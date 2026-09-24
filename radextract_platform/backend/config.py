@@ -1,0 +1,114 @@
+"""Application configuration and settings."""
+from __future__ import annotations
+import os
+from pathlib import Path
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    # Database
+    db_path: str = str(Path(__file__).parent / "radextract.db")
+
+    # Environment
+    env: str = "development"
+
+    # JWT
+    jwt_secret: str = ""  # Must be set via RADEXTRACT_JWT_SECRET in production
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 15  # short-lived access tokens
+    refresh_token_expire_days: int = 30  # long-lived refresh tokens
+
+    @property
+    def effective_jwt_secret(self) -> str:
+        if not self.jwt_secret:
+            if self.env == "production":
+                raise RuntimeError("RADEXTRACT_JWT_SECRET must be set in production")
+            return "radextract-dev-secret-change-in-production"
+        return self.jwt_secret
+
+    # LLM Gateway (gemini-web2api)
+    llm_api_url: str = "http://127.0.0.1:8081/v1/chat/completions"
+    llm_api_key: str = "sk-gemini"
+    llm_models_url: str = "http://127.0.0.1:8081/v1/models"
+    llm_model: str = "gemini-3.7-flash"
+    llm_tool_calling_enabled: bool = True
+    llm_tool_call_fallback: bool = True
+    llm_provider: str = "gateway"
+    llm_request_timeout: int = 90
+    llm_max_retries: int = 2
+
+    # TypeSafe Jev screening (optional; "off" keeps the existing LLM screening untouched)
+    #   off    -> Jev never called
+    #   shadow -> Jev runs alongside and is logged for comparison; the LLM result is still returned
+    #   on     -> Jev result is returned; any Jev failure falls back to the LLM path
+    jev_mode: str = "off"
+    jev_api_key: str = ""  # falls back to the TYPESAFE_API_KEY env var
+    jev_api_url: str = "https://api.typesafe.ai/v1/systemone"
+    jev_model: str = "jev-latest"
+    jev_timeout: int = 30
+    jev_max_retries: int = 2
+    # Decision policy (validate on labelled data before relying on these)
+    jev_include_threshold: float = 0.75   # min(P(population), P(intervention)) needed to include
+    jev_exclude_threshold: float = 0.85   # P(mismatch / hard-exclude) needed to exclude
+    jev_clarify_band: float = 0.15        # |P - 0.5| below this counts as genuinely ambiguous
+
+    # File storage
+    upload_root: str = str(Path(__file__).parent / "uploads")
+    export_root: str = str(Path(__file__).parent / "exports")
+
+    # ── AWS / LocalStack settings (single block — no duplicates) ──
+    aws_endpoint_url: str = ""           # "" = real AWS; "http://localhost:4566" = LocalStack
+    aws_region: str = "us-east-1"        # Use this consistently (not aws_default_region)
+    aws_access_key_id: str = "test"
+    aws_secret_access_key: str = "test"
+    storage_backend: str = "local"       # "local" | "s3"
+    db_backend: str = "sqlite"           # "sqlite" | "dynamodb"
+    s3_pdf_bucket: str = "radextract-pdfs"
+    s3_export_bucket: str = "radextract-exports"
+    dynamodb_table_prefix: str = "radextract_"
+
+    @property
+    def aws_default_region(self) -> str:
+        """Backward-compat alias for aws_region."""
+        return self.aws_region
+
+    # RadExtract core
+    radextract_root: str = str(Path(__file__).parent / "radextract_core")
+
+    # CORS
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
+
+    # Upload limits
+    max_upload_mb: int = 500
+
+    # ── Antigravity SDK settings ──
+    antigravity_enabled: bool = False  # Master feature flag; endpoints return 503 when False
+    antigravity_api_key: str = ""      # Gemini API key (or set GEMINI_API_KEY env var)
+    antigravity_model: str = "gemini-2.5-flash"
+    antigravity_max_concurrent: int = 3  # Max concurrent agent runs (semaphore)
+    antigravity_max_tokens_per_run: int = 50000  # Token budget per study (~$0.01-0.02 at Flash pricing)
+    antigravity_save_dir: str = ""  # Directory for session persistence; empty = temp dir
+
+    class Config:
+        env_prefix = "RADEXTRACT_"
+        # Optional local .env next to this file (git-ignored). Real environment variables still win,
+        # and nothing changes when the file does not exist (e.g. on Lambda).
+        env_file = str(Path(__file__).parent / ".env")
+        extra = "ignore"
+
+
+settings = Settings()
+
+
+def ensure_dirs():
+    """Create required directories if they don't exist."""
+    os.makedirs(settings.upload_root, exist_ok=True)
+    os.makedirs(settings.export_root, exist_ok=True)
+    Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)

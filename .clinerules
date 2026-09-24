@@ -1,0 +1,14 @@
+# Graphify Codebase Navigation Rules for Cline
+
+You are working on the RadExtract codebase. A precomputed knowledge graph is available in `graphify-out/`.
+
+## Mandatory Rules:
+1. **Always Check the Graph First**:
+   - Before modifying code or scanning the codebase, check `graphify-out/GRAPH_REPORT.md` and `graphify-out/graph.json`.
+   - Use the graph to identify central abstractions ("God Nodes" like `get_connection()`, `DeterministicScreener`, `A1`), callers, and dependencies.
+
+2. **Cross-Module Context**:
+   - When answering questions about how `radextract_platform` or `gemini-web2api` interact, trace the relationships in `graphify-out/graph.json`.
+
+3. **Keep Graph Updated**:
+   - If you add or refactor major modules, run `python -m graphify --update` to re-index changed files.

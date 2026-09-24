@@ -1,0 +1,48 @@
+# Runtime requirements for container-based AWS Lambda deployment.
+# Includes google-antigravity (compiled Go binary) which exceeds the
+# 250MB ZIP Lambda limit and requires container-based deployment.
+
+# Web framework
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+python-multipart>=0.0.6
+
+# Settings & validation
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+jsonschema>=4.0.0
+
+# HTTP client
+httpx>=0.24.0
+requests>=2.31.0
+
+# Auth
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.0,<4.1
+
+# PDF processing
+pypdfium2>=4.0.0
+pdfplumber>=0.10.0
+
+# Data analysis
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+statsmodels>=0.14.0
+matplotlib>=3.7.0
+
+# Machine learning & Document fixtures
+scikit-learn>=1.3.0
+reportlab>=3.6.0
+
+# Document export
+python-docx>=1.1.0
+openpyxl>=3.1.0
+
+# AWS / Serverless
+boto3>=1.34.0
+mangum>=0.17.0
+
+# AI Agent Orchestration (Antigravity SDK — requires container-based Lambda)
+google-antigravity>=0.1.15

@@ -1,0 +1,23 @@
+rules:
+- id: arm_trial_resolves
+  kind: key_resolves
+  sheet: Arm
+  parent_key_field: Trial ID
+  parent_sheet: Trial
+  severity: error
+  message: Arm Trial ID not found in Trial
+- id: arm_id_unique
+  kind: unique_within_parent
+  sheet: Arm
+  parent_field: Trial ID
+  key_field: Arm ID
+  severity: error
+  message: Duplicate Arm ID within trial
+- id: resp_rate_range
+  kind: range
+  sheet: Arm
+  field: Response Rate (%)
+  min: 0
+  max: 100
+  severity: error
+  message: Response Rate outside 0-100

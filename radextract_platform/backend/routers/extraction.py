@@ -1,0 +1,407 @@
+"""Extraction router: CRUD for data extractions, dual-reviewer verification."""
+from __future__ import annotations
+import uuid
+import datetime
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+import sqlite3
+
+from models import ExtractionCreate, ExtractionUpdate, ExtractionResponse, MissingDataSummary
+from database import get_db
+from services.db_backend import DBBackend
+from dependencies import get_current_user_optional, check_project_access
+
+router = APIRouter(prefix="/api", tags=["extraction"])
+
+
+# ── Dual-reviewer models ──
+
+class ExtractionVerifyRequest(BaseModel):
+    """Second reviewer verification of a primary extraction."""
+    agree: bool = True
+    alternative_value: str = ""
+    reviewer: str = ""
+
+
+class ExtractionAdjudicateRequest(BaseModel):
+    """Adjudicator resolves a disagreement between primary and second reviewer."""
+    final_value: str
+    adjudicator: str = ""
+    notes: str = ""
+
+
+@router.get("/studies/{study_id}/extractions")
+async def list_extractions(study_id: str, user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)):
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid: check_project_access(conn, _pid["project_id"], user)
+    rows = conn.execute(
+        """SELECT e.*, v.name as variable_name, v.section as variable_section
+           FROM extractions e
+           LEFT JOIN variables v ON e.variable_id = v.variable_id
+           WHERE e.study_id = ?
+           ORDER BY v.section, v.order_index""",
+        (study_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+@router.post("/studies/{study_id}/extractions", response_model=ExtractionResponse)
+async def create_extraction(
+    study_id: str,
+    body: ExtractionCreate,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid: check_project_access(conn, _pid["project_id"], user)
+    if body.study_id != study_id:
+        raise HTTPException(status_code=400, detail="study_id mismatch")
+    extraction_id = str(uuid.uuid4())
+    conn.execute(
+        """INSERT INTO extractions
+           (extraction_id, study_id, variable_id, value, confidence, confidence_tag,
+            source_page, source_bbox, source_text, extracted_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (extraction_id, study_id, body.variable_id, body.value,
+         body.confidence, body.confidence_tag, body.source_page, body.source_bbox,
+         body.source_text, body.extracted_by or (user["username"] if user else "system")),
+    )
+    conn.commit()
+    return ExtractionResponse(
+        extraction_id=extraction_id, study_id=study_id,
+        variable_id=body.variable_id, value=body.value,
+        confidence=body.confidence, confidence_tag=body.confidence_tag, source_page=body.source_page,
+        source_bbox=body.source_bbox, source_text=body.source_text,
+        extracted_by=body.extracted_by or (user["username"] if user else "system"),
+    )
+
+
+@router.put("/extractions/{extraction_id}", response_model=ExtractionResponse)
+async def update_extraction(
+    extraction_id: str,
+    body: ExtractionUpdate,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    row = conn.execute(
+        "SELECT * FROM extractions WHERE extraction_id = ?", (extraction_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Extraction not found")
+
+    # Track changes in audit log
+    old_value = row["value"]
+    updates = []
+    params = []
+    if body.value is not None and body.value != old_value:
+        updates.append("value = ?")
+        params.append(body.value)
+        updates.append("is_edited = 1")
+        updates.append("edited_by = ?")
+        params.append(user["username"] if user else "anonymous")
+        updates.append("edited_at = ?")
+        import datetime
+        params.append(datetime.datetime.utcnow().isoformat())
+
+        # Get variable name for audit
+        v_row = conn.execute(
+            "SELECT name FROM variables WHERE variable_id = ?", (row["variable_id"],)
+        ).fetchone()
+        v_name = v_row["name"] if v_row else ""
+
+        # Write audit log
+        conn.execute(
+            """INSERT INTO audit_log
+               (audit_id, study_id, variable_id, variable_name,
+                old_value, new_value, changed_by, reason)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (str(uuid.uuid4()), row["study_id"], row["variable_id"],
+             v_name, old_value, body.value,
+             user["username"] if user else "anonymous",
+             body.reason or ""),
+        )
+
+    if body.confidence is not None:
+        updates.append("confidence = ?")
+        params.append(body.confidence)
+    if body.confidence_tag is not None:
+        updates.append("confidence_tag = ?")
+        params.append(body.confidence_tag)
+    if body.source_page is not None:
+        updates.append("source_page = ?")
+        params.append(body.source_page)
+    if body.source_text is not None:
+        updates.append("source_text = ?")
+        params.append(body.source_text)
+
+    if updates:
+        params.append(extraction_id)
+        conn.execute(
+            f"UPDATE extractions SET {', '.join(updates)} WHERE extraction_id = ?",
+            params,
+        )
+        conn.commit()
+
+    row = conn.execute(
+        "SELECT * FROM extractions WHERE extraction_id = ?", (extraction_id,)
+    ).fetchone()
+    return ExtractionResponse(**dict(row))
+
+
+@router.get("/studies/{study_id}/extractions/audit")
+async def get_audit_log(study_id: str, user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)):
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid: check_project_access(conn, _pid["project_id"], user)
+    rows = conn.execute(
+        "SELECT * FROM audit_log WHERE study_id = ? ORDER BY changed_at DESC",
+        (study_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+# ── Dual-reviewer verification & adjudication ──
+
+@router.put("/extractions/{extraction_id}/verify")
+async def verify_extraction(
+    extraction_id: str,
+    body: ExtractionVerifyRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Second reviewer verifies a primary extraction.
+
+    If agree=True, marks as verified.
+    If agree=False, stores alternative_value and marks as disagreed.
+    """
+    row = conn.execute(
+        "SELECT * FROM extractions WHERE extraction_id = ?", (extraction_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Extraction not found")
+
+    reviewer = body.reviewer or (user["username"] if user else "second_reviewer")
+    now = datetime.datetime.utcnow().isoformat()
+
+    if body.agree:
+        status = "verified"
+        second_value = row["value"]
+    else:
+        status = "disagreed"
+        second_value = body.alternative_value
+
+    conn.execute(
+        """UPDATE extractions SET
+           verification_status = ?, second_value = ?, second_reviewer = ?,
+           verified_at = ?
+           WHERE extraction_id = ?""",
+        (status, second_value, reviewer, now, extraction_id),
+    )
+    conn.commit()
+
+    row = conn.execute(
+        "SELECT * FROM extractions WHERE extraction_id = ?", (extraction_id,)
+    ).fetchone()
+    return dict(row)
+
+
+@router.put("/extractions/{extraction_id}/adjudicate")
+async def adjudicate_extraction(
+    extraction_id: str,
+    body: ExtractionAdjudicateRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Adjudicator resolves a disagreement between primary and second reviewer."""
+    row = conn.execute(
+        "SELECT * FROM extractions WHERE extraction_id = ?", (extraction_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Extraction not found")
+
+    adjudicator = body.adjudicator or (user["username"] if user else "adjudicator")
+    now = datetime.datetime.utcnow().isoformat()
+
+    # Write audit log for the adjudication
+    v_row = conn.execute(
+        "SELECT name FROM variables WHERE variable_id = ?", (row["variable_id"],)
+    ).fetchone()
+    v_name = v_row["name"] if v_row else ""
+
+    conn.execute(
+        """INSERT INTO audit_log
+           (audit_id, study_id, variable_id, variable_name,
+            old_value, new_value, changed_by, reason)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (str(uuid.uuid4()), row["study_id"], row["variable_id"],
+         v_name, row["value"], body.final_value, adjudicator,
+         f"Adjudication: {body.notes}"),
+    )
+
+    conn.execute(
+        """UPDATE extractions SET
+           verification_status = 'adjudicated',
+           adjudicated_value = ?, adjudicator = ?,
+           adjudication_notes = ?, value = ?,
+           is_edited = 1, edited_by = ?, edited_at = ?
+           WHERE extraction_id = ?""",
+        (body.final_value, adjudicator, body.notes,
+         body.final_value, adjudicator, now, extraction_id),
+    )
+    conn.commit()
+
+    row = conn.execute(
+        "SELECT * FROM extractions WHERE extraction_id = ?", (extraction_id,)
+    ).fetchone()
+    return dict(row)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  v2.4: Missing Data Summary Endpoint
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.get("/projects/{project_id}/extraction/missing-data-summary", response_model=MissingDataSummary)
+async def get_missing_data_summary(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Get counts of -99, -77, -88 missing data codes across all variables for a project."""
+    check_project_access(conn, project_id, user)
+    proj = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+    if not proj:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    variables = conn.execute(
+        "SELECT variable_id, name FROM variables WHERE project_id = ? ORDER BY section, order_index",
+        (project_id,),
+    ).fetchall()
+
+    total_extractions = 0
+    total_99 = 0
+    total_77 = 0
+    total_88 = 0
+    per_var_list = []
+
+    for v in variables:
+        vid = v["variable_id"]
+        vname = v["name"]
+        rows = conn.execute(
+            """SELECT e.value FROM extractions e
+               JOIN studies s ON e.study_id = s.study_id
+               WHERE s.project_id = ? AND e.variable_id = ?""",
+            (project_id, vid),
+        ).fetchall()
+
+        v_total = len(rows)
+        v_99 = sum(1 for r in rows if str(r["value"]).strip() == "-99")
+        v_77 = sum(1 for r in rows if str(r["value"]).strip() == "-77")
+        v_88 = sum(1 for r in rows if str(r["value"]).strip() == "-88")
+
+        total_extractions += v_total
+        total_99 += v_99
+        total_77 += v_77
+        total_88 += v_88
+
+        per_var_list.append({
+            "variable_name": vname,
+            "total": v_total,
+            "not_reported": v_99,
+            "not_applicable": v_77,
+            "unable_to_extract": v_88,
+        })
+
+    return MissingDataSummary(
+        project_id=project_id,
+        total_extractions=total_extractions,
+        not_reported=total_99,
+        not_applicable=total_77,
+        unable_to_extract=total_88,
+        per_variable=per_var_list,
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Coded Extraction (per-variable prompts + confidence tags + missing codes)
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.post("/studies/{study_id}/coded-extract")
+async def coded_extract(
+    study_id: str,
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Run coded extraction for one study.
+
+    For every variable: builds its extraction prompt, extracts via LLM
+    (when available) with verbatim source quotes, assigns a confidence tag
+    ([DS]/[INF]/[CALC]/[SUP]/[FIG]) or a missing-data code (-99/-77/-88)
+    after an exhaustive search + recheck pass. Returns a per-study summary.
+    """
+    from services.coded_extraction_service import coded_extract_study
+    from services.llm_extractor import is_llm_available
+
+    study = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    check_project_access(conn, study["project_id"], user)
+
+    model_fn = None
+    if is_llm_available():
+        from services.llm_client import get_client
+        model_fn = get_client().as_model_fn("coded_extract")
+
+    try:
+        return coded_extract_study(
+            study_id, project_id, db=conn, model_fn=model_fn,
+            reviewer=user["username"] if user else "coded_auto",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/projects/{project_id}/extraction/prompts")
+async def extraction_prompts(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)):
+    """Preview the generated extraction prompt for every variable in the project."""
+    from services.extraction_prompt_builder import build_field_prompt
+
+    check_project_access(conn, project_id, user)
+    rows = conn.execute(
+        "SELECT * FROM variables WHERE project_id = ? ORDER BY section, order_index",
+        (project_id,),
+    ).fetchall()
+    return [
+        {
+            "variable_id": r["variable_id"],
+            "name": r["name"],
+            "section": r["section"],
+            "field_type": r["field_type"],
+            "extraction_prompt": build_field_prompt(dict(r)),
+        }
+        for r in rows
+    ]
+
+
+@router.get("/projects/{project_id}/extraction/xlsx-coded")
+async def coded_extraction_xlsx(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)):
+    """Download the coded extraction workbook (Excel).
+
+    One sheet per variable section (StudyID rows x variable columns), missing-data
+    codes color-coded (-99 yellow, -77 grey, -88 orange), a Notes column with the
+    confidence tags and source citations, a Prompts sheet, and an Extraction_Legend.
+    """
+    from services.extraction_excel_service import build_coded_extraction_workbook
+    from fastapi.responses import Response
+
+    check_project_access(conn, project_id, user)
+    blob = build_coded_extraction_workbook(project_id, conn)
+    return Response(
+        content=blob,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="coded_extraction_{project_id}.xlsx"'},
+    )

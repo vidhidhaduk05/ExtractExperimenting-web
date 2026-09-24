@@ -1,0 +1,6 @@
+name: radiology_base
+description: >-
+  Base radiology systematic-review extraction template. Contains universal fields
+  for any radiology topic. Topic-specific fields are added per-project by the
+  PICOS → Schema Generator.
+codebook: codebook.xlsx

@@ -1,0 +1,309 @@
+# Radiology base schema — universal fields for any radiology systematic review.
+# Topic-specific fields are added per-project by the PICOS → Schema Generator.
+#
+# Entity graph:
+#   Study_Level (parent)
+#     ├── Cohort_Level (child)
+#     │     └── Protocol_Level (child)
+#     │           └── Outcome_Level (child)
+#     └── Quality_Assessment (child)
+
+codebook_sheet: Codebook
+data_start_row: 3
+data_sheets:
+  - Study_Level
+  - Cohort_Level
+  - Protocol_Level
+  - Outcome_Level
+  - Quality_Assessment
+
+missing_tokens:
+  - NR
+  - NA
+  - unclear
+  - not_reported
+  - none
+  - ''
+
+type_defaults:
+  Integer: int
+  Number: float
+  Percentage: percent
+  Category: enum
+  Text: free_text
+
+entity_graph:
+  Study_Level:
+    role: parent
+    key: Study ID
+    parent: null
+    parent_key: null
+  Cohort_Level:
+    role: child
+    key: Cohort ID
+    parent: Study_Level
+    parent_key: Study ID
+  Protocol_Level:
+    role: child
+    key: Protocol ID
+    parent: Cohort_Level
+    parent_key: Cohort ID
+  Outcome_Level:
+    role: child
+    key: Outcome ID
+    parent: Protocol_Level
+    parent_key: Protocol ID
+  Quality_Assessment:
+    role: child
+    key: QA ID
+    parent: Study_Level
+    parent_key: Study ID
+
+field_types:
+  # ---- Study_Level (15 fields) ----
+  Study_Level::Study ID:
+    type: free_text
+  Study_Level::First Author:
+    type: free_text
+  Study_Level::Publication Year:
+    type: year
+  Study_Level::Journal:
+    type: free_text
+  Study_Level::DOI:
+    type: free_text
+  Study_Level::PMID:
+    type: free_text
+  Study_Level::Country:
+    type: free_text
+  Study_Level::Study Design:
+    type: enum
+  Study_Level::Study Setting:
+    type: enum
+  Study_Level::N Centers:
+    type: int
+  Study_Level::Enrollment Period:
+    type: free_text
+  Study_Level::Funding Source:
+    type: free_text
+  Study_Level::Conflict of Interest:
+    type: enum
+  Study_Level::Registration:
+    type: enum
+  Study_Level::Registration ID:
+    type: free_text
+
+  # ---- Cohort_Level (16 fields) ----
+  Cohort_Level::Study ID:
+    type: free_text
+  Cohort_Level::Cohort ID:
+    type: free_text
+  Cohort_Level::Cohort Role:
+    type: enum
+  Cohort_Level::Disease/Condition:
+    type: free_text
+  Cohort_Level::Sample Size (Enrolled):
+    type: int
+  Cohort_Level::N Analyzed:
+    type: int
+  Cohort_Level::Age Group:
+    type: enum
+  Cohort_Level::Age, Central Value (years):
+    type: float
+    tol: 0.1
+  Cohort_Level::Age, Dispersion Type:
+    type: enum
+  Cohort_Level::Age, Dispersion Value:
+    type: float
+    tol: 0.1
+  Cohort_Level::Female (%):
+    type: percent
+    tol: 0.1
+  Cohort_Level::Race/Ethnicity:
+    type: free_text
+  Cohort_Level::Clinical Indication:
+    type: free_text
+  Cohort_Level::Inclusion Criteria:
+    type: free_text
+  Cohort_Level::Exclusion Criteria:
+    type: free_text
+  Cohort_Level::Comorbidities:
+    type: free_text
+
+  # ---- Protocol_Level (24 fields) ----
+  Protocol_Level::Cohort ID:
+    type: free_text
+  Protocol_Level::Protocol ID:
+    type: free_text
+  Protocol_Level::Modality:
+    type: enum
+  Protocol_Level::Scanner Manufacturer:
+    type: free_text
+  Protocol_Level::Scanner Model:
+    type: free_text
+  Protocol_Level::Field Strength (T):
+    type: enum
+  Protocol_Level::kVp:
+    type: int
+  Protocol_Level::mAs:
+    type: float
+    tol: 0.1
+  Protocol_Level::Contrast Agent:
+    type: enum
+  Protocol_Level::Contrast Dose:
+    type: free_text
+  Protocol_Level::Contrast Route:
+    type: enum
+  Protocol_Level::Acquisition Phase:
+    type: enum
+  Protocol_Level::TR (ms):
+    type: float
+    tol: 0.5
+  Protocol_Level::TE (ms):
+    type: float
+    tol: 0.1
+  Protocol_Level::Flip Angle (degrees):
+    type: float
+    tol: 0.5
+  Protocol_Level::Sequence Type:
+    type: enum
+  Protocol_Level::Voxel Size:
+    type: free_text
+  Protocol_Level::Slice Thickness (mm):
+    type: float
+    tol: 0.1
+  Protocol_Level::Matrix Size:
+    type: free_text
+  Protocol_Level::FOV:
+    type: free_text
+  Protocol_Level::Reconstruction Algorithm:
+    type: enum
+  Protocol_Level::CTDIvol (mGy):
+    type: float
+    tol: 0.1
+  Protocol_Level::DLP (mGy·cm):
+    type: float
+    tol: 0.1
+  Protocol_Level::Scan Duration (s):
+    type: float
+    tol: 1.0
+
+  # ---- Outcome_Level (26 fields) ----
+  Outcome_Level::Protocol ID:
+    type: free_text
+  Outcome_Level::Outcome ID:
+    type: free_text
+  Outcome_Level::Result Type:
+    type: enum
+  Outcome_Level::Specific Outcome Label:
+    type: free_text
+  Outcome_Level::Reference Standard:
+    type: enum
+  Outcome_Level::Reference Standard Details:
+    type: free_text
+  Outcome_Level::ROI/Region Category:
+    type: enum
+  Outcome_Level::N Analyzed:
+    type: int
+  Outcome_Level::Sensitivity (%):
+    type: percent
+    tol: 0.1
+  Outcome_Level::Specificity (%):
+    type: percent
+    tol: 0.1
+  Outcome_Level::PPV (%):
+    type: percent
+    tol: 0.1
+  Outcome_Level::NPV (%):
+    type: percent
+    tol: 0.1
+  Outcome_Level::AUC:
+    type: float
+    tol: 0.01
+  Outcome_Level::AUC 95CI Lower:
+    type: float
+    tol: 0.01
+  Outcome_Level::AUC 95CI Upper:
+    type: float
+    tol: 0.01
+  Outcome_Level::Central Estimate:
+    type: float
+    tol: 0.01
+  Outcome_Level::Dispersion Type:
+    type: enum
+  Outcome_Level::Dispersion Value:
+    type: float
+    tol: 0.01
+  Outcome_Level::Unit (as reported):
+    type: free_text
+  Outcome_Level::Standardized Unit Family:
+    type: enum
+  Outcome_Level::Statistical Test:
+    type: enum
+  Outcome_Level::P-value:
+    type: free_text
+  Outcome_Level::Agreement Metric:
+    type: enum
+  Outcome_Level::Agreement Value:
+    type: float
+    tol: 0.01
+  Outcome_Level::N Readers:
+    type: int
+  Outcome_Level::Reader Blinding:
+    type: enum
+
+  # ---- Quality_Assessment (shared QUADAS-2 / ROBINS-I) ----
+  Quality_Assessment::Study ID:
+    type: free_text
+  Quality_Assessment::QA ID:
+    type: free_text
+  Quality_Assessment::Assessment Tool:
+    type: enum
+  # QUADAS-2 domains (fields 4-12)
+  "Quality_Assessment::D1: Patient Selection — Risk of Bias":
+    type: enum
+  "Quality_Assessment::D1: Patient Selection — Applicability":
+    type: enum
+  "Quality_Assessment::D2: Index Test — Risk of Bias":
+    type: enum
+  "Quality_Assessment::D2: Index Test — Applicability":
+    type: enum
+  "Quality_Assessment::D3: Reference Standard — Risk of Bias":
+    type: enum
+  "Quality_Assessment::D3: Reference Standard — Applicability":
+    type: enum
+  "Quality_Assessment::D4: Flow and Timing — Risk of Bias":
+    type: enum
+  Quality_Assessment::Overall Risk of Bias:
+    type: enum
+  Quality_Assessment::Overall Applicability:
+    type: enum
+  # ROBINS-I domains (fields 13-19, active when Assessment Tool = ROBINS_I)
+  "Quality_Assessment::D1: Confounding":
+    type: enum
+  "Quality_Assessment::D2: Selection of Participants":
+    type: enum
+  "Quality_Assessment::D3: Classification of Interventions":
+    type: enum
+  "Quality_Assessment::D4: Deviations from Interventions":
+    type: enum
+  "Quality_Assessment::D5: Missing Data":
+    type: enum
+  "Quality_Assessment::D6: Measurement of Outcomes":
+    type: enum
+  "Quality_Assessment::D7: Selection of Reported Result":
+    type: enum
+  # Support for judgment fields
+  Quality_Assessment::D1 Support for Judgment:
+    type: free_text
+  Quality_Assessment::D2 Support for Judgment:
+    type: free_text
+  Quality_Assessment::D3 Support for Judgment:
+    type: free_text
+  Quality_Assessment::D4 Support for Judgment:
+    type: free_text
+  Quality_Assessment::D5 Support for Judgment:
+    type: free_text
+  Quality_Assessment::D6 Support for Judgment:
+    type: free_text
+  Quality_Assessment::D7 Support for Judgment:
+    type: free_text

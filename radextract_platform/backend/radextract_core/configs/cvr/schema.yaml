@@ -1,0 +1,143 @@
+codebook_sheet: Codebook
+data_start_row: 3
+data_sheets:
+- Study_Level
+- Cohort_Methods
+- Outcome_Level
+missing_tokens:
+- NR
+- NA
+- unclear
+- not_reported
+- none
+- ''
+type_defaults:
+  Integer: int
+  Number: float
+  Percentage: percent
+  Category: enum
+  Text: free_text
+entity_graph:
+  Study_Level:
+    role: parent
+    key: Study ID
+    parent: null
+    parent_key: null
+  Cohort_Methods:
+    role: child
+    key: Cohort ID
+    parent: Study_Level
+    parent_key: Study ID
+  Outcome_Level:
+    role: child
+    key: Outcome ID
+    parent: Cohort_Methods
+    parent_key: Cohort ID
+field_types:
+  Study_Level::Study ID:
+    type: free_text
+  Study_Level::First Author:
+    type: free_text
+  Study_Level::Publication Year:
+    type: year
+  Study_Level::Country:
+    type: free_text
+  Study_Level::Study Design (Reported):
+    type: enum
+  Study_Level::Study Setting:
+    type: free_text
+  Cohort_Methods::Study ID:
+    type: free_text
+  Cohort_Methods::Cohort ID:
+    type: free_text
+  Cohort_Methods::Cohort/Group Role:
+    type: enum
+  Cohort_Methods::Review Disease Group:
+    type: enum
+  Cohort_Methods::Age Group:
+    type: enum
+  Cohort_Methods::Sample Size (Reported):
+    type: int
+  Cohort_Methods::Age, Central Value (years):
+    type: float
+    tol: 0.1
+  Cohort_Methods::Female (%):
+    type: percent
+    tol: 0.1
+  Cohort_Methods::MRI Modality:
+    type: enum
+  Cohort_Methods::Field Strength (T):
+    type: enum
+  Cohort_Methods::CVR Stimulus:
+    type: enum
+  Cohort_Methods::Stimulus Delivery Method:
+    type: enum
+  Cohort_Methods::Physiology Monitoring:
+    type: enum
+  Cohort_Methods::Baseline EtCO2 (mmHg):
+    type: float
+    tol: 0.1
+  Cohort_Methods::Achieved ΔEtCO2 (mmHg):
+    type: float
+    tol: 0.1
+  Cohort_Methods::TR (ms):
+    type: float
+    tol: 0.5
+  Cohort_Methods::TE (ms):
+    type: float
+    tol: 0.1
+  Cohort_Methods::Voxel Size (Reported):
+    type: free_text
+  Cohort_Methods::Scan Duration (s):
+    type: float
+    tol: 1.0
+  Cohort_Methods::Brain Coverage:
+    type: enum
+  Cohort_Methods::CVR Modeling Approach:
+    type: enum
+  Cohort_Methods::Lag/Delay Correction:
+    type: enum
+  Cohort_Methods::Spatial Smoothing:
+    type: enum
+  Cohort_Methods::QA/QC Maps Reported:
+    type: enum
+  Cohort_Methods::Protocol Reproducibility Judgment:
+    type: enum
+  Outcome_Level::Study ID:
+    type: free_text
+  Outcome_Level::Outcome ID:
+    type: free_text
+  Outcome_Level::Cohort ID:
+    type: free_text
+  Outcome_Level::Comparator Cohort ID:
+    type: free_text
+  Outcome_Level::Result Type:
+    type: enum
+  Outcome_Level::Specific Outcome Label:
+    type: free_text
+  Outcome_Level::ROI/Region Category:
+    type: enum
+  Outcome_Level::CVR Unit (as reported):
+    type: free_text
+  Outcome_Level::Standardized Unit Family:
+    type: enum
+  Outcome_Level::N Analyzed:
+    type: int
+  Outcome_Level::Central Estimate:
+    type: float
+    tol: 0.01
+  Outcome_Level::Dispersion Type:
+    type: enum
+  Outcome_Level::Dispersion Value:
+    type: float
+    tol: 0.01
+  Outcome_Level::Failed Subjects (n):
+    type: int
+  Outcome_Level::Failure Denominator (n):
+    type: int
+  Outcome_Level::Failure Definition (as reported):
+    type: free_text
+  Outcome_Level::Meta-analysis Ready?:
+    type: enum
+  Outcome_Level::Author Contact Needed?:
+    type: enum
