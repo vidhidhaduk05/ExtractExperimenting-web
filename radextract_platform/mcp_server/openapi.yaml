@@ -1,0 +1,108 @@
+openapi: 3.1.0
+info:
+  title: RadExtract MCP Server
+  description: API for interacting with RadExtract's systematic review and extraction tools.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api
+    description: RadExtract Backend API
+paths:
+  /projects/{project_id}/pico:
+    get:
+      summary: Get Project PICO
+      description: Retrieves the PICO criteria for a given project.
+      operationId: get_project_pico
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project.
+      responses:
+        "200":
+          description: Successful response.
+      security:
+        - BearerAuth: []
+  /projects/{project_id}/studies/{study_id}/auto-assess:
+    post:
+      summary: Perform RoB Assessment
+      description: Performs a Risk of Bias assessment on a study.
+      operationId: perform_rob_assessment
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The project ID.
+        - name: study_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The study ID to assess.
+        - name: tool_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The Risk of Bias tool to use (e.g. rob2, robins_i, quadas_2).
+      responses:
+        "200":
+          description: Successful response.
+      security:
+        - BearerAuth: []
+  /search/multi-database:
+    post:
+      summary: Search Literature
+      description: Searches literature databases (PubMed, OpenAlex) based on a query.
+      operationId: search_literature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: The search query string.
+                sources:
+                  type: array
+                  items:
+                    type: string
+                  description: Sources to search, e.g. ['pubmed', 'openalex'].
+                max_per_source:
+                  type: integer
+                  description: Max results per source.
+              required:
+                - query
+      responses:
+        "200":
+          description: Successful response.
+      security:
+        - BearerAuth: []
+  /projects/{project_id}/search-strings/generate:
+    post:
+      summary: Generate Search Strings
+      description: Generates database-specific search strings from a project's PICO framework.
+      operationId: generate_search_strings
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Project ID to generate search strings for.
+      responses:
+        "200":
+          description: Successful response.
+      security:
+        - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Provide your RadExtract API key / subscription token.
