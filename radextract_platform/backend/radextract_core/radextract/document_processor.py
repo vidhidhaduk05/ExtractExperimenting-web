@@ -443,7 +443,7 @@ class FallbackProcessor:
             doc_id = os.path.splitext(os.path.basename(pdf_path))[0]
 
         t0 = time.time()
-        parsed = parse_document(pdf_path)
+        parsed = parse_document(pdf_path) # _autorotate is handled in process_pdf if used from facade
         elapsed = time.time() - t0
 
         # Build minimal annotations from page text (no bbox info)
@@ -557,14 +557,49 @@ def get_processor(prefer_docling: bool = True) -> Any:
 
 
 def process_pdf(pdf_path: str, *, doc_id: Optional[str] = None,
-                prefer_docling: bool = True) -> ProcessedDocument:
+                prefer_docling: bool = True, autorotate: bool = False) -> ProcessedDocument:
     """Convert a single PDF using the best available processor."""
-    proc = get_processor(prefer_docling=prefer_docling)
-    return proc.convert(pdf_path, doc_id=doc_id)
+    from ..litextract.document import _autorotate_pdf
+    import os
+
+    active_path = pdf_path
+    is_temp = False
+    if autorotate:
+        active_path, is_temp = _autorotate_pdf(pdf_path)
+
+    try:
+        proc = get_processor(prefer_docling=prefer_docling)
+        result = proc.convert(active_path, doc_id=doc_id)
+        # Update metadata to reflect the original source_path
+        if result.metadata:
+            result.metadata["source_path"] = pdf_path
+        return result
+    finally:
+        if is_temp and os.path.exists(active_path):
+            try:
+                os.remove(active_path)
+            except OSError:
+                pass
 
 
-def process_batch(pdf_paths: List[str], *, prefer_docling: bool = True) -> List[ProcessedDocument]:
+def process_batch(pdf_paths: List[str], *, prefer_docling: bool = True, autorotate: bool = False) -> List[ProcessedDocument]:
     """Convert multiple PDFs using the best available processor."""
+    # If autorotate is True, we process them one by one to handle temp files easily
+    if autorotate:
+        results = []
+        for path in pdf_paths:
+            try:
+                results.append(process_pdf(path, prefer_docling=prefer_docling, autorotate=autorotate))
+            except Exception as e:
+                import os
+                results.append(ProcessedDocument(
+                    doc_id=os.path.splitext(os.path.basename(path))[0],
+                    parsed={"full_text": "", "pages": [], "tables": [], "figures": [],
+                            "triage": "ERROR", "n_pages": 0, "n_text_pages": 0},
+                    metadata={"engine": "unknown", "source_path": path, "error": str(e)},
+                ))
+        return results
+
     proc = get_processor(prefer_docling=prefer_docling)
     return proc.convert_batch(pdf_paths)
 
