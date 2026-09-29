@@ -18,9 +18,81 @@ from typing import Optional
 # --------------------------------------------------------------------------- #
 # Parsing
 # --------------------------------------------------------------------------- #
+
+import os
+import tempfile
+
+def _get_page_rotation(page) -> int:
+    """Heuristic to find if page text is mostly rotated."""
+    try:
+        d = page.get_text("dict")
+    except Exception:
+        return 0
+
+    dir_counts = {(1.0, 0.0): 0, (0.0, 1.0): 0, (-1.0, 0.0): 0, (0.0, -1.0): 0}
+
+    for block in d.get("blocks", []):
+        if block.get("type") == 0:
+            for line in block.get("lines", []):
+                ldir = line.get("dir", (1.0, 0.0))
+                nx, ny = round(ldir[0]), round(ldir[1])
+                key = (nx, ny)
+                char_count = sum(len(span.get("text", "")) for span in line.get("spans", []))
+
+                if key in dir_counts:
+                    dir_counts[key] += char_count
+                else:
+                    dir_counts[key] = char_count
+
+    if not dir_counts:
+        return 0
+
+    dominant_dir = max(dir_counts, key=dir_counts.get)
+    total_chars = sum(dir_counts.values())
+
+    if total_chars == 0:
+        return 0
+
+    if dominant_dir == (0, -1):
+        return -90
+    elif dominant_dir == (0, 1):
+        return 90
+    elif dominant_dir == (-1, 0):
+        return 180
+
+    return 0
+
+def _autorotate_pdf(path: str) -> tuple[str, bool]:
+    """Reads PDF, auto-rotates pages if necessary, returns (path_to_use, is_temp_file)."""
+    try:
+        import fitz
+    except ImportError:
+        return path, False
+
+    doc = fitz.open(path)
+    rotated = False
+
+    for page in doc:
+        rot = _get_page_rotation(page)
+        if rot != 0:
+            current_rot = page.rotation
+            page.set_rotation((current_rot + rot) % 360)
+            rotated = True
+
+    if rotated:
+        fd, temp_path = tempfile.mkstemp(suffix=".pdf")
+        os.close(fd)
+        doc.save(temp_path)
+        doc.close()
+        return temp_path, True
+
+    doc.close()
+    return path, False
+
 def parse_document(path: str, *, text_page_min_chars: int = 50,
                    full_text_frac: float = 0.8, partial_frac: float = 0.3,
-                   use_pipeline: bool = False, ocr_backend=None, tsr_backend=None) -> dict:
+                   use_pipeline: bool = False, ocr_backend=None, tsr_backend=None,
+                   autorotate: bool = False) -> dict:
     """Parse a document into the normalized structure.
 
     Currently dispatches by extension. PDFs are parsed with pdfplumber/fitz (lazy
@@ -29,16 +101,29 @@ def parse_document(path: str, *, text_page_min_chars: int = 50,
     """
     low = path.lower()
     if low.endswith(".pdf"):
-        if use_pipeline:
-            return parse_pdf_pipeline(
-                path,
-                text_page_min_chars=text_page_min_chars,
-                full_text_frac=full_text_frac,
-                partial_frac=partial_frac,
-                ocr_backend=ocr_backend,
-                tsr_backend=tsr_backend,
-            )
-        return _parse_pdf(path, text_page_min_chars, full_text_frac, partial_frac)
+        active_path = path
+        is_temp = False
+        if autorotate:
+            active_path, is_temp = _autorotate_pdf(path)
+
+        try:
+            if use_pipeline:
+                return parse_pdf_pipeline(
+                    active_path,
+                    text_page_min_chars=text_page_min_chars,
+                    full_text_frac=full_text_frac,
+                    partial_frac=partial_frac,
+                    ocr_backend=ocr_backend,
+                    tsr_backend=tsr_backend,
+                )
+            return _parse_pdf(active_path, text_page_min_chars, full_text_frac, partial_frac)
+        finally:
+            if is_temp and os.path.exists(active_path):
+                try:
+                    os.remove(active_path)
+                except OSError:
+                    pass
+
     if low.endswith((".txt", ".md", ".text")):
         return _parse_textfile(path)
     raise ValueError(f"Unsupported document type for {path!r}; "
