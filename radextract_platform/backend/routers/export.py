@@ -57,6 +57,57 @@ async def export_project(
         return await _export_csv(project_id, timestamp, include_rob, db)
 
 
+def _fetch_extractions_map(db: DBBackend, project_id: str, study_ids: list[str]) -> dict[str, dict[str, str]]:
+    """Fetch extractions in bulk for all project studies to avoid N+1 queries.
+
+    Returns dict mapping study_id -> {variable_id: value}.
+    """
+    ext_map_by_study: dict[str, dict[str, str]] = {sid: {} for sid in study_ids if sid}
+    if not study_ids:
+        return ext_map_by_study
+
+    try:
+        # Fast bulk JOIN query for relational backends (e.g., SQLite)
+        rows = db.execute(
+            """SELECT e.study_id, e.variable_id, e.value
+               FROM extractions e
+               JOIN studies s ON e.study_id = s.study_id
+               WHERE s.project_id = ?""",
+            (project_id,),
+        ).fetchall()
+        for r in rows:
+            sid = r["study_id"] if isinstance(r, dict) or hasattr(r, "__getitem__") else r[0]
+            vid = r["variable_id"] if isinstance(r, dict) or hasattr(r, "__getitem__") else r[1]
+            val = r["value"] if isinstance(r, dict) or hasattr(r, "__getitem__") else r[2]
+            if sid in ext_map_by_study:
+                ext_map_by_study[sid][vid] = val if val is not None else ""
+        return ext_map_by_study
+    except NotImplementedError:
+        # Fallback for key-value / NoSQL backends (e.g., DynamoDB)
+        for sid in study_ids:
+            if not sid:
+                continue
+            ext_list = db.query("extractions", {"study_id": sid})
+            ext_map_by_study[sid] = {e.get("variable_id"): (e.get("value") or "") for e in ext_list}
+        return ext_map_by_study
+
+
+def _fetch_rob_map(db: DBBackend, project_id: str, include_rob: bool) -> dict[str, dict]:
+    """Fetch RoB assessments in bulk for the project to avoid N+1 queries.
+
+    Returns dict mapping study_id -> rob_assessment_dict.
+    """
+    if not include_rob:
+        return {}
+    all_rob = db.query("rob_assessments", {"project_id": project_id})
+    rob_map = {}
+    for r in all_rob:
+        sid = r.get("study_id")
+        if sid and sid not in rob_map:
+            rob_map[sid] = r
+    return rob_map
+
+
 async def _export_csv(project_id: str, timestamp: str, include_rob: bool, db: DBBackend) -> Response:
     proj = db.get("projects", project_id)
     if not proj:
@@ -64,6 +115,10 @@ async def _export_csv(project_id: str, timestamp: str, include_rob: bool, db: DB
 
     variables = db.query("variables", {"project_id": project_id}, order_by="order_index ASC")
     studies = db.query("studies", {"project_id": project_id}, order_by="title ASC")
+
+    study_ids = [s.get("study_id", "") for s in studies if s.get("study_id")]
+    ext_map_by_study = _fetch_extractions_map(db, project_id, study_ids)
+    rob_map = _fetch_rob_map(db, project_id, include_rob)
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -85,14 +140,12 @@ async def _export_csv(project_id: str, timestamp: str, include_rob: bool, db: DB
             s.get("journal", ""),
             s.get("doi", ""),
         ]
-        ext_list = db.query("extractions", {"study_id": study_id})
-        ext_map = {e.get("variable_id"): e.get("value", "") for e in ext_list}
+        ext_map = ext_map_by_study.get(study_id, {})
         for v in variables:
             row.append(ext_map.get(v.get("variable_id"), ""))
 
         if include_rob:
-            rob_list = db.query("rob_assessments", {"study_id": study_id})
-            rob = rob_list[0] if rob_list else {}
+            rob = rob_map.get(study_id, {})
             row.append(rob.get("tool", ""))
             row.append(rob.get("overall_judgment", ""))
         writer.writerow(row)
@@ -122,6 +175,10 @@ async def _export_xlsx(project_id: str, timestamp: str, include_rob: bool, db: D
     variables = db.query("variables", {"project_id": project_id}, order_by="order_index ASC")
     studies = db.query("studies", {"project_id": project_id}, order_by="title ASC")
 
+    study_ids = [s.get("study_id", "") for s in studies if s.get("study_id")]
+    ext_map_by_study = _fetch_extractions_map(db, project_id, study_ids)
+    rob_map = _fetch_rob_map(db, project_id, include_rob)
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Extraction Data"
@@ -142,14 +199,12 @@ async def _export_xlsx(project_id: str, timestamp: str, include_rob: bool, db: D
             s.get("journal", ""),
             s.get("doi", ""),
         ]
-        ext_list = db.query("extractions", {"study_id": study_id})
-        ext_map = {e.get("variable_id"): e.get("value", "") for e in ext_list}
+        ext_map = ext_map_by_study.get(study_id, {})
         for v in variables:
             row.append(ext_map.get(v.get("variable_id"), ""))
 
         if include_rob:
-            rob_list = db.query("rob_assessments", {"study_id": study_id})
-            rob = rob_list[0] if rob_list else {}
+            rob = rob_map.get(study_id, {})
             row.append(rob.get("tool", ""))
             row.append(rob.get("overall_judgment", ""))
         ws.append(row)
