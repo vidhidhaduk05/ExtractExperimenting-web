@@ -57,13 +57,62 @@ async def export_project(
         return await _export_csv(project_id, timestamp, include_rob, db)
 
 
-async def _export_csv(project_id: str, timestamp: str, include_rob: bool, db: DBBackend) -> Response:
+def _fetch_export_data(project_id: str, include_rob: bool, db: DBBackend):
     proj = db.get("projects", project_id)
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
 
     variables = db.query("variables", {"project_id": project_id}, order_by="order_index ASC")
     studies = db.query("studies", {"project_id": project_id}, order_by="title ASC")
+
+    # Batch fetch extractions and RoB assessments to prevent N+1 queries
+    ext_by_study: dict[str, dict[str, str]] = {}
+    rob_by_study: dict[str, dict] = {}
+
+    if studies:
+        # Pre-populate dictionaries for each study
+        for s in studies:
+            sid = s.get("study_id", "")
+            ext_by_study[sid] = {}
+            if include_rob:
+                rob_by_study[sid] = {}
+
+        # Fetch extractions for all studies in project in batch
+        try:
+            # Single SQL JOIN query for SQLiteBackend
+            rows = db.execute(
+                """SELECT e.study_id, e.variable_id, e.value FROM extractions e
+                   JOIN studies s ON e.study_id = s.study_id
+                   WHERE s.project_id = ?""",
+                (project_id,),
+            ).fetchall()
+            for r in rows:
+                sid = r["study_id"]
+                vid = r["variable_id"]
+                if sid in ext_by_study and vid:
+                    ext_by_study[sid][vid] = r["value"] or ""
+        except NotImplementedError:
+            # Fallback for non-SQL backends (e.g. DynamoDB)
+            for s in studies:
+                sid = s.get("study_id", "")
+                ext_list = db.query("extractions", {"study_id": sid})
+                ext_by_study[sid] = {e.get("variable_id"): e.get("value", "") for e in ext_list if e.get("variable_id")}
+
+        # Fetch RoB assessments for project in batch
+        if include_rob:
+            rob_list = db.query("rob_assessments", {"project_id": project_id})
+            for r in rob_list:
+                sid = r.get("study_id")
+                if sid and sid not in rob_by_study:
+                    rob_by_study[sid] = r
+                elif sid and not rob_by_study[sid]:
+                    rob_by_study[sid] = r
+
+    return proj, variables, studies, ext_by_study, rob_by_study
+
+
+async def _export_csv(project_id: str, timestamp: str, include_rob: bool, db: DBBackend) -> Response:
+    proj, variables, studies, ext_by_study, rob_by_study = _fetch_export_data(project_id, include_rob, db)
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -85,14 +134,12 @@ async def _export_csv(project_id: str, timestamp: str, include_rob: bool, db: DB
             s.get("journal", ""),
             s.get("doi", ""),
         ]
-        ext_list = db.query("extractions", {"study_id": study_id})
-        ext_map = {e.get("variable_id"): e.get("value", "") for e in ext_list}
+        ext_map = ext_by_study.get(study_id, {})
         for v in variables:
             row.append(ext_map.get(v.get("variable_id"), ""))
 
         if include_rob:
-            rob_list = db.query("rob_assessments", {"study_id": study_id})
-            rob = rob_list[0] if rob_list else {}
+            rob = rob_by_study.get(study_id, {})
             row.append(rob.get("tool", ""))
             row.append(rob.get("overall_judgment", ""))
         writer.writerow(row)
@@ -115,12 +162,7 @@ async def _export_xlsx(project_id: str, timestamp: str, include_rob: bool, db: D
     except ImportError:
         raise HTTPException(status_code=500, detail="openpyxl not installed")
 
-    proj = db.get("projects", project_id)
-    if not proj:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    variables = db.query("variables", {"project_id": project_id}, order_by="order_index ASC")
-    studies = db.query("studies", {"project_id": project_id}, order_by="title ASC")
+    proj, variables, studies, ext_by_study, rob_by_study = _fetch_export_data(project_id, include_rob, db)
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -142,14 +184,12 @@ async def _export_xlsx(project_id: str, timestamp: str, include_rob: bool, db: D
             s.get("journal", ""),
             s.get("doi", ""),
         ]
-        ext_list = db.query("extractions", {"study_id": study_id})
-        ext_map = {e.get("variable_id"): e.get("value", "") for e in ext_list}
+        ext_map = ext_by_study.get(study_id, {})
         for v in variables:
             row.append(ext_map.get(v.get("variable_id"), ""))
 
         if include_rob:
-            rob_list = db.query("rob_assessments", {"study_id": study_id})
-            rob = rob_list[0] if rob_list else {}
+            rob = rob_by_study.get(study_id, {})
             row.append(rob.get("tool", ""))
             row.append(rob.get("overall_judgment", ""))
         ws.append(row)
