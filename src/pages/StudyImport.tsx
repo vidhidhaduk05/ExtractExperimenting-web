@@ -78,7 +78,7 @@ export function StudyImport() {
         try {
           await api.uploadPdf(study.study_id, pdfFile);
           setPdfUploaded(true);
-        } catch (e) {
+        } catch (_e) {
           // PDF upload failure is non-fatal
         }
       }

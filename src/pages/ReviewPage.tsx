@@ -57,7 +57,7 @@ export function ReviewPage() {
         try {
           const r = await api.codedExtract(s.study_id, projectId!);
           results.push(r);
-        } catch (e) {
+        } catch (_e) {
           // Non-fatal per study
         }
       }
@@ -202,14 +202,14 @@ export function ReviewPage() {
       {/* Progress Summary */}
       {progress && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          <ProgressCard label="Included Studies" value={progress.total_studies} />
-          <ProgressCard label="Variables" value={progress.total_variables} />
-          <ProgressCard label="Extractions" value={progress.total_extractions} />
-          <ProgressCard label="Edited" value={progress.edited_count} />
+          <ProgressCard label="Included Studies" value={progress?.total_studies ?? 0} />
+          <ProgressCard label="Variables" value={progress?.total_variables ?? 0} />
+          <ProgressCard label="Extractions" value={progress?.total_extractions ?? 0} />
+          <ProgressCard label="Edited" value={progress?.edited_count ?? 0} />
           <ProgressCard
             label="Completion"
-            value={`${progress.completion_pct}%`}
-            highlight={progress.completion_pct === 100}
+            value={`${progress?.completion_pct ?? 0}%`}
+            highlight={progress?.completion_pct === 100}
           />
         </div>
       )}
@@ -223,13 +223,13 @@ export function ReviewPage() {
               Extraction Progress
             </span>
             <span className="text-sm text-gray-500">
-              {progress.total_extractions} / {progress.expected_extractions} cells filled
+              {progress?.total_extractions ?? 0} / {progress?.expected_extractions ?? 0} cells filled
             </span>
           </div>
           <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
             <div
               className="h-full bg-phylo-blue transition-all duration-500"
-              style={{ width: `${Math.min(progress.completion_pct, 100)}%` }}
+              style={{ width: `${Math.min(progress?.completion_pct ?? 0, 100)}%` }}
             />
           </div>
         </div>
@@ -238,7 +238,7 @@ export function ReviewPage() {
       {/* Data Matrix */}
       {matrixLoading && <p className="text-gray-400">Loading data matrix...</p>}
 
-      {matrix && matrix.studies.length === 0 && (
+      {matrix && (matrix.studies || []).length === 0 && (
         <div className="card p-12 text-center">
           <Table className="h-12 w-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500">No included studies with extraction data yet</p>
@@ -248,7 +248,7 @@ export function ReviewPage() {
         </div>
       )}
 
-      {matrix && matrix.studies.length > 0 && (
+      {matrix && (matrix.studies || []).length > 0 && (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -256,7 +256,7 @@ export function ReviewPage() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-600 sticky left-0 bg-gray-50">
                   Study
                 </th>
-                {matrix.variables.map((v) => (
+                {(matrix.variables || []).map((v) => (
                   <th key={v.variable_id} className="px-3 py-3 font-semibold text-gray-600 text-center min-w-[120px]">
                     <div className="text-xs leading-tight">{v.name}</div>
                     <div className="text-xs text-gray-400 font-normal mt-0.5">{v.section}</div>
@@ -265,7 +265,7 @@ export function ReviewPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {matrix.studies.map((s) => {
+              {(matrix.studies || []).map((s) => {
                 const studyHasPdf = (studies || []).find((st) => st.study_id === s.study_id)?.pdf_path;
                 return (
                 <tr key={s.study_id} className="hover:bg-gray-50">
@@ -289,8 +289,8 @@ export function ReviewPage() {
                       )}
                     </div>
                   </td>
-                  {matrix.variables.map((v) => {
-                    const cell = s.values[v.variable_id] as any;
+                  {(matrix.variables || []).map((v) => {
+                    const cell = (s.values || {})[v.variable_id] as any;
                     const hasValue = cell?.value && cell.value.trim();
                     const lowConfidence = cell && cell.confidence < 0.5;
                     const missingStyle = cell?.missing_code ? MISSING_CODE_STYLES[cell.missing_code] : undefined;
@@ -406,7 +406,7 @@ function VariableManagementPanel({
 }) {
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
-  const [addError, setAddError] = useState("");
+  const [_addError, setAddError] = useState("");
   const [newVar, setNewVar] = useState({
     section: "Cohort_Level",
     name: "",

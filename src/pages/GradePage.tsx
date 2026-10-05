@@ -94,7 +94,7 @@ export function GradePage() {
 
       {gradeList && gradeList.length > 0 && (
         <div className="space-y-3 mb-6">
-          {gradeList.map((g) => (
+          {(Array.isArray(gradeList) ? gradeList : []).map((g) => (
             <GradeCard
               key={g.grade_id}
               grade={g}
@@ -155,7 +155,7 @@ function CreateGradeForm({
             onChange={(e) => setMetaAnalysisId(e.target.value)}
           >
             <option value="">None</option>
-            {metaAnalyses.map((m) => (
+            {(Array.isArray(metaAnalyses) ? metaAnalyses : []).map((m) => (
               <option key={m.meta_id} value={m.meta_id}>
                 {m.outcome_label} ({m.analysis_type})
               </option>
@@ -304,7 +304,7 @@ function GradeDetail({ gradeId }: { gradeId: string }) {
       <div className="card p-5">
         <h3 className="text-sm font-semibold mb-4">Factors Reducing Certainty</h3>
         <div className="space-y-3">
-          {downgrading.map((f) => (
+          {(Array.isArray(downgrading) ? downgrading : []).map((f) => (
             <FactorRow key={f.factor_id} factor={f} gradeId={gradeId} />
           ))}
         </div>
@@ -314,7 +314,7 @@ function GradeDetail({ gradeId }: { gradeId: string }) {
       <div className="card p-5">
         <h3 className="text-sm font-semibold mb-4">Factors Raising Certainty</h3>
         <div className="space-y-3">
-          {upgrading.map((f) => (
+          {(Array.isArray(upgrading) ? upgrading : []).map((f) => (
             <FactorRow key={f.factor_id} factor={f} gradeId={gradeId} />
           ))}
         </div>

@@ -206,7 +206,13 @@ export const DEMO_SCREENING_SUMMARY: AIScreeningSummary = {
   awaiting_pdf: 0,
 };
 
-export const DEMO_REVIEW_MATRIX = [
+export const DEMO_REVIEW_MATRIX = {
+  variables: [
+    { variable_id: "v1_vessel_involved", project_id: "proj_pam_current", name: "Vessel Involved", section: "Clinical", order_index: 0, description: "Vessel involved" },
+    { variable_id: "v9_associated_aneurysm", project_id: "proj_pam_current", name: "Associated Aneurysm", section: "Clinical", order_index: 1, description: "Aneurysm" },
+    { variable_id: "v18_treatment_type", project_id: "proj_pam_current", name: "Treatment Type", section: "Clinical", order_index: 2, description: "Treatment" }
+  ],
+  studies: [
   {
     study_id: "study_albina_2024",
     title: "A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery",
@@ -234,4 +240,95 @@ export const DEMO_REVIEW_MATRIX = [
       { variable_id: "v18_treatment_type", value: "conservative (82%)", confidence: 0.97 },
     ],
   },
-];
+] };
+
+
+export const DEMO_ANALYSIS_PROFILE = {
+  summary: { total_studies: 6, total_variables: 12, total_extractions: 72, completion_pct: 100, numeric_variables: 2, categorical_variables: 10 },
+  per_variable: [],
+  missing_matrix: [],
+  correlation_matrix: { variables: [], values: [] },
+  outliers: []
+};
+
+export const DEMO_ROB_SUMMARY = {
+  project_id: "proj_pam_current",
+  tool: "rob2",
+  total_assessments: 6,
+  judgment_counts: { low: 4, some_concerns: 2, high: 0 },
+  assessments: []
+};
+
+export const DEMO_GRADE_LIST = [];
+
+export const DEMO_META_ANALYSES = [];
+
+export const DEMO_CRITERIA = {
+  project_id: "proj_pam_current",
+  inclusion: [{ id: "c1", text: "Pure arterial malformation on DSA/MRI" }],
+  exclusion: [{ id: "c2", text: "Arteriovenous shunting (AVM/dAVF)" }]
+};
+
+export const DEMO_SEARCH_STRINGS = {
+  project_id: "proj_pam_current",
+  strings: { pubmed: '("pure arterial malformation" OR "pure artery malformation")', embase: '("pure arterial malformation" OR "pure artery malformation")', cochrane: '("pure arterial malformation" OR "pure artery malformation")' }
+};
+
+export const DEMO_REVIEW_PROGRESS = {
+  project_id: "proj_pam_current",
+  total_studies: 6,
+  total_variables: 12,
+  total_extractions: 72,
+  expected_extractions: 72,
+  completion_pct: 100,
+  edited_count: 4
+};
+
+export const DEMO_CODE_GRAPH_STATS = {
+  total_nodes: 20,
+  total_links: 25,
+  file_types: { ".tsx": 10, ".ts": 10 },
+  relations: { "imports": 25 },
+  num_communities: 3,
+  top_communities: { "1": 10, "2": 5, "3": 5 },
+  top_source_files: [{ path: "src/main.tsx", node_count: 5 }]
+};
+
+export const DEMO_CODE_GRAPH = {
+  nodes: [
+    { id: "1", label: "src/main.tsx", community: 1, file_type: ".tsx" },
+    { id: "2", label: "src/App.tsx", community: 1, file_type: ".tsx" },
+    { id: "3", label: "src/lib/api.ts", community: 2, file_type: ".ts" },
+    { id: "4", label: "src/lib/demoData.ts", community: 2, file_type: ".ts" },
+    { id: "5", label: "src/lib/utils.ts", community: 2, file_type: ".ts" },
+    { id: "6", label: "src/components/layout/AppLayout.tsx", community: 1, file_type: ".tsx" },
+    { id: "7", label: "src/pages/AnalysisPage.tsx", community: 3, file_type: ".tsx" },
+    { id: "8", label: "src/pages/ReviewPage.tsx", community: 3, file_type: ".tsx" },
+    { id: "9", label: "src/pages/GradePage.tsx", community: 3, file_type: ".tsx" },
+    { id: "10", label: "src/pages/RobSummaryPage.tsx", community: 3, file_type: ".tsx" },
+    { id: "11", label: "src/pages/ScreeningPage.tsx", community: 3, file_type: ".tsx" },
+    { id: "12", label: "src/pages/ProjectList.tsx", community: 3, file_type: ".tsx" },
+    { id: "13", label: "src/pages/ProjectDetail.tsx", community: 3, file_type: ".tsx" },
+    { id: "14", label: "src/pages/StudyList.tsx", community: 3, file_type: ".tsx" },
+    { id: "15", label: "src/components/common/ErrorBoundary.tsx", community: 1, file_type: ".tsx" }
+  ],
+  links: [
+    { source: "1", target: "2", relation: "imports" },
+    { source: "1", target: "15", relation: "imports" },
+    { source: "2", target: "6", relation: "imports" },
+    { source: "6", target: "15", relation: "imports" },
+    { source: "6", target: "3", relation: "imports" },
+    { source: "6", target: "5", relation: "imports" },
+    { source: "7", target: "3", relation: "imports" },
+    { source: "8", target: "3", relation: "imports" },
+    { source: "9", target: "3", relation: "imports" },
+    { source: "10", target: "3", relation: "imports" },
+    { source: "11", target: "3", relation: "imports" },
+    { source: "12", target: "3", relation: "imports" },
+    { source: "13", target: "3", relation: "imports" },
+    { source: "14", target: "3", relation: "imports" },
+    { source: "3", target: "4", relation: "imports" }
+  ],
+  node_count: 15,
+  link_count: 15
+};
