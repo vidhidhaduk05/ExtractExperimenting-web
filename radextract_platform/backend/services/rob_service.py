@@ -478,15 +478,43 @@ def export_project_rob(project_id: str, format: str = "csv", db: Optional[DBBack
     studies = db.query("studies", {"project_id": project_id})
     study_map = {s["study_id"]: s for s in studies}
 
+    # Bulk fetch domain judgments and signaling answers to avoid N+1 queries
+    assessment_ids = {a["assessment_id"] for a in assessments if "assessment_id" in a}
+
+    # Query all domain judgments and signaling answers in bulk
+    all_domains = db.query_all("rob_domain_judgments")
+    all_answers = db.query_all("rob_signaling_answers")
+
+    # Map assessment_id -> list of domain judgments
+    domains_by_assessment = {}
+    for d in all_domains:
+        aid = d.get("assessment_id")
+        if aid in assessment_ids:
+            domains_by_assessment.setdefault(aid, []).append(d)
+
+    # Sort domain judgments for each assessment by domain_key
+    for aid in domains_by_assessment:
+        domains_by_assessment[aid].sort(key=lambda x: x.get("domain_key", ""))
+
+    # Map judgment_id -> list of signaling answers
+    all_judgment_ids = {d["judgment_id"] for d in all_domains if "judgment_id" in d}
+    answers_by_judgment = {}
+    for ans in all_answers:
+        jid = ans.get("judgment_id")
+        if jid in all_judgment_ids:
+            answers_by_judgment.setdefault(jid, []).append(ans)
+
+    # Sort signaling answers for each judgment by question_key
+    for jid in answers_by_judgment:
+        answers_by_judgment[jid].sort(key=lambda x: x.get("question_key", ""))
+
     rows = []
     for a in assessments:
         s = study_map.get(a.get("study_id"), {})
-        domains = db.query("rob_domain_judgments", {"assessment_id": a["assessment_id"]})
-        domains.sort(key=lambda x: x.get("domain_key", ""))
+        domains = domains_by_assessment.get(a["assessment_id"], [])
 
         for d in domains:
-            answers = db.query("rob_signaling_answers", {"judgment_id": d["judgment_id"]})
-            answers.sort(key=lambda x: x.get("question_key", ""))
+            answers = answers_by_judgment.get(d["judgment_id"], [])
 
             for ans in answers:
                 rows.append({
