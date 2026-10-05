@@ -202,6 +202,11 @@ export interface ReviewStudyRow {
     confidence: number;
     is_edited: boolean;
     extraction_id: string | null;
+    missing_code?: string | null;
+    confidence_tag?: string | null;
+    calc_note?: string | null;
+    source_text?: string | null;
+    source_page?: number | null;
   }>;
 }
 

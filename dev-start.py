@@ -43,8 +43,6 @@ def start_llm_gateway():
         p = subprocess.Popen(
             [sys.executable, "gemini_web2api.py"],
             cwd=gateway_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
         )
         PROCESSES.append(("llm-gateway", p))
     else:
@@ -92,7 +90,7 @@ def start_frontend():
     if shutil.which(npm_cmd) or shutil.which("npm"):
         print("[Dev] Starting Vite frontend on http://localhost:5173 ...")
         cmd = npm_cmd if shutil.which(npm_cmd) else "npm"
-        p = subprocess.Popen([cmd, "run", "dev"], cwd=frontend_dir)
+        p = subprocess.Popen([cmd, "run", "dev"], cwd=frontend_dir, shell=(os.name == "nt"))
         PROCESSES.append(("frontend", p))
     else:
         print("[Dev] npm not found on PATH.")

@@ -12,4 +12,11 @@
    - Always reference `graphify-out/GRAPH_REPORT.md` to identify central god nodes (`get_connection()`, `DeterministicScreener`, `A1`, `DoclingProcessor`) before proposing architectural refactors.
 
 4. **Keep Graph Updated**:
-   - When modifying code or adding new features, re-index changed files using `python -m graphify --update` so the knowledge graph remains synchronized.
+   - When modifying code or adding new features, re-index changed files using `python -m graphify --update` (or `graphify update .`) so the knowledge graph remains synchronized.
+
+5. **Delegating to Google Jules for Asynchronous & Repo-Wide Tasks**:
+   - For repository-wide refactoring, broad test repairs, or asynchronous background tasks, delegate to **Google Jules** via its REST API (`https://jules.googleapis.com/v1alpha`).
+   - Use source `sources/github/vidhidhaduk05/ExtractExperimenting` with header `x-goog-api-key: $JULES_API_KEY`.
+   - When a plan requires approval, inspect activities and call `POST /sessions/{id}:approvePlan`.
+   - Once Jules creates a Pull Request, verify changes, merge into `main`, fast-forward the local branch, and re-run `graphify update .`.
+   - Refer to `.agents/rules/jules.md` for complete API schemas and operational workflows.
