@@ -723,8 +723,8 @@ function log(msg, level, config) {
  * 其中 4 固定为版本号，y 的高位固定为 10xx（表示变体）
  * 
  * Cloudflare Workers 环境优先使用内置的 crypto.randomUUID() 方法。
- * 如果不可用（老版本或其他环境），使用 Math.random() 回退方案。
- * 回退方案的随机性较弱，不适合安全敏感场景。
+ * 如果不可用（老版本或其他环境），优先使用 crypto.getRandomValues 生成加密安全随机数。
+ * 兜底方案使用 Math.random() 生成伪随机数。
  * 
  * @returns {string} UUID v4 格式的字符串，如 "550e8400-e29b-41d4-a716-446655440000"
  */
@@ -733,7 +733,25 @@ function generateUUID() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  // 回退方案：手动生成符合 UUID v4 规范的字符串
+  // 加密安全的随机数回退方案
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    var rnds = new Uint8Array(16);
+    crypto.getRandomValues(rnds);
+    rnds[6] = (rnds[6] & 0x0f) | 0x40; // UUID v4 规范 (0100xxxx)
+    rnds[8] = (rnds[8] & 0x3f) | 0x80; // 变体标识 (10xxxxxx)
+    var hex = [];
+    for (var i = 0; i < 16; i++) {
+      hex.push(rnds[i].toString(16).padStart(2, '0'));
+    }
+    return (
+      hex.slice(0, 4).join('') + '-' +
+      hex.slice(4, 6).join('') + '-' +
+      hex.slice(6, 8).join('') + '-' +
+      hex.slice(8, 10).join('') + '-' +
+      hex.slice(10, 16).join('')
+    );
+  }
+  // 兜底方案：手动生成符合 UUID v4 规范的字符串
   // 使用 Math.random() 生成伪随机数
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     // 生成 0-15 的随机整数
