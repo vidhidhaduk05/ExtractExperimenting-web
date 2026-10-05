@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from database import reset_db, init_db, get_connection
 from services import rob_service, rob_ai
-from services.rob_tools import select_rob_tool, get_tool, tool_to_dict, get_judgment_label, get_judgment_color
+from services.rob_tools import select_rob_tool, get_tool, get_judgment_label
 
 
 # ── Study metadata (from PMC/PubMed) ──
