@@ -144,7 +144,7 @@ class TestExtractPicoFromFile:
         """Create a minimal PDF and extract PICO."""
         try:
             import pdfplumber
-            from reportlab.lib.pages import letter
+            from reportlab.lib.pagesizes import letter
             from reportlab.platypus import SimpleDocTemplate, Paragraph
             from reportlab.lib.styles import getSampleStyleSheet
         except ImportError:
