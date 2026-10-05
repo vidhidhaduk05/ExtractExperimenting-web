@@ -40,7 +40,7 @@ def _build_tool_choice_instruction(tool_choice, tool_defs: list) -> str:
       - "none": do not call any tool
       - "auto": decide whether to call tools (default)
       - "required": must call at least one tool
-      - {"type": "function", "function": {"name": "xxx"}}: must call specific tool
+      - {"type": "function", "function": {"name": "<tool_name>"}}: must call specific tool
     """
     if tool_choice == "none":
         return "\n\nIMPORTANT: Do NOT call any tools. Respond with text only."
