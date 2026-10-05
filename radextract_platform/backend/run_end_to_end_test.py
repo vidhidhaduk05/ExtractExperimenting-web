@@ -9,7 +9,6 @@ Executes:
 6. Risk of Bias (RoB) assessments.
 7. Meta-Analysis / Descriptive stats & JSON export.
 """
-import os
 import sys
 import json
 import uuid
@@ -29,8 +28,8 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 from config import settings, ensure_dirs
 from database import get_connection, init_db
-from services import pdf_service, auto_extract_service, rob_service, stats_engine, meta_analysis
-from services.llm_extractor import screen_fulltext_with_llm, extract_variables_with_llm
+from services import pdf_service, auto_extract_service, rob_service
+from services.llm_extractor import screen_fulltext_with_llm
 
 import docx
 
