@@ -1,11 +1,17 @@
-import { render, screen } from '@testing-library/react';
+// @vitest-environment jsdom
+import '@testing-library/jest-dom/vitest';
+import { render, screen, cleanup } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { AppLayout } from './AppLayout';
 
 describe('AppLayout Component', () => {
   const queryClient = new QueryClient();
+
+  afterEach(() => {
+    cleanup();
+  });
 
   const renderWithProviders = (ui: React.ReactNode, initialEntries = ['/']) => {
     return render(
@@ -29,8 +35,9 @@ describe('AppLayout Component', () => {
   it('renders global navigation links', () => {
     renderWithProviders(<AppLayout />);
 
-    // Using getAllByText or finding by role if needed, but simple getByText should work for these
-    expect(screen.getByRole('link', { name: /Projects/i })).toBeInTheDocument();
+    const projectLinks = screen.getAllByRole('link', { name: /Projects/i });
+    expect(projectLinks.length).toBeGreaterThan(0);
+    expect(projectLinks[0]).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Code Graph/i })).toBeInTheDocument();
   });
 

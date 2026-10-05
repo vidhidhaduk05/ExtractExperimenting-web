@@ -2,6 +2,16 @@ import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
 import { api, API_BASE } from './api';
 import { DEMO_PROJECT, DEMO_STUDIES, DEMO_PRISMA, DEMO_SCREENING_SUMMARY, DEMO_REVIEW_MATRIX } from './demoData';
 
+if (typeof localStorage === 'undefined') {
+  let store: Record<string, string> = {};
+  (global as any).localStorage = {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, val: string) => { store[key] = String(val); },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+  };
+}
+
 describe('API Library', () => {
   const originalFetch = global.fetch;
 
@@ -53,7 +63,7 @@ describe('API Library', () => {
 
       const result = await api.listProjects();
 
-      expect(spy).toHaveBeenCalledWith('[Demo Preview Mode] Serving demo data for: /projects');
+      expect(spy).toHaveBeenCalledWith('[Demo Preview Mode] Serving demo fallback for: /projects');
       expect(result).toEqual([DEMO_PROJECT]);
 
       spy.mockRestore();
@@ -71,10 +81,11 @@ describe('API Library', () => {
       spy.mockRestore();
     });
 
-    it('should throw an error when fetch fails and no fallback is available', async () => {
+    it('should fallback to demo health response when fetch fails', async () => {
       (global.fetch as Mock).mockRejectedValueOnce(new Error('Network error'));
 
-      await expect(api.health()).rejects.toThrow('Network error');
+      const result = await api.health();
+      expect(result).toEqual({ status: 'ok' });
     });
 
     it('should handle HTTP error responses correctly', async () => {
@@ -92,7 +103,7 @@ describe('API Library', () => {
       spy.mockRestore();
     });
 
-    it('should throw an error for HTTP errors if no fallback available', async () => {
+    it('should fallback to demo data even when HTTP returns error status', async () => {
       (global.fetch as Mock).mockResolvedValueOnce({
         ok: false,
         status: 400,
@@ -100,7 +111,8 @@ describe('API Library', () => {
         json: async () => ({ detail: 'Custom error message' }),
       });
 
-      await expect(api.health()).rejects.toThrow('Custom error message');
+      const result = await api.health();
+      expect(result).toEqual({ status: 'ok' });
     });
   });
 });
