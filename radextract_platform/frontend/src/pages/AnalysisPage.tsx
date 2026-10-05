@@ -159,16 +159,16 @@ function ProfileTab({
   if (loading) return <LoadingSpinner />;
   if (!profile) return <EmptyState message="No profiling data available." />;
 
-  const { summary, per_variable, missing_matrix, correlation_matrix, outliers } = profile;
+  const { summary, per_variable = [], missing_matrix = [], correlation_matrix, outliers = [] } = profile;
 
   return (
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <SummaryCard label="Studies" value={summary.total_studies} />
-        <SummaryCard label="Variables" value={summary.total_variables} />
-        <SummaryCard label="Extractions" value={summary.total_extractions} />
-        <SummaryCard label="Completion" value={`${summary.completion_pct}%`} />
+        <SummaryCard label="Studies" value={summary?.total_studies ?? 0} />
+        <SummaryCard label="Variables" value={summary?.total_variables ?? 0} />
+        <SummaryCard label="Extractions" value={summary?.total_extractions ?? 0} />
+        <SummaryCard label="Completion" value={`${summary?.completion_pct ?? 0}%`} />
       </div>
 
       {/* Per-variable table */}

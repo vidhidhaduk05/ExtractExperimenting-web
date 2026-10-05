@@ -40,7 +40,7 @@ export function RobSummaryPage() {
         </Link>
       </div>
 
-      {summary && summary.total_assessments > 0 ? (
+      {summary && (summary?.total_assessments ?? 0) > 0 ? (
         <div className="space-y-6">
           {/* Judgment Distribution */}
           <JudgmentDistribution summary={summary} />
@@ -66,7 +66,7 @@ export function RobSummaryPage() {
 }
 
 function JudgmentDistribution({ summary }: { summary: RobSummary }) {
-  const data = Object.entries(summary.judgment_counts).map(([key, count]) => ({
+  const data = Object.entries(summary?.judgment_counts || {}).map(([key, count]) => ({
     name: judgmentLabel(key),
     key,
     count,
@@ -100,8 +100,9 @@ function JudgmentDistribution({ summary }: { summary: RobSummary }) {
 
 function TrafficLightChart({ summary }: { summary: RobSummary }) {
   // Get all unique domain keys across assessments
-  const domainKeys = summary.assessments[0]?.domains?.map((d) => d.domain_key) || [];
-  const domainLabels = summary.assessments[0]?.domains?.map((d) => d.domain_label) || [];
+  const assessments = Array.isArray(summary?.assessments) ? summary.assessments : [];
+  const domainKeys = assessments[0]?.domains?.map((d) => d.domain_key) || [];
+  const domainLabels = assessments[0]?.domains?.map((d) => d.domain_label) || [];
 
   return (
     <div className="card p-5 overflow-x-auto">
@@ -123,7 +124,7 @@ function TrafficLightChart({ summary }: { summary: RobSummary }) {
           </tr>
         </thead>
         <tbody>
-          {summary.assessments.map((a) => (
+          {assessments.map((a) => (
             <tr key={a.assessment_id} className="hover:bg-gray-50">
               <td className="px-3 py-2 border-b border-gray-100 sticky left-0 bg-white">
                 <Link
@@ -189,8 +190,9 @@ function TrafficLightChart({ summary }: { summary: RobSummary }) {
 
 function AssessmentList({ summary }: { summary: RobSummary }) {
   // Group assessments by study
+  const assessments = Array.isArray(summary?.assessments) ? summary.assessments : [];
   const studyGroups: Record<string, { study_title: string; study_design: string; assessments: typeof summary.assessments }> = {};
-  for (const a of summary.assessments) {
+  for (const a of assessments) {
     if (!studyGroups[a.study_id]) {
       studyGroups[a.study_id] = {
         study_title: a.study_title || "Untitled",

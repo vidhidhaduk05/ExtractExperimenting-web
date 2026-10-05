@@ -209,19 +209,21 @@ export function ScreeningPage() {
     }
   };
 
+  const studyList = Array.isArray(studies) ? studies : [];
+
   // Effective selected study
   const selectedStudy = useMemo(() => {
-    if (!studies || studies.length === 0) return null;
+    if (!studyList || studyList.length === 0) return null;
     if (selectedStudyId) {
-      const found = studies.find((s) => s.study_id === selectedStudyId);
+      const found = studyList.find((s) => s.study_id === selectedStudyId);
       if (found) return found;
     }
-    return studies[0];
-  }, [studies, selectedStudyId]);
+    return studyList[0];
+  }, [studyList, selectedStudyId]);
 
   // Filtered Studies List
   const filteredStudies = useMemo(() => {
-    return studies.filter((s) => {
+    return studyList.filter((s) => {
       // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();

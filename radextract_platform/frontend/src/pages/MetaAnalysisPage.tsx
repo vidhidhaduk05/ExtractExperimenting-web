@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Play, RotateCcw, AlertTriangle, Info, BarChart3, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Play, RotateCcw, AlertTriangle, Info, BarChart3, TrendingUp, CheckCircle2, Copy } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-
+import { api } from '../lib/api';
 
 interface StudyData {
   name: string;
@@ -138,19 +138,14 @@ export function MetaAnalysisPage() {
       const g1 = (results?.studies || []).map((s: any) => Number(s.effect || s.effect_size || 1.4));
       const g2 = (results?.studies || []).map(() => 1.0);
 
-      const res = await fetch('/api/stats/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          group1: g1.length >= 3 ? g1 : [12.4, 14.1, 13.8, 15.2, 16.0, 14.7, 13.9, 15.5],
-          group2: g2.length >= 3 ? g2 : [10.1, 11.2, 9.8, 10.5, 12.0, 11.4, 10.9, 11.8],
-          group1_name: 'Intervention Effect',
-          group2_name: 'Null Comparator',
-          paired: false,
-          alpha: 0.05
-        })
+      const data = await api.analyzeStats({
+        group1: g1.length >= 3 ? g1 : [12.4, 14.1, 13.8, 15.2, 16.0, 14.7, 13.9, 15.5],
+        group2: g2.length >= 3 ? g2 : [10.1, 11.2, 9.8, 10.5, 12.0, 11.4, 10.9, 11.8],
+        group1_name: 'Intervention Effect',
+        group2_name: 'Null Comparator',
+        paired: false,
+        alpha: 0.05
       });
-      const data = await res.json();
       if (data.analysis) setStatsResult(data.analysis);
     } catch (err) {
       console.error('Error running stats:', err);
@@ -331,11 +326,19 @@ export function MetaAnalysisPage() {
                     <p className="text-sm font-mono text-emerald-800 mt-1">{statsResult.apa_formatted_result}</p>
                   </div>
 
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 relative">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">APA 7th Manuscript Narrative</h4>
                     <p className="text-sm text-slate-800 leading-relaxed italic bg-white p-3 rounded-lg border">
                       "{statsResult.apa_narrative}"
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(statsResult.apa_narrative)}
+                      className="absolute top-4 right-4 text-slate-400 hover:text-indigo-600 p-1 rounded bg-white"
+                      title="Copy APA narrative"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

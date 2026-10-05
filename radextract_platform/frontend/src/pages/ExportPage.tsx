@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Download, FileSpreadsheet, FileText, Table, Check, ExternalLink } from 'lucide-react';
-
+import { api } from '../lib/api';
 
 export function ExportPage() {
   const { projectId } = useParams();
@@ -45,21 +45,16 @@ export function ExportPage() {
     setDraftLoading(true);
     setManuscriptOpen(true);
     try {
-      const res = await fetch('/api/scientific-export/draft-manuscript', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: projectId,
-          section: section,
-          pooled_effect: 1.48,
-          ci_lower: 1.22,
-          ci_upper: 1.79,
-          measure: 'Odds Ratio (OR)',
-          i2: 42.5,
-          p_val: 0.001
-        })
+      const data = await api.draftManuscript({
+        project_id: projectId,
+        section: section,
+        pooled_effect: 1.48,
+        ci_lower: 1.22,
+        ci_upper: 1.79,
+        measure: 'Odds Ratio (OR)',
+        i2: 42.5,
+        p_val: 0.001
       });
-      const data = await res.json();
       if (data.markdown) setManuscriptText(data.markdown);
     } catch (err) {
       console.error('Error drafting manuscript:', err);
@@ -74,15 +69,10 @@ export function ExportPage() {
     setBibLoading(true);
     setBibModalOpen(true);
     try {
-      const res = await fetch('/api/scientific-export/bibliography', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: projectId,
-          format: fmt
-        })
+      const data = await api.exportBibliography({
+        project_id: projectId,
+        format: fmt
       });
-      const data = await res.json();
       if (data.content) setBibText(data.content);
     } catch (err) {
       console.error('Error exporting bibliography:', err);

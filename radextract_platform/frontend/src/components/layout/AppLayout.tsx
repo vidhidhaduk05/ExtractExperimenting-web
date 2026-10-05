@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { useState, useEffect } from "react";
 import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { ErrorBoundary } from "../common/ErrorBoundary";
 
 const navItems = [
   { to: "/projects", label: "Projects", icon: Home, end: true },
@@ -269,7 +270,9 @@ export function AppLayout() {
           </div>
         </header>
         <div className="flex-1 overflow-y-auto">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </main>
     </div>

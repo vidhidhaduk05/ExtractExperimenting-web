@@ -1,4 +1,24 @@
-import { DEMO_PROJECT, DEMO_STUDIES, DEMO_PRISMA, DEMO_SCREENING_SUMMARY, DEMO_REVIEW_MATRIX } from "./demoData";
+import { 
+  DEMO_PROJECT, 
+  DEMO_STUDIES, 
+  DEMO_PRISMA, 
+  DEMO_SCREENING_SUMMARY, 
+  DEMO_REVIEW_MATRIX,
+  DEMO_ANALYSIS_PROFILE,
+  DEMO_ROB_SUMMARY,
+  DEMO_GRADE_LIST,
+  DEMO_META_ANALYSES,
+  DEMO_CRITERIA,
+  DEMO_SEARCH_STRINGS,
+  DEMO_REVIEW_PROGRESS,
+  DEMO_CODE_GRAPH,
+  DEMO_CODE_GRAPH_STATS,
+  DEMO_STATS_ANALYSIS,
+  DEMO_DRAFT_MANUSCRIPT,
+  DEMO_BIBLIOGRAPHY,
+  DEMO_PRISMA_MERMAID,
+  DEMO_MULTI_DATABASE_SEARCH
+} from "./demoData";
 
 const API_HOST = typeof window !== "undefined" ? window.location.hostname : "localhost";
 export const API_BASE =
@@ -7,8 +27,36 @@ export const API_BASE =
   (API_HOST === "localhost" || API_HOST === "127.0.0.1" ? `http://${API_HOST}:8000/api` : `/api`);
 
 function getDemoFallback(path: string): any {
-  if (path === "/projects" || path.startsWith("/projects?")) {
-    return [DEMO_PROJECT];
+  // Specific routes first to avoid catching on general prefixes
+  if (path.includes("/analysis/profile") || path.includes("/analysis")) {
+    return DEMO_ANALYSIS_PROFILE;
+  }
+  if (path.includes("/rob/summary") || path.includes("/rob-summary") || path.includes("/rob")) {
+    return DEMO_ROB_SUMMARY;
+  }
+  if (path.includes("/grade")) {
+    return DEMO_GRADE_LIST;
+  }
+  if (path.includes("/meta-analyses")) {
+    return DEMO_META_ANALYSES;
+  }
+  if (path.includes("/criteria")) {
+    return DEMO_CRITERIA;
+  }
+  if (path.includes("/search-strings")) {
+    return DEMO_SEARCH_STRINGS;
+  }
+  if (path.includes("/review/progress")) {
+    return DEMO_REVIEW_PROGRESS;
+  }
+  if (path.includes("/review/matrix") || path.includes("/review")) {
+    return DEMO_REVIEW_MATRIX;
+  }
+  if (path.includes("/graphify/code/stats") || path.includes("/code/stats")) {
+    return DEMO_CODE_GRAPH_STATS;
+  }
+  if (path.includes("/graphify") || path.includes("/graph")) {
+    return DEMO_CODE_GRAPH;
   }
   if (path.includes("/studies")) {
     return DEMO_STUDIES;
@@ -16,11 +64,11 @@ function getDemoFallback(path: string): any {
   if (path.includes("/prisma")) {
     return DEMO_PRISMA;
   }
-  if (path.includes("/ai-screening/summary") || path.includes("/screening/status") || path.includes("/screening")) {
+  if (path.includes("/ai-screening/summary") || path.includes("/screening/summary") || path.includes("/screening-summary") || path.includes("/screening/status")) {
     return DEMO_SCREENING_SUMMARY;
   }
-  if (path.includes("/review/matrix") || path.includes("/review")) {
-    return DEMO_REVIEW_MATRIX;
+  if (path.includes("/screening")) {
+    return DEMO_STUDIES;
   }
   if (path.includes("/pico")) {
     return JSON.parse(DEMO_PROJECT.pico_json);
@@ -28,7 +76,27 @@ function getDemoFallback(path: string): any {
   if (path.includes("/hypothesis")) {
     return { hypothesis: DEMO_PROJECT.hypothesis, research_question: DEMO_PROJECT.research_question };
   }
-  if (path.includes("/projects/")) {
+  // Generic route handling last
+  if (path === "/stats/analyze" || path.includes("/stats/analyze")) {
+    return DEMO_STATS_ANALYSIS;
+  }
+  if (path === "/scientific-export/draft-manuscript" || path.includes("/scientific-export/draft-manuscript")) {
+    return DEMO_DRAFT_MANUSCRIPT;
+  }
+  if (path === "/scientific-export/bibliography" || path.includes("/scientific-export/bibliography")) {
+    return DEMO_BIBLIOGRAPHY;
+  }
+  if (path === "/scientific-export/prisma-mermaid" || path.includes("/scientific-export/prisma-mermaid")) {
+    return DEMO_PRISMA_MERMAID;
+  }
+  if (path === "/search/multi-database" || path.includes("/search/multi-database")) {
+    return DEMO_MULTI_DATABASE_SEARCH;
+  }
+  // Generic route handling last
+  if (path === "/projects" || path.startsWith("/projects?")) {
+    return [DEMO_PROJECT];
+  }
+  if (path.match(/\/projects\/[^/]+$/)) {
     return DEMO_PROJECT;
   }
   return null;
@@ -1937,6 +2005,23 @@ export const api = {
   /** Get all clarification questions for a study */
   getStudyClarifications: (studyId: string) =>
     request<ClarificationQuestion[]>(`/studies/${studyId}/clarifications`),
+
+  // ── K-Dense-AI Scientific Review and Statistical Methods ──
+
+  analyzeStats: (data: { group1: number[], group2: number[], group1_name?: string, group2_name?: string, paired?: boolean, alpha?: number }) =>
+    request<any>('/stats/analyze', { method: 'POST', body: JSON.stringify(data) }),
+
+  draftManuscript: (data: { project_id: string, section?: string, pooled_effect?: number, ci_lower?: number, ci_upper?: number, measure?: string, i2?: number, p_val?: number }) =>
+    request<any>('/scientific-export/draft-manuscript', { method: 'POST', body: JSON.stringify(data) }),
+
+  exportBibliography: (data: { project_id: string, format: string }) =>
+    request<any>('/scientific-export/bibliography', { method: 'POST', body: JSON.stringify(data) }),
+
+  prismaMermaid: (data: Record<string, any>) =>
+    request<any>('/scientific-export/prisma-mermaid', { method: 'POST', body: JSON.stringify(data) }),
+
+  searchMultiDatabase: (data: { query: string, sources?: string[], max_per_source?: number }) =>
+    request<any>('/search/multi-database', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 
