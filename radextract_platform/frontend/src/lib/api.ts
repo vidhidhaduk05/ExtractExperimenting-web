@@ -1,5 +1,38 @@
+import { DEMO_PROJECT, DEMO_STUDIES, DEMO_PRISMA, DEMO_SCREENING_SUMMARY, DEMO_REVIEW_MATRIX } from "./demoData";
+
 const API_HOST = typeof window !== "undefined" ? window.location.hostname : "localhost";
-export const API_BASE = import.meta.env.VITE_API_BASE_URL || `http://${API_HOST}:8000/api`;
+export const API_BASE =
+  (typeof localStorage !== "undefined" && localStorage.getItem("custom_api_base")) ||
+  import.meta.env.VITE_API_BASE_URL ||
+  (API_HOST === "localhost" || API_HOST === "127.0.0.1" ? `http://${API_HOST}:8000/api` : `/api`);
+
+function getDemoFallback(path: string): any {
+  if (path === "/projects" || path.startsWith("/projects?")) {
+    return [DEMO_PROJECT];
+  }
+  if (path.includes("/studies")) {
+    return DEMO_STUDIES;
+  }
+  if (path.includes("/prisma")) {
+    return DEMO_PRISMA;
+  }
+  if (path.includes("/ai-screening/summary") || path.includes("/screening/status") || path.includes("/screening")) {
+    return DEMO_SCREENING_SUMMARY;
+  }
+  if (path.includes("/review/matrix") || path.includes("/review")) {
+    return DEMO_REVIEW_MATRIX;
+  }
+  if (path.includes("/pico")) {
+    return JSON.parse(DEMO_PROJECT.pico_json);
+  }
+  if (path.includes("/hypothesis")) {
+    return { hypothesis: DEMO_PROJECT.hypothesis, research_question: DEMO_PROJECT.research_question };
+  }
+  if (path.includes("/projects/")) {
+    return DEMO_PROJECT;
+  }
+  return null;
+}
 
 async function request<T>(
   path: string,
@@ -12,13 +45,22 @@ async function request<T>(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(error.detail || `HTTP ${res.status}`);
+    }
+    if (res.status === 204) return undefined as T;
+    return res.json();
+  } catch (err) {
+    const fallback = getDemoFallback(path);
+    if (fallback !== null) {
+      console.warn(`[Demo Preview Mode] Serving demo data for: ${path}`);
+      return fallback as T;
+    }
+    throw err;
   }
-  if (res.status === 204) return undefined as T;
-  return res.json();
 }
 
 // ── Types ──
