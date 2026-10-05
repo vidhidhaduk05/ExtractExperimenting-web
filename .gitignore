@@ -66,3 +66,6 @@ Biomni/
 # LocalStack
 .localstack/
 *.localstack.json
+
+# Web Repo Deployment directory
+radextract_web_repo/
