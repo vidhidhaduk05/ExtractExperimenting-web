@@ -59,8 +59,11 @@ function getDemoFallback(path: string): any {
   if (path.includes("/prisma")) {
     return DEMO_PRISMA;
   }
-  if (path.includes("/ai-screening/summary") || path.includes("/screening/status") || path.includes("/screening")) {
+  if (path.includes("/ai-screening/summary") || path.includes("/screening/summary") || path.includes("/screening-summary") || path.includes("/screening/status")) {
     return DEMO_SCREENING_SUMMARY;
+  }
+  if (path.includes("/screening")) {
+    return DEMO_STUDIES;
   }
   if (path.includes("/pico")) {
     return JSON.parse(DEMO_PROJECT.pico_json);
