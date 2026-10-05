@@ -372,6 +372,85 @@ def test_start_analysis_title_only(client, monkeypatch):
     assert data["title_screened"] == 4
 
 
+def test_start_ai_analysis_finally_clears_progress_on_error(client, monkeypatch):
+    """Ensure screening_progress.finish is called even when run_title_screening raises an exception."""
+    from unittest.mock import MagicMock
+    from routers import ai_screening
+
+    pid, _, _, _, _ = _setup_project_and_studies(client)
+
+    finish_mock = MagicMock()
+    monkeypatch.setattr(ai_screening.screening_progress, "finish", finish_mock)
+
+    def mock_run_title_screening(*args, **kwargs):
+        raise RuntimeError("LLM service unavailable")
+
+    monkeypatch.setattr(ai_screening.pipeline, "run_title_screening", mock_run_title_screening)
+
+    with pytest.raises(RuntimeError, match="LLM service unavailable"):
+        client.post(f"/api/projects/{pid}/ai-screening/start-analysis")
+
+    finish_mock.assert_called_once_with(pid)
+
+
+def test_start_ai_analysis_check_project_access_denied(client, monkeypatch):
+    """Ensure check_project_access exception halts execution before screening runs."""
+    from fastapi import HTTPException
+    from unittest.mock import MagicMock
+    from routers import ai_screening
+
+    pid, _, _, _, _ = _setup_project_and_studies(client)
+
+    def mock_check_access(conn, project_id, user):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    finish_mock = MagicMock()
+    monkeypatch.setattr(ai_screening, "check_project_access", mock_check_access)
+    monkeypatch.setattr(ai_screening.screening_progress, "finish", finish_mock)
+
+    r = client.post(f"/api/projects/{pid}/ai-screening/start-analysis")
+    assert r.status_code == 403
+    assert r.json()["detail"] == "Access denied"
+    finish_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_start_ai_analysis_direct_function_call(monkeypatch):
+    """Directly test start_ai_analysis async function with mocks."""
+    from unittest.mock import MagicMock
+    from routers.ai_screening import start_ai_analysis
+
+    mock_conn = MagicMock()
+    mock_pipeline = MagicMock()
+    mock_pipeline.run_title_screening.return_value = [{"study_id": "s1"}]
+    mock_pipeline.get_pipeline_summary.return_value = {
+        "project_id": "p1",
+        "total": 10,
+        "title_screened": 1,
+        "abstract_screened": 0,
+        "fulltext_screened": 0,
+        "included": 0,
+        "excluded": 0,
+        "uncertain": 0,
+        "awaiting_clarification": 0,
+        "awaiting_pdf": 0,
+        "pending": 9,
+    }
+
+    mock_progress = MagicMock()
+
+    monkeypatch.setattr("routers.ai_screening.check_project_access", MagicMock())
+    monkeypatch.setattr("routers.ai_screening.pipeline", mock_pipeline)
+    monkeypatch.setattr("routers.ai_screening.screening_progress", mock_progress)
+
+    res = await start_ai_analysis("p1", user={"id": "u1"}, conn=mock_conn)
+
+    assert res.total == 10
+    assert res.title_screened == 1
+    mock_progress.finish.assert_called_once_with("p1")
+    mock_pipeline.get_pipeline_summary.assert_called_once_with("p1", mock_conn, title_count=1)
+
+
 def test_continue_to_abstract(client, monkeypatch):
     monkeypatch.setattr("services.ai_screening_pipeline.get_client", lambda: MockLLMClient())
     pid, _, _, _, _ = _setup_project_and_studies(client)
