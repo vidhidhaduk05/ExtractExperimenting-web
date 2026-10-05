@@ -42,7 +42,7 @@
  * 
  * 4. 【SAPISID 自动提取】增加了从 COOKIE_STRING 自动提取 SAPISID 的防御性逻辑。
  *    - 用户通常从浏览器复制完整 Cookie 字符串
- *    - Cookie 格式: "__Secure-1PSID=xxx; SAPISID=yyy; ..."
+ *    - Cookie 格式: "__Secure-1PSID=value; SAPISID=value; ..."
  *    - 如果用户设置了 COOKIE_STRING 但忘记单独设置 SAPISID
  *    - 程序会自动从 Cookie 字符串中正则提取 SAPISID 值
  *    - 正则表达式: /SAPISID=([^;]+)/
@@ -212,7 +212,7 @@ var DEFAULT_CONFIG = {
   // Gemini 对匿名请求有严格的速率限制（容易触发 429 Too Many Requests）
   // 提供有效的 Cookie 可以大幅提升稳定性和降低限流概率
   // cookieString: 从浏览器复制的完整 Cookie 字符串
-  //   格式: "__Secure-1PSID=xxx; __Secure-3PSID=xxx; SAPISID=xxx; ..."
+  //   格式: "__Secure-1PSID=value; __Secure-3PSID=value; SAPISID=value; ..."
   //   支持多个 Cookie（用 | 分隔），每次请求随机选择一个
   //   示例: "cookie1| cookie2| cookie3"
   cookieString: null,
@@ -719,8 +719,8 @@ function log(msg, level, config) {
 /**
  * 生成 UUID v4（通用唯一标识符）
  * 
- * UUID v4 格式: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
- * 其中 4 固定为版本号，y 的高位固定为 10xx（表示变体）
+ * UUID v4 格式: 00000000-0000-4000-8000-000000000000
+ * 其中 4 固定为版本号，8/9/a/b 的高位固定为 10（表示变体）
  * 
  * Cloudflare Workers 环境优先使用内置的 crypto.randomUUID() 方法。
  * 如果不可用（老版本或其他环境），使用 Math.random() 回退方案。
@@ -735,7 +735,8 @@ function generateUUID() {
   }
   // 回退方案：手动生成符合 UUID v4 规范的字符串
   // 使用 Math.random() 生成伪随机数
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+  var uuidTemplate = 'x'.repeat(8) + '-' + 'x'.repeat(4) + '-4' + 'x'.repeat(3) + '-y' + 'x'.repeat(3) + '-' + 'x'.repeat(12);
+  return uuidTemplate.replace(/[xy]/g, function (c) {
     // 生成 0-15 的随机整数
     var r = Math.random() * 16 | 0;
     // x 位置直接使用随机值
@@ -1518,7 +1519,7 @@ function messagesToPrompt(messages, tools) {
  * 
  * 解析后转换为 OpenAI 格式的工具调用对象:
  * {
- *   id: "call_xxxxxxxxxxxx",
+ *   id: "call_1234567890ab",
  *   type: "function",
  *   function: {
  *     name: "get_weather",
