@@ -206,7 +206,13 @@ export const DEMO_SCREENING_SUMMARY: AIScreeningSummary = {
   awaiting_pdf: 0,
 };
 
-export const DEMO_REVIEW_MATRIX = [
+export const DEMO_REVIEW_MATRIX = {
+  variables: [
+    { variable_id: "v1_vessel_involved", project_id: "proj_pam_current", name: "Vessel Involved", section: "Clinical", order_index: 0, description: "Vessel involved" },
+    { variable_id: "v9_associated_aneurysm", project_id: "proj_pam_current", name: "Associated Aneurysm", section: "Clinical", order_index: 1, description: "Aneurysm" },
+    { variable_id: "v18_treatment_type", project_id: "proj_pam_current", name: "Treatment Type", section: "Clinical", order_index: 2, description: "Treatment" }
+  ],
+  studies: [
   {
     study_id: "study_albina_2024",
     title: "A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery",
@@ -234,4 +240,68 @@ export const DEMO_REVIEW_MATRIX = [
       { variable_id: "v18_treatment_type", value: "conservative (82%)", confidence: 0.97 },
     ],
   },
-];
+] };
+
+
+export const DEMO_ANALYSIS_PROFILE = {
+  summary: { total_studies: 6, total_variables: 12, total_extractions: 72, completion_pct: 100, numeric_variables: 2, categorical_variables: 10 },
+  per_variable: [],
+  missing_matrix: [],
+  correlation_matrix: { variables: [], values: [] },
+  outliers: []
+};
+
+export const DEMO_ROB_SUMMARY = {
+  project_id: "proj_pam_current",
+  tool: "rob2",
+  total_assessments: 6,
+  judgment_counts: { low: 4, some_concerns: 2, high: 0 },
+  assessments: []
+};
+
+export const DEMO_GRADE_LIST = [];
+
+export const DEMO_META_ANALYSES = [];
+
+export const DEMO_CRITERIA = {
+  project_id: "proj_pam_current",
+  inclusion: [{ id: "c1", text: "Pure arterial malformation on DSA/MRI" }],
+  exclusion: [{ id: "c2", text: "Arteriovenous shunting (AVM/dAVF)" }]
+};
+
+export const DEMO_SEARCH_STRINGS = {
+  project_id: "proj_pam_current",
+  strings: { pubmed: '("pure arterial malformation" OR "pure artery malformation")', embase: '("pure arterial malformation" OR "pure artery malformation")', cochrane: '("pure arterial malformation" OR "pure artery malformation")' }
+};
+
+export const DEMO_REVIEW_PROGRESS = {
+  project_id: "proj_pam_current",
+  total_studies: 6,
+  total_variables: 12,
+  total_extractions: 72,
+  expected_extractions: 72,
+  completion_pct: 100,
+  edited_count: 4
+};
+
+export const DEMO_CODE_GRAPH_STATS = {
+  total_nodes: 20,
+  total_links: 25,
+  file_types: { ".tsx": 10, ".ts": 10 },
+  relations: { "imports": 25 },
+  num_communities: 3,
+  top_communities: { "1": 10, "2": 5, "3": 5 },
+  top_source_files: [{ path: "src/main.tsx", node_count: 5 }]
+};
+
+export const DEMO_CODE_GRAPH = {
+  nodes: [
+    { id: "1", label: "src/main.tsx", community: 1, file_type: ".tsx" },
+    { id: "2", label: "src/App.tsx", community: 1, file_type: ".tsx" }
+  ],
+  links: [
+    { source: "1", target: "2", relation: "imports" }
+  ],
+  node_count: 2,
+  link_count: 1
+};

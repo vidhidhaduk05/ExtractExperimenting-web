@@ -1,4 +1,19 @@
-import { DEMO_PROJECT, DEMO_STUDIES, DEMO_PRISMA, DEMO_SCREENING_SUMMARY, DEMO_REVIEW_MATRIX } from "./demoData";
+import { 
+  DEMO_PROJECT, 
+  DEMO_STUDIES, 
+  DEMO_PRISMA, 
+  DEMO_SCREENING_SUMMARY, 
+  DEMO_REVIEW_MATRIX,
+  DEMO_ANALYSIS_PROFILE,
+  DEMO_ROB_SUMMARY,
+  DEMO_GRADE_LIST,
+  DEMO_META_ANALYSES,
+  DEMO_CRITERIA,
+  DEMO_SEARCH_STRINGS,
+  DEMO_REVIEW_PROGRESS,
+  DEMO_CODE_GRAPH,
+  DEMO_CODE_GRAPH_STATS
+} from "./demoData";
 
 const API_HOST = typeof window !== "undefined" ? window.location.hostname : "localhost";
 export const API_BASE =
@@ -7,8 +22,36 @@ export const API_BASE =
   (API_HOST === "localhost" || API_HOST === "127.0.0.1" ? `http://${API_HOST}:8000/api` : `/api`);
 
 function getDemoFallback(path: string): any {
-  if (path === "/projects" || path.startsWith("/projects?")) {
-    return [DEMO_PROJECT];
+  // Specific routes first to avoid catching on general prefixes
+  if (path.includes("/analysis/profile") || path.includes("/analysis")) {
+    return DEMO_ANALYSIS_PROFILE;
+  }
+  if (path.includes("/rob/summary") || path.includes("/rob-summary") || path.includes("/rob")) {
+    return DEMO_ROB_SUMMARY;
+  }
+  if (path.includes("/grade")) {
+    return DEMO_GRADE_LIST;
+  }
+  if (path.includes("/meta-analyses")) {
+    return DEMO_META_ANALYSES;
+  }
+  if (path.includes("/criteria")) {
+    return DEMO_CRITERIA;
+  }
+  if (path.includes("/search-strings")) {
+    return DEMO_SEARCH_STRINGS;
+  }
+  if (path.includes("/review/progress")) {
+    return DEMO_REVIEW_PROGRESS;
+  }
+  if (path.includes("/review/matrix") || path.includes("/review")) {
+    return DEMO_REVIEW_MATRIX;
+  }
+  if (path.includes("/graphify/code/stats") || path.includes("/code/stats")) {
+    return DEMO_CODE_GRAPH_STATS;
+  }
+  if (path.includes("/graphify") || path.includes("/graph")) {
+    return DEMO_CODE_GRAPH;
   }
   if (path.includes("/studies")) {
     return DEMO_STUDIES;
@@ -19,16 +62,17 @@ function getDemoFallback(path: string): any {
   if (path.includes("/ai-screening/summary") || path.includes("/screening/status") || path.includes("/screening")) {
     return DEMO_SCREENING_SUMMARY;
   }
-  if (path.includes("/review/matrix") || path.includes("/review")) {
-    return DEMO_REVIEW_MATRIX;
-  }
   if (path.includes("/pico")) {
     return JSON.parse(DEMO_PROJECT.pico_json);
   }
   if (path.includes("/hypothesis")) {
     return { hypothesis: DEMO_PROJECT.hypothesis, research_question: DEMO_PROJECT.research_question };
   }
-  if (path.includes("/projects/")) {
+  // Generic route handling last
+  if (path === "/projects" || path.startsWith("/projects?")) {
+    return [DEMO_PROJECT];
+  }
+  if (path.match(/\/projects\/[^/]+$/)) {
     return DEMO_PROJECT;
   }
   return null;
