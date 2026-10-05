@@ -485,3 +485,90 @@ def test_pipeline_summary_counts():
     summary = pipe.run_full_pipeline(pid, conn, client=MockLLMClient())
     db_total = conn.execute("SELECT COUNT(*) as c FROM studies WHERE project_id = ?", (pid,)).fetchone()["c"]
     assert summary["total"] == db_total
+
+
+def test_get_ai_screening_status_endpoint(client, monkeypatch):
+    """Test GET /api/projects/{project_id}/ai-screening/status returning AIScreeningSummary."""
+    monkeypatch.setattr("services.ai_screening_pipeline.get_client", lambda: MockLLMClient())
+    pid, _, _, _, _ = _setup_project_and_studies(client)
+
+    # Initial status
+    r = client.get(f"/api/projects/{pid}/ai-screening/status")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["total"] == 4
+    assert data["title_screened"] == 0
+    assert data["included"] == 0
+    assert data["excluded"] == 0
+
+    # Run screening and check updated status
+    client.post(f"/api/projects/{pid}/ai-screening/start-analysis")
+    r2 = client.get(f"/api/projects/{pid}/ai-screening/status")
+    assert r2.status_code == 200
+    data2 = r2.json()
+    assert data2["total"] == 4
+    assert data2["included"] == 1
+    assert data2["excluded"] == 1
+
+
+def test_get_ai_screening_status_empty_project(client):
+    """Test GET status on a project with no studies returns all zero counts."""
+    p_resp = client.post("/api/projects", json={"name": "Empty Status Project"})
+    pid = p_resp.json()["project_id"]
+
+    r = client.get(f"/api/projects/{pid}/ai-screening/status")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["total"] == 0
+    assert data["included"] == 0
+    assert data["excluded"] == 0
+    assert data["uncertain"] == 0
+    assert data["awaiting_clarification"] == 0
+
+
+def test_get_ai_screening_status_forbidden_when_not_member(client, monkeypatch):
+    """Test GET status returns 403 when check_project_access raises HTTP 403."""
+    from fastapi import HTTPException
+
+    p_resp = client.post("/api/projects", json={"name": "Restricted Project"})
+    pid = p_resp.json()["project_id"]
+
+    def mock_check_project_access(conn, project_id, user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    monkeypatch.setattr("routers.ai_screening.check_project_access", mock_check_project_access)
+
+    r = client.get(f"/api/projects/{pid}/ai-screening/status")
+    assert r.status_code == 403
+    assert r.json()["detail"] == "Insufficient permissions"
+
+
+@pytest.mark.asyncio
+async def test_get_ai_screening_status_unit_function_mock(monkeypatch):
+    """Unit test for get_ai_screening_status router function directly."""
+    from unittest.mock import MagicMock
+    from routers.ai_screening import get_ai_screening_status, pipeline
+    from models import AIScreeningSummary
+
+    mock_conn = MagicMock()
+    mock_summary = {
+        "total": 10,
+        "title_screened": 8,
+        "abstract_screened": 5,
+        "fulltext_screened": 2,
+        "included": 1,
+        "excluded": 4,
+        "pending": 2,
+        "uncertain": 1,
+        "awaiting_clarification": 1,
+        "awaiting_pdf": 1,
+    }
+
+    monkeypatch.setattr("routers.ai_screening.check_project_access", lambda conn, pid, user: None)
+    monkeypatch.setattr(pipeline, "get_pipeline_summary", lambda pid, conn: mock_summary)
+
+    result = await get_ai_screening_status(project_id="test_pid", user={"id": "u1"}, conn=mock_conn)
+    assert isinstance(result, AIScreeningSummary)
+    assert result.total == 10
+    assert result.title_screened == 8
+    assert result.included == 1
