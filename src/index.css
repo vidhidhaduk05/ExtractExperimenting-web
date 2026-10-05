@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #FAF9F3;
+    --foreground: #000000;
+    --card: #FFFFFF;
+    --border: #E5E2DA;
+    --muted: #F5F3EC;
+    --muted-foreground: #6B6B6B;
+    --primary: #0279EE;
+    --primary-foreground: #FFFFFF;
+  }
+
+  body {
+    @apply bg-phylo-paper text-black font-sans antialiased;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-phylo-blue disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-phylo-blue text-white hover:bg-blue-700;
+  }
+  .btn-secondary {
+    @apply btn bg-gray-100 text-gray-900 hover:bg-gray-200;
+  }
+  .btn-danger {
+    @apply btn bg-red-500 text-white hover:bg-red-600;
+  }
+  .card {
+    @apply rounded-lg border border-gray-200 bg-white shadow-sm;
+  }
+  .input {
+    @apply w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-phylo-blue focus:outline-none focus:ring-1 focus:ring-phylo-blue;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+}
