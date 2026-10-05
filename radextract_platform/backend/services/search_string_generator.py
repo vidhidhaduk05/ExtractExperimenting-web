@@ -471,16 +471,12 @@ def _extract_key_phrases(text: str) -> list[str]:
 def _lookup_term(phrase: str) -> Optional[dict]:
     """Look up a phrase in the MeSH mapping (case-insensitive).
 
-    Tries exact match first, then partial match (if any mapping key is
-    contained in the phrase).
+    Tries exact match first, then partial whole-word match (sorting keys
+    by length descending so longer, more specific keys match first).
     """
     phrase_lower = phrase.lower().strip()
     if phrase_lower in MESH_MAPPING:
         return MESH_MAPPING[phrase_lower]
-    # Try partial matching — check if any mapping key appears as a whole-word
-    # match within the phrase. Sort keys by length descending so longer (more
-    # specific) keys match first. Use word boundaries to avoid false positives
-    # from short keys (e.g., "uti" matching inside "computing").
     for key in sorted(MESH_MAPPING.keys(), key=len, reverse=True):
         if re.search(r'\b' + re.escape(key) + r'\b', phrase_lower):
             return MESH_MAPPING[key]
