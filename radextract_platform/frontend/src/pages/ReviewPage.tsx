@@ -290,11 +290,11 @@ export function ReviewPage() {
                     </div>
                   </td>
                   {matrix.variables.map((v) => {
-                    const cell = s.values[v.variable_id];
+                    const cell = s.values[v.variable_id] as any;
                     const hasValue = cell?.value && cell.value.trim();
                     const lowConfidence = cell && cell.confidence < 0.5;
                     const missingStyle = cell?.missing_code ? MISSING_CODE_STYLES[cell.missing_code] : undefined;
-                    const tag = cell?.confidence_tag;
+                    const tag = cell?.confidence_tag || cell?.confidenceTag;
                     const tooltip = [
                       missingStyle?.label,
                       tag === "CALC" && cell?.calc_note ? `Calculated: ${cell.calc_note}` : "",

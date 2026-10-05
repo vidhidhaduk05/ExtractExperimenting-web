@@ -188,7 +188,9 @@ class TestEndToEnd:
             study_design="diagnostic accuracy study",
         )
         gen = DeterministicSchemaGenerator(fields=_make_picos_fields())
-        base_config = "/workspace/radextract/configs/radiology_base"
+        base_config = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../configs/radiology_base")
+        )
         result = generate_project_config(picos, gen, base_config, str(tmp_path))
         config_dir = result["config_dir"]
         assert result["n_total_fields"] > 100
@@ -280,7 +282,10 @@ class TestEndToEnd:
 
     def test_pipeline_with_base_config(self, tmp_path):
         """Pipeline works with the base radiology config (no PICOS layer)."""
-        project = load_project("/workspace/radextract/configs/radiology_base")
+        base_config = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../configs/radiology_base")
+        )
+        project = load_project(base_config)
         record = _make_extraction_record(project)
         extractor_a = DeterministicBackend(record=record, agent_id="A")
         extractor_b = DeterministicBackend(record=record, agent_id="B")

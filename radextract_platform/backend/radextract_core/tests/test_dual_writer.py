@@ -31,7 +31,10 @@ from radextract_core.litextract.schema import load_project
 # --------------------------------------------------------------------------- #
 @pytest.fixture
 def project():
-    return load_project("/workspace/radextract/configs/radiology_base")
+    base_config = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../configs/radiology_base")
+    )
+    return load_project(base_config)
 
 
 @pytest.fixture

@@ -104,7 +104,8 @@ def render_prisma_png(flow_data: dict) -> Optional[bytes]:
     """Render the PRISMA diagram to PNG bytes.
 
     Primary: R prisma_flow.R with png() device (selected by .png extension).
-    Fallback: convert the SVG (R or chart_engine) to PNG with cairosvg.
+    Fallback 1: convert the SVG to PNG with cairosvg.
+    Fallback 2: generate diagram with matplotlib / PIL in Python.
     """
     from services.r_plot_service import call_r_script_bytes, generate_prisma_flow
 
@@ -116,7 +117,7 @@ def render_prisma_png(flow_data: dict) -> Optional[bytes]:
     except Exception as e:
         logger.warning(f"[PRISMA] R PNG render failed: {e}")
 
-    # Fallback: SVG -> PNG via cairosvg
+    # Fallback 1: SVG -> PNG via cairosvg
     try:
         import cairosvg
         svg = generate_prisma_flow(flow_data)
@@ -129,6 +130,45 @@ def render_prisma_png(flow_data: dict) -> Optional[bytes]:
             )
     except Exception as e:
         logger.warning(f"[PRISMA] cairosvg PNG fallback failed: {e}")
+
+    # Fallback 2: Pure Python matplotlib PRISMA chart generator
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from matplotlib.patches import FancyBboxPatch
+
+        fig, ax = plt.subplots(figsize=(10, 12), dpi=150)
+        ax.axis("off")
+
+        id_total = flow_data.get("identification", {}).get("total", 0)
+        screened = flow_data.get("screening", {}).get("records_screened", 0)
+        excluded = flow_data.get("screening", {}).get("records_excluded", 0)
+        ft_assessed = flow_data.get("eligibility", {}).get("full_text_assessed", 0)
+        ft_excluded = flow_data.get("eligibility", {}).get("full_text_excluded", 0)
+        included = flow_data.get("included", {}).get("studies_in_review", 0)
+
+        boxes = [
+            (0.5, 0.85, f"Identification\nRecords identified: {id_total}"),
+            (0.5, 0.65, f"Screening\nRecords screened: {screened}\nExcluded: {excluded}"),
+            (0.5, 0.45, f"Eligibility\nFull-text assessed: {ft_assessed}\nExcluded: {ft_excluded}"),
+            (0.5, 0.25, f"Included\nStudies included: {included}"),
+        ]
+
+        for x, y, text in boxes:
+            box_patch = FancyBboxPatch((x - 0.3, y - 0.07), 0.6, 0.14,
+                                       boxstyle="round,pad=0.03",
+                                       fc="#E3F2FD", ec="#1565C0", lw=2)
+            ax.add_patch(box_patch)
+            ax.text(x, y, text, ha="center", va="center", fontsize=11, fontweight="bold")
+
+        buf = io.BytesIO()
+        plt.tight_layout()
+        plt.savefig(buf, format="png", bbox_inches="tight")
+        plt.close(fig)
+        return buf.getvalue()
+    except Exception as e:
+        logger.warning(f"[PRISMA] matplotlib PNG fallback failed: {e}")
 
     return None
 

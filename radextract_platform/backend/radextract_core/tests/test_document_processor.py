@@ -128,13 +128,20 @@ class TestFallbackProcessor:
 class TestDoclingProcessor:
     def test_availability(self):
         proc = DoclingProcessor()
-        # Docling should be installed in this environment
-        assert proc.available is True
         assert proc.name == "docling"
+        # Test reflects whether docling/docling_core is installed
+        try:
+            import docling_core
+            assert proc.available is True
+        except ImportError:
+            assert proc.available is False
 
     def test_bbox_normalization_topleft(self):
         """Test bbox normalization with TOPLEFT origin."""
-        from docling_core.types.doc import BoundingBox, CoordOrigin
+        try:
+            from docling_core.types.doc import BoundingBox, CoordOrigin
+        except ImportError:
+            pytest.skip("docling_core not installed")
 
         bbox = BoundingBox(l=10, t=20, r=50, b=60, coord_origin=CoordOrigin.TOPLEFT)
         page_size = (100.0, 100.0)
@@ -143,7 +150,10 @@ class TestDoclingProcessor:
 
     def test_bbox_normalization_bottomleft(self):
         """Test bbox normalization with BOTTOMLEFT origin (Y flip)."""
-        from docling_core.types.doc import BoundingBox, CoordOrigin
+        try:
+            from docling_core.types.doc import BoundingBox, CoordOrigin
+        except ImportError:
+            pytest.skip("docling_core not installed")
 
         bbox = BoundingBox(l=10, t=20, r=50, b=60, coord_origin=CoordOrigin.BOTTOMLEFT)
         page_size = (100.0, 100.0)
@@ -153,7 +163,10 @@ class TestDoclingProcessor:
 
     def test_bbox_normalization_none_page_size(self):
         """Should return None when page_size is None."""
-        from docling_core.types.doc import BoundingBox, CoordOrigin
+        try:
+            from docling_core.types.doc import BoundingBox, CoordOrigin
+        except ImportError:
+            pytest.skip("docling_core not installed")
 
         bbox = BoundingBox(l=10, t=20, r=50, b=60, coord_origin=CoordOrigin.TOPLEFT)
         result = DoclingProcessor._normalize_bbox(bbox, None)
@@ -161,7 +174,10 @@ class TestDoclingProcessor:
 
     def test_bbox_normalization_clamping(self):
         """Coordinates should be clamped to [0, 1]."""
-        from docling_core.types.doc import BoundingBox, CoordOrigin
+        try:
+            from docling_core.types.doc import BoundingBox, CoordOrigin
+        except ImportError:
+            pytest.skip("docling_core not installed")
 
         bbox = BoundingBox(l=-10, t=-20, r=150, b=160, coord_origin=CoordOrigin.TOPLEFT)
         page_size = (100.0, 100.0)
@@ -170,7 +186,10 @@ class TestDoclingProcessor:
 
     def test_table_data_to_rows(self):
         """Test conversion of Docling TableData to row format."""
-        from docling_core.types.doc import TableData, TableCell
+        try:
+            from docling_core.types.doc import TableData, TableCell
+        except ImportError:
+            pytest.skip("docling_core not installed")
 
         cells = [
             TableCell(text="A", start_row_offset_idx=0, end_row_offset_idx=1,
@@ -249,8 +268,10 @@ class TestProcessedDocumentSerialization:
 class TestFacade:
     def test_get_processor_prefers_docling(self):
         proc = get_processor(prefer_docling=True)
-        # In this environment Docling is installed
-        assert isinstance(proc, DoclingProcessor)
+        if DoclingProcessor().available:
+            assert isinstance(proc, DoclingProcessor)
+        else:
+            assert isinstance(proc, FallbackProcessor)
 
     def test_get_processor_fallback(self):
         proc = get_processor(prefer_docling=False)

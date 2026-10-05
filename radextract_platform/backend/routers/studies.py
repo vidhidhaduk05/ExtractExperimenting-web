@@ -582,7 +582,7 @@ async def find_quote_location(study_id: str, quote: str = Query(...), user: Opti
             .replace("’", "'")
             .replace("“", '"')
             .replace("”", '"')
-            .replace("-\s+", "")
+            .replace(r"-\s+", "")
             .lower()
             .strip()
         )

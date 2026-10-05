@@ -86,7 +86,7 @@ def _sql_type(field_type: str) -> str:
 
 
 def write_sqlite(records: dict, project, db_path: str, *,
-                 work_dir: str = "/workspace") -> dict:
+                 work_dir: Optional[str] = None) -> dict:
     """Write reconciled records to a SQLite database.
 
     Creates tables mirroring the entity graph with foreign keys, inserts all
@@ -104,8 +104,16 @@ def write_sqlite(records: dict, project, db_path: str, *,
     schema = project.schema
     entity_graph = schema.entity_graph
 
-    # Stage in work_dir for S3 safety
-    os.makedirs(work_dir, exist_ok=True)
+    # Stage in work_dir for S3 safety (default to dest_dir if work_dir not writable)
+    dest_dir = os.path.dirname(db_path) or "."
+    if not work_dir:
+        work_dir = dest_dir if os.access(dest_dir, os.W_OK) else "/tmp"
+    else:
+        try:
+            os.makedirs(work_dir, exist_ok=True)
+        except OSError:
+            work_dir = dest_dir if os.access(dest_dir, os.W_OK) else "/tmp"
+
     staging_path = os.path.join(work_dir, f"extract_staging_{os.getpid()}.db")
 
     # Remove any existing staging file
@@ -340,7 +348,9 @@ def write_all(records: dict, project, src_workbook: str, dest_dir: str, *,
               do_json_nested: bool = True,
               do_sqlite: bool = True,
               flags: Optional[dict] = None,
-              work_dir: str = "/workspace") -> dict:
+              work_dir: Optional[str] = None) -> dict:
+    if not work_dir:
+        work_dir = dest_dir if os.access(dest_dir, os.W_OK) else "/tmp"
     """Write reconciled records to all enabled formats.
 
     Args:
