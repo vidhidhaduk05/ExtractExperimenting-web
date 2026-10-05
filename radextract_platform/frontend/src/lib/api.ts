@@ -480,6 +480,9 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.match(/\/projects\/[^/]+$/)) {
     return DEMO_PROJECT as unknown as T;
   }
+  if (path.includes("/health")) {
+    return { status: "ok" } as unknown as T;
+  }
 
   return {} as unknown as T;
 }
