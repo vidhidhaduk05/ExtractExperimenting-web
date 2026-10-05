@@ -305,3 +305,54 @@ export const DEMO_CODE_GRAPH = {
   node_count: 2,
   link_count: 1
 };
+
+export const DEMO_STATS_ANALYSIS = {
+  analysis: {
+    test_name: "Independent Samples t-test",
+    apa_formatted_result: "t(14) = 3.42, p = .004, d = 1.71",
+    apa_narrative: "An independent-samples t-test was conducted to compare the intervention effect with the null comparator. There was a significant difference in the scores for the intervention group (M = 14.45, SD = 1.15) and the null comparator group (M = 10.96, SD = 0.78); t(14) = 3.42, p = .004. These results suggest that the intervention significantly increases the measured effect. The effect size (Cohen's d = 1.71) indicates a very large practical significance.",
+    assumptions: {
+      normality_passed: true,
+      equal_variance_passed: true
+    },
+    effect_size_name: "Cohen's d",
+    effect_size: 1.71
+  }
+};
+
+export const DEMO_DRAFT_MANUSCRIPT = {
+  markdown: `## Methods
+
+The systematic review and meta-analysis were conducted in accordance with the PRISMA 2020 guidelines. A comprehensive literature search was performed across PubMed, Embase, and Cochrane databases using pre-defined Boolean strings. Inclusion criteria encompassed observational studies and case reports detailing Pure Arterial Malformations (PAM) of the brain. Two independent reviewers screened titles, abstracts, and full texts. Discrepancies were resolved by a third adjudicator. Data extraction included angioarchitecture, aneurysm association, and stroke outcomes.
+
+## Results
+
+A total of 154 records were identified from databases. After removing duplicates and irrelevant records, 30 full-text articles were assessed for eligibility. Ultimately, 6 studies met the inclusion criteria and were included in the quantitative synthesis. The pooled analysis revealed a significant association with specific angioarchitectural profiles. The overall DerSimonian-Laird random-effects pooled estimate was 1.48 (95% CI: 1.22, 1.79), with moderate heterogeneity (I² = 42.5%, p = 0.156).`
+};
+
+export const DEMO_BIBLIOGRAPHY = {
+  content: `Albina-Palmarola, et al. (2024). A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery. World Neurosurgery.
+Birua, et al. (2022). Pure Artery Malformation of Posterior Cerebral Artery with Dysplastic Internal Carotid Artery. Asian Journal of Neurosurgery.
+Brinjikji, et al. (2018). Pure Arterial Malformations: Multi-Center Case Series and Systematic Review of Natural History. Journal of NeuroInterventional Surgery.
+Chua, et al. (2021). Endovascular Treatment of a Ruptured Posterior Fossa Pure Arterial Malformation: Illustrative Case. Journal of Neurosurgery: Case Lessons.
+Deshmukh, et al. (2023). Pure Arterial Malformation (PAM): Case Report and Review of Literature. Surgical Neurology International.
+Feliciano, et al. (2014). Color-Coded Digital Subtraction Angiography in the Management of Middle Cerebral Artery Pure Arterial Malformation. Interventional Neuroradiology.`
+};
+
+export const DEMO_PRISMA_MERMAID = {
+  mermaid: `graph TD
+    A[Records identified from databases: n = 142] --> B[Records screened: n = 128]
+    B -->|Records excluded: n = 98| C[Full-text articles assessed for eligibility: n = 30]
+    C -->|Full-text articles excluded: n = 24| D[Studies included in review: n = 6]
+    D --> E[Studies included in quantitative synthesis: n = 6]`
+};
+
+export const DEMO_MULTI_DATABASE_SEARCH = {
+  results: DEMO_STUDIES,
+  total_found: 10,
+  deduplicated_count: 4,
+  sources: {
+    PubMed: 6,
+    OpenAlex: 4
+  }
+};

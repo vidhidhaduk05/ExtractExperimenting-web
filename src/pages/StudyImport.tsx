@@ -28,13 +28,13 @@ export function StudyImport() {
   const [activeCitationTab, setActiveCitationTab] = useState("vancouver");
   const [copied, setCopied] = useState(false);
 
-  // PubMed Preview / Dry-run state
+  // Multi-Database Preview / Dry-run state
   const [previewQuery, setPreviewQuery] = useState("");
 
-  // PubMed Preview dry-run mutation
+  // Multi-Database Preview dry-run mutation
   const previewMutation = useMutation({
     mutationFn: (query: string) =>
-      api.pubmedPreview({ query, project_id: projectId, sample_size: 5 }),
+      api.searchMultiDatabase({ query, sources: ['PubMed', 'OpenAlex'], max_per_source: 5 }),
   });
 
   // PMID lookup
@@ -165,19 +165,19 @@ export function StudyImport() {
         </div>
       )}
 
-      {/* PubMed Query Preview & Dry-Run Card */}
+      {/* Multi-Database Discovery Preview & Dry-Run Card */}
       <div className="card p-5 bg-phylo-cream/30 border border-phylo-blue/20 mb-6">
         <div className="flex items-center justify-between mb-2">
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-800">
             <Search className="h-4 w-4 text-phylo-blue" />
-            PubMed AutoFetch & Dry-Run Preview
+            Multi-Database Discovery (PubMed + OpenAlex)
           </label>
           <span className="text-xs px-2 py-0.5 rounded-full bg-phylo-blue/10 text-phylo-blue font-medium">
             Dry-Run Enabled
           </span>
         </div>
         <p className="text-xs text-gray-500 mb-3">
-          Test and preview complex search strings against PubMed before importing. Shows exact record counts and duplicate detection against your project.
+          Test and preview complex search strings across PubMed and OpenAlex. Shows exact record counts and duplicate detection against your project.
         </p>
         <div className="flex gap-2 mb-3">
           <input
@@ -206,7 +206,7 @@ export function StudyImport() {
 
         {previewMutation.isPending && (
           <div className="p-3 bg-white/70 rounded-lg border border-gray-200 text-xs text-gray-600 flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-phylo-blue" /> Querying NCBI E-utilities for count and sample records...
+            <Loader2 className="h-4 w-4 animate-spin text-phylo-blue" /> Querying multi-database API for deduplicated records...
           </div>
         )}
 
@@ -214,37 +214,51 @@ export function StudyImport() {
           <div className="space-y-3 mt-3 pt-3 border-t border-gray-200/60">
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm text-center">
-                <div className="text-xs text-gray-500">Total Matching</div>
-                <div className="text-lg font-bold text-phylo-blue">{previewMutation.data.total_matching_records.toLocaleString()}</div>
+                <div className="text-xs text-gray-500">Total Found</div>
+                <div className="text-lg font-bold text-phylo-blue">{previewMutation.data.total_found?.toLocaleString() || 0}</div>
               </div>
               <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm text-center">
-                <div className="text-xs text-gray-500">Sample Duplicate Check</div>
-                <div className="text-lg font-bold text-amber-600">
-                  {previewMutation.data.existing_in_project_samples} / {previewMutation.data.sample_count}
+                <div className="text-xs text-gray-500">Deduplicated Records</div>
+                <div className="text-lg font-bold text-phylo-blue">
+                  {previewMutation.data.deduplicated_count || 0}
                 </div>
               </div>
               <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm text-center">
-                <div className="text-xs text-gray-500">Net Status</div>
-                <div className="text-xs font-semibold text-phylo-green mt-1">Ready for Search Refinement</div>
+                <div className="text-xs text-gray-500">Source Breakdown</div>
+                <div className="text-xs font-semibold text-gray-700 mt-1">
+                  PubMed: {previewMutation.data.sources?.PubMed || 0} | OpenAlex: {previewMutation.data.sources?.OpenAlex || 0}
+                </div>
               </div>
             </div>
 
-            {previewMutation.data.sample_previews.length > 0 && (
+            {previewMutation.data.results && previewMutation.data.results.length > 0 && (
               <div className="bg-white rounded-lg p-3 border border-gray-200 text-xs space-y-2">
                 <div className="font-semibold text-gray-700">Top Sample Records:</div>
-                {previewMutation.data.sample_previews.map((sample) => (
-                  <div key={sample.pmid} className="p-2 rounded bg-gray-50 border border-gray-100 flex items-start justify-between gap-2">
+                {previewMutation.data.results.map((sample: any) => (
+                  <div key={sample.pmid || sample.study_id} className="p-2 rounded bg-gray-50 border border-gray-100 flex items-start justify-between gap-2">
                     <div>
                       <div className="font-medium text-gray-900 line-clamp-1">{sample.title}</div>
                       <div className="text-gray-500 text-[11px]">
-                        PMID: {sample.pmid} · {sample.authors} · {sample.journal} ({sample.publication_year || "N/A"})
+                        PMID: {sample.pmid || 'N/A'} · Source: {sample.source} · {sample.authors} · {sample.journal} ({sample.publication_year || "N/A"})
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        update("pmid", sample.pmid);
-                        pmidLookupMutation.mutate(sample.pmid);
+                        update("pmid", sample.pmid || "");
+                        if(sample.pmid) pmidLookupMutation.mutate(sample.pmid);
+                        else {
+                           setForm(prev => ({
+                             ...prev,
+                             title: sample.title || "",
+                             authors: sample.authors || "",
+                             journal: sample.journal || "",
+                             doi: sample.doi || "",
+                             abstract: sample.abstract || "",
+                             source: sample.source || "",
+                             publication_year: sample.publication_year ? String(sample.publication_year) : ""
+                           }))
+                        }
                       }}
                       className="px-2 py-1 text-[11px] rounded bg-phylo-blue/10 text-phylo-blue hover:bg-phylo-blue hover:text-white shrink-0"
                     >

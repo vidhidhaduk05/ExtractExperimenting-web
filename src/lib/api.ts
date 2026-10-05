@@ -12,7 +12,12 @@ import {
   DEMO_SEARCH_STRINGS,
   DEMO_REVIEW_PROGRESS,
   DEMO_CODE_GRAPH,
-  DEMO_CODE_GRAPH_STATS
+  DEMO_CODE_GRAPH_STATS,
+  DEMO_STATS_ANALYSIS,
+  DEMO_DRAFT_MANUSCRIPT,
+  DEMO_BIBLIOGRAPHY,
+  DEMO_PRISMA_MERMAID,
+  DEMO_MULTI_DATABASE_SEARCH
 } from "./demoData";
 
 const API_HOST = typeof window !== "undefined" ? window.location.hostname : "localhost";
@@ -70,6 +75,22 @@ function getDemoFallback(path: string): any {
   }
   if (path.includes("/hypothesis")) {
     return { hypothesis: DEMO_PROJECT.hypothesis, research_question: DEMO_PROJECT.research_question };
+  }
+  // Generic route handling last
+  if (path === "/stats/analyze" || path.includes("/stats/analyze")) {
+    return DEMO_STATS_ANALYSIS;
+  }
+  if (path === "/scientific-export/draft-manuscript" || path.includes("/scientific-export/draft-manuscript")) {
+    return DEMO_DRAFT_MANUSCRIPT;
+  }
+  if (path === "/scientific-export/bibliography" || path.includes("/scientific-export/bibliography")) {
+    return DEMO_BIBLIOGRAPHY;
+  }
+  if (path === "/scientific-export/prisma-mermaid" || path.includes("/scientific-export/prisma-mermaid")) {
+    return DEMO_PRISMA_MERMAID;
+  }
+  if (path === "/search/multi-database" || path.includes("/search/multi-database")) {
+    return DEMO_MULTI_DATABASE_SEARCH;
   }
   // Generic route handling last
   if (path === "/projects" || path.startsWith("/projects?")) {
@@ -1984,6 +2005,23 @@ export const api = {
   /** Get all clarification questions for a study */
   getStudyClarifications: (studyId: string) =>
     request<ClarificationQuestion[]>(`/studies/${studyId}/clarifications`),
+
+  // ── K-Dense-AI Scientific Review and Statistical Methods ──
+
+  analyzeStats: (data: { group1: number[], group2: number[], group1_name?: string, group2_name?: string, paired?: boolean, alpha?: number }) =>
+    request<any>('/stats/analyze', { method: 'POST', body: JSON.stringify(data) }),
+
+  draftManuscript: (data: { project_id: string, section?: string, pooled_effect?: number, ci_lower?: number, ci_upper?: number, measure?: string, i2?: number, p_val?: number }) =>
+    request<any>('/scientific-export/draft-manuscript', { method: 'POST', body: JSON.stringify(data) }),
+
+  exportBibliography: (data: { project_id: string, format: string }) =>
+    request<any>('/scientific-export/bibliography', { method: 'POST', body: JSON.stringify(data) }),
+
+  prismaMermaid: (data: Record<string, any>) =>
+    request<any>('/scientific-export/prisma-mermaid', { method: 'POST', body: JSON.stringify(data) }),
+
+  searchMultiDatabase: (data: { query: string, sources?: string[], max_per_source?: number }) =>
+    request<any>('/search/multi-database', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 
