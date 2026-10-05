@@ -36,6 +36,7 @@ from routers import (
     clarification,
     ai_screening,
     agent,
+    settings as system_settings,
 )
 
 logger = logging.getLogger("radextract")
@@ -140,6 +141,7 @@ def create_app() -> FastAPI:
     app.include_router(clarification.router)
     app.include_router(ai_screening.router)
     app.include_router(agent.router)
+    app.include_router(system_settings.router)
 
     # Health check
     @app.get("/health")

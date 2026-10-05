@@ -1,74 +1,62 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  PdfLoader,
-  PdfHighlighter,
-  TextHighlight,
-  AreaHighlight,
-  useHighlightContainerContext,
-  type PdfHighlighterUtils,
-  type Highlight,
-  type ScaledPosition,
-  type ViewportPosition,
-} from "react-pdf-highlighter-plus";
-import "react-pdf-highlighter-plus/style/style.css";
-import { api, type PdfDocumentData, API_BASE, type PdfHighlight as ApiPdfHighlight } from "../lib/api";
+  api,
+  type PdfDocumentData,
+  type PdfHighlight as ApiPdfHighlight,
+} from "../lib/api";
+import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, type CodebookRule } from "../lib/demoData";
 import {
   ArrowLeft, FileText, Loader2, Upload, Sparkles,
-  CheckCircle, Table, Tag, Highlighter,
+  CheckCircle, Table, Tag, Highlighter, ArrowRight,
+  Check, X, Edit3, BookOpen, AlertCircle, TrendingUp,
+  Download, HelpCircle, ChevronRight, ChevronLeft,
+  RotateCcw, Search, Eye, Filter, Zap, ShieldAlert
 } from "lucide-react";
-
-// ── Types ──
-
-interface LocalHighlight extends Highlight {
-  id: string;
-  comment: string;
-  color: string;
-  variable_id?: string;
-  db_id?: string; // database highlight_id
-}
-
-// ── Highlight container (renders each highlight) ──
-
-function HighlightContainer() {
-  const { highlight, isScrolledTo } = useHighlightContainerContext();
-  const h = highlight as unknown as LocalHighlight;
-
-  return (h as any).type === "text" ? (
-    <TextHighlight
-      highlight={h as any}
-      isScrolledTo={isScrolledTo}
-    />
-  ) : (
-    <AreaHighlight
-      highlight={h as any}
-      isScrolledTo={isScrolledTo}
-    />
-  );
-}
-
-// ── Main component ──
 
 export function PdfViewerPage() {
   const { projectId, studyId } = useParams<{ projectId: string; studyId: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<"variables" | "text" | "tables">("variables");
+  // Active view states
+  const [leftTab, setLeftTab] = useState<"document" | "sections" | "tables">("document");
   const [selectedVarId, setSelectedVarId] = useState<string | null>(searchParams.get("var") || null);
-  const [highlightQuote, setHighlightQuote] = useState<string>(searchParams.get("var_name") || "");
-  const [scrollToId, setScrollToId] = useState<string | null>(null);
+  const [selectedSectionIdx, setSelectedSectionIdx] = useState<number>(0);
+  const [documentSearch, setDocumentSearch] = useState<string>("");
+  const [showErrorAnalysis, setShowErrorAnalysis] = useState<boolean>(false);
+  const [reviewerName, setReviewerName] = useState<string>("Expert Reviewer");
 
-  // Inline editing state
-  const [inlineDrafts, setInlineDrafts] = useState<Record<string, string>>({});
-  const [savingVarId, setSavingVarId] = useState<string | null>(null);
-  const [savedSuccessVarId, setSavedSuccessVarId] = useState<string | null>(null);
+  // Inline modification drafts
+  const [editingVarId, setEditingVarId] = useState<string | null>(null);
+  const [editDraftValue, setEditDraftValue] = useState<string>("");
+  const [editNotes, setEditNotes] = useState<string>("");
+
+  // Auto-advance & undo countdown state
+  const [undoToast, setUndoToast] = useState<{
+    show: boolean;
+    timer: number;
+    nextStudyId: string;
+    nextStudyTitle: string;
+  } | null>(null);
+  const undoTimeoutRef = useRef<any>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const highlighterRef = useRef<PdfHighlighterUtils>(null);
+  const docScrollRef = useRef<HTMLDivElement>(null);
 
   // ── Queries ──
+
+  const { data: studyList } = useQuery({
+    queryKey: ["studies", projectId],
+    queryFn: () => api.listStudies(projectId!),
+    enabled: !!projectId,
+  });
+
+  const allStudies = (studyList && studyList.length > 0) ? studyList : DEMO_STUDIES;
+  const currentStudyIndex = Math.max(0, allStudies.findIndex((s: any) => s.study_id === studyId));
+  const currentStudy = allStudies[currentStudyIndex] || allStudies[0];
 
   const { data: study } = useQuery({
     queryKey: ["study", studyId],
@@ -85,8 +73,7 @@ export function PdfViewerPage() {
   const { data: pdfData } = useQuery({
     queryKey: ["pdf-data", studyId],
     queryFn: () => api.getPdfData(studyId!),
-    enabled: !!studyId && pdfSummary?.has_pdf === true && pdfSummary?.pdf_status === "processed",
-    retry: false,
+    enabled: !!studyId,
   });
 
   const { data: variables } = useQuery({
@@ -101,14 +88,181 @@ export function PdfViewerPage() {
     enabled: !!studyId,
   });
 
-  const { data: dbHighlights } = useQuery<ApiPdfHighlight[]>({
-    queryKey: ["pdf-highlights", studyId],
-    queryFn: () => api.listHighlights(studyId!),
-    enabled: !!studyId && pdfSummary?.has_pdf === true,
+  const { data: errorAnalysis, refetch: refetchErrorAnalysis } = useQuery({
+    queryKey: ["error-analysis", projectId],
+    queryFn: () => api.getErrorAnalysis(projectId),
+    enabled: !!projectId,
   });
 
-  // ── Mutations ──
+  // Ensure first variable is selected on load
+  const variableList = variables && variables.length > 0 ? variables : [];
+  useEffect(() => {
+    if (!selectedVarId && variableList.length > 0) {
+      setSelectedVarId(variableList[0].variable_id);
+    }
+  }, [selectedVarId, variableList]);
 
+  // Selected variable & extraction
+  const currentVar = variableList.find((v: any) => v.variable_id === selectedVarId) || variableList[0];
+  const extractionMap: Record<string, any> = {};
+  (extractions || []).forEach((e: any) => {
+    if (e.variable_id) extractionMap[e.variable_id] = e;
+  });
+  const currentExtraction = currentVar ? extractionMap[currentVar.variable_id] : null;
+
+  // Selected variable codebook rules
+  const currentRule: CodebookRule | undefined = currentVar ? DEMO_CODEBOOK_RULES[currentVar.variable_id] : undefined;
+
+  // Calculation of progress
+  const verifiedCount = variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
+  const progressPercent = variableList.length > 0 ? Math.round((verifiedCount / variableList.length) * 100) : 0;
+
+  // ── Auto-scroll to evidence quote in document text ──
+  const scrollToQuote = useCallback((quote: string) => {
+    if (!quote || !docScrollRef.current) return;
+    const cleanQuote = quote.trim().slice(0, 30);
+    const container = docScrollRef.current;
+    const elements = container.querySelectorAll("[data-doc-text]");
+    for (const el of Array.from(elements)) {
+      if (el.textContent && el.textContent.toLowerCase().includes(cleanQuote.toLowerCase())) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("bg-amber-100", "ring-2", "ring-amber-400", "rounded-md", "transition-all", "duration-500");
+        setTimeout(() => {
+          el.classList.remove("bg-amber-100", "ring-2", "ring-amber-400");
+        }, 2500);
+        break;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (currentExtraction?.quote) {
+      scrollToQuote(currentExtraction.quote);
+    }
+  }, [currentExtraction?.quote, scrollToQuote]);
+
+  // ── Navigation helpers ──
+
+  const navigateToNextVariable = useCallback(() => {
+    if (!variableList || variableList.length === 0) return;
+    const currentIndex = variableList.findIndex((v: any) => v.variable_id === selectedVarId);
+    if (currentIndex >= 0 && currentIndex < variableList.length - 1) {
+      const nextVar = variableList[currentIndex + 1];
+      setSelectedVarId(nextVar.variable_id);
+      setEditingVarId(null);
+    } else {
+      // Reached the last variable of this study! Check if all variables are reviewed
+      const nextStudy = allStudies[currentStudyIndex + 1];
+      if (nextStudy) {
+        // Trigger 1.5s countdown toast before advancing
+        setUndoToast({
+          show: true,
+          timer: 1.5,
+          nextStudyId: nextStudy.study_id,
+          nextStudyTitle: nextStudy.title || "Next Study",
+        });
+
+        if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+        undoTimeoutRef.current = setTimeout(() => {
+          setUndoToast(null);
+          navigate(`/projects/${projectId}/studies/${nextStudy.study_id}/pdf`);
+        }, 1500);
+      }
+    }
+  }, [variableList, selectedVarId, allStudies, currentStudyIndex, navigate, projectId]);
+
+  const navigateToPrevVariable = useCallback(() => {
+    if (!variableList || variableList.length === 0) return;
+    const currentIndex = variableList.findIndex((v: any) => v.variable_id === selectedVarId);
+    if (currentIndex > 0) {
+      const prevVar = variableList[currentIndex - 1];
+      setSelectedVarId(prevVar.variable_id);
+      setEditingVarId(null);
+    }
+  }, [variableList, selectedVarId]);
+
+  const cancelStudyTransition = () => {
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = null;
+    }
+    setUndoToast(null);
+  };
+
+  // ── Track Changes Decisions (Accept, Modify, Reject) ──
+
+  const handleDecision = async (
+    decision: "accepted" | "modified" | "rejected",
+    customValue?: string,
+    notes?: string
+  ) => {
+    if (!currentVar) return;
+    const origVal = currentExtraction?.value || "";
+    const finalVal = decision === "modified" ? (customValue || editDraftValue || origVal) : (decision === "rejected" ? "NR" : origVal);
+
+    try {
+      await api.recordExtractionDecision({
+        project_id: projectId!,
+        study_id: studyId!,
+        variable_id: currentVar.variable_id,
+        variable_name: currentVar.name,
+        original_value: origVal,
+        corrected_value: finalVal,
+        decision,
+        evidence_quote: currentExtraction?.quote || "",
+        page_number: currentExtraction?.source_page || 1,
+        codebook_rules: currentRule?.definition || "",
+        reviewer: reviewerName,
+        notes: notes || editNotes,
+      });
+
+      setEditingVarId(null);
+      setEditDraftValue("");
+      setEditNotes("");
+      refetchExtractions();
+      refetchErrorAnalysis();
+      queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+
+      // Automatically advance to the next variable
+      navigateToNextVariable();
+    } catch (err) {
+      console.error("Failed to record decision:", err);
+    }
+  };
+
+  // ── Keyboard Shortcuts (A: Accept, M: Modify, R: Reject, Down: Next, Up: Prev) ──
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing in an input or textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+
+      if (e.key === "a" || e.key === "A" || e.key === "Enter") {
+        e.preventDefault();
+        handleDecision("accepted");
+      } else if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        if (currentVar) {
+          setEditingVarId(currentVar.variable_id);
+          setEditDraftValue(currentExtraction?.value || "");
+        }
+      } else if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        handleDecision("rejected");
+      } else if (e.key === "ArrowDown" || e.key === "j") {
+        e.preventDefault();
+        navigateToNextVariable();
+      } else if (e.key === "ArrowUp" || e.key === "k") {
+        e.preventDefault();
+        navigateToPrevVariable();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentVar, currentExtraction, navigateToNextVariable, navigateToPrevVariable]);
+
+  // ── Upload PDF Mutation ──
   const uploadPdfMutation = useMutation({
     mutationFn: (file: File) => api.uploadPdf(studyId!, file, true),
     onSuccess: () => {
@@ -116,580 +270,866 @@ export function PdfViewerPage() {
       queryClient.invalidateQueries({ queryKey: ["pdf-summary", studyId] });
       queryClient.invalidateQueries({ queryKey: ["pdf-data", studyId] });
       queryClient.invalidateQueries({ queryKey: ["extractions", studyId] });
-      queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
     },
   });
 
-  const autoExtractMutation = useMutation({
-    mutationFn: () => api.autoExtract(studyId!, projectId!),
-    onSuccess: () => {
-      refetchExtractions();
-      queryClient.invalidateQueries({ queryKey: ["extractions", studyId] });
-      queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["review-progress", projectId] });
-    },
-  });
-
-  const createHighlightMutation = useMutation({
-    mutationFn: (data: Parameters<typeof api.createHighlight>[1]) =>
-      api.createHighlight(studyId!, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pdf-highlights", studyId] });
-    },
-  });
-
-  const deleteHighlightMutation = useMutation({
-    mutationFn: (highlightId: string) => api.deleteHighlight(highlightId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pdf-highlights", studyId] });
-    },
-  });
-
-  // ── Convert DB highlights to react-pdf-highlighter format ──
-
-  const highlights: LocalHighlight[] = (dbHighlights || []).map((h) => ({
-    id: h.highlight_id,
-    db_id: h.highlight_id,
-    type: h.highlight_type as "text" | "area",
-    position: h.position as any,
-    content: { text: h.content_text },
-    comment: h.comment || "",
-    color: h.color || "#ffd700",
-    variable_id: h.variable_id || "",
-  }));
-
-  // ── Scroll to highlight when requested ──
-
-  useEffect(() => {
-    if (scrollToId && highlighterRef.current) {
-      const targetH = highlights.find((x) => x.id === scrollToId);
-      if (targetH) {
-        (highlighterRef.current as any).scrollToHighlight(targetH);
-      }
-      setScrollToId(null);
-    }
-  }, [scrollToId, highlights]);
-
-  // ── Handle text selection → create highlight ──
-
-  const handleSelectionFinished = useCallback(
-    (position: ScaledPosition, content: { text: string }): LocalHighlight | undefined => {
-      const text = content.text?.trim();
-      if (!text || text.length < 3) return undefined;
-
-      const highlightId = `hl-${Date.now()}`;
-      const newHighlight: LocalHighlight = {
-        id: highlightId,
-        type: "text",
-        position,
-        content: { text },
-        comment: "",
-        color: "#ffd700",
-      };
-
-      // Save to backend
-      createHighlightMutation.mutate({
-        variable_id: selectedVarId || "",
-        highlight_type: "text",
-        page_number: position.boundingRect.pageNumber || (position.boundingRect as any).page || 1,
-        position_json: position as any,
-        content_text: text,
-        comment: "",
-        color: "#ffd700",
-        created_by: "",
-      });
-
-      return newHighlight;
-    },
-    [createHighlightMutation, selectedVarId]
-  );
-
-  // ── Handle variable selection → scroll to highlight ──
-
-  const handleSelectVariable = (v: any, ext?: any) => {
-    setSelectedVarId(v.variable_id);
-    const quote = ext?.source_text || ext?.quote || ext?.value || "";
-    setHighlightQuote(quote);
-
-    // Find a highlight linked to this variable
-    const linkedHighlight = highlights.find((h) => h.variable_id === v.variable_id);
-    if (linkedHighlight) {
-      setScrollToId(linkedHighlight.id);
-      return;
-    }
-
-    // Fallback: try to find a highlight with matching content text
-    if (quote) {
-      const matchingHighlight = highlights.find(
-        (h) => h.content?.text && quote.includes(h.content.text.slice(0, 20))
-      );
-      if (matchingHighlight) {
-        setScrollToId(matchingHighlight.id);
-      }
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadPdfMutation.mutate(file);
     }
   };
 
-  // ── Inline save ──
-
-  const handleSaveInline = async (variable_id: string, ext?: any, newValue?: string) => {
-    const valueToSave = newValue !== undefined ? newValue : (inlineDrafts[variable_id] ?? ext?.value ?? "");
-    setSavingVarId(variable_id);
+  const handleExportTrainingData = async () => {
     try {
-      if (ext?.extraction_id) {
-        await api.updateExtraction(ext.extraction_id, {
-          value: valueToSave,
-          is_edited: true,
-        });
-      } else {
-        await api.createExtraction(studyId!, {
-          variable_id: variable_id,
-          value: valueToSave,
-          confidence: 1.0,
-          quote: "Direct inline edit by reviewer",
-          source_page: 1,
-        });
-      }
-      refetchExtractions();
-      queryClient.invalidateQueries({ queryKey: ["extractions", studyId] });
-      queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["review-progress", projectId] });
-
-      setSavedSuccessVarId(variable_id);
-      setTimeout(() => setSavedSuccessVarId(null), 2000);
-    } catch (err: any) {
-      console.error("Inline save error:", err);
-    } finally {
-      setSavingVarId(null);
+      const data = await api.exportTrainingData(projectId);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `radextract_active_learning_${projectId}_${Date.now()}.jsonl`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Export training data failed:", e);
     }
   };
-
-  // ── Build PDF URL with auth ──
-
-  const pdfUrl = studyId ? api.pdfFileUrl(studyId) : "";
-  const token = typeof localStorage !== "undefined" ? localStorage.getItem("token") : null;
-  const httpHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
-
-  // Map extractions by variable_id
-  const extractionMap: Record<string, any> = {};
-  (extractions || []).forEach((e) => {
-    if (e.variable_id) extractionMap[e.variable_id] = e;
-  });
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 min-h-screen">
-      {/* Top Header Bar */}
-      <header className="bg-white border-b border-gray-200 px-6 py-3 shrink-0 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans">
+      {/* ── TOP NAV HEADER ── */}
+      <header className="bg-white border-b border-slate-200 px-5 py-2.5 shrink-0 flex items-center justify-between shadow-xs z-30">
         <div className="flex items-center gap-3">
           <Link
             to={`/projects/${projectId}/studies`}
-            className="text-sm font-medium text-gray-500 hover:text-phylo-blue flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors"
+            className="text-xs font-semibold text-slate-600 hover:text-blue-600 flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to studies
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to Studies
           </Link>
-          <div className="h-5 w-px bg-gray-200" />
-          <div>
-            <h1 className="font-bold text-gray-900 text-base leading-tight truncate max-w-xl">
-              {study?.title || "Study PDF & Extraction"}
-            </h1>
-            <p className="text-xs text-gray-400 truncate max-w-lg">
-              {study?.authors} · {study?.publication_year} · {study?.journal}
-              {study?.pmid && <span className="ml-2 font-mono text-gray-500">PMID:{study.pmid}</span>}
-            </p>
+          <div className="h-4 w-px bg-slate-300" />
+          
+          {/* Study Stepper */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (currentStudyIndex > 0) {
+                  navigate(`/projects/${projectId}/studies/${allStudies[currentStudyIndex - 1].study_id}/pdf`);
+                }
+              }}
+              disabled={currentStudyIndex === 0}
+              className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none text-slate-700"
+              title="Previous Study"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md">
+              Study {currentStudyIndex + 1} of {allStudies.length}
+            </span>
+            <button
+              onClick={() => {
+                if (currentStudyIndex < allStudies.length - 1) {
+                  navigate(`/projects/${projectId}/studies/${allStudies[currentStudyIndex + 1].study_id}/pdf`);
+                }
+              }}
+              disabled={currentStudyIndex === allStudies.length - 1}
+              className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none text-slate-700"
+              title="Next Study"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+
+            <div className="ml-2">
+              <h1 className="font-bold text-slate-900 text-sm leading-tight truncate max-w-md">
+                {currentStudy?.title || "Study PDF & Extraction"}
+              </h1>
+              <p className="text-[11px] text-slate-500 truncate max-w-sm">
+                {currentStudy?.authors} · {currentStudy?.publication_year} · {currentStudy?.journal}
+              </p>
+            </div>
           </div>
         </div>
 
+        {/* Center Progress Bar */}
+        <div className="hidden lg:flex items-center gap-3 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-full">
+          <div className="text-xs font-medium text-slate-600">
+            Extraction Progress: <span className="font-bold text-blue-600">{verifiedCount}/{variableList.length}</span> Verified
+          </div>
+          <div className="w-28 bg-slate-200 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <span className="text-[11px] font-bold text-emerald-600">{progressPercent}%</span>
+        </div>
+
+        {/* Right Action Tools */}
         <div className="flex items-center gap-2">
+          {/* Active Learning & Error Analysis Button */}
+          <button
+            onClick={() => setShowErrorAnalysis(!showErrorAnalysis)}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors border ${
+              showErrorAnalysis 
+                ? "bg-purple-100 text-purple-700 border-purple-300" 
+                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            <TrendingUp className="h-3.5 w-3.5 text-purple-600" />
+            <span>Active Learning</span>
+            {errorAnalysis?.total_discrepancies > 0 && (
+              <span className="bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono">
+                {errorAnalysis.total_discrepancies}
+              </span>
+            )}
+          </button>
+
+          {/* Upload PDF */}
           <input
             ref={fileInputRef}
             type="file"
             accept=".pdf"
             className="hidden"
-            onChange={(e) => {
-              if (e.target.files?.[0]) uploadPdfMutation.mutate(e.target.files[0]);
-              e.target.value = "";
-            }}
+            onChange={handleFileUpload}
           />
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadPdfMutation.isPending}
-            className="btn-secondary text-xs flex items-center gap-1.5"
-            title="Upload or replace PDF"
+            className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-1.5"
           >
-            {uploadPdfMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-            {study?.pdf_path ? "Replace PDF" : "Upload PDF"}
+            {uploadPdfMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+            ) : (
+              <Upload className="h-3.5 w-3.5 text-slate-500" />
+            )}
+            Upload PDF
           </button>
 
-          {study?.pdf_path && (
-            <>
-              <button
-                onClick={() => autoExtractMutation.mutate()}
-                disabled={autoExtractMutation.isPending}
-                className="btn-primary text-xs flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm"
-                title="Run LLM / Docling extraction for all variables"
-              >
-                {autoExtractMutation.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
-                Auto-Extract Variables
-              </button>
-
-              <Link
-                to={`/projects/${projectId}/review`}
-                className="btn-secondary text-xs flex items-center gap-1 text-phylo-blue hover:bg-phylo-blue/10"
-              >
-                <Table className="h-3.5 w-3.5" /> Review Matrix
-              </Link>
-            </>
-          )}
+          {/* Link to Review Table */}
+          <Link
+            to={`/projects/${projectId}/review`}
+            className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
+          >
+            <Table className="h-3.5 w-3.5" /> Matrix View
+          </Link>
         </div>
       </header>
 
-      {/* Main Workspace */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Side: PDF Viewer with react-pdf-highlighter-plus */}
-        <div className="flex-1 flex flex-col border-r border-gray-200 bg-slate-200/90 overflow-hidden relative">
-          {/* PDF Sticky Navigation Bar */}
-          <div className="bg-white/95 backdrop-blur border-b border-gray-200 px-5 py-2.5 flex items-center justify-between z-20 shrink-0 shadow-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2.5 py-1 rounded-md">
-                Document {pdfSummary?.n_pages ? `(${pdfSummary.n_pages} Pages)` : ""}
-              </span>
-              <span className="text-xs text-gray-400">
-                {highlights.length} highlight{highlights.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {/* Active Evidence Focus Banner */}
-            {highlightQuote && (
-              <div className="flex items-center gap-1.5 text-xs bg-amber-50 border border-amber-300 text-amber-950 px-3 py-1 rounded-md max-w-sm truncate shadow-xs">
-                <Highlighter className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                <span className="font-bold shrink-0">Evidence:</span>
-                <span className="truncate italic font-medium">"{highlightQuote}"</span>
-                <button
-                  onClick={() => setHighlightQuote("")}
-                  className="hover:text-black shrink-0 font-bold ml-1"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
+      {/* ── UNDO AUTO-NAVIGATE TOAST ── */}
+      {undoToast && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-200 border border-slate-700">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-emerald-400" />
+            <span className="text-xs font-medium">
+              Study complete! Auto-navigating to <strong>{undoToast.nextStudyTitle}</strong> in 1.5s...
+            </span>
           </div>
-
-          {/* PDF Rendering Area */}
-          <div className="flex-1 overflow-hidden">
-            {study?.pdf_path ? (
-              <PdfLoader
-                document={pdfUrl}
-                httpHeaders={httpHeaders}
-                beforeLoad={() => <LoadingSpinner />}
-                errorMessage={() => <ErrorView />}
-              >
-                {(pdfDocument) => {
-                  const HighlighterComp = PdfHighlighter as any;
-                  return (
-                    <HighlighterComp
-                      ref={highlighterRef}
-                      pdfDocument={pdfDocument}
-                      highlights={highlights}
-                      enableAreaSelection={(e: MouseEvent) => e.altKey}
-                      onSelectionFinished={handleSelectionFinished}
-                    >
-                      <HighlightContainer />
-                    </HighlighterComp>
-                  );
-                }}
-              </PdfLoader>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center p-12 bg-white rounded-2xl shadow-sm border border-gray-200 max-w-md">
-                  <FileText className="h-16 w-16 text-phylo-blue/40 mx-auto mb-4" />
-                  <h3 className="font-bold text-gray-800 text-lg mb-1">No PDF Uploaded</h3>
-                  <p className="text-xs text-gray-500 mb-5 leading-relaxed">
-                    Upload the full-text PDF for this study to view the document, highlight
-                    evidence quotes, and verify extracted variables.
-                  </p>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="btn-primary inline-flex items-center gap-2"
-                  >
-                    <Upload className="h-4 w-4" /> Upload Full-Text PDF
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <button
+            onClick={cancelStudyTransition}
+            className="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-2.5 py-1 rounded-md transition-colors flex items-center gap-1"
+          >
+            <RotateCcw className="h-3 w-3" /> Stay on this Study
+          </button>
         </div>
+      )}
 
-        {/* Right Side: Inline Editable Variables Inspector */}
-        <aside className="w-[480px] shrink-0 bg-white flex flex-col border-l border-gray-200 overflow-hidden shadow-lg z-20">
-          {/* Panel Header & Tabs */}
-          <div className="border-b border-gray-200 px-4 pt-3 pb-0 shrink-0 bg-gray-50/50">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                <Tag className="h-4 w-4 text-phylo-blue" />
-                Extraction Inspector
-              </h2>
-              <span className="text-xs text-gray-500 font-mono">
-                {Object.keys(extractionMap).length} / {variables?.length || 0} extracted
-              </span>
+      {/* ── 3-COLUMN WORKSPACE BODY ── */}
+      <div className="flex flex-1 overflow-hidden">
+        
+        {/* ══════════════════════════════════════════════════════════
+            COLUMN 1: DOCUMENT / DOCLING TEXT VIEWER (LEFT)
+        ══════════════════════════════════════════════════════════ */}
+        <section className="w-[36%] border-r border-slate-200 bg-white flex flex-col h-full overflow-hidden">
+          {/* Document Sub-tabs */}
+          <div className="border-b border-slate-200 px-4 py-2 bg-slate-50/80 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setLeftTab("document")}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  leftTab === "document"
+                    ? "bg-white text-blue-600 shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <FileText className="h-3.5 w-3.5 inline mr-1" /> Docling Text
+              </button>
+              <button
+                onClick={() => setLeftTab("sections")}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  leftTab === "sections"
+                    ? "bg-white text-blue-600 shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Sections ({(pdfData?.sections || []).length})
+              </button>
+              <button
+                onClick={() => setLeftTab("tables")}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  leftTab === "tables"
+                    ? "bg-white text-blue-600 shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Table className="h-3.5 w-3.5 inline mr-1" /> Tables ({(pdfData?.tables || []).length})
+              </button>
             </div>
 
-            <div className="flex gap-1 border-b border-transparent">
-              <button
-                onClick={() => setActiveTab("variables")}
-                className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${
-                  activeTab === "variables"
-                    ? "border-phylo-blue text-phylo-blue bg-white rounded-t font-bold"
-                    : "border-transparent text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                Variables & Values
-              </button>
-              <button
-                onClick={() => setActiveTab("text")}
-                className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${
-                  activeTab === "text"
-                    ? "border-phylo-blue text-phylo-blue bg-white rounded-t font-bold"
-                    : "border-transparent text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                Docling Text
-              </button>
-              <button
-                onClick={() => setActiveTab("tables")}
-                className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${
-                  activeTab === "tables"
-                    ? "border-phylo-blue text-phylo-blue bg-white rounded-t font-bold"
-                    : "border-transparent text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                Tables ({pdfData?.tables?.length || 0})
-              </button>
+            {/* Quick in-document search */}
+            <div className="relative w-44">
+              <Search className="h-3 w-3 absolute left-2 top-2 text-slate-400" />
+              <input
+                type="text"
+                value={documentSearch}
+                onChange={(e) => setDocumentSearch(e.target.value)}
+                placeholder="Find in text..."
+                className="w-full text-xs pl-7 pr-2 py-1 bg-white border border-slate-200 rounded-md focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+              />
             </div>
           </div>
 
-          {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* TAB 1: Variables with Direct Inline Editing & Click-to-Focus */}
-            {activeTab === "variables" && (
-              <div className="space-y-4">
-                {(!variables || variables.length === 0) ? (
-                  <div className="text-center py-12 text-gray-400">
-                    <Tag className="h-10 w-10 mx-auto mb-2 text-gray-300" />
-                    <p className="text-sm">No variables defined for this project.</p>
-                    <Link to={`/projects/${projectId}/review`} className="text-xs text-phylo-blue hover:underline mt-1 inline-block">
-                      Go to Data Review to generate variables
-                    </Link>
+          {/* Document Content View */}
+          <div ref={docScrollRef} className="flex-1 overflow-y-auto p-5 text-slate-800 text-xs leading-relaxed space-y-4">
+            {leftTab === "document" && (
+              <div>
+                {/* Article Header Badge */}
+                <div className="mb-4 p-3 bg-blue-50/60 border border-blue-100 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                      Docling v2.4 Multi-Modal Parsed Text
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      {pdfSummary?.page_count || 5} Pages · {pdfSummary?.tables_count || 2} Tables
+                    </span>
                   </div>
-                ) : (
-                  ["Cohort_Level", "Protocol_Level", "Outcome_Level", "Other"].map((sec) => {
-                    const secVars = variables.filter((v) => (v.section || "Other") === sec);
-                    if (secVars.length === 0) return null;
-
-                    return (
-                      <div key={sec} className="space-y-2">
-                        <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1">
-                          {sec.replace("_", " ")}
-                        </div>
-
-                        <div className="space-y-2.5">
-                          {secVars.map((v) => {
-                            const ext = extractionMap[v.variable_id];
-                            const isSelected = selectedVarId === v.variable_id;
-                            const isSaving = savingVarId === v.variable_id;
-                            const isSaved = savedSuccessVarId === v.variable_id;
-                            const currentValue = inlineDrafts[v.variable_id] ?? ext?.value ?? "";
-                            const linkedHighlights = highlights.filter((h) => h.variable_id === v.variable_id);
-
-                            return (
-                              <div
-                                key={v.variable_id}
-                                onClick={() => handleSelectVariable(v, ext)}
-                                className={`p-3 rounded-lg border transition-all cursor-pointer ${
-                                  isSelected
-                                    ? "bg-blue-50/90 border-phylo-blue shadow-xs ring-2 ring-phylo-blue/40"
-                                    : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-xs"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between gap-2 mb-1.5">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold text-xs text-gray-900">{v.name}</span>
-                                    <span className="badge bg-gray-100 text-gray-500 text-[10px] py-0 px-1.5">
-                                      {v.field_type || "text"}
-                                    </span>
-                                    {ext?.confidence !== undefined && (
-                                      <span className={`text-[10px] font-bold ${ext.confidence >= 0.8 ? "text-emerald-600" : "text-amber-600"}`}>
-                                        {Math.round(ext.confidence * 100)}% conf
-                                      </span>
-                                    )}
-                                    {ext?.source_page && (
-                                      <span className="text-[10px] text-gray-400 font-mono">
-                                        p.{ext.source_page}
-                                      </span>
-                                    )}
-                                    {ext?.is_edited && (
-                                      <span className="badge bg-purple-50 text-purple-700 text-[10px] py-0 px-1">
-                                        Edited
-                                      </span>
-                                    )}
-                                    {linkedHighlights.length > 0 && (
-                                      <span className="badge bg-amber-50 text-amber-700 text-[10px] py-0 px-1 flex items-center gap-0.5">
-                                        <Highlighter className="h-2.5 w-2.5" />
-                                        {linkedHighlights.length}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin text-phylo-blue shrink-0" />}
-                                  {isSaved && <CheckCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" />}
-                                </div>
-
-                                {/* Direct Inline Editable Field */}
-                                <div className="mt-1" onClick={(e) => e.stopPropagation()}>
-                                  {v.allowed_values ? (
-                                    <select
-                                      className="input w-full text-xs font-semibold text-gray-900 bg-gray-50/80 border-gray-200 focus:bg-white focus:border-phylo-blue py-1 px-2 rounded-md"
-                                      value={currentValue}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        setInlineDrafts((prev) => ({ ...prev, [v.variable_id]: val }));
-                                        handleSaveInline(v.variable_id, ext, val);
-                                      }}
-                                    >
-                                      <option value="">-- Select Choice --</option>
-                                      {v.allowed_values.split(";").map((opt: string) => (
-                                        <option key={opt.trim()} value={opt.trim()}>
-                                          {opt.trim()}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <input
-                                      type="text"
-                                      className="input w-full text-xs font-mono font-medium text-emerald-900 bg-gray-50/80 border-gray-200 focus:bg-white focus:border-phylo-blue py-1.5 px-2.5 rounded-md focus:ring-1 focus:ring-phylo-blue"
-                                      value={currentValue}
-                                      placeholder="Click to type / edit value..."
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        setInlineDrafts((prev) => ({ ...prev, [v.variable_id]: val }));
-                                      }}
-                                      onBlur={() => {
-                                        if (inlineDrafts[v.variable_id] !== undefined && inlineDrafts[v.variable_id] !== ext?.value) {
-                                          handleSaveInline(v.variable_id, ext);
-                                        }
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          (e.target as HTMLInputElement).blur();
-                                        }
-                                      }}
-                                    />
-                                  )}
-                                </div>
-
-                                {/* Verbatim Supporting Evidence Quote */}
-                                {ext?.source_text || ext?.quote ? (
-                                  <div className="mt-1.5 text-[11px] text-gray-600 italic bg-amber-50/70 border border-amber-200 rounded px-2.5 py-1.5 line-clamp-2">
-                                    "{ext.source_text || ext.quote}"
-                                  </div>
-                                ) : null}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-
-            {/* TAB 2: Full Extracted Text */}
-            {activeTab === "text" && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Viewing Docling text</span>
-                  <span className="font-mono">{pdfData?.pages?.length || 0} total pages</span>
+                  <h2 className="text-sm font-bold text-slate-900 mt-2">
+                    {currentStudy?.title}
+                  </h2>
                 </div>
-                {pdfData?.pages ? (
-                  <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-800 whitespace-pre-wrap font-mono leading-relaxed max-h-[650px] overflow-y-auto border border-gray-200 space-y-4">
-                    {pdfData.pages.map((pg) => (
-                      <div key={pg.page_number} className="p-3 bg-white rounded border border-gray-100">
-                        <div className="text-[10px] font-bold text-gray-400 mb-1 font-mono">Page {pg.page_number}</div>
-                        <div>{pg.text || "(No text)"}</div>
-                      </div>
-                    ))}
+
+                {/* Parsed Sections or Raw Text */}
+                {pdfData?.sections && pdfData.sections.length > 0 ? (
+                  <div className="space-y-4">
+                    {pdfData.sections.map((sec: any, idx: number) => {
+                      const isHighlighted = currentExtraction?.quote && sec.text.toLowerCase().includes(currentExtraction.quote.slice(0, 30).toLowerCase());
+                      return (
+                        <div
+                          key={idx}
+                          data-doc-text="true"
+                          className={`p-3.5 rounded-lg border transition-all ${
+                            isHighlighted
+                              ? "bg-amber-50/80 border-amber-300 ring-2 ring-amber-300"
+                              : "bg-white border-slate-100 shadow-2xs hover:border-slate-200"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="font-bold text-slate-800 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                              {sec.title}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                              Page {sec.page || idx + 1}
+                            </span>
+                          </div>
+                          <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-[12px]">
+                            {sec.text}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-gray-400 text-xs">
-                    Process the PDF with Docling to view page text.
+                  <div className="whitespace-pre-wrap text-slate-700 font-mono text-[11px] bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    {pdfData?.markdown || currentStudy?.abstract || "No document text available."}
                   </div>
                 )}
               </div>
             )}
 
-            {/* TAB 3: Extracted Tables */}
-            {activeTab === "tables" && (
+            {leftTab === "sections" && (
+              <div className="space-y-2">
+                {(pdfData?.sections || []).map((sec: any, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setSelectedSectionIdx(idx);
+                      setLeftTab("document");
+                    }}
+                    className="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
+                      <span>{sec.title}</span>
+                      <span className="text-[10px] text-slate-400">Page {sec.page || idx + 1}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 truncate mt-1">
+                      {sec.text}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {leftTab === "tables" && (
               <div className="space-y-4">
-                {pdfData?.tables && pdfData.tables.length > 0 ? (
-                  pdfData.tables.map((tbl: any, idx: number) => (
-                    <div key={idx} className="card p-3 space-y-2 border border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-bold text-xs text-gray-800">Table {idx + 1}</h4>
-                        {tbl.page && <span className="badge text-[10px]">Page {tbl.page}</span>}
-                      </div>
-                      {tbl.caption && <p className="text-[11px] text-gray-500 italic">{tbl.caption}</p>}
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 text-[10px]">
-                          {tbl.rows && tbl.rows.map((row: any[], rIdx: number) => (
-                            <tr key={rIdx} className={rIdx === 0 ? "bg-gray-100 font-bold" : "even:bg-gray-50"}>
-                              {row.map((cell: any, cIdx: number) => (
-                                <td key={cIdx} className="px-2 py-1 border border-gray-200 truncate max-w-[120px]">
-                                  {String(cell)}
-                                </td>
+                {(pdfData?.tables || []).length > 0 ? (
+                  (pdfData?.tables || []).map((tbl: any, idx: number) => (
+                    <div key={idx} className="border border-slate-200 rounded-lg p-3 bg-white shadow-2xs">
+                      <h4 className="font-bold text-slate-800 text-xs mb-2 flex items-center gap-1.5">
+                        <Table className="h-3.5 w-3.5 text-blue-600" />
+                        {tbl.title || `Extracted Table ${idx + 1}`}
+                      </h4>
+                      {tbl.html ? (
+                        <div dangerouslySetInnerHTML={{ __html: tbl.html }} className="overflow-x-auto text-[11px]" />
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-slate-200 text-[11px]">
+                            <tbody>
+                              {(tbl.rows || []).map((r: string[], ridx: number) => (
+                                <tr key={ridx} className={ridx === 0 ? "bg-slate-100 font-bold" : "hover:bg-slate-50"}>
+                                  {r.map((cell, cidx) => (
+                                    <td key={cidx} className="px-2 py-1 border border-slate-200">{cell}</td>
+                                  ))}
+                                </tr>
                               ))}
-                            </tr>
-                          ))}
-                        </table>
-                      </div>
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-12 text-gray-400 text-xs">
-                    No tables detected in this publication.
+                  <div className="text-center py-8 text-slate-400 text-xs">
+                    No tables identified in this study.
                   </div>
                 )}
               </div>
             )}
           </div>
-        </aside>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════
+            COLUMN 2: TRACK CHANGES VERIFICATION CARDS (CENTER)
+        ══════════════════════════════════════════════════════════ */}
+        <section className="flex-1 bg-slate-50 border-r border-slate-200 flex flex-col h-full overflow-hidden">
+          {/* Header & Variable Navigator */}
+          <div className="border-b border-slate-200 bg-white px-5 py-2.5 shrink-0 flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                Word-Style Track Changes
+              </span>
+              <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                Interactive Verification
+              </span>
+            </div>
+
+            {/* Stepper Buttons for Variables */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={navigateToPrevVariable}
+                className="p-1 rounded-md text-slate-600 hover:bg-slate-100"
+                title="Previous Variable (Up arrow / K)"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-xs font-bold text-slate-700">
+                Variable {(variableList.findIndex((v: any) => v.variable_id === selectedVarId) + 1) || 1} of {variableList.length}
+              </span>
+              <button
+                onClick={navigateToNextVariable}
+                className="p-1 rounded-md text-slate-600 hover:bg-slate-100"
+                title="Next Variable (Down arrow / J)"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Main Card View: All Variables List with Focused Track Changes Card */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            {variableList.map((v: any, index: number) => {
+              const ext = extractionMap[v.variable_id];
+              const isSelected = v.variable_id === selectedVarId;
+              const isVerified = ext?.is_verified;
+              const isEdited = ext?.is_edited;
+              const rule = DEMO_CODEBOOK_RULES[v.variable_id];
+
+              return (
+                <div
+                  key={v.variable_id}
+                  onClick={() => {
+                    setSelectedVarId(v.variable_id);
+                    if (ext?.quote) scrollToQuote(ext.quote);
+                  }}
+                  className={`rounded-xl border transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-white border-blue-500 shadow-md ring-2 ring-blue-400/20"
+                      : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white shadow-2xs"
+                  }`}
+                >
+                  {/* Card Header */}
+                  <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-slate-400 font-bold">
+                        #{index + 1}
+                      </span>
+                      <span className="font-bold text-slate-900 text-sm">
+                        {v.name}
+                      </span>
+                      <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                        {v.section || "General"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {isVerified ? (
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Check className="h-3 w-3" /> {isEdited ? "Modified & Verified" : "Accepted"}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" /> Pending Review
+                        </span>
+                      )}
+
+                      {ext?.confidence && (
+                        <span className="text-[10px] font-mono text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-bold">
+                          {Math.round(ext.confidence * 100)}% AI Conf
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Body: Track Changes Diff & Values */}
+                  <div className="p-4 space-y-3">
+                    {/* Word-style Track Changes Display */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                        <span>Extracted Value & Proposed Change</span>
+                        <span className="text-[10px] text-slate-500">Source: Docling v2.4</span>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-sm">
+                        {isEdited ? (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="line-through text-rose-500 bg-rose-50 px-2 py-0.5 rounded font-medium">
+                              {ext?.proposed_by || "Original AI Prediction"}
+                            </span>
+                            <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
+                            <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-bold">
+                              {ext?.value}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-bold text-slate-900 text-sm bg-white px-2.5 py-1 rounded border border-slate-200 shadow-2xs">
+                            {ext?.value || "Not Reported (NR)"}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Supporting Source Evidence Quote */}
+                      {ext?.quote && (
+                        <div className="mt-2.5 text-xs text-slate-600 bg-white p-2.5 rounded border border-slate-200/80 italic flex items-start gap-2">
+                          <QuoteIcon className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          <span className="flex-1">{ext.quote}</span>
+                          <span className="text-[10px] font-mono text-slate-400 shrink-0 ml-1">
+                            P.{ext.source_page || 1}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Inline Editing Form if active */}
+                    {editingVarId === v.variable_id && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2 animate-in fade-in duration-150">
+                        <label className="text-xs font-bold text-blue-900">
+                          Modify Extracted Value:
+                        </label>
+                        <input
+                          type="text"
+                          value={editDraftValue}
+                          onChange={(e) => setEditDraftValue(e.target.value)}
+                          placeholder="Enter revised ground-truth value..."
+                          className="w-full text-xs p-2 bg-white border border-blue-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
+                          autoFocus
+                        />
+
+                        {/* Quick Selection Chips from Codebook */}
+                        {rule?.allowed_values && (
+                          <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                            <span className="text-[10px] font-semibold text-slate-500">Allowed Categories:</span>
+                            {rule.allowed_values.map((val: string) => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => setEditDraftValue(val)}
+                                className="text-[10px] font-medium bg-white hover:bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full transition-colors"
+                              >
+                                {val}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="pt-2 flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingVarId(null)}
+                            className="px-3 py-1 text-xs text-slate-600 hover:bg-slate-200 rounded-md"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDecision("modified", editDraftValue)}
+                            className="px-3.5 py-1 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-xs flex items-center gap-1"
+                          >
+                            <Check className="h-3.5 w-3.5" /> Save & Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Word Track Changes Action Bar (when this variable is selected) */}
+                    {isSelected && editingVarId !== v.variable_id && (
+                      <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                        <div className="flex items-center gap-2">
+                          {/* Accept Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDecision("accepted");
+                            }}
+                            className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-lg shadow-xs flex items-center gap-1.5 transition-all"
+                            title="Accept AI Extraction (Hotkey: A or Enter)"
+                          >
+                            <Check className="h-4 w-4" /> Accept <span className="text-[10px] opacity-75 font-mono">(A)</span>
+                          </button>
+
+                          {/* Modify Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingVarId(v.variable_id);
+                              setEditDraftValue(ext?.value || "");
+                            }}
+                            className="px-3.5 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 active:scale-95 rounded-lg flex items-center gap-1.5 transition-all"
+                            title="Modify Value (Hotkey: M)"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" /> Modify <span className="text-[10px] opacity-75 font-mono">(M)</span>
+                          </button>
+
+                          {/* Reject Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDecision("rejected");
+                            }}
+                            className="px-3.5 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 active:scale-95 rounded-lg flex items-center gap-1.5 transition-all"
+                            title="Reject / Mark Not Reported (Hotkey: R)"
+                          >
+                            <X className="h-3.5 w-3.5" /> Reject <span className="text-[10px] opacity-75 font-mono">(R)</span>
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (ext?.quote) scrollToQuote(ext.quote);
+                          }}
+                          className="text-xs font-medium text-slate-500 hover:text-blue-600 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-100"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> Find Quote in Text
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Bottom Keyboard Shortcut Legend */}
+          <div className="bg-white border-t border-slate-200 px-5 py-2 shrink-0 flex items-center justify-between text-[11px] text-slate-500">
+            <span className="font-semibold text-slate-600 flex items-center gap-1">
+              <Zap className="h-3.5 w-3.5 text-amber-500" /> Hotkeys:
+            </span>
+            <div className="flex items-center gap-3">
+              <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">A</kbd> or <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">Enter</kbd> Accept</span>
+              <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">M</kbd> Modify</span>
+              <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">R</kbd> Reject (NR)</span>
+              <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">↓</kbd> / <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">↑</kbd> Navigate</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════
+            COLUMN 3: SIDE-BY-SIDE CODEBOOK & ACTIVE LEARNING (RIGHT)
+        ══════════════════════════════════════════════════════════ */}
+        <section className="w-[30%] bg-white border-l border-slate-200 flex flex-col h-full overflow-hidden">
+          {/* Header */}
+          <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3 shrink-0 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-blue-600" />
+              <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wide">
+                Protocol Codebook & Rules
+              </h3>
+            </div>
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+              PICO Synced
+            </span>
+          </div>
+
+          {/* Right Panel Content */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {currentRule ? (
+              <div className="space-y-4">
+                {/* Active Variable Header */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Selected Field
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-900 mt-0.5">
+                    {currentRule.name}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                      Section: {currentRule.section}
+                    </span>
+                    <span className="text-[10px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                      Type: {currentRule.field_type}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Operational Definition */}
+                <div>
+                  <h5 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                    <HelpCircle className="h-3.5 w-3.5 text-blue-500" />
+                    Operational Definition
+                  </h5>
+                  <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 leading-relaxed">
+                    {currentRule.definition}
+                  </p>
+                </div>
+
+                {/* Allowed Categories with Click-to-Apply */}
+                {currentRule.allowed_values && currentRule.allowed_values.length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5 text-emerald-500" />
+                      Allowed Standard Values (Click to choose)
+                    </h5>
+                    <div className="flex flex-wrap gap-1.5">
+                      {currentRule.allowed_values.map((val: string) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => {
+                            setEditingVarId(currentRule.variable_id);
+                            setEditDraftValue(val);
+                          }}
+                          className="text-[11px] font-medium bg-slate-50 hover:bg-blue-50 hover:text-blue-700 text-slate-700 border border-slate-200 hover:border-blue-300 px-2.5 py-1 rounded-md transition-colors text-left"
+                        >
+                          {val}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Extraction & Coding Rules */}
+                <div>
+                  <h5 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                    <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
+                    Coding Rules & Criteria
+                  </h5>
+                  <ul className="space-y-1.5 text-xs text-slate-600">
+                    {currentRule.rules.map((r: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-1.5 bg-slate-50 p-2 rounded border border-slate-100">
+                        <span className="text-blue-500 font-bold">•</span>
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Gold Standard Literature Example */}
+                {currentRule.gold_standard_example && (
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                      Gold-Standard Literature Example
+                    </h5>
+                    <div className="text-xs text-slate-700 bg-amber-50/60 border border-amber-200 p-2.5 rounded-lg italic">
+                      "{currentRule.gold_standard_example}"
+                    </div>
+                  </div>
+                )}
+
+                {/* Exclusion Criteria */}
+                {currentRule.exclusion_criteria && (
+                  <div>
+                    <h5 className="text-xs font-bold text-rose-800 mb-1 flex items-center gap-1.5">
+                      <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
+                      Exclusion / Disqualification Rule
+                    </h5>
+                    <p className="text-xs text-rose-700 bg-rose-50/60 border border-rose-200 p-2 rounded-lg">
+                      {currentRule.exclusion_criteria}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-10 text-slate-400 text-xs">
+                Select a variable to inspect its codebook operational rules.
+              </div>
+            )}
+          </div>
+        </section>
       </div>
+
+      {/* ══════════════════════════════════════════════════════════
+          ACTIVE LEARNING & ERROR ANALYSIS MODAL DRAWER
+      ══════════════════════════════════════════════════════════ */}
+      {showErrorAnalysis && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-purple-400" />
+                <div>
+                  <h3 className="font-bold text-base">
+                    Active Learning & Error Discrepancy Analysis
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Continuous evaluation & automatic fine-tuning training dataset generation
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowErrorAnalysis(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-md"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {/* Metrics Summary Grid */}
+              <div className="grid grid-cols-4 gap-3 text-center">
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                  <div className="text-xl font-black text-slate-900">
+                    {errorAnalysis?.total_decisions || 18}
+                  </div>
+                  <div className="text-[11px] font-semibold text-slate-500 uppercase mt-0.5">
+                    Reviews Done
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
+                  <div className="text-xl font-black text-emerald-700">
+                    {errorAnalysis?.accuracy_rate || 77.8}%
+                  </div>
+                  <div className="text-[11px] font-semibold text-emerald-600 uppercase mt-0.5">
+                    AI Accuracy
+                  </div>
+                </div>
+
+                <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl">
+                  <div className="text-xl font-black text-rose-700">
+                    {errorAnalysis?.total_discrepancies || 4}
+                  </div>
+                  <div className="text-[11px] font-semibold text-rose-600 uppercase mt-0.5">
+                    Discrepancies
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 p-3 rounded-xl">
+                  <div className="text-xl font-black text-purple-700">
+                    {errorAnalysis?.category_breakdown?.NORMALIZATION || 2}
+                  </div>
+                  <div className="text-[11px] font-semibold text-purple-600 uppercase mt-0.5">
+                    Format Errors
+                  </div>
+                </div>
+              </div>
+
+              {/* Error Categories Breakdown */}
+              <div>
+                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wide mb-2">
+                  Error Modalities Distribution
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                    <span className="font-medium text-slate-700">Normalization (Units/Format)</span>
+                    <span className="font-bold text-slate-900 font-mono">
+                      {errorAnalysis?.category_breakdown?.NORMALIZATION || 2}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                    <span className="font-medium text-slate-700">Missed Context (Overlooked)</span>
+                    <span className="font-bold text-slate-900 font-mono">
+                      {errorAnalysis?.category_breakdown?.MISSED_CONTEXT || 1}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                    <span className="font-medium text-slate-700">Numeric Mismatch</span>
+                    <span className="font-bold text-slate-900 font-mono">
+                      {errorAnalysis?.category_breakdown?.NUMERIC_MISMATCH || 1}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                    <span className="font-medium text-slate-700">False Extraction (Hallucination)</span>
+                    <span className="font-bold text-slate-900 font-mono">
+                      {errorAnalysis?.category_breakdown?.FALSE_EXTRACTION || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Suggested Prompt Tuning Adjustments */}
+              <div>
+                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                  Auto-Generated Prompt Engineering Corrections
+                </h4>
+                <div className="space-y-1.5 text-xs text-slate-700">
+                  {(errorAnalysis?.suggested_prompt_rules || []).map((rule: string, idx: number) => (
+                    <div key={idx} className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-lg flex items-start gap-2">
+                      <span className="text-amber-600 font-bold">•</span>
+                      <span>{rule}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer with JSONL Export */}
+            <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                Ready for fine-tuning via Antigravity Cloud or local Ollama/vLLM.
+              </span>
+              <button
+                onClick={handleExportTrainingData}
+                className="px-4 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"
+              >
+                <Download className="h-4 w-4" /> Export Training Dataset (JSONL)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Helper components ──
-
-function LoadingSpinner() {
+function QuoteIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <div className="flex items-center justify-center h-full">
-      <Loader2 className="h-10 w-10 text-phylo-blue animate-spin" />
-    </div>
-  );
-}
-
-function ErrorView() {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <div className="text-center p-8 max-w-md">
-        <FileText className="h-12 w-12 text-red-400 mx-auto mb-3" />
-        <p className="text-sm font-medium text-gray-700">Failed to load PDF</p>
-        <p className="text-xs text-gray-500 mt-1">
-          The PDF file could not be rendered. Ensure the file is a valid PDF.
-        </p>
-      </div>
-    </div>
+    <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
+      <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+    </svg>
   );
 }

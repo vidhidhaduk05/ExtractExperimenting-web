@@ -405,3 +405,104 @@ async def coded_extraction_xlsx(project_id: str, user: Optional[dict] = Depends(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="coded_extraction_{project_id}.xlsx"'},
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Track Changes Review & Active Learning Error Analysis
+# ═══════════════════════════════════════════════════════════════════════
+
+class ExtractionDecisionRequest(BaseModel):
+    project_id: str
+    study_id: str
+    variable_id: str
+    variable_name: str
+    original_value: str
+    corrected_value: str
+    decision: str  # 'accepted' | 'modified' | 'rejected'
+    evidence_quote: Optional[str] = ""
+    page_number: Optional[int] = None
+    codebook_rules: Optional[str] = ""
+    reviewer: Optional[str] = "Expert Reviewer"
+    notes: Optional[str] = ""
+
+
+@router.post("/extraction/decide")
+async def record_extraction_decision(
+    body: ExtractionDecisionRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Record human Track Changes decision (accepted/modified/rejected).
+    
+    Persists update to study extraction record, classifies discrepancies into
+    error modalities (NORMALIZATION, MISSED_CONTEXT, NUMERIC_MISMATCH, etc.),
+    and registers record into active learning pipeline.
+    """
+    from services.error_analysis_service import error_analysis_service
+    
+    check_project_access(conn, body.project_id, user)
+    
+    # Update SQLite database if extraction row exists
+    now = datetime.datetime.utcnow().isoformat()
+    existing = conn.execute(
+        "SELECT extraction_id FROM extractions WHERE study_id = ? AND variable_id = ?",
+        (body.study_id, body.variable_id),
+    ).fetchone()
+    
+    final_val = body.corrected_value if body.decision == "modified" else (
+        "NR" if body.decision == "rejected" else body.original_value
+    )
+    
+    if existing:
+        conn.execute(
+            """UPDATE extractions 
+               SET value = ?, is_verified = 1, verified_by = ?, verified_at = ?,
+                   notes = ?, updated_at = ?
+               WHERE extraction_id = ?""",
+            (final_val, body.reviewer or "reviewer", now, body.notes, now, existing["extraction_id"])
+        )
+    else:
+        new_id = f"ext_{uuid.uuid4().hex[:12]}"
+        conn.execute(
+            """INSERT INTO extractions
+               (extraction_id, study_id, variable_id, value, is_verified, verified_by, verified_at, notes, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)""",
+            (new_id, body.study_id, body.variable_id, final_val, body.reviewer or "reviewer", now, body.notes, now, now)
+        )
+    conn.commit()
+
+    record = error_analysis_service.record_decision(
+        project_id=body.project_id,
+        study_id=body.study_id,
+        variable_id=body.variable_id,
+        variable_name=body.variable_name,
+        original_value=body.original_value,
+        corrected_value=final_val,
+        decision=body.decision,
+        evidence_quote=body.evidence_quote or "",
+        page_number=body.page_number,
+        codebook_rules=body.codebook_rules or "",
+        reviewer=body.reviewer or (user["username"] if user else "Expert Reviewer"),
+        notes=body.notes or ""
+    )
+    return {"status": "success", "record": record}
+
+
+@router.get("/extraction/error-analysis")
+async def get_extraction_error_analysis(
+    project_id: Optional[str] = None,
+    user: Optional[dict] = Depends(get_current_user_optional),
+):
+    """Retrieve aggregate error analysis breakdown and prompt tuning rules."""
+    from services.error_analysis_service import error_analysis_service
+    return error_analysis_service.get_analysis_summary(project_id)
+
+
+@router.get("/extraction/export-training-data")
+async def export_extraction_training_data(
+    project_id: Optional[str] = None,
+    user: Optional[dict] = Depends(get_current_user_optional),
+):
+    """Export verified human decisions in fine-tuning / prompt format."""
+    from services.error_analysis_service import error_analysis_service
+    return error_analysis_service.export_training_dataset(project_id)
