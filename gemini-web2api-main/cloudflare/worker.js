@@ -1518,7 +1518,7 @@ function messagesToPrompt(messages, tools) {
  * 
  * 解析后转换为 OpenAI 格式的工具调用对象:
  * {
- *   id: "call_xxxxxxxxxxxx",
+ *   id: "call_a1b2c3d4",
  *   type: "function",
  *   function: {
  *     name: "get_weather",
