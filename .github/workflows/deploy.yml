@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy Web App to GitHub Pages
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build-and-deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -36,14 +36,24 @@ jobs:
       - name: Build Web App
         run: npm run build
 
+      - name: Deploy to gh-pages Branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          force_orphan: true
+
       - name: Setup Pages
+        continue-on-error: true
         uses: actions/configure-pages@v5
 
       - name: Upload Pages Artifact
+        continue-on-error: true
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages (Actions Mode)
+        continue-on-error: true
         id: deployment
         uses: actions/deploy-pages@v4
