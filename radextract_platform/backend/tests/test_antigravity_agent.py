@@ -28,6 +28,8 @@ from config import settings
 @pytest.fixture
 def fresh_settings(tmp_path, monkeypatch):
     """Reset settings to a clean state for each test."""
+    from routers.agent import _batch_jobs
+    _batch_jobs.clear()
     monkeypatch.setattr(settings, "db_path", str(tmp_path / "test_agent.db"))
     monkeypatch.setattr(settings, "upload_root", str(tmp_path / "uploads"))
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
@@ -36,6 +38,7 @@ def fresh_settings(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "antigravity_model", "gemini-2.5-flash")
     monkeypatch.setattr(settings, "antigravity_max_tokens_per_run", 50000)
     yield
+    _batch_jobs.clear()
 
 
 @pytest.fixture
@@ -369,3 +372,57 @@ class TestAgentRouter:
             "study_ids": [], "project_id": pid
         })
         assert r.status_code == 400
+
+    def test_get_batch_status_success_direct(self, client):
+        """Test GET /api/agent/batch/{job_id} returning job state directly."""
+        from routers.agent import _batch_jobs
+
+        job_id = "test-job-uuid-123"
+        _batch_jobs[job_id] = {
+            "job_id": job_id,
+            "project_id": "proj-1",
+            "total_studies": 2,
+            "status": "completed",
+            "results": {"total_studies": 2, "included": 1, "excluded": 1, "uncertain": 0},
+            "error": None,
+        }
+
+        r = client.get(f"/api/agent/batch/{job_id}")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["job_id"] == job_id
+        assert data["project_id"] == "proj-1"
+        assert data["status"] == "completed"
+        assert data["total_studies"] == 2
+        assert data["results"]["included"] == 1
+
+    def test_get_batch_status_integration_flow(self, client, monkeypatch, mock_agent_response):
+        """Test full flow: POST /api/agent/batch and polling GET /api/agent/batch/{job_id}."""
+        import services.antigravity_agent as mod
+        monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
+        monkeypatch.setattr(settings, "antigravity_enabled", True)
+        monkeypatch.setattr(settings, "antigravity_api_key", "test-key")
+        monkeypatch.setattr(mod, "create_agent_config", lambda **kw: MagicMock())
+
+        mock_response = MockChatResponse(structured=mock_agent_response)
+        mock_agent = MockAgent(config=MagicMock(), response=mock_response)
+        monkeypatch.setattr(mod, "_Agent", lambda config: mock_agent)
+
+        # Create project first
+        proj_resp = client.post("/api/projects", json={"name": "Batch Test Project"})
+        pid = proj_resp.json()["project_id"]
+
+        batch_resp = client.post("/api/agent/batch", json={
+            "study_ids": ["s1"],
+            "project_id": pid
+        })
+        assert batch_resp.status_code == 200
+        job_id = batch_resp.json()["job_id"]
+        assert batch_resp.json()["status"] == "queued"
+
+        status_resp = client.get(f"/api/agent/batch/{job_id}")
+        assert status_resp.status_code == 200
+        job_data = status_resp.json()
+        assert job_data["job_id"] == job_id
+        assert job_data["project_id"] == pid
+        assert job_data["status"] in ["queued", "running", "completed"]
