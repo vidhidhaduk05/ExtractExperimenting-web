@@ -212,7 +212,7 @@ var DEFAULT_CONFIG = {
   // Gemini 对匿名请求有严格的速率限制（容易触发 429 Too Many Requests）
   // 提供有效的 Cookie 可以大幅提升稳定性和降低限流概率
   // cookieString: 从浏览器复制的完整 Cookie 字符串
-  //   格式: "__Secure-1PSID=xxx; __Secure-3PSID=xxx; SAPISID=xxx; ..."
+  //   格式: "__Secure-1PSID=<value>; __Secure-3PSID=<value>; SAPISID=<value>; ..."
   //   支持多个 Cookie（用 | 分隔），每次请求随机选择一个
   //   示例: "cookie1| cookie2| cookie3"
   cookieString: null,
