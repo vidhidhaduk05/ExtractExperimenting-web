@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, type PrismaFlow } from "../lib/api";
-import { ArrowLeft, GitBranch, Loader2, Download, FileText } from "lucide-react";
+import { ArrowLeft, GitBranch, Loader2, Download, FileText, Code2, Copy } from "lucide-react";
 
 /** Fetch a URL as a blob and trigger a browser download. */
 async function downloadFile(url: string, filename: string) {
@@ -23,6 +23,25 @@ export function PrismaFlowPage() {
   const [rSvgLoading, setRSvgLoading] = useState(false);
   const [rSvgError, setRSvgError] = useState(false);
   const [downloading, setDownloading] = useState<"png" | "docx" | null>(null);
+
+  // Mermaid Modal State
+  const [mermaidModalOpen, setMermaidModalOpen] = useState(false);
+  const [mermaidText, setMermaidText] = useState<string>('');
+  const [mermaidLoading, setMermaidLoading] = useState(false);
+
+  const handleMermaidSyntax = async () => {
+    if (!projectId) return;
+    setMermaidLoading(true);
+    setMermaidModalOpen(true);
+    try {
+      const data = await api.prismaMermaid({ project_id: projectId });
+      if (data.mermaid) setMermaidText(data.mermaid);
+    } catch (err) {
+      console.error('Error fetching Mermaid syntax:', err);
+    } finally {
+      setMermaidLoading(false);
+    }
+  };
 
   const handleDownload = async (kind: "png" | "docx") => {
     if (!projectId) return;
@@ -116,6 +135,15 @@ export function PrismaFlowPage() {
           >
             Built-in
           </button>
+          <span className="w-px h-5 bg-gray-200 mx-1" />
+          <button
+            onClick={handleMermaidSyntax}
+            className="text-xs px-3 py-1.5 rounded-md font-medium bg-gray-800 text-white hover:bg-gray-900 transition-colors flex items-center gap-1"
+            title="View Mermaid Syntax"
+          >
+            <Code2 className="h-3 w-3" />
+            Mermaid Syntax
+          </button>
         </div>
       </div>
       <p className="text-gray-500 text-sm mb-6">
@@ -160,6 +188,40 @@ export function PrismaFlowPage() {
           )}
         </div>
       )}
+
+      {/* Mermaid Syntax Modal */}
+      {mermaidModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 relative flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Code2 className="w-5 h-5 text-gray-800" />
+                PRISMA 2020 Mermaid Syntax
+              </h3>
+              <button onClick={() => setMermaidModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">✕</button>
+            </div>
+
+            <div className="flex-1 overflow-auto bg-slate-50 p-4 rounded-xl border font-mono text-sm text-slate-800 whitespace-pre-wrap leading-relaxed relative">
+              {mermaidLoading ? "Generating Mermaid syntax..." : mermaidText}
+              {!mermaidLoading && mermaidText && (
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(mermaidText)}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-indigo-600 p-1 rounded bg-white"
+                  title="Copy Mermaid syntax"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4 border-t mt-4">
+              <button onClick={() => setMermaidModalOpen(false)} className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
