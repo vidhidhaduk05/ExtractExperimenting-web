@@ -294,10 +294,10 @@
     "semantic_hash": "7ec1b30513a95a42235f86078e401c0d"
   },
   "radextract_platform/backend/routers/export.py": {
-    "mtime": 1791198854.5720234,
-    "seen": 1791208660.4842732,
-    "ast_hash": "4c487195565263fe9b275d59d20af91b",
-    "semantic_hash": "4c487195565263fe9b275d59d20af91b"
+    "mtime": 1791216367.4954283,
+    "seen": 1791216932.7324157,
+    "ast_hash": "db668bca84d4eb165d9af06ac0385843",
+    "semantic_hash": ""
   },
   "radextract_platform/backend/routers/extraction.py": {
     "mtime": 1791198854.573599,
@@ -390,9 +390,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/seed_example_study.py": {
-    "mtime": 1791198854.7507217,
-    "seen": 1791208660.4843047,
-    "ast_hash": "58194a24362e27f2b6a2a49e7c2509bc",
+    "mtime": 1791213458.27065,
+    "seen": 1791215053.3430924,
+    "ast_hash": "c7ed8f2e7e4bd9e39caced2f9f26e5c1",
     "semantic_hash": ""
   },
   "radextract_platform/backend/seed_pam_protocol.py": {
@@ -552,9 +552,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/rob_service.py": {
-    "mtime": 1791198855.4192753,
-    "seen": 1791208660.4843812,
-    "ast_hash": "a3271ac030f1d30efb8ff9f8fb3ffe86",
+    "mtime": 1791213741.6579137,
+    "seen": 1791215053.3431883,
+    "ast_hash": "18e52b036509c6eef77795a6d2c70d53",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/rob_tools.py": {
@@ -564,10 +564,10 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/search_string_generator.py": {
-    "mtime": 1791198855.4295774,
-    "seen": 1791208660.4843886,
-    "ast_hash": "9e4d03f1f9a6ba567c5763792a6b8f7c",
-    "semantic_hash": "9e4d03f1f9a6ba567c5763792a6b8f7c"
+    "mtime": 1791213318.9062164,
+    "seen": 1791215053.3431976,
+    "ast_hash": "7ff4bab038799a00a561ef944d7c516c",
+    "semantic_hash": ""
   },
   "radextract_platform/backend/services/stats_engine.py": {
     "mtime": 1791198855.431091,
@@ -654,9 +654,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_pico_extractor.py": {
-    "mtime": 1791198855.6026454,
-    "seen": 1791208660.4844325,
-    "ast_hash": "90e2ac85569af7808838e66c6400c8fb",
+    "mtime": 1791214377.5703042,
+    "seen": 1791215053.3432555,
+    "ast_hash": "308c70586348228d51c5bc49bb779b89",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_pico_highlight.py": {
@@ -798,9 +798,9 @@
     "semantic_hash": "66b534d62b3522b6584adb2e7b8b1070"
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1791199503.665121,
-    "seen": 1791208660.484477,
-    "ast_hash": "88052f9a7cff396076a7d11e18810c4f",
+    "mtime": 1791214993.7525651,
+    "seen": 1791215053.343319,
+    "ast_hash": "26354b467da4b3f5f808567c4c3cdecb",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -810,9 +810,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/main.tsx": {
-    "mtime": 1791198855.744094,
-    "seen": 1791208660.48448,
-    "ast_hash": "d0423e4084ea1d5e5ac6c866914c6939",
+    "mtime": 1791214993.7536716,
+    "seen": 1791215053.3433242,
+    "ast_hash": "9ca90bab4aea1c4fd06ab168a312a7e5",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/AnalysisPage.tsx": {
@@ -966,9 +966,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/vite.config.ts": {
-    "mtime": 1791198855.8882475,
-    "seen": 1791208660.4845183,
-    "ast_hash": "97cf3ca4f8b09d79f6cec3220b0952bb",
+    "mtime": 1791214993.7542531,
+    "seen": 1791215053.3433719,
+    "ast_hash": "755614ca5c4c08dac03b111563e782c1",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_ai_integration.py": {
@@ -1092,9 +1092,9 @@
     "semantic_hash": ""
   },
   "gemini-web2api-main/cloudflare/worker.js": {
-    "mtime": 1791198853.3055875,
-    "seen": 1791208660.4841628,
-    "ast_hash": "227b5926bc0ac9a0e8ba9638f09fc956",
+    "mtime": 1791216323.13574,
+    "seen": 1791216932.7322633,
+    "ast_hash": "78eff4a05793e9f16a5b432a95c587bd",
     "semantic_hash": ""
   },
   "gemini-web2api-main/config.example.json": {
@@ -1164,9 +1164,9 @@
     "semantic_hash": ""
   },
   "gemini-web2api-main/gemini_web2api/tools.py": {
-    "mtime": 1791198853.4214957,
-    "seen": 1791208660.4841824,
-    "ast_hash": "9eb8e0a5f1fd6db5b10edc994c2b483f",
+    "mtime": 1791213376.35095,
+    "seen": 1791215053.3428705,
+    "ast_hash": "f6afd4c56385467c9f6a8525e06b39c5",
     "semantic_hash": ""
   },
   "gemini-web2api-main/pyproject.toml": {
@@ -1188,15 +1188,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/preload_test_data.py": {
-    "mtime": 1791198853.938783,
-    "seen": 1791208660.4841995,
-    "ast_hash": "30cc8b9a4be9d2f4a90ce3adb7cd98a6",
+    "mtime": 1791213532.1353402,
+    "seen": 1791215053.3429148,
+    "ast_hash": "1c3374797461410d08854de9b7b46686",
     "semantic_hash": ""
   },
   "radextract_platform/backend/run_end_to_end_test.py": {
-    "mtime": 1791198854.7358186,
-    "seen": 1791208660.4842978,
-    "ast_hash": "9fc74a4430fa7a3da95e57dcffecd070",
+    "mtime": 1791214092.4191823,
+    "seen": 1791215053.3430848,
+    "ast_hash": "034fe075e9f3d4140e5e743ad4d2cd51",
     "semantic_hash": ""
   },
   "radextract_platform/backend/scripts/init_aws_local.py": {
@@ -1308,9 +1308,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_ai_screening_pipeline.py": {
-    "mtime": 1791198855.5063558,
-    "seen": 1791208660.4844048,
-    "ast_hash": "46f5ee27300f9ffb446a05062114b462",
+    "mtime": 1791213821.319847,
+    "seen": 1791215053.343221,
+    "ast_hash": "a1b80bcf46993b500db149dedda56efd",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_keyword_highlight.py": {
@@ -1518,9 +1518,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1791209193.954649,
-    "seen": 1791209352.2212543,
-    "ast_hash": "d1421b938dc990e3865b95f46a4df40d",
+    "mtime": 1791215859.832646,
+    "seen": 1791216932.7327604,
+    "ast_hash": "69324ec2b978cfb4e6079053cb9de43d",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -1530,9 +1530,9 @@
     "semantic_hash": ""
   },
   "GEMINI.md": {
-    "mtime": 1791209203.1094518,
-    "seen": 1791209352.2212577,
-    "ast_hash": "d1421b938dc990e3865b95f46a4df40d",
+    "mtime": 1791215868.2393563,
+    "seen": 1791216932.7327642,
+    "ast_hash": "69324ec2b978cfb4e6079053cb9de43d",
     "semantic_hash": ""
   },
   "PLANS/Improvements_Precision_Cost_Deployment.md": {
@@ -1812,9 +1812,57 @@
     "semantic_hash": ""
   },
   ".agents/rules/jules.md": {
-    "mtime": 1791209186.2062201,
-    "seen": 1791209352.2212439,
-    "ast_hash": "5c4aee732815bf8a22d05aeaec69e7d7",
+    "mtime": 1791215875.4718127,
+    "seen": 1791216932.7327487,
+    "ast_hash": "7003c5b983b5080af5781ca4877cc2a4",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/benchmark_export.py": {
+    "mtime": 1791213769.2540066,
+    "seen": 1791215053.3432128,
+    "ast_hash": "251ea533fe642a763bfff3169e2defd5",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_rob_benchmark.py": {
+    "mtime": 1791213741.6589167,
+    "seen": 1791215053.3432744,
+    "ast_hash": "1d81b5b6851fef117a1fc2bc40b23bcb",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_routers_analysis.py": {
+    "mtime": 1791216559.9152446,
+    "seen": 1791216932.7326496,
+    "ast_hash": "61c403b97fde5e00c347244706a0f929",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_routers_auth.py": {
+    "mtime": 1791213737.904319,
+    "seen": 1791215053.3432834,
+    "ast_hash": "e8b9f3d767d05ff01a8123d624251568",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/lib/demoData.ts": {
+    "mtime": 1791214993.7531357,
+    "seen": 1791215053.3433206,
+    "ast_hash": "6c0adcd9cd84e6c7fe8fb85c98f11dcf",
+    "semantic_hash": ""
+  },
+  ".github/workflows/deploy-pages.yml": {
+    "mtime": 1791214993.7514768,
+    "seen": 1791215053.3433867,
+    "ast_hash": "dde680cf001a2f73ff16aae98e4fe4c4",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/public/404.html": {
+    "mtime": 1791214993.752038,
+    "seen": 1791215053.3434572,
+    "ast_hash": "9fa314a6ad682f1298da1d2fb35ee2d5",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_export_benchmark.py": {
+    "mtime": 1791216347.730568,
+    "seen": 1791216932.7326033,
+    "ast_hash": "b86d5afb784d047a9d5b3b1803193587",
     "semantic_hash": ""
   }
 }

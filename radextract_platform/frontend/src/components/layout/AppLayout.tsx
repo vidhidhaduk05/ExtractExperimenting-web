@@ -1,8 +1,8 @@
 import { Outlet, NavLink, useParams, Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../../lib/api";
-import { useState } from "react";
-import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 const navItems = [
@@ -162,14 +162,50 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
 
 export function AppLayout() {
   const { projectId } = useParams();
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDarkMode]);
 
   return (
-    <div className="flex h-screen bg-phylo-paper">
+    <div className="flex h-screen bg-phylo-paper dark:bg-gray-900 transition-colors">
+      {/* Mobile Backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 border-r border-gray-200 bg-white flex flex-col">
-        <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-200">
-          <FlaskConical className="h-6 w-6 text-phylo-blue" />
-          <span className="font-bold text-lg">RadExtract</span>
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col transform transition-transform duration-300 md:relative md:translate-x-0",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+            <FlaskConical className="h-6 w-6 text-phylo-blue" />
+            <span className="font-bold text-lg dark:text-gray-100">RadExtract</span>
+          </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="md:hidden p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">
@@ -193,7 +229,7 @@ export function AppLayout() {
           )}
         </nav>
 
-        <div className="border-t border-gray-200 px-4 py-3 text-xs text-gray-400">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 text-xs text-gray-400 dark:text-gray-500">
           RadExtract Platform v2.4
         </div>
       </aside>
@@ -201,15 +237,35 @@ export function AppLayout() {
       {/* Main content with top bar */}
       <main className="flex-1 overflow-y-auto flex flex-col">
         {/* Top bar with settings */}
-        <header className="bg-white border-b border-gray-200 px-4 py-2 sticky top-0 z-30">
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 sticky top-0 z-30 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Layers className="h-5 w-5 text-gray-400" />
-              <span className="text-sm font-medium text-gray-600">
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                aria-label="Toggle Menu"
+              >
+                <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+              </button>
+              <Layers className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                 {projectId ? "Project: " + projectId.substring(0, 20) : "RadExtract Platform"}
               </span>
             </div>
-            {projectId && <SettingsPanel projectId={projectId} />}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                aria-label="Toggle Dark Mode"
+              >
+                {isDarkMode ? (
+                  <Sun className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Moon className="h-5 w-5 text-gray-600" />
+                )}
+              </button>
+              {projectId && <SettingsPanel projectId={projectId} />}
+            </div>
           </div>
         </header>
         <div className="flex-1 overflow-y-auto">
@@ -225,27 +281,35 @@ function NavItem({
   label,
   icon: Icon,
   end,
+  badge,
 }: {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   end?: boolean;
+  badge?: string | number;
 }) {
   return (
     <NavLink
       to={to}
       end={end}
+      title={label}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 hover:scale-[1.02]",
           isActive
-            ? "bg-phylo-blue/10 text-phylo-blue"
-            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            ? "bg-phylo-blue/10 text-phylo-blue dark:bg-phylo-blue/20 dark:text-blue-400"
+            : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white"
         )
       }
     >
       <Icon className="h-4 w-4" />
-      {label}
+      <span className="flex-1 truncate">{label}</span>
+      {badge && (
+        <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[0.65rem] font-bold text-white bg-phylo-blue rounded-full">
+          {badge}
+        </span>
+      )}
     </NavLink>
   );
 }
