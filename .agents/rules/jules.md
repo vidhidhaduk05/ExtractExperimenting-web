@@ -16,8 +16,9 @@ Google Jules is an autonomous coding agent capable of deep codebase analysis, mu
 
 ## 2. Jules API Protocol
 - **Base Endpoint**: `https://jules.googleapis.com/v1alpha`
-- **Authentication**: `x-goog-api-key: $JULES_API_KEY` (passed in request header)
-- **Repository Source Identifier**: `sources/github/vidhidhaduk05/ExtractExperimenting`
+- **Repository Source Identifiers**:
+  - **Web Frontend & GitHub Pages**: `sources/github/vidhidhaduk05/ExtractExperimenting-web`
+  - **Core Platform & Backend**: `sources/github/vidhidhaduk05/ExtractExperimenting`
 
 ### Key REST Methods
 | Operation | Method & URI | Body / Notes |
