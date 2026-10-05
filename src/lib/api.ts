@@ -3,6 +3,11 @@ import {
   DEMO_STUDIES, 
   DEMO_PRISMA, 
   DEMO_SCREENING_SUMMARY, 
+  DEMO_SCREENING_KEYWORDS,
+  DEMO_ABSTRACT_HIGHLIGHTS,
+  DEMO_STUDY_CLARIFICATIONS,
+  DEMO_EXCLUSION_REASONS,
+  DEMO_VARIABLES,
   DEMO_REVIEW_MATRIX,
   DEMO_ANALYSIS_PROFILE,
   DEMO_ROB_SUMMARY,
@@ -17,7 +22,12 @@ import {
   DEMO_DRAFT_MANUSCRIPT,
   DEMO_BIBLIOGRAPHY,
   DEMO_PRISMA_MERMAID,
-  DEMO_MULTI_DATABASE_SEARCH
+  DEMO_MULTI_DATABASE_SEARCH,
+  DEMO_PDF_SUMMARIES,
+  DEMO_PDF_DATA,
+  DEMO_EXTRACTIONS,
+  DEMO_CODEBOOK_RULES,
+  DEMO_ERROR_ANALYSIS
 } from "./demoData";
 
 const API_HOST = typeof window !== "undefined" ? window.location.hostname : "localhost";
@@ -26,86 +36,468 @@ export const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
   (API_HOST === "localhost" || API_HOST === "127.0.0.1" ? `http://${API_HOST}:8000/api` : `/api`);
 
-function getDemoFallback(path: string): any {
-  // Specific routes first to avoid catching on general prefixes
-  if (path.includes("/analysis/profile") || path.includes("/analysis")) {
-    return DEMO_ANALYSIS_PROFILE;
+function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
+  const method = (options.method || "GET").toUpperCase();
+  let body: any = {};
+  if (options.body && typeof options.body === "string") {
+    try {
+      body = JSON.parse(options.body);
+    } catch (e) {
+      body = {};
+    }
   }
-  if (path.includes("/rob/summary") || path.includes("/rob-summary") || path.includes("/rob")) {
-    return DEMO_ROB_SUMMARY;
+
+  // Handle mutations (POST, PUT, DELETE)
+  if (method === "POST" || method === "PUT" || method === "DELETE") {
+    if (path.includes("/extraction/decide")) {
+      const studyId = body.study_id || "study_albina_2024";
+      const varId = body.variable_id;
+      const dec = body.decision;
+      const orig = body.original_value || "";
+      const corr = dec === "modified" ? (body.corrected_value || "") : (dec === "rejected" ? "NR" : orig);
+      const category = (dec === "accepted" || orig === corr) 
+        ? "VERIFIED_ACCURATE" 
+        : (dec === "rejected" ? "FALSE_EXTRACTION" : "NORMALIZATION");
+      
+      const record = {
+        id: `err_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        project_id: body.project_id || "proj_pam_current",
+        study_id: studyId,
+        variable_id: varId,
+        variable_name: body.variable_name || varId,
+        decision: dec,
+        original_value: orig,
+        corrected_value: corr,
+        has_discrepancy: category !== "VERIFIED_ACCURATE",
+        category,
+        rationale: body.notes || (category === "VERIFIED_ACCURATE" ? "Verified accurate by expert reviewer" : "Correction recorded for active learning"),
+        evidence_quote: body.evidence_quote || "",
+        codebook_rules: body.codebook_rules || "",
+        reviewer: body.reviewer || "Expert Reviewer",
+        notes: body.notes || ""
+      };
+
+      // Update in-memory DEMO_EXTRACTIONS
+      const list = (DEMO_EXTRACTIONS as any)[studyId] || [];
+      const item = list.find((e: any) => e.variable_id === varId);
+      if (item) {
+        item.value = corr;
+        item.is_verified = true;
+        item.is_edited = dec === "modified";
+      }
+
+      // Update in-memory error analysis records
+      if (DEMO_ERROR_ANALYSIS) {
+        DEMO_ERROR_ANALYSIS.total_decisions += 1;
+        if (record.has_discrepancy) {
+          DEMO_ERROR_ANALYSIS.total_discrepancies += 1;
+          (DEMO_ERROR_ANALYSIS.category_breakdown as any)[category] = ((DEMO_ERROR_ANALYSIS.category_breakdown as any)[category] || 0) + 1;
+        } else {
+          DEMO_ERROR_ANALYSIS.verified_accurate += 1;
+        }
+        DEMO_ERROR_ANALYSIS.accuracy_rate = Math.round((DEMO_ERROR_ANALYSIS.verified_accurate / DEMO_ERROR_ANALYSIS.total_decisions) * 1000) / 10;
+        DEMO_ERROR_ANALYSIS.recent_records.unshift(record);
+      }
+
+      return { status: "success", record } as unknown as T;
+    }
+    if (path.includes("/ai-screening/start") || path.includes("/ai-screening/start-analysis") || path.includes("/ai-screening/continue")) {
+      return DEMO_SCREENING_SUMMARY as unknown as T;
+    }
+    if (path.includes("/screening-decision")) {
+      return { status: "success", decision: body.decision || "included" } as unknown as T;
+    }
+    if (path.includes("/screening-keywords/auto-generate")) {
+      return DEMO_SCREENING_KEYWORDS as unknown as T;
+    }
+    if (path.includes("/screening-keywords") && method === "POST") {
+      const newKw = {
+        keyword_id: `kw-${Date.now()}`,
+        project_id: "proj_pam_current",
+        keyword: body.keyword || "new keyword",
+        keyword_type: body.keyword_type || "include",
+        color: body.keyword_type === "exclude" ? "#ef4444" : "#10b981",
+        created_at: new Date().toISOString()
+      };
+      return newKw as unknown as T;
+    }
+    if (path.includes("/screening-keywords/") && method === "DELETE") {
+      return { status: "deleted" } as unknown as T;
+    }
+    if (path.includes("/clarifications/") && path.includes("/answer")) {
+      return {
+        question_id: "q_clarify_1",
+        study_id: "study_albina_2024",
+        status: "answered",
+        final_decision: "include",
+        final_confidence: 0.98,
+        final_reason_text: "Verified pure arterial malformation with absent venous shunting.",
+        conflict_detected: false
+      } as unknown as T;
+    }
+    if (path.includes("/pico/suggestions")) {
+      return {
+        population: "Patients with Pure Arterial Malformations (PAM) of the brain",
+        index_test: "Catheter DSA, 3D Rotational Angiography, 3T MRA",
+        comparator: "Single vs multiple territory PAM; aneurysm-associated vs non-aneurysmal",
+        outcome: "Angioarchitecture, aneurysm association, stroke rate, treatment durability",
+        study_design: "Observational series, cohorts, case reports"
+      } as unknown as T;
+    }
+    if (path.includes("/pico") && (method === "POST" || method === "PUT")) {
+      return body as unknown as T;
+    }
+    if (path.includes("/hypothesis/refine")) {
+      return {
+        hypothesis: "Pure arterial malformations represent non-shunting developmental vascular anomalies with high lifetime propensity for flow pseudoaneurysms (~40%).",
+        research_question: "What is the angioarchitectural profile, aneurysm association, and stroke outcome of pure arterial malformations?",
+        secondary_hypotheses: [
+          { text: "Concurrent aneurysm formation significantly elevates annual subarachnoid hemorrhage risk.", type: "alternative", status: "confirmed" },
+          { text: "Conservative clinical follow-up without intervention is safe in unruptured, non-aneurysmal PAM.", type: "alternative", status: "pending" }
+        ]
+      } as unknown as T;
+    }
+    if (path.includes("/auto-variables")) {
+      return DEMO_VARIABLES as unknown as T;
+    }
+    if (path.includes("/variables") && method === "POST") {
+      return { variable_id: `v_${Date.now()}`, project_id: "proj_pam_current", ...body, order_index: 5 } as unknown as T;
+    }
+    if (path.includes("/variables/") && method === "DELETE") {
+      return { status: "deleted" } as unknown as T;
+    }
+    if (path.includes("/coded-extract")) {
+      return { status: "complete", extracted_count: 5 } as unknown as T;
+    }
+    if (path.includes("/rob/") && path.includes("/ai-prefill")) {
+      return DEMO_ROB_SUMMARY.assessments[0] as unknown as T;
+    }
+    if (path.includes("/accept-ai")) {
+      return { status: "accepted" } as unknown as T;
+    }
+    if (path.includes("/grade/auto-populate")) {
+      return DEMO_GRADE_LIST as unknown as T;
+    }
+    if (path.includes("/meta-analyses") && method === "POST") {
+      return { ...DEMO_META_ANALYSES[0], meta_id: `meta_${Date.now()}`, outcome_label: body.outcome_label || "New Outcome" } as unknown as T;
+    }
+    if (path.includes("/meta-analyses/") && path.includes("/run")) {
+      return {
+        status: "completed",
+        pooled_effect: 0.38,
+        pooled_ci_lower: 0.24,
+        pooled_ci_upper: 0.54,
+        i_squared: 31.4,
+        q_statistic: 7.29,
+        q_p_value: 0.200
+      } as unknown as T;
+    }
+    if (path.includes("/stats/analyze")) {
+      return DEMO_STATS_ANALYSIS as unknown as T;
+    }
+    if (path.includes("/scientific-export/draft-manuscript")) {
+      return DEMO_DRAFT_MANUSCRIPT as unknown as T;
+    }
+    if (path.includes("/scientific-export/bibliography")) {
+      return DEMO_BIBLIOGRAPHY as unknown as T;
+    }
+    if (path.includes("/scientific-export/prisma-mermaid")) {
+      return DEMO_PRISMA_MERMAID as unknown as T;
+    }
+    if (path.includes("/search/multi-database")) {
+      return DEMO_MULTI_DATABASE_SEARCH as unknown as T;
+    }
+    if (path.includes("/settings/llm-config/test")) {
+      return {
+        success: true,
+        provider: body.provider || "antigravity",
+        model: body.model_name || "gemini-2.5-flash",
+        latency_ms: 74,
+        message: "Verified successfully! Antigravity Cloud AI Agent connection verified."
+      } as unknown as T;
+    }
+    if (path.includes("/settings/llm-config/reset")) {
+      try {
+        localStorage.removeItem("radextract_llm_settings");
+      } catch (e) {}
+      return {
+        status: "success",
+        message: "Reset to Antigravity defaults successfully.",
+        config: {
+          provider: "antigravity",
+          active_model: "gemini-2.5-flash",
+          active_endpoint: "https://generativelanguage.googleapis.com/v1beta",
+          active_key_masked: "AQ.Ab8RN6...GYqKKg",
+          is_default_key: true,
+          temperature: 0.1
+        }
+      } as unknown as T;
+    }
+    if (path.includes("/settings/llm-config") && method === "POST") {
+      try {
+        localStorage.setItem("radextract_llm_settings", JSON.stringify(body));
+      } catch (e) {}
+      return {
+        status: "success",
+        message: "AI model configuration updated successfully.",
+        config: {
+          provider: body.provider || "antigravity",
+          active_model: body.provider === "local" ? (body.local_model_name || "llama3.3") : (body.antigravity_model || "gemini-2.5-flash"),
+          active_endpoint: body.provider === "local" ? (body.local_endpoint_url || "http://localhost:11434/v1") : "https://generativelanguage.googleapis.com/v1beta",
+          active_key_masked: body.custom_api_key ? (body.custom_api_key.slice(0, 4) + "..." + body.custom_api_key.slice(-4)) : "AQ.Ab8RN6...GYqKKg",
+          is_default_key: !body.custom_api_key,
+          temperature: body.temperature ?? 0.1
+        }
+      } as unknown as T;
+    }
+    if (path.includes("/biomni/doi/supplementary")) {
+      return {
+        success: true,
+        doi: body.doi || "10.1016/j.wneu.2024.01.015",
+        title: "A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery",
+        has_supplementary: true,
+        supplementary_links: [
+          { url: "https://doi.org/10.1016/j.wneu.2024.01.015", type: "application/pdf", label: "Supplementary Table S1 (DSA Angiographic Flow Parameters)" },
+          { url: "https://doi.org/10.1016/j.wneu.2024.01.015", type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", label: "Supplementary Dataset S2 (Raw Follow-up)" }
+        ]
+      } as unknown as T;
+    }
+    if (path.includes("/studies") && method === "POST") {
+      const newStudy = {
+        study_id: `study_custom_${Date.now()}`,
+        project_id: "proj_pam_current",
+        title: body.title || "Newly Imported Study",
+        authors: body.authors || "Author et al.",
+        publication_year: Number(body.publication_year) || 2024,
+        journal: body.journal || "Journal of Neurosurgery",
+        doi: body.doi || "",
+        pmid: body.pmid || "",
+        abstract: body.abstract || "",
+        source: body.source || "Manual Entry",
+        study_design: body.study_design || "case_report",
+        screening_status: "included",
+        screening_stage: "fulltext",
+        extraction_status: "complete",
+        pdf_status: "parsed",
+        ai_priority_score: 0.95,
+        ai_confidence: 0.96,
+        ai_decision: "include"
+      };
+      return newStudy as unknown as T;
+    }
+    if (path.includes("/studies/") && method === "DELETE") {
+      return { status: "deleted" } as unknown as T;
+    }
+    if (path.includes("/upload-references")) {
+      return { imported_count: 5, skipped_duplicates: 1, errors: [] } as unknown as T;
+    }
+    return { status: "success" } as unknown as T;
+  }
+
+  // Handle GET queries
+  if (path.includes("/settings/llm-config")) {
+    let saved: any = null;
+    try {
+      saved = JSON.parse(localStorage.getItem("radextract_llm_settings") || "null");
+    } catch (e) {}
+    return {
+      status: "success",
+      config: {
+        provider: saved?.provider || "antigravity",
+        active_model: saved?.provider === "local" ? (saved?.local_model_name || "llama3.3") : (saved?.antigravity_model || "gemini-2.5-flash"),
+        active_endpoint: saved?.provider === "local" ? (saved?.local_endpoint_url || "http://localhost:11434/v1") : "https://generativelanguage.googleapis.com/v1beta",
+        active_key_masked: saved?.custom_api_key ? (saved.custom_api_key.slice(0, 4) + "..." + saved.custom_api_key.slice(-4)) : "AQ.Ab8RN6...GYqKKg",
+        is_default_key: !saved?.custom_api_key,
+        local_endpoint_url: saved?.local_endpoint_url || "http://localhost:11434/v1",
+        local_model_name: saved?.local_model_name || "llama3.3",
+        antigravity_model: saved?.antigravity_model || "gemini-2.5-flash",
+        temperature: saved?.temperature ?? 0.1,
+        timeout_seconds: 60,
+        has_key: true
+      }
+    } as unknown as T;
+  }
+  if (path.includes("/studies/pubmed-lookup/")) {
+    const pmid = path.split("/").pop() || "35928114";
+    return {
+      pmid,
+      title: "Endovascular Treatment of a Ruptured Posterior Fossa Pure Arterial Malformation: Illustrative Case",
+      authors: "Chua et al.",
+      publication_year: 2021,
+      journal: "Journal of Neurosurgery: Case Lessons",
+      doi: "10.3171/CASE2123",
+      abstract: "A 59-year-old female presented with severe subarachnoid hemorrhage due to a ruptured PICA pure arterial malformation with an associated flow pseudoaneurysm successfully treated with targeted parent-artery preserving coiling.",
+      study_design: "case_report"
+    } as unknown as T;
+  }
+  if (path.includes("/analysis/profile") || path.includes("/analysis")) {
+    return DEMO_ANALYSIS_PROFILE as unknown as T;
+  }
+  if (path.includes("/rob/summary") || path.includes("/rob-summary")) {
+    return DEMO_ROB_SUMMARY as unknown as T;
+  }
+  if (path.match(/\/rob\/[^/]+$/)) {
+    const id = path.split("/").pop();
+    const found = DEMO_ROB_SUMMARY.assessments.find((a: any) => a.assessment_id === id);
+    return (found || DEMO_ROB_SUMMARY.assessments[0]) as unknown as T;
   }
   if (path.includes("/grade")) {
-    return DEMO_GRADE_LIST;
+    return DEMO_GRADE_LIST as unknown as T;
   }
   if (path.includes("/meta-analyses")) {
-    return DEMO_META_ANALYSES;
+    return DEMO_META_ANALYSES as unknown as T;
   }
   if (path.includes("/criteria")) {
-    return DEMO_CRITERIA;
+    return DEMO_CRITERIA as unknown as T;
   }
   if (path.includes("/search-strings")) {
-    return DEMO_SEARCH_STRINGS;
+    return DEMO_SEARCH_STRINGS as unknown as T;
   }
   if (path.includes("/review/progress")) {
-    return DEMO_REVIEW_PROGRESS;
+    return DEMO_REVIEW_PROGRESS as unknown as T;
   }
   if (path.includes("/review/matrix") || path.includes("/review")) {
-    return DEMO_REVIEW_MATRIX;
+    return DEMO_REVIEW_MATRIX as unknown as T;
+  }
+  if (path.includes("/screening-keywords")) {
+    return DEMO_SCREENING_KEYWORDS as unknown as T;
+  }
+  if (path.includes("/abstract-highlights")) {
+    return DEMO_ABSTRACT_HIGHLIGHTS.default as unknown as T;
+  }
+  if (path.includes("/clarifications/stats")) {
+    return { project_id: "proj_pam_current", total: 1, pending: 0, answered: 1, expired: 0, by_type: { eligibility: 1 }, by_stage: { fulltext: 1 } } as unknown as T;
+  }
+  if (path.includes("/clarifications")) {
+    return DEMO_STUDY_CLARIFICATIONS as unknown as T;
+  }
+  if (path.includes("/exclusion-reasons")) {
+    return DEMO_EXCLUSION_REASONS as unknown as T;
   }
   if (path.includes("/graphify/code/stats") || path.includes("/code/stats")) {
-    return DEMO_CODE_GRAPH_STATS;
+    return DEMO_CODE_GRAPH_STATS as unknown as T;
   }
   if (path.includes("/graphify") || path.includes("/graph")) {
-    return DEMO_CODE_GRAPH;
-  }
-  if (path.includes("/studies")) {
-    return DEMO_STUDIES;
-  }
-  if (path.includes("/prisma")) {
-    return DEMO_PRISMA;
+    return DEMO_CODE_GRAPH as unknown as T;
   }
   if (path.includes("/ai-screening/summary") || path.includes("/screening/summary") || path.includes("/screening-summary") || path.includes("/screening/status")) {
-    return DEMO_SCREENING_SUMMARY;
+    return DEMO_SCREENING_SUMMARY as unknown as T;
+  }
+  if (path.includes("/ai-screening/progress")) {
+    return {
+      active: false,
+      stage: "",
+      total: 128,
+      done: 128,
+      current_study_id: null,
+      current_title: "",
+      pending_ids: [],
+      done_ids: []
+    } as unknown as T;
+  }
+  if (path.includes("/variables")) {
+    return DEMO_VARIABLES as unknown as T;
+  }
+  if (path.includes("/pdf-summary")) {
+    const studyId = path.split("/").filter(Boolean)[1] || "study_albina_2024";
+    return ((DEMO_PDF_SUMMARIES as any)[studyId] || DEMO_PDF_SUMMARIES.study_albina_2024) as unknown as T;
+  }
+  if (path.includes("/pdf-data")) {
+    const studyId = path.split("/").filter(Boolean)[1] || "study_albina_2024";
+    return ((DEMO_PDF_DATA as any)[studyId] || DEMO_PDF_DATA.study_albina_2024) as unknown as T;
+  }
+  if (path.includes("/extractions") || path.includes("/coded-extract")) {
+    const studyId = path.split("/").filter(Boolean)[1] || "study_albina_2024";
+    return ((DEMO_EXTRACTIONS as any)[studyId] || DEMO_EXTRACTIONS.study_albina_2024) as unknown as T;
+  }
+  if (path.includes("/pdf-highlights")) {
+    return [] as unknown as T;
+  }
+  if (path.includes("/codebook/rules") || path.includes("/codebook")) {
+    return DEMO_CODEBOOK_RULES as unknown as T;
+  }
+  if (path.includes("/extraction/error-analysis")) {
+    return DEMO_ERROR_ANALYSIS as unknown as T;
+  }
+  if (path.includes("/extraction/export-training-data")) {
+    return [
+      {
+        messages: [
+          { role: "system", content: "You are an expert biomedical data extractor adhering strictly to codebook rules." },
+          { role: "user", content: "Extract Vessel Involved from: 'Catheter digital subtraction angiography (DSA) revealed an anomalous vessel branching from the right internal carotid artery conforming to an accessory MCA.'" },
+          { role: "assistant", content: JSON.stringify({ variable: "Vessel Involved", extracted_value: "Accessory MCA", status: "VERIFIED" }, null, 2) }
+        ],
+        metadata: { category: "VERIFIED_ACCURATE", timestamp: "2026-10-05T20:00:00Z" }
+      }
+    ] as unknown as T;
+  }
+  if (path.match(/\/studies\/[^/]+$/)) {
+    const studyId = path.split("/").pop();
+    const found = DEMO_STUDIES.find((s: any) => s.study_id === studyId);
+    return (found || DEMO_STUDIES[0]) as unknown as T;
+  }
+  if (path.includes("/studies")) {
+    return DEMO_STUDIES as unknown as T;
+  }
+  if (path.includes("/prisma")) {
+    return DEMO_PRISMA as unknown as T;
   }
   if (path.includes("/screening")) {
-    return DEMO_STUDIES;
+    return DEMO_STUDIES as unknown as T;
   }
   if (path.includes("/pico")) {
-    return JSON.parse(DEMO_PROJECT.pico_json);
+    return JSON.parse(DEMO_PROJECT.pico_json) as unknown as T;
   }
   if (path.includes("/hypothesis")) {
-    return { hypothesis: DEMO_PROJECT.hypothesis, research_question: DEMO_PROJECT.research_question };
+    return {
+      hypothesis: DEMO_PROJECT.hypothesis,
+      research_question: DEMO_PROJECT.research_question,
+      secondary_hypotheses: [
+        { text: "PAM lesions harbor distinct angioarchitectural phenotypes with differential rupture hazards.", type: "alternative", status: "confirmed" },
+        { text: "Flow pseudoaneurysms develop predominantly at arterial loop apexes subject to high hemodynamic wall shear stress.", type: "alternative", status: "confirmed" }
+      ]
+    } as unknown as T;
   }
-  // Generic route handling last
   if (path === "/stats/analyze" || path.includes("/stats/analyze")) {
-    return DEMO_STATS_ANALYSIS;
+    return DEMO_STATS_ANALYSIS as unknown as T;
   }
   if (path === "/scientific-export/draft-manuscript" || path.includes("/scientific-export/draft-manuscript")) {
-    return DEMO_DRAFT_MANUSCRIPT;
+    return DEMO_DRAFT_MANUSCRIPT as unknown as T;
   }
   if (path === "/scientific-export/bibliography" || path.includes("/scientific-export/bibliography")) {
-    return DEMO_BIBLIOGRAPHY;
+    return DEMO_BIBLIOGRAPHY as unknown as T;
   }
   if (path === "/scientific-export/prisma-mermaid" || path.includes("/scientific-export/prisma-mermaid")) {
-    return DEMO_PRISMA_MERMAID;
+    return DEMO_PRISMA_MERMAID as unknown as T;
   }
   if (path === "/search/multi-database" || path.includes("/search/multi-database")) {
-    return DEMO_MULTI_DATABASE_SEARCH;
+    return DEMO_MULTI_DATABASE_SEARCH as unknown as T;
   }
-  // Generic route handling last
   if (path === "/projects" || path.startsWith("/projects?")) {
-    return [DEMO_PROJECT];
+    return [DEMO_PROJECT] as unknown as T;
   }
   if (path.match(/\/projects\/[^/]+$/)) {
-    return DEMO_PROJECT;
+    return DEMO_PROJECT as unknown as T;
   }
-  return null;
+
+  return {} as unknown as T;
 }
 
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const isBrowser = typeof window !== "undefined";
+  const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
+  const isDemoExplicit = isBrowser && localStorage.getItem("demo_mode") === "true";
+  const isLocalhost = isBrowser && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+  // On GitHub Pages or when demo mode is active, directly serve mock response without network 404 spam
+  if (isGithubPages || isDemoExplicit || (!isLocalhost && API_BASE === "/api")) {
+    return handleDemoRequest<T>(path, options);
+  }
+
   const token = localStorage.getItem("token");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -122,12 +514,8 @@ async function request<T>(
     if (res.status === 204) return undefined as T;
     return res.json();
   } catch (err) {
-    const fallback = getDemoFallback(path);
-    if (fallback !== null) {
-      console.warn(`[Demo Preview Mode] Serving demo data for: ${path}`);
-      return fallback as T;
-    }
-    throw err;
+    console.warn(`[Demo Preview Mode] Serving demo fallback for: ${path}`);
+    return handleDemoRequest<T>(path, options);
   }
 }
 
@@ -375,24 +763,30 @@ export interface PdfAnnotation {
 }
 
 export interface PdfDocumentData {
-  doc_id: string;
+  doc_id?: string;
   study_id: string;
-  n_pages: number;
-  full_text: string;
-  pages: PdfPageData[];
-  annotations: PdfAnnotation[];
-  tables: any[];
-  processed_at: string;
-  processor_used: string;
+  n_pages?: number;
+  full_text?: string;
+  pages?: PdfPageData[] | number;
+  annotations?: PdfAnnotation[];
+  tables?: any[];
+  sections?: { title: string; text: string; page?: number }[];
+  markdown?: string;
+  processed_at?: string;
+  processor_used?: string;
 }
 
 export interface PdfSummary {
   study_id: string;
   has_pdf: boolean;
   pdf_status: string;
-  n_pages: number;
-  processor_used: string;
-  processed_at: string;
+  n_pages?: number;
+  page_count?: number;
+  tables_count?: number;
+  extractions_count?: number;
+  highlighted_variables_count?: number;
+  processor_used?: string;
+  processed_at?: string;
 }
 
 // ── Meta-Analysis ──
@@ -804,6 +1198,11 @@ export interface AIScreeningSummary {
   uncertain: number;
   awaiting_clarification: number;
   awaiting_pdf: number;
+  ta_included?: number;
+  ta_excluded?: number;
+  ft_included?: number;
+  ft_excluded?: number;
+  pending?: number;
 }
 
 /** Live progress of a running AI screening (in-memory on the server; active=false when idle) */
@@ -2022,6 +2421,69 @@ export const api = {
 
   searchMultiDatabase: (data: { query: string, sources?: string[], max_per_source?: number }) =>
     request<any>('/search/multi-database', { method: 'POST', body: JSON.stringify(data) }),
+
+  // ── Track Changes Verification & Active Learning ──
+
+  recordExtractionDecision: (data: {
+    project_id: string;
+    study_id: string;
+    variable_id: string;
+    variable_name: string;
+    original_value: string;
+    corrected_value: string;
+    decision: "accepted" | "modified" | "rejected";
+    evidence_quote?: string;
+    page_number?: number;
+    codebook_rules?: string;
+    reviewer?: string;
+    notes?: string;
+  }) =>
+    request<{ status: string; record: any }>("/extraction/decide", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getErrorAnalysis: (projectId?: string) =>
+    request<any>(`/extraction/error-analysis${projectId ? `?project_id=${projectId}` : ""}`),
+
+  exportTrainingData: (projectId?: string) =>
+    request<any>(`/extraction/export-training-data${projectId ? `?project_id=${projectId}` : ""}`),
+
+  getCodebookRules: () =>
+    request<any>("/codebook/rules"),
+
+  // ── AI LLM Configuration & Custom Model Keys ──
+  getLlmConfig: () =>
+    request<any>("/settings/llm-config"),
+
+  updateLlmConfig: (data: {
+    provider: "antigravity" | "local";
+    local_endpoint_url?: string;
+    local_model_name?: string;
+    antigravity_model?: string;
+    custom_api_key?: string;
+    temperature?: number;
+  }) =>
+    request<any>("/settings/llm-config", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  testLlmConfig: (data: {
+    provider: "antigravity" | "local";
+    local_endpoint_url?: string;
+    model_name?: string;
+    api_key?: string;
+  }) =>
+    request<any>("/settings/llm-config/test", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  resetLlmConfig: () =>
+    request<any>("/settings/llm-config/reset", {
+      method: "POST",
+    }),
 };
 
 
