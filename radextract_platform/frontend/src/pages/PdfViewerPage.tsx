@@ -6,7 +6,7 @@ import {
   type PdfDocumentData,
   type PdfHighlight as ApiPdfHighlight,
 } from "../lib/api";
-import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, type CodebookRule } from "../lib/demoData";
+import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, DEMO_EXTRACTIONS, DEMO_VARIABLES, type CodebookRule } from "../lib/demoData";
 import {
   ArrowLeft, FileText, Loader2, Upload, Sparkles,
   CheckCircle, Table, Tag, Highlighter, ArrowRight,
@@ -14,7 +14,8 @@ import {
   Download, HelpCircle, ChevronRight, ChevronLeft,
   RotateCcw, Search, Eye, Filter, Zap, ShieldAlert,
   ZoomIn, ZoomOut, Maximize2, Minimize2, Sliders,
-  PanelRightClose, PanelRightOpen, FileSpreadsheet
+  PanelRightClose, PanelRightOpen, FileSpreadsheet,
+  CheckCheck, ExternalLink
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
@@ -71,10 +72,13 @@ interface UndoRecord {
 }
 
 export function PdfViewerPage() {
-  const { projectId, studyId } = useParams<{ projectId: string; studyId: string }>();
+  const { projectId, studyId } = useParams<{ projectId: string; studyId?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const queryStudy = searchParams.get("study");
+  const rawTargetStudy = studyId || queryStudy;
 
   // Active view states
   const [leftTab, setLeftTab] = useState<"document" | "sections" | "tables">("document");
@@ -85,19 +89,22 @@ export function PdfViewerPage() {
   const [reviewerName, setReviewerName] = useState<string>("Expert Reviewer");
   const [pdfZoom, setPdfZoom] = useState<number>(100);
   const [selectedPaperId, setSelectedPaperId] = useState<string>(() => {
-    const match = BENCHMARK_PAPERS.find((p) => p.id === studyId || p.shortId === studyId);
+    const match = BENCHMARK_PAPERS.find((p) => p.id === rawTargetStudy || p.shortId === rawTargetStudy);
     return match ? match.id : "study_birua_2022";
   });
   const [customPdfUrl, setCustomPdfUrl] = useState<string | null>(null);
 
-  // Synchronize selected paper with route parameter
+  const activeStudyId = selectedPaperId || (rawTargetStudy ? (BENCHMARK_PAPERS.find(p => p.id === rawTargetStudy || p.shortId === rawTargetStudy)?.id || rawTargetStudy) : "study_birua_2022");
+
+  // Synchronize selected paper with route parameter or query
   useEffect(() => {
-    if (!studyId) return;
-    const match = BENCHMARK_PAPERS.find((p) => p.id === studyId || p.shortId === studyId);
+    const target = studyId || searchParams.get("study");
+    if (!target) return;
+    const match = BENCHMARK_PAPERS.find((p) => p.id === target || p.shortId === target);
     if (match && match.id !== selectedPaperId) {
       setSelectedPaperId(match.id);
     }
-  }, [studyId, selectedPaperId]);
+  }, [studyId, searchParams, selectedPaperId]);
 
   // Collapsible Protocol Rules panel (collapsed by default on extraction side as requested)
   const [showCodebookPanel, setShowCodebookPanel] = useState<boolean>(false);
@@ -159,25 +166,25 @@ export function PdfViewerPage() {
   });
 
   const allStudies = (studyList && studyList.length > 0) ? studyList : DEMO_STUDIES;
-  const currentStudyIndex = Math.max(0, allStudies.findIndex((s: any) => s.study_id === studyId));
+  const currentStudyIndex = Math.max(0, allStudies.findIndex((s: any) => s.study_id === activeStudyId));
   const currentStudy = allStudies[currentStudyIndex] || allStudies[0];
 
   const { data: study } = useQuery({
-    queryKey: ["study", studyId],
-    queryFn: () => api.getStudy(studyId!),
-    enabled: !!studyId,
+    queryKey: ["study", activeStudyId],
+    queryFn: () => api.getStudy(activeStudyId),
+    enabled: !!activeStudyId,
   });
 
   const { data: pdfSummary } = useQuery({
-    queryKey: ["pdf-summary", studyId],
-    queryFn: () => api.getPdfSummary(studyId!),
-    enabled: !!studyId,
+    queryKey: ["pdf-summary", activeStudyId],
+    queryFn: () => api.getPdfSummary(activeStudyId),
+    enabled: !!activeStudyId,
   });
 
   const { data: pdfData } = useQuery({
-    queryKey: ["pdf-data", studyId],
-    queryFn: () => api.getPdfData(studyId!),
-    enabled: !!studyId,
+    queryKey: ["pdf-data", activeStudyId],
+    queryFn: () => api.getPdfData(activeStudyId),
+    enabled: !!activeStudyId,
   });
 
   const { data: variables } = useQuery({
@@ -187,9 +194,9 @@ export function PdfViewerPage() {
   });
 
   const { data: extractions, refetch: refetchExtractions } = useQuery({
-    queryKey: ["extractions", studyId],
-    queryFn: () => api.listExtractions(studyId!),
-    enabled: !!studyId,
+    queryKey: ["extractions", activeStudyId],
+    queryFn: () => api.listExtractions(activeStudyId),
+    enabled: !!activeStudyId,
   });
 
   const { data: errorAnalysis, refetch: refetchErrorAnalysis } = useQuery({
@@ -199,22 +206,34 @@ export function PdfViewerPage() {
   });
 
   // Ensure first variable is selected on load
-  const variableList = variables && variables.length > 0 ? variables : [];
+  const variableList = (variables && variables.length > 0) ? variables : DEMO_VARIABLES;
   useEffect(() => {
     if (!selectedVarId && variableList.length > 0) {
       setSelectedVarId(variableList[0].variable_id);
     }
   }, [selectedVarId, variableList]);
 
+  // When switching studies, ensure selected variable is valid
+  useEffect(() => {
+    if (variableList.length > 0) {
+      const exists = variableList.some((v: any) => v.variable_id === selectedVarId);
+      if (!exists) {
+        setSelectedVarId(variableList[0].variable_id);
+      }
+    }
+  }, [activeStudyId, variableList, selectedVarId]);
+
   // Selected variable & extraction
   const currentVar = variableList.find((v: any) => v.variable_id === selectedVarId) || variableList[0];
   const extractionMap: Record<string, any> = useMemo(() => {
     const map: Record<string, any> = {};
-    (extractions || []).forEach((e: any) => {
+    const fallbackList = (DEMO_EXTRACTIONS as any)[activeStudyId] || (DEMO_EXTRACTIONS as any)["study_birua_2022"] || [];
+    const sourceList = (extractions && extractions.length > 0) ? extractions : fallbackList;
+    sourceList.forEach((e: any) => {
       if (e.variable_id) map[e.variable_id] = e;
     });
     return map;
-  }, [extractions]);
+  }, [extractions, activeStudyId]);
 
   const currentExtraction = currentVar ? extractionMap[currentVar.variable_id] : null;
   const currentRule: CodebookRule | undefined = currentVar ? (customRules[currentVar.variable_id] || DEMO_CODEBOOK_RULES[currentVar.variable_id]) : undefined;
@@ -227,11 +246,11 @@ export function PdfViewerPage() {
   // Active Publication PDF URL computation
   const currentPdfUrl = useMemo(() => {
     if (customPdfUrl) return customPdfUrl;
-    const paper = BENCHMARK_PAPERS.find((p) => p.id === selectedPaperId) || BENCHMARK_PAPERS[0];
+    const paper = BENCHMARK_PAPERS.find((p) => p.id === activeStudyId) || BENCHMARK_PAPERS[0];
     const base = import.meta.env.BASE_URL || "/";
     const cleanBase = base.endsWith("/") ? base : base + "/";
     return cleanBase + "papers/" + paper.filename;
-  }, [customPdfUrl, selectedPaperId]);
+  }, [customPdfUrl, activeStudyId]);
 
   // Map extraction variables to spatial PDF highlights for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -269,47 +288,67 @@ export function PdfViewerPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `extraction_${studyId}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `extraction_${activeStudyId}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  // ── Auto-scroll to evidence quote fallback ──
-  const scrollToQuote = useCallback((quote: string) => {
-    if (!quote || !docScrollRef.current) return;
-    const cleanQuote = quote.trim().slice(0, 30);
-    const container = docScrollRef.current;
-    const elements = container.querySelectorAll("[data-doc-text]");
-    for (const el of Array.from(elements)) {
-      if (el.textContent && el.textContent.toLowerCase().includes(cleanQuote.toLowerCase())) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        el.classList.add("bg-amber-100", "ring-2", "ring-amber-400", "rounded-md", "transition-all", "duration-500");
-        setTimeout(() => {
-          el.classList.remove("bg-amber-100", "ring-2", "ring-amber-400");
-        }, 2000);
-        break;
-      }
+  // ── Find Quote in PDF: Scroll, center, and flash the highlight in ActualPdfViewer ──
+  const findQuoteInPdf = useCallback((targetVarId?: string) => {
+    const vid = targetVarId || selectedVarId;
+    if (!vid) return;
+
+    if (selectedVarId !== vid) {
+      setSelectedVarId(vid);
     }
-  }, []);
+
+    // 1. Dispatch custom event for ActualPdfViewer
+    window.dispatchEvent(new CustomEvent("radextract:find-quote", { detail: { variableId: vid } }));
+
+    // 2. Direct DOM scroll fallback with pulsing glow
+    requestAnimationFrame(() => {
+      const highlightElement = document.getElementById(`pdf-highlight-${vid}`);
+      if (highlightElement) {
+        highlightElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest",
+        });
+        highlightElement.classList.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+        setTimeout(() => {
+          highlightElement.classList.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+        }, 1500);
+      } else {
+        const ext = extractionMap[vid];
+        const pageNum = ext?.source_page || 1;
+        const pageElement = document.getElementById(`pdf-page-${pageNum}`);
+        if (pageElement) {
+          pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
+          setTimeout(() => {
+            const retryEl = document.getElementById(`pdf-highlight-${vid}`);
+            if (retryEl) {
+              retryEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+              retryEl.classList.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+              setTimeout(() => {
+                retryEl.classList.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+              }, 1500);
+            }
+          }, 350);
+        }
+      }
+    });
+  }, [selectedVarId, extractionMap]);
 
   // ── Auto-scroll when selected variable changes ──
   useEffect(() => {
     if (!selectedVarId) return;
 
-    // 1. Center column card auto-scroll
+    // Center column card auto-scroll
     const targetCard = cardRefs.current[selectedVarId];
     if (targetCard) {
       targetCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-
-    // 2. Left column PDF highlight auto-scroll
-    const targetHighlight = highlightRefs.current[selectedVarId];
-    if (targetHighlight) {
-      targetHighlight.scrollIntoView({ behavior: "smooth", block: "center" });
-    } else if (currentExtraction?.quote) {
-      scrollToQuote(currentExtraction.quote);
-    }
-  }, [selectedVarId, currentExtraction?.quote, scrollToQuote]);
+  }, [selectedVarId]);
 
   // ── Navigation helpers ──
 
@@ -373,7 +412,7 @@ export function PdfViewerPage() {
     setUndoStack((prev) => [
       ...prev,
       {
-        studyId: studyId!,
+        studyId: activeStudyId,
         variableId: currentVar.variable_id,
         variableName: currentVar.name,
         previousValue: origVal,
@@ -391,7 +430,7 @@ export function PdfViewerPage() {
 
       await api.recordExtractionDecision({
         project_id: projectId!,
-        study_id: studyId!,
+        study_id: activeStudyId,
         variable_id: currentVar.variable_id,
         variable_name: currentVar.name,
         original_value: origVal,
@@ -484,6 +523,82 @@ export function PdfViewerPage() {
     }
   }, [undoStack, projectId, reviewerName, refetchExtractions, refetchErrorAnalysis, queryClient]);
 
+  // ── Accept All High-Confidence (>95%) Extractions ──
+  const highConfPendingVariables = useMemo(() => {
+    return variableList.filter((v: any) => {
+      const ext = extractionMap[v.variable_id];
+      if (!ext || ext.is_verified) return false;
+      const confPercent = Math.round((ext.confidence || 0) * 100);
+      return confPercent > 95;
+    });
+  }, [variableList, extractionMap]);
+
+  const [isAcceptingAll, setIsAcceptingAll] = useState(false);
+
+  const handleAcceptAllHighConfidence = async () => {
+    if (highConfPendingVariables.length === 0 || isAcceptingAll) return;
+    setIsAcceptingAll(true);
+
+    try {
+      const batchUndos: any[] = [];
+      for (const v of highConfPendingVariables) {
+        const ext = extractionMap[v.variable_id];
+        const val = ext?.value || "";
+        const rule = customRules[v.variable_id] || DEMO_CODEBOOK_RULES[v.variable_id];
+
+        batchUndos.push({
+          studyId: activeStudyId,
+          variableId: v.variable_id,
+          variableName: v.name,
+          previousValue: val,
+          previousVerified: !!ext?.is_verified,
+          previousEdited: !!ext?.is_edited,
+          previousDecision: "accepted",
+          previousFewShotQueue: [...fewShotExemplars],
+        });
+
+        await api.recordExtractionDecision({
+          project_id: projectId!,
+          study_id: activeStudyId,
+          variable_id: v.variable_id,
+          variable_name: v.name,
+          original_value: val,
+          corrected_value: val,
+          decision: "accepted",
+          evidence_quote: ext?.quote || "",
+          page_number: ext?.source_page || 1,
+          codebook_rules: rule?.definition || "",
+          reviewer: reviewerName,
+          notes: "Accepted via Batch High Confidence (>95%)",
+        });
+      }
+
+      setUndoStack((prev) => [...prev, ...batchUndos]);
+      await refetchExtractions();
+      await refetchErrorAnalysis();
+      queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+
+      setUndoToastMessage(`Accepted ${highConfPendingVariables.length} high-confidence (>95%) extractions ✓`);
+      setTimeout(() => setUndoToastMessage(null), 3500);
+
+      // Select first remaining unverified variable (e.g. low-confidence ones)
+      const remainingUnverified = variableList.find((v: any) => {
+        const ext = extractionMap[v.variable_id];
+        const isJustAccepted = highConfPendingVariables.some((hv: any) => hv.variable_id === v.variable_id);
+        return ext && !ext.is_verified && !isJustAccepted;
+      });
+
+      if (remainingUnverified) {
+        setSelectedVarId(remainingUnverified.variable_id);
+        findQuoteInPdf(remainingUnverified.variable_id);
+      }
+    } catch (err) {
+      console.error("Failed to batch accept high confidence extractions:", err);
+    } finally {
+      setIsAcceptingAll(false);
+    }
+  };
+
   // ── Keyboard Shortcuts (A: Accept, M: Modify, R: Reject, Z/U: Undo, Down: Next, Up: Prev) ──
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -513,6 +628,13 @@ export function PdfViewerPage() {
         return;
       }
 
+      // Find Quote in PDF hotkey: F or Q
+      if (e.key === "f" || e.key === "F" || e.key === "q" || e.key === "Q") {
+        e.preventDefault();
+        findQuoteInPdf(currentVar?.variable_id);
+        return;
+      }
+
       if (e.key === "a" || e.key === "A" || e.key === "Enter") {
         e.preventDefault();
         handleDecision("accepted");
@@ -536,16 +658,16 @@ export function PdfViewerPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentVar, currentExtraction, handleUndo, handleDecision, navigateToNextVariable, navigateToPrevVariable]);
+  }, [currentVar, currentExtraction, handleUndo, handleDecision, navigateToNextVariable, navigateToPrevVariable, findQuoteInPdf]);
 
   // ── Upload PDF Mutation ──
   const uploadPdfMutation = useMutation({
-    mutationFn: (file: File) => api.uploadPdf(studyId!, file, true),
+    mutationFn: (file: File) => api.uploadPdf(activeStudyId, file, true),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["study", studyId] });
-      queryClient.invalidateQueries({ queryKey: ["pdf-summary", studyId] });
-      queryClient.invalidateQueries({ queryKey: ["pdf-data", studyId] });
-      queryClient.invalidateQueries({ queryKey: ["extractions", studyId] });
+      queryClient.invalidateQueries({ queryKey: ["study", activeStudyId] });
+      queryClient.invalidateQueries({ queryKey: ["pdf-summary", activeStudyId] });
+      queryClient.invalidateQueries({ queryKey: ["pdf-data", activeStudyId] });
+      queryClient.invalidateQueries({ queryKey: ["extractions", activeStudyId] });
     },
   });
 
@@ -747,7 +869,9 @@ export function PdfViewerPage() {
             <button
               onClick={() => {
                 if (currentStudyIndex > 0) {
-                  navigate(`/projects/${projectId}/studies/${allStudies[currentStudyIndex - 1].study_id}/pdf`);
+                  const prevStudy = allStudies[currentStudyIndex - 1];
+                  setSelectedPaperId(prevStudy.study_id);
+                  navigate(`/projects/${projectId}/studies/${prevStudy.study_id}/pdf`);
                 }
               }}
               disabled={currentStudyIndex === 0}
@@ -762,7 +886,9 @@ export function PdfViewerPage() {
             <button
               onClick={() => {
                 if (currentStudyIndex < allStudies.length - 1) {
-                  navigate(`/projects/${projectId}/studies/${allStudies[currentStudyIndex + 1].study_id}/pdf`);
+                  const nextStudy = allStudies[currentStudyIndex + 1];
+                  setSelectedPaperId(nextStudy.study_id);
+                  navigate(`/projects/${projectId}/studies/${nextStudy.study_id}/pdf`);
                 }
               }}
               disabled={currentStudyIndex === allStudies.length - 1}
@@ -809,15 +935,24 @@ export function PdfViewerPage() {
             <span>In-App Codebook</span>
           </button>
 
-          {/* AIDE-Web Style Recorded Answers Data Sheet Button */}
+          {/* AIDE-Web Style Recorded Answers Data Sheet Button & Full Page Link */}
           <button
             onClick={() => setShowDataSheetModal(true)}
             className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors shadow-2xs"
-            title="Inspect recorded study answers matrix and export CSV"
+            title="Inspect recorded study answers matrix modal"
           >
             <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
             <span>Recorded Sheet</span>
           </button>
+
+          <Link
+            to={`/projects/${projectId}/extraction-sheet?study=${selectedPaperId}`}
+            className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-2xs"
+            title="Open full dedicated Extraction Sheet page with multi-study matrix"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Full-Page Matrix</span>
+          </Link>
 
           {/* Toggle Protocol Rules Panel Button */}
           <button
@@ -969,8 +1104,37 @@ export function PdfViewerPage() {
                 </span>
               </div>
 
-              {/* Fast Action Ribbon Buttons: Accept & Next, Reject & Next, Modify, Prev, Next, Undo */}
+              {/* Fast Action Ribbon Buttons: Accept All >95%, Accept & Next, Reject & Next, Modify, Prev, Next, Undo */}
               <div className="flex items-center gap-1.5">
+                {/* Accept All High-Confidence (>95%) Button */}
+                <button
+                  onClick={handleAcceptAllHighConfidence}
+                  disabled={highConfPendingVariables.length === 0 || isAcceptingAll}
+                  className={cn(
+                    "px-2.5 py-1.5 text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all",
+                    highConfPendingVariables.length > 0
+                      ? "text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 active:scale-95 cursor-pointer ring-1 ring-emerald-500/20"
+                      : "text-slate-400 bg-slate-100 border border-slate-200 opacity-60 cursor-not-allowed"
+                  )}
+                  title={
+                    highConfPendingVariables.length > 0
+                      ? `Accept all ${highConfPendingVariables.length} extractions with AI confidence >95%`
+                      : "No pending extractions with confidence >95%"
+                  }
+                >
+                  {isAcceptingAll ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+                  ) : (
+                    <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />
+                  )}
+                  <span>Accept All &gt;95%</span>
+                  {highConfPendingVariables.length > 0 && (
+                    <span className="text-[10px] font-mono font-bold bg-emerald-600 text-white rounded-full px-1.5 py-0.2">
+                      {highConfPendingVariables.length}
+                    </span>
+                  )}
+                </button>
+
                 {/* Accept & Next Button */}
                 <button
                   onClick={() => handleDecision("accepted")}
@@ -1007,6 +1171,17 @@ export function PdfViewerPage() {
                 >
                   <Edit3 className="h-3 w-3 text-slate-500" />
                   <kbd className="text-[10px] bg-white border border-slate-300 px-1 rounded font-mono text-slate-600">M</kbd>
+                </button>
+
+                {/* Find Quote in PDF Button in Ribbon */}
+                <button
+                  onClick={() => findQuoteInPdf(currentVar?.variable_id)}
+                  className="px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                  title="Find & jump to quote in PDF (Hotkey: F or Q)"
+                >
+                  <Eye className="h-3.5 w-3.5 text-blue-600" />
+                  <span className="hidden sm:inline">Find Quote</span>
+                  <kbd className="text-[10px] bg-white border border-blue-300 px-1 rounded font-mono text-blue-700 font-bold">F</kbd>
                 </button>
 
                 <div className="h-4 w-px bg-slate-200 mx-0.5" />
@@ -1074,24 +1249,35 @@ export function PdfViewerPage() {
               const rule = customRules[v.variable_id] || DEMO_CODEBOOK_RULES[v.variable_id];
               const isTransitioning = acceptTransitioningId === v.variable_id;
 
+              const confPercent = Math.round((ext?.confidence || 0) * 100);
+              const isLowConfidence = !isVerified && confPercent > 0 && confPercent <= 95;
+
               return (
                 <div
                   key={v.variable_id}
                   ref={(el) => { cardRefs.current[v.variable_id] = el; }}
                   onClick={() => {
                     setSelectedVarId(v.variable_id);
-                    if (ext?.quote) scrollToQuote(ext.quote);
+                    findQuoteInPdf(v.variable_id);
                   }}
                   className={`rounded-xl border transition-all cursor-pointer duration-300 ${
                     isTransitioning
                       ? "bg-emerald-50 border-emerald-500 shadow-lg ring-4 ring-emerald-500/30 scale-[1.01]"
                       : isSelected
-                      ? "bg-white border-blue-500 shadow-md ring-2 ring-blue-400/20"
+                      ? isLowConfidence
+                        ? "bg-slate-100 border-amber-500 shadow-md ring-2 ring-amber-400/30"
+                        : "bg-white border-blue-500 shadow-md ring-2 ring-blue-400/20"
+                      : isLowConfidence
+                      ? "bg-slate-100/95 border-slate-300 hover:bg-slate-200/75 hover:border-slate-400 shadow-xs"
                       : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white shadow-2xs"
                   }`}
                 >
                   {/* Card Header */}
-                  <div className="p-3.5 border-b border-slate-100 flex items-center justify-between">
+                  <div className={`p-3.5 border-b flex items-center justify-between transition-colors ${
+                    isLowConfidence && !isVerified
+                      ? "bg-slate-200/60 border-slate-300"
+                      : "border-slate-100"
+                  }`}>
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] font-mono text-slate-400 font-bold">
                         #{index + 1}
@@ -1109,16 +1295,27 @@ export function PdfViewerPage() {
                         <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Check className="h-3 w-3" /> {isEdited ? "Modified & Verified" : "Accepted"}
                         </span>
+                      ) : isLowConfidence ? (
+                        <span className="text-[11px] font-bold text-amber-800 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                          <AlertCircle className="h-3 w-3 text-amber-600" /> Review Required
+                        </span>
                       ) : (
-                        <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" /> Pending Review
+                        <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3 text-slate-400" /> Pending Review
                         </span>
                       )}
 
                       {ext?.confidence && (
-                        <span className="text-[10px] font-mono text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-bold">
-                          {Math.round(ext.confidence * 100)}% AI Conf
-                        </span>
+                        isLowConfidence ? (
+                          <span className="text-[10px] font-mono text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded font-bold flex items-center gap-1 shadow-2xs" title="Confidence ≤ 95% - Requires manual scrutiny">
+                            <span>{confPercent}% AI Conf</span>
+                            <span className="text-[9px] bg-amber-200 text-amber-900 px-1 rounded uppercase tracking-wider font-extrabold">Low</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded font-bold" title="High confidence (>95%)">
+                            {confPercent}% AI Conf
+                          </span>
+                        )
                       )}
                     </div>
                   </div>
@@ -1155,7 +1352,17 @@ export function PdfViewerPage() {
                     )}
 
                     {/* Word-style Track Changes Display */}
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div className={`border rounded-lg p-3 ${
+                      isLowConfidence && !isVerified
+                        ? "bg-white border-slate-300 shadow-2xs"
+                        : "bg-slate-50 border-slate-200"
+                    }`}>
+                      {isLowConfidence && !isVerified && (
+                        <div className="mb-2.5 text-[10px] font-medium text-amber-800 bg-amber-50 border border-amber-200/80 rounded px-2 py-1 flex items-center gap-1.5">
+                          <AlertCircle className="h-3 w-3 text-amber-600 shrink-0" />
+                          <span>AI model flagged lower extraction certainty ({confPercent}%). Please verify quote vs paper.</span>
+                        </div>
+                      )}
                       <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
                         <span>Extracted Value & Proposed Change</span>
                         <span className="text-[10px] text-slate-500">Source: Docling v2.4</span>
@@ -1297,11 +1504,14 @@ export function PdfViewerPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (ext?.quote) scrollToQuote(ext.quote);
+                            findQuoteInPdf(v.variable_id);
                           }}
-                          className="text-xs font-medium text-slate-500 hover:text-blue-600 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-100"
+                          className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200/90 flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all shadow-2xs active:scale-95 cursor-pointer"
+                          title="Scroll and flash quote highlight in PDF (Hotkey: F or Q)"
                         >
-                          <Eye className="h-3.5 w-3.5" /> Find Quote in PDF
+                          <Eye className="h-3.5 w-3.5 text-blue-600" />
+                          <span>Find Quote in PDF</span>
+                          <kbd className="text-[10px] bg-white border border-blue-300 text-blue-700 px-1 py-0.2 rounded font-mono font-bold">F</kbd>
                         </button>
                       </div>
                     )}
@@ -1320,6 +1530,7 @@ export function PdfViewerPage() {
               <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">A</kbd> or <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">Enter</kbd> Accept</span>
               <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">M</kbd> Modify</span>
               <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">R</kbd> Reject (NR)</span>
+              <span><kbd className="px-1.5 py-0.5 bg-blue-50 border border-blue-300 text-blue-900 rounded font-mono text-[10px] font-bold">F</kbd> / <kbd className="px-1.5 py-0.5 bg-blue-50 border border-blue-300 text-blue-900 rounded font-mono text-[10px] font-bold">Q</kbd> Find Quote</span>
               <span><kbd className="px-1.5 py-0.5 bg-amber-50 border border-amber-300 text-amber-900 rounded font-mono text-[10px] font-bold">Z</kbd> / <kbd className="px-1.5 py-0.5 bg-amber-50 border border-amber-300 text-amber-900 rounded font-mono text-[10px] font-bold">U</kbd> Undo</span>
               <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">↓</kbd> / <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">↑</kbd> Navigate</span>
             </div>
@@ -1745,6 +1956,14 @@ export function PdfViewerPage() {
                 Exports all recorded variables with verified status and ground-truth citations.
               </span>
               <div className="flex items-center gap-2">
+                <Link
+                  to={`/projects/${projectId}/extraction-sheet?study=${selectedPaperId}`}
+                  className="px-3.5 py-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg flex items-center gap-1.5 transition-colors"
+                  onClick={() => setShowDataSheetModal(false)}
+                >
+                  <ExternalLink className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Open Full-Page Sheet</span>
+                </Link>
                 <button
                   onClick={handleExportStudyCsv}
                   className="px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"

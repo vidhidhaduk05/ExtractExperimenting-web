@@ -282,7 +282,7 @@ export function ActualPdfViewer({
     return () => {
       cancelled = true;
     };
-  }, [highlights, numPages, activeHighlightId]);
+  }, [highlights, numPages]);
 
   // ── 4. Microsoft Word Track Changes Auto-Scroll Mechanism ──
   // Upon accepting/changing to the next variable, smoothly autoscroll to the next highlight!
@@ -322,6 +322,47 @@ export function ActualPdfViewer({
 
     return () => clearTimeout(timer);
   }, [activeHighlightId, pages, highlights, numPages]);
+
+  // ── 4b. Explicit Find Quote Trigger Handler ──
+  useEffect(() => {
+    const handleFindQuote = (e: any) => {
+      const vid = e.detail?.variableId;
+      if (!vid) return;
+
+      const triggerScrollAndFlash = () => {
+        const highlightElement = document.getElementById(`pdf-highlight-${vid}`);
+        if (highlightElement) {
+          highlightElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest",
+          });
+          highlightElement.classList.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+          if (activePulseTimeoutRef.current) clearTimeout(activePulseTimeoutRef.current);
+          activePulseTimeoutRef.current = setTimeout(() => {
+            highlightElement.classList.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+          }, 1500);
+          return true;
+        }
+        return false;
+      };
+
+      if (!triggerScrollAndFlash()) {
+        const item = highlights.find((h) => h.id === vid);
+        const targetPage = parseTargetPage(item?.pageNumber || 1, numPages);
+        const pageElement = document.getElementById(`pdf-page-${targetPage}`);
+        if (pageElement) {
+          pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
+          setTimeout(() => {
+            triggerScrollAndFlash();
+          }, 350);
+        }
+      }
+    };
+
+    window.addEventListener("radextract:find-quote", handleFindQuote);
+    return () => window.removeEventListener("radextract:find-quote", handleFindQuote);
+  }, [highlights, numPages]);
 
   // ── 5. File Upload Handler ──
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -507,7 +548,9 @@ export function ActualPdfViewer({
                         {overlay.rects.map((rect, rIdx) => (
                           <div
                             key={rIdx}
-                            id={isActive && rIdx === 0 ? `pdf-highlight-${overlay.variableId}` : undefined}
+                            id={rIdx === 0 ? `pdf-highlight-${overlay.variableId}` : undefined}
+                            data-variable-id={overlay.variableId}
+                            data-is-active={isActive ? "true" : "false"}
                             onClick={(e) => {
                               e.stopPropagation();
                               onHighlightClick?.(overlay.variableId);
@@ -518,49 +561,31 @@ export function ActualPdfViewer({
                               top: `${rect.top}%`,
                               width: `${rect.width}%`,
                               height: `${rect.height}%`,
+                              mixBlendMode: "multiply",
                               backgroundColor: isActive
-                                ? "rgba(245, 158, 11, 0.38)" // Luminous amber glow for active
+                                ? "rgba(254, 240, 138, 0.90)" // Luminous highlighter yellow
                                 : isVerified
-                                ? "rgba(16, 185, 129, 0.25)" // Emerald for verified
-                                : "rgba(245, 158, 11, 0.18)", // Soft amber for unverified
-                              border: isActive
+                                ? "rgba(167, 243, 208, 0.35)" // Soft emerald highlighter
+                                : "rgba(254, 243, 199, 0.18)", // Faint unobtrusive tint for pending highlights
+                              borderBottom: isActive
                                 ? "2.5px solid #d97706"
                                 : isVerified
-                                ? "1.5px solid #059669"
-                                : "1.5px solid #f59e0b",
+                                ? "2px solid #059669"
+                                : "1.5px dashed rgba(217, 119, 6, 0.45)",
                               boxShadow: isActive
-                                ? "0 0 0 2px rgba(245, 158, 11, 0.4), 0 0 16px rgba(245, 158, 11, 0.85)"
-                                : isVerified
-                                ? "0 0 8px rgba(16, 185, 129, 0.3)"
+                                ? "0 0 0 2px rgba(245, 158, 11, 0.35), 0 2px 8px rgba(245, 158, 11, 0.25)"
                                 : "none",
-                              borderRadius: "3px",
+                              borderRadius: "2px",
                               cursor: "pointer",
                               zIndex: isActive ? 25 : 15,
-                              transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                              transition: "all 0.15s ease",
                             }}
                             className={cn(
-                              "group/highlight hover:scale-[1.01]",
-                              isActive && "animate-pulse"
+                              "group/highlight hover:brightness-95",
+                              isActive && "ring-2 ring-amber-500/40"
                             )}
-                            title={`#${overlay.varIndex} ${overlay.label}: ${overlay.value || "Extracted"} (Click to focus Track Changes card)`}
-                          >
-                            {/* Word-Style Flag Tag on First Rect */}
-                            {rIdx === 0 && (
-                              <span
-                                style={{ transform: "translateY(-100%)" }}
-                                className={cn(
-                                  "absolute left-0 top-0 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-t shadow-xs whitespace-nowrap transition-colors select-none",
-                                  isActive
-                                    ? "bg-amber-600 text-white font-extrabold"
-                                    : isVerified
-                                    ? "bg-emerald-600 text-white"
-                                    : "bg-amber-500 text-white"
-                                )}
-                              >
-                                #{overlay.varIndex} {isActive ? "● REVIEWING" : isVerified ? "✓" : ""}
-                              </span>
-                            )}
-                          </div>
+                            title={`#${overlay.varIndex} ${overlay.label}: ${overlay.value || "Extracted"} (Click to review)`}
+                          />
                         ))}
                       </React.Fragment>
                     );
