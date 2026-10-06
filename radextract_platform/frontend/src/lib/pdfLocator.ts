@@ -68,55 +68,79 @@ function clusterItemsIntoLines(items: TextItem[]): TextItem[][] {
 /**
  * Detects the column midpoint of academic 2-column layouts.
  */
-function detectColumnMidpoint(lines: TextItem[][], pageWidth: number): number | null {
-  let columnGapLines = 0;
-  let gapMidpointSum = 0;
-  let gapCount = 0;
-
-  for (const line of lines) {
-    if (line.length < 2) continue;
-    let maxGap = 0;
-    let maxGapMidpoint = 0;
-    for (let j = 1; j < line.length; j++) {
-      const gap = line[j].x - (line[j - 1].x + line[j - 1].width);
-      if (gap > maxGap) {
-        maxGap = gap;
-        maxGapMidpoint = line[j - 1].x + line[j - 1].width + gap / 2;
-      }
-    }
-    if (maxGap > pageWidth * COLUMN_GAP_THRESHOLD) {
-      columnGapLines++;
-      gapMidpointSum += maxGapMidpoint;
-      gapCount++;
-    }
-  }
-
-  const isMultiColumn = lines.length > 0 && columnGapLines / lines.length >= COLUMN_LINE_RATIO;
-  return isMultiColumn ? gapMidpointSum / gapCount : null;
-}
-
-/**
- * Splits lines by column around the midpoint to preserve natural multi-column reading order.
- */
-function splitLinesByColumn(lines: TextItem[][], columnMidpoint: number): { leftLines: TextItem[][]; rightLines: TextItem[][] } {
-  const leftLines: TextItem[][] = [];
-  const rightLines: TextItem[][] = [];
-  for (const line of lines) {
-    const leftItems = line.filter((item) => item.x + item.width / 2 < columnMidpoint);
-    const rightItems = line.filter((item) => item.x + item.width / 2 >= columnMidpoint);
-    if (leftItems.length > 0) leftLines.push(leftItems);
-    if (rightItems.length > 0) rightLines.push(rightItems);
-  }
-  return { leftLines, rightLines };
-}
-
 function getReadingOrderedLines(items: TextItem[], pageWidth: number): TextItem[][] {
   if (items.length === 0) return [];
+
   const lines = clusterItemsIntoLines(items);
-  const columnMidpoint = detectColumnMidpoint(lines, pageWidth);
-  if (columnMidpoint === null) return lines;
-  const { leftLines, rightLines } = splitLinesByColumn(lines, columnMidpoint);
-  return [...leftLines, ...rightLines];
+  const mid = pageWidth / 2;
+
+  // Detect whether page has multi-column content
+  const col1Lines: TextItem[][] = [];
+  const col2Lines: TextItem[][] = [];
+  for (const l of lines) {
+    const minX = l[0].x;
+    const maxX = l[l.length - 1].x + l[l.length - 1].width;
+    if (maxX < mid + 15) {
+      col1Lines.push(l);
+    } else if (minX > mid - 15) {
+      col2Lines.push(l);
+    }
+  }
+
+  const isMultiCol = col1Lines.length >= 3 && col2Lines.length >= 3;
+  if (!isMultiCol) {
+    return lines;
+  }
+
+  const colYMin = Math.min(...col1Lines.concat(col2Lines).map((l) => l[0].y));
+  const colYMax = Math.max(...col1Lines.concat(col2Lines).map((l) => l[0].y));
+
+  const topSpanning: TextItem[][] = [];
+  const leftLines: TextItem[][] = [];
+  const rightLines: TextItem[][] = [];
+  const bottomSpanning: TextItem[][] = [];
+
+  for (const l of lines) {
+    const minX = l[0].x;
+    const maxX = l[l.length - 1].x + l[l.length - 1].width;
+
+    // Check if line spans across center
+    if (minX < mid - 30 && maxX > mid + 30) {
+      // Check for column gap near center
+      let hasGap = false;
+      for (let j = 1; j < l.length; j++) {
+        const gap = l[j].x - (l[j - 1].x + l[j - 1].width);
+        const gapMid = (l[j - 1].x + l[j - 1].width + l[j].x) / 2;
+        if (gap >= 12 && Math.abs(gapMid - mid) < pageWidth * 0.15) {
+          hasGap = true;
+          break;
+        }
+      }
+
+      if (hasGap) {
+        const lItems = l.filter((it) => it.x + it.width / 2 < mid);
+        const rItems = l.filter((it) => it.x + it.width / 2 >= mid);
+        if (lItems.length > 0) leftLines.push(lItems);
+        if (rItems.length > 0) rightLines.push(rItems);
+      } else {
+        // Continuous spanning line (e.g. title/abstract at top or reference/footer at bottom)
+        // In PDF.js, y increases upwards (top is higher y, bottom is lower y)
+        if (l[0].y >= colYMax - 5) {
+          topSpanning.push(l);
+        } else if (l[0].y <= colYMin + 5) {
+          bottomSpanning.push(l);
+        } else {
+          topSpanning.push(l);
+        }
+      }
+    } else if (maxX < mid + 30) {
+      leftLines.push(l);
+    } else {
+      rightLines.push(l);
+    }
+  }
+
+  return [...topSpanning, ...leftLines, ...rightLines, ...bottomSpanning];
 }
 
 /**

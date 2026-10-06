@@ -1431,7 +1431,7 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_section: "Management",
       value: "Conservative (Statin Therapy)",
       confidence: 0.98,
-      quote: "decided upon conservative management on a statin-vessel wall stabilizing agent",
+      quote: "decided upon conservative management on a statin",
       source_page: 3,
       is_verified: false,
       is_edited: false,
