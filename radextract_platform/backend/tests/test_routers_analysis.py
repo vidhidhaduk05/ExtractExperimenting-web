@@ -261,7 +261,7 @@ class TestGetAnalysisProfile:
             "missing_matrix": [],
         }
         monkeypatch.setattr(
-            "services.analysis_service.compute_data_profile",
+            "services.analysis_service.profile_extraction_data",
             lambda pid: mock_profile,
         )
         response = client.get(f"/api/projects/{project}/analysis/profile")

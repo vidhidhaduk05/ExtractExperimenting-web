@@ -155,8 +155,9 @@ class TestCreateAgentConfig:
         monkeypatch.setattr(mod, "_policy", MagicMock())
         monkeypatch.setattr(settings, "antigravity_api_key", "")
         monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-        with pytest.raises(RuntimeError, match="No Gemini API key"):
-            mod.create_agent_config()
+        with patch("services.llm_config_service.get_active_config", return_value={"active_key": ""}):
+            with pytest.raises(RuntimeError, match="No Gemini API key"):
+                mod.create_agent_config()
 
     def test_builds_config_with_api_key(self, fresh_settings, monkeypatch):
         import services.antigravity_agent as mod
