@@ -449,6 +449,18 @@ async def record_extraction_decision(
         (body.study_id, body.variable_id),
     ).fetchone()
     
+    if body.decision == "undone":
+        if existing:
+            conn.execute(
+                """UPDATE extractions 
+                   SET value = ?, is_verified = 0, verified_by = NULL, verified_at = NULL,
+                       notes = ?, updated_at = ?
+                   WHERE extraction_id = ?""",
+                (body.original_value, body.notes, now, existing["extraction_id"])
+            )
+            conn.commit()
+        return {"status": "success", "undone": True}
+
     final_val = body.corrected_value if body.decision == "modified" else (
         "NR" if body.decision == "rejected" else body.original_value
     )

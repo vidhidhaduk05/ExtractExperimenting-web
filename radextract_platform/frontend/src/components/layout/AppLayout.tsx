@@ -2,7 +2,7 @@ import { Outlet, NavLink, useParams, Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useState, useEffect } from "react";
-import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu } from "lucide-react";
+import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ErrorBoundary } from "../common/ErrorBoundary";
 
@@ -437,6 +437,36 @@ export function AppLayout() {
     return localStorage.getItem("theme") === "dark";
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("radextract_sidebar_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("radextract_sidebar_collapsed", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
+        const target = e.target as HTMLElement;
+        if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -462,55 +492,88 @@ export function AppLayout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col transform transition-transform duration-300 md:relative md:translate-x-0",
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-40 shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col transform transition-all duration-300 md:relative md:translate-x-0",
+          isMobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
+          isSidebarCollapsed ? "md:w-16" : "md:w-64"
         )}
       >
-        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <FlaskConical className="h-6 w-6 text-phylo-blue" />
-            <span className="font-bold text-lg dark:text-gray-100">RadExtract</span>
+        <div className={cn("flex items-center justify-between px-3.5 py-4 border-b border-gray-200 dark:border-gray-700 transition-all")}>
+          <div className="flex items-center gap-2 overflow-hidden">
+            <FlaskConical className="h-6 w-6 text-phylo-blue shrink-0" />
+            <span className={cn("font-bold text-lg dark:text-gray-100 transition-opacity duration-200 truncate", isSidebarCollapsed && "md:hidden")}>
+              RadExtract
+            </span>
           </div>
-          <button
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="md:hidden p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-          </button>
+
+          <div className="flex items-center gap-1">
+            {/* Desktop Minimize / Expand Toggle Button */}
+            <button
+              onClick={toggleSidebar}
+              className="hidden md:flex p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Minimize sidebar (Ctrl+B)"}
+              aria-label={isSidebarCollapsed ? "Expand sidebar" : "Minimize sidebar"}
+            >
+              {isSidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
+            </button>
+
+            {/* Mobile Close Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="md:hidden p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">
-          <div className="px-3 py-1">
+          <div className={cn(isSidebarCollapsed ? "px-1.5 py-1" : "px-3 py-1")}>
             {navItems.map((item) => (
-              <NavItem key={item.to} {...item} />
+              <NavItem key={item.to} {...item} isCollapsed={isSidebarCollapsed} />
             ))}
           </div>
 
           {projectId && (
             <>
-              <div className="px-4 py-2 mt-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Current Project
+              <div className={cn("py-2", isSidebarCollapsed ? "px-2 flex justify-center" : "px-4")}>
+                {isSidebarCollapsed ? (
+                  <div className="w-8 h-px bg-gray-200 dark:bg-gray-700 my-1" title="Current Project" />
+                ) : (
+                  <div className="mt-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Current Project
+                  </div>
+                )}
               </div>
-              <div className="px-3">
+              <div className={cn(isSidebarCollapsed ? "px-1.5" : "px-3")}>
                 {projectNavItems(projectId).map((item) => (
-                  <NavItem key={item.to} {...item} />
+                  <NavItem key={item.to} {...item} isCollapsed={isSidebarCollapsed} />
                 ))}
               </div>
             </>
           )}
         </nav>
 
-        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 text-xs text-gray-400 dark:text-gray-500">
-          RadExtract Platform v2.4
+        <div className={cn("border-t border-gray-200 dark:border-gray-700 py-3 text-xs text-gray-400 dark:text-gray-500 transition-all", isSidebarCollapsed ? "px-2 text-center" : "px-4")}>
+          {isSidebarCollapsed ? (
+            <span title="RadExtract Platform v2.4" className="font-mono text-[10px] hidden md:inline">v2.4</span>
+          ) : (
+            <span>RadExtract Platform v2.4</span>
+          )}
         </div>
       </aside>
 
       {/* Main content with top bar */}
-      <main className="flex-1 overflow-y-auto flex flex-col">
+      <main className="flex-1 overflow-y-auto flex flex-col min-w-0">
         {/* Top bar with settings */}
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 sticky top-0 z-30 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              {/* Mobile menu trigger */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -518,8 +581,21 @@ export function AppLayout() {
               >
                 <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               </button>
+
+              {/* Desktop Expand Button if Sidebar is collapsed */}
+              {isSidebarCollapsed && (
+                <button
+                  onClick={toggleSidebar}
+                  className="hidden md:flex p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Expand sidebar (Ctrl+B)"
+                  aria-label="Expand sidebar"
+                >
+                  <PanelLeftOpen className="h-4 w-4" />
+                </button>
+              )}
+
               <Layers className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-300 truncate">
                 {projectId ? "Project: " + projectId.substring(0, 20) : "RadExtract Platform"}
               </span>
             </div>
@@ -555,12 +631,14 @@ function NavItem({
   icon: Icon,
   end,
   badge,
+  isCollapsed,
 }: {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   end?: boolean;
   badge?: string | number;
+  isCollapsed?: boolean;
 }) {
   return (
     <NavLink
@@ -569,17 +647,21 @@ function NavItem({
       title={label}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 hover:scale-[1.02]",
+          "flex items-center rounded-md text-sm font-medium transition-all duration-200 hover:scale-[1.02]",
+          isCollapsed ? "md:justify-center px-2 py-2.5 my-1" : "gap-2 px-3 py-2",
           isActive
             ? "bg-phylo-blue/10 text-phylo-blue dark:bg-phylo-blue/20 dark:text-blue-400"
             : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white"
         )
       }
     >
-      <Icon className="h-4 w-4" />
-      <span className="flex-1 truncate">{label}</span>
+      <Icon className={cn("h-4 w-4 shrink-0", isCollapsed && "md:h-5 md:w-5")} />
+      <span className={cn("flex-1 truncate", isCollapsed && "md:hidden")}>{label}</span>
       {badge && (
-        <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[0.65rem] font-bold text-white bg-phylo-blue rounded-full">
+        <span className={cn(
+          "inline-flex items-center justify-center font-bold text-white bg-phylo-blue rounded-full",
+          isCollapsed ? "md:hidden ml-auto min-w-[1.25rem] h-5 px-1.5 text-[0.65rem]" : "ml-auto min-w-[1.25rem] h-5 px-1.5 text-[0.65rem]"
+        )}>
           {badge}
         </span>
       )}
