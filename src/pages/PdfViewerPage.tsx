@@ -469,9 +469,18 @@ export function PdfViewerPage() {
   // ── Keyboard Shortcuts (A: Accept, M: Modify, R: Reject, Z/U: Undo, Down: Next, Up: Prev) ──
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in an input, textarea, or contentEditable element
+      // Don't intercept if user is typing in an input, textarea, select, or contentEditable element
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      const isInput =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable;
+
+      if (isInput) return;
+
+      // Also ignore Enter key if a button is focused to prevent double action
+      if ((e.key === "Enter" || e.key === " ") && target.tagName === "BUTTON") return;
 
       // Undo hotkey: Z, Ctrl+Z, Cmd+Z, U
       if (

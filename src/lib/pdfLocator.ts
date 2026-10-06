@@ -228,11 +228,16 @@ function itemsToPercentRects(items: TextItem[], viewport: any): PercentRect[] {
       height = maxY - minY;
     }
 
+    const finalLeft = Math.max(0, Math.min(100, (left / viewport.width) * 100));
+    const finalTop = Math.max(0, Math.min(100, (top / viewport.height) * 100));
+    const finalWidth = Math.max(0.5, Math.min(100 - finalLeft, (width / viewport.width) * 100));
+    const finalHeight = Math.max(0.5, Math.min(100 - finalTop, (height / viewport.height) * 100));
+
     rects.push({
-      left: Math.max(0, Math.min(100, (left / viewport.width) * 100)),
-      top: Math.max(0, Math.min(100, (top / viewport.height) * 100)),
-      width: Math.max(0.5, Math.min(100, (width / viewport.width) * 100)),
-      height: Math.max(0.5, Math.min(100, (height / viewport.height) * 100)),
+      left: finalLeft,
+      top: finalTop,
+      width: finalWidth,
+      height: finalHeight,
     });
   }
   return rects;
@@ -246,6 +251,9 @@ export async function locateQuoteRects(page: any, quote: string): Promise<Percen
   const trimmed = quote.trim();
   if (!trimmed || /^(not found|n\/a|unreported)$/i.test(trimmed)) return [];
 
+  // Edge case: handle quotes ending in ellipses often used in LLM truncation
+  const cleanQuote = trimmed.replace(/\.{3,}$|…$/, '').trim();
+
   const textContent = await page.getTextContent();
   const items = mapTextItems(textContent.items);
   if (items.length === 0) return [];
@@ -254,7 +262,7 @@ export async function locateQuoteRects(page: any, quote: string): Promise<Percen
   const orderedLines = getReadingOrderedLines(items, viewport.width);
   const { normText, normOwners } = buildNormalizedIndex(orderedLines);
 
-  const normQuote = normalizeForMatch(trimmed);
+  const normQuote = normalizeForMatch(cleanQuote);
   if (!normQuote) return [];
 
   // 1. Try exact match
