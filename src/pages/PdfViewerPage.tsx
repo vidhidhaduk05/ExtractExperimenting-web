@@ -18,6 +18,40 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
+import { ActualPdfViewer, type PdfHighlightItem } from "../components/common/ActualPdfViewer";
+
+export const BENCHMARK_PAPERS = [
+  {
+    id: "s1",
+    title: "Birua et al. 2022 (Pure Arterial Malformation PCA)",
+    filename: "Birua_2022.pdf",
+  },
+  {
+    id: "s2",
+    title: "Albina-Palmarola et al. 2024 (Accessory MCA)",
+    filename: "Albina-Palmarola_2024_A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery.pdf",
+  },
+  {
+    id: "s3",
+    title: "Brinjikji et al. 2018 (Pure Arterial Malformations Review)",
+    filename: "Brinjikji_2018_Pure arterial malformations.pdf",
+  },
+  {
+    id: "s4",
+    title: "Chua et al. 2021 (Ruptured Posterior Fossa PAM)",
+    filename: "Chua_2021_Endovascular treatment of a ruptured posterior fossa pure arterial malformation illustrative case.pdf",
+  },
+  {
+    id: "s5",
+    title: "Deshmukh et al. 2023 (PAM Case Report)",
+    filename: "Deshmukh_2023_Pure Arterial Malformation (PAM) Case Report and Review of Literature.pdf",
+  },
+  {
+    id: "s6",
+    title: "Feliciano et al. 2014 (Color-coded DSA MCA PAM)",
+    filename: "Feliciano_2014_Color-coded digital subtraction angiography in the management of a rare case of middle cerebral artery pure arterial malformation. A technical and case report.pdf",
+  },
+];
 
 interface UndoRecord {
   studyId: string;
@@ -44,6 +78,8 @@ export function PdfViewerPage() {
   const [showErrorAnalysis, setShowErrorAnalysis] = useState<boolean>(false);
   const [reviewerName, setReviewerName] = useState<string>("Expert Reviewer");
   const [pdfZoom, setPdfZoom] = useState<number>(100);
+  const [selectedPaperId, setSelectedPaperId] = useState<string>("s1");
+  const [customPdfUrl, setCustomPdfUrl] = useState<string | null>(null);
 
   // Collapsible Protocol Rules panel (collapsed by default on extraction side as requested)
   const [showCodebookPanel, setShowCodebookPanel] = useState<boolean>(false);
@@ -166,8 +202,34 @@ export function PdfViewerPage() {
   const currentRule: CodebookRule | undefined = currentVar ? (customRules[currentVar.variable_id] || DEMO_CODEBOOK_RULES[currentVar.variable_id]) : undefined;
 
   // Progress metrics
+  const currentVarIndex = Math.max(0, variableList.findIndex((v: any) => v.variable_id === selectedVarId));
   const verifiedCount = variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
   const progressPercent = variableList.length > 0 ? Math.round((verifiedCount / variableList.length) * 100) : 0;
+
+  // Active Publication PDF URL computation
+  const currentPdfUrl = useMemo(() => {
+    if (customPdfUrl) return customPdfUrl;
+    const paper = BENCHMARK_PAPERS.find((p) => p.id === selectedPaperId) || BENCHMARK_PAPERS[0];
+    const base = import.meta.env.BASE_URL || "/";
+    const cleanBase = base.endsWith("/") ? base : base + "/";
+    return cleanBase + "papers/" + paper.filename;
+  }, [customPdfUrl, selectedPaperId]);
+
+  // Map extraction variables to spatial PDF highlights for ActualPdfViewer
+  const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
+    return variableList.map((v: any, idx: number) => {
+      const ext = extractionMap[v.variable_id];
+      return {
+        id: v.variable_id,
+        varIndex: idx + 1,
+        label: v.name,
+        quote: ext?.quote || "",
+        pageNumber: ext?.source_page || 1,
+        isVerified: !!ext?.is_verified,
+        value: ext?.value,
+      };
+    });
+  }, [variableList, extractionMap]);
 
   // Export study recorded extraction data sheet (CSV) - AIDE-Web style
   const handleExportStudyCsv = () => {
@@ -834,515 +896,141 @@ export function PdfViewerPage() {
           "border-r border-slate-200 bg-slate-200/70 flex flex-col h-full overflow-hidden transition-all duration-300",
           showCodebookPanel ? "w-[38%]" : "w-[56%]"
         )}>
-          {/* PDF Viewer Header Toolbar */}
-          <div className="border-b border-slate-200 px-3 py-2 bg-white flex items-center justify-between shrink-0 shadow-2xs">
-            {/* View Selector Tabs */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setLeftTab("document")}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-bold rounded-md transition-colors flex items-center gap-1",
-                  leftTab === "document"
-                    ? "bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
-                )}
-              >
-                <FileText className="h-3.5 w-3.5 text-blue-600" />
-                <span>Actual PDF ({pdfSummary?.page_count || 4}P)</span>
-              </button>
-              <button
-                onClick={() => setLeftTab("sections")}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-medium rounded-md transition-colors",
-                  leftTab === "sections"
-                    ? "bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
-                )}
-              >
-                Sections ({(pdfData?.sections || []).length})
-              </button>
-              <button
-                onClick={() => setLeftTab("tables")}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1",
-                  leftTab === "tables"
-                    ? "bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
-                )}
-              >
-                <Table className="h-3.5 w-3.5 text-slate-500" />
-                <span>Tables ({Math.max((pdfData?.tables || []).length, 1)})</span>
-              </button>
-            </div>
-
-            {/* Page Jump & Zoom Controls */}
-            <div className="flex items-center gap-1.5">
-              {leftTab === "document" && (
-                <>
-                  <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded border border-slate-200 text-[10px] font-mono">
-                    {[1, 2, 3, 4].map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => jumpToPage(p)}
-                        className="px-1.5 py-0.5 rounded hover:bg-white text-slate-600 font-bold transition-colors"
-                        title={`Jump to Page ${p}`}
-                      >
-                        P{p}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-1 ml-1 text-slate-500">
-                    <button
-                      onClick={() => setPdfZoom((z) => Math.max(75, z - 10))}
-                      className="p-1 rounded hover:bg-slate-100 text-slate-600"
-                      title="Zoom Out"
-                    >
-                      <ZoomOut className="h-3.5 w-3.5" />
-                    </button>
-                    <span className="text-[10px] font-mono font-semibold w-7 text-center">{pdfZoom}%</span>
-                    <button
-                      onClick={() => setPdfZoom((z) => Math.min(130, z + 10))}
-                      className="p-1 rounded hover:bg-slate-100 text-slate-600"
-                      title="Zoom In"
-                    >
-                      <ZoomIn className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Quick in-document search bar */}
-          <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs">
-            <div className="relative flex-1 max-w-xs">
-              <Search className="h-3 w-3 absolute left-2 top-2 text-slate-400" />
-              <input
-                type="text"
-                value={documentSearch}
-                onChange={(e) => setDocumentSearch(e.target.value)}
-                placeholder="Find in PDF text..."
-                className="w-full text-xs pl-7 pr-2 py-1 bg-white border border-slate-200 rounded-md focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-slate-500">
-              <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded">
-                <Highlighter className="h-3 w-3 text-amber-600" />
-                {variableList.length} Highlights Mapped
-              </span>
-            </div>
-          </div>
-
-          {/* Document Content View */}
-          <div ref={docScrollRef} className="flex-1 overflow-y-auto p-4 space-y-6">
-            
-            {leftTab === "document" && (
-              <div
-                style={{ transform: `scale(${pdfZoom / 100})`, transformOrigin: "top center" }}
-                className="transition-transform duration-150 space-y-6"
-              >
-                {/* ── REALISTIC PDF PAGE 1 OF 4 ── */}
-                <div
-                  ref={(el) => { pageRefs.current[1] = el; }}
-                  className="bg-white shadow-xl border border-slate-300 rounded-xs p-8 sm:p-9 min-h-[800px] relative font-serif text-slate-900 mx-auto max-w-[650px] select-text"
-                >
-                  {/* Journal Header Masthead */}
-                  <div className="border-b-2 border-slate-800 pb-3 mb-4">
-                    <div className="flex items-center justify-between text-[10px] font-sans font-semibold text-slate-500 tracking-wider uppercase mb-1">
-                      <span>{currentStudy?.journal || "Asian Journal of Neurosurgery"}</span>
-                      <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">Open Access</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[9px] font-sans text-slate-400">
-                      <span>Case Report · Vol. 17 · Issue 2 · {currentStudy?.publication_year || 2022}</span>
-                      <span>DOI: 10.4103/ajns.AJNS_287_21</span>
-                    </div>
-                  </div>
-
-                  {/* Article Title */}
-                  <h1 className="text-xl font-bold font-serif text-slate-950 leading-snug tracking-tight mb-2">
-                    {currentStudy?.title || "Pure Artery Malformation of Posterior Cerebral Artery with Dysplastic Internal Carotid Artery"}
-                  </h1>
-
-                  {/* Authors & Affiliations */}
-                  <div className="font-sans text-xs text-slate-700 mb-4 border-b border-slate-200 pb-3">
-                    <p className="font-semibold text-slate-900">
-                      {currentStudy?.authors || "Shashi Birua, Mukesh Kumar, Raghvendra Sharma, Vivek Gupta"}
-                    </p>
-                    <p className="text-[11px] text-slate-500 italic mt-0.5">
-                      Department of Neurosurgery, Advanced Neurosciences Center, PGIMER, Chandigarh, India
-                    </p>
-                  </div>
-
-                  {/* Abstract Callout Box */}
-                  <div className="bg-slate-50/90 border-l-4 border-slate-700 p-3.5 mb-5 rounded-r font-sans text-xs text-slate-800 leading-relaxed">
-                    <h3 className="font-bold text-slate-900 uppercase text-[10px] tracking-wider mb-1">
-                      Abstract
-                    </h3>
-                    <p className="text-[11px] leading-relaxed text-slate-700">
-                      Pure arterial malformations (PAMs) are rare intracranial non-shunting vascular lesions characterized by dilated, tortuous, and coiled arterial loops. We describe a 32-year-old male diagnosed with pure arterial malformation of the left posterior cerebral artery (PCA) accompanied by severe internal carotid dysplasia, successfully managed with conservative follow-up.
-                    </p>
-                  </div>
-
-                  {/* Page 1 Body Text (Abstract & Clinical History) */}
-                  <div className="space-y-3 text-[12px] leading-relaxed text-slate-800 font-serif text-justify">
-                    <h4 className="font-sans font-bold text-slate-900 text-xs uppercase tracking-wide border-b border-slate-200 pb-1 mt-4">
-                      Abstract & Clinical History
-                    </h4>
-                    <p>
-                      {renderTextWithHighlights(
-                        "Asian J Neurosurg 2022. Pure Artery Malformation of Posterior Cerebral Artery with Dysplastic Internal Carotid Artery."
-                      )}
-                    </p>
-                    <p>
-                      {renderTextWithHighlights(
-                        "A 32-year-old male presented with a 2-year history of episodic chronic throbbing occipital headaches without focal neurological deficits."
-                      )}
-                    </p>
-                    <p>
-                      The patient had no prior history of systemic hypertension, seizures, trauma, or familial intracranial aneurysms. On physical examination, vital signs were stable with blood pressure 128/82 mmHg and regular pulse. Detailed neurological assessment confirmed intact cranial nerve reflexes, symmetrical motor and sensory functions, and complete absence of signs of meningeal irritation or intracranial vascular bruit.
-                    </p>
-                  </div>
-
-                  {/* Page 1 Running Footer */}
-                  <div className="absolute bottom-4 left-8 right-8 border-t border-slate-200 pt-2 flex items-center justify-between text-[10px] font-sans text-slate-400">
-                    <span>{currentStudy?.journal || "Asian Journal of Neurosurgery"}</span>
-                    <span className="font-bold font-mono">Page 1 of {pdfSummary?.page_count || 4}</span>
-                  </div>
-                </div>
-
-                {/* ── REALISTIC PDF PAGE 2 OF 4 ── */}
-                <div
-                  ref={(el) => { pageRefs.current[2] = el; }}
-                  className="bg-white shadow-xl border border-slate-300 rounded-xs p-8 sm:p-9 min-h-[800px] relative font-serif text-slate-900 mx-auto max-w-[650px] select-text"
-                >
-                  {/* Page 2 Running Header */}
-                  <div className="border-b border-slate-200 pb-2 mb-4 flex items-center justify-between text-[10px] font-sans text-slate-400">
-                    <span className="italic">Birua et al. · Pure Artery Malformation of Posterior Cerebral Artery</span>
-                    <span className="font-mono font-bold">Vol. 17 · Issue 2 · 2022</span>
-                  </div>
-
-                  {/* Section: Neuroimaging & Angiography */}
-                  <div className="space-y-3 text-[12px] leading-relaxed text-slate-800 font-serif text-justify">
-                    <h4 className="font-sans font-bold text-slate-900 text-xs uppercase tracking-wide border-b border-slate-200 pb-1">
-                      Neuroimaging & Angiography
-                    </h4>
-                    <p>
-                      Brain magnetic resonance imaging (MRI) revealed coiled flow voids in the left ambient cistern without any evidence of parenchymal hematoma or acute ischemic changes on diffusion-weighted sequences.
-                    </p>
-                    <p>
-                      {renderTextWithHighlights(
-                        "Digital subtraction angiography demonstrated marked tortuosity and multiple arterial loops along the left PCA (P2 segment)."
-                      )}
-                    </p>
-                    <p>
-                      {renderTextWithHighlights(
-                        "No arteriovenous shunting or associated aneurysm was identified."
-                      )}
-                    </p>
-                    <p>
-                      Catheter selective angiography of the left internal carotid artery demonstrated severe hypoplasia and dysplasia of the cervical ICA, terminating in rudimentary anterior branches. Collateral blood supply to the anterior territory was compensated via a robust, enlarged posterior communicating artery arising from the basilar bifurcation.
-                    </p>
-                    <p>
-                      High-resolution 3D rotational angiographic reconstruction confirmed that the tortuous coiled loops preserved normal distal parenchymal branches without an interposed capillary nidus or early cortical venous drainage, definitively validating the diagnosis of Pure Arterial Malformation.
-                    </p>
-                  </div>
-
-                  {/* Angiography Schematic / Diagram Box */}
-                  <div className="my-5 p-3.5 bg-slate-50 border border-slate-200 rounded text-center font-sans">
-                    <div className="text-[11px] font-semibold text-slate-700">
-                      Fig 1. Digital Subtraction Angiography (Left Vertebral Injection, Lateral & Oblique Views)
-                    </div>
-                    <p className="text-[10px] text-slate-500 mt-1 max-w-md mx-auto">
-                      Showing marked tortuosity and continuous arterial looping along the left P2 PCA segment. Absence of early venous opacification or saccular aneurysmal dilation.
-                    </p>
-                  </div>
-
-                  {/* Page 2 Running Footer */}
-                  <div className="absolute bottom-4 left-8 right-8 border-t border-slate-200 pt-2 flex items-center justify-between text-[10px] font-sans text-slate-400">
-                    <span>{currentStudy?.journal || "Asian Journal of Neurosurgery"}</span>
-                    <span className="font-bold font-mono">Page 2 of {pdfSummary?.page_count || 4}</span>
-                  </div>
-                </div>
-
-                {/* ── REALISTIC PDF PAGE 3 OF 4 ── */}
-                <div
-                  ref={(el) => { pageRefs.current[3] = el; }}
-                  className="bg-white shadow-xl border border-slate-300 rounded-xs p-8 sm:p-9 min-h-[800px] relative font-serif text-slate-900 mx-auto max-w-[650px] select-text"
-                >
-                  {/* Page 3 Running Header */}
-                  <div className="border-b border-slate-200 pb-2 mb-4 flex items-center justify-between text-[10px] font-sans text-slate-400">
-                    <span className="italic">Birua et al. · Management Decision & Follow-Up</span>
-                    <span className="font-mono font-bold">Vol. 17 · Issue 2 · 2022</span>
-                  </div>
-
-                  {/* Section: Management Decision */}
-                  <div className="space-y-3 text-[12px] leading-relaxed text-slate-800 font-serif text-justify">
-                    <h4 className="font-sans font-bold text-slate-900 text-xs uppercase tracking-wide border-b border-slate-200 pb-1">
-                      Management Decision & Clinical Outcome
-                    </h4>
-                    <p>
-                      {renderTextWithHighlights(
-                        "Because the lesion was unruptured and lacked aneurysmal dilatation, conservative observation with annual MRI/MRA follow-up was selected."
-                      )}
-                    </p>
-                    <p>
-                      The multidisciplinary neurovascular review board concluded that endovascular deconstruction or surgical parent-vessel sacrifice was strictly contraindicated due to the risk of irreversible visual cortex and thalamic stroke. Because the malformation lacked aneurysmal dilatation or signs of hemodynamic rupture, conservative medical therapy was deemed safest.
-                    </p>
-                    <p>
-                      {renderTextWithHighlights(
-                        "Over 3 years of clinical follow-up, the patient remained neurologically intact with stable angioarchitecture."
-                      )}
-                    </p>
-                    <p>
-                      Serial neuroimaging follow-up at 12, 24, and 36 months using non-contrast MRA revealed unchanged luminal diameter and stable looping morphology of the left PCA loops. The patient experienced marked improvement in headache frequency under conservative prophylaxis and resumed all normal occupational activities without restriction.
-                    </p>
-                  </div>
-
-                  {/* Page 3 Running Footer */}
-                  <div className="absolute bottom-4 left-8 right-8 border-t border-slate-200 pt-2 flex items-center justify-between text-[10px] font-sans text-slate-400">
-                    <span>{currentStudy?.journal || "Asian Journal of Neurosurgery"}</span>
-                    <span className="font-bold font-mono">Page 3 of {pdfSummary?.page_count || 4}</span>
-                  </div>
-                </div>
-
-                {/* ── REALISTIC PDF PAGE 4 OF 4 ── */}
-                <div
-                  ref={(el) => { pageRefs.current[4] = el; }}
-                  className="bg-white shadow-xl border border-slate-300 rounded-xs p-8 sm:p-9 min-h-[800px] relative font-serif text-slate-900 mx-auto max-w-[650px] select-text"
-                >
-                  {/* Page 4 Running Header */}
-                  <div className="border-b border-slate-200 pb-2 mb-4 flex items-center justify-between text-[10px] font-sans text-slate-400">
-                    <span className="italic">Birua et al. · Discussion & Table 1</span>
-                    <span className="font-mono font-bold">Vol. 17 · Issue 2 · 2022</span>
-                  </div>
-
-                  <div className="space-y-3 text-[12px] leading-relaxed text-slate-800 font-serif text-justify mb-4">
-                    <h4 className="font-sans font-bold text-slate-900 text-xs uppercase tracking-wide border-b border-slate-200 pb-1">
-                      Discussion & Literature Synthesis
-                    </h4>
-                    <p>
-                      Intracranial Pure Arterial Malformations (PAMs) represent unique, non-shunting coiled vascular entities that must be distinguished from arteriovenous malformations and high-flow fistulas. Our case illustrates the favorable natural history of unruptured non-aneurysmal PAMs managed conservatively.
-                    </p>
-                  </div>
-
-                  {/* ── TABLE 1 ── */}
-                  <div className="my-4 border border-slate-300 rounded font-sans overflow-hidden">
-                    <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-300 text-xs font-bold text-slate-900 flex items-center justify-between">
-                      <span>Table 1: Literature Characteristics of Pure Artery Malformation Cases</span>
-                      <span className="text-[10px] text-slate-500 font-mono">n = 6 Studies</span>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-slate-200 text-[10px]">
-                        <thead className="bg-slate-50 text-slate-700 font-semibold">
-                          <tr>
-                            <th className="px-2 py-1.5 text-left border-r border-slate-200">Study / Author</th>
-                            <th className="px-2 py-1.5 text-left border-r border-slate-200">Patient Age/Sex</th>
-                            <th className="px-2 py-1.5 text-left border-r border-slate-200">Vessel Involved</th>
-                            <th className="px-2 py-1.5 text-left border-r border-slate-200">Aneurysm</th>
-                            <th className="px-2 py-1.5 text-left border-r border-slate-200">Treatment</th>
-                            <th className="px-2 py-1.5 text-left">Outcome</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200 text-slate-800">
-                          <tr className="bg-amber-50/70 font-semibold">
-                            <td className="px-2 py-1.5 border-r border-slate-200">Birua 2022 (Current)</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">32 / M</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Left PCA (P2)</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Absent</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Conservative</td>
-                            <td className="px-2 py-1.5 text-emerald-700 font-bold">Intact (3y)</td>
-                          </tr>
-                          <tr>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Albina 2024</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">48 / F</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Accessory MCA</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Present (3.8mm)</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Hybrid (Clip+Coil)</td>
-                            <td className="px-2 py-1.5">Recovered (mRS 0)</td>
-                          </tr>
-                          <tr>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Brinjikji 2018</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">44 (Mean) / 58% F</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">MCA, PCA, ACA</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">41% Present</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Cons 56% / Endo 36%</td>
-                            <td className="px-2 py-1.5">Benign course</td>
-                          </tr>
-                          <tr>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Chua 2021</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">59 / F</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Left PICA</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Present (5mm)</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Endovascular Coil</td>
-                            <td className="px-2 py-1.5">Favorable</td>
-                          </tr>
-                          <tr>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Deshmukh 2023</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">27 / M</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">ACA (A2/A3)</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Absent</td>
-                            <td className="px-2 py-1.5 border-r border-slate-200">Surgical Resection</td>
-                            <td className="px-2 py-1.5">Seizure Free</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* References */}
-                  <div className="font-sans text-[10px] text-slate-500 space-y-1 mt-4">
-                    <h5 className="font-bold uppercase tracking-wider text-slate-700">References</h5>
-                    <p>1. Birua S, et al. Asian J Neurosurg 2022;17:342-6.</p>
-                    <p>2. Albina-Palmarola M, et al. World Neurosurg 2024;182:e45-51.</p>
-                    <p>3. Brinjikji W, et al. J Neurointerv Surg 2018;10:e22.</p>
-                  </div>
-
-                  {/* Page 4 Running Footer */}
-                  <div className="absolute bottom-4 left-8 right-8 border-t border-slate-200 pt-2 flex items-center justify-between text-[10px] font-sans text-slate-400">
-                    <span>{currentStudy?.journal || "Asian Journal of Neurosurgery"}</span>
-                    <span className="font-bold font-mono">Page 4 of {pdfSummary?.page_count || 4}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Sections Tab View */}
-            {leftTab === "sections" && (
-              <div className="space-y-3">
-                {(pdfData?.sections || []).map((sec: any, idx: number) => (
-                  <div
-                    key={idx}
-                    data-doc-text="true"
-                    className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-all"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-slate-800 text-xs uppercase tracking-wide flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        {sec.title}
-                      </span>
-                      <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                        Page {sec.page || idx + 1}
-                      </span>
-                    </div>
-                    <div className="text-slate-700 leading-relaxed text-[12px] whitespace-pre-wrap">
-                      {renderTextWithHighlights(sec.text)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Tables Tab View */}
-            {leftTab === "tables" && (
-              <div className="space-y-4">
-                <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-2xs">
-                  <h4 className="font-bold text-slate-800 text-xs mb-2 flex items-center gap-1.5">
-                    <Table className="h-3.5 w-3.5 text-blue-600" />
-                    Table 1: Literature Characteristics of Pure Artery Malformations
-                  </h4>
-                  <div className="overflow-x-auto text-[11px]">
-                    <table className="min-w-full divide-y divide-slate-200">
-                      <thead className="bg-slate-50 font-semibold text-slate-700">
-                        <tr>
-                          <th className="px-2 py-1 border">Study</th>
-                          <th className="px-2 py-1 border">Age/Sex</th>
-                          <th className="px-2 py-1 border">Vessel</th>
-                          <th className="px-2 py-1 border">Aneurysm</th>
-                          <th className="px-2 py-1 border">Treatment</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="bg-amber-50/70 font-semibold">
-                          <td className="px-2 py-1 border">Birua 2022 (Current)</td>
-                          <td className="px-2 py-1 border">32 / M</td>
-                          <td className="px-2 py-1 border">Left PCA (P2)</td>
-                          <td className="px-2 py-1 border">Absent</td>
-                          <td className="px-2 py-1 border">Conservative</td>
-                        </tr>
-                        <tr>
-                          <td className="px-2 py-1 border">Albina 2024</td>
-                          <td className="px-2 py-1 border">48 / F</td>
-                          <td className="px-2 py-1 border">Accessory MCA</td>
-                          <td className="px-2 py-1 border">Present (3.8mm)</td>
-                          <td className="px-2 py-1 border">Hybrid (Clip+Coil)</td>
-                        </tr>
-                        <tr>
-                          <td className="px-2 py-1 border">Brinjikji 2018</td>
-                          <td className="px-2 py-1 border">44 / 58% F</td>
-                          <td className="px-2 py-1 border">MCA/PCA/ACA</td>
-                          <td className="px-2 py-1 border">41% Present</td>
-                          <td className="px-2 py-1 border">Conservative</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <ActualPdfViewer
+            pdfUrl={currentPdfUrl}
+            highlights={pdfHighlightItems}
+            activeHighlightId={selectedVarId}
+            onHighlightClick={(varId) => {
+              setSelectedVarId(varId);
+              cardRefs.current[varId]?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+            onPdfUpload={(file) => {
+              const url = URL.createObjectURL(file);
+              setCustomPdfUrl(url);
+            }}
+            zoom={pdfZoom}
+            onZoomChange={setPdfZoom}
+            availableStudies={BENCHMARK_PAPERS}
+            currentStudyId={selectedPaperId}
+            onSelectStudy={(id) => {
+              setSelectedPaperId(id);
+              setCustomPdfUrl(null);
+            }}
+          />
         </section>
 
         {/* ══════════════════════════════════════════════════════════
             COLUMN 2: TRACK CHANGES VERIFICATION CARDS (CENTER)
         ══════════════════════════════════════════════════════════ */}
         <section className="flex-1 bg-slate-50 border-r border-slate-200 flex flex-col h-full overflow-hidden min-w-0">
-          {/* Header & Variable Navigator with UNDO BUTTON */}
-          <div className="border-b border-slate-200 bg-white px-4 py-2.5 shrink-0 flex items-center justify-between shadow-2xs">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                Word-Style Track Changes
-              </span>
-              <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                Interactive Verification
-              </span>
+          {/* Microsoft Word Track Changes Review Ribbon Bar */}
+          <div className="border-b border-slate-200 bg-white px-4 py-2 shrink-0 flex flex-col gap-2 shadow-2xs z-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                  Word-Style Track Changes
+                </span>
+                <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-200">
+                  Revision {currentVarIndex + 1} of {variableList.length}
+                </span>
+                <span className="text-[11px] font-medium text-slate-500 hidden sm:inline">
+                  · {progressPercent}% Verified
+                </span>
+              </div>
+
+              {/* Fast Action Ribbon Buttons: Accept & Next, Reject & Next, Modify, Prev, Next, Undo */}
+              <div className="flex items-center gap-1.5">
+                {/* Accept & Next Button */}
+                <button
+                  onClick={() => handleDecision("accepted")}
+                  disabled={acceptTransitioningId === currentVar?.variable_id}
+                  className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-lg shadow-xs flex items-center gap-1.5 transition-all"
+                  title="Accept AI extraction and autoscroll to next highlight (Hotkey: A or Enter)"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Accept & Next</span>
+                  <kbd className="text-[10px] bg-emerald-700/80 px-1 py-0.2 rounded font-mono font-normal">A</kbd>
+                </button>
+
+                {/* Reject & Next Button */}
+                <button
+                  onClick={() => handleDecision("rejected")}
+                  className="px-2.5 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 active:scale-95 rounded-lg flex items-center gap-1 transition-all"
+                  title="Reject / Mark NR and autoscroll to next highlight (Hotkey: R)"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span>Reject</span>
+                  <kbd className="text-[10px] bg-rose-200 text-rose-900 px-1 py-0.2 rounded font-mono font-normal">R</kbd>
+                </button>
+
+                {/* Modify Button */}
+                <button
+                  onClick={() => {
+                    if (currentVar) {
+                      setEditingVarId(currentVar.variable_id);
+                      setEditDraftValue(currentExtraction?.value || "");
+                    }
+                  }}
+                  className="px-2 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1 transition-all"
+                  title="Modify extracted value inline (Hotkey: M)"
+                >
+                  <Edit3 className="h-3 w-3 text-slate-500" />
+                  <kbd className="text-[10px] bg-white border border-slate-300 px-1 rounded font-mono text-slate-600">M</kbd>
+                </button>
+
+                <div className="h-4 w-px bg-slate-200 mx-0.5" />
+
+                {/* Previous Change Button */}
+                <button
+                  onClick={navigateToPrevVariable}
+                  disabled={currentVarIndex === 0}
+                  className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+                  title="Previous Change & Highlight (Hotkey: [ or ↑ or K)"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                {/* Next Change Button */}
+                <button
+                  onClick={navigateToNextVariable}
+                  disabled={currentVarIndex >= variableList.length - 1}
+                  className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+                  title="Next Change & Highlight (Hotkey: ] or ↓ or J)"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+
+                {/* Undo Button */}
+                <button
+                  onClick={handleUndo}
+                  disabled={undoStack.length === 0}
+                  className={cn(
+                    "px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1 transition-all shadow-2xs",
+                    undoStack.length > 0
+                      ? "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 cursor-pointer active:scale-95"
+                      : "bg-slate-100 text-slate-400 border border-slate-200 opacity-60 cursor-not-allowed"
+                  )}
+                  title="Undo last accepted/modified change and scroll back (Hotkey: Z or U or Ctrl+Z)"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Undo</span>
+                  <kbd className="text-[9px] bg-white border border-slate-300 rounded px-1 font-mono text-slate-600">Z</kbd>
+                  {undoStack.length > 0 && (
+                    <span className="text-[9px] font-bold bg-amber-200 text-amber-900 rounded-full px-1.5 py-0.2">
+                      {undoStack.length}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Center Action Controls: Undo and Steppers */}
-            <div className="flex items-center gap-1.5">
-              {/* UNDO BUTTON */}
-              <button
-                onClick={handleUndo}
-                disabled={undoStack.length === 0}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all mr-1.5 shadow-2xs",
-                  undoStack.length > 0
-                    ? "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 active:scale-95 cursor-pointer"
-                    : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60"
-                )}
-                title="Undo last accepted/modified change (Hotkey: Z or U or Ctrl+Z)"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Undo</span>
-                <kbd className="text-[10px] bg-white border border-slate-300 rounded px-1 font-mono text-slate-600 font-normal">
-                  Z / U
-                </kbd>
-                {undoStack.length > 0 && (
-                  <span className="text-[10px] font-bold bg-amber-200 text-amber-900 rounded-full px-1.5 py-0.2">
-                    {undoStack.length}
-                  </span>
-                )}
-              </button>
-
-              <div className="h-4 w-px bg-slate-200" />
-
-              <button
-                onClick={navigateToPrevVariable}
-                className="p-1 rounded-md text-slate-600 hover:bg-slate-100"
-                title="Previous Variable (Up arrow / K)"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-xs font-bold text-slate-700 px-1">
-                Variable {(variableList.findIndex((v: any) => v.variable_id === selectedVarId) + 1) || 1} of {variableList.length}
-              </span>
-              <button
-                onClick={navigateToNextVariable}
-                className="p-1 rounded-md text-slate-600 hover:bg-slate-100"
-                title="Next Variable (Down arrow / J)"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+            {/* Word Review Progress Bar */}
+            <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden flex">
+              <div
+                className="bg-emerald-500 h-1 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
             </div>
           </div>
 
