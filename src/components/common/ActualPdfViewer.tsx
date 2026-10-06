@@ -382,16 +382,16 @@ export function ActualPdfViewer({
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-slate-200/90 relative overflow-hidden select-none", className)}>
+    <div className={cn("flex flex-col h-full bg-[#ECE9E2] relative overflow-hidden select-none", className)}>
       {/* ── TOP PDF TOOLBAR ── */}
-      <div className="bg-white border-b border-slate-200 px-3 py-2 flex items-center justify-between shrink-0 shadow-2xs z-20">
+      <div className="bg-[#FAF9F3] border-b border-[#381A61]/10 px-3.5 py-2 flex items-center justify-between shrink-0 shadow-2xs z-20">
         {/* Left: Study Selector & Upload */}
         <div className="flex items-center gap-2">
           {availableStudies.length > 0 ? (
             <select
               value={currentStudyId || ""}
               onChange={(e) => onSelectStudy?.(e.target.value)}
-              className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded px-2 py-1 text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 max-w-[220px] truncate"
+              className="text-xs font-semibold bg-white border border-[#7C4B73]/25 rounded-lg px-2.5 py-1 text-[#381A61] focus:outline-hidden focus:ring-1 focus:ring-[#88A0DC] max-w-[240px] truncate shadow-2xs"
               title="Switch publication paper"
             >
               {availableStudies.map((s) => (
@@ -401,8 +401,8 @@ export function ActualPdfViewer({
               ))}
             </select>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-              <FileText className="h-4 w-4 text-blue-600" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#381A61]">
+              <FileText className="h-4 w-4 text-[#88A0DC]" />
               <span>Publication PDF</span>
             </div>
           )}
@@ -417,30 +417,30 @@ export function ActualPdfViewer({
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded transition-colors"
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#381A61] hover:text-[#381A61] bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 border border-[#88A0DC]/40 px-2.5 py-1 rounded-lg transition-colors shadow-2xs"
             title="Upload and inspect your own PDF paper"
           >
-            <Upload className="h-3 w-3 text-slate-500" />
+            <Upload className="h-3 w-3 text-[#7C4B73]" />
             <span>Upload PDF</span>
           </button>
         </div>
 
         {/* Center: Page Jump Pills */}
         {numPages > 0 && (
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] font-mono text-slate-500 mr-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-mono text-[#7C4B73] font-medium mr-1">
               Page {currentPage} of {numPages}
             </span>
-            <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded border border-slate-200 text-[10px] font-mono font-bold">
+            <div className="flex items-center gap-1 bg-[#88A0DC]/15 p-0.5 rounded-lg border border-[#88A0DC]/30 text-[10px] font-mono font-bold">
               {Array.from({ length: numPages }, (_, idx) => idx + 1).map((p) => (
                 <button
                   key={p}
                   onClick={() => jumpToPage(p)}
                   className={cn(
-                    "px-1.5 py-0.5 rounded transition-colors",
+                    "px-2 py-0.5 rounded-md transition-all",
                     currentPage === p
-                      ? "bg-blue-600 text-white shadow-2xs"
-                      : "text-slate-600 hover:bg-white"
+                      ? "bg-[#381A61] text-[#F9D14A] font-bold shadow-xs scale-105"
+                      : "text-[#381A61]/80 hover:bg-white hover:text-[#381A61]"
                   )}
                   title={`Jump to Page ${p}`}
                 >
@@ -455,24 +455,24 @@ export function ActualPdfViewer({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setZoom((z) => Math.max(60, z - 10))}
-            className="p-1 rounded hover:bg-slate-100 text-slate-600 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#381A61]/5 text-[#381A61] transition-colors"
             title="Zoom Out"
           >
             <ZoomOut className="h-3.5 w-3.5" />
           </button>
-          <span className="text-[11px] font-mono font-bold text-slate-700 w-9 text-center">
+          <span className="text-[11px] font-mono font-bold text-[#381A61] w-10 text-center">
             {zoom}%
           </span>
           <button
             onClick={() => setZoom((z) => Math.min(180, z + 10))}
-            className="p-1 rounded hover:bg-slate-100 text-slate-600 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#381A61]/5 text-[#381A61] transition-colors"
             title="Zoom In"
           >
             <ZoomIn className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => setZoom(100)}
-            className="text-[10px] font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded ml-1"
+            className="text-[10px] font-bold text-[#381A61] hover:bg-[#88A0DC]/35 bg-[#88A0DC]/20 border border-[#88A0DC]/40 px-2 py-0.5 rounded-md ml-1 shadow-2xs"
             title="Reset to 100% Fit"
           >
             Fit
@@ -487,26 +487,26 @@ export function ActualPdfViewer({
       >
         {loading && pages.length === 0 ? (
           <div className="my-auto py-16 flex flex-col items-center text-center">
-            <Loader2 className="h-8 w-8 text-blue-600 animate-spin mb-3" />
-            <p className="text-sm font-semibold text-slate-700">{loadingProgress}</p>
-            <p className="text-xs text-slate-400 mt-1">Rendering high-resolution multi-column layout with Docling-aligned highlights</p>
+            <Loader2 className="h-8 w-8 text-[#381A61] animate-spin mb-3" />
+            <p className="text-sm font-semibold text-[#381A61]">{loadingProgress}</p>
+            <p className="text-xs text-[#7C4B73] mt-1 font-serif italic">Rendering high-resolution multi-column layout with Docling-aligned highlights</p>
           </div>
         ) : error ? (
-          <div className="my-auto max-w-md p-6 bg-white rounded-xl border border-rose-200 shadow-md text-center">
-            <AlertCircle className="h-10 w-10 text-rose-500 mx-auto mb-2" />
-            <h3 className="text-sm font-bold text-slate-900 mb-1">Could not render PDF preview</h3>
-            <p className="text-xs text-slate-500 mb-4">{error}</p>
+          <div className="my-auto max-w-md p-6 bg-white rounded-2xl border border-[#AB3329]/30 shadow-md text-center">
+            <AlertCircle className="h-10 w-10 text-[#AB3329] mx-auto mb-2" />
+            <h3 className="text-sm font-bold text-[#381A61] mb-1">Could not render PDF preview</h3>
+            <p className="text-xs text-[#6B665E] mb-4">{error}</p>
             <div className="flex justify-center gap-3">
               <button
                 onClick={() => setRetryCount((prev) => prev + 1)}
-                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg transition-colors flex items-center gap-1.5"
+                className="btn-palette-secondary text-xs"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 Retry Loading
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-1.5"
+                className="btn-palette-primary text-xs"
               >
                 <Upload className="h-3.5 w-3.5" />
                 Upload Local PDF
@@ -522,10 +522,10 @@ export function ActualPdfViewer({
                 key={page.pageNumber}
                 id={`pdf-page-${page.pageNumber}`}
                 style={{ width: `${zoom}%`, maxWidth: `${Math.round(850 * (zoom / 100))}px` }}
-                className="bg-white rounded-xs shadow-2xl border border-slate-300 relative transition-all duration-150 shrink-0 select-text"
+                className="bg-white rounded-xs shadow-2xl border border-[#381A61]/15 relative transition-all duration-150 shrink-0 select-text"
               >
                 {/* Visual Page Number Badge in Margin */}
-                <div className="absolute -top-3 left-3 bg-slate-800 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow-sm z-30 select-none">
+                <div className="absolute -top-3 left-3 bg-[#381A61] text-[#F9D14A] font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-md shadow-xs z-30 select-none border border-[#7C4B73]/40">
                   Page {page.pageNumber}
                 </div>
 
@@ -563,17 +563,17 @@ export function ActualPdfViewer({
                               height: `${rect.height}%`,
                               mixBlendMode: "multiply",
                               backgroundColor: isActive
-                                ? "rgba(254, 240, 138, 0.90)" // Luminous highlighter yellow
+                                ? "rgba(249, 209, 74, 0.88)" // Canary Gold #F9D14A
                                 : isVerified
-                                ? "rgba(167, 243, 208, 0.35)" // Soft emerald highlighter
-                                : "rgba(254, 243, 199, 0.18)", // Faint unobtrusive tint for pending highlights
+                                ? "rgba(124, 75, 115, 0.22)" // Berry Plum #7C4B73
+                                : "rgba(136, 160, 220, 0.20)", // Soft Periwinkle #88A0DC
                               borderBottom: isActive
-                                ? "2.5px solid #d97706"
+                                ? "2.5px solid #E78429" // Tangerine Amber #E78429
                                 : isVerified
-                                ? "2px solid #059669"
-                                : "1.5px dashed rgba(217, 119, 6, 0.45)",
+                                ? "2px solid #7C4B73" // Berry Plum #7C4B73
+                                : "1.5px dashed rgba(124, 75, 115, 0.45)",
                               boxShadow: isActive
-                                ? "0 0 0 2px rgba(245, 158, 11, 0.35), 0 2px 8px rgba(245, 158, 11, 0.25)"
+                                ? "0 0 0 2.5px rgba(231, 132, 41, 0.4), 0 2px 10px rgba(249, 209, 74, 0.5)"
                                 : "none",
                               borderRadius: "2px",
                               cursor: "pointer",
@@ -582,7 +582,7 @@ export function ActualPdfViewer({
                             }}
                             className={cn(
                               "group/highlight hover:brightness-95",
-                              isActive && "ring-2 ring-amber-500/40"
+                              isActive && "ring-2 ring-[#E78429]/50"
                             )}
                             title={`#${overlay.varIndex} ${overlay.label}: ${overlay.value || "Extracted"} (Click to review)`}
                           />
@@ -593,9 +593,9 @@ export function ActualPdfViewer({
                 </div>
 
                 {/* Page Bottom Running Footer */}
-                <div className="bg-slate-50 border-t border-slate-200 px-4 py-1.5 flex items-center justify-between text-[10px] font-sans text-slate-500 select-none">
+                <div className="bg-[#FAF9F3] border-t border-[#381A61]/10 px-4 py-1.5 flex items-center justify-between text-[10px] font-sans text-[#7C4B73] select-none">
                   <span className="italic">Actual PDF Page {page.pageNumber} of {numPages}</span>
-                  <span className="font-semibold text-slate-600">
+                  <span className="font-semibold text-[#381A61]">
                     {overlays.length} active extraction highlight{overlays.length === 1 ? "" : "s"}
                   </span>
                 </div>

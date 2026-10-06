@@ -8,66 +8,108 @@
     --foreground: #141413;
     --card: #FFFFFF;
     --card-surface: #F2F1EB;
-    --border: rgba(20, 20, 19, 0.08);
+    --border: rgba(56, 26, 97, 0.08);
     --muted: #F2F1EB;
     --muted-foreground: #6B665E;
-    --primary: #141413;
+    --primary: #381A61;
     --primary-foreground: #FAF9F3;
-    --accent-yellow: #E9ED4C;
-    --accent-yellow-text: #62631E;
+    --palette-periwinkle: #88A0DC;
+    --palette-amethyst: #381A61;
+    --palette-plum: #7C4B73;
+    --palette-coral: #ED968C;
+    --palette-crimson: #AB3329;
+    --palette-amber: #E78429;
+    --palette-gold: #F9D14A;
+    --accent-yellow: #F9D14A;
+    --accent-yellow-text: #381A61;
   }
 
   body {
-    @apply bg-[#FAF9F3] text-[#141413] font-sans antialiased selection:bg-[#E9ED4C] selection:text-[#141413];
+    @apply bg-[#FAF9F3] text-[#141413] font-sans antialiased selection:bg-[#F9D14A] selection:text-[#381A61];
   }
 
   h1, h2, h3, .font-editorial {
-    @apply font-serif tracking-tight text-[#141413];
+    @apply font-serif tracking-tight text-[#381A61];
   }
 }
 
 @layer components {
-  /* Phylo.bio Signature Black Pill Button */
+  /* Bespoke 7-Color Palette Buttons */
+  .btn-palette-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-bold bg-[#381A61] text-white hover:bg-[#4E2487] active:scale-[0.98] transition-all shadow-sm disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .btn-palette-accept-all {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold bg-[#F9D14A] text-[#381A61] border border-[#E78429]/40 hover:bg-[#F9D14A]/90 active:scale-[0.98] transition-all shadow-sm disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .btn-palette-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold border border-[#7C4B73]/30 text-[#7C4B73] bg-[#7C4B73]/5 hover:bg-[#7C4B73]/15 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .btn-palette-reject {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-[#AB3329] bg-[#AB3329]/10 hover:bg-[#AB3329]/20 border border-[#AB3329]/30 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .btn-palette-quote {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-[#381A61] bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 border border-[#88A0DC]/40 active:scale-[0.98] transition-all shadow-sm;
+  }
+
+  /* Bespoke Tag Badges */
+  .tag-palette-gold {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F9D14A] text-[#381A61] hover:bg-[#F9D14A]/90 transition-colors shadow-sm;
+  }
+
+  .tag-palette-amber {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#E78429]/15 text-[#E78429] border border-[#E78429]/30;
+  }
+
+  .tag-palette-plum {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#7C4B73]/15 text-[#7C4B73] border border-[#7C4B73]/30;
+  }
+
+  .tag-palette-periwinkle {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#88A0DC]/20 text-[#381A61] border border-[#88A0DC]/30;
+  }
+
+  /* Legacy & editorial compatibility */
   .btn-phylo-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium bg-[#141413] text-[#FAF9F3] hover:opacity-90 hover:shadow-[0_0_36px_#FFF5C6] active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none;
+    @apply btn-palette-primary;
   }
 
-  /* Phylo.bio Outlined Pill Button */
   .btn-phylo-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium border border-black/20 text-[#141413] hover:border-black hover:bg-black/5 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none;
+    @apply btn-palette-secondary;
   }
 
-  /* Signature Announcement Tag */
   .tag-phylo-yellow {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#E9ED4C] text-[#62631E] hover:bg-[#E9ED4C]/90 transition-colors;
+    @apply tag-palette-gold;
   }
 
-  /* Phylo Warm Editorial Card */
   .card-phylo {
-    @apply rounded-2xl border border-black/[0.08] bg-white transition-all;
+    @apply rounded-2xl border border-[#381A61]/[0.08] bg-white transition-all shadow-sm;
   }
 
   .card-phylo-warm {
-    @apply rounded-2xl border border-black/[0.08] bg-[#F2F1EB] transition-all;
+    @apply rounded-2xl border border-[#381A61]/[0.08] bg-[#F2F1EB] transition-all;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#381A61] disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn-phylo-primary;
+    @apply btn-palette-primary;
   }
   .btn-secondary {
-    @apply btn-phylo-secondary;
+    @apply btn-palette-secondary;
   }
   .btn-danger {
-    @apply btn bg-rose-600 text-white hover:bg-rose-700;
+    @apply btn-palette-reject;
   }
   .card {
     @apply card-phylo;
   }
   .input {
-    @apply w-full rounded-xl border border-black/15 bg-white px-3.5 py-2 text-sm text-[#141413] placeholder:text-black/40 focus:border-black focus:outline-none focus:ring-1 focus:ring-black;
+    @apply w-full rounded-xl border border-[#381A61]/15 bg-white px-3.5 py-2 text-sm text-[#141413] placeholder:text-black/40 focus:border-[#381A61] focus:outline-none focus:ring-1 focus:ring-[#381A61];
   }
   .badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
