@@ -67,6 +67,7 @@ export function ActualPdfViewer({
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingProgress, setLoadingProgress] = useState<string>("Initializing PDF...");
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
   const [internalZoom, setInternalZoom] = useState<number>(100);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageHighlights, setPageHighlights] = useState<Record<number, PageHighlightOverlay[]>>({});
@@ -142,7 +143,7 @@ export function ActualPdfViewer({
         try { loadingTask.destroy(); } catch (e) {}
       }
     };
-  }, [pdfUrl]);
+  }, [pdfUrl, retryCount]);
 
   // ── 2. Sequentially Render Pages & Progressively Display ──
   useEffect(() => {
@@ -150,6 +151,8 @@ export function ActualPdfViewer({
     if (!pdf || numPages === 0) return;
 
     let cancelled = false;
+    let currentRenderTask: any = null;
+
     const renderAll = async () => {
       for (let i = 1; i <= numPages; i++) {
         if (cancelled) return;
@@ -167,10 +170,12 @@ export function ActualPdfViewer({
           canvas.width = viewport.width;
           canvas.height = viewport.height;
 
-          await page.render({
+          currentRenderTask = page.render({
             canvasContext: ctx,
             viewport,
-          }).promise;
+          });
+
+          await currentRenderTask.promise;
 
           if (cancelled) return;
           const dataUrl = canvas.toDataURL("image/webp", 0.92);
@@ -181,7 +186,10 @@ export function ActualPdfViewer({
               (a, b) => a.pageNumber - b.pageNumber
             );
           });
-        } catch (err) {
+        } catch (err: any) {
+          if (err.name === 'RenderingCancelledException') {
+             continue;
+          }
           console.error(`Page ${i} render failure:`, err);
         }
       }
@@ -192,6 +200,11 @@ export function ActualPdfViewer({
 
     return () => {
       cancelled = true;
+      if (currentRenderTask) {
+        try {
+          currentRenderTask.cancel();
+        } catch (e) {}
+      }
     };
   }, [numPages]);
 
@@ -274,30 +287,33 @@ export function ActualPdfViewer({
     const highlightItem = highlights.find((h) => h.id === activeHighlightId);
     if (!highlightItem) return;
 
-    // Small timeout ensures DOM elements are rendered
+    // Larger timeout and requestAnimationFrame ensures DOM elements are rendered fully
+    // across complex multi-page rapid transitions.
     const timer = setTimeout(() => {
-      const highlightElement = document.getElementById(`pdf-highlight-${activeHighlightId}`);
-      if (highlightElement) {
-        highlightElement.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "nearest",
-        });
-        // Flash pulse animation
-        highlightElement.classList.add("ring-4", "ring-amber-500", "scale-102");
-        if (activePulseTimeoutRef.current) clearTimeout(activePulseTimeoutRef.current);
-        activePulseTimeoutRef.current = setTimeout(() => {
-          highlightElement.classList.remove("ring-4", "ring-amber-500", "scale-102");
-        }, 1200);
-      } else {
-        // Fallback: scroll to target page
-        const targetPage = parseTargetPage(highlightItem.pageNumber, numPages);
-        const pageElement = document.getElementById(`pdf-page-${targetPage}`);
-        if (pageElement) {
-          pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
+      requestAnimationFrame(() => {
+        const highlightElement = document.getElementById(`pdf-highlight-${activeHighlightId}`);
+        if (highlightElement) {
+          highlightElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest",
+          });
+          // Flash pulse animation
+          highlightElement.classList.add("ring-4", "ring-amber-500", "scale-102");
+          if (activePulseTimeoutRef.current) clearTimeout(activePulseTimeoutRef.current);
+          activePulseTimeoutRef.current = setTimeout(() => {
+            highlightElement.classList.remove("ring-4", "ring-amber-500", "scale-102");
+          }, 1200);
+        } else {
+          // Fallback: scroll to target page if highlight rect is missing
+          const targetPage = parseTargetPage(highlightItem.pageNumber, numPages);
+          const pageElement = document.getElementById(`pdf-page-${targetPage}`);
+          if (pageElement) {
+            pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
         }
-      }
-    }, 100);
+      });
+    }, 250);
 
     return () => clearTimeout(timer);
   }, [activeHighlightId, pages, highlights, numPages]);
@@ -434,12 +450,22 @@ export function ActualPdfViewer({
             <AlertCircle className="h-10 w-10 text-rose-500 mx-auto mb-2" />
             <h3 className="text-sm font-bold text-slate-900 mb-1">Could not render PDF preview</h3>
             <p className="text-xs text-slate-500 mb-4">{error}</p>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              Choose or Upload Local PDF
-            </button>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setRetryCount((prev) => prev + 1)}
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Retry Loading
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Upload Local PDF
+              </button>
+            </div>
           </div>
         ) : (
           pages.map((page) => {

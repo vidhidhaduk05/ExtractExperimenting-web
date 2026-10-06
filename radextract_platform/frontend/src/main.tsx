@@ -1,8 +1,8 @@
 // PDF.js worker configuration — required by react-pdf-highlighter-plus
 import * as pdfjsLib from "pdfjs-dist";
-import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorker;
+// Use a robust CDN URL to guarantee it works cleanly across all browser targets and static hosting (GitHub Pages)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 import React from "react";
 import ReactDOM from "react-dom/client";
