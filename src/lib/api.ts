@@ -49,11 +49,44 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
 
   // Handle mutations (POST, PUT, DELETE)
   if (method === "POST" || method === "PUT" || method === "DELETE") {
-    if (path.includes("/extraction/decide")) {
+      if (path.includes("/extraction/decide")) {
       const studyId = body.study_id || "study_albina_2024";
       const varId = body.variable_id;
       const dec = body.decision;
       const orig = body.original_value || "";
+
+      if (dec === "undone") {
+        const list = (DEMO_EXTRACTIONS as any)[studyId] || [];
+        const item = list.find((e: any) => e.variable_id === varId);
+        if (item) {
+          item.value = orig || item.value;
+          item.is_verified = false;
+          item.is_edited = false;
+        }
+        if (DEMO_ERROR_ANALYSIS && DEMO_ERROR_ANALYSIS.recent_records.length > 0) {
+          const recIdx = DEMO_ERROR_ANALYSIS.recent_records.findIndex(
+            (r: any) => r.variable_id === varId && r.study_id === studyId
+          );
+          if (recIdx !== -1) {
+            const removed = DEMO_ERROR_ANALYSIS.recent_records.splice(recIdx, 1)[0];
+            DEMO_ERROR_ANALYSIS.total_decisions = Math.max(0, DEMO_ERROR_ANALYSIS.total_decisions - 1);
+            if (removed.has_discrepancy) {
+              DEMO_ERROR_ANALYSIS.total_discrepancies = Math.max(0, DEMO_ERROR_ANALYSIS.total_discrepancies - 1);
+              const cat = removed.category;
+              if ((DEMO_ERROR_ANALYSIS.category_breakdown as any)[cat]) {
+                (DEMO_ERROR_ANALYSIS.category_breakdown as any)[cat] = Math.max(0, (DEMO_ERROR_ANALYSIS.category_breakdown as any)[cat] - 1);
+              }
+            } else {
+              DEMO_ERROR_ANALYSIS.verified_accurate = Math.max(0, DEMO_ERROR_ANALYSIS.verified_accurate - 1);
+            }
+            if (DEMO_ERROR_ANALYSIS.total_decisions > 0) {
+              DEMO_ERROR_ANALYSIS.accuracy_rate = Math.round((DEMO_ERROR_ANALYSIS.verified_accurate / DEMO_ERROR_ANALYSIS.total_decisions) * 1000) / 10;
+            }
+          }
+        }
+        return { status: "success", undone: true } as unknown as T;
+      }
+
       const corr = dec === "modified" ? (body.corrected_value || "") : (dec === "rejected" ? "NR" : orig);
       const category = (dec === "accepted" || orig === corr) 
         ? "VERIFIED_ACCURATE" 
@@ -2434,14 +2467,14 @@ export const api = {
     variable_name: string;
     original_value: string;
     corrected_value: string;
-    decision: "accepted" | "modified" | "rejected";
+    decision: "accepted" | "modified" | "rejected" | "undone";
     evidence_quote?: string;
     page_number?: number;
     codebook_rules?: string;
     reviewer?: string;
     notes?: string;
   }) =>
-    request<{ status: string; record: any }>("/extraction/decide", {
+    request<{ status: string; record?: any; undone?: boolean }>("/extraction/decide", {
       method: "POST",
       body: JSON.stringify(data),
     }),

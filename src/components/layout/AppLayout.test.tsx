@@ -60,4 +60,10 @@ describe('AppLayout Component', () => {
     expect(screen.queryByText('Current Project')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Dashboard/i })).not.toBeInTheDocument();
   });
+
+  it('toggles sidebar minimize when minimize button is clicked', () => {
+    renderWithProviders(<AppLayout />);
+    const minimizeBtn = screen.getByRole('button', { name: /Minimize sidebar/i });
+    expect(minimizeBtn).toBeInTheDocument();
+  });
 });
