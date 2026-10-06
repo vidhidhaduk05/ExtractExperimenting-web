@@ -33,6 +33,16 @@ export function PdfViewerPage() {
   const [editingVarId, setEditingVarId] = useState<string | null>(null);
   const [editDraftValue, setEditDraftValue] = useState<string>("");
   const [editNotes, setEditNotes] = useState<string>("");
+  const [acceptTransitioningId, setAcceptTransitioningId] = useState<string | null>(null);
+
+  // Active Few-Shot Prompt Injection Queue for Dual-Mode Retraining
+  const [fewShotExemplars, setFewShotExemplars] = useState<Array<{ variable: string; quote: string; value: string; rule: string }>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("radextract_few_shots") || "[]");
+    } catch (e) {
+      return [];
+    }
+  });
 
   // Auto-advance & undo countdown state
   const [undoToast, setUndoToast] = useState<{
@@ -201,6 +211,10 @@ export function PdfViewerPage() {
     const finalVal = decision === "modified" ? (customValue || editDraftValue || origVal) : (decision === "rejected" ? "NR" : origVal);
 
     try {
+      if (decision === "accepted") {
+        setAcceptTransitioningId(currentVar.variable_id);
+      }
+
       await api.recordExtractionDecision({
         project_id: projectId!,
         study_id: studyId!,
@@ -216,6 +230,21 @@ export function PdfViewerPage() {
         notes: notes || editNotes,
       });
 
+      // Dual Mode: If human modified or rejected, inject into active few-shot prompt queue
+      if (decision === "modified" || decision === "rejected") {
+        const newExemplar = {
+          variable: currentVar.name,
+          quote: currentExtraction?.quote || "Extracted snippet",
+          value: finalVal,
+          rule: currentRule?.definition || "Follow standard codebook rules"
+        };
+        const updatedQueue = [newExemplar, ...fewShotExemplars.filter(e => e.variable !== currentVar.name).slice(0, 7)];
+        setFewShotExemplars(updatedQueue);
+        try {
+          localStorage.setItem("radextract_few_shots", JSON.stringify(updatedQueue));
+        } catch (e) {}
+      }
+
       setEditingVarId(null);
       setEditDraftValue("");
       setEditNotes("");
@@ -223,10 +252,18 @@ export function PdfViewerPage() {
       refetchErrorAnalysis();
       queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
 
-      // Automatically advance to the next variable
-      navigateToNextVariable();
+      // Smooth 400ms visual confirmation transition on Accept
+      if (decision === "accepted") {
+        setTimeout(() => {
+          navigateToNextVariable();
+          setAcceptTransitioningId(null);
+        }, 400);
+      } else {
+        navigateToNextVariable();
+      }
     } catch (err) {
       console.error("Failed to record decision:", err);
+      setAcceptTransitioningId(null);
     }
   };
 
@@ -653,6 +690,7 @@ export function PdfViewerPage() {
               const isVerified = ext?.is_verified;
               const isEdited = ext?.is_edited;
               const rule = DEMO_CODEBOOK_RULES[v.variable_id];
+              const isTransitioning = acceptTransitioningId === v.variable_id;
 
               return (
                 <div
@@ -661,8 +699,10 @@ export function PdfViewerPage() {
                     setSelectedVarId(v.variable_id);
                     if (ext?.quote) scrollToQuote(ext.quote);
                   }}
-                  className={`rounded-xl border transition-all cursor-pointer ${
-                    isSelected
+                  className={`rounded-xl border transition-all cursor-pointer duration-300 ${
+                    isTransitioning
+                      ? "bg-emerald-50 border-emerald-500 shadow-lg ring-4 ring-emerald-500/30 scale-[1.01]"
+                      : isSelected
                       ? "bg-white border-blue-500 shadow-md ring-2 ring-blue-400/20"
                       : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white shadow-2xs"
                   }`}
@@ -800,10 +840,20 @@ export function PdfViewerPage() {
                               e.stopPropagation();
                               handleDecision("accepted");
                             }}
-                            className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-lg shadow-xs flex items-center gap-1.5 transition-all"
+                            disabled={isTransitioning}
+                            className={`px-4 py-1.5 text-xs font-bold text-white rounded-lg shadow-xs flex items-center gap-1.5 transition-all active:scale-95 ${
+                              isTransitioning
+                                ? "bg-emerald-700 ring-2 ring-emerald-400"
+                                : "bg-emerald-600 hover:bg-emerald-700"
+                            }`}
                             title="Accept AI Extraction (Hotkey: A or Enter)"
                           >
-                            <Check className="h-4 w-4" /> Accept <span className="text-[10px] opacity-75 font-mono">(A)</span>
+                            <Check className={`h-4 w-4 ${isTransitioning ? "animate-bounce" : ""}`} />
+                            {isTransitioning ? (
+                              <span>Accepted!</span>
+                            ) : (
+                              <>Accept <span className="text-[10px] opacity-75 font-mono">(A)</span></>
+                            )}
                           </button>
 
                           {/* Modify Button */}
@@ -979,6 +1029,45 @@ export function PdfViewerPage() {
                     </p>
                   </div>
                 )}
+
+                {/* Live Few-Shot Prompt Queue (Dual-Mode Retraining) */}
+                <div className="pt-3 border-t border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                      <Zap className="h-3.5 w-3.5 text-indigo-600" />
+                      Live Few-Shot Prompt Queue
+                    </h5>
+                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                      {fewShotExemplars.length} Injected
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Human modifications are directly injected into system prompts for subsequent extractions and logged for JSONL offline retraining.
+                  </p>
+                  {fewShotExemplars.length > 0 ? (
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                      {fewShotExemplars.map((ex, idx) => (
+                        <div key={idx} className="p-2 rounded-lg bg-indigo-50/60 border border-indigo-100 text-xs">
+                          <div className="flex items-center justify-between font-bold text-indigo-950">
+                            <span>{ex.variable}</span>
+                            <span className="text-emerald-700 bg-emerald-100/70 text-[10px] px-1.5 py-0.5 rounded font-mono">
+                              {ex.value}
+                            </span>
+                          </div>
+                          {ex.quote && (
+                            <p className="text-[10px] text-slate-500 italic truncate mt-0.5">
+                              "{ex.quote}"
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-lg border border-dashed border-slate-200 text-center">
+                      Modifying or rejecting variables dynamically adds active learning exemplars here.
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="text-center py-10 text-slate-400 text-xs">
