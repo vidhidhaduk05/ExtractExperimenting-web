@@ -487,11 +487,11 @@ export function AppLayout() {
   }, [isDarkMode]);
 
   return (
-    <div className="flex h-screen bg-phylo-paper dark:bg-gray-900 transition-colors">
+    <div className="flex h-screen bg-[#FAF9F3] text-[#141413] transition-colors">
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-xs md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-hidden="true"
         />
@@ -500,24 +500,36 @@ export function AppLayout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col transform transition-all duration-300 md:relative md:translate-x-0",
-          isMobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
-          isSidebarCollapsed ? "md:w-16" : "md:w-64"
+          "fixed inset-y-0 left-0 z-40 shrink-0 border-r border-black/[0.08] bg-[#FAF9F3] flex flex-col transform transition-all duration-300 md:relative md:translate-x-0 select-none",
+          isMobileMenuOpen ? "translate-x-0 w-68" : "-translate-x-full md:translate-x-0",
+          isSidebarCollapsed ? "md:w-16" : "md:w-68"
         )}
       >
-        <div className={cn("flex items-center justify-between px-3.5 py-4 border-b border-gray-200 dark:border-gray-700 transition-all")}>
-          <div className="flex items-center gap-2 overflow-hidden">
-            <FlaskConical className="h-6 w-6 text-phylo-blue shrink-0" />
-            <span className={cn("font-bold text-lg dark:text-gray-100 transition-opacity duration-200 truncate", isSidebarCollapsed && "md:hidden")}>
-              RadExtract
-            </span>
+        <div className={cn("flex items-center justify-between px-4 py-4 border-b border-black/[0.08] transition-all")}>
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="h-8 w-8 rounded-full bg-[#141413] text-[#FAF9F3] flex items-center justify-center font-serif text-sm font-bold shadow-xs shrink-0">
+              R
+            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex flex-col truncate">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-serif font-semibold text-base text-[#141413] tracking-tight">
+                    RadExtract
+                  </span>
+                  <span className="tag-phylo-yellow text-[9px] px-1.5 py-0.2 tracking-wider">LAB</span>
+                </div>
+                <span className="text-[10px] text-[#6B665E] font-sans truncate">
+                  AI Agents for Biomedical Lit
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-1">
             {/* Desktop Minimize / Expand Toggle Button */}
             <button
               onClick={toggleSidebar}
-              className="hidden md:flex p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="hidden md:flex p-1.5 rounded-full text-[#6B665E] hover:text-[#141413] hover:bg-black/5 transition-colors"
               title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Minimize sidebar (Ctrl+B)"}
               aria-label={isSidebarCollapsed ? "Expand sidebar" : "Minimize sidebar"}
             >
@@ -531,16 +543,16 @@ export function AppLayout() {
             {/* Mobile Close Button */}
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              className="md:hidden p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="md:hidden p-1 rounded-full hover:bg-black/5 text-[#6B665E]"
               aria-label="Close menu"
             >
-              <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-2">
-          <div className={cn(isSidebarCollapsed ? "px-1.5 py-1" : "px-3 py-1")}>
+        <nav className="flex-1 overflow-y-auto py-3 space-y-1">
+          <div className={cn(isSidebarCollapsed ? "px-2" : "px-3")}>
             {navItems.map((item) => (
               <NavItem key={item.to} {...item} isCollapsed={isSidebarCollapsed} />
             ))}
@@ -548,16 +560,16 @@ export function AppLayout() {
 
           {projectId && (
             <>
-              <div className={cn("py-2", isSidebarCollapsed ? "px-2 flex justify-center" : "px-4")}>
+              <div className={cn("pt-4 pb-1", isSidebarCollapsed ? "px-2 flex justify-center" : "px-4")}>
                 {isSidebarCollapsed ? (
-                  <div className="w-8 h-px bg-gray-200 dark:bg-gray-700 my-1" title="Current Project" />
+                  <div className="w-6 h-px bg-black/[0.08] my-1" title="Current Project" />
                 ) : (
-                  <div className="mt-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    Current Project
+                  <div className="text-[10px] font-mono font-semibold text-[#8A817A] uppercase tracking-wider">
+                    Review Workflow
                   </div>
                 )}
               </div>
-              <div className={cn(isSidebarCollapsed ? "px-1.5" : "px-3")}>
+              <div className={cn(isSidebarCollapsed ? "px-2 space-y-0.5" : "px-3 space-y-0.5")}>
                 {projectNavItems(projectId).map((item) => (
                   <NavItem key={item.to} {...item} isCollapsed={isSidebarCollapsed} />
                 ))}
@@ -566,35 +578,38 @@ export function AppLayout() {
           )}
         </nav>
 
-        <div className={cn("border-t border-gray-200 dark:border-gray-700 py-3 text-xs text-gray-400 dark:text-gray-500 transition-all", isSidebarCollapsed ? "px-2 text-center" : "px-4")}>
+        <div className={cn("border-t border-black/[0.08] py-3 text-xs text-[#8A817A] transition-all", isSidebarCollapsed ? "px-2 text-center" : "px-4")}>
           {isSidebarCollapsed ? (
-            <span title="RadExtract Platform v2.4" className="font-mono text-[10px] hidden md:inline">v2.4</span>
+            <span title="Phylo Warm-Editorial Edition" className="font-mono text-[10px]">α</span>
           ) : (
-            <span>RadExtract Platform v2.4</span>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-serif italic text-[#6B665E]">Phylo Editorial</span>
+              <span className="font-mono text-[10px] text-[#8A817A]">v2.5</span>
+            </div>
           )}
         </div>
       </aside>
 
       {/* Main content with top bar */}
-      <main className="flex-1 overflow-y-auto flex flex-col min-w-0">
-        {/* Top bar with settings */}
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 sticky top-0 z-30 transition-colors">
+      <main className="flex-1 overflow-y-auto flex flex-col min-w-0 bg-[#FAF9F3]">
+        {/* Top Announcement & Header */}
+        <header className="bg-[#FAF9F3]/90 backdrop-blur-md border-b border-black/[0.08] px-4 sm:px-6 py-2.5 sticky top-0 z-30 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Mobile menu trigger */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="md:hidden p-2 rounded-full hover:bg-black/5 text-[#141413] transition-colors"
                 aria-label="Toggle Menu"
               >
-                <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                <Menu className="h-5 w-5" />
               </button>
 
               {/* Desktop Expand Button if Sidebar is collapsed */}
               {isSidebarCollapsed && (
                 <button
                   onClick={toggleSidebar}
-                  className="hidden md:flex p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="hidden md:flex p-1.5 rounded-full text-[#6B665E] hover:text-[#141413] hover:bg-black/5 transition-colors"
                   title="Expand sidebar (Ctrl+B)"
                   aria-label="Expand sidebar"
                 >
@@ -602,27 +617,37 @@ export function AppLayout() {
                 </button>
               )}
 
-              <Layers className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-300 truncate">
-                {projectId ? "Project: " + projectId.substring(0, 20) : "RadExtract Platform"}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#141413] animate-pulse" />
+                <span className="font-serif text-sm font-medium text-[#141413] truncate">
+                  {projectId ? `Project: ${projectId}` : "RadExtract Lab"}
+                </span>
+                <span className="hidden sm:inline-block text-[#8A817A] text-xs font-serif italic">
+                  — Systematic Review & Literature Synthesis
+                </span>
+              </div>
             </div>
+
             <div className="flex items-center gap-2">
+              <span className="hidden lg:inline-flex tag-phylo-yellow text-[10px] px-2.5 py-0.5">
+                ✦ OPEN-DESIGN WARM EDITORIAL
+              </span>
               <button
                 onClick={() => setIsDarkMode(!isDarkMode)}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-full hover:bg-black/5 text-[#6B665E] hover:text-[#141413] transition-colors"
                 aria-label="Toggle Dark Mode"
               >
                 {isDarkMode ? (
-                  <Sun className="h-5 w-5 text-gray-400" />
+                  <Sun className="h-4 w-4" />
                 ) : (
-                  <Moon className="h-5 w-5 text-gray-600" />
+                  <Moon className="h-4 w-4" />
                 )}
               </button>
               {projectId && <SettingsPanel projectId={projectId} />}
             </div>
           </div>
         </header>
+
         <div className="flex-1 overflow-y-auto">
           <ErrorBoundary>
             <Outlet />
@@ -655,20 +680,20 @@ function NavItem({
       title={label}
       className={({ isActive }) =>
         cn(
-          "flex items-center rounded-md text-sm font-medium transition-all duration-200 hover:scale-[1.02]",
-          isCollapsed ? "md:justify-center px-2 py-2.5 my-1" : "gap-2 px-3 py-2",
+          "flex items-center rounded-xl text-xs font-medium transition-all duration-150",
+          isCollapsed ? "md:justify-center px-2 py-2.5 my-0.5" : "gap-2.5 px-3 py-2",
           isActive
-            ? "bg-phylo-blue/10 text-phylo-blue dark:bg-phylo-blue/20 dark:text-blue-400"
-            : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white"
+            ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
+            : "text-[#141413]/75 hover:text-[#141413] hover:bg-black/[0.04]"
         )
       }
     >
-      <Icon className={cn("h-4 w-4 shrink-0", isCollapsed && "md:h-5 md:w-5")} />
+      <Icon className={cn("h-4 w-4 shrink-0", isCollapsed && "md:h-4.5 md:w-4.5")} />
       <span className={cn("flex-1 truncate", isCollapsed && "md:hidden")}>{label}</span>
       {badge && (
         <span className={cn(
-          "inline-flex items-center justify-center font-bold text-white bg-phylo-blue rounded-full",
-          isCollapsed ? "md:hidden ml-auto min-w-[1.25rem] h-5 px-1.5 text-[0.65rem]" : "ml-auto min-w-[1.25rem] h-5 px-1.5 text-[0.65rem]"
+          "inline-flex items-center justify-center font-mono font-semibold rounded-full",
+          isCollapsed ? "md:hidden ml-auto px-1.5 py-0.2 text-[9px] bg-[#E9ED4C] text-[#62631E]" : "ml-auto px-1.5 py-0.2 text-[9px] bg-[#E9ED4C] text-[#62631E]"
         )}>
           {badge}
         </span>

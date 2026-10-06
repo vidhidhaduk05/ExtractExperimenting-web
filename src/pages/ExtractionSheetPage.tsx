@@ -262,32 +262,32 @@ export function ExtractionSheetPage() {
   const activeStudyPercent = variableList.length > 0 ? Math.round((activeStudyVerifiedCount / variableList.length) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-16">
+    <div className="min-h-screen bg-[#FAF9F3] text-[#141413] pb-16">
       {/* ── Top Header Navigation Bar ── */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
+      <div className="bg-[#FAF9F3]/90 backdrop-blur-md border-b border-black/[0.08] sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             {/* Left: Breadcrumbs & Title */}
             <div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-                <Link to={`/projects/${projectId}`} className="hover:text-blue-600 transition-colors flex items-center gap-1 font-medium">
+              <div className="flex items-center gap-2 text-xs text-[#8A817A] mb-1">
+                <Link to={`/projects/${projectId}`} className="hover:text-[#141413] transition-colors flex items-center gap-1 font-sans">
                   <ArrowLeft className="h-3 w-3" /> Dashboard
                 </Link>
                 <span>/</span>
-                <Link to={`/projects/${projectId}/studies`} className="hover:text-blue-600 transition-colors font-medium">
+                <Link to={`/projects/${projectId}/studies`} className="hover:text-[#141413] transition-colors font-sans">
                   Studies
                 </Link>
                 <span>/</span>
-                <span className="text-slate-800 dark:text-slate-200 font-semibold flex items-center gap-1">
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-                  Recorded Extraction Data Sheet
+                <span className="text-[#141413] font-medium flex items-center gap-1">
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-[#141413]" />
+                  Extraction Data Sheet
                 </span>
               </div>
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>Study Recorded Extraction Data Sheet</span>
-                  <span className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 font-semibold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                    AIDE-Web Matrix View
+                <h1 className="font-serif text-2xl sm:text-3xl font-normal text-[#141413] tracking-tight flex items-center gap-2">
+                  <span>Study Extraction Data Sheet</span>
+                  <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">
+                    MATRIX VIEW
                   </span>
                 </h1>
               </div>
@@ -298,41 +298,41 @@ export function ExtractionSheetPage() {
               {/* Jump to Word-Style Track Changes PDF Viewer */}
               <Link
                 to={`/projects/${projectId}/studies/${selectedStudyId}/pdf`}
-                className="px-3.5 py-2 text-xs font-bold rounded-lg flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all hover:shadow-md"
+                className="btn-phylo-primary text-xs"
                 title="Open Split PDF Word-Style Track Changes Viewer with spatial highlighting"
               >
-                <FileText className="h-4 w-4" />
+                <FileText className="h-3.5 w-3.5" />
                 <span>Open PDF Track Changes</span>
               </Link>
 
               {/* In-App Codebook Designer Button */}
               <button
                 onClick={() => setShowCodebookDesigner(true)}
-                className="px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors shadow-2xs"
+                className="btn-phylo-secondary text-xs bg-white/80"
                 title="Design codebook variables and schema directly in-app"
               >
-                <Sliders className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>In-App Codebook</span>
+                <Sliders className="h-3.5 w-3.5 text-[#141413]" />
+                <span>Codebook Rules</span>
               </button>
 
               {/* Accept All >95% */}
               <button
                 onClick={handleAcceptAllHighConfidence}
-                className="px-3 py-2 text-xs font-bold rounded-lg flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition-colors shadow-2xs"
+                className="btn-phylo-secondary text-xs bg-white/80 hover:bg-[#E9ED4C]/20"
                 title="Accept all variables with confidence score higher than 95%"
               >
-                <CheckCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <CheckCheck className="h-3.5 w-3.5 text-emerald-700" />
                 <span>Accept All &gt;95%</span>
               </button>
 
               {/* Export Dropdown / Buttons */}
               <button
                 onClick={handleExportStudyCsv}
-                className="px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+                className="btn-phylo-secondary text-xs bg-white/80"
                 title="Export this study's extraction data sheet to CSV"
               >
-                <Download className="h-3.5 w-3.5 text-slate-500" />
-                <span>Export Study CSV</span>
+                <Download className="h-3.5 w-3.5 text-[#6B665E]" />
+                <span>Export CSV</span>
               </button>
             </div>
           </div>
@@ -340,80 +340,80 @@ export function ExtractionSheetPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        {/* ── Summary Metrics Bar ── */}
+        {/* ── Summary Metrics Bar (Serif numbers as per warm-editorial rules) ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+          <div className="card-phylo p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between text-[#8A817A] text-[10px] font-mono uppercase tracking-wider mb-1">
               <span>ACTIVE STUDY STATUS</span>
-              <FileText className="h-4 w-4 text-blue-500" />
+              <FileText className="h-3.5 w-3.5 text-[#141413]" />
             </div>
-            <div className="text-xl font-bold text-slate-900 dark:text-white">
-              {activeStudyVerifiedCount} / {variableList.length} Verified
+            <div className="font-serif text-2xl font-normal text-[#141413]">
+              {activeStudyVerifiedCount} / {variableList.length} <span className="text-sm font-sans text-[#6B665E]">Verified</span>
             </div>
-            <div className="mt-2 w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <div className="mt-2 w-full bg-black/[0.06] h-1.5 rounded-full overflow-hidden">
               <div
-                className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                className="bg-[#141413] h-full rounded-full transition-all duration-300"
                 style={{ width: `${activeStudyPercent}%` }}
               />
             </div>
-            <span className="text-[11px] text-slate-400 mt-1 block">{activeStudyPercent}% Completed</span>
+            <span className="text-[10px] font-mono text-[#8A817A] mt-1.5 block">{activeStudyPercent}% Completed</span>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+          <div className="card-phylo p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between text-[#8A817A] text-[10px] font-mono uppercase tracking-wider mb-1">
               <span>BENCHMARK CORPUS</span>
-              <Layers className="h-4 w-4 text-indigo-500" />
+              <Layers className="h-3.5 w-3.5 text-[#141413]" />
             </div>
-            <div className="text-xl font-bold text-slate-900 dark:text-white">
-              6 Academic Papers
+            <div className="font-serif text-2xl font-normal text-[#141413]">
+              6 Studies
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {allBenchmarkStats.totalVars} total variables across literature
+            <p className="text-xs font-sans text-[#6B665E] mt-1">
+              {allBenchmarkStats.totalVars} total clinical extraction variables
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+          <div className="card-phylo p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between text-[#8A817A] text-[10px] font-mono uppercase tracking-wider mb-1">
               <span>AI CONFIDENCE</span>
-              <Sparkles className="h-4 w-4 text-amber-500" />
+              <Sparkles className="h-3.5 w-3.5 text-amber-600" />
             </div>
-            <div className="text-xl font-bold text-slate-900 dark:text-white">
+            <div className="font-serif text-2xl font-normal text-[#141413]">
               Docling v2.4
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs font-sans text-[#6B665E] mt-1">
               {allBenchmarkStats.highConfCount} variables &gt;95% confidence
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+          <div className="card-phylo p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between text-[#8A817A] text-[10px] font-mono uppercase tracking-wider mb-1">
               <span>CROSS-STUDY MATRIX</span>
-              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-700" />
             </div>
-            <div className="text-xl font-bold text-slate-900 dark:text-white">
+            <div className="font-serif text-2xl font-normal text-[#141413]">
               {allBenchmarkStats.verifiedVars} Verified
             </div>
             <button
               onClick={handleExportAllStudiesMatrixCsv}
-              className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold mt-1 flex items-center gap-1"
+              className="text-xs text-[#141413] hover:underline font-mono mt-1 flex items-center gap-1"
             >
-              <Download className="h-3 w-3" /> Export All Matrix CSV
+              <Download className="h-3 w-3" /> Export Matrix CSV
             </button>
           </div>
         </div>
 
         {/* ── View Mode & Study Switcher Tabs ── */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden mb-6">
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/40">
+        <div className="card-phylo overflow-hidden mb-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+          <div className="px-6 py-4 border-b border-black/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#F2F1EB]/50">
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl">
+            <div className="flex items-center gap-1 bg-black/[0.05] p-1 rounded-full">
               <button
                 onClick={() => setViewMode("single")}
                 className={cn(
-                  "px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+                  "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
                   viewMode === "single"
-                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                    ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
+                    : "text-[#6B665E] hover:text-[#141413]"
                 )}
               >
                 <FileText className="h-3.5 w-3.5" />
@@ -422,10 +422,10 @@ export function ExtractionSheetPage() {
               <button
                 onClick={() => setViewMode("matrix")}
                 className={cn(
-                  "px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+                  "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
                   viewMode === "matrix"
-                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                    ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
+                    : "text-[#6B665E] hover:text-[#141413]"
                 )}
               >
                 <FileSpreadsheet className="h-3.5 w-3.5" />
@@ -446,20 +446,18 @@ export function ExtractionSheetPage() {
                       key={paper.id}
                       onClick={() => setSelectedStudyId(paper.id)}
                       className={cn(
-                        "px-3 py-1 text-xs font-medium rounded-lg whitespace-nowrap transition-all border flex items-center gap-1.5 shrink-0",
+                        "px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all border flex items-center gap-1.5 shrink-0",
                         isSelected
-                          ? "bg-blue-50 border-blue-300 text-blue-700 font-bold dark:bg-blue-950 dark:border-blue-800 dark:text-blue-300 shadow-2xs"
-                          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50"
+                          ? "bg-[#141413] text-[#FAF9F3] border-[#141413] shadow-2xs"
+                          : "bg-white text-[#6B665E] border-black/10 hover:border-black/30 hover:text-[#141413]"
                       )}
                     >
-                      <span>#{idx + 1} {paper.title.split("(")[0].trim()}</span>
+                      <span className="font-serif font-medium">#{idx + 1} {paper.title.split("(")[0].trim()}</span>
                       <span className={cn(
-                        "text-[10px] px-1.5 py-0.2 rounded-full",
-                        paperVerified === paperExts.length && paperExts.length > 0
-                          ? "bg-emerald-100 text-emerald-700 font-bold"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                        "text-[10px] font-mono px-1.5 py-0.2 rounded-full",
+                        isSelected ? "bg-white/20 text-[#FAF9F3]" : "bg-black/[0.04] text-[#8A817A]"
                       )}>
-                        {paperVerified}/{paperExts.length}
+                        {paperVerified}/10
                       </span>
                     </button>
                   );

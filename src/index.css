@@ -5,38 +5,69 @@
 @layer base {
   :root {
     --background: #FAF9F3;
-    --foreground: #000000;
+    --foreground: #141413;
     --card: #FFFFFF;
-    --border: #E5E2DA;
-    --muted: #F5F3EC;
-    --muted-foreground: #6B6B6B;
-    --primary: #0279EE;
-    --primary-foreground: #FFFFFF;
+    --card-surface: #F2F1EB;
+    --border: rgba(20, 20, 19, 0.08);
+    --muted: #F2F1EB;
+    --muted-foreground: #6B665E;
+    --primary: #141413;
+    --primary-foreground: #FAF9F3;
+    --accent-yellow: #E9ED4C;
+    --accent-yellow-text: #62631E;
   }
 
   body {
-    @apply bg-phylo-paper text-black font-sans antialiased;
+    @apply bg-[#FAF9F3] text-[#141413] font-sans antialiased selection:bg-[#E9ED4C] selection:text-[#141413];
+  }
+
+  h1, h2, h3, .font-editorial {
+    @apply font-serif tracking-tight text-[#141413];
   }
 }
 
 @layer components {
+  /* Phylo.bio Signature Black Pill Button */
+  .btn-phylo-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium bg-[#141413] text-[#FAF9F3] hover:opacity-90 hover:shadow-[0_0_36px_#FFF5C6] active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  /* Phylo.bio Outlined Pill Button */
+  .btn-phylo-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium border border-black/20 text-[#141413] hover:border-black hover:bg-black/5 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  /* Signature Announcement Tag */
+  .tag-phylo-yellow {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#E9ED4C] text-[#62631E] hover:bg-[#E9ED4C]/90 transition-colors;
+  }
+
+  /* Phylo Warm Editorial Card */
+  .card-phylo {
+    @apply rounded-2xl border border-black/[0.08] bg-white transition-all;
+  }
+
+  .card-phylo-warm {
+    @apply rounded-2xl border border-black/[0.08] bg-[#F2F1EB] transition-all;
+  }
+
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-phylo-blue disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-phylo-blue text-white hover:bg-blue-700;
+    @apply btn-phylo-primary;
   }
   .btn-secondary {
-    @apply btn bg-gray-100 text-gray-900 hover:bg-gray-200;
+    @apply btn-phylo-secondary;
   }
   .btn-danger {
-    @apply btn bg-red-500 text-white hover:bg-red-600;
+    @apply btn bg-rose-600 text-white hover:bg-rose-700;
   }
   .card {
-    @apply rounded-lg border border-gray-200 bg-white shadow-sm;
+    @apply card-phylo;
   }
   .input {
-    @apply w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-phylo-blue focus:outline-none focus:ring-1 focus:ring-phylo-blue;
+    @apply w-full rounded-xl border border-black/15 bg-white px-3.5 py-2 text-sm text-[#141413] placeholder:text-black/40 focus:border-black focus:outline-none focus:ring-1 focus:ring-black;
   }
   .badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;

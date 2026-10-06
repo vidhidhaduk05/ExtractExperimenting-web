@@ -48,17 +48,34 @@ export function StudyList() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
-        <ArrowLeft className="h-3 w-3" /> Back to project
-      </Link>
+    <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
+      {/* Breadcrumb Navigation */}
+      <div>
+        <Link
+          to={`/projects/${projectId}`}
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans text-[#6B665E] hover:text-[#141413] bg-black/[0.03] hover:bg-black/[0.06] transition-colors"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          <span>Back to Project Dashboard</span>
+        </Link>
+      </div>
 
-      <div className="flex items-center justify-between mb-6">
+      {/* Page Title & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-black/[0.08] pb-6">
         <div>
-          <h1 className="text-2xl font-bold">Studies</h1>
-          <p className="text-gray-500 text-sm mt-1">{studies?.length || 0} studies in this project</p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">LITERATURE REPOSITORY</span>
+            <span className="text-xs font-mono text-[#8A817A]">{studies?.length || 0} Studies Indexed</span>
+          </div>
+          <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#141413] tracking-tight">
+            Studies & Clinical Benchmarks
+          </h1>
+          <p className="font-serif italic text-sm text-[#6B665E] mt-1">
+            Verified study extraction records, bounding box quote locators, and evidence quality reviews.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-2.5 shrink-0">
           <input
             ref={fileInputRef}
             type="file"
@@ -72,106 +89,119 @@ export function StudyList() {
           />
           <button
             type="button"
-            className="btn-secondary"
+            className="btn-phylo-secondary text-xs"
             onClick={() => fileInputRef.current?.click()}
             disabled={refUploadMutation.isPending}
           >
             {refUploadMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Upload className="h-4 w-4" />
+              <Upload className="h-3.5 w-3.5" />
             )}
             Import References
           </button>
-          <Link to={`/projects/${projectId}/studies/new`} className="btn-primary">
-            <Plus className="h-4 w-4" /> Import Study
+          <Link to={`/projects/${projectId}/studies/new`} className="btn-phylo-primary text-xs">
+            <Plus className="h-3.5 w-3.5" />
+            <span>Import Study</span>
           </Link>
         </div>
       </div>
 
-      {/* Benchmark Studies & Quick Extraction Access */}
-      <div className="card p-4 mb-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-emerald-50 border border-blue-200/80 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-blue-600 text-white shadow-xs">
+      {/* Warm Editorial Quick Extraction Banner */}
+      <div className="card-phylo-warm p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+        <div className="flex items-start gap-4">
+          <div className="h-10 w-10 rounded-full bg-[#141413] text-[#FAF9F3] flex items-center justify-center shrink-0 shadow-xs">
             <Highlighter className="h-5 w-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-bold text-sm text-slate-900">AI Data Extraction & Verification Ready</h2>
-              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700">6 Benchmark Studies</span>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="font-serif text-lg font-medium text-[#141413]">
+                AI Quote Extraction & Verification Ready
+              </h2>
+              <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">6 BENCHMARKS</span>
             </div>
-            <p className="text-xs text-slate-600 mt-0.5">
-              Review extracted clinical variables with in-situ PDF quote highlighting or inspect the consolidated multi-study matrix.
+            <p className="font-sans text-xs text-[#6B665E] max-w-xl leading-relaxed">
+              Review extracted variables with Docling-aligned in-situ PDF quote highlighting or inspect the multi-study consolidated matrix sheet.
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+
+        <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto">
           <Link
             to={`/projects/${projectId}/extraction`}
-            className="px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"
+            className="btn-phylo-primary text-xs px-4 py-2 flex-1 md:flex-initial"
           >
             <Highlighter className="h-3.5 w-3.5" />
-            PDF Extraction (Track Changes)
+            <span>PDF Viewer (Track Changes)</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
           <Link
             to={`/projects/${projectId}/extraction-sheet`}
-            className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg flex items-center gap-1.5 transition-colors"
+            className="btn-phylo-secondary text-xs px-4 py-2 flex-1 md:flex-initial bg-white/80"
           >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-700" />
-            Extraction Data Sheet
+            <FileSpreadsheet className="h-3.5 w-3.5 text-[#141413]" />
+            <span>Extraction Sheet</span>
           </Link>
         </div>
       </div>
 
       {uploadMsg && (
         <div
-          className={`rounded-md px-4 py-3 text-sm mb-4 ${
+          className={`rounded-xl px-4 py-3 text-xs font-sans ${
             uploadMsg.startsWith("Error")
-              ? "bg-red-50 border border-red-200 text-red-700"
-              : "bg-green-50 border border-green-200 text-green-700"
+              ? "bg-rose-50 border border-rose-200 text-rose-800"
+              : "bg-emerald-50 border border-emerald-200 text-emerald-800"
           }`}
         >
           {uploadMsg}
         </div>
       )}
 
-      {isLoading && <p className="text-gray-400">Loading studies...</p>}
+      {isLoading && (
+        <div className="p-12 text-center text-[#8A817A] font-serif italic text-sm">
+          Loading clinical study records...
+        </div>
+      )}
 
       {studies && studies.length === 0 && (
-        <div className="card p-12 text-center">
-          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 mb-4">No studies imported yet</p>
-          <Link to={`/projects/${projectId}/studies/new`} className="btn-primary inline-flex">
-            <Plus className="h-4 w-4" /> Import your first study
+        <div className="card-phylo p-16 text-center">
+          <FileText className="h-10 w-10 text-[#8A817A] mx-auto mb-3 opacity-60" />
+          <h3 className="font-serif text-lg text-[#141413] mb-1">No studies indexed yet</h3>
+          <p className="font-sans text-xs text-[#6B665E] mb-5 max-w-sm mx-auto">
+            Import reference files (RIS, BibTeX, CSV) or manually register study publications to begin systematic extraction.
+          </p>
+          <Link to={`/projects/${projectId}/studies/new`} className="btn-phylo-primary text-xs inline-flex">
+            <Plus className="h-3.5 w-3.5" /> Import Your First Study
           </Link>
         </div>
       )}
 
       {studies && studies.length > 0 && (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Title</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Year</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Design</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Screening</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">RoB</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {studies.map((s) => (
-                <StudyRow
-                  key={s.study_id}
-                  study={s}
-                  projectId={projectId!}
-                  onDelete={() => deleteMutation.mutate(s.study_id)}
-                />
-              ))}
-            </tbody>
-          </table>
+        <div className="card-phylo overflow-hidden rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[#F2F1EB]/70 border-b border-black/[0.08] text-[10px] font-mono text-[#8A817A] uppercase tracking-wider">
+                <tr>
+                  <th className="px-5 py-3 font-medium">Study & Citation</th>
+                  <th className="px-4 py-3 font-medium">Year</th>
+                  <th className="px-4 py-3 font-medium">Design</th>
+                  <th className="px-4 py-3 font-medium">Screening</th>
+                  <th className="px-4 py-3 font-medium">RoB Status</th>
+                  <th className="px-5 py-3 font-medium text-right">Extraction Workflows</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/[0.04]">
+                {studies.map((s) => (
+                  <StudyRow
+                    key={s.study_id}
+                    study={s}
+                    projectId={projectId!}
+                    onDelete={() => deleteMutation.mutate(s.study_id)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -186,54 +216,56 @@ function StudyRow({ study, projectId, onDelete }: { study: Study; projectId: str
 
   const screeningBadge = (status: string) => {
     const styles: Record<string, string> = {
-      pending: "bg-gray-100 text-gray-600",
-      included: "bg-phylo-green/15 text-phylo-green",
-      excluded: "bg-red-100 text-red-700",
+      pending: "bg-black/[0.06] text-[#6B665E]",
+      included: "bg-[#E9ED4C] text-[#62631E]",
+      excluded: "bg-rose-100 text-rose-800",
     };
     return styles[status] || styles.pending;
   };
 
   return (
-    <tr className="hover:bg-gray-50">
-      <td className="px-4 py-3">
-        <div className="font-medium text-gray-900 line-clamp-1">{study.title}</div>
-        <div className="text-xs text-gray-400">{study.authors} — {study.journal}</div>
+    <tr className="hover:bg-black/[0.015] transition-colors">
+      <td className="px-5 py-3.5">
+        <div className="font-serif font-medium text-sm text-[#141413] line-clamp-1">{study.title}</div>
+        <div className="text-xs font-sans text-[#8A817A] mt-0.5 line-clamp-1">
+          {study.authors || "Unknown Authors"} {study.journal ? `— ${study.journal}` : ""}
+        </div>
       </td>
-      <td className="px-4 py-3 text-gray-600">{study.publication_year || "—"}</td>
-      <td className="px-4 py-3 text-gray-600">{study.study_design || "—"}</td>
-      <td className="px-4 py-3">
-        <span className={`badge ${screeningBadge(study.screening_status)}`}>
+      <td className="px-4 py-3.5 font-mono text-xs text-[#6B665E]">{study.publication_year || "—"}</td>
+      <td className="px-4 py-3.5 text-xs text-[#6B665E]">{study.study_design || "—"}</td>
+      <td className="px-4 py-3.5">
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${screeningBadge(study.screening_status)}`}>
           {study.screening_status || "pending"}
         </span>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3.5">
         {assessments && assessments.length > 0 ? (
           <Link
             to={`/projects/${projectId}/rob/${assessments[0].assessment_id}`}
-            className="inline-flex items-center gap-1 text-phylo-blue hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs text-[#141413] hover:underline"
           >
-            <ShieldCheck className="h-3 w-3" />
-            <span className={`badge ${judgmentColor(assessments[0].overall_judgment)}`}>
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
+            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono ${judgmentColor(assessments[0].overall_judgment)}`}>
               {judgmentLabel(assessments[0].overall_judgment)}
             </span>
           </Link>
         ) : (
-          <span className="text-gray-300 text-xs">none</span>
+          <span className="text-[#8A817A] text-xs font-serif italic">unassessed</span>
         )}
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-5 py-3.5 text-right">
         <div className="flex items-center justify-end gap-2">
           <Link
             to={`/projects/${projectId}/studies/${study.study_id}/pdf`}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
+            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-[#141413] text-[#FAF9F3] hover:bg-[#282724] transition-all shadow-2xs"
             title="Review AI Extractions in PDF with Track Changes"
           >
             <Highlighter className="h-3 w-3" />
-            <span>Extract</span>
+            <span>PDF</span>
           </Link>
           <Link
             to={`/projects/${projectId}/studies/${study.study_id}/sheet`}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-white hover:bg-black/5 text-[#141413] border border-black/15 transition-all"
             title="View Extraction Data Sheet"
           >
             <FileSpreadsheet className="h-3 w-3" />
@@ -241,10 +273,10 @@ function StudyRow({ study, projectId, onDelete }: { study: Study; projectId: str
           </Link>
           <button
             onClick={onDelete}
-            className="text-gray-400 hover:text-red-500 transition-colors p-1"
+            className="text-[#8A817A] hover:text-rose-600 transition-colors p-1.5 rounded-full hover:bg-black/5"
             title="Delete study"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       </td>
