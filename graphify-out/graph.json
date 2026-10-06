@@ -582,7 +582,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 110,
-      "community_name": "study_to_ris",
+      "community_name": "generate_formatted_bibliography",
       "file_type": "code",
       "norm_label": "testbibliographyhelpers",
       "source_file": "radextract_platform/backend/tests/test_citation_service.py",
@@ -8785,16 +8785,16 @@
       "source_location": "L303"
     },
     {
-      "id": "radextract_platform_backend_services_citation_service_study_to_ris",
-      "label": "study_to_ris()",
+      "id": "radextract_platform_backend_services_citation_service_generate_formatted_bibliography",
+      "label": "generate_formatted_bibliography()",
       "_callable": true,
       "_origin": "ast",
       "community": 110,
-      "community_name": "study_to_ris",
+      "community_name": "generate_formatted_bibliography",
       "file_type": "code",
-      "norm_label": "study_to_ris()",
+      "norm_label": "generate_formatted_bibliography()",
       "source_file": "radextract_platform/backend/services/citation_service.py",
-      "source_location": "L399"
+      "source_location": "L422"
     },
     {
       "id": "radextract_platform_backend_tests_test_citation_service_testbibliographyhelpers_test_generate_formatted_bibliography",
@@ -8802,7 +8802,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 110,
-      "community_name": "study_to_ris",
+      "community_name": "generate_formatted_bibliography",
       "file_type": "code",
       "norm_label": ".test_generate_formatted_bibliography()",
       "source_file": "radextract_platform/backend/tests/test_citation_service.py",
@@ -8814,7 +8814,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 110,
-      "community_name": "study_to_ris",
+      "community_name": "generate_formatted_bibliography",
       "file_type": "code",
       "norm_label": ".test_study_to_bibtex()",
       "source_file": "radextract_platform/backend/tests/test_citation_service.py",
@@ -8826,7 +8826,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 110,
-      "community_name": "study_to_ris",
+      "community_name": "generate_formatted_bibliography",
       "file_type": "code",
       "norm_label": ".test_study_to_ris()",
       "source_file": "radextract_platform/backend/tests/test_citation_service.py",
@@ -22510,7 +22510,7 @@
       "file_type": "code",
       "norm_label": "quoteicon()",
       "source_file": "radextract_platform/frontend/src/pages/PdfViewerPage.tsx",
-      "source_location": "L1739"
+      "source_location": "L1748"
     },
     {
       "id": "radextract_platform_backend_radextract_core_radextract_document_processor_fallbackprocessor_convert",
@@ -25261,18 +25261,6 @@
       "source_location": "L61"
     },
     {
-      "id": "radextract_platform_backend_services_citation_service_generate_formatted_bibliography",
-      "label": "generate_formatted_bibliography()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 42,
-      "community_name": "scientific_exports.py",
-      "file_type": "code",
-      "norm_label": "generate_formatted_bibliography()",
-      "source_file": "radextract_platform/backend/services/citation_service.py",
-      "source_location": "L422"
-    },
-    {
       "id": "radextract_platform_backend_services_citation_service_study_to_bibtex",
       "label": "study_to_bibtex()",
       "_callable": true,
@@ -25283,6 +25271,18 @@
       "norm_label": "study_to_bibtex()",
       "source_file": "radextract_platform/backend/services/citation_service.py",
       "source_location": "L365"
+    },
+    {
+      "id": "radextract_platform_backend_services_citation_service_study_to_ris",
+      "label": "study_to_ris()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 42,
+      "community_name": "scientific_exports.py",
+      "file_type": "code",
+      "norm_label": "study_to_ris()",
+      "source_file": "radextract_platform/backend/services/citation_service.py",
+      "source_location": "L399"
     },
     {
       "id": "radextract_platform_backend_services_manuscript_drafter_draft_methods_section",
@@ -32698,7 +32698,7 @@
       "file_type": "code",
       "norm_label": "locatequoterects()",
       "source_file": "radextract_platform/frontend/src/lib/pdfLocator.ts",
-      "source_location": "L244"
+      "source_location": "L249"
     },
     {
       "id": "radextract_platform_frontend_src_lib_pdflocator_maptextitems",
@@ -32734,7 +32734,7 @@
       "file_type": "code",
       "norm_label": "parsetargetpage()",
       "source_file": "radextract_platform/frontend/src/lib/pdfLocator.ts",
-      "source_location": "L310"
+      "source_location": "L318"
     },
     {
       "id": "radextract_platform_frontend_src_lib_pdflocator_splitlinesbycolumn",
@@ -36701,15 +36701,15 @@
       "source_location": "L58"
     },
     {
-      "id": "radextract_platform_backend_services_citation_service_rationale_400",
-      "label": "Convert study metadata into RIS format for EndNote / Zotero.",
+      "id": "radextract_platform_backend_services_citation_service_rationale_423",
+      "label": "Format study list into APA / Vancouver / Nature formatted text.",
       "_origin": "ast",
       "community": 110,
-      "community_name": "study_to_ris",
+      "community_name": "generate_formatted_bibliography",
       "file_type": "rationale",
-      "norm_label": "convert study metadata into ris format for endnote / zotero.",
+      "norm_label": "format study list into apa / vancouver / nature formatted text.",
       "source_file": "radextract_platform/backend/services/citation_service.py",
-      "source_location": "L400"
+      "source_location": "L423"
     },
     {
       "id": "radextract_platform_backend_services_citation_service",
@@ -54426,26 +54426,26 @@
       "source_location": ""
     },
     {
-      "id": "radextract_platform_frontend_package_dependencies_react_pdf_highlighter_plus",
-      "label": "react-pdf-highlighter-plus",
+      "id": "radextract_platform_frontend_package_dependencies_lucide_react",
+      "label": "lucide-react",
       "_origin": "ast",
       "community": 321,
-      "community_name": "react-pdf-highlighter-plus",
+      "community_name": "lucide-react",
       "file_type": "code",
-      "norm_label": "react-pdf-highlighter-plus",
+      "norm_label": "lucide-react",
       "source_file": "radextract_platform/frontend/package.json",
-      "source_location": "L22"
+      "source_location": "L17"
     },
     {
-      "id": "react_pdf_highlighter_plus",
-      "label": "react-pdf-highlighter-plus",
+      "id": "lucide_react",
+      "label": "lucide-react",
       "_origin": "ast",
       "community": 321,
-      "community_name": "react-pdf-highlighter-plus",
+      "community_name": "lucide-react",
       "file_type": "concept",
-      "norm_label": "react-pdf-highlighter-plus",
+      "norm_label": "lucide-react",
       "source_file": "radextract_platform/frontend/package.json",
-      "source_location": "L22"
+      "source_location": "L17"
     },
     {
       "id": "radextract_platform_frontend_package_devdependencies_tailwindcss",
@@ -55691,15 +55691,15 @@
       "source_location": "L366"
     },
     {
-      "id": "radextract_platform_backend_services_citation_service_rationale_423",
-      "label": "Format study list into APA / Vancouver / Nature formatted text.",
+      "id": "radextract_platform_backend_services_citation_service_rationale_400",
+      "label": "Convert study metadata into RIS format for EndNote / Zotero.",
       "_origin": "ast",
       "community": 42,
       "community_name": "scientific_exports.py",
       "file_type": "rationale",
-      "norm_label": "format study list into apa / vancouver / nature formatted text.",
+      "norm_label": "convert study metadata into ris format for endnote / zotero.",
       "source_file": "radextract_platform/backend/services/citation_service.py",
-      "source_location": "L423"
+      "source_location": "L400"
     },
     {
       "id": "radextract_platform_backend_services_manuscript_drafter_rationale_1",
@@ -58188,17 +58188,6 @@
       "source_location": "L16"
     },
     {
-      "id": "radextract_platform_frontend_package_dependencies_lucide_react",
-      "label": "lucide-react",
-      "_origin": "ast",
-      "community": 60,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "lucide-react",
-      "source_file": "radextract_platform/frontend/package.json",
-      "source_location": "L17"
-    },
-    {
       "id": "radextract_platform_frontend_package_dependencies_pdfjs_dist",
       "label": "pdfjs-dist",
       "_origin": "ast",
@@ -58241,6 +58230,17 @@
       "norm_label": "react-is",
       "source_file": "radextract_platform/frontend/package.json",
       "source_location": "L21"
+    },
+    {
+      "id": "radextract_platform_frontend_package_dependencies_react_pdf_highlighter_plus",
+      "label": "react-pdf-highlighter-plus",
+      "_origin": "ast",
+      "community": 60,
+      "community_name": "dependencies",
+      "file_type": "code",
+      "norm_label": "react-pdf-highlighter-plus",
+      "source_file": "radextract_platform/frontend/package.json",
+      "source_location": "L22"
     },
     {
       "id": "radextract_platform_frontend_package_dependencies_react_router_dom",
@@ -58320,17 +58320,6 @@
       "source_location": "L16"
     },
     {
-      "id": "lucide_react",
-      "label": "lucide-react",
-      "_origin": "ast",
-      "community": 60,
-      "community_name": "dependencies",
-      "file_type": "concept",
-      "norm_label": "lucide-react",
-      "source_file": "radextract_platform/frontend/package.json",
-      "source_location": "L17"
-    },
-    {
       "id": "pdfjs_dist",
       "label": "pdfjs-dist",
       "_origin": "ast",
@@ -58373,6 +58362,17 @@
       "norm_label": "react-is",
       "source_file": "radextract_platform/frontend/package.json",
       "source_location": "L21"
+    },
+    {
+      "id": "react_pdf_highlighter_plus",
+      "label": "react-pdf-highlighter-plus",
+      "_origin": "ast",
+      "community": 60,
+      "community_name": "dependencies",
+      "file_type": "concept",
+      "norm_label": "react-pdf-highlighter-plus",
+      "source_file": "radextract_platform/frontend/package.json",
+      "source_location": "L22"
     },
     {
       "id": "react_router_dom",
@@ -92071,7 +92071,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/components/common/ActualPdfViewer.tsx",
-      "source_location": "L212",
+      "source_location": "L225",
       "weight": 1.0
     },
     {
@@ -92083,7 +92083,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/components/common/ActualPdfViewer.tsx",
-      "source_location": "L217",
+      "source_location": "L230",
       "weight": 1.0
     },
     {
@@ -92095,7 +92095,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/components/common/ActualPdfViewer.tsx",
-      "source_location": "L323",
+      "source_location": "L339",
       "weight": 1.0
     },
     {
@@ -92191,7 +92191,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/lib/pdfLocator.ts",
-      "source_location": "L250",
+      "source_location": "L258",
       "weight": 1.0
     },
     {
@@ -92203,7 +92203,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/lib/pdfLocator.ts",
-      "source_location": "L254",
+      "source_location": "L262",
       "weight": 1.0
     },
     {
@@ -92215,7 +92215,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/lib/pdfLocator.ts",
-      "source_location": "L255",
+      "source_location": "L263",
       "weight": 1.0
     },
     {
@@ -92227,7 +92227,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/lib/pdfLocator.ts",
-      "source_location": "L257",
+      "source_location": "L265",
       "weight": 1.0
     },
     {
@@ -92239,7 +92239,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/lib/pdfLocator.ts",
-      "source_location": "L304",
+      "source_location": "L312",
       "weight": 1.0
     },
     {
@@ -92251,7 +92251,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/PdfViewerPage.tsx",
-      "source_location": "L663",
+      "source_location": "L672",
       "weight": 1.0
     },
     {
@@ -143593,7 +143593,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/frontend/src/lib/pdfLocator.ts",
-      "source_location": "L244",
+      "source_location": "L249",
       "weight": 1.0
     },
     {
@@ -143615,7 +143615,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/frontend/src/lib/pdfLocator.ts",
-      "source_location": "L310",
+      "source_location": "L318",
       "weight": 1.0
     },
     {
@@ -144077,7 +144077,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/frontend/src/pages/PdfViewerPage.tsx",
-      "source_location": "L1739",
+      "source_location": "L1748",
       "weight": 1.0
     },
     {
@@ -178299,5 +178299,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "407433039038f5de88785c2288408cb4c95a7378"
+  "built_at_commit": "f9a3d23805bd8f32861c1d2095aa58f61559a549"
 }

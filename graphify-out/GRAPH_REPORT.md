@@ -1,7 +1,7 @@
 # Graph Report - Rad Extract Experimenting  (2026-10-06)
 
 ## Corpus Check
-- 355 files · ~779,374 words
+- 355 files · ~779,556 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `40743303`
+- Built from commit: `f9a3d238`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -125,7 +125,7 @@
 - patch
 - TestGetHeterogeneity
 - FallbackProcessor
-- study_to_ris
+- generate_formatted_bibliography
 - citation_service.py
 - VDExtract: Interactive AI Screening with Mid-Pipeline Clarification Questions
 - export_bibtex
@@ -303,7 +303,7 @@
 - eslint
 - eslint-plugin-react-refresh
 - client
-- react-pdf-highlighter-plus
+- lucide-react
 - tailwindcss
 - @testing-library/dom
 - @types/react
@@ -579,7 +579,7 @@ Nodes (7): generate_search_strings(), Generate database-specific search strings 
 
 ### Community 60 - "dependencies"
 Cohesion: 0.08
-Nodes (25): clsx, date-fns, lucide-react, pdfjs-dist, dependencies, clsx, date-fns, lucide-react (+17 more)
+Nodes (25): clsx, date-fns, pdfjs-dist, dependencies, clsx, date-fns, pdfjs-dist, react (+17 more)
 
 ### Community 61 - "create_meta_analysis"
 Cohesion: 0.15
@@ -773,9 +773,9 @@ Nodes (20): mock_db(), mock_project(), mock_study(), mock_variables(), fixture, 
 Cohesion: 0.27
 Nodes (5): FallbackProcessor, Fallback PDF processor using LitExtract's existing pdfplumber-based parser.…, FallbackProcessor should handle .txt files via parse_document., Batch should not fail entirely if one file is bad., TestFallbackProcessor
 
-### Community 110 - "study_to_ris"
+### Community 110 - "generate_formatted_bibliography"
 Cohesion: 0.33
-Nodes (3): Convert study metadata into RIS format for EndNote / Zotero., study_to_ris(), TestBibliographyHelpers
+Nodes (3): generate_formatted_bibliography(), Format study list into APA / Vancouver / Nature formatted text., TestBibliographyHelpers
 
 ### Community 111 - "citation_service.py"
 Cohesion: 0.14
