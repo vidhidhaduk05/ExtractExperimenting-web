@@ -13,9 +13,11 @@ import {
   Check, X, Edit3, BookOpen, AlertCircle, TrendingUp,
   Download, HelpCircle, ChevronRight, ChevronLeft,
   RotateCcw, Search, Eye, Filter, Zap, ShieldAlert,
-  ZoomIn, ZoomOut, Maximize2, Minimize2
+  ZoomIn, ZoomOut, Maximize2, Minimize2, Sliders,
+  PanelRightClose, PanelRightOpen, FileSpreadsheet
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
 
 interface UndoRecord {
   studyId: string;
@@ -42,6 +44,21 @@ export function PdfViewerPage() {
   const [showErrorAnalysis, setShowErrorAnalysis] = useState<boolean>(false);
   const [reviewerName, setReviewerName] = useState<string>("Expert Reviewer");
   const [pdfZoom, setPdfZoom] = useState<number>(100);
+
+  // Collapsible Protocol Rules panel (collapsed by default on extraction side as requested)
+  const [showCodebookPanel, setShowCodebookPanel] = useState<boolean>(false);
+  // In-app Codebook designer modal (create inside app without uploading)
+  const [showCodebookDesigner, setShowCodebookDesigner] = useState<boolean>(false);
+  // AIDE-style Recorded answers matrix / data sheet modal
+  const [showDataSheetModal, setShowDataSheetModal] = useState<boolean>(false);
+  // Dynamic in-app codebook rules state
+  const [customRules, setCustomRules] = useState<Record<string, CodebookRule>>(() => {
+    try {
+      const saved = localStorage.getItem("radextract_codebook_rules");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return DEMO_CODEBOOK_RULES;
+  });
 
   // Undo system
   const [undoStack, setUndoStack] = useState<UndoRecord[]>([]);
@@ -146,11 +163,36 @@ export function PdfViewerPage() {
   }, [extractions]);
 
   const currentExtraction = currentVar ? extractionMap[currentVar.variable_id] : null;
-  const currentRule: CodebookRule | undefined = currentVar ? DEMO_CODEBOOK_RULES[currentVar.variable_id] : undefined;
+  const currentRule: CodebookRule | undefined = currentVar ? (customRules[currentVar.variable_id] || DEMO_CODEBOOK_RULES[currentVar.variable_id]) : undefined;
 
   // Progress metrics
   const verifiedCount = variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
   const progressPercent = variableList.length > 0 ? Math.round((verifiedCount / variableList.length) * 100) : 0;
+
+  // Export study recorded extraction data sheet (CSV) - AIDE-Web style
+  const handleExportStudyCsv = () => {
+    const headers = ["Variable ID", "Variable Name", "Section", "Extracted Value", "Status", "Source Page", "Evidence Quote"];
+    const rows = variableList.map((v: any) => {
+      const ext = extractionMap[v.variable_id];
+      return [
+        v.variable_id,
+        `"${(v.name || "").replace(/"/g, '""')}"`,
+        `"${(v.section || "").replace(/"/g, '""')}"`,
+        `"${(ext?.value || "").replace(/"/g, '""')}"`,
+        ext?.is_verified ? "Recorded (Verified)" : "Pending Review",
+        ext?.source_page || 1,
+        `"${(ext?.quote || "").replace(/"/g, '""')}"`
+      ].join(",");
+    });
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `extraction_${studyId}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // ── Auto-scroll to evidence quote fallback ──
   const scrollToQuote = useCallback((quote: string) => {
@@ -668,6 +710,45 @@ export function PdfViewerPage() {
 
         {/* Right Action Tools */}
         <div className="flex items-center gap-2">
+          {/* In-App Codebook Designer Button */}
+          <button
+            onClick={() => setShowCodebookDesigner(true)}
+            className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors shadow-2xs"
+            title="Design and customize codebook variables directly in-app (No file upload required)"
+          >
+            <Sliders className="h-3.5 w-3.5 text-blue-600" />
+            <span>In-App Codebook</span>
+          </button>
+
+          {/* AIDE-Web Style Recorded Answers Data Sheet Button */}
+          <button
+            onClick={() => setShowDataSheetModal(true)}
+            className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors shadow-2xs"
+            title="Inspect recorded study answers matrix and export CSV"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Recorded Sheet</span>
+          </button>
+
+          {/* Toggle Protocol Rules Panel Button */}
+          <button
+            onClick={() => setShowCodebookPanel(!showCodebookPanel)}
+            className={cn(
+              "px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 border transition-colors",
+              showCodebookPanel
+                ? "bg-indigo-100 text-indigo-700 border-indigo-300"
+                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+            )}
+            title={showCodebookPanel ? "Minimize Protocol Rules Panel" : "Open Protocol Rules & Guidelines"}
+          >
+            {showCodebookPanel ? (
+              <PanelRightClose className="h-3.5 w-3.5 text-indigo-600" />
+            ) : (
+              <PanelRightOpen className="h-3.5 w-3.5 text-slate-500" />
+            )}
+            <span>{showCodebookPanel ? "Hide Rules" : "Protocol Rules"}</span>
+          </button>
+
           {/* Active Learning & Error Analysis Button */}
           <button
             onClick={() => setShowErrorAnalysis(!showErrorAnalysis)}
@@ -749,7 +830,10 @@ export function PdfViewerPage() {
         {/* ══════════════════════════════════════════════════════════
             COLUMN 1: ACTUAL PDF PUBLICATION VIEWER & HIGHLIGHTS (LEFT)
         ══════════════════════════════════════════════════════════ */}
-        <section className="w-[36%] border-r border-slate-200 bg-slate-200/70 flex flex-col h-full overflow-hidden">
+        <section className={cn(
+          "border-r border-slate-200 bg-slate-200/70 flex flex-col h-full overflow-hidden transition-all duration-300",
+          showCodebookPanel ? "w-[38%]" : "w-[56%]"
+        )}>
           {/* PDF Viewer Header Toolbar */}
           <div className="border-b border-slate-200 px-3 py-2 bg-white flex items-center justify-between shrink-0 shadow-2xs">
             {/* View Selector Tabs */}
@@ -1269,7 +1353,7 @@ export function PdfViewerPage() {
               const isSelected = v.variable_id === selectedVarId;
               const isVerified = ext?.is_verified;
               const isEdited = ext?.is_edited;
-              const rule = DEMO_CODEBOOK_RULES[v.variable_id];
+              const rule = customRules[v.variable_id] || DEMO_CODEBOOK_RULES[v.variable_id];
               const isTransitioning = acceptTransitioningId === v.variable_id;
 
               return (
@@ -1323,6 +1407,35 @@ export function PdfViewerPage() {
 
                   {/* Card Body: Track Changes Diff & Values */}
                   <div className="p-4 space-y-3">
+                    {/* AIDE-Web Inspired Prominent Recorded Answer Banner */}
+                    {isVerified && (
+                      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2.5 flex items-center justify-between text-xs animate-in fade-in duration-200">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                          <span className="font-semibold text-emerald-950 truncate">
+                            Recorded (Verified by Human):
+                          </span>
+                          <span className="font-mono font-bold text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-200 shrink-0">
+                            {ext?.value || "Not Reported"}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-emerald-700 font-medium shrink-0 ml-2">
+                          Saved to Study Dataset ✓
+                        </span>
+                      </div>
+                    )}
+
+                    {/* In-App Variable Coding Guideline / Definition */}
+                    {rule?.definition && (
+                      <div className="text-[11px] text-slate-600 bg-slate-50/80 p-2 rounded border border-slate-200/80 leading-relaxed flex items-start gap-1.5">
+                        <BookOpen className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-semibold text-slate-700">Coding Guideline: </span>
+                          <span>{rule.definition}</span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Word-style Track Changes Display */}
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
                       <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
@@ -1498,166 +1611,181 @@ export function PdfViewerPage() {
         {/* ══════════════════════════════════════════════════════════
             COLUMN 3: SIDE-BY-SIDE CODEBOOK & ACTIVE LEARNING (RIGHT)
         ══════════════════════════════════════════════════════════ */}
-        <section className="w-[30%] bg-white border-l border-slate-200 flex flex-col h-full overflow-hidden">
-          {/* Header */}
-          <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3 shrink-0 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-blue-600" />
-              <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wide">
-                Protocol Codebook & Rules
-              </h3>
+        {showCodebookPanel && (
+          <section className="w-[30%] bg-white border-l border-slate-200 flex flex-col h-full overflow-hidden animate-in slide-in-from-right-4 duration-200">
+            {/* Header */}
+            <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3 shrink-0 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wide">
+                  Protocol Codebook & Rules
+                </h3>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowCodebookDesigner(true)}
+                  className="text-[10px] font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors"
+                  title="Open In-App Codebook Designer"
+                >
+                  <Sliders className="h-3 w-3" /> Designer
+                </button>
+                <button
+                  onClick={() => setShowCodebookPanel(false)}
+                  className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-800 transition-colors"
+                  title="Minimize Protocol Rules Panel"
+                >
+                  <PanelRightClose className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
-              PICO Synced
-            </span>
-          </div>
 
-          {/* Right Panel Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {currentRule ? (
-              <div className="space-y-4">
-                {/* Active Variable Header */}
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Selected Field
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-900 mt-0.5">
-                    {currentRule.name}
-                  </h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
-                      Section: {currentRule.section}
-                    </span>
-                    <span className="text-[10px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
-                      Type: {currentRule.field_type}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Operational Definition */}
-                <div>
-                  <h5 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                    <HelpCircle className="h-3.5 w-3.5 text-blue-500" />
-                    Operational Definition
-                  </h5>
-                  <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 leading-relaxed">
-                    {currentRule.definition}
-                  </p>
-                </div>
-
-                {/* Allowed Categories with Click-to-Apply */}
-                {currentRule.allowed_values && currentRule.allowed_values.length > 0 && (
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
-                      <Tag className="h-3.5 w-3.5 text-emerald-500" />
-                      Allowed Standard Values (Click to choose)
-                    </h5>
-                    <div className="flex flex-wrap gap-1.5">
-                      {currentRule.allowed_values.map((val: string) => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => {
-                            setEditingVarId(currentRule.variable_id);
-                            setEditDraftValue(val);
-                          }}
-                          className="text-[11px] font-medium bg-slate-50 hover:bg-blue-50 hover:text-blue-700 text-slate-700 border border-slate-200 hover:border-blue-300 px-2.5 py-1 rounded-md transition-colors text-left"
-                        >
-                          {val}
-                        </button>
-                      ))}
+            {/* Right Panel Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {currentRule ? (
+                <div className="space-y-4">
+                  {/* Active Variable Header */}
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Selected Field
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-900 mt-0.5">
+                      {currentRule.name}
+                    </h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                        Section: {currentRule.section}
+                      </span>
+                      <span className="text-[10px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                        Type: {currentRule.field_type}
+                      </span>
                     </div>
                   </div>
-                )}
 
-                {/* Extraction & Coding Rules */}
-                <div>
-                  <h5 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
-                    <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
-                    Coding Rules & Criteria
-                  </h5>
-                  <ul className="space-y-1.5 text-xs text-slate-600">
-                    {currentRule.rules.map((r: string, idx: number) => (
-                      <li key={idx} className="flex items-start gap-1.5 bg-slate-50 p-2 rounded border border-slate-100">
-                        <span className="text-blue-500 font-bold">•</span>
-                        <span>{r}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Gold Standard Literature Example */}
-                {currentRule.gold_standard_example && (
+                  {/* Operational Definition */}
                   <div>
                     <h5 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                      Gold-Standard Literature Example
+                      <HelpCircle className="h-3.5 w-3.5 text-blue-500" />
+                      Operational Definition
                     </h5>
-                    <div className="text-xs text-slate-700 bg-amber-50/60 border border-amber-200 p-2.5 rounded-lg italic">
-                      "{currentRule.gold_standard_example}"
-                    </div>
-                  </div>
-                )}
-
-                {/* Exclusion Criteria */}
-                {currentRule.exclusion_criteria && (
-                  <div>
-                    <h5 className="text-xs font-bold text-rose-800 mb-1 flex items-center gap-1.5">
-                      <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
-                      Exclusion / Disqualification Rule
-                    </h5>
-                    <p className="text-xs text-rose-700 bg-rose-50/60 border border-rose-200 p-2 rounded-lg">
-                      {currentRule.exclusion_criteria}
+                    <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 leading-relaxed">
+                      {currentRule.definition}
                     </p>
                   </div>
-                )}
 
-                {/* Live Few-Shot Prompt Queue (Dual-Mode Retraining) */}
-                <div className="pt-3 border-t border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h5 className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                      <Zap className="h-3.5 w-3.5 text-indigo-600" />
-                      Live Few-Shot Prompt Queue
-                    </h5>
-                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
-                      {fewShotExemplars.length} Injected
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Human modifications are directly injected into system prompts for subsequent extractions and logged for JSONL offline retraining.
-                  </p>
-                  {fewShotExemplars.length > 0 ? (
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                      {fewShotExemplars.map((ex, idx) => (
-                        <div key={idx} className="p-2 rounded-lg bg-indigo-50/60 border border-indigo-100 text-xs">
-                          <div className="flex items-center justify-between font-bold text-indigo-950">
-                            <span>{ex.variable}</span>
-                            <span className="text-emerald-700 bg-emerald-100/70 text-[10px] px-1.5 py-0.5 rounded font-mono">
-                              {ex.value}
-                            </span>
-                          </div>
-                          {ex.quote && (
-                            <p className="text-[10px] text-slate-500 italic truncate mt-0.5">
-                              "{ex.quote}"
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-lg border border-dashed border-slate-200 text-center">
-                      Modifying or rejecting variables dynamically adds active learning exemplars here.
+                  {/* Allowed Categories with Click-to-Apply */}
+                  {currentRule.allowed_values && currentRule.allowed_values.length > 0 && (
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                        <Tag className="h-3.5 w-3.5 text-emerald-500" />
+                        Allowed Standard Values (Click to choose)
+                      </h5>
+                      <div className="flex flex-wrap gap-1.5">
+                        {currentRule.allowed_values.map((val: string) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => {
+                              setEditingVarId(currentRule.variable_id);
+                              setEditDraftValue(val);
+                            }}
+                            className="text-[11px] font-medium bg-slate-50 hover:bg-blue-50 hover:text-blue-700 text-slate-700 border border-slate-200 hover:border-blue-300 px-2.5 py-1 rounded-md transition-colors text-left"
+                          >
+                            {val}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
+
+                  {/* Extraction & Coding Rules */}
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
+                      Coding Rules & Criteria
+                    </h5>
+                    <ul className="space-y-1.5 text-xs text-slate-600">
+                      {currentRule.rules.map((r: string, idx: number) => (
+                        <li key={idx} className="flex items-start gap-1.5 bg-slate-50 p-2 rounded border border-slate-100">
+                          <span className="text-blue-500 font-bold">•</span>
+                          <span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Gold Standard Literature Example */}
+                  {currentRule.gold_standard_example && (
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                        Gold-Standard Literature Example
+                      </h5>
+                      <div className="text-xs text-slate-700 bg-amber-50/60 border border-amber-200 p-2.5 rounded-lg italic">
+                        "{currentRule.gold_standard_example}"
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Exclusion Criteria */}
+                  {currentRule.exclusion_criteria && (
+                    <div>
+                      <h5 className="text-xs font-bold text-rose-800 mb-1 flex items-center gap-1.5">
+                        <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
+                        Exclusion / Disqualification Rule
+                      </h5>
+                      <p className="text-xs text-rose-700 bg-rose-50/60 border border-rose-200 p-2 rounded-lg">
+                        {currentRule.exclusion_criteria}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Live Few-Shot Prompt Queue (Dual-Mode Retraining) */}
+                  <div className="pt-3 border-t border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                        <Zap className="h-3.5 w-3.5 text-indigo-600" />
+                        Live Few-Shot Prompt Queue
+                      </h5>
+                      <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                        {fewShotExemplars.length} Injected
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Human modifications are directly injected into system prompts for subsequent extractions and logged for JSONL offline retraining.
+                    </p>
+                    {fewShotExemplars.length > 0 ? (
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {fewShotExemplars.map((ex, idx) => (
+                          <div key={idx} className="p-2 rounded-lg bg-indigo-50/60 border border-indigo-100 text-xs">
+                            <div className="flex items-center justify-between font-bold text-indigo-950">
+                              <span>{ex.variable}</span>
+                              <span className="text-emerald-700 bg-emerald-100/70 text-[10px] px-1.5 py-0.5 rounded font-mono">
+                                {ex.value}
+                              </span>
+                            </div>
+                            {ex.quote && (
+                              <p className="text-[10px] text-slate-500 italic truncate mt-0.5">
+                                "{ex.quote}"
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-lg border border-dashed border-slate-200 text-center">
+                        Modifying or rejecting variables dynamically adds active learning exemplars here.
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-10 text-slate-400 text-xs">
-                Select a variable to inspect its codebook operational rules.
-              </div>
-            )}
-          </div>
-        </section>
+              ) : (
+                <div className="text-center py-10 text-slate-400 text-xs">
+                  Select a variable to inspect its codebook operational rules.
+                </div>
+              )}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════════════════
@@ -1789,6 +1917,129 @@ export function PdfViewerPage() {
               >
                 <Download className="h-4 w-4" /> Export Training Dataset (JSONL)
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          IN-APP CODEBOOK DESIGNER MODAL
+      ══════════════════════════════════════════════════════════ */}
+      {showCodebookDesigner && (
+        <CodebookDesignerModal
+          isOpen={showCodebookDesigner}
+          onClose={() => setShowCodebookDesigner(false)}
+          onCodebookUpdated={(updatedVars, updatedRules) => {
+            setCustomRules(updatedRules);
+            try {
+              localStorage.setItem("radextract_codebook_rules", JSON.stringify(updatedRules));
+            } catch (e) {}
+            queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
+          }}
+        />
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          AIDE-WEB STYLE RECORDED ANSWERS DATA SHEET MODAL
+      ══════════════════════════════════════════════════════════ */}
+      {showDataSheetModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
+                <div>
+                  <h3 className="font-bold text-base">
+                    Study Recorded Extraction Data Sheet
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    AIDE-Web Matrix View &middot; {verifiedCount}/{variableList.length} Variables Human-Verified
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDataSheetModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-md"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Table Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                <table className="min-w-full divide-y divide-slate-200 text-xs">
+                  <thead className="bg-slate-50 font-bold text-slate-700">
+                    <tr>
+                      <th className="px-3 py-2.5 text-left">Variable</th>
+                      <th className="px-3 py-2.5 text-left">Section</th>
+                      <th className="px-3 py-2.5 text-left">Extracted / Verified Value</th>
+                      <th className="px-3 py-2.5 text-left">Verification Status</th>
+                      <th className="px-3 py-2.5 text-left">Evidence Source Quote</th>
+                      <th className="px-3 py-2.5 text-left">Page</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {variableList.map((v: any, idx: number) => {
+                      const ext = extractionMap[v.variable_id];
+                      const isVerified = ext?.is_verified;
+                      const isEdited = ext?.is_edited;
+                      return (
+                        <tr key={v.variable_id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                          <td className="px-3 py-2.5 font-bold text-slate-900 whitespace-nowrap">
+                            #{idx + 1} {v.name}
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">
+                            {v.section || "General"}
+                          </td>
+                          <td className="px-3 py-2.5 font-mono font-semibold text-slate-800">
+                            {ext?.value || <span className="text-slate-400 italic">Not Reported</span>}
+                          </td>
+                          <td className="px-3 py-2.5 whitespace-nowrap">
+                            {isVerified ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                <Check className="h-3 w-3" /> {isEdited ? "Modified" : "Accepted"}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                <AlertCircle className="h-3 w-3" /> Pending
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-600 italic max-w-xs truncate" title={ext?.quote}>
+                            {ext?.quote || "—"}
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-400 font-mono">
+                            {ext?.source_page || 1}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                Exports all recorded variables with verified status and ground-truth citations.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportStudyCsv}
+                  className="px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="h-4 w-4" /> Export CSV (AIDE Data Sheet)
+                </button>
+                <button
+                  onClick={() => setShowDataSheetModal(false)}
+                  className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
