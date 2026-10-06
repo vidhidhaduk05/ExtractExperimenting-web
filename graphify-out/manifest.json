@@ -250,8 +250,8 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/extraction.py": {
-    "mtime": 1791234873.498238,
-    "ast_hash": "604b217572ea6b2e743657a78982a8ef",
+    "mtime": 1791260442.903811,
+    "ast_hash": "372f0f2849c920dae7b75e89442c7f78",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/grade.py": {
@@ -660,13 +660,13 @@
     "semantic_hash": "1a5a5110c38e436b3f861fa40b7b23fe"
   },
   "radextract_platform/frontend/src/components/layout/AppLayout.tsx": {
-    "mtime": 1791235236.1264114,
-    "ast_hash": "462bed29e494c1c2052c5ebe86008e68",
+    "mtime": 1791260137.8376038,
+    "ast_hash": "243a0a9ed5a7e0e648bf0e3a119f34b5",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1791235914.655948,
-    "ast_hash": "d634e37907bdcc4ffa5d49a72f6ecc43",
+    "mtime": 1791260170.3855357,
+    "ast_hash": "da162ed355b5d303773b10efd83b7daf",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -710,8 +710,8 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PdfViewerPage.tsx": {
-    "mtime": 1791258539.797433,
-    "ast_hash": "e9e05d20b57a31941222f67ab7d2783f",
+    "mtime": 1791262717.1734495,
+    "ast_hash": "6dd3b3b15522cc08aab1a898bd20a92b",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PicoHypothesisPage.tsx": {
@@ -765,8 +765,8 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
-    "mtime": 1791231987.9885218,
-    "ast_hash": "9c3b6e07edabf7aaac9ca881310efb04",
+    "mtime": 1791262822.6516826,
+    "ast_hash": "32e5f5e1188ee249848f8a462d1e7b88",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyImport.tsx": {
@@ -1840,8 +1840,8 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/layout/AppLayout.test.tsx": {
-    "mtime": 1791236096.3001654,
-    "ast_hash": "323d56cf339ad64762a88591df263313",
+    "mtime": 1791260463.1036642,
+    "ast_hash": "635d56e3e75d15c7418ee6a67ba4410a",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.test.ts": {
@@ -2297,6 +2297,11 @@
   ".playwright-mcp/page-2026-10-05T20-42-50-645Z.yml": {
     "mtime": 1791232970.6474838,
     "ast_hash": "a7b087f3351048bf70d72c92d4eec3d6",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/common/CodebookDesignerModal.tsx": {
+    "mtime": 1791261840.7592027,
+    "ast_hash": "ea7457687b25251ceb4f222f64147c3d",
     "semantic_hash": ""
   }
 }

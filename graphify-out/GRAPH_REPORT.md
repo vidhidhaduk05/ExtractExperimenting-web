@@ -1,16 +1,16 @@
 # Graph Report - Rad Extract Experimenting  (2026-10-06)
 
 ## Corpus Check
-- 351 files · ~769,662 words
+- 352 files · ~777,438 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5280 nodes · 8763 edges · 326 communities (298 shown, 28 thin omitted)
+- 5285 nodes · 8780 edges · 328 communities (296 shown, 32 thin omitted)
 - Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 1333 edges (avg confidence: 0.74)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8858f145`
+- Built from commit: `bd414d5a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -271,7 +271,7 @@
 - rules/graphify.md
 - workflows/graphify.md
 - TestReferenceUpload
-- TestRAvailability
+- test_ai_integration.py
 - tailwind-merge
 - tailwindcss
 - _merge_cell_borders
@@ -286,7 +286,7 @@
 - consolidate_nicotine
 - coded_extract
 - module_07_trajectory.py
-- autoprefixer
+- document_processor.py
 - KNOWN_LIMITATIONS.md
 - code_and_data/statistical_methods_paragraph.md
 - final_submission/statistical_methods_paragraph.md
@@ -295,17 +295,19 @@
 - tailwindcss
 - test_screening_progress.py
 - PdfViewerPage.tsx
-- FigureAnnotation
+- TextAnnotation
 - plot_config.py
-- TestMetaAnalysisCRUD
+- ProcessedDocument
 - module_08_decision_curve.py
-- ensure_dirs
-- get_storage
-- TestSessions
-- TestRunAnalysis
-- TestLogin
+- exhaustive_extract
+- test_extraction_gaps.py
+- PicoHypothesisPage.tsx
+- recheck_missing
+- UnlimitedOCRBackend
 - lambda_handler.py
-- TestRegister
+- _is_scanned_pdf
+- test_start_ai_analysis_finally_clears_progress_on_error
+- test_start_ai_analysis_check_project_access_denied
 
 ## God Nodes (most connected - your core abstractions)
 1. `DBBackend` - 287 edges
@@ -334,67 +336,67 @@
 ## Import Cycles
 - None detected.
 
-## Communities (326 total, 28 thin omitted)
+## Communities (328 total, 32 thin omitted)
 
 ### Community 0 - "check_project_access"
 Cohesion: 0.02
-Nodes (131): HypothesisUpdate, KeywordGroupCreate, PICOUpdate, check_project_access(), Raise 403 if user lacks access to the project.      If user is None (no auth t, AIScreeningSummary, continue_ai_screening(), get_ai_screening_progress() (+123 more)
+Nodes (151): HypothesisUpdate, KeywordGroupCreate, PICOUpdate, check_project_access(), Raise 403 if user lacks access to the project.      If user is None (no auth t, ScreeningConflictResponse, get_ai_screening_progress(), Live progress of a running AI screening: current study, done/pending ids, stage. (+143 more)
 
 ### Community 1 - "litextract/__init__.py"
-Cohesion: 0.08
-Nodes (30): adjudicate_cells(), Adjudicator, Interface: ``decide(cell, parsed, project) -> decision dict``.      decision =, Run the referee over every non-agreeing cell.      Returns {"decisions": [{**c, _as_dict(), audit.py — persist the four per-run transparency sidecars.  For each document/, Write the four sidecars for one document into ``out_dir/<doc_id>/``., write_audit() (+22 more)
+Cohesion: 0.12
+Nodes (21): adjudicate_cells(), Adjudicator, AgentAdjudicator, DeterministicAdjudicator, _missing(), adjudicate.py — the third-agent "referee".  Invoked ONLY on cells the reconcil, Interface: ``decide(cell, parsed, project) -> decision dict``.      decision =, Source-grounded referee: pick the candidate present in the document. (+13 more)
 
 ### Community 2 - "api.ts"
 Cohesion: 0.03
-Nodes (92): AIPrioritizationResult, AiScreenResult, AnalysisMissingRow, AnalysisOutlier, AnalysisPerVariable, AnalysisProfileSummary, ClarificationStats, CriteriaResponse (+84 more)
+Nodes (102): AbstractHighlights, AIPrioritizationResult, AIScreeningProgress, AIScreeningSummary, AiScreenResult, AnalysisMissingRow, AnalysisOutlier, AnalysisPerVariable (+94 more)
 
 ### Community 3 - "backend/models.py"
 Cohesion: 0.04
-Nodes (106): AbstractHighlightsResponse, ActiveLearningFeedbackRequest, AIPrioritizationResult, AIScreeningStartRequest, AiScreenResult, BatchClarificationAnswerRequest, BatchClarificationItem, ClarificationAnswerRequest (+98 more)
+Nodes (118): AbstractHighlightsResponse, ActiveLearningFeedbackRequest, AIPrioritizationResult, AIScreeningStartRequest, AIScreeningSummary, AiScreenResult, BatchClarificationAnswerRequest, BatchClarificationItem (+110 more)
 
 ### Community 4 - "studies.py"
-Cohesion: 0.04
-Nodes (55): FastAPI, get_db(), SQLite database connection, schema initialization, and migrations.  Extends th, FastAPI dependency that yields a database connection and closes it.      Retur, lifespan(), FastAPI application factory.  Creates and configures the RadExtract platform A, Initialize database and storage on startup., VariableResponse (+47 more)
+Cohesion: 0.50
+Nodes (4): get_ai_screening_status(), Get current screening pipeline status and counts., Unit test for get_ai_screening_status router function directly., test_get_ai_screening_status_unit_function_mock()
 
 ### Community 5 - "dependencies.py"
-Cohesion: 0.06
-Nodes (52): authenticate_user(), can_user_access_project(), create_access_token(), create_refresh_token(), create_user(), get_current_user(), get_current_user_optional(), get_user_project_role() (+44 more)
+Cohesion: 0.03
+Nodes (92): FastAPI, SQLite database connection, schema initialization, and migrations.  Extends th, authenticate_user(), can_user_access_project(), create_access_token(), create_refresh_token(), create_user(), get_current_user() (+84 more)
 
 ### Community 6 - "auto_extract_service.py"
-Cohesion: 0.06
-Nodes (36): auto_extract(), _find_keyword_in_text(), _is_scanned_pdf(), _match_variable_to_keywords(), Any, Automated data extraction service: extracts variable values from PDF text using, Check if PDF has pages but lacks a text layer (< 100 characters)., Map variable name to extraction keyword patterns. (+28 more)
+Cohesion: 0.16
+Nodes (14): auto_extract(), apply_g1_fixed_horizon(), apply_g2_comparator_heterogeneity(), apply_g3_subgroup_detection(), apply_g4_immortal_time_bias(), apply_g5_effect_conflict(), Any, Universal clinical data extraction gap rules (G1-G5). (+6 more)
 
 ### Community 7 - "test_dual_writer.py"
-Cohesion: 0.06
-Nodes (34): build_column_map(), dual_writer.py — multi-format output writer for reconciled extraction records., Convert a sheet name to a valid SQLite table identifier., Write records as a flat JSON file (all sheets, all rows).      Structure:, Write records as a nested JSON file preserving the entity graph hierarchy., Convert a field name to a valid SQLite column identifier.      'Study ID' → 's, Read all records from a SQLite database back into the {sheet: [row_dict]} format, Write text content, staging in /workspace for S3-backed destinations. (+26 more)
+Cohesion: 0.05
+Nodes (40): append_records(), count_dropdowns(), _lastrow(), writer.py — append-only workbook writer.  Preserves the contract proven in the, Return {sheet: n_data_validations, '_total': n} for a workbook., Append ``records`` to a copy of ``src_workbook``, save to ``dest_workbook``., build_column_map(), dual_writer.py — multi-format output writer for reconciled extraction records. (+32 more)
 
 ### Community 8 - "gemini_web2api.py"
-Cohesion: 0.15
-Nodes (28): account_prefix(), apply_chat_persistence_flags(), clean_gemini_text(), decode_data_url(), extract_response_text(), fetch_latest_bl(), gemini_stream_generate(), gemini_stream_generate_iter() (+20 more)
+Cohesion: 0.14
+Nodes (30): account_prefix(), apply_chat_persistence_flags(), clean_gemini_text(), decode_data_url(), extract_response_text(), fetch_latest_bl(), gemini_stream_generate(), gemini_stream_generate_iter() (+22 more)
 
 ### Community 9 - "get_db_backend"
 Cohesion: 0.03
-Nodes (94): create_clarification_question(), extract_variables(), get_pdf_text(), get_project(), get_project_variables(), get_study(), query_biomedical_entity(), Antigravity SDK custom tool wrappers for VDExtract.  Each function is a thin w (+86 more)
+Nodes (90): create_clarification_question(), extract_variables(), get_pdf_text(), get_project(), get_project_variables(), get_study(), query_biomedical_entity(), Antigravity SDK custom tool wrappers for VDExtract.  Each function is a thin w (+82 more)
 
 ### Community 10 - "validate.py"
-Cohesion: 0.07
-Nodes (36): _blank(), _check_required(), _check_vocab(), _num(), validate.py — config-driven validation.  Generalizes the original hardcoded ch, A field is required when another field in the same row has a specific value., Validate a records structure ({sheet: [row,...]}) against the project.      Re, Read a written workbook into the {sheet: [row_dict,...]} records structure. (+28 more)
+Cohesion: 0.06
+Nodes (39): _blank(), _check_required(), _check_vocab(), _num(), validate.py — config-driven validation.  Generalizes the original hardcoded ch, A field is required when another field in the same row has a specific value., Validate a records structure ({sheet: [row,...]}) against the project.      Re, Read a written workbook into the {sheet: [row_dict,...]} records structure. (+31 more)
 
 ### Community 11 - "clarification.py"
-Cohesion: 0.13
-Nodes (20): _account_prefix(), _apply_chat_persistence_flags(), _build_headers(), _build_payload(), clean_text(), extract_response_text(), _extract_texts_from_line(), generate() (+12 more)
+Cohesion: 0.25
+Nodes (5): _apply_chat_persistence_flags(), _build_payload(), Apply Gemini Web persistence flags to an outgoing request payload., _decode_payload(), PayloadPersistenceTests
 
 ### Community 12 - "routers/screening.py"
-Cohesion: 0.07
-Nodes (32): batch_ai_screen(), _check_and_record_conflict(), generate_project_signals(), Any, Generate or refresh screening signal lists for a project., Batch screen pending studies in a project using signals, pre-filter, and LLM wit, Auto-detect conflicts or sync consensus decisions for a study stage.      Retu, ai_screen_fulltext() (+24 more)
+Cohesion: 0.06
+Nodes (35): ScreeningDecisionResponse, answer_clarification(), Submit an answer to a clarification question, triggering AI resolution., _check_and_record_conflict(), create_screening_decision(), Any, BackgroundTasks, Auto-detect conflicts or sync consensus decisions for a study stage.      Retu (+27 more)
 
 ### Community 13 - "analysis.py"
 Cohesion: 0.14
 Nodes (23): DataFrame, compute_descriptive_stats(), compute_heterogeneity(), compute_sensitivity_analysis(), generate_full_report(), _load_extractions_df(), _load_meta_studies_df(), _parse_numeric() (+15 more)
 
 ### Community 14 - "meta.py"
-Cohesion: 0.10
-Nodes (23): create_meta_analysis(), delete_meta_analysis(), get_forest_plot(), get_funnel_plot(), get_sroc_curve(), list_meta_analyses(), MetaAnalysisCreate, MetaAnalysisStudyUpdate (+15 more)
+Cohesion: 0.08
+Nodes (29): auto_extract(), batch_upload_pdf(), delete_pdf_data(), find_quote_location(), get_citation_format(), get_citations(), get_pdf_summary(), process_pdf() (+21 more)
 
 ### Community 15 - "VDExtract: Code Cleanup + AWS Production Migration Plan"
 Cohesion: 0.04
@@ -405,36 +407,36 @@ Cohesion: 0.08
 Nodes (38): _author_overlap(), deduplicate_studies(), _normalize_authors(), _normalize_doi(), _normalize_pmid(), _normalize_title(), Duplicate detection service for systematic review studies.  Detects duplicate, Normalize a DOI string for comparison. (+30 more)
 
 ### Community 17 - "test_routers_analysis.py"
-Cohesion: 0.07
-Nodes (10): fresh_db(), Tests for routers/analysis.py — data profiling, heterogeneity, sensitivity, and, Helper to insert a meta-analysis and study records into DB., Test happy path when valid project and meta-analysis with >= 2 studies exists., setup_meta_analysis_with_studies(), TestGetAnalysisProfile, TestGetHeterogeneity, TestGetSensitivityEndpoint (+2 more)
+Cohesion: 0.10
+Nodes (7): Tests for routers/analysis.py — data profiling, heterogeneity, sensitivity, and, Helper to insert a meta-analysis and study records into DB., setup_meta_analysis_with_studies(), TestGetAnalysisProfile, TestGetSensitivityEndpoint, TestGetVariableStats, TestReportEndpoints
 
 ### Community 18 - "DeterministicScreener"
 Cohesion: 0.14
-Nodes (10): DeterministicScreener, Rule-based or injected screener for reproducible tests.      Provide ONE of:, test_screening.py — test the two-stage PRISMA screening module.  Tests cover:, All papers included at TA, all have PDFs, all included at FT., Some included, some excluded, some uncertain at TA level., TA-included but no PDF → needs_pdf_upload., TA-include but FT-exclude → exclude_ft., Excluded papers should have reasons tracked. (+2 more)
+Nodes (15): PICOS, PICOS input for a systematic review., DeterministicScreener, Screen a batch of papers through TA + FT stages.      Args:         papers: l, Rule-based or injected screener for reproducible tests.      Provide ONE of:, screen_batch(), test_screening.py — test the two-stage PRISMA screening module.  Tests cover:, All papers included at TA, all have PDFs, all included at FT. (+7 more)
 
 ### Community 19 - "DeterministicSchemaGenerator"
 Cohesion: 0.12
-Nodes (17): _generate_merged_codebook(), generate_project_config(), GeneratedField, LLMSchemaGenerator, PICOS, picos_schema_generator.py — generate topic-specific extraction fields from PICOS, PICOS input for a systematic review., Interface: ``generate_fields(picos) -> list[GeneratedField]``. (+9 more)
+Nodes (15): _generate_merged_codebook(), generate_project_config(), GeneratedField, LLMSchemaGenerator, picos_schema_generator.py — generate topic-specific extraction fields from PICOS, Interface: ``generate_fields(picos) -> list[GeneratedField]``., LLM-driven schema generator.      ``model_fn(prompt, **kwargs) -> dict`` must, Generate a complete LitExtract config folder from PICOS + base template. (+7 more)
 
 ### Community 20 - "OCRBackend"
-Cohesion: 0.08
-Nodes (26): NullOCRBackend, OCRBackend, ocr.py — OCR backend implementations including Baidu Unlimited-OCR and fallbacks, HTTP client connecting to a remote SGLang or vLLM server serving Unlimited-OCR., Abstract interface for OCR backends: ocr(image_input) -> str., Process image file path or raw bytes and return extracted text/markdown., Process a batch of images., No-op OCR backend for unit tests or environments without OCR models. (+18 more)
+Cohesion: 0.09
+Nodes (25): litextract — a generic, config-driven, multi-agent literature data-extraction en, NullOCRBackend, OCRBackend, ocr.py — OCR backend implementations including Baidu Unlimited-OCR and fallbacks, HTTP client connecting to a remote SGLang or vLLM server serving Unlimited-OCR., Abstract interface for OCR backends: ocr(image_input) -> str., Process image file path or raw bytes and return extracted text/markdown., Process a batch of images. (+17 more)
 
 ### Community 21 - "rob_service.py"
 Cohesion: 0.13
 Nodes (10): auto_select_tool(), Auto-select the appropriate RoB tool based on study design., get_judgment_color(), Auto-select the appropriate RoB tool based on study design classification., select_rob_tool(), Tests for rob_tools.py — RoB tool definitions, auto-selection, and judgment algo, Test judgment display helpers., Test auto-selection of RoB tool by study design. (+2 more)
 
 ### Community 22 - "generate_variables_from_picos"
-Cohesion: 0.11
-Nodes (17): _default_extraction_prompt(), _extract_var_list(), _format_variable_dicts(), generate_variables_from_picos(), Any, Variable auto-generation service: generate extraction variables strictly grounde, Extract list of variable definitions from arbitrary dict or list structure., Normalize variable definitions into standard platform format.      Section nam (+9 more)
+Cohesion: 0.07
+Nodes (27): _default_extraction_prompt(), _extract_var_list(), _format_variable_dicts(), _generate_heuristic_variables(), generate_variables_from_picos(), Any, Variable auto-generation service: generate extraction variables strictly grounde, Extract list of variable definitions from arbitrary dict or list structure. (+19 more)
 
 ### Community 23 - "_create_project_and_study"
 Cohesion: 0.08
 Nodes (18): _create_project_and_study(), Tests for services/grade_service.py — GRADE factors, certainty, SoF., Low start, one upgrade → moderate., Upgrading factors should not apply when starting at high., Auto-populate should detect high RoB percentage., Auto-populate should detect low RoB., Auto-populate with no RoB assessments should set none., Helper: create a project, study, and RoB assessment. (+10 more)
 
 ### Community 24 - "test_production_hardening.py"
-Cohesion: 0.08
-Nodes (16): CircuitBreaker, Circuit breaker implementation to prevent cascading failures to LLM/external API, Standard 3-state circuit breaker: closed (normal), open (failing), half-open (te, Check if execution is allowed based on current circuit state., Record a successful execution, resetting failure count., Record a failure, potentially opening the circuit., RateLimiter, In-memory rate limiter to protect endpoints against denial of service and abuse. (+8 more)
+Cohesion: 0.07
+Nodes (18): CircuitBreaker, Circuit breaker implementation to prevent cascading failures to LLM/external API, Standard 3-state circuit breaker: closed (normal), open (failing), half-open (te, Check if execution is allowed based on current circuit state., Record a successful execution, resetting failure count., Record a failure, potentially opening the circuit., RateLimiter, In-memory rate limiter to protect endpoints against denial of service and abuse. (+10 more)
 
 ### Community 25 - "test_routers_rob.py"
 Cohesion: 0.07
@@ -445,8 +447,8 @@ Cohesion: 0.18
 Nodes (30): buildHeaders(), buildPayload(), buildUrl(), checkApiKey(), checkRateLimit(), cleanGeminiText(), estimateTokens(), extractResponseText() (+22 more)
 
 ### Community 27 - "get_connection"
-Cohesion: 0.12
-Nodes (40): get_connection(), Get a SQLite connection with WAL mode, foreign keys, and busy timeout enabled., AIScreeningPipeline, Runs multi-stage AI screening: title -> abstract -> full-text., MockLLMClient, Tests for Multi-Stage AI Screening Pipeline (Part 11 of Redesign Plan).  Cover, Ensure screening_progress.finish is called even when run_title_screening raises, Ensure check_project_access exception halts execution before screening runs. (+32 more)
+Cohesion: 0.19
+Nodes (30): get_connection(), Get a SQLite connection with WAL mode, foreign keys, and busy timeout enabled., AIScreeningPipeline, Runs multi-stage AI screening: title -> abstract -> full-text., MockLLMClient, Tests for Multi-Stage AI Screening Pipeline (Part 11 of Redesign Plan).  Cover, Mock LLM client returning predictable decisions for pipeline testing., Test GET /api/projects/{project_id}/ai-screening/status returning AIScreeningSum (+22 more)
 
 ### Community 28 - "mice_impute"
 Cohesion: 0.19
@@ -469,8 +471,8 @@ Cohesion: 0.11
 Nodes (22): buildInspection(), chooseGeminiTab(), cookieKey(), CORE_REQUIRED, EXPORT_ORDER, exportButton, getActiveGeminiAccount(), inspectButton (+14 more)
 
 ### Community 33 - "test_routers_auth.py"
-Cohesion: 0.17
-Nodes (4): Tests for routers/auth.py — Authentication API endpoints., TestLogout, TestMe, TestRefreshToken
+Cohesion: 0.08
+Nodes (7): Tests for routers/auth.py — Authentication API endpoints., TestLogin, TestLogout, TestMe, TestRefreshToken, TestRegister, TestSessions
 
 ### Community 34 - "test_pico_highlight.py"
 Cohesion: 0.10
@@ -478,7 +480,7 @@ Nodes (25): extract_pico_spans_from_abstract(), Extract PICO spans from a study 
 
 ### Community 35 - "test_routers_grade.py"
 Cohesion: 0.08
-Nodes (11): fresh_db(), project_with_study(), Tests for routers/grade.py — GRADE API endpoints., Create a project with an included RCT study and a RoB assessment., TestAutoPopulate, TestComputeCertainty, TestExport, TestFactorUpdate (+3 more)
+Nodes (10): project_with_study(), Tests for routers/grade.py — GRADE API endpoints., Create a project with an included RCT study and a RoB assessment., TestAutoPopulate, TestComputeCertainty, TestExport, TestFactorUpdate, TestGradeCRUD (+2 more)
 
 ### Community 36 - "pico_extractor.py"
 Cohesion: 0.19
@@ -513,8 +515,8 @@ Cohesion: 0.10
 Nodes (25): _cache_key(), call_r_script(), call_r_script_bytes(), generate_forest_plot(), generate_funnel_plot(), generate_prisma_flow(), generate_sroc_curve(), _is_r_available() (+17 more)
 
 ### Community 44 - "test_screening_decisions.py"
-Cohesion: 0.16
-Nodes (20): _create_project_and_studies(), _make_decision(), Tests for blinded multi-reviewer screening (v2.4 feature 2)., When two reviewers agree, no conflict should be created., PUT /screening-conflicts/{id}/resolve should resolve a conflict., GET/PUT /projects/{id}/screening-config should work., When blind mode is on, decisions should be marked as blinded., Helper to create a screening decision with correct field names. (+12 more)
+Cohesion: 0.15
+Nodes (21): _create_project_and_studies(), fresh_db(), _make_decision(), Tests for blinded multi-reviewer screening (v2.4 feature 2)., When two reviewers agree, no conflict should be created., PUT /screening-conflicts/{id}/resolve should resolve a conflict., GET/PUT /projects/{id}/screening-config should work., When blind mode is on, decisions should be marked as blinded. (+13 more)
 
 ### Community 45 - "compilerOptions"
 Cohesion: 0.10
@@ -541,28 +543,32 @@ Cohesion: 0.04
 Nodes (27): project(), Tests for PICO and Hypothesis endpoints in routers/projects.py., New project should have empty hypothesis., Updating hypothesis should persist., Secondary hypotheses should persist and be retrievable., Hypothesis should persist after update., Non-existent project should return 404., Auto-generate should create variables from PICO. (+19 more)
 
 ### Community 51 - "App.tsx"
-Cohesion: 0.08
-Nodes (18): api, Criterion, SecondaryHypothesis, ExportPage(), MetaAnalysisPage(), MetaResult, StudyData, DATABASES (+10 more)
+Cohesion: 0.07
+Nodes (18): api, GradeAssessment, GradeFactor, ExportPage(), CERTAINTY_BG, GradePage(), MetaAnalysisPage(), MetaResult (+10 more)
 
 ### Community 52 - "TestToolDefinitions"
 Cohesion: 0.18
 Nodes (3): Test that tool definitions are structurally correct., ROBINS-I and RoB 2 should have conditional signaling questions., TestToolDefinitions
 
 ### Community 53 - "test_end_to_end.py"
-Cohesion: 0.08
-Nodes (24): controlled_vocab(), load_codebook(), codebook.py — generic codebook loader.  The codebook workbook (a sheet, by def, Parse an 'Allowed/Standardized Entries' cell into a token list.      Controlle, Return (codebook, sheet_order, controlled_vocab).      codebook:         {(she, Extract {(sheet, name): [allowed,...]} for closed-vocabulary fields only., Assert live sheet headers (row 1) match the Codebook order.      Returns (ok:, split_allowed() (+16 more)
+Cohesion: 0.09
+Nodes (21): controlled_vocab(), load_codebook(), codebook.py — generic codebook loader.  The codebook workbook (a sheet, by def, Parse an 'Allowed/Standardized Entries' cell into a token list.      Controlle, Return (codebook, sheet_order, controlled_vocab).      codebook:         {(she, Extract {(sheet, name): [allowed,...]} for closed-vocabulary fields only., Assert live sheet headers (row 1) match the Codebook order.      Returns (ok:, split_allowed() (+13 more)
 
 ### Community 54 - "biomni.py"
 Cohesion: 0.11
 Nodes (31): AdmetRequest, BatchEntityRequest, cross_reference_batch(), cross_reference_entity(), CslCitationRequest, EntityRequest, generate_zotero_csl_field(), get_admet_prediction() (+23 more)
 
 ### Community 55 - "SQLiteBackend"
-Cohesion: 0.14
-Nodes (7): Any, Connection, Execute raw SQL (SQLite only). Raises NotImplementedError for DynamoDB., SQLite backend — wraps sqlite3.Connection with high-level methods., Pass-through to sqlite3.Connection.execute for backward compatibility., Pass-through for schema scripts., SQLiteBackend
+Cohesion: 0.13
+Nodes (8): Any, Connection, Execute raw SQL (SQLite only). Raises NotImplementedError for DynamoDB., SQLite backend — wraps sqlite3.Connection with high-level methods., Pass-through to sqlite3.Connection.execute for backward compatibility., Pass-through for schema scripts., SQLiteBackend, TestDBBackend
 
 ### Community 57 - "test_new_features.py"
 Cohesion: 0.10
 Nodes (6): project(), Tests for new features: expanded reference parsers, keyword groups, reference ex, Create a project and return its ID., TestKeywordGroupsAPI, TestReferenceExportAPI, TestResearchQuestionAPI
+
+### Community 58 - "test_routers_meta.py"
+Cohesion: 0.10
+Nodes (5): fresh_db(), Tests for routers/meta.py — meta-analysis API endpoints., TestMetaAnalysisCRUD, TestPlotEndpoints, TestRunAnalysis
 
 ### Community 59 - "generate_search_strings"
 Cohesion: 0.09
@@ -573,24 +579,24 @@ Cohesion: 0.05
 Nodes (43): dependencies, clsx, date-fns, lucide-react, pdfjs-dist, react, react-dom, react-is (+35 more)
 
 ### Community 61 - "pdf_highlights.py"
-Cohesion: 0.19
-Nodes (12): create_highlight(), delete_highlight(), HighlightCreate, HighlightUpdate, list_study_highlights(), BaseModel, PDF Highlights API router.  Endpoints:   GET    /api/studies/{study_id}/pdf-h, Update a PDF highlight. (+4 more)
+Cohesion: 0.10
+Nodes (23): create_meta_analysis(), delete_meta_analysis(), get_forest_plot(), get_funnel_plot(), get_sroc_curve(), list_meta_analyses(), MetaAnalysisCreate, MetaAnalysisStudyUpdate (+15 more)
 
 ### Community 62 - "devDependencies"
 Cohesion: 0.09
 Nodes (24): auto_populate_grade(), compute_grade_certainty(), create_grade(), delete_grade(), export_grade(), get_grade(), get_sof_table(), get_starting_level() (+16 more)
 
 ### Community 63 - "detect_page_layout"
-Cohesion: 0.12
-Nodes (29): parse_document(), _parse_pdf(), parse_pdf_pipeline(), parse_text(), _parse_textfile(), document.py — generic document parsing + search.  Parses a source document (PD, Build the normalized structure directly from an in-memory string.      Pages m, Full multi-channel PDF parsing pipeline:          Layout Detection -> (Text: N (+21 more)
+Cohesion: 0.13
+Nodes (21): parse_pdf_pipeline(), Full multi-channel PDF parsing pipeline:          Layout Detection -> (Text: N, _classify_layout_type(), detect_page_layout(), _is_overlapping(), _is_overlapping_any(), LayoutRegion, PageLayout (+13 more)
 
 ### Community 64 - "zotero.lua"
 Cohesion: 0.09
 Nodes (17): Cite_replace(), clean_csl(), Div(), Doc(), load_items(), Meta(), module.get(), newfileparser() (+9 more)
 
 ### Community 65 - "rob.py"
-Cohesion: 0.06
-Nodes (46): Full assessment with all domain judgments and signaling answers., Request AI pre-fill for an assessment., Result of AI pre-fill operation., Summary of RoB assessments across a project for traffic-light chart., RobAIPrefillRequest, RobAIPrefillResult, RobAssessmentCreate, RobAssessmentDetail (+38 more)
+Cohesion: 0.07
+Nodes (31): coded_extract(), Run coded extraction for one study.      For every variable: builds its extrac, accept_ai_suggestions(), adjudicate_assessment(), ai_prefill(), auto_create_assessment(), create_assessment(), delete_assessment() (+23 more)
 
 ### Community 66 - "test_rob_tools.py"
 Cohesion: 0.15
@@ -605,20 +611,20 @@ Cohesion: 0.06
 Nodes (60): _apply_baseline_borders(), _apply_grouped_borders(), build_docx(), _clean_value(), consolidate_nicotine(), derive_cohort_names(), detect_table_type(), _main() (+52 more)
 
 ### Community 69 - "__main__.py"
-Cohesion: 0.25
-Nodes (8): find_config(), load_config(), Configuration management., Load config from JSON file., Search for config file in standard locations., gemini-web2api: Gemini Web to OpenAI API proxy., main(), Entry point: python -m gemini_web2api
+Cohesion: 0.15
+Nodes (12): find_config(), load_config(), Configuration management., Load config from JSON file., Search for config file in standard locations., gemini-web2api: Gemini Web to OpenAI API proxy., main(), Entry point: python -m gemini_web2api (+4 more)
 
 ### Community 70 - "init_db"
 Cohesion: 0.08
-Nodes (41): init_db(), Create all tables if they don't exist and run column migrations.      For SQLi, Drop all tables and recreate. FOR TESTING ONLY., reset_db(), Run the full seed sequence., seed(), Seed script: Pure Arterial Malformations of the Brain (PAM) Systematic Review., seed_pam() (+33 more)
+Nodes (40): init_db(), Create all tables if they don't exist and run column migrations.      For SQLi, Drop all tables and recreate. FOR TESTING ONLY., reset_db(), Run the full seed sequence., seed(), fresh_db(), fresh_db() (+32 more)
 
 ### Community 71 - "clarification_generator.py"
 Cohesion: 0.50
 Nodes (3): _jev_args(), Any, Clarification question generator service for mid-pipeline interactive clarificat
 
 ### Community 72 - "test_screening_gaps.py"
-Cohesion: 0.14
-Nodes (9): apply_overrides(), Any, Safety net service: Post-LLM hard-override safety net rules., Apply PICO hard-override safety net rules to an LLM screening result based on pr, db_conn(), Unit and integration tests for Screening Quality Gaps (Part A).  Tests: 1. Si, TestDualReviewerAndConflicts, TestSafetyNet (+1 more)
+Cohesion: 0.23
+Nodes (7): _count_matches(), prefilter_study(), Any, Signal-based pre-filter service: Quick triage and confidence ceilings for studie, Check a study title/abstract against topic signal lists for triage and confidenc, Count how many signal terms match in the text using word-boundary regex., TestSignalPrefilter
 
 ### Community 73 - "DynamoDBBackend"
 Cohesion: 0.17
@@ -629,8 +635,8 @@ Cohesion: 0.11
 Nodes (19): get_full_rob_assessment(), get_project_extractions(), get_project_rob_assessments(), get_project_studies(), get_project_variables(), get_study_extractions(), get_study_extractions_with_variable_names(), get_study_rob_assessment() (+11 more)
 
 ### Community 75 - "MockProcessor"
-Cohesion: 0.14
-Nodes (14): _autorotate_pdf(), _get_page_rotation(), Heuristic to find if page text is mostly rotated., Reads PDF, auto-rotates pages if necessary, returns (path_to_use, is_temp_file)., process_batch(), process_pdf(), ProcessedDocument, document_processor.py — Docling wrapper for PDF → structured JSON with bounding (+6 more)
+Cohesion: 0.15
+Nodes (9): MockProcessor, Deterministic processor for tests — builds ProcessedDocument from text.      N, Save a ProcessedDocument to JSON. Stages in /workspace for S3 safety., save_processed_document(), Save to a regular (non-S3) path should work directly., Pages with very little text should be triaged as SCANNED., Mix of text and empty pages should be PARTIAL., TestMockProcessor (+1 more)
 
 ### Community 76 - "search_string_generator.py"
 Cohesion: 0.18
@@ -641,8 +647,8 @@ Cohesion: 0.11
 Nodes (17): compilerOptions, allowImportingTsExtensions, isolatedModules, lib, module, moduleDetection, moduleResolution, noEmit (+9 more)
 
 ### Community 78 - "server.py"
-Cohesion: 0.17
-Nodes (19): _get_ssl_ctx(), load_cookie(), log(), make_sapisidhash(), Load cookie from file with mtime-based caching., Model definitions and mapping from Gemini frontend JS source., _cached_page_tokens(), detect_image_mime() (+11 more)
+Cohesion: 0.13
+Nodes (31): _account_prefix(), _build_headers(), clean_text(), extract_response_text(), _extract_texts_from_line(), generate(), generate_stream(), _get_httpx_client() (+23 more)
 
 ### Community 79 - "GeminiHandler"
 Cohesion: 0.22
@@ -661,8 +667,8 @@ Cohesion: 0.12
 Nodes (10): generate_citation(), Generate a single citation in the specified format.      Args:         study_, Tests for services/citation_service.py — citation generation in 6 formats., More than 6 authors should produce 'et al'., TestAPA, TestBibTeX, TestChicago, TestHarvard (+2 more)
 
 ### Community 83 - "rob_ai.py"
-Cohesion: 0.21
-Nodes (10): _avg_confidence(), mock_model_fn(), _mock_support(), prefill_assessment(), AI-assisted risk-of-bias pre-fill.  Uses the existing model_fn(prompt, **kwarg, Compute average confidence across answers., Run AI pre-fill for all domains of a RoB assessment.      Args:         tool_, Deterministic mock model_fn for testing.      Analyzes the prompt text to prod (+2 more)
+Cohesion: 0.27
+Nodes (9): _get_pending_studies(), _get_training_data(), prioritize_studies(), AI screening prioritization service.  Trains a TF-IDF + LogisticRegression cla, Submit a reviewer correction for a misprioritized study and re-prioritize pendin, Get training data from screening_decisions and studies table.      Returns (te, Get pending studies that haven't been screened yet., Train a classifier on existing decisions and prioritize pending studies. (+1 more)
 
 ### Community 84 - ".call_with_tool_async"
 Cohesion: 0.19
@@ -670,7 +676,7 @@ Nodes (8): Any, Call the LLM with a specific tool schema, validating output agai
 
 ### Community 85 - "test_pico_hypothesis.py"
 Cohesion: 0.15
-Nodes (18): get_analysis_profile(), get_forest_data(), get_funnel_data(), get_heterogeneity(), get_sensitivity(), get_variable_stats(), list_outcomes(), Connection (+10 more)
+Nodes (18): download_full_report(), get_analysis_profile(), get_forest_data(), get_funnel_data(), get_heterogeneity(), get_sensitivity(), list_outcomes(), Connection (+10 more)
 
 ### Community 86 - "aws-deploy.py"
 Cohesion: 0.12
@@ -681,8 +687,8 @@ Cohesion: 0.09
 Nodes (9): DeterministicSchemaGenerator, Returns injected fields, for reproducible tests.      Provide ONE of:       *, test_picos_schema.py — test the PICOS → Schema Generator.  Tests:   - Determi, Generate a project config once for all tests in this class., The generated config must load with LitExtract's load_project., The generated config should validate records without errors., Clean up generated config after tests., TestDeterministicSchemaGenerator (+1 more)
 
 ### Community 88 - "antigravity_tools.py"
-Cohesion: 0.15
-Nodes (16): _clean_json_response(), extract_variables_with_aide_engine(), _jev_args_abstract(), _jev_args_fulltext(), _jev_args_title(), _normalize_extracted_item(), Any, AIDE-Web Enhanced LLM Extraction Service for RadExtract. Incorporates: 1. Fiel (+8 more)
+Cohesion: 0.16
+Nodes (17): Screen a study by title only against PICO criteria.      Uses the project's PI, Screen a study by title and abstract against PICO criteria.      Uses the proj, screen_title(), screen_title_abstract(), _clean_json_response(), _jev_args_abstract(), _jev_args_fulltext(), _jev_args_title() (+9 more)
 
 ### Community 89 - "parse_bibtex"
 Cohesion: 0.12
@@ -693,16 +699,12 @@ Cohesion: 0.11
 Nodes (10): _create_project_and_study(), Tests for rob_service.py — CRUD, judgment computation, summary, export., Helper: create a project and study, return (project_id, study_id)., TestAIPrefill, TestAutoSelectAndCreate, TestCreateAssessment, TestDeleteAssessment, TestProjectSummary (+2 more)
 
 ### Community 91 - "RobAssessmentPage.tsx"
-Cohesion: 0.16
-Nodes (20): AppLayout(), NavItem(), navItems, projectNavItems(), SettingsPanelProps, RobDomainJudgment, RobSignalingAnswer, RobSummary (+12 more)
-
-### Community 92 - "StreamingEndpointTests"
-Cohesion: 0.12
-Nodes (6): ThreadedServer, _decode_sse(), MessageParsingTests, StreamingEndpointTests, HTTPServer, ThreadingMixIn
+Cohesion: 0.25
+Nodes (15): RobDomainJudgment, RobSignalingAnswer, RobSummary, cn(), judgmentColor(), judgmentDotColor(), judgmentLabel(), DomainJudgmentSelect() (+7 more)
 
 ### Community 93 - "GeminiHandler"
 Cohesion: 0.16
-Nodes (10): GeminiHandler, google_contents_to_prompt(), parse_tool_calls(), BaseHTTPRequestHandler, Convert Google API contents to (prompt_str, images_list)., Extract tool_call blocks. Returns (clean_text, tool_calls_list)., OpenAI Responses API for Codex CLI compatibility., Extract model name from /v1beta/models/{model}:method path. (+2 more)
+Nodes (10): GeminiHandler, google_contents_to_prompt(), BaseHTTPRequestHandler, Upload parsed OpenAI image parts and return Gemini file references., Convert Google API contents to (prompt_str, images_list)., OpenAI Responses API for Codex CLI compatibility., Extract model name from /v1beta/models/{model}:method path., GET /v1beta/models — Google AI format model list. (+2 more)
 
 ### Community 94 - "parse_json_from_text"
 Cohesion: 0.18
@@ -737,8 +739,8 @@ Cohesion: 0.07
 Nodes (17): Tests for services/r_plot_service.py — R plot generation with matplotlib fallbac, Funnel plot without Egger result should still work., R availability check should return boolean., PRISMA flow diagram should produce valid SVG., Non-existent script should return None., R scripts directory should exist., All 4 R scripts should exist., Forest plot should produce valid SVG. (+9 more)
 
 ### Community 102 - "test_screening_fixes.py"
-Cohesion: 0.18
-Nodes (13): fresh_db(), Tests for Screening Fixes & Single Reviewer Status Updates (Part 11 of Plan)., Maybe / uncertain decision updates status appropriately., Screening summary returns all new fields: uncertain, awaiting_clarification, awa, Include decision by a single reviewer immediately updates studies.screening_stat, Exclude decision by a single reviewer immediately updates studies.screening_stat, Screening decision creates an auditable row in screening_decisions table., _setup_project_and_study() (+5 more)
+Cohesion: 0.20
+Nodes (12): Tests for Screening Fixes & Single Reviewer Status Updates (Part 11 of Plan)., Maybe / uncertain decision updates status appropriately., Screening summary returns all new fields: uncertain, awaiting_clarification, awa, Include decision by a single reviewer immediately updates studies.screening_stat, Exclude decision by a single reviewer immediately updates studies.screening_stat, Screening decision creates an auditable row in screening_decisions table., _setup_project_and_study(), test_decision_recorded_in_screening_decisions() (+4 more)
 
 ### Community 103 - "manifest.json"
 Cohesion: 0.20
@@ -746,27 +748,23 @@ Nodes (9): action, default_popup, default_title, description, host_permissions, 
 
 ### Community 104 - "TestAutoGenerateVariables"
 Cohesion: 0.16
-Nodes (12): AgentAdjudicator, DeterministicAdjudicator, _missing(), adjudicate.py — the third-agent "referee".  Invoked ONLY on cells the reconcil, Source-grounded referee: pick the candidate present in the document., LLM/agent referee. ``model_fn(field, a, b, snippets, project) -> dict``., find_in_document(), in_document() (+4 more)
+Nodes (7): get_storage(), LocalStorage, Path, Get the configured storage backend.      Args:         bucket_type: "upload", Local filesystem storage — the current default behavior., TestStorageBackend, TestExport
 
 ### Community 105 - "extract_pico_from_question"
 Cohesion: 0.17
 Nodes (10): extract_pico_from_question(), Extract PICO elements from a plain-language research question using LLM., Simple rule-based PICO extraction from a research question.      This is a fal, _simple_pico_extraction(), Simple extraction should find population from 'in patients with X'., Simple extraction should find index test and comparator from 'X better than Y'., Simple extraction should find outcome from 'detecting X'., Full extraction should return both pico and strings. (+2 more)
 
 ### Community 106 - "LocalStorage"
-Cohesion: 0.11
-Nodes (12): init_s3_buckets(), ABC, Storage abstraction layer: local filesystem ↔ S3.  Provides a unified interfac, Create S3 buckets if they don't exist (called on startup when using S3)., Abstract storage interface., Save bytes under key. Returns the key (or path)., Read bytes for key. Returns None if not found., Return a local filesystem path for the file.          For LocalStorage this is (+4 more)
+Cohesion: 0.07
+Nodes (16): ABC, Storage abstraction layer: local filesystem ↔ S3.  Provides a unified interfac, S3-compatible storage (works with AWS S3 or Floci on localhost:4566)., Download S3 object to a temp file and return the local path., Abstract storage interface., Save bytes under key. Returns the key (or path)., Read bytes for key. Returns None if not found., Return a local filesystem path for the file.          For LocalStorage this is (+8 more)
 
 ### Community 107 - "patch"
 Cohesion: 0.04
 Nodes (15): mock_db(), Unit tests for Antigravity SDK tool wrappers.  Each test mocks the underlying, Create a mock DBBackend., TestCreateClarificationQuestion, TestExtractVariables, TestGetPdfText, TestGetProject, TestGetProjectVariables (+7 more)
 
-### Community 108 - "TestPdfService"
-Cohesion: 0.16
-Nodes (10): FallbackProcessor, get_processor(), Any, Fallback PDF processor using LitExtract's existing pdfplumber-based parser., Return the best available processor.      Prefers Docling when installed; fall, FallbackProcessor should handle .txt files via parse_document., Batch should not fail entirely if one file is bad., process_pdf should work with text files via fallback. (+2 more)
-
 ### Community 109 - "test_coded_extraction.py"
-Cohesion: 0.17
-Nodes (7): MockProcessor, Deterministic processor for tests — builds ProcessedDocument from text.      N, Save to a regular (non-S3) path should work directly., Pages with very little text should be triaged as SCANNED., Mix of text and empty pages should be PARTIAL., TestMockProcessor, TestProcessedDocumentSerialization
+Cohesion: 0.16
+Nodes (10): FallbackProcessor, FigureAnnotation, Fallback PDF processor using LitExtract's existing pdfplumber-based parser., A figure/image with its location., test_document_processor.py — tests for the Docling wrapper.  Tests cover:   -, FallbackProcessor should handle .txt files via parse_document., Batch should not fail entirely if one file is bad., TestFacade (+2 more)
 
 ### Community 110 - "study_to_ris"
 Cohesion: 0.20
@@ -785,20 +783,20 @@ Cohesion: 0.21
 Nodes (8): _escape_bibtex(), export_bibtex(), _make_bibtex_key(), Reference export service: export studies to reference manager formats.  Genera, Export studies as BibTeX format string.      Args:         studies: List of s, Escape special characters for BibTeX., Generate a BibTeX citation key from title and year., TestExportBibtex
 
 ### Community 114 - "test_ai_screening.py"
-Cohesion: 0.27
-Nodes (11): _add_decision(), _create_project(), _create_study(), fresh_db(), Tests for AI screening prioritization (v2.4 feature 4)., After prioritization, ai_priority_score should be stored in DB., Should return model_trained=False when fewer than 10 include + 10 exclude., With enough decisions, should return priority scores for unlabeled studies. (+3 more)
+Cohesion: 0.30
+Nodes (10): _add_decision(), _create_project(), _create_study(), Tests for AI screening prioritization (v2.4 feature 4)., After prioritization, ai_priority_score should be stored in DB., Should return model_trained=False when fewer than 10 include + 10 exclude., With enough decisions, should return priority scores for unlabeled studies., test_ai_prioritization_insufficient_data() (+2 more)
 
 ### Community 115 - "run_end_to_end_test.py"
-Cohesion: 0.21
-Nodes (9): execute_test_run(), parse_protocol_docx(), Path, End-to-End Execution Script for RadExtract on TEST Dataset.  Executes: 1. Pro, Main orchestrator for end-to-end execution., Parse protocol docx for metadata, PICO, criteria, and variable schema., Runs AI full-text screening against PICO eligibility criteria.      Returns a, screen_fulltext_with_llm() (+1 more)
+Cohesion: 0.17
+Nodes (11): execute_test_run(), parse_protocol_docx(), Path, End-to-End Execution Script for RadExtract on TEST Dataset.  Executes: 1. Pro, Main orchestrator for end-to-end execution., Parse protocol docx for metadata, PICO, criteria, and variable schema., Screen a study by full text against PICO eligibility criteria.      Requires t, screen_fulltext() (+3 more)
 
 ### Community 116 - "database.py"
 Cohesion: 0.20
 Nodes (7): init_dynamodb(), Initialize AWS resources against LocalStack (no Docker)., migrate_sqlite_to_dynamodb(), Data Migration Tool: Migrate SQLite database to DynamoDB (Floci or AWS)., Read all records from SQLite and insert into DynamoDB., init_dynamodb_tables(), Create DynamoDB tables if they don't exist (called on startup when using DynamoD
 
 ### Community 117 - "get_client"
-Cohesion: 0.18
-Nodes (12): Any, Screen pending/uncertain studies with abstract., Load PICO criteria and exclusion reason labels for a project., Screen ta_included studies by full text., Build summary of screening status and counts for project., Run all screening stages sequentially. Returns summary dict., Screen all pending studies in project by title only., Any (+4 more)
+Cohesion: 0.23
+Nodes (9): Any, Screen pending/uncertain studies with abstract., Load PICO criteria and exclusion reason labels for a project., Screen ta_included studies by full text., Build summary of screening status and counts for project., Run all screening stages sequentially. Returns summary dict., Screen all pending studies in project by title only., get_client() (+1 more)
 
 ### Community 118 - "parse_ris"
 Cohesion: 0.17
@@ -813,8 +811,8 @@ Cohesion: 0.24
 Nodes (15): hr_text(), p1(), ph_rejected(), ptext(), Generate the draft_text skeleton from the study IR.  Design principle: every sen, Prose p-value with 'p=' prefix handled by caller conventions., (7.2% vs 9.7%), 2 years (12.5% vs 17.3%), …' fragments., scaffold_abstract() (+7 more)
 
 ### Community 121 - "DoclingProcessor"
-Cohesion: 0.18
-Nodes (7): Normalize a Docling BoundingBox to [0,1] coordinates relative to page size., Test bbox normalization with TOPLEFT origin., Test bbox normalization with BOTTOMLEFT origin (Y flip)., Should return None when page_size is None., Coordinates should be clamped to [0, 1]., Test conversion of Docling TableData to row format., TestDoclingProcessor
+Cohesion: 0.11
+Nodes (12): DoclingProcessor, Wraps IBM Docling's DocumentConverter for PDF → structured JSON.      Lazy-ini, Convert a single PDF to a ProcessedDocument.          Raises RuntimeError if D, Convert a DoclingDocument into parsed dict + annotation lists.          Doclin, Normalize a Docling BoundingBox to [0,1] coordinates relative to page size., Convert Docling TableData to a list-of-lists row format., Test bbox normalization with TOPLEFT origin., Test bbox normalization with BOTTOMLEFT origin (Y flip). (+4 more)
 
 ### Community 122 - "get"
 Cohesion: 0.13
@@ -849,8 +847,8 @@ Cohesion: 0.08
 Nodes (25): A1. Signal Generation Service (Hybrid: MeSH + LLM), A2. Signal-Based Pre-Filter, A3. PICO Hard-Override Safety Net, A4. AI-Reviewer Integration (Human + LLM), A5. Screening Summary Enhancement, Assumptions, B1. Confidence Taxonomy, B2. Exhaustive Search Strategy (7-Step + Recheck) (+17 more)
 
 ### Community 130 - "tool_calling_client.py"
-Cohesion: 0.12
-Nodes (11): assess_study_risk_of_bias(), _fallback_heuristic_assessment(), Any, RCT-Reviewer & Cochrane RoB 2.0 Integration Engine for RadExtract. Incorporates, Fast rule-based Cochrane domain assessment matching RCT-Reviewer classifier weig, Runs automated Cochrane RoB 2.0 / ROBINS-I assessment inspired by RCT-Reviewer., Provider-agnostic Tool Calling Client with automatic schema validation and fallb, Integration tests for all AI services, endpoints, and background pipeline. (+3 more)
+Cohesion: 0.28
+Nodes (8): auto_assess_study_rob(), Auto-assess Risk of Bias for a study using RCT-Reviewer Cochrane domain engine., assess_study_risk_of_bias(), _fallback_heuristic_assessment(), Any, RCT-Reviewer & Cochrane RoB 2.0 Integration Engine for RadExtract. Incorporates, Fast rule-based Cochrane domain assessment matching RCT-Reviewer classifier weig, Runs automated Cochrane RoB 2.0 / ROBINS-I assessment inspired by RCT-Reviewer.
 
 ### Community 131 - "parse_pubmed_xml"
 Cohesion: 0.36
@@ -868,17 +866,13 @@ Nodes (6): _extract_key_phrases(), Extract key phrases from a PICO field text.  
 Cohesion: 0.04
 Nodes (22): Tests for services/meta_analysis.py — bivariate model, generic pooling, plots., Bivariate model with 5 studies should produce valid pooled estimates., Zero cells should get continuity correction., Tests for Egger's regression test., Tests that SVG plots are generated correctly., Tests for run_meta_analysis end-to-end., Pooled sensitivity should be within the range of study sensitivities., Should raise ValueError with < 2 studies. (+14 more)
 
-### Community 135 - "coded_extraction_service.py"
-Cohesion: 0.16
-Nodes (10): _generate_heuristic_variables(), Extract meaningful lowercase tokens from text for heuristic naming., PICO-token-derived fallback variables (no domain hardcoding).      Section and, _tokenize(), Heuristic fallback (no LLM) — PICO-token-derived, domain-neutral., study_design, sample_size, and an outcome variable are always generated., Sections come from the standard dynamic set, not the old fixed 3., A back-pain RCT must not get neurovascular/imaging variables. (+2 more)
-
 ### Community 136 - "ScreeningDecision"
-Cohesion: 0.30
-Nodes (5): advance_status(), Result of screening one paper at one stage., Compute the final screening status from TA + FT decisions., ScreeningDecision, TestAdvanceStatus
+Cohesion: 0.16
+Nodes (15): _autorotate_pdf(), _get_page_rotation(), in_document(), _norm(), parse_document(), _parse_pdf(), parse_text(), _parse_textfile() (+7 more)
 
 ### Community 137 - "GradePage.tsx"
-Cohesion: 0.20
-Nodes (4): GradeAssessment, GradeFactor, CERTAINTY_BG, GradePage()
+Cohesion: 0.21
+Nodes (10): _avg_confidence(), mock_model_fn(), _mock_support(), prefill_assessment(), AI-assisted risk-of-bias pre-fill.  Uses the existing model_fn(prompt, **kwarg, Compute average confidence across answers., Run AI pre-fill for all domains of a RoB assessment.      Args:         tool_, Deterministic mock model_fn for testing.      Analyzes the prompt text to prod (+2 more)
 
 ### Community 138 - "dev-start.py"
 Cohesion: 0.20
@@ -893,20 +887,20 @@ Cohesion: 0.24
 Nodes (13): check_isolation(), check_max_asd(), check_structure(), check_text_table_consistency(), _flatten_draft(), _fmt_rate_1dp(), _known_rates(), Mandatory pre-delivery QC for the mentor-style package (style-spec §9).  Checks: (+5 more)
 
 ### Community 141 - "create_app"
-Cohesion: 0.11
-Nodes (10): create_app(), Create and configure the FastAPI application., client(), client(), Tests for Plan 2: Review Matrix Bug Fix and Publication-Ready Plots., Test GET /api/projects/{id}/review/matrix executes cleanly without SQL errors., Test GET /api/projects/{id}/review/progress executes cleanly without SQL errors., sample_project() (+2 more)
+Cohesion: 0.14
+Nodes (6): Tests for Plan 2: Review Matrix Bug Fix and Publication-Ready Plots., Test GET /api/projects/{id}/review/matrix executes cleanly without SQL errors., Test GET /api/projects/{id}/review/progress executes cleanly without SQL errors., sample_project(), TestPublicationPlots, TestReviewMatrixBugFix
 
 ### Community 142 - "ScreeningPage.tsx"
-Cohesion: 0.15
-Nodes (12): AbstractHighlights, AIScreeningProgress, AIScreeningSummary, BatchUploadResult, ClarificationAnswerResponse, ClarificationOption, ClarificationQuestion, HighlightSpan (+4 more)
+Cohesion: 0.17
+Nodes (12): _find_keyword_in_text(), _match_variable_to_keywords(), Automated data extraction service: extracts variable values from PDF text using, Map variable name to extraction keyword patterns., auto_extract_with_docling(), _extract_from_table_data(), _extract_numeric_from_text(), _get_pattern_key() (+4 more)
 
 ### Community 143 - "Replication Log — NWU Progression Manuscript (Radiology)"
 Cohesion: 0.17
 Nodes (11): Bootstrap discrimination (module 03), Cohort reconstruction (module 00), Decision curve (module 08), Deliverables, Excess progression definition (module 01), Known deviations (all documented, none silently tuned), Mortality models (module 05; 20 MICE datasets, Rubin's rules), Replication Log — NWU Progression Manuscript (Radiology) (+3 more)
 
 ### Community 144 - "get_prisma_flow_data"
-Cohesion: 0.05
-Nodes (45): ScreeningConflictResponse, deduplicate_studies(), get_study_screening_decisions(), list_screening(), list_screening_conflicts(), list_screening_decisions(), list_screening_keywords(), prioritize_screening() (+37 more)
+Cohesion: 0.40
+Nodes (5): _add_table(), PRISMA 2020 flow diagram export service.  Single source of truth for PRISMA fl, Add a headed, editable 2-column table to the document., Build an editable Word document for the PRISMA 2020 flow.      Contains the di, render_prisma_docx()
 
 ### Community 145 - "parse_authors"
 Cohesion: 0.29
@@ -977,8 +971,8 @@ Cohesion: 0.39
 Nodes (3): export_endnote_xml(), Export studies as EndNote XML format string.      Args:         studies: List, TestExportEndNoteXML
 
 ### Community 162 - "Record"
-Cohesion: 0.11
-Nodes (19): AgentBackend, LLM/agent-driven extractor.      ``model_fn(prompt, *, parsed, project, agent_, Record, compare_values(), _index(), _is_missing(), _iter_cells(), _key_for() (+11 more)
+Cohesion: 0.10
+Nodes (24): _as_dict(), audit.py — persist the four per-run transparency sidecars.  For each document/, Write the four sidecars for one document into ``out_dir/<doc_id>/``., write_audit(), AgentBackend, Extractor, extract.py — extractor interface + backends.  A *Record* is the generalized ve, Interface: ``extract(parsed, project, *, agent_id) -> Record``. (+16 more)
 
 ### Community 163 - "test_prisma_export.py"
 Cohesion: 0.13
@@ -989,8 +983,8 @@ Cohesion: 0.18
 Nodes (10): 1. Reference verification (all 21 refs), 2. AMA/Radiology format check report, 3. BibTeX export, 4. Zotero local API step, Assumptions, Deliverables, Plan: Reference Validation, BibTeX Export, and Zotero Linking — NWU Progression Manuscript, Steps (+2 more)
 
 ### Community 165 - "AppLayout.tsx"
-Cohesion: 0.22
-Nodes (4): ErrorBoundary, Props, State, queryClient
+Cohesion: 0.14
+Nodes (9): ErrorBoundary, Props, State, AppLayout(), NavItem(), navItems, projectNavItems(), SettingsPanelProps (+1 more)
 
 ### Community 166 - "generate_citations"
 Cohesion: 0.40
@@ -1052,10 +1046,6 @@ Nodes (10): 1. Document order and sectioning (python-docx), 2. Typography, 3. Nu
 Cohesion: 0.16
 Nodes (15): create_agent_config(), Any, Build a LocalAgentConfig for the VDExtract screening + extraction agent., BatchProcessingResult, ExtractionItem, ExtractionResult, BaseModel, Pydantic schemas for Antigravity agent structured output.  These models are pa (+7 more)
 
-### Community 181 - "eslint-plugin-react-hooks"
-Cohesion: 0.22
-Nodes (4): LocalStorage, Path, Local filesystem storage — the current default behavior., TestStorageBackend
-
 ### Community 182 - "citation_verification_service.py"
 Cohesion: 0.22
 Nodes (12): classify_publication_type(), is_valid_doi(), is_valid_pmid(), Any, Citation Verification and Anti-Hallucination Service for Systematic Reviews.  Ad, Run full citation verification across all studies in a project., Validate standard DOI syntax (e.g. 10.1000/182)., Validate PubMed ID (numeric 1-9 digits). (+4 more)
@@ -1065,8 +1055,8 @@ Cohesion: 0.15
 Nodes (10): Description, Endpoints, Module, Skill: Publication Charts, Skills Documentation Registry, Description, Inputs, Outputs (+2 more)
 
 ### Community 185 - "LLMScreener"
-Cohesion: 0.14
-Nodes (11): RadExtract — radiology systematic review data extraction platform.  Built on t, get_ready_papers(), LLMScreener, screening.py — two-stage PRISMA screening for systematic reviews.  Implements, LLM-driven screener.      ``model_fn(prompt, **kwargs) -> dict`` must return a, Screen a batch of papers through TA + FT stages.      Args:         papers: l, Filter papers that are ready for extraction., Interface: ``screen_title_abstract(paper, picos) -> ScreeningDecision``. (+3 more)
+Cohesion: 0.13
+Nodes (11): RadExtract — radiology systematic review data extraction platform.  Built on t, advance_status(), LLMScreener, screening.py — two-stage PRISMA screening for systematic reviews.  Implements, LLM-driven screener.      ``model_fn(prompt, **kwargs) -> dict`` must return a, Result of screening one paper at one stage., Compute the final screening status from TA + FT decisions., Interface: ``screen_title_abstract(paper, picos) -> ScreeningDecision``. (+3 more)
 
 ### Community 186 - "RadExtract — Agent Handoff Document"
 Cohesion: 0.17
@@ -1077,8 +1067,8 @@ Cohesion: 0.24
 Nodes (9): _fwd(), loveplot_rows_from_table1(), parse_asd(), Mentor-style Love plot (Figure S1) — covariate balance before/after PSM.  Locked, Piecewise transform: linear to 0.2, log10 above (exemplar-measured)., Parse an ASD display value; return float or None when masked/missing., Build plot rows from IR table1_rows.      Returns (rows, omitted) where rows = [, Render the love plot.      panels: list of dicts {"letter": "A", "rows": [(label (+1 more)
 
 ### Community 194 - "init_sqlite_db"
-Cohesion: 0.40
-Nodes (5): init_sqlite_db(), Connection, Add columns to existing tables if they don't already exist., Create all SQLite tables and run column migrations., _run_migrations()
+Cohesion: 0.29
+Nodes (7): get_db(), init_sqlite_db(), Connection, Add columns to existing tables if they don't already exist., FastAPI dependency that yields a database connection and closes it.      Retur, Create all SQLite tables and run column migrations., _run_migrations()
 
 ### Community 195 - "build_study_tables_v2.py"
 Cohesion: 0.17
@@ -1097,8 +1087,8 @@ Cohesion: 0.04
 Nodes (19): project(), project_with_pico(), Tests for merged PICO/Hypothesis endpoints: criteria, search strings, PubMed fet, Tests for search string generation endpoints., Tests for PICO extraction from uploaded documents., Extraction should return data but NOT save to DB., Tests for PubMed auto-fetch endpoint., Generate search strings so PubMed string is saved. (+11 more)
 
 ### Community 200 - "vite"
-Cohesion: 0.20
-Nodes (12): _create_project(), Tests for exclusion reason taxonomy (v2.4 feature 3)., GET /projects/{id}/exclusion-reasons should return default taxonomy., PUT /projects/{id}/exclusion-reasons should update the taxonomy., POST /projects/{id}/exclusion-reasons/reset should restore defaults., A screening decision with exclusion should store the reason_code., Exclusion reasons should persist after being set., test_exclusion_reason_with_screening_decision() (+4 more)
+Cohesion: 0.18
+Nodes (13): _create_project(), fresh_db(), Tests for exclusion reason taxonomy (v2.4 feature 3)., GET /projects/{id}/exclusion-reasons should return default taxonomy., PUT /projects/{id}/exclusion-reasons should update the taxonomy., POST /projects/{id}/exclusion-reasons/reset should restore defaults., A screening decision with exclusion should store the reason_code., Exclusion reasons should persist after being set. (+5 more)
 
 ### Community 201 - "index.js"
 Cohesion: 0.27
@@ -1107,10 +1097,6 @@ Nodes (10): axios, callApi(), cors, express, main(), { McpServer }, server, { SS
 ### Community 202 - "7. Every Bug That Was Found and Fixed"
 Cohesion: 0.20
 Nodes (10): 7.1 YAML colon issue, 7.2 Numeric range vs controlled vocabulary, 7.3 Config file naming, 7.4 Docling coord_origin case sensitivity, 7.5 SQLite FK constraint placement, 7.6 Function name shadowing in write_all, 7.7 GeneratedField missing allowed_values, 7.8 DeterministicScreener dict format handling (+2 more)
-
-### Community 203 - "test_pico_hypothesis_merge.py"
-Cohesion: 0.21
-Nodes (5): DoclingProcessor, Wraps IBM Docling's DocumentConverter for PDF → structured JSON.      Lazy-ini, Convert a single PDF to a ProcessedDocument.          Raises RuntimeError if D, Convert a DoclingDocument into parsed dict + annotation lists.          Doclin, Convert Docling TableData to a list-of-lists row format.
 
 ### Community 204 - "VDExtract: Precision, Cost & Deployment Improvement Plan"
 Cohesion: 0.22
@@ -1189,12 +1175,8 @@ Cohesion: 0.06
 Nodes (18): _create_test_pdf(), project_study_with_pdf(), Tests for services/pdf_service.py and auto_extract_service.py., Test getting a lightweight summary., Summary for unprocessed study should return processed=False., Test deleting processed PDF data., Processing a study without a PDF should raise ValueError., Test automated extraction from processed PDF. (+10 more)
 
 ### Community 223 - ".test_full_pipeline_deterministic"
-Cohesion: 0.26
-Nodes (8): _make_picos_fields(), _make_sample_papers(), _make_screener(), test_end_to_end.py — full pipeline integration test with deterministic backends., PICOS-generated fields for the glioma IDH MRI example (from the plan)., Only ready_for_extraction papers proceed to extraction., PRISMA flow numbers are correctly tracked., TestEndToEnd
-
-### Community 224 - "TestCriteria"
-Cohesion: 0.20
-Nodes (7): load_processed_document(), A text segment with its location on the page., Build a ProcessedDocument directly from a pre-parsed dict (for tests)., A table with its location and cell-level bounding boxes., Load a ProcessedDocument from a saved JSON file., TableAnnotation, TextAnnotation
+Cohesion: 0.14
+Nodes (16): DeterministicBackend, Any, Reproducible extractor.      Provide ONE of:       * ``record_fn(parsed, proj, get_ready_papers(), Filter papers that are ready for extraction., _make_extraction_record(), _make_picos_fields(), _make_sample_papers() (+8 more)
 
 ### Community 225 - "Reference Format Check — NWU Progression Manuscript (Radiology submission)"
 Cohesion: 0.29
@@ -1248,10 +1230,6 @@ Nodes (5): 11. What to Build Next (Phases 2-5), Phase 2: Graphify Integration (t
 Cohesion: 0.50
 Nodes (4): 4A. `services/keyword_highlight_service.py`, 4B. Highlighting API endpoint, 4C. Keyword management endpoints, Part 4 — Backend: Keyword Highlighting Service
 
-### Community 240 - "_reset"
-Cohesion: 0.23
-Nodes (7): _count_matches(), prefilter_study(), Any, Signal-based pre-filter service: Quick triage and confidence ceilings for studie, Check a study title/abstract against topic signal lists for triage and confidenc, Count how many signal terms match in the text using word-boundary regex., TestSignalPrefilter
-
 ### Community 243 - "Optional: Cookie for Pro"
 Cohesion: 0.67
 Nodes (3): Authenticated account path and XSRF token, How to get cookies, Optional: Cookie for Pro
@@ -1292,9 +1270,9 @@ Nodes (10): build_design(), ci_str(), fit_glm(), main(), make_design_info(), MOD
 Cohesion: 0.27
 Nodes (10): create_forest_plot_from_meta(), create_funnel_plot_from_meta(), create_sroc_curve_from_meta(), _extract_studies(), _load_meta(), Any, Extract study-level data from results_json.      The meta-analysis service sto, Generate forest plot from an existing meta-analysis. (+2 more)
 
-### Community 263 - "TestRAvailability"
-Cohesion: 0.22
-Nodes (3): S3-compatible storage (works with AWS S3 or Floci on localhost:4566)., Download S3 object to a temp file and return the local path., S3Storage
+### Community 263 - "test_ai_integration.py"
+Cohesion: 0.18
+Nodes (6): extract_variables_with_aide_engine(), Runs AIDE-Web style high-precision structured data extraction over document text, Integration tests for all AI services, endpoints, and background pipeline., TestAiScreenTitleAbstractEndpoint, TestExtractVariablesIntegration, TestGenerateVariablesIntegration
 
 ### Community 264 - "tailwind-merge"
 Cohesion: 0.31
@@ -1337,20 +1315,20 @@ Cohesion: 0.36
 Nodes (7): apply_training_medians(), main(), prepare_frame(), MODULE 3 — BOOTSTRAP DISCRIMINATION (TABLE 3 AND FIGURE 2) =====================, Impute new data with TRAINING medians (no OOB information used)., Add derived predictor columns (location dummies, center, occlusion side)., summarize()
 
 ### Community 275 - "consolidate_nicotine"
-Cohesion: 0.29
-Nodes (6): LogRecord, JSONFormatter, Structured JSON logging configuration for production and CloudWatch., Configure root logger with either standard or structured JSON formatting., Formats log records as single-line JSON objects., setup_logging()
+Cohesion: 0.13
+Nodes (15): LogRecord, create_app(), lifespan(), FastAPI application factory.  Creates and configures the RadExtract platform A, Initialize database and storage on startup., Create and configure the FastAPI application., JSONFormatter, Structured JSON logging configuration for production and CloudWatch. (+7 more)
 
 ### Community 276 - "coded_extract"
 Cohesion: 0.32
 Nodes (4): QueryCountingSQLiteBackend, Benchmark script to measure query counts and execution time for project export e, run_export_benchmark(), setup_benchmark_data()
 
-### Community 278 - "autoprefixer"
-Cohesion: 0.25
-Nodes (4): Tests for AWS Serverless Migration (StorageBackend, DBBackend, init_dynamodb_tab, TestAwsInit, TestDBBackend, TestLambdaHandler
+### Community 278 - "document_processor.py"
+Cohesion: 0.21
+Nodes (9): get_processor(), process_batch(), process_pdf(), Any, document_processor.py — Docling wrapper for PDF → structured JSON with bounding, Return the best available processor.      Prefers Docling when installed; fall, Convert a single PDF using the best available processor., Convert multiple PDFs using the best available processor. (+1 more)
 
 ### Community 284 - "lucide-react"
-Cohesion: 0.29
-Nodes (4): BaseSettings, Application configuration and settings., Backward-compat alias for aws_region., Settings
+Cohesion: 0.17
+Nodes (8): BaseSettings, ensure_dirs(), Application configuration and settings., Create required directories if they don't exist., Backward-compat alias for aws_region., Settings, preload_all(), Preload and populate full PAM Test dataset for immediate UI visualization.
 
 ### Community 285 - "pdfjs-dist"
 Cohesion: 0.38
@@ -1365,42 +1343,58 @@ Cohesion: 0.29
 Nodes (3): Tests for live AI-screening progress tracking., The pipeline marks every study current then done, in order., test_pipeline_reports_progress()
 
 ### Community 312 - "PdfViewerPage.tsx"
-Cohesion: 0.29
-Nodes (5): PdfDocumentData, PdfHighlight, CodebookRule, DEMO_CODEBOOK_RULES, PdfViewerPage()
+Cohesion: 0.20
+Nodes (11): CodebookDesignerModal(), CodebookDesignerModalProps, PREDEFINED_TEMPLATES, PdfDocumentData, PdfHighlight, ReviewVariable, CodebookRule, DEMO_CODEBOOK_RULES (+3 more)
 
-### Community 313 - "FigureAnnotation"
-Cohesion: 0.33
-Nodes (4): FigureAnnotation, A figure/image with its location., test_document_processor.py — tests for the Docling wrapper.  Tests cover:   -, TestIntegrationWithLitExtract
+### Community 313 - "TextAnnotation"
+Cohesion: 0.20
+Nodes (7): load_processed_document(), A text segment with its location on the page., Build a ProcessedDocument directly from a pre-parsed dict (for tests)., A table with its location and cell-level bounding boxes., Load a ProcessedDocument from a saved JSON file., TableAnnotation, TextAnnotation
 
 ### Community 314 - "plot_config.py"
 Cohesion: 0.33
 Nodes (5): configure_plots(), Shared publication-ready plot configuration.  Centralizes font, color, DPI, an, Save a figure to file in multiple formats.      Args:         fig: Matplotlib, Set matplotlib rcParams for publication-ready figures.      Call this once at, save_figure_to_file()
 
+### Community 315 - "ProcessedDocument"
+Cohesion: 0.27
+Nodes (3): ProcessedDocument, Convert multiple PDFs. Failed conversions are skipped with a warning., Unified output: parsed dict (for extraction) + annotations (for UI).
+
 ### Community 316 - "module_08_decision_curve.py"
 Cohesion: 0.50
 Nodes (4): main(), net_benefit(), MODULE 8 — DECISION CURVE ANALYSIS (TABLE S2, FIGURE S2) =======================, Net benefit = (TP - FP * t/(1-t)) / n.
 
-### Community 317 - "ensure_dirs"
-Cohesion: 0.40
-Nodes (4): ensure_dirs(), Create required directories if they don't exist., preload_all(), Preload and populate full PAM Test dataset for immediate UI visualization.
+### Community 317 - "exhaustive_extract"
+Cohesion: 0.31
+Nodes (4): exhaustive_extract(), 7-Step multi-location search before declaring a variable missing., TestMathematicalDerivations, TestSynonymAndAbbreviationResolution
 
-### Community 318 - "get_storage"
-Cohesion: 0.50
-Nodes (3): get_storage(), Get the configured storage backend.      Args:         bucket_type: "upload", TestExport
+### Community 318 - "test_extraction_gaps.py"
+Cohesion: 0.22
+Nodes (4): db_conn(), Unit and integration tests for Extraction Quality Gaps (Part B).  Tests: 1. C, TestExhaustiveSearchPipeline, TestMissingDataSummaryAndExportStyling
+
+### Community 319 - "PicoHypothesisPage.tsx"
+Cohesion: 0.25
+Nodes (4): Criterion, SecondaryHypothesis, DATABASES, PicoHypothesisPage()
+
+### Community 320 - "recheck_missing"
+Cohesion: 0.33
+Nodes (6): _extract_number_or_sentence(), Any, Exhaustive Search Strategy (7-Step + Recheck Pass) for clinical data extraction., Recheck pass on extractions with value '-99' by targeting the single most likely, Search for a keyword in text and try to extract a numerical value and surroundin, recheck_missing()
+
+### Community 323 - "_is_scanned_pdf"
+Cohesion: 0.40
+Nodes (4): _is_scanned_pdf(), Any, Check if PDF has pages but lacks a text layer (< 100 characters)., TestScannedPdfDetection
 
 ## Knowledge Gaps
-- **559 isolated node(s):** `dev-start.sh script`, `dev-stop.sh script`, `manifest_version`, `name`, `version` (+554 more)
+- **561 isolated node(s):** `dev-start.sh script`, `dev-stop.sh script`, `manifest_version`, `name`, `version` (+556 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **32 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `DBBackend` connect `check_project_access` to `TestReferenceUpload`, `backend/models.py`, `studies.py`, `dependencies.py`, `auto_extract_service.py`, `get_db_backend`, `routers/screening.py`, `analysis.py`, `meta.py`, `generate_sroc_curve_svg`, `get_prisma_flow_data`, `test_dedup_service.py`, `frontend/package.json`, `get_connection`, `charts.py`, `scientific_exports.py`, `citation_verification_service.py`, `SQLiteBackend`, `pdf_highlights.py`, `devDependencies`, `rob.py`, `DynamoDBBackend`, `DBBackend`, `pubmed.py`, `agent.py`, `test_pico_hypothesis.py`, `coded_extract_study`, `study_to_ris`, `get`?**
+- **Why does `DBBackend` connect `check_project_access` to `TestReferenceUpload`, `tool_calling_client.py`, `backend/models.py`, `studies.py`, `dependencies.py`, `auto_extract_service.py`, `get_db_backend`, `routers/screening.py`, `analysis.py`, `meta.py`, `ScreeningPage.tsx`, `test_dedup_service.py`, `generate_sroc_curve_svg`, `frontend/package.json`, `get_connection`, `charts.py`, `scientific_exports.py`, `citation_verification_service.py`, `SQLiteBackend`, `pdf_highlights.py`, `devDependencies`, `rob.py`, `init_sqlite_db`, `DynamoDBBackend`, `DBBackend`, `pubmed.py`, `agent.py`, `rob_ai.py`, `test_pico_hypothesis.py`, `coded_extract_study`, `study_to_ris`, `get`?**
   _High betweenness centrality (0.180) - this node is a cross-community bridge._
-- **Why does `get_connection()` connect `get_connection` to `studies.py`, `get_db_backend`, `routers/screening.py`, `create_app`, `test_dedup_service.py`, `test_routers_analysis.py`, `TestFunnelPlot`, `coded_extract`, `frontend/package.json`, `_create_project_and_study`, `test_extraction_excel.py`, `test_prisma_export.py`, `test_routers_grade.py`, `test_rob_integration.py`, `pubmed_service.py`, `test_ai_integration.py`, `ensure_dirs`, `get_storage`, `init_sqlite_db`, `init_db`, `test_rob_service.py`, `coded_extract_study`, `test_screening_fixes.py`, `test_ai_screening.py`, `run_end_to_end_test.py`, `get_client`?**
+- **Why does `get_connection()` connect `get_connection` to `dependencies.py`, `get_db_backend`, `routers/screening.py`, `create_app`, `test_dedup_service.py`, `test_routers_analysis.py`, `TestFunnelPlot`, `coded_extract`, `frontend/package.json`, `_create_project_and_study`, `test_extraction_excel.py`, `lucide-react`, `test_prisma_export.py`, `test_routers_grade.py`, `test_rob_integration.py`, `pubmed_service.py`, `eslint-plugin-react-hooks`, `test_ai_integration.py`, `init_sqlite_db`, `init_db`, `test_rob_service.py`, `coded_extract_study`, `test_screening_fixes.py`, `TestAutoGenerateVariables`, `TestPdfService`, `test_ai_screening.py`, `run_end_to_end_test.py`?**
   _High betweenness centrality (0.113) - this node is a cross-community bridge._
-- **Why does `CERTAINTY_COLORS` connect `get_db_backend` to `GradePage.tsx`?**
+- **Why does `seed()` connect `init_db` to `get_db_backend`, `rob_tools.py`, `DeterministicScreener`, `rob_service.py`, `get_connection`?**
   _High betweenness centrality (0.083) - this node is a cross-community bridge._
 - **Are the 28 inferred relationships involving `DBBackend` (e.g. with `AgentRequest` and `AgentResponse`) actually correct?**
   _`DBBackend` has 28 INFERRED edges - model-reasoned connections that need verification._

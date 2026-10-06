@@ -47,6 +47,9 @@ import {
   FileUp,
   FileCheck,
   AlertCircle,
+  BookOpen,
+  Minimize2,
+  Maximize2,
 } from "lucide-react";
 
 export function ScreeningPage() {
@@ -60,6 +63,25 @@ export function ScreeningPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [confidenceFilter, setConfidenceFilter] = useState<"all" | "high" | "medium" | "low">("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Protocol Screening Rules & PICO Criteria Minimization
+  const [isProtocolRulesMinimized, setIsProtocolRulesMinimized] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("radextract_screening_rules_minimized") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleProtocolRulesMinimized = () => {
+    setIsProtocolRulesMinimized((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("radextract_screening_rules_minimized", String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Reviewer identity
   const [reviewerId] = useState(() => localStorage.getItem("username") || "reviewer1");
@@ -598,6 +620,127 @@ export function ScreeningPage() {
             />
           </div>
         </div>
+      </div>
+
+      {/* ── COLLAPSIBLE PROTOCOL SCREENING RULES & PICO CRITERIA PANEL ── */}
+      <div className="max-w-7xl mx-auto w-full px-4 md:px-6 pt-4">
+        {isProtocolRulesMinimized ? (
+          <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs">
+              <BookOpen className="w-4 h-4 text-indigo-600" />
+              <span className="font-bold text-slate-800">
+                Protocol Eligibility & PICO Rules:
+              </span>
+              <span className="text-slate-500">
+                Population: Intracranial PAMs / Arterial Malformations &bull; Intervention: Endovascular / Surgical &bull; Outcomes: Occlusion / Safety
+              </span>
+            </div>
+            <button
+              onClick={toggleProtocolRulesMinimized}
+              className="px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Expand full protocol screening rules"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Expand Protocol Rules</span>
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white border border-indigo-100 rounded-xl shadow-xs overflow-hidden transition-all duration-300">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-50/80 via-white to-slate-50 border-b border-indigo-100 px-4 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-indigo-600" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                  Protocol Screening Rules & PICO Eligibility Criteria
+                </h3>
+                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+                  PRISMA Protocol Active
+                </span>
+              </div>
+              <button
+                onClick={toggleProtocolRulesMinimized}
+                className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                title="Minimize protocol rules panel"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span>Minimize Rules</span>
+              </button>
+            </div>
+
+            {/* PICO Grid & Inclusion/Exclusion Rules */}
+            <div className="p-4 space-y-3">
+              {/* PICO 4-Pill Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div className="p-2.5 bg-indigo-50/60 border border-indigo-100 rounded-lg">
+                  <div className="font-bold text-indigo-900 flex items-center gap-1 mb-1">
+                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">P</span>
+                    <span>Population</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Patients with pure arterial malformations (PAM) or tortuous dilated intracranial arteries without nidus or direct arteriovenous shunts.
+                  </p>
+                </div>
+
+                <div className="p-2.5 bg-sky-50/60 border border-sky-100 rounded-lg">
+                  <div className="font-bold text-sky-900 flex items-center gap-1 mb-1">
+                    <span className="w-4 h-4 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-black">I</span>
+                    <span>Intervention</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Endovascular embolization (coiling, onyx, flow diverter stenting), microsurgical clipping/resection, or conservative clinical surveillance.
+                  </p>
+                </div>
+
+                <div className="p-2.5 bg-purple-50/60 border border-purple-100 rounded-lg">
+                  <div className="font-bold text-purple-900 flex items-center gap-1 mb-1">
+                    <span className="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">C</span>
+                    <span>Comparator</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Conservative angiographic follow-up vs active interventional occlusion or historical lesion cohorts.
+                  </p>
+                </div>
+
+                <div className="p-2.5 bg-emerald-50/60 border border-emerald-100 rounded-lg">
+                  <div className="font-bold text-emerald-900 flex items-center gap-1 mb-1">
+                    <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">O</span>
+                    <span>Outcomes</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Aneurysm co-occurrence, angiographic obliteration, recurrent hemorrhage, ischemic stroke, and modified Rankin Scale (mRS).
+                  </p>
+                </div>
+              </div>
+
+              {/* Explicit Inclusion vs Exclusion Criteria Rows */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
+                <div className="p-2.5 bg-emerald-50/40 border border-emerald-200/80 rounded-lg">
+                  <span className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1 text-[11px]">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    Mandatory Inclusion Criteria
+                  </span>
+                  <ul className="text-[11px] text-emerald-800 space-y-1 list-disc list-inside">
+                    <li>Human subjects (in vivo) with radiographically confirmed intracranial PAM.</li>
+                    <li>Reports angiographic details (DSA, CTA, or 3T MRA) and clinical management.</li>
+                    <li>Peer-reviewed original research, cohort studies, or clinical case series.</li>
+                  </ul>
+                </div>
+
+                <div className="p-2.5 bg-rose-50/40 border border-rose-200/80 rounded-lg">
+                  <span className="font-bold text-rose-900 flex items-center gap-1.5 mb-1 text-[11px]">
+                    <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                    Explicit Exclusion Disqualifiers
+                  </span>
+                  <ul className="text-[11px] text-rose-800 space-y-1 list-disc list-inside">
+                    <li>Classic AVMs with parenchymal nidus or early draining cortical veins.</li>
+                    <li>Dural arteriovenous fistulas (dAVF) or cavernous hemangiomas without PAM.</li>
+                    <li>Animal models, in vitro hydrodynamic bench studies, or non-English abstracts.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Two-Pane Screening Workspace */}
