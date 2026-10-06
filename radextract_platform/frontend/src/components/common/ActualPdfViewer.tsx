@@ -246,24 +246,29 @@ export function ActualPdfViewer({
           console.warn(`Quote matching skipped on page ${targetPage}:`, e);
         }
 
-        // If not found on target page, scan page 1 or 2
-        if (!located && targetPage !== 1) {
-          try {
-            const page1 = await pdf.getPage(1);
-            const rects1 = await locateQuoteRects(page1, item.quote);
-            if (rects1.length > 0) {
-              if (!pageMap[1]) pageMap[1] = [];
-              pageMap[1].push({
-                variableId: item.id,
-                varIndex: item.varIndex,
-                label: item.label,
-                value: item.value,
-                isVerified: !!item.isVerified,
-                isActive: item.id === activeHighlightId,
-                rects: rects1,
-              });
-            }
-          } catch (e) {}
+        // If not found on target page, scan all remaining pages
+        if (!located) {
+          for (let p = 1; p <= numPages; p++) {
+            if (p === targetPage) continue;
+            try {
+              const otherPage = await pdf.getPage(p);
+              const otherRects = await locateQuoteRects(otherPage, item.quote);
+              if (otherRects.length > 0) {
+                located = true;
+                if (!pageMap[p]) pageMap[p] = [];
+                pageMap[p].push({
+                  variableId: item.id,
+                  varIndex: item.varIndex,
+                  label: item.label,
+                  value: item.value,
+                  isVerified: !!item.isVerified,
+                  isActive: item.id === activeHighlightId,
+                  rects: otherRects,
+                });
+                break;
+              }
+            } catch (e) {}
+          }
         }
       }
 

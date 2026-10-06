@@ -992,7 +992,98 @@ export const DEMO_PDF_DATA: Record<string, any> = {
   }
 };
 
+DEMO_PDF_SUMMARIES.s1 = DEMO_PDF_SUMMARIES.study_birua_2022;
+DEMO_PDF_SUMMARIES.s2 = DEMO_PDF_SUMMARIES.study_albina_2024;
+DEMO_PDF_SUMMARIES.s3 = DEMO_PDF_SUMMARIES.study_brinjikji_2018;
+DEMO_PDF_SUMMARIES.s4 = DEMO_PDF_SUMMARIES.study_chua_2021;
+DEMO_PDF_SUMMARIES.s5 = DEMO_PDF_SUMMARIES.study_deshmukh_2023;
+DEMO_PDF_SUMMARIES.s6 = DEMO_PDF_SUMMARIES.study_feliciano_2014;
+
+DEMO_PDF_DATA.s1 = DEMO_PDF_DATA.study_birua_2022;
+DEMO_PDF_DATA.s2 = DEMO_PDF_DATA.study_albina_2024;
+DEMO_PDF_DATA.s3 = DEMO_PDF_DATA.study_brinjikji_2018;
+DEMO_PDF_DATA.s4 = DEMO_PDF_DATA.study_chua_2021;
+DEMO_PDF_DATA.s5 = DEMO_PDF_DATA.study_deshmukh_2023;
+DEMO_PDF_DATA.s6 = DEMO_PDF_DATA.study_feliciano_2014;
+
 export const DEMO_EXTRACTIONS: Record<string, any[]> = {
+  study_birua_2022: [
+    {
+      extraction_id: "ext_birua_v1",
+      study_id: "study_birua_2022",
+      variable_id: "v1_vessel_involved",
+      variable_name: "Vessel Involved",
+      variable_section: "Anatomy",
+      value: "Left PCA & Right ICA",
+      confidence: 0.98,
+      quote: "dysplastic right cavernous and clinoidal segments of internal carotid artery (ICA) along with tortuous, redundant vascular compact loops of purely arterial mass (PAM) of left posterior cerebral artery (PCA) were evident",
+      source_page: 1,
+      is_verified: false,
+      is_edited: false,
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Left PCA and Right ICA involvement"
+    },
+    {
+      extraction_id: "ext_birua_v9",
+      study_id: "study_birua_2022",
+      variable_id: "v9_associated_aneurysm",
+      variable_name: "Associated Aneurysm",
+      variable_section: "Angioarchitecture",
+      value: "Absent",
+      confidence: 0.97,
+      quote: "There was no evidence of parenchymal hemorrhage, infarction, or subarachnoid hemorrhage (SAH) on CT or magnetic resonance imaging (MRI) of the brain.",
+      source_page: 1,
+      is_verified: false,
+      is_edited: false,
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "No hemorrhage or aneurysm"
+    },
+    {
+      extraction_id: "ext_birua_v18",
+      study_id: "study_birua_2022",
+      variable_id: "v18_treatment_type",
+      variable_name: "Treatment Type",
+      variable_section: "Management",
+      value: "Conservative (Observation)",
+      confidence: 0.99,
+      quote: "The patient was managed conservatively and advised for regular radiological follow-up.",
+      source_page: 1,
+      is_verified: false,
+      is_edited: false,
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Managed conservatively with regular follow-up"
+    },
+    {
+      extraction_id: "ext_birua_v4",
+      study_id: "study_birua_2022",
+      variable_id: "v4_presentation",
+      variable_name: "Presentation",
+      variable_section: "Clinical",
+      value: "Sudden Onset Holocranial Headache",
+      confidence: 0.96,
+      quote: "A 40-year-old female presented to the emergency ward with a history of sudden onset holocranial headache associated with episodes of vomiting for five days.",
+      source_page: 1,
+      is_verified: false,
+      is_edited: false,
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Sudden onset holocranial headache"
+    },
+    {
+      extraction_id: "ext_birua_v12",
+      study_id: "study_birua_2022",
+      variable_id: "v12_age",
+      variable_name: "Patient Age",
+      variable_section: "Demographics",
+      value: "40",
+      confidence: 0.99,
+      quote: "A 40-year-old female presented to the emergency ward with a history of sudden onset holocranial headache associated with episodes of vomiting for five days.",
+      source_page: 1,
+      is_verified: false,
+      is_edited: false,
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "40 years old female"
+    }
+  ],
   study_albina_2024: [
     {
       extraction_id: "ext_albina_v1",
@@ -1002,12 +1093,12 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_section: "Anatomy",
       value: "Accessory MCA",
       confidence: 0.98,
-      quote: "Catheter digital subtraction angiography (DSA) revealed an anomalous vessel branching from the right internal carotid artery conforming to an accessory MCA.",
-      source_page: 2,
+      quote: "A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
       proposed_by: "AI Extractor (Docling v2.4)",
-      notes: "Clear anomalous arterial branch from ICA"
+      notes: "Accessory MCA"
     },
     {
       extraction_id: "ext_albina_v9",
@@ -1015,14 +1106,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v9_associated_aneurysm",
       variable_name: "Associated Aneurysm",
       variable_section: "Angioarchitecture",
-      value: "Present",
+      value: "Present (Flow-related)",
       confidence: 0.97,
-      quote: "Detailed 3D rotational catheter angiography demonstrated a 3.8-mm saccular flow-related pseudoaneurysm located at the apex of the looped accessory middle cerebral artery.",
-      source_page: 3,
+      quote: "revascularization and endovascular occlusion using Glubran2/Lipiodol",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
       proposed_by: "AI Extractor (Docling v2.4)",
-      notes: "Saccular 3.8 mm apex aneurysm"
+      notes: "Flow-related pseudoaneurysm"
     },
     {
       extraction_id: "ext_albina_v18",
@@ -1030,14 +1121,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v18_treatment_type",
       variable_name: "Treatment Type",
       variable_section: "Management",
-      value: "Hybrid (Clip + Coil)",
+      value: "Bypass + Endovascular (nBCA)",
       confidence: 0.99,
-      quote: "The patient underwent a hybrid surgical and endovascular approach. Right pterional craniotomy enabled microvascular clip reconstruction of the aneurysm neck, complemented by endovascular coil stabilization.",
-      source_page: 4,
+      quote: "Revascularization Followed by Endovascular Occlusion Using nBCA",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
       proposed_by: "AI Extractor (Docling v2.4)",
-      notes: "Dual surgical clipping and coiling"
+      notes: "Revascularization and endovascular occlusion"
     },
     {
       extraction_id: "ext_albina_v4",
@@ -1045,14 +1136,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v4_presentation",
       variable_name: "Presentation",
       variable_section: "Clinical",
-      value: "Subarachnoid Hemorrhage",
+      value: "Basal Ganglia Hemorrhage",
       confidence: 0.96,
-      quote: "Non-contrast cranial CT demonstrated diffuse subarachnoid hemorrhage predominantly in the right Sylvian fissure (Fisher grade 3).",
-      source_page: 2,
+      quote: "A 58-year-old woman with a history of spontaneous basal ganglia hemorrhage 2 years",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
       proposed_by: "AI Extractor (Docling v2.4)",
-      notes: "Acute Fisher grade 3 SAH"
+      notes: "Spontaneous basal ganglia hemorrhage"
     },
     {
       extraction_id: "ext_albina_v12",
@@ -1060,91 +1151,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v12_age",
       variable_name: "Patient Age",
       variable_section: "Demographics",
-      value: "48",
+      value: "58",
       confidence: 0.99,
-      quote: "A 48-year-old woman presented with sudden severe headache and vomiting.",
-      source_page: 2,
+      quote: "A 58-year-old woman with a history of spontaneous basal ganglia hemorrhage 2 years",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
       proposed_by: "AI Extractor (Docling v2.4)",
-      notes: "48 years old at presentation"
-    }
-  ],
-  study_birua_2022: [
-    {
-      extraction_id: "ext_birua_v1",
-      study_id: "study_birua_2022",
-      variable_id: "v1_vessel_involved",
-      variable_name: "Vessel Involved",
-      variable_section: "Anatomy",
-      value: "PCA (P1/P2)",
-      confidence: 0.97,
-      quote: "multiple arterial loops along the left PCA (P2 segment)",
-      source_page: 2,
-      is_verified: false,
-      is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Left P2 segment PCA"
-    },
-    {
-      extraction_id: "ext_birua_v9",
-      study_id: "study_birua_2022",
-      variable_id: "v9_associated_aneurysm",
-      variable_name: "Associated Aneurysm",
-      variable_section: "Angioarchitecture",
-      value: "Absent",
-      confidence: 0.95,
-      quote: "No arteriovenous shunting or associated aneurysm was identified.",
-      source_page: 2,
-      is_verified: false,
-      is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "No aneurysm on catheter DSA"
-    },
-    {
-      extraction_id: "ext_birua_v18",
-      study_id: "study_birua_2022",
-      variable_id: "v18_treatment_type",
-      variable_name: "Treatment Type",
-      variable_section: "Management",
-      value: "Conservative (Observation)",
-      confidence: 0.98,
-      quote: "conservative observation with annual MRI/MRA follow-up was selected.",
-      source_page: 3,
-      is_verified: false,
-      is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Conservative observation with serial MRI"
-    },
-    {
-      extraction_id: "ext_birua_v4",
-      study_id: "study_birua_2022",
-      variable_id: "v4_presentation",
-      variable_name: "Presentation",
-      variable_section: "Clinical",
-      value: "Chronic Headache",
-      confidence: 0.94,
-      quote: "A 32-year-old male presented with a 2-year history of episodic chronic throbbing occipital headaches",
-      source_page: 1,
-      is_verified: false,
-      is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Chronic throbbing headache"
-    },
-    {
-      extraction_id: "ext_birua_v12",
-      study_id: "study_birua_2022",
-      variable_id: "v12_age",
-      variable_name: "Patient Age",
-      variable_section: "Demographics",
-      value: "32",
-      confidence: 0.99,
-      quote: "A 32-year-old male presented with a 2-year history",
-      source_page: 1,
-      is_verified: false,
-      is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "32 years old"
+      notes: "58 years old woman"
     }
   ],
   study_brinjikji_2018: [
@@ -1154,14 +1168,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v1_vessel_involved",
       variable_name: "Vessel Involved",
       variable_section: "Anatomy",
-      value: "Multiple Arteries",
+      value: "Multiple Territories (12 Patients)",
       confidence: 0.99,
-      quote: "Vessel involvement was distributed across intracranial territories: MCA 42% (30/72), PCA 31% (22/72), ACA 27% (19/72).",
-      source_page: 2,
+      quote: "Herein we report on a consecutive series of 12 patients with pure arterial malformations",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Multicenter cohort: MCA 42%, PCA 31%, ACA 27%"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "12 patients multicenter series"
     },
     {
       extraction_id: "ext_brinjikji_v9",
@@ -1171,12 +1185,12 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_section: "Angioarchitecture",
       value: "Present",
       confidence: 0.98,
-      quote: "Associated aneurysms were identified in 41% of cases (29/72).",
-      source_page: 2,
+      quote: "aneurysms associated with the pure arterial malformation, and 5 were partially calcified",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "41% aneurysm association"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Aneurysms associated with PAM"
     },
     {
       extraction_id: "ext_brinjikji_v18",
@@ -1184,14 +1198,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v18_treatment_type",
       variable_name: "Treatment Type",
       variable_section: "Management",
-      value: "Conservative (Observation)",
+      value: "Conservative",
       confidence: 0.96,
-      quote: "Management was conservative in 56% and endovascular in 36%.",
-      source_page: 3,
+      quote: "managed conservatively. Herein we report on a consecutive series of 12 patients with pure arterial malformations",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Predominantly conservative (56%)"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Managed conservatively"
     },
     {
       extraction_id: "ext_brinjikji_v4",
@@ -1199,14 +1213,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v4_presentation",
       variable_name: "Presentation",
       variable_section: "Clinical",
-      value: "Subarachnoid Hemorrhage",
+      value: "Headache",
       confidence: 0.95,
-      quote: "Presentation was subarachnoid hemorrhage in 34%, chronic headache in 28%, seizure in 16%, and incidental in 22%.",
-      source_page: 3,
+      quote: "The most common imaging indication was headache",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "SAH 34%, headache 28%"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Most common indication: headache"
     },
     {
       extraction_id: "ext_brinjikji_v12",
@@ -1214,14 +1228,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v12_age",
       variable_name: "Patient Age",
       variable_section: "Demographics",
-      value: "44",
+      value: "26.2",
       confidence: 0.98,
-      quote: "We analyzed 72 patients (mean age 44.2 years; 58% female)",
+      quote: "Their mean age at diagnosis was 26.2",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Mean age 44.2 years"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Mean age at diagnosis 26.2 years"
     }
   ],
   study_chua_2021: [
@@ -1231,14 +1245,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v1_vessel_involved",
       variable_name: "Vessel Involved",
       variable_section: "Anatomy",
-      value: "PICA",
+      value: "Right PICA",
       confidence: 0.98,
-      quote: "pure arterial malformation involving the left posterior inferior cerebellar artery (PICA)",
-      source_page: 2,
+      quote: "angiography revealed a right posterior inferior cerebellar artery-associated PAM",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Left PICA"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Right PICA"
     },
     {
       extraction_id: "ext_chua_v9",
@@ -1246,14 +1260,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v9_associated_aneurysm",
       variable_name: "Associated Aneurysm",
       variable_section: "Angioarchitecture",
-      value: "Present",
+      value: "Present (Pseudoaneurysm)",
       confidence: 0.99,
-      quote: "with an associated 5-mm ruptured flow pseudoaneurysm.",
-      source_page: 2,
+      quote: "A small percentage of them may also be associated with an aneurysm",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "5 mm ruptured flow pseudoaneurysm"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Associated pseudoaneurysm"
     },
     {
       extraction_id: "ext_chua_v18",
@@ -1261,14 +1275,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v18_treatment_type",
       variable_name: "Treatment Type",
       variable_section: "Management",
-      value: "Endovascular (Coiling/Stenting)",
+      value: "Endovascular (Onyx)",
       confidence: 0.97,
-      quote: "Successful parent-artery preserving endovascular coiling of the aneurysm was performed.",
-      source_page: 2,
+      quote: "The PAM was treated with endovascular Onyx embolization",
+      source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Targeted coiling of aneurysm"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Endovascular Onyx embolization"
     },
     {
       extraction_id: "ext_chua_v4",
@@ -1278,12 +1292,12 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_section: "Clinical",
       value: "Subarachnoid Hemorrhage",
       confidence: 0.98,
-      quote: "CT showed fourth ventricular and cisternal subarachnoid hemorrhage.",
+      quote: "A 38-year-old man presented with a 1-day history of headaches and nausea",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Posterior fossa SAH"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Headaches and nausea (SAH)"
     },
     {
       extraction_id: "ext_chua_v12",
@@ -1291,14 +1305,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v12_age",
       variable_name: "Patient Age",
       variable_section: "Demographics",
-      value: "59",
+      value: "38",
       confidence: 0.99,
-      quote: "A 59-year-old female presented with sudden severe headache",
+      quote: "A 38-year-old man presented with a 1-day history of headaches and nausea",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "59 years old"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "38 years old male"
     }
   ],
   study_deshmukh_2023: [
@@ -1308,14 +1322,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v1_vessel_involved",
       variable_name: "Vessel Involved",
       variable_section: "Anatomy",
-      value: "ACA (A1/A2)",
+      value: "Left ACA",
       confidence: 0.97,
-      quote: "anterior cerebral artery (A2/A3 segment) pure arterial malformation",
+      quote: "We describe a case of PAM involving the left anterior cerebral",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "ACA A2/A3 segment"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Left ACA"
     },
     {
       extraction_id: "ext_deshmukh_v9",
@@ -1325,12 +1339,12 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_section: "Angioarchitecture",
       value: "Absent",
       confidence: 0.96,
-      quote: "without associated aneurysm.",
+      quote: "loops without evidence of AV shunting or aneurysmal dilatation",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "No aneurysm"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Without aneurysmal dilatation"
     },
     {
       extraction_id: "ext_deshmukh_v18",
@@ -1338,14 +1352,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v18_treatment_type",
       variable_name: "Treatment Type",
       variable_section: "Management",
-      value: "Surgical (Clipping/Bypass)",
+      value: "Conservative (Observation)",
       confidence: 0.95,
-      quote: "microsurgical exploration and surgical lesion management was performed",
+      quote: "history and is generally managed conservatively",
       source_page: 2,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Microsurgical management"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Managed conservatively"
     },
     {
       extraction_id: "ext_deshmukh_v4",
@@ -1353,14 +1367,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v4_presentation",
       variable_name: "Presentation",
       variable_section: "Clinical",
-      value: "Seizure / Epilepsy",
+      value: "Incidental / Meningioma Workup",
       confidence: 0.98,
-      quote: "A 27-year-old male presented with new-onset focal motor seizures with secondary generalization.",
+      quote: "underwent vascular imaging for a recently diagnosed left medial frontal",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "New-onset focal motor seizures"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Incidental on tumor workup"
     },
     {
       extraction_id: "ext_deshmukh_v12",
@@ -1368,14 +1382,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v12_age",
       variable_name: "Patient Age",
       variable_section: "Demographics",
-      value: "27",
+      value: "Mid-sixties",
       confidence: 0.99,
-      quote: "A 27-year-old male presented with new-onset focal motor seizures",
+      quote: "A male in his mid-sixties underwent vascular imaging",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "27 years old"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Male in mid-sixties"
     }
   ],
   study_feliciano_2014: [
@@ -1385,14 +1399,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v1_vessel_involved",
       variable_name: "Vessel Involved",
       variable_section: "Anatomy",
-      value: "MCA (M1/M2)",
+      value: "Right MCA",
       confidence: 0.98,
-      quote: "incidental MCA bifurcation pure arterial malformation",
+      quote: "Cerebral digital subtraction angiography (DSA) showed a right middle cerebral artery malformation",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "MCA bifurcation"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Right MCA"
     },
     {
       extraction_id: "ext_feliciano_v9",
@@ -1400,14 +1414,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v9_associated_aneurysm",
       variable_name: "Associated Aneurysm",
       variable_section: "Angioarchitecture",
-      value: "Absent",
+      value: "Present (Lenticulostriate)",
       confidence: 0.95,
-      quote: "without aneurysm.",
+      quote: "An associated medial lenticulostriate artery aneurysm was found",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "No aneurysm"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Associated medial lenticulostriate aneurysm"
     },
     {
       extraction_id: "ext_feliciano_v18",
@@ -1415,14 +1429,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v18_treatment_type",
       variable_name: "Treatment Type",
       variable_section: "Management",
-      value: "Conservative (Observation)",
+      value: "Conservative (Statin Therapy)",
       confidence: 0.98,
-      quote: "Managed conservatively with 5-year radiographic stability.",
-      source_page: 2,
+      quote: "decided upon conservative management on a statin-vessel wall stabilizing agent",
+      source_page: 3,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Conservative 5-year observation"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Conservative on statin wall stabilizing agent"
     },
     {
       extraction_id: "ext_feliciano_v4",
@@ -1430,14 +1444,14 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v4_presentation",
       variable_name: "Presentation",
       variable_section: "Clinical",
-      value: "Incidental",
+      value: "Severe Headache & Hemorrhage",
       confidence: 0.97,
-      quote: "Routine neuroimaging revealed an incidental MCA bifurcation pure arterial malformation",
+      quote: "A 42-year-old male chronic smoker was evaluated in the emergency room due to sudden onset of severe headache",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "Incidental finding on head trauma workup"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "Sudden onset severe headache"
     },
     {
       extraction_id: "ext_feliciano_v12",
@@ -1445,17 +1459,25 @@ export const DEMO_EXTRACTIONS: Record<string, any[]> = {
       variable_id: "v12_age",
       variable_name: "Patient Age",
       variable_section: "Demographics",
-      value: "51",
+      value: "42",
       confidence: 0.99,
-      quote: "A 51-year-old female presented for workup",
+      quote: "A 42-year-old male chronic smoker was evaluated in the emergency room",
       source_page: 1,
       is_verified: false,
       is_edited: false,
-      proposed_by: "AI Extractor",
-      notes: "51 years old"
+      proposed_by: "AI Extractor (Docling v2.4)",
+      notes: "42 years old male"
     }
   ]
 };
+
+// Aliases for short IDs (s1..s6)
+DEMO_EXTRACTIONS.s1 = DEMO_EXTRACTIONS.study_birua_2022;
+DEMO_EXTRACTIONS.s2 = DEMO_EXTRACTIONS.study_albina_2024;
+DEMO_EXTRACTIONS.s3 = DEMO_EXTRACTIONS.study_brinjikji_2018;
+DEMO_EXTRACTIONS.s4 = DEMO_EXTRACTIONS.study_chua_2021;
+DEMO_EXTRACTIONS.s5 = DEMO_EXTRACTIONS.study_deshmukh_2023;
+DEMO_EXTRACTIONS.s6 = DEMO_EXTRACTIONS.study_feliciano_2014;
 
 export const DEMO_ERROR_ANALYSIS = {
   total_decisions: 18,

@@ -432,17 +432,29 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.includes("/variables")) {
     return DEMO_VARIABLES as unknown as T;
   }
+  const studyAliasMap: Record<string, string> = {
+    s1: "study_birua_2022",
+    s2: "study_albina_2024",
+    s3: "study_brinjikji_2018",
+    s4: "study_chua_2021",
+    s5: "study_deshmukh_2023",
+    s6: "study_feliciano_2014",
+  };
+
   if (path.includes("/pdf-summary")) {
-    const studyId = path.split("/").filter(Boolean)[1] || "study_albina_2024";
-    return ((DEMO_PDF_SUMMARIES as any)[studyId] || DEMO_PDF_SUMMARIES.study_albina_2024) as unknown as T;
+    const rawStudyId = path.split("/").filter(Boolean)[1] || "study_birua_2022";
+    const resolvedId = (DEMO_PDF_SUMMARIES as any)[rawStudyId] ? rawStudyId : (studyAliasMap[rawStudyId] || "study_birua_2022");
+    return ((DEMO_PDF_SUMMARIES as any)[resolvedId] || DEMO_PDF_SUMMARIES.study_birua_2022) as unknown as T;
   }
   if (path.includes("/pdf-data")) {
-    const studyId = path.split("/").filter(Boolean)[1] || "study_albina_2024";
-    return ((DEMO_PDF_DATA as any)[studyId] || DEMO_PDF_DATA.study_albina_2024) as unknown as T;
+    const rawStudyId = path.split("/").filter(Boolean)[1] || "study_birua_2022";
+    const resolvedId = (DEMO_PDF_DATA as any)[rawStudyId] ? rawStudyId : (studyAliasMap[rawStudyId] || "study_birua_2022");
+    return ((DEMO_PDF_DATA as any)[resolvedId] || DEMO_PDF_DATA.study_birua_2022) as unknown as T;
   }
   if (path.includes("/extractions") || path.includes("/coded-extract")) {
-    const studyId = path.split("/").filter(Boolean)[1] || "study_albina_2024";
-    return ((DEMO_EXTRACTIONS as any)[studyId] || DEMO_EXTRACTIONS.study_albina_2024) as unknown as T;
+    const rawStudyId = path.split("/").filter(Boolean)[1] || "study_birua_2022";
+    const resolvedId = (DEMO_EXTRACTIONS as any)[rawStudyId] ? rawStudyId : (studyAliasMap[rawStudyId] || "study_birua_2022");
+    return ((DEMO_EXTRACTIONS as any)[resolvedId] || DEMO_EXTRACTIONS.study_birua_2022) as unknown as T;
   }
   if (path.includes("/pdf-highlights")) {
     return [] as unknown as T;

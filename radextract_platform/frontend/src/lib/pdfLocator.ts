@@ -125,8 +125,11 @@ function getReadingOrderedLines(items: TextItem[], pageWidth: number): TextItem[
  */
 export function normalizeForMatch(str: string): string {
   return str
-    .replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"')
+    .replace(/\ufffe/g, "")
+    .replace(/\u00ad/g, "")
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/[“”„‟]/g, '"')
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, "-")
     .replace(/-\s+/g, "")
     .toLowerCase()
     .replace(/\s+/g, " ")
@@ -154,8 +157,14 @@ function buildNormalizedIndex(orderedLines: TextItem[][]): { normText: string; n
   for (let i = 0; i < rawChars.length; i++) {
     let { ch, item } = rawChars[i];
 
-    if (ch === "‘" || ch === "’") ch = "'";
-    else if (ch === "“" || ch === "”") ch = '"';
+    // Strip soft-hyphens, PDF ligature break artifacts (\ufffe, \u00ad)
+    if (ch === "\ufffe" || ch === "\u00ad") {
+      continue;
+    }
+
+    if (ch === "‘" || ch === "’" || ch === "‚" || ch === "‛") ch = "'";
+    else if (ch === "“" || ch === "”" || ch === "„" || ch === "‟") ch = '"';
+    else if (/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/.test(ch)) ch = "-";
 
     // Rejoin hyphenated line breaks
     if (ch === "-" && i + 1 < rawChars.length && /\s/.test(rawChars[i + 1].ch)) {

@@ -22,32 +22,38 @@ import { ActualPdfViewer, type PdfHighlightItem } from "../components/common/Act
 
 export const BENCHMARK_PAPERS = [
   {
-    id: "s1",
+    id: "study_birua_2022",
+    shortId: "s1",
     title: "Birua et al. 2022 (Pure Arterial Malformation PCA)",
     filename: "Birua_2022.pdf",
   },
   {
-    id: "s2",
+    id: "study_albina_2024",
+    shortId: "s2",
     title: "Albina-Palmarola et al. 2024 (Accessory MCA)",
     filename: "Albina-Palmarola_2024_A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery.pdf",
   },
   {
-    id: "s3",
+    id: "study_brinjikji_2018",
+    shortId: "s3",
     title: "Brinjikji et al. 2018 (Pure Arterial Malformations Review)",
     filename: "Brinjikji_2018_Pure arterial malformations.pdf",
   },
   {
-    id: "s4",
+    id: "study_chua_2021",
+    shortId: "s4",
     title: "Chua et al. 2021 (Ruptured Posterior Fossa PAM)",
     filename: "Chua_2021_Endovascular treatment of a ruptured posterior fossa pure arterial malformation illustrative case.pdf",
   },
   {
-    id: "s5",
+    id: "study_deshmukh_2023",
+    shortId: "s5",
     title: "Deshmukh et al. 2023 (PAM Case Report)",
     filename: "Deshmukh_2023_Pure Arterial Malformation (PAM) Case Report and Review of Literature.pdf",
   },
   {
-    id: "s6",
+    id: "study_feliciano_2014",
+    shortId: "s6",
     title: "Feliciano et al. 2014 (Color-coded DSA MCA PAM)",
     filename: "Feliciano_2014_Color-coded digital subtraction angiography in the management of a rare case of middle cerebral artery pure arterial malformation. A technical and case report.pdf",
   },
@@ -78,8 +84,20 @@ export function PdfViewerPage() {
   const [showErrorAnalysis, setShowErrorAnalysis] = useState<boolean>(false);
   const [reviewerName, setReviewerName] = useState<string>("Expert Reviewer");
   const [pdfZoom, setPdfZoom] = useState<number>(100);
-  const [selectedPaperId, setSelectedPaperId] = useState<string>("s1");
+  const [selectedPaperId, setSelectedPaperId] = useState<string>(() => {
+    const match = BENCHMARK_PAPERS.find((p) => p.id === studyId || p.shortId === studyId);
+    return match ? match.id : "study_birua_2022";
+  });
   const [customPdfUrl, setCustomPdfUrl] = useState<string | null>(null);
+
+  // Synchronize selected paper with route parameter
+  useEffect(() => {
+    if (!studyId) return;
+    const match = BENCHMARK_PAPERS.find((p) => p.id === studyId || p.shortId === studyId);
+    if (match && match.id !== selectedPaperId) {
+      setSelectedPaperId(match.id);
+    }
+  }, [studyId, selectedPaperId]);
 
   // Collapsible Protocol Rules panel (collapsed by default on extraction side as requested)
   const [showCodebookPanel, setShowCodebookPanel] = useState<boolean>(false);
@@ -924,6 +942,9 @@ export function PdfViewerPage() {
             onSelectStudy={(id) => {
               setSelectedPaperId(id);
               setCustomPdfUrl(null);
+              if (projectId) {
+                navigate(`/projects/${projectId}/studies/${id}/pdf`);
+              }
             }}
           />
         </section>
