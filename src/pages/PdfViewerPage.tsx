@@ -6,7 +6,7 @@ import {
   type PdfDocumentData,
   type PdfHighlight as ApiPdfHighlight,
 } from "../lib/api";
-import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, type CodebookRule } from "../lib/demoData";
+import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, DEMO_EXTRACTIONS, DEMO_VARIABLES, type CodebookRule } from "../lib/demoData";
 import {
   ArrowLeft, FileText, Loader2, Upload, Sparkles,
   CheckCircle, Table, Tag, Highlighter, ArrowRight,
@@ -72,10 +72,13 @@ interface UndoRecord {
 }
 
 export function PdfViewerPage() {
-  const { projectId, studyId } = useParams<{ projectId: string; studyId: string }>();
+  const { projectId, studyId } = useParams<{ projectId: string; studyId?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const queryStudy = searchParams.get("study");
+  const rawTargetStudy = studyId || queryStudy;
 
   // Active view states
   const [leftTab, setLeftTab] = useState<"document" | "sections" | "tables">("document");
@@ -86,19 +89,22 @@ export function PdfViewerPage() {
   const [reviewerName, setReviewerName] = useState<string>("Expert Reviewer");
   const [pdfZoom, setPdfZoom] = useState<number>(100);
   const [selectedPaperId, setSelectedPaperId] = useState<string>(() => {
-    const match = BENCHMARK_PAPERS.find((p) => p.id === studyId || p.shortId === studyId);
+    const match = BENCHMARK_PAPERS.find((p) => p.id === rawTargetStudy || p.shortId === rawTargetStudy);
     return match ? match.id : "study_birua_2022";
   });
   const [customPdfUrl, setCustomPdfUrl] = useState<string | null>(null);
 
-  // Synchronize selected paper with route parameter
+  const activeStudyId = selectedPaperId || (rawTargetStudy ? (BENCHMARK_PAPERS.find(p => p.id === rawTargetStudy || p.shortId === rawTargetStudy)?.id || rawTargetStudy) : "study_birua_2022");
+
+  // Synchronize selected paper with route parameter or query
   useEffect(() => {
-    if (!studyId) return;
-    const match = BENCHMARK_PAPERS.find((p) => p.id === studyId || p.shortId === studyId);
+    const target = studyId || searchParams.get("study");
+    if (!target) return;
+    const match = BENCHMARK_PAPERS.find((p) => p.id === target || p.shortId === target);
     if (match && match.id !== selectedPaperId) {
       setSelectedPaperId(match.id);
     }
-  }, [studyId, selectedPaperId]);
+  }, [studyId, searchParams, selectedPaperId]);
 
   // Collapsible Protocol Rules panel (collapsed by default on extraction side as requested)
   const [showCodebookPanel, setShowCodebookPanel] = useState<boolean>(false);
@@ -160,25 +166,25 @@ export function PdfViewerPage() {
   });
 
   const allStudies = (studyList && studyList.length > 0) ? studyList : DEMO_STUDIES;
-  const currentStudyIndex = Math.max(0, allStudies.findIndex((s: any) => s.study_id === studyId));
+  const currentStudyIndex = Math.max(0, allStudies.findIndex((s: any) => s.study_id === activeStudyId));
   const currentStudy = allStudies[currentStudyIndex] || allStudies[0];
 
   const { data: study } = useQuery({
-    queryKey: ["study", studyId],
-    queryFn: () => api.getStudy(studyId!),
-    enabled: !!studyId,
+    queryKey: ["study", activeStudyId],
+    queryFn: () => api.getStudy(activeStudyId),
+    enabled: !!activeStudyId,
   });
 
   const { data: pdfSummary } = useQuery({
-    queryKey: ["pdf-summary", studyId],
-    queryFn: () => api.getPdfSummary(studyId!),
-    enabled: !!studyId,
+    queryKey: ["pdf-summary", activeStudyId],
+    queryFn: () => api.getPdfSummary(activeStudyId),
+    enabled: !!activeStudyId,
   });
 
   const { data: pdfData } = useQuery({
-    queryKey: ["pdf-data", studyId],
-    queryFn: () => api.getPdfData(studyId!),
-    enabled: !!studyId,
+    queryKey: ["pdf-data", activeStudyId],
+    queryFn: () => api.getPdfData(activeStudyId),
+    enabled: !!activeStudyId,
   });
 
   const { data: variables } = useQuery({
@@ -188,9 +194,9 @@ export function PdfViewerPage() {
   });
 
   const { data: extractions, refetch: refetchExtractions } = useQuery({
-    queryKey: ["extractions", studyId],
-    queryFn: () => api.listExtractions(studyId!),
-    enabled: !!studyId,
+    queryKey: ["extractions", activeStudyId],
+    queryFn: () => api.listExtractions(activeStudyId),
+    enabled: !!activeStudyId,
   });
 
   const { data: errorAnalysis, refetch: refetchErrorAnalysis } = useQuery({
@@ -200,22 +206,34 @@ export function PdfViewerPage() {
   });
 
   // Ensure first variable is selected on load
-  const variableList = variables && variables.length > 0 ? variables : [];
+  const variableList = (variables && variables.length > 0) ? variables : DEMO_VARIABLES;
   useEffect(() => {
     if (!selectedVarId && variableList.length > 0) {
       setSelectedVarId(variableList[0].variable_id);
     }
   }, [selectedVarId, variableList]);
 
+  // When switching studies, ensure selected variable is valid
+  useEffect(() => {
+    if (variableList.length > 0) {
+      const exists = variableList.some((v: any) => v.variable_id === selectedVarId);
+      if (!exists) {
+        setSelectedVarId(variableList[0].variable_id);
+      }
+    }
+  }, [activeStudyId, variableList, selectedVarId]);
+
   // Selected variable & extraction
   const currentVar = variableList.find((v: any) => v.variable_id === selectedVarId) || variableList[0];
   const extractionMap: Record<string, any> = useMemo(() => {
     const map: Record<string, any> = {};
-    (extractions || []).forEach((e: any) => {
+    const fallbackList = (DEMO_EXTRACTIONS as any)[activeStudyId] || (DEMO_EXTRACTIONS as any)["study_birua_2022"] || [];
+    const sourceList = (extractions && extractions.length > 0) ? extractions : fallbackList;
+    sourceList.forEach((e: any) => {
       if (e.variable_id) map[e.variable_id] = e;
     });
     return map;
-  }, [extractions]);
+  }, [extractions, activeStudyId]);
 
   const currentExtraction = currentVar ? extractionMap[currentVar.variable_id] : null;
   const currentRule: CodebookRule | undefined = currentVar ? (customRules[currentVar.variable_id] || DEMO_CODEBOOK_RULES[currentVar.variable_id]) : undefined;
@@ -228,11 +246,11 @@ export function PdfViewerPage() {
   // Active Publication PDF URL computation
   const currentPdfUrl = useMemo(() => {
     if (customPdfUrl) return customPdfUrl;
-    const paper = BENCHMARK_PAPERS.find((p) => p.id === selectedPaperId) || BENCHMARK_PAPERS[0];
+    const paper = BENCHMARK_PAPERS.find((p) => p.id === activeStudyId) || BENCHMARK_PAPERS[0];
     const base = import.meta.env.BASE_URL || "/";
     const cleanBase = base.endsWith("/") ? base : base + "/";
     return cleanBase + "papers/" + paper.filename;
-  }, [customPdfUrl, selectedPaperId]);
+  }, [customPdfUrl, activeStudyId]);
 
   // Map extraction variables to spatial PDF highlights for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -270,7 +288,7 @@ export function PdfViewerPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `extraction_${studyId}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `extraction_${activeStudyId}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -394,7 +412,7 @@ export function PdfViewerPage() {
     setUndoStack((prev) => [
       ...prev,
       {
-        studyId: studyId!,
+        studyId: activeStudyId,
         variableId: currentVar.variable_id,
         variableName: currentVar.name,
         previousValue: origVal,
@@ -412,7 +430,7 @@ export function PdfViewerPage() {
 
       await api.recordExtractionDecision({
         project_id: projectId!,
-        study_id: studyId!,
+        study_id: activeStudyId,
         variable_id: currentVar.variable_id,
         variable_name: currentVar.name,
         original_value: origVal,
@@ -529,7 +547,7 @@ export function PdfViewerPage() {
         const rule = customRules[v.variable_id] || DEMO_CODEBOOK_RULES[v.variable_id];
 
         batchUndos.push({
-          studyId: studyId!,
+          studyId: activeStudyId,
           variableId: v.variable_id,
           variableName: v.name,
           previousValue: val,
@@ -541,7 +559,7 @@ export function PdfViewerPage() {
 
         await api.recordExtractionDecision({
           project_id: projectId!,
-          study_id: studyId!,
+          study_id: activeStudyId,
           variable_id: v.variable_id,
           variable_name: v.name,
           original_value: val,
@@ -566,7 +584,7 @@ export function PdfViewerPage() {
       // Select first remaining unverified variable (e.g. low-confidence ones)
       const remainingUnverified = variableList.find((v: any) => {
         const ext = extractionMap[v.variable_id];
-        const isJustAccepted = highConfPendingVariables.some(hv => hv.variable_id === v.variable_id);
+        const isJustAccepted = highConfPendingVariables.some((hv: any) => hv.variable_id === v.variable_id);
         return ext && !ext.is_verified && !isJustAccepted;
       });
 
@@ -644,12 +662,12 @@ export function PdfViewerPage() {
 
   // ── Upload PDF Mutation ──
   const uploadPdfMutation = useMutation({
-    mutationFn: (file: File) => api.uploadPdf(studyId!, file, true),
+    mutationFn: (file: File) => api.uploadPdf(activeStudyId, file, true),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["study", studyId] });
-      queryClient.invalidateQueries({ queryKey: ["pdf-summary", studyId] });
-      queryClient.invalidateQueries({ queryKey: ["pdf-data", studyId] });
-      queryClient.invalidateQueries({ queryKey: ["extractions", studyId] });
+      queryClient.invalidateQueries({ queryKey: ["study", activeStudyId] });
+      queryClient.invalidateQueries({ queryKey: ["pdf-summary", activeStudyId] });
+      queryClient.invalidateQueries({ queryKey: ["pdf-data", activeStudyId] });
+      queryClient.invalidateQueries({ queryKey: ["extractions", activeStudyId] });
     },
   });
 
@@ -851,7 +869,9 @@ export function PdfViewerPage() {
             <button
               onClick={() => {
                 if (currentStudyIndex > 0) {
-                  navigate(`/projects/${projectId}/studies/${allStudies[currentStudyIndex - 1].study_id}/pdf`);
+                  const prevStudy = allStudies[currentStudyIndex - 1];
+                  setSelectedPaperId(prevStudy.study_id);
+                  navigate(`/projects/${projectId}/studies/${prevStudy.study_id}/pdf`);
                 }
               }}
               disabled={currentStudyIndex === 0}
@@ -866,7 +886,9 @@ export function PdfViewerPage() {
             <button
               onClick={() => {
                 if (currentStudyIndex < allStudies.length - 1) {
-                  navigate(`/projects/${projectId}/studies/${allStudies[currentStudyIndex + 1].study_id}/pdf`);
+                  const nextStudy = allStudies[currentStudyIndex + 1];
+                  setSelectedPaperId(nextStudy.study_id);
+                  navigate(`/projects/${projectId}/studies/${nextStudy.study_id}/pdf`);
                 }
               }}
               disabled={currentStudyIndex === allStudies.length - 1}

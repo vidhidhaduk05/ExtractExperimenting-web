@@ -282,7 +282,7 @@ export function ActualPdfViewer({
     return () => {
       cancelled = true;
     };
-  }, [highlights, numPages, activeHighlightId]);
+  }, [highlights, numPages]);
 
   // ── 4. Microsoft Word Track Changes Auto-Scroll Mechanism ──
   // Upon accepting/changing to the next variable, smoothly autoscroll to the next highlight!
