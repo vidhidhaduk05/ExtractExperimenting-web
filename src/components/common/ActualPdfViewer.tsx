@@ -563,17 +563,17 @@ export function ActualPdfViewer({
                               height: `${rect.height}%`,
                               mixBlendMode: "multiply",
                               backgroundColor: isActive
-                                ? "rgba(254, 240, 138, 0.85)" // Luminous highlighter yellow
+                                ? "rgba(254, 240, 138, 0.90)" // Luminous highlighter yellow
                                 : isVerified
-                                ? "rgba(167, 243, 208, 0.45)" // Soft emerald highlighter
-                                : "rgba(254, 243, 199, 0.55)", // Gentle warm amber highlighter
+                                ? "rgba(167, 243, 208, 0.35)" // Soft emerald highlighter
+                                : "rgba(254, 243, 199, 0.18)", // Faint unobtrusive tint for pending highlights
                               borderBottom: isActive
                                 ? "2.5px solid #d97706"
                                 : isVerified
                                 ? "2px solid #059669"
-                                : "1.5px solid rgba(217, 119, 6, 0.35)",
+                                : "1.5px dashed rgba(217, 119, 6, 0.45)",
                               boxShadow: isActive
-                                ? "0 0 0 1px rgba(217, 119, 6, 0.25)"
+                                ? "0 0 0 2px rgba(245, 158, 11, 0.35), 0 2px 8px rgba(245, 158, 11, 0.25)"
                                 : "none",
                               borderRadius: "2px",
                               cursor: "pointer",
@@ -582,7 +582,7 @@ export function ActualPdfViewer({
                             }}
                             className={cn(
                               "group/highlight hover:brightness-95",
-                              isActive && "ring-1 ring-amber-500/30"
+                              isActive && "ring-2 ring-amber-500/40"
                             )}
                             title={`#${overlay.varIndex} ${overlay.label}: ${overlay.value || "Extracted"} (Click to review)`}
                           />
