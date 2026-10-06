@@ -12,6 +12,7 @@ import { ReviewPage } from "./pages/ReviewPage";
 import { ExportPage } from "./pages/ExportPage";
 import { PrismaFlowPage } from "./pages/PrismaFlowPage";
 import { PdfViewerPage } from "./pages/PdfViewerPage";
+import { ExtractionSheetPage } from "./pages/ExtractionSheetPage";
 import { MetaAnalysisPage } from "./pages/MetaAnalysisPage";
 import { GradePage } from "./pages/GradePage";
 import { PicoHypothesisPage } from "./pages/PicoHypothesisPage";
@@ -32,6 +33,11 @@ export default function App() {
         <Route path="/projects/:projectId/studies" element={<StudyList />} />
         <Route path="/projects/:projectId/studies/new" element={<StudyImport />} />
         <Route path="/projects/:projectId/studies/:studyId/pdf" element={<PdfViewerPage />} />
+        <Route path="/projects/:projectId/studies/:studyId/sheet" element={<ExtractionSheetPage />} />
+        <Route path="/projects/:projectId/extraction" element={<PdfViewerPage />} />
+        <Route path="/projects/:projectId/extraction/:studyId" element={<PdfViewerPage />} />
+        <Route path="/projects/:projectId/extraction-sheet" element={<ExtractionSheetPage />} />
+        <Route path="/projects/:projectId/extraction-sheet/:studyId" element={<ExtractionSheetPage />} />
         <Route path="/projects/:projectId/screening" element={<ScreeningPage />} />
         <Route path="/projects/:projectId/prisma" element={<PrismaFlowPage />} />
         <Route path="/projects/:projectId/rob" element={<RobSummaryPage />} />

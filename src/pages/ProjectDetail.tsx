@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { FileText, CheckSquare, ShieldCheck, Table, Download, Plus, GitBranch, BarChart3, Award } from "lucide-react";
+import { FileText, CheckSquare, ShieldCheck, Table, Download, Plus, GitBranch, BarChart3, Award, Highlighter, FileSpreadsheet, Sparkles, ArrowRight } from "lucide-react";
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -48,14 +48,14 @@ export function ProjectDetail() {
   const gradeCount = gradeList?.length || 0;
 
   const cards = [
+    { label: "Data Extraction (PDF)", value: "6 Papers", to: `/projects/${projectId}/extraction`, icon: Highlighter, color: "text-blue-600" },
+    { label: "Extraction Sheet", value: "Matrix", to: `/projects/${projectId}/extraction-sheet`, icon: FileSpreadsheet, color: "text-emerald-600" },
     { label: "Studies", value: studyCount, to: `/projects/${projectId}/studies`, icon: FileText, color: "text-phylo-blue" },
     { label: "Screened In", value: includedCount, to: `/projects/${projectId}/screening`, icon: CheckSquare, color: "text-phylo-green" },
     { label: "PRISMA Flow", value: "View", to: `/projects/${projectId}/prisma`, icon: GitBranch, color: "text-phylo-pink" },
     { label: "RoB Assessments", value: robCount, to: `/projects/${projectId}/rob`, icon: ShieldCheck, color: "text-phylo-orange" },
     { label: "Data Review", value: "—", to: `/projects/${projectId}/review`, icon: Table, color: "text-phylo-pink" },
     { label: "Meta-Analyses", value: metaCount, to: `/projects/${projectId}/meta-analysis`, icon: BarChart3, color: "text-phylo-blue" },
-    { label: "GRADE", value: gradeCount, to: `/projects/${projectId}/grade`, icon: Award, color: "text-phylo-green" },
-    { label: "Export", value: "—", to: `/projects/${projectId}/export`, icon: Download, color: "text-gray-500" },
   ];
 
   return (
@@ -66,6 +66,48 @@ export function ProjectDetail() {
           {project.description && <p className="text-gray-500 mt-1">{project.description}</p>}
         </>
       )}
+
+      {/* AI Extraction & Verification Primary Hero Banner */}
+      <div className="card p-6 mt-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white border-0 shadow-xl relative overflow-hidden rounded-2xl">
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-3 border border-blue-400/30">
+              <Sparkles className="h-3.5 w-3.5 text-blue-400" /> AI Extraction Engine · Docling v2.4 Multi-Modal
+            </div>
+            <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight leading-snug">
+              PDF Data Extraction & Word-Style Track Changes
+            </h2>
+            <p className="text-sm text-slate-300 mt-2 leading-relaxed">
+              6 Benchmark Radiotherapy & Aneurysm papers pre-extracted with spatial bounding boxes, in-situ PDF quote highlighting, and rapid human verification.
+            </p>
+            <div className="flex items-center gap-4 mt-3 text-xs text-slate-400">
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 6 Papers Pre-Indexed</span>
+              <span>·</span>
+              <span>Single Keystroke Shortcuts (A, M, R, F)</span>
+              <span>·</span>
+              <span>Cross-Study Matrix</span>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full sm:w-auto">
+            <Link
+              to={`/projects/${projectId}/extraction`}
+              className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold shadow-lg shadow-blue-900/40 hover:shadow-xl transition-all flex items-center justify-center gap-2"
+            >
+              <Highlighter className="h-4 w-4" />
+              Open PDF Extraction
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              to={`/projects/${projectId}/extraction-sheet`}
+              className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm font-semibold backdrop-blur-xs transition-all flex items-center justify-center gap-2"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+              Extraction Data Sheet
+            </Link>
+          </div>
+        </div>
+      </div>
 
       {/* PICOS */}
       {Object.keys(pico).length > 0 && (

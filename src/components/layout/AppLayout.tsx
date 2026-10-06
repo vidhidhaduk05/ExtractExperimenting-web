@@ -2,7 +2,7 @@ import { Outlet, NavLink, useParams, Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useState, useEffect } from "react";
-import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ErrorBoundary } from "../common/ErrorBoundary";
 
@@ -16,6 +16,8 @@ const projectNavItems = (projectId: string) => [
   { to: `/projects/${projectId}/pico`, label: "PICO & Hypothesis", icon: Target },
   { to: `/projects/${projectId}/studies`, label: "Studies", icon: FileText },
   { to: `/projects/${projectId}/screening`, label: "Screening", icon: CheckSquare },
+  { to: `/projects/${projectId}/extraction`, label: "Data Extraction (PDF)", icon: Highlighter, badge: "Docling" },
+  { to: `/projects/${projectId}/extraction-sheet`, label: "Extraction Sheet", icon: FileSpreadsheet, badge: "Matrix" },
   { to: `/projects/${projectId}/prisma`, label: "PRISMA Flow", icon: GitBranch },
   { to: `/projects/${projectId}/review`, label: "Data Review", icon: Table },
   { to: `/projects/${projectId}/rob`, label: "Risk of Bias", icon: ShieldCheck },
@@ -396,6 +398,12 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
                 <div className="space-y-1.5">
                   <Link to={`/projects/${projectId}/pico`} className="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded flex items-center gap-2" onClick={() => setIsOpen(false)}>
                     <Target className="h-4 w-4" /> PICO & Hypothesis
+                  </Link>
+                  <Link to={`/projects/${projectId}/extraction`} className="block px-3 py-2 text-xs text-blue-700 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-slate-800 rounded flex items-center gap-2" onClick={() => setIsOpen(false)}>
+                    <Highlighter className="h-4 w-4 text-blue-600" /> Data Extraction (PDF)
+                  </Link>
+                  <Link to={`/projects/${projectId}/extraction-sheet`} className="block px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-slate-800 rounded flex items-center gap-2" onClick={() => setIsOpen(false)}>
+                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Extraction Data Sheet
                   </Link>
                   <Link to={`/projects/${projectId}/studies`} className="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded flex items-center gap-2" onClick={() => setIsOpen(false)}>
                     <FileText className="h-4 w-4" /> Manage Studies

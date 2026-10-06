@@ -15,7 +15,7 @@ import {
   RotateCcw, Search, Eye, Filter, Zap, ShieldAlert,
   ZoomIn, ZoomOut, Maximize2, Minimize2, Sliders,
   PanelRightClose, PanelRightOpen, FileSpreadsheet,
-  CheckCheck
+  CheckCheck, ExternalLink
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
@@ -913,15 +913,24 @@ export function PdfViewerPage() {
             <span>In-App Codebook</span>
           </button>
 
-          {/* AIDE-Web Style Recorded Answers Data Sheet Button */}
+          {/* AIDE-Web Style Recorded Answers Data Sheet Button & Full Page Link */}
           <button
             onClick={() => setShowDataSheetModal(true)}
             className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors shadow-2xs"
-            title="Inspect recorded study answers matrix and export CSV"
+            title="Inspect recorded study answers matrix modal"
           >
             <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
             <span>Recorded Sheet</span>
           </button>
+
+          <Link
+            to={`/projects/${projectId}/extraction-sheet?study=${selectedPaperId}`}
+            className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-2xs"
+            title="Open full dedicated Extraction Sheet page with multi-study matrix"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Full-Page Matrix</span>
+          </Link>
 
           {/* Toggle Protocol Rules Panel Button */}
           <button
@@ -1925,6 +1934,14 @@ export function PdfViewerPage() {
                 Exports all recorded variables with verified status and ground-truth citations.
               </span>
               <div className="flex items-center gap-2">
+                <Link
+                  to={`/projects/${projectId}/extraction-sheet?study=${selectedPaperId}`}
+                  className="px-3.5 py-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg flex items-center gap-1.5 transition-colors"
+                  onClick={() => setShowDataSheetModal(false)}
+                >
+                  <ExternalLink className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Open Full-Page Sheet</span>
+                </Link>
                 <button
                   onClick={handleExportStudyCsv}
                   className="px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"

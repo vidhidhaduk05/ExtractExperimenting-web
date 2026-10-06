@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type Study } from "../lib/api";
-import { Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Eye, Upload, Loader2 } from "lucide-react";
+import { Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Eye, Upload, Loader2, Highlighter, FileSpreadsheet, Sparkles, ArrowRight } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
 import { useRef, useState } from "react";
 
@@ -85,6 +85,41 @@ export function StudyList() {
           </button>
           <Link to={`/projects/${projectId}/studies/new`} className="btn-primary">
             <Plus className="h-4 w-4" /> Import Study
+          </Link>
+        </div>
+      </div>
+
+      {/* Benchmark Studies & Quick Extraction Access */}
+      <div className="card p-4 mb-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-emerald-50 border border-blue-200/80 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-lg bg-blue-600 text-white shadow-xs">
+            <Highlighter className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="font-bold text-sm text-slate-900">AI Data Extraction & Verification Ready</h2>
+              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700">6 Benchmark Studies</span>
+            </div>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Review extracted clinical variables with in-situ PDF quote highlighting or inspect the consolidated multi-study matrix.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            to={`/projects/${projectId}/extraction`}
+            className="px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"
+          >
+            <Highlighter className="h-3.5 w-3.5" />
+            PDF Extraction (Track Changes)
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+          <Link
+            to={`/projects/${projectId}/extraction-sheet`}
+            className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg flex items-center gap-1.5 transition-colors"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-700" />
+            Extraction Data Sheet
           </Link>
         </div>
       </div>
@@ -188,18 +223,25 @@ function StudyRow({ study, projectId, onDelete }: { study: Study; projectId: str
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-2">
-          {study.pdf_path && (
-            <Link
-              to={`/projects/${projectId}/studies/${study.study_id}/pdf`}
-              className="text-phylo-blue hover:text-phylo-blue/80 transition-colors"
-              title="View PDF"
-            >
-              <Eye className="h-4 w-4" />
-            </Link>
-          )}
+          <Link
+            to={`/projects/${projectId}/studies/${study.study_id}/pdf`}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
+            title="Review AI Extractions in PDF with Track Changes"
+          >
+            <Highlighter className="h-3 w-3" />
+            <span>Extract</span>
+          </Link>
+          <Link
+            to={`/projects/${projectId}/studies/${study.study_id}/sheet`}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+            title="View Extraction Data Sheet"
+          >
+            <FileSpreadsheet className="h-3 w-3" />
+            <span>Sheet</span>
+          </Link>
           <button
             onClick={onDelete}
-            className="text-gray-400 hover:text-red-500 transition-colors"
+            className="text-gray-400 hover:text-red-500 transition-colors p-1"
             title="Delete study"
           >
             <Trash2 className="h-4 w-4" />
