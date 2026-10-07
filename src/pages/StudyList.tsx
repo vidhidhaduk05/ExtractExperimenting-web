@@ -1,7 +1,8 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { parsePdfToStudyData, registerPdfDemoData } from "../lib/pdfAutoIdentifier";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type Study } from "../lib/api";
-import { Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Eye, Upload, Loader2, Highlighter, FileSpreadsheet, Sparkles, ArrowRight } from "lucide-react";
+import { Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Eye, Upload, Loader2, X, Highlighter, FileSpreadsheet, Sparkles, ArrowRight } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
 import { useRef, useState } from "react";
 
@@ -10,6 +11,13 @@ export function StudyList() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
+  const [bulkUploadModalOpen, setBulkUploadModalOpen] = useState(false);
+  const [fastTrackExtraction, setFastTrackExtraction] = useState(false);
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [bulkParsingProgress, setBulkParsingProgress] = useState(0);
+  const [bulkParsingComplete, setBulkParsingComplete] = useState(false);
+  const [parsedStudies, setParsedStudies] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   const { data: studies, isLoading } = useQuery({
     queryKey: ["studies", projectId],
@@ -40,6 +48,52 @@ export function StudyList() {
     },
   });
 
+    const handleBulkUpload = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    if (fileArray.length === 0) return;
+
+    setBulkFiles(fileArray);
+    setBulkUploadModalOpen(true);
+    setBulkParsingProgress(0);
+    setBulkParsingComplete(false);
+    setParsedStudies([]);
+
+    const results = [];
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      const data = await parsePdfToStudyData(file);
+      results.push({ file, data });
+      setBulkParsingProgress(Math.round(((i + 1) / fileArray.length) * 100));
+    }
+
+    setParsedStudies(results);
+    setBulkParsingComplete(true);
+  };
+
+  const commitBulkUpload = async () => {
+    // Actually create the studies
+    for (const item of parsedStudies) {
+       const studyData = {
+          ...item.data,
+          fast_track: fastTrackExtraction
+       };
+       // Create study using the mutate function or directly via API
+       try {
+           const newStudy = await api.createStudy(projectId!, studyData);
+           try {
+             await api.uploadPdf(newStudy.study_id, item.file);
+           } catch(e) {}
+           registerPdfDemoData(newStudy.study_id, item.file, item.data);
+       } catch (err) {}
+    }
+    setBulkUploadModalOpen(false);
+    queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+
+    if (fastTrackExtraction) {
+        navigate(`/projects/${projectId}/extraction-sheet`);
+    }
+  };
+
   const handleRefUpload = (files: FileList) => {
     const fileArray = Array.from(files);
     if (fileArray.length > 0) {
@@ -66,6 +120,16 @@ export function StudyList() {
           <div className="flex items-center gap-2 mb-2">
             <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">LITERATURE REPOSITORY</span>
             <span className="text-xs font-mono text-[#8A817A]">{studies?.length || 0} Studies Indexed</span>
+            <button
+              onClick={() => {
+                 localStorage.setItem(`radextract_blank_${projectId}`, "true");
+                 localStorage.setItem(`radextract_studies_${projectId}`, JSON.stringify([]));
+                 window.location.reload();
+              }}
+              className="text-[10px] px-2 py-0.5 border border-black/10 rounded-full hover:bg-black/5"
+            >
+              Start Blank Workspace
+            </button>
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#141413] tracking-tight">
             Studies & Clinical Benchmarks
@@ -79,11 +143,18 @@ export function StudyList() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".ris,.bib,.bibtex,.csv,.xml,.nbib,.txt"
+            accept=".ris,.bib,.bibtex,.csv,.xml,.nbib,.txt,.pdf"
             multiple
             className="hidden"
             onChange={(e) => {
-              if (e.target.files) handleRefUpload(e.target.files);
+              if (e.target.files) {
+                 const hasPdfs = Array.from(e.target.files).some(f => f.name.toLowerCase().endsWith('.pdf'));
+                 if (hasPdfs) {
+                    handleBulkUpload(e.target.files);
+                 } else {
+                    handleRefUpload(e.target.files);
+                 }
+              }
               e.target.value = "";
             }}
           />
@@ -99,6 +170,13 @@ export function StudyList() {
               <Upload className="h-3.5 w-3.5" />
             )}
             Import References
+          </button>
+          <button
+            type="button"
+            className="btn-phylo-secondary text-xs"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-3.5 w-3.5" /> Bulk Upload Study PDFs
           </button>
           <Link to={`/projects/${projectId}/studies/new`} className="btn-phylo-primary text-xs">
             <Plus className="h-3.5 w-3.5" />
@@ -164,15 +242,24 @@ export function StudyList() {
       )}
 
       {studies && studies.length === 0 && (
-        <div className="card-phylo p-16 text-center">
-          <FileText className="h-10 w-10 text-[#8A817A] mx-auto mb-3 opacity-60" />
-          <h3 className="font-serif text-lg text-[#141413] mb-1">No studies indexed yet</h3>
-          <p className="font-sans text-xs text-[#6B665E] mb-5 max-w-sm mx-auto">
-            Import reference files (RIS, BibTeX, CSV) or manually register study publications to begin systematic extraction.
+        <div className="card-phylo p-16 text-center border-2 border-dashed border-[#8A817A]/30 bg-black/[0.015]">
+          <Upload className="h-12 w-12 text-[#8A817A] mx-auto mb-4 opacity-70" />
+          <h3 className="font-serif text-2xl text-[#141413] mb-2">Study Repository is Blank</h3>
+          <p className="font-sans text-sm text-[#6B665E] mb-6 max-w-md mx-auto leading-relaxed">
+            Drop PDFs to auto-convert to JSON and begin extraction. No manual entry needed.
           </p>
-          <Link to={`/projects/${projectId}/studies/new`} className="btn-phylo-primary text-xs inline-flex">
-            <Plus className="h-3.5 w-3.5" /> Import Your First Study
-          </Link>
+          <div className="flex justify-center gap-3">
+             <button onClick={() => fileInputRef.current?.click()} className="btn-phylo-primary text-sm px-6 py-2.5">
+               <Upload className="h-4 w-4" /> Bulk Upload Study PDFs
+             </button>
+             <button onClick={() => {
+                localStorage.removeItem(`radextract_blank_${projectId}`);
+                localStorage.removeItem(`radextract_studies_${projectId}`);
+                window.location.reload();
+             }} className="btn-phylo-secondary text-sm px-6 py-2.5">
+               Load Benchmark Studies
+             </button>
+          </div>
         </div>
       )}
 
@@ -204,6 +291,76 @@ export function StudyList() {
           </div>
         </div>
       )}
+
+      {bulkUploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="px-6 py-4 border-b border-black/10 flex justify-between items-center bg-[#F2F1EB]">
+              <h3 className="font-serif text-xl text-[#141413]">Bulk Upload & Auto-Identify</h3>
+              <button onClick={() => setBulkUploadModalOpen(false)} className="text-[#8A817A] hover:text-[#141413]">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="mb-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
+                 <div className="text-blue-600 mt-0.5"><Sparkles className="h-5 w-5" /></div>
+                 <div>
+                    <h4 className="text-sm font-medium text-blue-900">Auto-identifying metadata from {bulkFiles.length} PDF(s)</h4>
+                    <div className="w-full bg-blue-200 rounded-full h-2 mt-2 mb-1 overflow-hidden">
+                       <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${bulkParsingProgress}%` }}></div>
+                    </div>
+                    <p className="text-xs text-blue-700">{bulkParsingProgress}% complete</p>
+                 </div>
+              </div>
+
+              {parsedStudies.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-[#141413]">Identified Studies:</h4>
+                  {parsedStudies.map((ps, idx) => (
+                    <div key={idx} className="p-3 border border-black/5 rounded-lg bg-black/[0.02]">
+                       <div className="font-medium text-sm text-[#141413] truncate">{ps.data.title}</div>
+                       <div className="text-xs text-[#6B665E] mt-1">{ps.data.authors} • {ps.data.publication_year} • {ps.data.journal}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-6 p-4 rounded-xl border border-[#E9ED4C] bg-[#E9ED4C]/10 flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="fastTrack"
+                  checked={fastTrackExtraction}
+                  onChange={(e) => setFastTrackExtraction(e.target.checked)}
+                  className="rounded border-black/20 text-[#62631E] focus:ring-[#62631E] w-4 h-4 cursor-pointer"
+                />
+                <label htmlFor="fastTrack" className="text-sm text-[#141413] cursor-pointer select-none">
+                  <span className="font-medium block">Direct Data Extraction Mode (Fast-Track)</span>
+                  <span className="text-xs text-[#6B665E]">Skip screening and go straight to Extraction Sheet. Marks as included and complete.</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-black/10 bg-[#F2F1EB]/50 flex justify-end gap-3">
+              <button
+                onClick={() => setBulkUploadModalOpen(false)}
+                className="btn-phylo-secondary px-4 py-2 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={commitBulkUpload}
+                disabled={!bulkParsingComplete}
+                className="btn-phylo-primary px-5 py-2 text-sm flex items-center gap-2"
+              >
+                {!bulkParsingComplete && <Loader2 className="h-4 w-4 animate-spin" />}
+                Import {parsedStudies.length} Studies
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

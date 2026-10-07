@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, DEMO_EXTRACTIONS, DEMO_VARIABLES, type CodebookRule } from "../lib/demoData";
 import { BENCHMARK_PAPERS } from "./PdfViewerPage";
+// BENCHMARK_PAPERS replaced by dynamic data below
 import {
   FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
@@ -43,6 +44,14 @@ export function ExtractionSheetPage() {
   });
 
   // Queries
+  const { data: dynamicStudies } = useQuery({
+    queryKey: ["studies", projectId],
+    queryFn: () => api.listStudies(projectId!),
+    enabled: !!projectId,
+  });
+
+  const availablePapers = (dynamicStudies && dynamicStudies.length > 0) ? dynamicStudies : BENCHMARK_PAPERS;
+
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
     queryFn: () => api.getProject(projectId!),
@@ -64,7 +73,7 @@ export function ExtractionSheetPage() {
   const variableList = variables && variables.length > 0 ? variables : DEMO_VARIABLES;
 
   // Active study object
-  const currentPaper = BENCHMARK_PAPERS.find((p) => p.id === selectedStudyId) || BENCHMARK_PAPERS[3]; // default Chua
+  const currentPaper = availablePapers.find((p: any) => (p.id || p.study_id) === selectedStudyId) || availablePapers[0];
 
   // Map extractions for the active study
   const extractionMap = useMemo(() => {
@@ -81,8 +90,8 @@ export function ExtractionSheetPage() {
     let verifiedVars = 0;
     let highConfCount = 0;
 
-    BENCHMARK_PAPERS.forEach((paper) => {
-      const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+    availablePapers.forEach((paper: any) => {
+      const paperExts = (DEMO_EXTRACTIONS as any)[(paper.id || paper.study_id)] || [];
       paperExts.forEach((e: any) => {
         totalVars++;
         if (e.is_verified) verifiedVars++;
@@ -230,9 +239,9 @@ export function ExtractionSheetPage() {
 
   // Export Combined Matrix CSV across all 6 benchmark studies
   const handleExportAllStudiesMatrixCsv = () => {
-    const headers = ["Variable ID", "Variable Name", "Section", ...BENCHMARK_PAPERS.map((p) => `"${p.title}"`)];
+    const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p: any) => `"${p.title}"`)];
     const rows = variableList.map((v: any) => {
-      const studyValues = BENCHMARK_PAPERS.map((p) => {
+      const studyValues = availablePapers.map((p: any) => {
         const exts = (DEMO_EXTRACTIONS as any)[p.id] || [];
         const found = exts.find((e: any) => e.variable_id === v.variable_id);
         const val = found?.value || "NR";
@@ -436,15 +445,15 @@ export function ExtractionSheetPage() {
             {/* If Single Mode: Study Selection Pills */}
             {viewMode === "single" && (
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-                {BENCHMARK_PAPERS.map((paper, idx) => {
-                  const isSelected = paper.id === selectedStudyId;
-                  const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+                {availablePapers.map((paper: any, idx: number) => {
+                  const isSelected = (paper.id || paper.study_id) === selectedStudyId;
+                  const paperExts = (DEMO_EXTRACTIONS as any)[(paper.id || paper.study_id)] || [];
                   const paperVerified = paperExts.filter((e: any) => e.is_verified).length;
 
                   return (
                     <button
-                      key={paper.id}
-                      onClick={() => setSelectedStudyId(paper.id)}
+                      key={(paper.id || paper.study_id) || paper.study_id}
+                      onClick={() => setSelectedStudyId((paper.id || paper.study_id) || paper.study_id)}
                       className={cn(
                         "px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all border flex items-center gap-1.5 shrink-0",
                         isSelected
@@ -761,8 +770,8 @@ export function ExtractionSheetPage() {
                     <th className="px-4 py-3.5 text-left w-56 sticky left-0 bg-slate-50 dark:bg-slate-850 z-20 shadow-xs">
                       Variable & Domain
                     </th>
-                    {BENCHMARK_PAPERS.map((paper, idx) => (
-                      <th key={paper.id} className="px-4 py-3.5 text-left min-w-[200px]">
+                    {availablePapers.map((paper: any, idx: number) => (
+                      <th key={(paper.id || paper.study_id) || paper.study_id} className="px-4 py-3.5 text-left min-w-[200px]">
                         <div className="flex flex-col">
                           <span className="text-blue-600 font-bold text-[10px]">Study #{idx + 1}</span>
                           <span className="font-bold text-slate-900 dark:text-white truncate" title={paper.title}>
@@ -790,14 +799,14 @@ export function ExtractionSheetPage() {
                       </td>
 
                       {/* Columns for Each Benchmark Study */}
-                      {BENCHMARK_PAPERS.map((paper) => {
-                        const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+                      {availablePapers.map((paper: any) => {
+                        const paperExts = (DEMO_EXTRACTIONS as any)[(paper.id || paper.study_id)] || [];
                         const foundExt = paperExts.find((e: any) => e.variable_id === v.variable_id);
                         const isVerified = !!foundExt?.is_verified;
                         const value = foundExt?.value || "Not Reported";
 
                         return (
-                          <td key={paper.id} className="px-4 py-3.5 group/cell hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors">
+                          <td key={(paper.id || paper.study_id)} className="px-4 py-3.5 group/cell hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors">
                             <div className="flex flex-col gap-1">
                               <div className="flex items-center justify-between gap-1">
                                 <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs truncate max-w-[150px]" title={value}>
@@ -821,7 +830,7 @@ export function ExtractionSheetPage() {
                                   {foundExt?.confidence ? `${Math.round(foundExt.confidence * 100)}% conf` : ""}
                                 </span>
                                 <Link
-                                  to={`/projects/${projectId}/studies/${paper.id}/pdf?var=${v.variable_id}`}
+                                  to={`/projects/${projectId}/studies/${(paper.id || paper.study_id)}/pdf?var=${v.variable_id}`}
                                   className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                                 >
                                   <span>View PDF</span>

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { ArrowLeft, Upload, FileText, CheckCircle, Search, Loader2, BookOpen, ExternalLink, Copy } from "lucide-react";
+import { parsePdfToStudyData, registerPdfDemoData } from "../lib/pdfAutoIdentifier";
 
 export function StudyImport() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -19,10 +20,12 @@ export function StudyImport() {
     pmid: "",
     abstract: "",
     study_design: "diagnostic accuracy",
+    fast_track: false,
     source: "",
   });
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUploaded, setPdfUploaded] = useState(false);
+  const [isParsingPdf, setIsParsingPdf] = useState(false);
   const [error, setError] = useState("");
   const [createdStudyId, setCreatedStudyId] = useState<string | null>(null);
   const [activeCitationTab, setActiveCitationTab] = useState("vancouver");
@@ -78,14 +81,21 @@ export function StudyImport() {
         try {
           await api.uploadPdf(study.study_id, pdfFile);
           setPdfUploaded(true);
+          registerPdfDemoData(study.study_id, pdfFile, form);
         } catch (e) {
-          // PDF upload failure is non-fatal
+          registerPdfDemoData(study.study_id, pdfFile, form);
         }
       }
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
       // Fetch citations for the newly created study
       refetchCitations();
-      setTimeout(() => navigate(`/projects/${projectId}/studies`), 2500);
+      setTimeout(() => {
+        if (form.fast_track) {
+           navigate(`/projects/${projectId}/extraction-sheet`);
+        } else {
+           navigate(`/projects/${projectId}/studies`);
+        }
+      }, 2500);
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -149,7 +159,7 @@ export function StudyImport() {
         <ArrowLeft className="h-3 w-3" /> Back to studies
       </Link>
 
-      <h1 className="text-2xl font-bold mb-1">Import Study</h1>
+      <h1 className="text-2xl font-bold mb-1">Import & Proceed</h1>
       <p className="text-gray-500 text-sm mb-6">Add a study manually or via PubMed PMID, and optionally upload the full-text PDF</p>
 
       {error && (
@@ -273,6 +283,46 @@ export function StudyImport() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+
+          {/* Quick PDF Auto-Extract Top Banner */}
+          <div className="card-phylo-warm p-6 mb-8 text-center border-2 border-dashed border-[#8A817A]/30">
+            <h2 className="font-serif text-xl font-medium text-[#141413] mb-2">
+              Upload PDF to Auto-Identify Everything
+            </h2>
+            <p className="font-sans text-sm text-[#6B665E] mb-5">
+              No Manual Entry Needed. Drop a paper to auto-extract Title, Authors, Year, and prepare for extraction.
+            </p>
+            <div className="relative inline-block">
+              <input
+                type="file"
+                accept=".pdf"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onChange={async (e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    const file = e.target.files[0];
+                    setPdfFile(file);
+                    setIsParsingPdf(true);
+                    try {
+                       const data = await parsePdfToStudyData(file);
+                       setForm(prev => ({ ...prev, ...data }));
+                    } finally {
+                       setIsParsingPdf(false);
+                    }
+                  }
+                }}
+              />
+              <button type="button" className="btn-phylo-primary px-6 py-2.5 flex items-center gap-2 pointer-events-none">
+                {isParsingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {isParsingPdf ? "Parsing PDF..." : "Select PDF File"}
+              </button>
+            </div>
+            {pdfFile && !isParsingPdf && (
+               <div className="mt-4 text-emerald-700 text-sm font-medium flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4" /> PDF Loaded & Metadata Extracted
+               </div>
+            )}
+          </div>
+
         {/* PubMed Lookup */}
         <div className="card p-5 bg-phylo-cream/20">
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">

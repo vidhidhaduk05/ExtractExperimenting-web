@@ -297,6 +297,36 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       } as unknown as T;
     }
     if (path.includes("/studies") && method === "POST") {
+      const projectId = path.split("/")[2] || "proj_pam_current";
+      const newStudy = {
+        study_id: `study_custom_${Date.now()}`,
+        project_id: projectId,
+        title: body.title || "Newly Imported Study",
+        authors: body.authors || "Author et al.",
+        publication_year: Number(body.publication_year) || 2024,
+        journal: body.journal || "Journal of Neurosurgery",
+        doi: body.doi || "",
+        pmid: body.pmid || "",
+        abstract: body.abstract || "",
+        source: body.source || "Manual Entry",
+        study_design: body.study_design || "diagnostic accuracy",
+        screening_status: body.fast_track ? "included" : "pending",
+        screening_stage: body.fast_track ? "fulltext" : "title_abstract",
+        screening_reason: "",
+        extraction_status: body.fast_track ? "complete" : "pending",
+        pdf_status: "pending",
+        pdf_path: ""
+      };
+
+      if (typeof localStorage !== "undefined") {
+         const existing = localStorage.getItem(`radextract_studies_${projectId}`);
+         let studies = existing ? JSON.parse(existing) : (localStorage.getItem(`radextract_blank_${projectId}`) === "true" ? [] : [...DEMO_STUDIES]);
+         studies.push(newStudy);
+         localStorage.setItem(`radextract_studies_${projectId}`, JSON.stringify(studies));
+      }
+
+      return newStudy as unknown as T;
+    }
       const newStudy = {
         study_id: `study_custom_${Date.now()}`,
         project_id: "proj_pam_current",
@@ -477,12 +507,38 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       }
     ] as unknown as T;
   }
+  if (path.match(/\/studies\/[^/]+$/) && method === "DELETE") {
+      const studyId = path.split("/").pop();
+      const projectId = "proj_pam_current";
+      if (typeof localStorage !== "undefined") {
+         const existing = localStorage.getItem(`radextract_studies_${projectId}`);
+         let studies = existing ? JSON.parse(existing) : (localStorage.getItem(`radextract_blank_${projectId}`) === "true" ? [] : [...DEMO_STUDIES]);
+         studies = studies.filter(s => s.study_id !== studyId);
+         localStorage.setItem(`radextract_studies_${projectId}`, JSON.stringify(studies));
+         if (studies.length === 0) {
+             localStorage.setItem(`radextract_blank_${projectId}`, "true");
+         }
+      }
+      return { deleted: true } as unknown as T;
+  }
+
   if (path.match(/\/studies\/[^/]+$/)) {
     const studyId = path.split("/").pop();
     const found = DEMO_STUDIES.find((s: any) => s.study_id === studyId);
     return (found || DEMO_STUDIES[0]) as unknown as T;
   }
   if (path.includes("/studies")) {
+    const projectId = path.includes("projects") ? path.split("/")[2] : "proj_pam_current";
+    if (typeof localStorage !== "undefined") {
+      if (localStorage.getItem(`radextract_blank_${projectId}`) === "true") {
+        const customStudies = localStorage.getItem(`radextract_studies_${projectId}`);
+        return (customStudies ? JSON.parse(customStudies) : []) as unknown as T;
+      }
+      const customStudies = localStorage.getItem(`radextract_studies_${projectId}`);
+      if (customStudies) {
+         return JSON.parse(customStudies) as unknown as T;
+      }
+    }
     return DEMO_STUDIES as unknown as T;
   }
   if (path.includes("/prisma")) {
