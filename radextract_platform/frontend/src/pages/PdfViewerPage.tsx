@@ -852,17 +852,17 @@ export function PdfViewerPage() {
   }, [variableList, extractionMap, selectedVarId, documentSearch]);
 
   return (
-    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen bg-[#ECE9E2] overflow-hidden font-sans">
       {/* ── TOP NAV HEADER ── */}
-      <header className="bg-white border-b border-slate-200 px-5 py-2.5 shrink-0 flex items-center justify-between shadow-xs z-30">
+      <header className="bg-[#FAF9F3] border-b border-[#381A61]/10 px-5 py-2.5 shrink-0 flex items-center justify-between shadow-xs z-30">
         <div className="flex items-center gap-3">
           <Link
             to={`/projects/${projectId}/studies`}
-            className="text-xs font-semibold text-slate-600 hover:text-blue-600 flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors"
+            className="text-xs font-semibold text-[#381A61] hover:text-[#381A61] flex items-center gap-1.5 bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 px-3 py-1.5 rounded-xl border border-[#88A0DC]/40 transition-colors shadow-2xs"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Studies
           </Link>
-          <div className="h-4 w-px bg-slate-300" />
+          <div className="h-4 w-px bg-[#381A61]/15" />
 
           {/* Study Stepper */}
           <div className="flex items-center gap-2">
@@ -875,12 +875,12 @@ export function PdfViewerPage() {
                 }
               }}
               disabled={currentStudyIndex === 0}
-              className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none text-slate-700"
+              className="p-1 rounded-lg hover:bg-[#381A61]/5 disabled:opacity-30 disabled:pointer-events-none text-[#381A61]"
               title="Previous Study"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md">
+            <span className="text-xs font-bold text-[#381A61] bg-[#7C4B73]/10 border border-[#7C4B73]/20 px-2.5 py-1 rounded-lg">
               Study {currentStudyIndex + 1} of {allStudies.length}
             </span>
             <button
@@ -892,17 +892,17 @@ export function PdfViewerPage() {
                 }
               }}
               disabled={currentStudyIndex === allStudies.length - 1}
-              className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none text-slate-700"
+              className="p-1 rounded-lg hover:bg-[#381A61]/5 disabled:opacity-30 disabled:pointer-events-none text-[#381A61]"
               title="Next Study"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
 
             <div className="ml-2">
-              <h1 className="font-bold text-slate-900 text-sm leading-tight truncate max-w-md">
+              <h1 className="font-serif font-bold text-[#381A61] text-sm sm:text-base leading-tight truncate max-w-md">
                 {currentStudy?.title || "Study PDF & Extraction"}
               </h1>
-              <p className="text-[11px] text-slate-500 truncate max-w-sm">
+              <p className="text-[11px] text-[#6B665E] font-serif italic truncate max-w-sm">
                 {currentStudy?.authors} · {currentStudy?.publication_year} · {currentStudy?.journal}
               </p>
             </div>
@@ -910,17 +910,17 @@ export function PdfViewerPage() {
         </div>
 
         {/* Center Progress Bar */}
-        <div className="hidden lg:flex items-center gap-3 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-full">
-          <div className="text-xs font-medium text-slate-600">
-            Extraction Progress: <span className="font-bold text-blue-600">{verifiedCount}/{variableList.length}</span> Verified
+        <div className="hidden lg:flex items-center gap-3 bg-white border border-[#381A61]/10 px-4 py-1.5 rounded-full shadow-2xs">
+          <div className="text-xs font-medium text-[#381A61]">
+            Extraction Progress: <span className="font-bold text-[#7C4B73] font-mono">{verifiedCount}/{variableList.length}</span> Verified
           </div>
-          <div className="w-28 bg-slate-200 rounded-full h-2 overflow-hidden">
+          <div className="w-28 bg-[#88A0DC]/25 rounded-full h-2 overflow-hidden">
             <div
-              className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-[#381A61] to-[#7C4B73] h-2 rounded-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <span className="text-[11px] font-bold text-emerald-600">{progressPercent}%</span>
+          <span className="text-[11px] font-bold text-[#381A61] font-mono">{progressPercent}%</span>
         </div>
 
         {/* Right Action Tools */}
@@ -928,26 +928,26 @@ export function PdfViewerPage() {
           {/* In-App Codebook Designer Button */}
           <button
             onClick={() => setShowCodebookDesigner(true)}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors shadow-2xs"
+            className="px-3 py-1.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 text-[#381A61] border border-[#88A0DC]/40 transition-colors shadow-2xs"
             title="Design and customize codebook variables directly in-app (No file upload required)"
           >
-            <Sliders className="h-3.5 w-3.5 text-blue-600" />
+            <Sliders className="h-3.5 w-3.5 text-[#381A61]" />
             <span>In-App Codebook</span>
           </button>
 
           {/* AIDE-Web Style Recorded Answers Data Sheet Button & Full Page Link */}
           <button
             onClick={() => setShowDataSheetModal(true)}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors shadow-2xs"
+            className="px-3 py-1.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 bg-[#7C4B73]/10 hover:bg-[#7C4B73]/20 text-[#7C4B73] border border-[#7C4B73]/30 transition-colors shadow-2xs"
             title="Inspect recorded study answers matrix modal"
           >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+            <FileSpreadsheet className="h-3.5 w-3.5 text-[#7C4B73]" />
             <span>Recorded Sheet</span>
           </button>
 
           <Link
             to={`/projects/${projectId}/extraction-sheet?study=${selectedPaperId}`}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-2xs"
+            className="px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 bg-[#381A61] hover:bg-[#4E2487] text-[#FAF9F3] transition-colors shadow-xs"
             title="Open full dedicated Extraction Sheet page with multi-study matrix"
           >
             <ExternalLink className="h-3.5 w-3.5" />
@@ -958,17 +958,17 @@ export function PdfViewerPage() {
           <button
             onClick={() => setShowCodebookPanel(!showCodebookPanel)}
             className={cn(
-              "px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 border transition-colors",
+              "px-3 py-1.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 border transition-colors",
               showCodebookPanel
-                ? "bg-indigo-100 text-indigo-700 border-indigo-300"
-                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                ? "bg-[#7C4B73]/15 text-[#7C4B73] border-[#7C4B73]/40"
+                : "bg-white text-[#381A61] border-[#381A61]/15 hover:bg-[#381A61]/5"
             )}
             title={showCodebookPanel ? "Minimize Protocol Rules Panel" : "Open Protocol Rules & Guidelines"}
           >
             {showCodebookPanel ? (
-              <PanelRightClose className="h-3.5 w-3.5 text-indigo-600" />
+              <PanelRightClose className="h-3.5 w-3.5 text-[#7C4B73]" />
             ) : (
-              <PanelRightOpen className="h-3.5 w-3.5 text-slate-500" />
+              <PanelRightOpen className="h-3.5 w-3.5 text-[#6B665E]" />
             )}
             <span>{showCodebookPanel ? "Hide Rules" : "Protocol Rules"}</span>
           </button>
@@ -976,16 +976,16 @@ export function PdfViewerPage() {
           {/* Active Learning & Error Analysis Button */}
           <button
             onClick={() => setShowErrorAnalysis(!showErrorAnalysis)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors border ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors border ${
               showErrorAnalysis 
-                ? "bg-purple-100 text-purple-700 border-purple-300" 
-                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                ? "bg-[#ED968C]/25 text-[#AB3329] border-[#ED968C]/50" 
+                : "bg-white text-[#381A61] border-[#381A61]/15 hover:bg-[#381A61]/5"
             }`}
           >
-            <TrendingUp className="h-3.5 w-3.5 text-purple-600" />
+            <TrendingUp className="h-3.5 w-3.5 text-[#AB3329]" />
             <span>Active Learning</span>
             {errorAnalysis?.total_discrepancies > 0 && (
-              <span className="bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono">
+              <span className="bg-[#AB3329] text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold">
                 {errorAnalysis.total_discrepancies}
               </span>
             )}
@@ -1002,12 +1002,12 @@ export function PdfViewerPage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadPdfMutation.isPending}
-            className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-1.5"
+            className="px-3 py-1.5 text-xs font-semibold text-[#381A61] hover:text-[#381A61] bg-white border border-[#381A61]/15 rounded-xl hover:bg-[#381A61]/5 flex items-center gap-1.5 shadow-2xs"
           >
             {uploadPdfMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#381A61]" />
             ) : (
-              <Upload className="h-3.5 w-3.5 text-slate-500" />
+              <Upload className="h-3.5 w-3.5 text-[#7C4B73]" />
             )}
             Upload PDF
           </button>
@@ -1015,7 +1015,7 @@ export function PdfViewerPage() {
           {/* Link to Review Table */}
           <Link
             to={`/projects/${projectId}/review`}
-            className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
+            className="px-3.5 py-1.5 text-xs font-bold text-[#381A61] bg-[#F9D14A] hover:bg-[#F9D14A]/90 border border-[#E78429]/40 rounded-xl transition-colors flex items-center gap-1.5 shadow-xs"
           >
             <Table className="h-3.5 w-3.5" /> Matrix View
           </Link>
@@ -1055,7 +1055,7 @@ export function PdfViewerPage() {
             COLUMN 1: ACTUAL PDF PUBLICATION VIEWER & HIGHLIGHTS (LEFT)
         ══════════════════════════════════════════════════════════ */}
         <section className={cn(
-          "border-r border-slate-200 bg-slate-200/70 flex flex-col h-full overflow-hidden transition-all duration-300",
+          "border-r border-[#381A61]/10 bg-[#ECE9E2] flex flex-col h-full overflow-hidden transition-all duration-300",
           showCodebookPanel ? "w-[38%]" : "w-[56%]"
         )}>
           <ActualPdfViewer
@@ -1087,19 +1087,19 @@ export function PdfViewerPage() {
         {/* ══════════════════════════════════════════════════════════
             COLUMN 2: TRACK CHANGES VERIFICATION CARDS (CENTER)
         ══════════════════════════════════════════════════════════ */}
-        <section className="flex-1 bg-slate-50 border-r border-slate-200 flex flex-col h-full overflow-hidden min-w-0">
+        <section className="flex-1 bg-[#F2F1EB] border-r border-[#381A61]/10 flex flex-col h-full overflow-hidden min-w-0">
           {/* Microsoft Word Track Changes Review Ribbon Bar */}
-          <div className="border-b border-slate-200 bg-white px-4 py-2 shrink-0 flex flex-col gap-2 shadow-2xs z-10">
+          <div className="border-b border-[#381A61]/10 bg-[#FAF9F3] px-4 py-2.5 shrink-0 flex flex-col gap-2 shadow-2xs z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <span className="text-xs font-bold text-[#381A61] uppercase tracking-wide flex items-center gap-1.5 font-mono">
+                  <span className="w-2 h-2 rounded-full bg-[#381A61] animate-pulse" />
                   Word-Style Track Changes
                 </span>
-                <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-200">
+                <span className="bg-[#88A0DC]/20 text-[#381A61] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-[#88A0DC]/35">
                   Revision {currentVarIndex + 1} of {variableList.length}
                 </span>
-                <span className="text-[11px] font-medium text-slate-500 hidden sm:inline">
+                <span className="text-[11px] font-medium text-[#7C4B73] hidden sm:inline font-serif italic">
                   · {progressPercent}% Verified
                 </span>
               </div>
@@ -1111,9 +1111,9 @@ export function PdfViewerPage() {
                   onClick={handleAcceptAllHighConfidence}
                   disabled={highConfPendingVariables.length === 0 || isAcceptingAll}
                   className={cn(
-                    "px-2.5 py-1.5 text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all",
+                    "px-2.5 py-1.5 text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition-all",
                     highConfPendingVariables.length > 0
-                      ? "text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 active:scale-95 cursor-pointer ring-1 ring-emerald-500/20"
+                      ? "text-[#381A61] bg-[#F9D14A] hover:bg-[#F9D14A]/90 border border-[#E78429]/40 active:scale-95 cursor-pointer ring-1 ring-[#F9D14A]/50"
                       : "text-slate-400 bg-slate-100 border border-slate-200 opacity-60 cursor-not-allowed"
                   )}
                   title={
@@ -1123,13 +1123,13 @@ export function PdfViewerPage() {
                   }
                 >
                   {isAcceptingAll ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[#381A61]" />
                   ) : (
-                    <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />
+                    <CheckCheck className="h-3.5 w-3.5 text-[#381A61]" />
                   )}
                   <span>Accept All &gt;95%</span>
                   {highConfPendingVariables.length > 0 && (
-                    <span className="text-[10px] font-mono font-bold bg-emerald-600 text-white rounded-full px-1.5 py-0.2">
+                    <span className="text-[10px] font-mono font-bold bg-[#381A61] text-[#F9D14A] rounded-full px-1.5 py-0.2">
                       {highConfPendingVariables.length}
                     </span>
                   )}
@@ -1139,23 +1139,23 @@ export function PdfViewerPage() {
                 <button
                   onClick={() => handleDecision("accepted")}
                   disabled={acceptTransitioningId === currentVar?.variable_id}
-                  className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-lg shadow-xs flex items-center gap-1.5 transition-all"
+                  className="px-3 py-1.5 text-xs font-bold text-white bg-[#381A61] hover:bg-[#4E2487] active:scale-95 rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
                   title="Accept AI extraction and autoscroll to next highlight (Hotkey: A or Enter)"
                 >
-                  <Check className="h-3.5 w-3.5" />
+                  <Check className="h-3.5 w-3.5 text-[#F9D14A]" />
                   <span>Accept & Next</span>
-                  <kbd className="text-[10px] bg-emerald-700/80 px-1 py-0.2 rounded font-mono font-normal">A</kbd>
+                  <kbd className="text-[10px] bg-white/20 text-[#FAF9F3] px-1 py-0.2 rounded font-mono font-normal">A</kbd>
                 </button>
 
                 {/* Reject & Next Button */}
                 <button
                   onClick={() => handleDecision("rejected")}
-                  className="px-2.5 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 active:scale-95 rounded-lg flex items-center gap-1 transition-all"
+                  className="px-2.5 py-1.5 text-xs font-bold text-[#AB3329] bg-[#AB3329]/10 hover:bg-[#AB3329]/20 border border-[#AB3329]/30 active:scale-95 rounded-xl flex items-center gap-1 transition-all"
                   title="Reject / Mark NR and autoscroll to next highlight (Hotkey: R)"
                 >
                   <X className="h-3.5 w-3.5" />
                   <span>Reject</span>
-                  <kbd className="text-[10px] bg-rose-200 text-rose-900 px-1 py-0.2 rounded font-mono font-normal">R</kbd>
+                  <kbd className="text-[10px] bg-[#AB3329]/20 text-[#AB3329] px-1 py-0.2 rounded font-mono font-normal">R</kbd>
                 </button>
 
                 {/* Modify Button */}
@@ -1166,31 +1166,31 @@ export function PdfViewerPage() {
                       setEditDraftValue(currentExtraction?.value || "");
                     }
                   }}
-                  className="px-2 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1 transition-all"
+                  className="px-2.5 py-1.5 text-xs font-semibold text-[#7C4B73] bg-[#7C4B73]/10 hover:bg-[#7C4B73]/20 border border-[#7C4B73]/25 rounded-xl flex items-center gap-1 transition-all active:scale-95"
                   title="Modify extracted value inline (Hotkey: M)"
                 >
-                  <Edit3 className="h-3 w-3 text-slate-500" />
-                  <kbd className="text-[10px] bg-white border border-slate-300 px-1 rounded font-mono text-slate-600">M</kbd>
+                  <Edit3 className="h-3 w-3 text-[#7C4B73]" />
+                  <kbd className="text-[10px] bg-white border border-[#7C4B73]/30 px-1 rounded font-mono text-[#7C4B73]">M</kbd>
                 </button>
 
                 {/* Find Quote in PDF Button in Ribbon */}
                 <button
                   onClick={() => findQuoteInPdf(currentVar?.variable_id)}
-                  className="px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                  className="px-2.5 py-1.5 text-xs font-bold text-[#381A61] bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 border border-[#88A0DC]/40 rounded-xl flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
                   title="Find & jump to quote in PDF (Hotkey: F or Q)"
                 >
-                  <Eye className="h-3.5 w-3.5 text-blue-600" />
+                  <Eye className="h-3.5 w-3.5 text-[#381A61]" />
                   <span className="hidden sm:inline">Find Quote</span>
-                  <kbd className="text-[10px] bg-white border border-blue-300 px-1 rounded font-mono text-blue-700 font-bold">F</kbd>
+                  <kbd className="text-[10px] bg-white border border-[#88A0DC]/60 px-1 rounded font-mono text-[#381A61] font-bold">F</kbd>
                 </button>
 
-                <div className="h-4 w-px bg-slate-200 mx-0.5" />
+                <div className="h-4 w-px bg-[#381A61]/15 mx-0.5" />
 
                 {/* Previous Change Button */}
                 <button
                   onClick={navigateToPrevVariable}
                   disabled={currentVarIndex === 0}
-                  className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+                  className="p-1.5 rounded-lg text-[#381A61] hover:bg-[#381A61]/5 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
                   title="Previous Change & Highlight (Hotkey: [ or ↑ or K)"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -1200,7 +1200,7 @@ export function PdfViewerPage() {
                 <button
                   onClick={navigateToNextVariable}
                   disabled={currentVarIndex >= variableList.length - 1}
-                  className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+                  className="p-1.5 rounded-lg text-[#381A61] hover:bg-[#381A61]/5 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
                   title="Next Change & Highlight (Hotkey: ] or ↓ or J)"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -1211,18 +1211,18 @@ export function PdfViewerPage() {
                   onClick={handleUndo}
                   disabled={undoStack.length === 0}
                   className={cn(
-                    "px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1 transition-all shadow-2xs",
+                    "px-2.5 py-1 text-xs font-bold rounded-xl flex items-center gap-1 transition-all shadow-2xs",
                     undoStack.length > 0
-                      ? "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 cursor-pointer active:scale-95"
+                      ? "bg-[#E78429]/15 hover:bg-[#E78429]/25 text-[#E78429] border border-[#E78429]/30 cursor-pointer active:scale-95"
                       : "bg-slate-100 text-slate-400 border border-slate-200 opacity-60 cursor-not-allowed"
                   )}
                   title="Undo last accepted/modified change and scroll back (Hotkey: Z or U or Ctrl+Z)"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   <span>Undo</span>
-                  <kbd className="text-[9px] bg-white border border-slate-300 rounded px-1 font-mono text-slate-600">Z</kbd>
+                  <kbd className="text-[9px] bg-white border border-[#E78429]/30 rounded px-1 font-mono text-[#E78429]">Z</kbd>
                   {undoStack.length > 0 && (
-                    <span className="text-[9px] font-bold bg-amber-200 text-amber-900 rounded-full px-1.5 py-0.2">
+                    <span className="text-[9px] font-bold bg-[#E78429] text-white rounded-full px-1.5 py-0.2">
                       {undoStack.length}
                     </span>
                   )}
@@ -1231,9 +1231,9 @@ export function PdfViewerPage() {
             </div>
 
             {/* Word Review Progress Bar */}
-            <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden flex">
+            <div className="w-full bg-[#88A0DC]/20 rounded-full h-1 overflow-hidden flex">
               <div
-                className="bg-emerald-500 h-1 transition-all duration-300"
+                className="bg-gradient-to-r from-[#381A61] to-[#7C4B73] h-1 transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -1260,59 +1260,60 @@ export function PdfViewerPage() {
                     setSelectedVarId(v.variable_id);
                     findQuoteInPdf(v.variable_id);
                   }}
-                  className={`rounded-xl border transition-all cursor-pointer duration-300 ${
+                  className={cn(
+                    "rounded-2xl border transition-all cursor-pointer duration-300",
                     isTransitioning
-                      ? "bg-emerald-50 border-emerald-500 shadow-lg ring-4 ring-emerald-500/30 scale-[1.01]"
+                      ? "bg-[#7C4B73]/10 border-2 border-[#7C4B73] shadow-lg ring-4 ring-[#7C4B73]/30 scale-[1.01]"
                       : isSelected
                       ? isLowConfidence
-                        ? "bg-slate-100 border-amber-500 shadow-md ring-2 ring-amber-400/30"
-                        : "bg-white border-blue-500 shadow-md ring-2 ring-blue-400/20"
+                        ? "bg-white border-2 border-[#E78429] shadow-lg ring-4 ring-[#E78429]/30 scale-[1.005]"
+                        : "bg-white border-2 border-[#381A61] shadow-lg ring-4 ring-[#F9D14A]/60 scale-[1.005]"
                       : isLowConfidence
-                      ? "bg-slate-100/95 border-slate-300 hover:bg-slate-200/75 hover:border-slate-400 shadow-xs"
-                      : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white shadow-2xs"
-                  }`}
+                      ? "bg-white/95 border border-[#E78429]/40 hover:border-[#E78429] hover:bg-white shadow-xs"
+                      : "bg-white/90 border border-[#381A61]/10 hover:border-[#7C4B73]/40 hover:bg-white shadow-2xs"
+                  )}
                 >
                   {/* Card Header */}
                   <div className={`p-3.5 border-b flex items-center justify-between transition-colors ${
                     isLowConfidence && !isVerified
-                      ? "bg-slate-200/60 border-slate-300"
-                      : "border-slate-100"
+                      ? "bg-[#E78429]/10 border-[#E78429]/25"
+                      : "border-[#381A61]/10 bg-[#FAF9F3]"
                   }`}>
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono text-slate-400 font-bold">
+                      <span className="text-[11px] font-mono text-[#7C4B73] font-bold">
                         #{index + 1}
                       </span>
-                      <span className="font-bold text-slate-900 text-sm">
+                      <span className="font-serif font-bold text-[#381A61] text-base">
                         {v.name}
                       </span>
-                      <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-semibold text-[#381A61] bg-[#88A0DC]/20 border border-[#88A0DC]/35 px-2.5 py-0.5 rounded-full">
                         {v.section || "General"}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2">
                       {isVerified ? (
-                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Check className="h-3 w-3" /> {isEdited ? "Modified & Verified" : "Accepted"}
+                        <span className="text-[11px] font-bold text-[#7C4B73] bg-[#7C4B73]/15 border border-[#7C4B73]/30 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                          <Check className="h-3 w-3 text-[#7C4B73]" /> {isEdited ? "Modified & Verified" : "Accepted"}
                         </span>
                       ) : isLowConfidence ? (
-                        <span className="text-[11px] font-bold text-amber-800 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-                          <AlertCircle className="h-3 w-3 text-amber-600" /> Review Required
+                        <span className="text-[11px] font-bold text-[#E78429] bg-[#E78429]/15 border border-[#E78429]/35 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                          <AlertCircle className="h-3 w-3 text-[#E78429]" /> Review Required
                         </span>
                       ) : (
-                        <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3 text-slate-400" /> Pending Review
+                        <span className="text-[11px] font-semibold text-[#6B665E] bg-[#88A0DC]/10 border border-[#88A0DC]/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3 text-[#88A0DC]" /> Pending Review
                         </span>
                       )}
 
                       {ext?.confidence && (
                         isLowConfidence ? (
-                          <span className="text-[10px] font-mono text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded font-bold flex items-center gap-1 shadow-2xs" title="Confidence ≤ 95% - Requires manual scrutiny">
+                          <span className="text-[10px] font-mono text-[#E78429] bg-[#E78429]/15 border border-[#E78429]/35 px-2 py-0.5 rounded-md font-bold flex items-center gap-1 shadow-2xs" title="Confidence ≤ 95% - Requires manual scrutiny">
                             <span>{confPercent}% AI Conf</span>
-                            <span className="text-[9px] bg-amber-200 text-amber-900 px-1 rounded uppercase tracking-wider font-extrabold">Low</span>
+                            <span className="text-[9px] bg-[#E78429] text-white px-1 rounded uppercase tracking-wider font-extrabold">Low</span>
                           </span>
                         ) : (
-                          <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded font-bold" title="High confidence (>95%)">
+                          <span className="text-[10px] font-mono text-[#381A61] bg-[#F9D14A]/30 border border-[#F9D14A] px-2 py-0.5 rounded-md font-bold" title="High confidence (>95%)">
                             {confPercent}% AI Conf
                           </span>
                         )
@@ -1324,17 +1325,17 @@ export function PdfViewerPage() {
                   <div className="p-4 space-y-3">
                     {/* AIDE-Web Inspired Prominent Recorded Answer Banner */}
                     {isVerified && (
-                      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2.5 flex items-center justify-between text-xs animate-in fade-in duration-200">
+                      <div className="bg-[#7C4B73]/10 border border-[#7C4B73]/30 rounded-xl p-2.5 flex items-center justify-between text-xs animate-in fade-in duration-200">
                         <div className="flex items-center gap-2 min-w-0">
-                          <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
-                          <span className="font-semibold text-emerald-950 truncate">
+                          <CheckCircle className="h-4 w-4 text-[#7C4B73] shrink-0" />
+                          <span className="font-semibold text-[#381A61] truncate">
                             Recorded (Verified by Human):
                           </span>
-                          <span className="font-mono font-bold text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-200 shrink-0">
+                          <span className="font-mono font-bold text-[#381A61] bg-white px-2.5 py-0.5 rounded-md border border-[#7C4B73]/30 shrink-0">
                             {ext?.value || "Not Reported"}
                           </span>
                         </div>
-                        <span className="text-[10px] text-emerald-700 font-medium shrink-0 ml-2">
+                        <span className="text-[10px] text-[#7C4B73] font-bold shrink-0 ml-2">
                           Saved to Study Dataset ✓
                         </span>
                       </div>
@@ -1342,45 +1343,45 @@ export function PdfViewerPage() {
 
                     {/* In-App Variable Coding Guideline / Definition */}
                     {rule?.definition && (
-                      <div className="text-[11px] text-slate-600 bg-slate-50/80 p-2 rounded border border-slate-200/80 leading-relaxed flex items-start gap-1.5">
-                        <BookOpen className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
+                      <div className="text-xs text-[#381A61]/90 bg-[#7C4B73]/5 p-2.5 rounded-xl border-l-3 border-[#7C4B73] border-y border-r border-[#7C4B73]/15 leading-relaxed flex items-start gap-2">
+                        <BookOpen className="h-3.5 w-3.5 text-[#7C4B73] shrink-0 mt-0.5" />
                         <div>
-                          <span className="font-semibold text-slate-700">Coding Guideline: </span>
+                          <span className="font-bold text-[#381A61]">Coding Guideline: </span>
                           <span>{rule.definition}</span>
                         </div>
                       </div>
                     )}
 
                     {/* Word-style Track Changes Display */}
-                    <div className={`border rounded-lg p-3 ${
+                    <div className={`border rounded-xl p-3.5 ${
                       isLowConfidence && !isVerified
-                        ? "bg-white border-slate-300 shadow-2xs"
-                        : "bg-slate-50 border-slate-200"
+                        ? "bg-white border-[#E78429]/30 shadow-2xs"
+                        : "bg-[#FAF9F3] border-[#381A61]/10"
                     }`}>
                       {isLowConfidence && !isVerified && (
-                        <div className="mb-2.5 text-[10px] font-medium text-amber-800 bg-amber-50 border border-amber-200/80 rounded px-2 py-1 flex items-center gap-1.5">
-                          <AlertCircle className="h-3 w-3 text-amber-600 shrink-0" />
+                        <div className="mb-2.5 text-[11px] font-semibold text-[#E78429] bg-[#E78429]/10 border border-[#E78429]/30 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+                          <AlertCircle className="h-3.5 w-3.5 text-[#E78429] shrink-0" />
                           <span>AI model flagged lower extraction certainty ({confPercent}%). Please verify quote vs paper.</span>
                         </div>
                       )}
-                      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                      <div className="text-[10px] font-bold text-[#7C4B73] uppercase tracking-wider mb-1 flex items-center justify-between font-mono">
                         <span>Extracted Value & Proposed Change</span>
-                        <span className="text-[10px] text-slate-500">Source: Docling v2.4</span>
+                        <span className="text-[10px] text-[#88A0DC] font-mono font-bold">Source: Docling v2.4</span>
                       </div>
 
                       <div className="flex items-center gap-3 text-sm">
                         {isEdited ? (
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="line-through text-rose-500 bg-rose-50 px-2 py-0.5 rounded font-medium">
+                            <span className="line-through text-[#AB3329] bg-[#ED968C]/20 border border-[#ED968C]/40 px-2 py-0.5 rounded-md font-medium">
                               {ext?.proposed_by || "Original AI Prediction"}
                             </span>
-                            <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
-                            <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-bold">
+                            <ArrowRight className="h-3.5 w-3.5 text-[#7C4B73]" />
+                            <span className="text-[#381A61] bg-[#F9D14A]/35 border border-[#F9D14A] px-2.5 py-0.5 rounded-md font-bold">
                               {ext?.value}
                             </span>
                           </div>
                         ) : (
-                          <span className="font-bold text-slate-900 text-sm bg-white px-2.5 py-1 rounded border border-slate-200 shadow-2xs">
+                          <span className="font-serif font-bold text-base text-[#381A61] bg-white px-3 py-1 rounded-lg border border-[#381A61]/15 shadow-2xs">
                             {ext?.value || "Not Reported (NR)"}
                           </span>
                         )}
@@ -1388,10 +1389,10 @@ export function PdfViewerPage() {
 
                       {/* Supporting Source Evidence Quote */}
                       {ext?.quote && (
-                        <div className="mt-2.5 text-xs text-slate-600 bg-white p-2.5 rounded border border-slate-200/80 italic flex items-start gap-2">
-                          <QuoteIcon className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
-                          <span className="flex-1">{ext.quote}</span>
-                          <span className="text-[10px] font-mono text-slate-400 shrink-0 ml-1">
+                        <div className="mt-2.5 text-xs text-[#381A61] bg-[#F9D14A]/10 p-3 rounded-r-xl border-l-3 border-[#E78429] border-y border-r border-[#E78429]/20 italic flex items-start gap-2 font-serif">
+                          <QuoteIcon className="h-3.5 w-3.5 text-[#E78429] shrink-0 mt-0.5" />
+                          <span className="flex-1 leading-relaxed">{ext.quote}</span>
+                          <span className="text-[10px] font-mono text-[#7C4B73] font-bold shrink-0 ml-1">
                             P.{ext.source_page || 1}
                           </span>
                         </div>
@@ -1400,8 +1401,8 @@ export function PdfViewerPage() {
 
                     {/* Inline Editing Form if active */}
                     {editingVarId === v.variable_id && (
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2 animate-in fade-in duration-150">
-                        <label className="text-xs font-bold text-blue-900">
+                      <div className="p-3.5 bg-[#88A0DC]/10 border border-[#88A0DC]/35 rounded-xl space-y-2.5 animate-in fade-in duration-150">
+                        <label className="text-xs font-bold text-[#381A61]">
                           Modify Extracted Value:
                         </label>
                         <input
@@ -1409,20 +1410,20 @@ export function PdfViewerPage() {
                           value={editDraftValue}
                           onChange={(e) => setEditDraftValue(e.target.value)}
                           placeholder="Enter revised ground-truth value..."
-                          className="w-full text-xs p-2 bg-white border border-blue-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
+                          className="w-full text-xs p-2 bg-white border border-[#88A0DC]/50 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#381A61] font-medium"
                           autoFocus
                         />
 
                         {/* Quick Selection Chips from Codebook */}
                         {rule?.allowed_values && (
                           <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                            <span className="text-[10px] font-semibold text-slate-500">Allowed Categories:</span>
+                            <span className="text-[10px] font-semibold text-[#6B665E]">Allowed Categories:</span>
                             {rule.allowed_values.map((val: string) => (
                               <button
                                 key={val}
                                 type="button"
                                 onClick={() => setEditDraftValue(val)}
-                                className="text-[10px] font-medium bg-white hover:bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full transition-colors"
+                                className="text-[10px] font-medium bg-white hover:bg-[#88A0DC]/25 text-[#381A61] border border-[#88A0DC]/40 px-2 py-0.5 rounded-full transition-colors"
                               >
                                 {val}
                               </button>
@@ -1434,16 +1435,16 @@ export function PdfViewerPage() {
                           <button
                             type="button"
                             onClick={() => setEditingVarId(null)}
-                            className="px-3 py-1 text-xs text-slate-600 hover:bg-slate-200 rounded-md"
+                            className="px-3 py-1.5 text-xs text-[#6B665E] hover:bg-black/5 rounded-lg"
                           >
                             Cancel
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDecision("modified", editDraftValue)}
-                            className="px-3.5 py-1 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-xs flex items-center gap-1"
+                            className="px-4 py-1.5 text-xs font-bold text-white bg-[#381A61] hover:bg-[#4E2487] rounded-xl shadow-xs flex items-center gap-1"
                           >
-                            <Check className="h-3.5 w-3.5" /> Save & Next
+                            <Check className="h-3.5 w-3.5 text-[#F9D14A]" /> Save & Next
                           </button>
                         </div>
                       </div>
@@ -1451,7 +1452,7 @@ export function PdfViewerPage() {
 
                     {/* Word Track Changes Action Bar (when this variable is selected) */}
                     {isSelected && editingVarId !== v.variable_id && (
-                      <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                      <div className="pt-2.5 flex items-center justify-between border-t border-[#381A61]/10">
                         <div className="flex items-center gap-2">
                           {/* Accept Button */}
                           <button
@@ -1460,18 +1461,18 @@ export function PdfViewerPage() {
                               handleDecision("accepted");
                             }}
                             disabled={isTransitioning}
-                            className={`px-4 py-1.5 text-xs font-bold text-white rounded-lg shadow-xs flex items-center gap-1.5 transition-all active:scale-95 ${
+                            className={`px-4 py-2 text-xs font-bold text-white rounded-xl shadow-xs flex items-center gap-1.5 transition-all active:scale-95 ${
                               isTransitioning
-                                ? "bg-emerald-700 ring-2 ring-emerald-400"
-                                : "bg-emerald-600 hover:bg-emerald-700"
+                                ? "bg-[#7C4B73] ring-2 ring-[#7C4B73]/50"
+                                : "bg-[#381A61] hover:bg-[#4E2487]"
                             }`}
                             title="Accept AI Extraction (Hotkey: A or Enter)"
                           >
-                            <Check className={`h-4 w-4 ${isTransitioning ? "animate-bounce" : ""}`} />
+                            <Check className={`h-4 w-4 text-[#F9D14A] ${isTransitioning ? "animate-bounce" : ""}`} />
                             {isTransitioning ? (
                               <span>Accepted!</span>
                             ) : (
-                              <>Accept <span className="text-[10px] opacity-75 font-mono">(A)</span></>
+                              <>Accept <span className="text-[10px] opacity-75 font-mono text-[#F9D14A]">(A)</span></>
                             )}
                           </button>
 
@@ -1482,10 +1483,10 @@ export function PdfViewerPage() {
                               setEditingVarId(v.variable_id);
                               setEditDraftValue(ext?.value || "");
                             }}
-                            className="px-3.5 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 active:scale-95 rounded-lg flex items-center gap-1.5 transition-all"
+                            className="px-3.5 py-2 text-xs font-bold text-[#7C4B73] bg-[#7C4B73]/10 hover:bg-[#7C4B73]/20 border border-[#7C4B73]/30 active:scale-95 rounded-xl flex items-center gap-1.5 transition-all"
                             title="Modify Value (Hotkey: M)"
                           >
-                            <Edit3 className="h-3.5 w-3.5" /> Modify <span className="text-[10px] opacity-75 font-mono">(M)</span>
+                            <Edit3 className="h-3.5 w-3.5 text-[#7C4B73]" /> Modify <span className="text-[10px] opacity-75 font-mono">(M)</span>
                           </button>
 
                           {/* Reject Button */}
@@ -1494,10 +1495,10 @@ export function PdfViewerPage() {
                               e.stopPropagation();
                               handleDecision("rejected");
                             }}
-                            className="px-3.5 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 active:scale-95 rounded-lg flex items-center gap-1.5 transition-all"
+                            className="px-3.5 py-2 text-xs font-bold text-[#AB3329] bg-[#AB3329]/10 hover:bg-[#AB3329]/20 border border-[#AB3329]/30 active:scale-95 rounded-xl flex items-center gap-1.5 transition-all"
                             title="Reject / Mark Not Reported (Hotkey: R)"
                           >
-                            <X className="h-3.5 w-3.5" /> Reject <span className="text-[10px] opacity-75 font-mono">(R)</span>
+                            <X className="h-3.5 w-3.5 text-[#AB3329]" /> Reject <span className="text-[10px] opacity-75 font-mono">(R)</span>
                           </button>
                         </div>
 
@@ -1506,12 +1507,12 @@ export function PdfViewerPage() {
                             e.stopPropagation();
                             findQuoteInPdf(v.variable_id);
                           }}
-                          className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200/90 flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all shadow-2xs active:scale-95 cursor-pointer"
+                          className="text-xs font-bold text-[#381A61] hover:text-[#381A61] bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 border border-[#88A0DC]/40 flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
                           title="Scroll and flash quote highlight in PDF (Hotkey: F or Q)"
                         >
-                          <Eye className="h-3.5 w-3.5 text-blue-600" />
+                          <Eye className="h-3.5 w-3.5 text-[#381A61]" />
                           <span>Find Quote in PDF</span>
-                          <kbd className="text-[10px] bg-white border border-blue-300 text-blue-700 px-1 py-0.2 rounded font-mono font-bold">F</kbd>
+                          <kbd className="text-[10px] bg-white border border-[#88A0DC]/60 text-[#381A61] px-1 py-0.2 rounded font-mono font-bold">F</kbd>
                         </button>
                       </div>
                     )}
@@ -1522,17 +1523,17 @@ export function PdfViewerPage() {
           </div>
 
           {/* Bottom Keyboard Shortcut Legend */}
-          <div className="bg-white border-t border-slate-200 px-4 py-2 shrink-0 flex items-center justify-between text-[11px] text-slate-500">
-            <span className="font-semibold text-slate-600 flex items-center gap-1">
-              <Zap className="h-3.5 w-3.5 text-amber-500" /> Hotkeys:
+          <div className="bg-[#FAF9F3] border-t border-[#381A61]/10 px-4 py-2.5 shrink-0 flex items-center justify-between text-[11px] text-[#381A61]">
+            <span className="font-semibold text-[#381A61] flex items-center gap-1">
+              <Zap className="h-3.5 w-3.5 text-[#E78429]" /> Hotkeys:
             </span>
             <div className="flex items-center gap-3">
-              <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">A</kbd> or <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">Enter</kbd> Accept</span>
-              <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">M</kbd> Modify</span>
-              <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">R</kbd> Reject (NR)</span>
-              <span><kbd className="px-1.5 py-0.5 bg-blue-50 border border-blue-300 text-blue-900 rounded font-mono text-[10px] font-bold">F</kbd> / <kbd className="px-1.5 py-0.5 bg-blue-50 border border-blue-300 text-blue-900 rounded font-mono text-[10px] font-bold">Q</kbd> Find Quote</span>
-              <span><kbd className="px-1.5 py-0.5 bg-amber-50 border border-amber-300 text-amber-900 rounded font-mono text-[10px] font-bold">Z</kbd> / <kbd className="px-1.5 py-0.5 bg-amber-50 border border-amber-300 text-amber-900 rounded font-mono text-[10px] font-bold">U</kbd> Undo</span>
-              <span><kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">↓</kbd> / <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px]">↑</kbd> Navigate</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[#381A61] text-[#F9D14A] rounded font-mono text-[10px] font-bold">A</kbd> or <kbd className="px-1.5 py-0.5 bg-white border border-[#381A61]/15 rounded font-mono text-[10px]">Enter</kbd> Accept</span>
+              <span><kbd className="px-1.5 py-0.5 bg-white border border-[#7C4B73]/30 text-[#7C4B73] rounded font-mono text-[10px] font-bold">M</kbd> Modify</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[#AB3329]/15 border border-[#AB3329]/30 text-[#AB3329] rounded font-mono text-[10px] font-bold">R</kbd> Reject (NR)</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[#88A0DC]/30 border border-[#88A0DC]/60 text-[#381A61] rounded font-mono text-[10px] font-bold">F</kbd> / <kbd className="px-1.5 py-0.5 bg-[#88A0DC]/30 border border-[#88A0DC]/60 text-[#381A61] rounded font-mono text-[10px] font-bold">Q</kbd> Find Quote</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[#E78429]/20 border border-[#E78429]/40 text-[#E78429] rounded font-mono text-[10px] font-bold">Z</kbd> / <kbd className="px-1.5 py-0.5 bg-[#E78429]/20 border border-[#E78429]/40 text-[#E78429] rounded font-mono text-[10px] font-bold">U</kbd> Undo</span>
+              <span><kbd className="px-1.5 py-0.5 bg-white border border-[#381A61]/15 text-[#381A61] rounded font-mono text-[10px]">↓</kbd> / <kbd className="px-1.5 py-0.5 bg-white border border-[#381A61]/15 text-[#381A61] rounded font-mono text-[10px]">↑</kbd> Navigate</span>
             </div>
           </div>
         </section>
@@ -1541,26 +1542,26 @@ export function PdfViewerPage() {
             COLUMN 3: SIDE-BY-SIDE CODEBOOK & ACTIVE LEARNING (RIGHT)
         ══════════════════════════════════════════════════════════ */}
         {showCodebookPanel && (
-          <section className="w-[30%] bg-white border-l border-slate-200 flex flex-col h-full overflow-hidden animate-in slide-in-from-right-4 duration-200">
+          <section className="w-[30%] bg-white border-l border-[#381A61]/15 flex flex-col h-full overflow-hidden animate-in slide-in-from-right-4 duration-200">
             {/* Header */}
-            <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3 shrink-0 flex items-center justify-between">
+            <div className="border-b border-[#381A61]/15 bg-[#FAF9F3] px-4 py-3 shrink-0 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-blue-600" />
-                <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wide">
+                <BookOpen className="h-4 w-4 text-[#381A61]" />
+                <h3 className="font-bold text-[#381A61] text-xs uppercase tracking-wide">
                   Protocol Codebook & Rules
                 </h3>
               </div>
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setShowCodebookDesigner(true)}
-                  className="text-[10px] font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors"
+                  className="text-[10px] font-bold text-[#381A61] bg-[#88A0DC]/25 hover:bg-[#88A0DC]/40 border border-[#88A0DC]/50 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors"
                   title="Open In-App Codebook Designer"
                 >
-                  <Sliders className="h-3 w-3" /> Designer
+                  <Sliders className="h-3 w-3 text-[#381A61]" /> Designer
                 </button>
                 <button
                   onClick={() => setShowCodebookPanel(false)}
-                  className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-800 transition-colors"
+                  className="p-1 hover:bg-[#381A61]/10 rounded text-[#381A61]/70 hover:text-[#381A61] transition-colors"
                   title="Minimize Protocol Rules Panel"
                 >
                   <PanelRightClose className="h-4 w-4" />
@@ -1573,18 +1574,18 @@ export function PdfViewerPage() {
               {currentRule ? (
                 <div className="space-y-4">
                   {/* Active Variable Header */}
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="p-3 bg-[#FAF9F3] border border-[#381A61]/15 rounded-lg">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#7C4B73]">
                       Selected Field
                     </div>
-                    <h4 className="text-sm font-bold text-slate-900 mt-0.5">
+                    <h4 className="text-sm font-bold text-[#381A61] mt-0.5">
                       {currentRule.name}
                     </h4>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                      <span className="text-[10px] font-medium text-[#381A61] bg-white px-2 py-0.5 rounded border border-[#381A61]/15">
                         Section: {currentRule.section}
                       </span>
-                      <span className="text-[10px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                      <span className="text-[10px] font-medium text-[#381A61] bg-white px-2 py-0.5 rounded border border-[#381A61]/15">
                         Type: {currentRule.field_type}
                       </span>
                     </div>
@@ -1592,11 +1593,11 @@ export function PdfViewerPage() {
 
                   {/* Operational Definition */}
                   <div>
-                    <h5 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                      <HelpCircle className="h-3.5 w-3.5 text-blue-500" />
+                    <h5 className="text-xs font-bold text-[#381A61] mb-1 flex items-center gap-1.5">
+                      <HelpCircle className="h-3.5 w-3.5 text-[#7C4B73]" />
                       Operational Definition
                     </h5>
-                    <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 leading-relaxed">
+                    <p className="text-xs text-[#381A61]/85 bg-[#FAF9F3] p-2.5 rounded-lg border border-[#381A61]/10 leading-relaxed">
                       {currentRule.definition}
                     </p>
                   </div>
@@ -1604,8 +1605,8 @@ export function PdfViewerPage() {
                   {/* Allowed Categories with Click-to-Apply */}
                   {currentRule.allowed_values && currentRule.allowed_values.length > 0 && (
                     <div>
-                      <h5 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
-                        <Tag className="h-3.5 w-3.5 text-emerald-500" />
+                      <h5 className="text-xs font-bold text-[#381A61] mb-1.5 flex items-center gap-1.5">
+                        <Tag className="h-3.5 w-3.5 text-[#7C4B73]" />
                         Allowed Standard Values (Click to choose)
                       </h5>
                       <div className="flex flex-wrap gap-1.5">
@@ -1617,7 +1618,7 @@ export function PdfViewerPage() {
                               setEditingVarId(currentRule.variable_id);
                               setEditDraftValue(val);
                             }}
-                            className="text-[11px] font-medium bg-slate-50 hover:bg-blue-50 hover:text-blue-700 text-slate-700 border border-slate-200 hover:border-blue-300 px-2.5 py-1 rounded-md transition-colors text-left"
+                            className="text-[11px] font-medium bg-white hover:bg-[#F9D14A]/25 text-[#381A61] border border-[#381A61]/15 hover:border-[#E78429]/50 px-2.5 py-1 rounded-md transition-colors text-left"
                           >
                             {val}
                           </button>
@@ -1628,14 +1629,14 @@ export function PdfViewerPage() {
 
                   {/* Extraction & Coding Rules */}
                   <div>
-                    <h5 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
-                      <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
+                    <h5 className="text-xs font-bold text-[#381A61] mb-1.5 flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-[#381A61]" />
                       Coding Rules & Criteria
                     </h5>
-                    <ul className="space-y-1.5 text-xs text-slate-600">
+                    <ul className="space-y-1.5 text-xs text-[#381A61]/85">
                       {currentRule.rules.map((r: string, idx: number) => (
-                        <li key={idx} className="flex items-start gap-1.5 bg-slate-50 p-2 rounded border border-slate-100">
-                          <span className="text-blue-500 font-bold">•</span>
+                        <li key={idx} className="flex items-start gap-1.5 bg-[#FAF9F3] p-2 rounded border border-[#381A61]/10">
+                          <span className="text-[#E78429] font-bold">•</span>
                           <span>{r}</span>
                         </li>
                       ))}
@@ -1645,11 +1646,11 @@ export function PdfViewerPage() {
                   {/* Gold Standard Literature Example */}
                   {currentRule.gold_standard_example && (
                     <div>
-                      <h5 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                        <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                      <h5 className="text-xs font-bold text-[#381A61] mb-1 flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-[#E78429]" />
                         Gold-Standard Literature Example
                       </h5>
-                      <div className="text-xs text-slate-700 bg-amber-50/60 border border-amber-200 p-2.5 rounded-lg italic">
+                      <div className="text-xs text-[#381A61] bg-[#F9D14A]/15 border border-[#F9D14A]/40 p-2.5 rounded-lg italic">
                         "{currentRule.gold_standard_example}"
                       </div>
                     </div>
@@ -1658,42 +1659,42 @@ export function PdfViewerPage() {
                   {/* Exclusion Criteria */}
                   {currentRule.exclusion_criteria && (
                     <div>
-                      <h5 className="text-xs font-bold text-rose-800 mb-1 flex items-center gap-1.5">
-                        <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
+                      <h5 className="text-xs font-bold text-[#AB3329] mb-1 flex items-center gap-1.5">
+                        <ShieldAlert className="h-3.5 w-3.5 text-[#AB3329]" />
                         Exclusion / Disqualification Rule
                       </h5>
-                      <p className="text-xs text-rose-700 bg-rose-50/60 border border-rose-200 p-2 rounded-lg">
+                      <p className="text-xs text-[#AB3329] bg-[#ED968C]/15 border border-[#ED968C]/40 p-2 rounded-lg">
                         {currentRule.exclusion_criteria}
                       </p>
                     </div>
                   )}
 
                   {/* Live Few-Shot Prompt Queue (Dual-Mode Retraining) */}
-                  <div className="pt-3 border-t border-slate-200 space-y-2">
+                  <div className="pt-3 border-t border-[#381A61]/15 space-y-2">
                     <div className="flex items-center justify-between">
-                      <h5 className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                        <Zap className="h-3.5 w-3.5 text-indigo-600" />
+                      <h5 className="text-xs font-bold text-[#381A61] flex items-center gap-1.5">
+                        <Zap className="h-3.5 w-3.5 text-[#E78429]" />
                         Live Few-Shot Prompt Queue
                       </h5>
-                      <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-bold text-[#381A61] bg-[#88A0DC]/25 border border-[#88A0DC]/40 px-2 py-0.5 rounded-full">
                         {fewShotExemplars.length} Injected
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                    <p className="text-[11px] text-[#381A61]/70 leading-relaxed">
                       Human modifications are directly injected into system prompts for subsequent extractions and logged for JSONL offline retraining.
                     </p>
                     {fewShotExemplars.length > 0 ? (
                       <div className="space-y-1.5 max-h-48 overflow-y-auto">
                         {fewShotExemplars.map((ex, idx) => (
-                          <div key={idx} className="p-2 rounded-lg bg-indigo-50/60 border border-indigo-100 text-xs">
-                            <div className="flex items-center justify-between font-bold text-indigo-950">
+                          <div key={idx} className="p-2 rounded-lg bg-[#FAF9F3] border border-[#88A0DC]/30 text-xs">
+                            <div className="flex items-center justify-between font-bold text-[#381A61]">
                               <span>{ex.variable}</span>
-                              <span className="text-emerald-700 bg-emerald-100/70 text-[10px] px-1.5 py-0.5 rounded font-mono">
+                              <span className="text-[#381A61] bg-[#F9D14A]/30 border border-[#F9D14A]/60 text-[10px] px-1.5 py-0.5 rounded font-mono">
                                 {ex.value}
                               </span>
                             </div>
                             {ex.quote && (
-                              <p className="text-[10px] text-slate-500 italic truncate mt-0.5">
+                              <p className="text-[10px] text-[#381A61]/70 italic truncate mt-0.5">
                                 "{ex.quote}"
                               </p>
                             )}
@@ -1701,14 +1702,14 @@ export function PdfViewerPage() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-lg border border-dashed border-slate-200 text-center">
+                      <div className="text-[11px] text-[#381A61]/50 bg-[#FAF9F3] p-2.5 rounded-lg border border-dashed border-[#381A61]/20 text-center">
                         Modifying or rejecting variables dynamically adds active learning exemplars here.
                       </div>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-10 text-slate-400 text-xs">
+                <div className="text-center py-10 text-[#381A61]/50 text-xs">
                   Select a variable to inspect its codebook operational rules.
                 </div>
               )}
@@ -1724,62 +1725,62 @@ export function PdfViewerPage() {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#381A61] text-white px-6 py-4 flex items-center justify-between border-b border-[#F9D14A]/30">
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-purple-400" />
+                <TrendingUp className="h-5 w-5 text-[#F9D14A]" />
                 <div>
-                  <h3 className="font-bold text-base">
+                  <h3 className="font-bold text-base text-[#FAF9F3]">
                     Active Learning & Error Discrepancy Analysis
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-[#88A0DC]">
                     Continuous evaluation & automatic fine-tuning training dataset generation
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowErrorAnalysis(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-md"
+                className="text-[#88A0DC] hover:text-white p-1 rounded-md"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-[#FAF9F3]">
               {/* Metrics Summary Grid */}
               <div className="grid grid-cols-4 gap-3 text-center">
-                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl">
-                  <div className="text-xl font-black text-slate-900">
+                <div className="bg-white border border-[#381A61]/15 p-3 rounded-xl shadow-2xs">
+                  <div className="text-xl font-black text-[#381A61]">
                     {errorAnalysis?.total_decisions || 18}
                   </div>
-                  <div className="text-[11px] font-semibold text-slate-500 uppercase mt-0.5">
+                  <div className="text-[11px] font-semibold text-[#381A61]/70 uppercase mt-0.5">
                     Reviews Done
                   </div>
                 </div>
 
-                <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
-                  <div className="text-xl font-black text-emerald-700">
+                <div className="bg-[#7C4B73]/10 border border-[#7C4B73]/30 p-3 rounded-xl shadow-2xs">
+                  <div className="text-xl font-black text-[#7C4B73]">
                     {errorAnalysis?.accuracy_rate || 77.8}%
                   </div>
-                  <div className="text-[11px] font-semibold text-emerald-600 uppercase mt-0.5">
+                  <div className="text-[11px] font-semibold text-[#7C4B73] uppercase mt-0.5">
                     AI Accuracy
                   </div>
                 </div>
 
-                <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl">
-                  <div className="text-xl font-black text-rose-700">
+                <div className="bg-[#ED968C]/20 border border-[#ED968C]/50 p-3 rounded-xl shadow-2xs">
+                  <div className="text-xl font-black text-[#AB3329]">
                     {errorAnalysis?.total_discrepancies || 4}
                   </div>
-                  <div className="text-[11px] font-semibold text-rose-600 uppercase mt-0.5">
+                  <div className="text-[11px] font-semibold text-[#AB3329] uppercase mt-0.5">
                     Discrepancies
                   </div>
                 </div>
 
-                <div className="bg-purple-50 border border-purple-200 p-3 rounded-xl">
-                  <div className="text-xl font-black text-purple-700">
+                <div className="bg-[#88A0DC]/20 border border-[#88A0DC]/40 p-3 rounded-xl shadow-2xs">
+                  <div className="text-xl font-black text-[#381A61]">
                     {errorAnalysis?.category_breakdown?.NORMALIZATION || 2}
                   </div>
-                  <div className="text-[11px] font-semibold text-purple-600 uppercase mt-0.5">
+                  <div className="text-[11px] font-semibold text-[#381A61] uppercase mt-0.5">
                     Format Errors
                   </div>
                 </div>
@@ -1787,31 +1788,31 @@ export function PdfViewerPage() {
 
               {/* Error Categories Breakdown */}
               <div>
-                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wide mb-2">
+                <h4 className="font-bold text-[#381A61] text-xs uppercase tracking-wide mb-2">
                   Error Modalities Distribution
                 </h4>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
-                    <span className="font-medium text-slate-700">Normalization (Units/Format)</span>
-                    <span className="font-bold text-slate-900 font-mono">
+                  <div className="p-2.5 bg-white border border-[#381A61]/15 rounded-lg flex items-center justify-between">
+                    <span className="font-medium text-[#381A61]">Normalization (Units/Format)</span>
+                    <span className="font-bold text-[#381A61] font-mono">
                       {errorAnalysis?.category_breakdown?.NORMALIZATION || 2}
                     </span>
                   </div>
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
-                    <span className="font-medium text-slate-700">Missed Context (Overlooked)</span>
-                    <span className="font-bold text-slate-900 font-mono">
+                  <div className="p-2.5 bg-white border border-[#381A61]/15 rounded-lg flex items-center justify-between">
+                    <span className="font-medium text-[#381A61]">Missed Context (Overlooked)</span>
+                    <span className="font-bold text-[#381A61] font-mono">
                       {errorAnalysis?.category_breakdown?.MISSED_CONTEXT || 1}
                     </span>
                   </div>
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
-                    <span className="font-medium text-slate-700">Numeric Mismatch</span>
-                    <span className="font-bold text-slate-900 font-mono">
+                  <div className="p-2.5 bg-white border border-[#381A61]/15 rounded-lg flex items-center justify-between">
+                    <span className="font-medium text-[#381A61]">Numeric Mismatch</span>
+                    <span className="font-bold text-[#381A61] font-mono">
                       {errorAnalysis?.category_breakdown?.NUMERIC_MISMATCH || 1}
                     </span>
                   </div>
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
-                    <span className="font-medium text-slate-700">False Extraction (Hallucination)</span>
-                    <span className="font-bold text-slate-900 font-mono">
+                  <div className="p-2.5 bg-white border border-[#381A61]/15 rounded-lg flex items-center justify-between">
+                    <span className="font-medium text-[#381A61]">False Extraction (Hallucination)</span>
+                    <span className="font-bold text-[#381A61] font-mono">
                       {errorAnalysis?.category_breakdown?.FALSE_EXTRACTION || 0}
                     </span>
                   </div>
@@ -1820,14 +1821,14 @@ export function PdfViewerPage() {
 
               {/* Suggested Prompt Tuning Adjustments */}
               <div>
-                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                <h4 className="font-bold text-[#381A61] text-xs uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-[#E78429]" />
                   Auto-Generated Prompt Engineering Corrections
                 </h4>
-                <div className="space-y-1.5 text-xs text-slate-700">
+                <div className="space-y-1.5 text-xs text-[#381A61]">
                   {(errorAnalysis?.suggested_prompt_rules || []).map((rule: string, idx: number) => (
-                    <div key={idx} className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-lg flex items-start gap-2">
-                      <span className="text-amber-600 font-bold">•</span>
+                    <div key={idx} className="p-2.5 bg-[#F9D14A]/15 border border-[#F9D14A]/40 rounded-lg flex items-start gap-2">
+                      <span className="text-[#E78429] font-bold">•</span>
                       <span>{rule}</span>
                     </div>
                   ))}
@@ -1836,15 +1837,15 @@ export function PdfViewerPage() {
             </div>
 
             {/* Modal Footer with JSONL Export */}
-            <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
+            <div className="bg-[#FAF9F3] border-t border-[#381A61]/15 px-6 py-3.5 flex items-center justify-between">
+              <span className="text-xs text-[#381A61]/70">
                 Ready for fine-tuning via Antigravity Cloud or local Ollama/vLLM.
               </span>
               <button
                 onClick={handleExportTrainingData}
-                className="px-4 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"
+                className="px-4 py-2 text-xs font-bold text-white bg-[#381A61] hover:bg-[#381A61]/90 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors border border-[#F9D14A]/30"
               >
-                <Download className="h-4 w-4" /> Export Training Dataset (JSONL)
+                <Download className="h-4 w-4 text-[#F9D14A]" /> Export Training Dataset (JSONL)
               </button>
             </div>
           </div>
@@ -1875,31 +1876,31 @@ export function PdfViewerPage() {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#381A61] text-white px-6 py-4 flex items-center justify-between border-b border-[#F9D14A]/30">
               <div className="flex items-center gap-3">
-                <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
+                <FileSpreadsheet className="h-5 w-5 text-[#F9D14A]" />
                 <div>
-                  <h3 className="font-bold text-base">
+                  <h3 className="font-bold text-base text-[#FAF9F3]">
                     Study Recorded Extraction Data Sheet
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-[#88A0DC]">
                     AIDE-Web Matrix View &middot; {verifiedCount}/{variableList.length} Variables Human-Verified
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowDataSheetModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-md"
+                className="text-[#88A0DC] hover:text-white p-1 rounded-md"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Modal Table Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                <table className="min-w-full divide-y divide-slate-200 text-xs">
-                  <thead className="bg-slate-50 font-bold text-slate-700">
+            <div className="flex-1 overflow-y-auto p-6 bg-[#FAF9F3]">
+              <div className="border border-[#381A61]/15 rounded-xl overflow-hidden shadow-2xs bg-white">
+                <table className="min-w-full divide-y divide-[#381A61]/10 text-xs">
+                  <thead className="bg-[#FAF9F3] font-bold text-[#381A61]">
                     <tr>
                       <th className="px-3 py-2.5 text-left">Variable</th>
                       <th className="px-3 py-2.5 text-left">Section</th>
@@ -1909,37 +1910,37 @@ export function PdfViewerPage() {
                       <th className="px-3 py-2.5 text-left">Page</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody className="divide-y divide-[#381A61]/10 bg-white">
                     {variableList.map((v: any, idx: number) => {
                       const ext = extractionMap[v.variable_id];
                       const isVerified = ext?.is_verified;
                       const isEdited = ext?.is_edited;
                       return (
-                        <tr key={v.variable_id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
-                          <td className="px-3 py-2.5 font-bold text-slate-900 whitespace-nowrap">
+                        <tr key={v.variable_id} className={idx % 2 === 0 ? "bg-white" : "bg-[#FAF9F3]/50"}>
+                          <td className="px-3 py-2.5 font-bold text-[#381A61] whitespace-nowrap">
                             #{idx + 1} {v.name}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">
+                          <td className="px-3 py-2.5 text-[#381A61]/70 whitespace-nowrap">
                             {v.section || "General"}
                           </td>
-                          <td className="px-3 py-2.5 font-mono font-semibold text-slate-800">
-                            {ext?.value || <span className="text-slate-400 italic">Not Reported</span>}
+                          <td className="px-3 py-2.5 font-mono font-semibold text-[#381A61]">
+                            {ext?.value || <span className="text-[#381A61]/40 italic">Not Reported</span>}
                           </td>
                           <td className="px-3 py-2.5 whitespace-nowrap">
                             {isVerified ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7C4B73] bg-[#7C4B73]/15 border border-[#7C4B73]/30 px-2 py-0.5 rounded-full">
                                 <Check className="h-3 w-3" /> {isEdited ? "Modified" : "Accepted"}
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#E78429] bg-[#E78429]/15 border border-[#E78429]/30 px-2 py-0.5 rounded-full">
                                 <AlertCircle className="h-3 w-3" /> Pending
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-600 italic max-w-xs truncate" title={ext?.quote}>
+                          <td className="px-3 py-2.5 text-[#381A61]/80 italic max-w-xs truncate" title={ext?.quote}>
                             {ext?.quote || "—"}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-400 font-mono">
+                          <td className="px-3 py-2.5 text-[#381A61]/60 font-mono">
                             {ext?.source_page || 1}
                           </td>
                         </tr>
@@ -1951,28 +1952,28 @@ export function PdfViewerPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
+            <div className="bg-[#FAF9F3] border-t border-[#381A61]/15 px-6 py-3.5 flex items-center justify-between">
+              <span className="text-xs text-[#381A61]/70">
                 Exports all recorded variables with verified status and ground-truth citations.
               </span>
               <div className="flex items-center gap-2">
                 <Link
                   to={`/projects/${projectId}/extraction-sheet?study=${selectedPaperId}`}
-                  className="px-3.5 py-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg flex items-center gap-1.5 transition-colors"
+                  className="px-3.5 py-2 text-xs font-bold text-[#381A61] bg-[#88A0DC]/25 hover:bg-[#88A0DC]/40 border border-[#88A0DC]/50 rounded-lg flex items-center gap-1.5 transition-colors"
                   onClick={() => setShowDataSheetModal(false)}
                 >
-                  <ExternalLink className="h-3.5 w-3.5 text-blue-600" />
+                  <ExternalLink className="h-3.5 w-3.5 text-[#381A61]" />
                   <span>Open Full-Page Sheet</span>
                 </Link>
                 <button
                   onClick={handleExportStudyCsv}
-                  className="px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"
+                  className="px-3.5 py-2 text-xs font-bold text-[#381A61] bg-[#F9D14A] hover:bg-[#F9D14A]/90 border border-[#E78429]/40 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"
                 >
-                  <Download className="h-4 w-4" /> Export CSV (AIDE Data Sheet)
+                  <Download className="h-4 w-4 text-[#381A61]" /> Export CSV (AIDE Data Sheet)
                 </button>
                 <button
                   onClick={() => setShowDataSheetModal(false)}
-                  className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#381A61] bg-white border border-[#381A61]/20 hover:bg-[#FAF9F3] rounded-lg"
                 >
                   Close
                 </button>

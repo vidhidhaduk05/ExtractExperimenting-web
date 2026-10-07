@@ -69,3 +69,6 @@ Biomni/
 
 # Web Repo Deployment directory
 radextract_web_repo/
+open-design/
+.playwright-mcp/
+graphify-out/.*.stale

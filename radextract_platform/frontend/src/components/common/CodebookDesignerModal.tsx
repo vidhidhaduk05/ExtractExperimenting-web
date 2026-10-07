@@ -422,19 +422,19 @@ export function CodebookDesignerModal({
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-[#381A61] text-white px-6 py-4 flex items-center justify-between shrink-0 border-b border-[#F9D14A]/30">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-600 rounded-xl">
-              <Sliders className="h-5 w-5 text-white" />
+            <div className="p-2 bg-[#7C4B73] rounded-xl">
+              <Sliders className="h-5 w-5 text-[#F9D14A]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base">In-App Protocol Codebook Designer</h3>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded-full border border-indigo-400/40">
+                <h3 className="font-bold text-base text-[#FAF9F3]">In-App Protocol Codebook Designer</h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-[#88A0DC]/25 text-[#FAF9F3] px-2 py-0.5 rounded-full border border-[#88A0DC]/40">
                   Built-In • No Upload Required
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-[#88A0DC] mt-0.5">
                 Define extraction variables, allowed standard options, and coding criteria inside the app itself.
               </p>
             </div>
@@ -447,7 +447,7 @@ export function CodebookDesignerModal({
                 if (e.target.value) handleLoadTemplate(e.target.value);
                 e.target.value = "";
               }}
-              className="text-xs bg-slate-800 text-slate-200 border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="text-xs bg-[#381A61] text-[#FAF9F3] border border-[#88A0DC]/40 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#F9D14A]"
               defaultValue=""
             >
               <option value="" disabled>Load Protocol Template...</option>
@@ -457,8 +457,8 @@ export function CodebookDesignerModal({
             </select>
 
             {/* Optional CSV/JSON Import (AIDE-Web compatibility) */}
-            <label className="text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer flex items-center gap-1 transition-colors">
-              <Upload className="h-3.5 w-3.5" />
+            <label className="text-xs font-semibold text-[#FAF9F3] hover:text-white bg-[#381A61] hover:bg-[#7C4B73] border border-[#88A0DC]/40 px-2.5 py-1.5 rounded-lg cursor-pointer flex items-center gap-1 transition-colors">
+              <Upload className="h-3.5 w-3.5 text-[#F9D14A]" />
               <span>Import</span>
               <input type="file" accept=".json,.csv" onChange={handleImportFile} className="hidden" />
             </label>
@@ -466,16 +466,16 @@ export function CodebookDesignerModal({
             {/* Export JSON */}
             <button
               onClick={handleExportJson}
-              className="text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-colors"
+              className="text-xs font-semibold text-[#FAF9F3] hover:text-white bg-[#381A61] hover:bg-[#7C4B73] border border-[#88A0DC]/40 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-colors"
               title="Export Codebook to JSON"
             >
-              <Download className="h-3.5 w-3.5" />
+              <Download className="h-3.5 w-3.5 text-[#F9D14A]" />
               <span>Export</span>
             </button>
 
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-white p-1 rounded-md transition-colors"
+              className="text-[#88A0DC] hover:text-white p-1 rounded-md transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -792,15 +792,15 @@ export function CodebookDesignerModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="bg-slate-50 border-t border-slate-200 px-6 py-3 flex items-center justify-between shrink-0">
-          <span className="text-xs text-slate-500">
+        <div className="bg-[#FAF9F3] border-t border-[#381A61]/15 px-6 py-3 flex items-center justify-between shrink-0">
+          <span className="text-xs text-[#381A61]/70">
             Changes are saved live into your project and applied immediately across studies and verification views.
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1.5"
+            className="px-4 py-2 text-xs font-bold text-white bg-[#381A61] hover:bg-[#381A61]/90 rounded-lg transition-colors flex items-center gap-1.5 border border-[#F9D14A]/30"
           >
-            <Check className="h-4 w-4" /> Done & Return to Extraction
+            <Check className="h-4 w-4 text-[#F9D14A]" /> Done & Return to Extraction
           </button>
         </div>
       </div>

@@ -256,14 +256,17 @@ export function PicoHypothesisPage() {
   const [extractionStatus, setExtractionStatus] = useState<
     "idle" | "loading" | "done" | "error"
   >("idle");
+  const [uploadedFileName, setUploadedFileName] = useState("");
   const [extractionConfidence, setExtractionConfidence] = useState("");
   const [extractionError, setExtractionError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleProtocolUpload = async (file: File) => {
     setExtractionStatus("loading");
     setExtractionError("");
+    setUploadedFileName(file.name);
     try {
       const result = await api.extractPico(projectId!, file);
       // Auto-fill PICO form
@@ -277,10 +280,18 @@ export function PicoHypothesisPage() {
       // Auto-fill hypothesis fields
       if (result.research_question) setResearchQuestion(result.research_question);
       if (result.hypothesis) setHypothesis(result.hypothesis);
-      setExtractionConfidence(result.extraction_confidence);
+      setExtractionConfidence(result.extraction_confidence || "high");
       setExtractionStatus("done");
+      // Auto-expand PICO and Hypothesis sections so user immediately sees results
+      setOpenSections((prev) => ({
+        ...prev,
+        protocol: true,
+        pico: true,
+        hypothesis: true,
+      }));
     } catch (err) {
-      setExtractionError((err as Error).message);
+      console.error("[Protocol Upload Error]", err);
+      setExtractionError((err as Error).message || "Failed to process protocol file");
       setExtractionStatus("error");
     }
   };
@@ -337,70 +348,116 @@ export function PicoHypothesisPage() {
         isOpen={openSections.protocol}
         onToggle={() => toggleSection("protocol")}
       >
-        <div className="space-y-3">
+        <div className="space-y-4">
           <p className="text-sm text-gray-500">
             Upload a study protocol (PDF, DOCX, or TXT) to automatically extract PICO
             elements, research question, and hypothesis via NLP analysis.
           </p>
 
-          <div className="flex items-center gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.docx,.txt,.md,.rtf"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleProtocolUpload(file);
-                e.target.value = "";
-              }}
-            />
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={extractionStatus === "loading"}
-            >
-              {extractionStatus === "loading" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4" />
-              )}
-              Upload Protocol
-            </button>
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              const file = e.dataTransfer.files?.[0];
+              if (file) handleProtocolUpload(file);
+            }}
+            className={`rounded-2xl border-2 border-dashed p-5 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 ${
+              isDragging
+                ? "border-[#381A61] bg-[#88A0DC]/10"
+                : "border-[#381A61]/15 bg-[#F2F1EB]/30 hover:border-[#381A61]/30"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-[#381A61]/10 flex items-center justify-center text-[#381A61] shrink-0">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#141413]">
+                  {uploadedFileName ? (
+                    <span className="flex items-center gap-1.5 text-[#381A61]">
+                      <span>{uploadedFileName}</span>
+                    </span>
+                  ) : (
+                    "Select a protocol file or drag & drop here"
+                  )}
+                </p>
+                <p className="text-[11px] text-black/50 mt-0.5">
+                  Supports PDF, DOCX, TXT, MD, RTF (up to 50MB)
+                </p>
+              </div>
+            </div>
 
-            {extractionStatus === "done" && (
+            <div className="flex items-center gap-2.5 shrink-0">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.txt,.md,.rtf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleProtocolUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                id="btn-upload-protocol"
+                className="btn-palette-primary cursor-pointer !px-4 !py-2 text-xs font-bold shadow-sm inline-flex items-center gap-2"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={extractionStatus === "loading"}
+              >
+                {extractionStatus === "loading" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {extractionStatus === "done" ? "Upload Different Protocol" : "Upload Protocol"}
+              </button>
+            </div>
+          </div>
+
+          {extractionStatus === "loading" && (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#88A0DC]/15 border border-[#88A0DC]/30 text-xs font-medium text-[#381A61]">
+              <Loader2 className="h-4 w-4 animate-spin text-[#381A61]" />
+              <span>Analyzing protocol text and extracting PICO elements via NLP...</span>
+            </div>
+          )}
+
+          {extractionStatus === "done" && (
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-phylo-green" />
-                <span className="text-sm text-gray-600">Extracted</span>
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+                <span className="text-sm font-semibold text-emerald-800">Protocol Successfully Extracted</span>
                 {extractionConfidence && (
-                  <span
-                    className={`badge ${
-                      extractionConfidence === "high"
-                        ? "bg-green-100 text-green-700"
-                        : extractionConfidence === "medium"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {extractionConfidence} confidence
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    {extractionConfidence.toUpperCase()} CONFIDENCE
                   </span>
                 )}
               </div>
-            )}
-
-            {extractionStatus === "error" && (
-              <div className="flex items-center gap-2 text-sm text-red-600">
-                <AlertCircle className="h-4 w-4" />
-                {extractionError}
+              <div className="rounded-xl bg-emerald-50/70 border border-emerald-200 px-4 py-3 text-xs text-emerald-900 leading-relaxed">
+                PICO elements, research question, and hypothesis have been auto-populated below from <strong className="font-semibold">{uploadedFileName || "your protocol"}</strong>. Review and edit as needed, then click Save on each section.
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {extractionStatus === "done" && (
-            <div className="rounded-md bg-phylo-cream/30 border border-gray-200 px-4 py-3 text-sm text-gray-600">
-              PICO elements, research question, and hypothesis have been auto-filled
-              below. Review and edit as needed, then save each section.
+          {extractionStatus === "error" && (
+            <div className="flex items-center justify-between rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+                <span>{extractionError || "Failed to extract protocol. Please try again."}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="underline font-semibold hover:text-red-900"
+              >
+                Try Again
+              </button>
             </div>
           )}
         </div>

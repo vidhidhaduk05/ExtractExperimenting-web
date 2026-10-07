@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
@@ -8,10 +8,12 @@ import {
   FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
   Sparkles, ExternalLink, RefreshCw, CheckCheck, ChevronRight,
-  TrendingUp, Award, Layers, ShieldCheck, Tag
+  TrendingUp, Award, Layers, ShieldCheck, Tag, FolderPlus, Upload
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
+import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
+import { CuratedExcelModal } from "../components/common/CuratedExcelModal";
 
 export function ExtractionSheetPage() {
   const { projectId, studyId: routeStudyId } = useParams<{ projectId: string; studyId?: string }>();
@@ -28,6 +30,9 @@ export function ExtractionSheetPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "pending" | "low_conf">("all");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
   const [showCodebookDesigner, setShowCodebookDesigner] = useState<boolean>(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState<boolean>(false);
+  const [showCuratedExcelModal, setShowCuratedExcelModal] = useState<boolean>(false);
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
 
   // Inline editing state
   const [editingVarId, setEditingVarId] = useState<string | null>(null);
@@ -63,8 +68,41 @@ export function ExtractionSheetPage() {
 
   const variableList = variables && variables.length > 0 ? variables : DEMO_VARIABLES;
 
+  const { data: projectStudies } = useQuery({
+    queryKey: ["studies", projectId],
+    queryFn: () => api.listStudies(projectId!),
+    enabled: !!projectId,
+  });
+
+  const availablePapers = useMemo(() => {
+    if (!projectStudies) return BENCHMARK_PAPERS;
+    if (projectStudies.length === 0) return [];
+    return projectStudies.map((s, idx) => {
+      const match = BENCHMARK_PAPERS.find((b) => b.id === s.study_id);
+      if (match) return match;
+      return {
+        id: s.study_id,
+        shortId: `s${idx + 1}`,
+        title: s.title ? `${s.title} (${s.publication_year || 2024})` : `Study #${idx + 1}`,
+        filename: s.pdf_path || `${s.title}.pdf`,
+      };
+    });
+  }, [projectStudies]);
+
+  // Sync selectedStudyId if current is not in available papers
+  useEffect(() => {
+    if (availablePapers.length > 0 && !availablePapers.some((p) => p.id === selectedStudyId)) {
+      setSelectedStudyId(availablePapers[0].id);
+    }
+  }, [availablePapers, selectedStudyId]);
+
   // Active study object
-  const currentPaper = BENCHMARK_PAPERS.find((p) => p.id === selectedStudyId) || BENCHMARK_PAPERS[3]; // default Chua
+  const currentPaper = availablePapers.find((p) => p.id === selectedStudyId) || availablePapers[0] || {
+    id: selectedStudyId || "none",
+    shortId: "s0",
+    title: "No Study Selected",
+    filename: "",
+  };
 
   // Map extractions for the active study
   const extractionMap = useMemo(() => {
@@ -75,13 +113,13 @@ export function ExtractionSheetPage() {
     return map;
   }, [extractions]);
 
-  // Overall metrics across all benchmark papers
+  // Overall metrics across all papers
   const allBenchmarkStats = useMemo(() => {
     let totalVars = 0;
     let verifiedVars = 0;
     let highConfCount = 0;
 
-    BENCHMARK_PAPERS.forEach((paper) => {
+    availablePapers.forEach((paper) => {
       const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
       paperExts.forEach((e: any) => {
         totalVars++;
@@ -96,7 +134,7 @@ export function ExtractionSheetPage() {
       highConfCount,
       percent: totalVars > 0 ? Math.round((verifiedVars / totalVars) * 100) : 0,
     };
-  }, [extractions]);
+  }, [availablePapers, extractions]);
 
   // Filtered variables for single-study sheet
   const filteredVariables = useMemo(() => {
@@ -228,11 +266,11 @@ export function ExtractionSheetPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Export Combined Matrix CSV across all 6 benchmark studies
+  // Export Combined Matrix CSV across all studies
   const handleExportAllStudiesMatrixCsv = () => {
-    const headers = ["Variable ID", "Variable Name", "Section", ...BENCHMARK_PAPERS.map((p) => `"${p.title}"`)];
+    const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p) => `"${p.title}"`)];
     const rows = variableList.map((v: any) => {
-      const studyValues = BENCHMARK_PAPERS.map((p) => {
+      const studyValues = availablePapers.map((p) => {
         const exts = (DEMO_EXTRACTIONS as any)[p.id] || [];
         const found = exts.find((e: any) => e.variable_id === v.variable_id);
         const val = found?.value || "NR";
@@ -262,32 +300,32 @@ export function ExtractionSheetPage() {
   const activeStudyPercent = variableList.length > 0 ? Math.round((activeStudyVerifiedCount / variableList.length) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-16">
+    <div className="min-h-screen bg-[#FAF9F3] text-[#141413] pb-16">
       {/* ── Top Header Navigation Bar ── */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
+      <div className="bg-[#FAF9F3]/90 backdrop-blur-md border-b border-black/[0.08] sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             {/* Left: Breadcrumbs & Title */}
             <div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-                <Link to={`/projects/${projectId}`} className="hover:text-blue-600 transition-colors flex items-center gap-1 font-medium">
+              <div className="flex items-center gap-2 text-xs text-[#8A817A] mb-1">
+                <Link to={`/projects/${projectId}`} className="hover:text-[#141413] transition-colors flex items-center gap-1 font-sans">
                   <ArrowLeft className="h-3 w-3" /> Dashboard
                 </Link>
                 <span>/</span>
-                <Link to={`/projects/${projectId}/studies`} className="hover:text-blue-600 transition-colors font-medium">
+                <Link to={`/projects/${projectId}/studies`} className="hover:text-[#141413] transition-colors font-sans">
                   Studies
                 </Link>
                 <span>/</span>
-                <span className="text-slate-800 dark:text-slate-200 font-semibold flex items-center gap-1">
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-                  Recorded Extraction Data Sheet
+                <span className="text-[#141413] font-medium flex items-center gap-1">
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-[#141413]" />
+                  Extraction Data Sheet
                 </span>
               </div>
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>Study Recorded Extraction Data Sheet</span>
-                  <span className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 font-semibold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                    AIDE-Web Matrix View
+                <h1 className="font-serif text-2xl sm:text-3xl font-normal text-[#141413] tracking-tight flex items-center gap-2">
+                  <span>Study Extraction Data Sheet</span>
+                  <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">
+                    MATRIX VIEW
                   </span>
                 </h1>
               </div>
@@ -295,44 +333,64 @@ export function ExtractionSheetPage() {
 
             {/* Right: Primary Quick Action Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Bulk Upload from Laptop */}
+              <button
+                onClick={() => setShowBulkUploadModal(true)}
+                className="btn-phylo-primary text-xs flex items-center gap-1.5 shadow-xs"
+                title="Bulk upload study PDFs, Excel spreadsheets, or citations directly from your laptop"
+              >
+                <FolderPlus className="h-3.5 w-3.5 text-[#E9ED4C]" />
+                <span>Bulk Upload from Laptop</span>
+              </button>
+
+              {/* Already Curated Excel Sheet */}
+              <button
+                onClick={() => setShowCuratedExcelModal(true)}
+                className="btn-phylo-secondary text-xs bg-white/90 hover:bg-[#E9ED4C]/20 border-black/15 flex items-center gap-1.5"
+                title="1-Click Load Curated Benchmark PAM Sheet, Import Laptop Excel/CSV, or Export Multi-Sheet Workbook"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-700" />
+                <span>Curated Excel Sheet</span>
+              </button>
+
               {/* Jump to Word-Style Track Changes PDF Viewer */}
               <Link
                 to={`/projects/${projectId}/studies/${selectedStudyId}/pdf`}
-                className="px-3.5 py-2 text-xs font-bold rounded-lg flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all hover:shadow-md"
+                className="btn-phylo-secondary text-xs bg-white/80"
                 title="Open Split PDF Word-Style Track Changes Viewer with spatial highlighting"
               >
-                <FileText className="h-4 w-4" />
+                <FileText className="h-3.5 w-3.5 text-[#141413]" />
                 <span>Open PDF Track Changes</span>
               </Link>
 
               {/* In-App Codebook Designer Button */}
               <button
                 onClick={() => setShowCodebookDesigner(true)}
-                className="px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors shadow-2xs"
+                className="btn-phylo-secondary text-xs bg-white/80"
                 title="Design codebook variables and schema directly in-app"
               >
-                <Sliders className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>In-App Codebook</span>
+                <Sliders className="h-3.5 w-3.5 text-[#141413]" />
+                <span>Codebook Rules</span>
               </button>
 
               {/* Accept All >95% */}
               <button
                 onClick={handleAcceptAllHighConfidence}
-                className="px-3 py-2 text-xs font-bold rounded-lg flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition-colors shadow-2xs"
+                className="btn-phylo-secondary text-xs bg-white/80 hover:bg-[#E9ED4C]/20"
                 title="Accept all variables with confidence score higher than 95%"
               >
-                <CheckCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <CheckCheck className="h-3.5 w-3.5 text-emerald-700" />
                 <span>Accept All &gt;95%</span>
               </button>
 
               {/* Export Dropdown / Buttons */}
               <button
                 onClick={handleExportStudyCsv}
-                className="px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+                className="btn-phylo-secondary text-xs bg-white/80"
                 title="Export this study's extraction data sheet to CSV"
               >
-                <Download className="h-3.5 w-3.5 text-slate-500" />
-                <span>Export Study CSV</span>
+                <Download className="h-3.5 w-3.5 text-[#6B665E]" />
+                <span>Export CSV</span>
               </button>
             </div>
           </div>
@@ -340,80 +398,80 @@ export function ExtractionSheetPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        {/* ── Summary Metrics Bar ── */}
+        {/* ── Summary Metrics Bar (Serif numbers as per warm-editorial rules) ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+          <div className="card-phylo p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between text-[#8A817A] text-[10px] font-mono uppercase tracking-wider mb-1">
               <span>ACTIVE STUDY STATUS</span>
-              <FileText className="h-4 w-4 text-blue-500" />
+              <FileText className="h-3.5 w-3.5 text-[#141413]" />
             </div>
-            <div className="text-xl font-bold text-slate-900 dark:text-white">
-              {activeStudyVerifiedCount} / {variableList.length} Verified
+            <div className="font-serif text-2xl font-normal text-[#141413]">
+              {activeStudyVerifiedCount} / {variableList.length} <span className="text-sm font-sans text-[#6B665E]">Verified</span>
             </div>
-            <div className="mt-2 w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <div className="mt-2 w-full bg-black/[0.06] h-1.5 rounded-full overflow-hidden">
               <div
-                className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                className="bg-[#141413] h-full rounded-full transition-all duration-300"
                 style={{ width: `${activeStudyPercent}%` }}
               />
             </div>
-            <span className="text-[11px] text-slate-400 mt-1 block">{activeStudyPercent}% Completed</span>
+            <span className="text-[10px] font-mono text-[#8A817A] mt-1.5 block">{activeStudyPercent}% Completed</span>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+          <div className="card-phylo p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between text-[#8A817A] text-[10px] font-mono uppercase tracking-wider mb-1">
               <span>BENCHMARK CORPUS</span>
-              <Layers className="h-4 w-4 text-indigo-500" />
+              <Layers className="h-3.5 w-3.5 text-[#141413]" />
             </div>
-            <div className="text-xl font-bold text-slate-900 dark:text-white">
-              6 Academic Papers
+            <div className="font-serif text-2xl font-normal text-[#141413]">
+              6 Studies
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {allBenchmarkStats.totalVars} total variables across literature
+            <p className="text-xs font-sans text-[#6B665E] mt-1">
+              {allBenchmarkStats.totalVars} total clinical extraction variables
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+          <div className="card-phylo p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between text-[#8A817A] text-[10px] font-mono uppercase tracking-wider mb-1">
               <span>AI CONFIDENCE</span>
-              <Sparkles className="h-4 w-4 text-amber-500" />
+              <Sparkles className="h-3.5 w-3.5 text-amber-600" />
             </div>
-            <div className="text-xl font-bold text-slate-900 dark:text-white">
+            <div className="font-serif text-2xl font-normal text-[#141413]">
               Docling v2.4
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs font-sans text-[#6B665E] mt-1">
               {allBenchmarkStats.highConfCount} variables &gt;95% confidence
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+          <div className="card-phylo p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between text-[#8A817A] text-[10px] font-mono uppercase tracking-wider mb-1">
               <span>CROSS-STUDY MATRIX</span>
-              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-700" />
             </div>
-            <div className="text-xl font-bold text-slate-900 dark:text-white">
+            <div className="font-serif text-2xl font-normal text-[#141413]">
               {allBenchmarkStats.verifiedVars} Verified
             </div>
             <button
               onClick={handleExportAllStudiesMatrixCsv}
-              className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold mt-1 flex items-center gap-1"
+              className="text-xs text-[#141413] hover:underline font-mono mt-1 flex items-center gap-1"
             >
-              <Download className="h-3 w-3" /> Export All Matrix CSV
+              <Download className="h-3 w-3" /> Export Matrix CSV
             </button>
           </div>
         </div>
 
         {/* ── View Mode & Study Switcher Tabs ── */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden mb-6">
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/40">
+        <div className="card-phylo overflow-hidden mb-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+          <div className="px-6 py-4 border-b border-black/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#F2F1EB]/50">
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl">
+            <div className="flex items-center gap-1 bg-black/[0.05] p-1 rounded-full">
               <button
                 onClick={() => setViewMode("single")}
                 className={cn(
-                  "px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+                  "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
                   viewMode === "single"
-                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                    ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
+                    : "text-[#6B665E] hover:text-[#141413]"
                 )}
               >
                 <FileText className="h-3.5 w-3.5" />
@@ -422,10 +480,10 @@ export function ExtractionSheetPage() {
               <button
                 onClick={() => setViewMode("matrix")}
                 className={cn(
-                  "px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+                  "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
                   viewMode === "matrix"
-                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                    ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
+                    : "text-[#6B665E] hover:text-[#141413]"
                 )}
               >
                 <FileSpreadsheet className="h-3.5 w-3.5" />
@@ -436,7 +494,7 @@ export function ExtractionSheetPage() {
             {/* If Single Mode: Study Selection Pills */}
             {viewMode === "single" && (
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-                {BENCHMARK_PAPERS.map((paper, idx) => {
+                {availablePapers.map((paper, idx) => {
                   const isSelected = paper.id === selectedStudyId;
                   const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
                   const paperVerified = paperExts.filter((e: any) => e.is_verified).length;
@@ -446,24 +504,32 @@ export function ExtractionSheetPage() {
                       key={paper.id}
                       onClick={() => setSelectedStudyId(paper.id)}
                       className={cn(
-                        "px-3 py-1 text-xs font-medium rounded-lg whitespace-nowrap transition-all border flex items-center gap-1.5 shrink-0",
+                        "px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all border flex items-center gap-1.5 shrink-0",
                         isSelected
-                          ? "bg-blue-50 border-blue-300 text-blue-700 font-bold dark:bg-blue-950 dark:border-blue-800 dark:text-blue-300 shadow-2xs"
-                          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50"
+                          ? "bg-[#141413] text-[#FAF9F3] border-[#141413] shadow-2xs"
+                          : "bg-white text-[#6B665E] border-black/10 hover:border-black/30 hover:text-[#141413]"
                       )}
                     >
-                      <span>#{idx + 1} {paper.title.split("(")[0].trim()}</span>
+                      <span className="font-serif font-medium">#{idx + 1} {paper.title.split("(")[0].trim()}</span>
                       <span className={cn(
-                        "text-[10px] px-1.5 py-0.2 rounded-full",
-                        paperVerified === paperExts.length && paperExts.length > 0
-                          ? "bg-emerald-100 text-emerald-700 font-bold"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                        "text-[10px] font-mono px-1.5 py-0.2 rounded-full",
+                        isSelected ? "bg-white/20 text-[#FAF9F3]" : "bg-black/[0.04] text-[#8A817A]"
                       )}>
-                        {paperVerified}/{paperExts.length}
+                        {paperVerified}/10
                       </span>
                     </button>
                   );
                 })}
+
+                {/* Direct Upload Pill */}
+                <button
+                  onClick={() => setShowBulkUploadModal(true)}
+                  className="px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all border border-dashed border-black/30 bg-white/80 hover:bg-[#E9ED4C]/25 hover:border-black/60 text-[#141413] flex items-center gap-1.5 shrink-0 shadow-2xs"
+                  title="Bulk upload study PDFs or datasets directly from your laptop"
+                >
+                  <FolderPlus className="h-3.5 w-3.5 text-[#141413]" />
+                  <span>+ Upload PDFs from Laptop</span>
+                </button>
               </div>
             )}
           </div>
@@ -763,7 +829,7 @@ export function ExtractionSheetPage() {
                     <th className="px-4 py-3.5 text-left w-56 sticky left-0 bg-slate-50 dark:bg-slate-850 z-20 shadow-xs">
                       Variable & Domain
                     </th>
-                    {BENCHMARK_PAPERS.map((paper, idx) => (
+                    {availablePapers.map((paper, idx) => (
                       <th key={paper.id} className="px-4 py-3.5 text-left min-w-[200px]">
                         <div className="flex flex-col">
                           <span className="text-blue-600 font-bold text-[10px]">Study #{idx + 1}</span>
@@ -791,8 +857,8 @@ export function ExtractionSheetPage() {
                         </span>
                       </td>
 
-                      {/* Columns for Each Benchmark Study */}
-                      {BENCHMARK_PAPERS.map((paper) => {
+                      {/* Columns for Each Study */}
+                      {availablePapers.map((paper) => {
                         const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
                         const foundExt = paperExts.find((e: any) => e.variable_id === v.variable_id);
                         const isVerified = !!foundExt?.is_verified;
@@ -875,6 +941,57 @@ export function ExtractionSheetPage() {
             queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
           }}
         />
+      )}
+
+      {/* ── Universal Bulk Upload Modal from Laptop ── */}
+      {showBulkUploadModal && (
+        <UniversalBulkUploadModal
+          projectId={projectId!}
+          isOpen={showBulkUploadModal}
+          onClose={() => setShowBulkUploadModal(false)}
+          defaultTarget="extraction"
+          onSuccess={(count, target, firstStudyId) => {
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["extractions"] });
+            if (firstStudyId) {
+              setSelectedStudyId(firstStudyId);
+            }
+            setFeedbackToast(`Successfully uploaded ${count} studies directly into extraction sheet!`);
+            setTimeout(() => setFeedbackToast(null), 5000);
+          }}
+        />
+      )}
+
+      {/* ── Curated Excel Sheet Modal ── */}
+      {showCuratedExcelModal && (
+        <CuratedExcelModal
+          projectId={projectId!}
+          selectedStudyId={selectedStudyId}
+          availablePapers={availablePapers}
+          isOpen={showCuratedExcelModal}
+          onClose={() => setShowCuratedExcelModal(false)}
+          onSuccess={(msg) => {
+            queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["extractions"] });
+            setFeedbackToast(msg);
+            setTimeout(() => setFeedbackToast(null), 5000);
+          }}
+        />
+      )}
+
+      {/* ── Feedback Toast ── */}
+      {feedbackToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#141413] text-[#FAF9F3] border border-black/20 rounded-xl px-4 py-3 shadow-xl flex items-center gap-2.5 animate-in slide-in-from-bottom-2 duration-200">
+          <CheckCircle2 className="h-4 w-4 text-[#E9ED4C] shrink-0" />
+          <span className="font-serif text-xs">{feedbackToast}</span>
+          <button
+            onClick={() => setFeedbackToast(null)}
+            className="text-white/60 hover:text-white ml-2 text-xs"
+          >
+            &times;
+          </button>
+        </div>
       )}
     </div>
   );

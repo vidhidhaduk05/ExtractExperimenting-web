@@ -59,61 +59,104 @@ export function ProjectDetail() {
   ];
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
+      {/* Project Header */}
       {project && (
-        <>
-          <h1 className="text-2xl font-bold">{project.name}</h1>
-          {project.description && <p className="text-gray-500 mt-1">{project.description}</p>}
-        </>
+        <div className="border-b border-black/[0.08] pb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="tag-phylo-yellow text-[10px] px-2.5 py-0.5">PROJECT SYNTHESIS</span>
+            <span className="text-xs font-mono text-[#8A817A]">ID: {projectId?.slice(0, 12)}</span>
+          </div>
+          <h1 className="font-serif text-4xl sm:text-5xl font-normal text-[#141413] tracking-tight">
+            {project.name}
+          </h1>
+          {project.description && (
+            <p className="font-serif italic text-base text-[#6B665E] mt-2 max-w-2xl leading-relaxed">
+              {project.description}
+            </p>
+          )}
+        </div>
       )}
 
       {/* AI Extraction & Verification Primary Hero Banner */}
-      <div className="card p-6 mt-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white border-0 shadow-xl relative overflow-hidden rounded-2xl">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-3 border border-blue-400/30">
-              <Sparkles className="h-3.5 w-3.5 text-blue-400" /> AI Extraction Engine · Docling v2.4 Multi-Modal
+      <div className="card-phylo-warm p-8 sm:p-10 rounded-3xl relative overflow-hidden shadow-[0_2px_16px_rgba(0,0,0,0.02)]">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 relative z-10">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E9ED4C] text-[#62631E] text-xs font-mono font-medium mb-3">
+              <Sparkles className="h-3.5 w-3.5" /> AI AGENT ENGINE · DOCLING v2.4 IN-SITU
             </div>
-            <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight leading-snug">
-              PDF Data Extraction & Word-Style Track Changes
+            <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#141413] tracking-tight leading-snug">
+              In-Situ PDF Data Extraction & Word-Style Track Changes
             </h2>
-            <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-              6 Benchmark Radiotherapy & Aneurysm papers pre-extracted with spatial bounding boxes, in-situ PDF quote highlighting, and rapid human verification.
+            <p className="font-sans text-xs sm:text-sm text-[#6B665E] mt-3 leading-relaxed">
+              6 Benchmark Clinical Studies pre-indexed with spatial bounding boxes, in-situ verbatim quote highlighting, and rapid human verification hotkeys.
             </p>
-            <div className="flex items-center gap-4 mt-3 text-xs text-slate-400">
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 6 Papers Pre-Indexed</span>
+            <div className="flex flex-wrap items-center gap-3 mt-4 text-[11px] font-mono text-[#8A817A]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#141413] animate-pulse"></span>
+                6 Papers Pre-Indexed
+              </span>
               <span>·</span>
-              <span>Single Keystroke Shortcuts (A, M, R, F)</span>
+              <span>Hotkeys (A: Accept, M: Modify, R: Reject, F: Focus)</span>
               <span>·</span>
-              <span>Cross-Study Matrix</span>
+              <span>Consolidated Extraction Sheet</span>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full sm:w-auto">
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full lg:w-auto">
             <Link
               to={`/projects/${projectId}/extraction`}
-              className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold shadow-lg shadow-blue-900/40 hover:shadow-xl transition-all flex items-center justify-center gap-2"
+              className="btn-phylo-primary text-sm px-6 py-3.5 shadow-sm"
             >
               <Highlighter className="h-4 w-4" />
-              Open PDF Extraction
+              <span>Open PDF Viewer</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               to={`/projects/${projectId}/extraction-sheet`}
-              className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm font-semibold backdrop-blur-xs transition-all flex items-center justify-center gap-2"
+              className="btn-phylo-secondary text-sm px-6 py-3.5 bg-white/80"
             >
-              <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
-              Extraction Data Sheet
+              <FileSpreadsheet className="h-4 w-4 text-[#141413]" />
+              <span>Extraction Sheet</span>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* PICOS */}
+      {/* Dashboard Metrics Grid (Serif numbers as per warm-editorial rules) */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-serif text-lg font-medium text-[#141413]">Review Architecture & Metrics</h3>
+          <span className="font-mono text-xs text-[#8A817A]">Live Status</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {cards.map((c) => (
+            <Link
+              key={c.label}
+              to={c.to}
+              className="card-phylo p-6 rounded-2xl hover:border-black/20 hover:shadow-[0_8px_24px_rgba(0,0,0,0.04)] transition-all group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-8 w-8 rounded-full bg-black/[0.04] flex items-center justify-center text-[#141413] group-hover:bg-[#141413] group-hover:text-[#FAF9F3] transition-colors">
+                  <c.icon className="h-4 w-4" />
+                </div>
+                <ArrowRight className="h-3.5 w-3.5 text-[#8A817A] opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <div className="font-serif text-3xl font-normal text-[#141413] tracking-tight">{c.value}</div>
+              <div className="font-mono text-[11px] text-[#8A817A] uppercase tracking-wider mt-1">{c.label}</div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* PICOS Framework */}
       {Object.keys(pico).length > 0 && (
-        <div className="card p-5 mt-6">
-          <h2 className="font-semibold mb-3">PICOS Framework</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        <div className="card-phylo p-6 sm:p-8 rounded-2xl">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">PROTOCOL</span>
+            <h2 className="font-serif text-lg font-medium text-[#141413]">PICOS Clinical Framework</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             {pico.population && <PicosItem letter="P" label="Population" value={pico.population} />}
             {pico.index_test && <PicosItem letter="I" label="Index Test" value={pico.index_test} />}
             {pico.comparator && <PicosItem letter="C" label="Comparator" value={pico.comparator} />}
@@ -123,47 +166,39 @@ export function ProjectDetail() {
         </div>
       )}
 
-      {/* Dashboard cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        {cards.map((c) => (
-          <Link key={c.label} to={c.to} className="card p-5 hover:shadow-md transition-shadow">
-            <c.icon className={`h-8 w-8 ${c.color} mb-2`} />
-            <div className="text-2xl font-bold">{c.value}</div>
-            <div className="text-sm text-gray-500">{c.label}</div>
+      {/* Quick Actions & Research Question */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-4 border-t border-black/[0.08]">
+        <div className="flex items-center gap-3">
+          <Link to={`/projects/${projectId}/studies/new`} className="btn-phylo-primary text-xs">
+            <Plus className="h-3.5 w-3.5" />
+            <span>Import Study</span>
           </Link>
-        ))}
-      </div>
-
-      {/* Quick actions */}
-      <div className="mt-6 flex gap-3">
-        <Link to={`/projects/${projectId}/studies/new`} className="btn-primary">
-          <Plus className="h-4 w-4" /> Import Study
-        </Link>
-        <Link to={`/projects/${projectId}/export`} className="btn-secondary">
-          <Download className="h-4 w-4" /> Export Data
-        </Link>
-      </div>
-
-      {/* Research question */}
-      {project?.research_question && (
-        <div className="card p-4 mt-6 bg-phylo-cream/30">
-          <div className="text-xs font-semibold text-gray-400 uppercase mb-1">Research Question</div>
-          <p className="text-sm">{project.research_question}</p>
+          <Link to={`/projects/${projectId}/export`} className="btn-phylo-secondary text-xs bg-white/80">
+            <Download className="h-3.5 w-3.5" />
+            <span>Export Evidence</span>
+          </Link>
         </div>
-      )}
+
+        {project?.research_question && (
+          <div className="font-serif italic text-xs text-[#6B665E]">
+            <span className="font-mono not-italic text-[10px] text-[#8A817A] uppercase mr-2">Q:</span>
+            "{project.research_question}"
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function PicosItem({ letter, label, value }: { letter: string; label: string; value: string }) {
   return (
-    <div className="flex gap-2">
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-phylo-blue/10 text-phylo-blue text-xs font-bold">
+    <div className="flex items-start gap-3 p-3.5 rounded-xl bg-black/[0.02] border border-black/[0.04]">
+      <div className="h-6 w-6 rounded-full bg-[#141413] text-[#FAF9F3] flex items-center justify-center font-serif text-xs font-bold shrink-0">
         {letter}
-      </span>
+      </div>
       <div>
-        <span className="text-gray-400 text-xs">{label}: </span>
-        <span>{value}</span>
+        <div className="font-mono text-[10px] text-[#8A817A] uppercase tracking-wider">{label}</div>
+        <div className="font-sans text-xs text-[#141413] mt-0.5 leading-relaxed">{value}</div>
       </div>
     </div>
   );

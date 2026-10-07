@@ -49,6 +49,63 @@ interface PageHighlightOverlay {
   rects: PercentRect[];
 }
 
+/**
+ * Merges line-by-line quote rectangles into a unified block boundary rectangle.
+ * When quotes span multiple lines within the same column or paragraph, this creates
+ * a single perimeter bounding box rather than striped borders across every line.
+ */
+function mergeContiguousRects(rects: PercentRect[]): PercentRect[] {
+  if (!rects || rects.length <= 1) return rects || [];
+
+  // Sort by vertical position (top to bottom), then left to right
+  const sorted = [...rects].sort((a, b) => a.top - b.top || a.left - b.left);
+  const clusters: PercentRect[][] = [];
+  let currentCluster: PercentRect[] = [sorted[0]];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = currentCluster[currentCluster.length - 1];
+    const curr = sorted[i];
+
+    const verticalGap = curr.top - (prev.top + prev.height);
+    // Line spacing in multi-line quotes is typically within 3.5% page height
+    const isAdjacent = verticalGap >= -1.0 && verticalGap <= 3.5;
+
+    // Check horizontal overlap between curr and currentCluster bounding box
+    const clusterMinX = Math.min(...currentCluster.map((r) => r.left));
+    const clusterMaxX = Math.max(...currentCluster.map((r) => r.left + r.width));
+    const currRight = curr.left + curr.width;
+
+    const horizontalOverlap = Math.min(clusterMaxX, currRight) - Math.max(clusterMinX, curr.left);
+    const isInSameColumn = horizontalOverlap > -3.0; // allows indentations / line wraps
+
+    if (isAdjacent && isInSameColumn) {
+      currentCluster.push(curr);
+    } else {
+      clusters.push(currentCluster);
+      currentCluster = [curr];
+    }
+  }
+  clusters.push(currentCluster);
+
+  return clusters.map((cluster) => {
+    const minLeft = Math.min(...cluster.map((r) => r.left));
+    const minTop = Math.min(...cluster.map((r) => r.top));
+    const maxRight = Math.max(...cluster.map((r) => r.left + r.width));
+    const maxBottom = Math.max(...cluster.map((r) => r.top + r.height));
+
+    // Slight breathing padding around the text
+    const padX = 0.25;
+    const padY = 0.15;
+
+    const left = Math.max(0, minLeft - padX);
+    const top = Math.max(0, minTop - padY);
+    const width = Math.min(100 - left, (maxRight - minLeft) + padX * 2);
+    const height = Math.min(100 - top, (maxBottom - minTop) + padY * 2);
+
+    return { left, top, width, height };
+  });
+}
+
 export function ActualPdfViewer({
   pdfUrl,
   highlights,
@@ -382,16 +439,16 @@ export function ActualPdfViewer({
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-slate-200/90 relative overflow-hidden select-none", className)}>
+    <div className={cn("flex flex-col h-full bg-[#ECE9E2] relative overflow-hidden select-none", className)}>
       {/* ── TOP PDF TOOLBAR ── */}
-      <div className="bg-white border-b border-slate-200 px-3 py-2 flex items-center justify-between shrink-0 shadow-2xs z-20">
+      <div className="bg-[#FAF9F3] border-b border-[#381A61]/10 px-3.5 py-2 flex items-center justify-between shrink-0 shadow-2xs z-20">
         {/* Left: Study Selector & Upload */}
         <div className="flex items-center gap-2">
           {availableStudies.length > 0 ? (
             <select
               value={currentStudyId || ""}
               onChange={(e) => onSelectStudy?.(e.target.value)}
-              className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded px-2 py-1 text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 max-w-[220px] truncate"
+              className="text-xs font-semibold bg-white border border-[#7C4B73]/25 rounded-lg px-2.5 py-1 text-[#381A61] focus:outline-hidden focus:ring-1 focus:ring-[#88A0DC] max-w-[240px] truncate shadow-2xs"
               title="Switch publication paper"
             >
               {availableStudies.map((s) => (
@@ -401,8 +458,8 @@ export function ActualPdfViewer({
               ))}
             </select>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-              <FileText className="h-4 w-4 text-blue-600" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#381A61]">
+              <FileText className="h-4 w-4 text-[#88A0DC]" />
               <span>Publication PDF</span>
             </div>
           )}
@@ -417,30 +474,30 @@ export function ActualPdfViewer({
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded transition-colors"
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#381A61] hover:text-[#381A61] bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 border border-[#88A0DC]/40 px-2.5 py-1 rounded-lg transition-colors shadow-2xs"
             title="Upload and inspect your own PDF paper"
           >
-            <Upload className="h-3 w-3 text-slate-500" />
+            <Upload className="h-3 w-3 text-[#7C4B73]" />
             <span>Upload PDF</span>
           </button>
         </div>
 
         {/* Center: Page Jump Pills */}
         {numPages > 0 && (
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] font-mono text-slate-500 mr-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-mono text-[#7C4B73] font-medium mr-1">
               Page {currentPage} of {numPages}
             </span>
-            <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded border border-slate-200 text-[10px] font-mono font-bold">
+            <div className="flex items-center gap-1 bg-[#88A0DC]/15 p-0.5 rounded-lg border border-[#88A0DC]/30 text-[10px] font-mono font-bold">
               {Array.from({ length: numPages }, (_, idx) => idx + 1).map((p) => (
                 <button
                   key={p}
                   onClick={() => jumpToPage(p)}
                   className={cn(
-                    "px-1.5 py-0.5 rounded transition-colors",
+                    "px-2 py-0.5 rounded-md transition-all",
                     currentPage === p
-                      ? "bg-blue-600 text-white shadow-2xs"
-                      : "text-slate-600 hover:bg-white"
+                      ? "bg-[#381A61] text-[#F9D14A] font-bold shadow-xs scale-105"
+                      : "text-[#381A61]/80 hover:bg-white hover:text-[#381A61]"
                   )}
                   title={`Jump to Page ${p}`}
                 >
@@ -455,24 +512,24 @@ export function ActualPdfViewer({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setZoom((z) => Math.max(60, z - 10))}
-            className="p-1 rounded hover:bg-slate-100 text-slate-600 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#381A61]/5 text-[#381A61] transition-colors"
             title="Zoom Out"
           >
             <ZoomOut className="h-3.5 w-3.5" />
           </button>
-          <span className="text-[11px] font-mono font-bold text-slate-700 w-9 text-center">
+          <span className="text-[11px] font-mono font-bold text-[#381A61] w-10 text-center">
             {zoom}%
           </span>
           <button
             onClick={() => setZoom((z) => Math.min(180, z + 10))}
-            className="p-1 rounded hover:bg-slate-100 text-slate-600 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#381A61]/5 text-[#381A61] transition-colors"
             title="Zoom In"
           >
             <ZoomIn className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => setZoom(100)}
-            className="text-[10px] font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded ml-1"
+            className="text-[10px] font-bold text-[#381A61] hover:bg-[#88A0DC]/35 bg-[#88A0DC]/20 border border-[#88A0DC]/40 px-2 py-0.5 rounded-md ml-1 shadow-2xs"
             title="Reset to 100% Fit"
           >
             Fit
@@ -487,26 +544,26 @@ export function ActualPdfViewer({
       >
         {loading && pages.length === 0 ? (
           <div className="my-auto py-16 flex flex-col items-center text-center">
-            <Loader2 className="h-8 w-8 text-blue-600 animate-spin mb-3" />
-            <p className="text-sm font-semibold text-slate-700">{loadingProgress}</p>
-            <p className="text-xs text-slate-400 mt-1">Rendering high-resolution multi-column layout with Docling-aligned highlights</p>
+            <Loader2 className="h-8 w-8 text-[#381A61] animate-spin mb-3" />
+            <p className="text-sm font-semibold text-[#381A61]">{loadingProgress}</p>
+            <p className="text-xs text-[#7C4B73] mt-1 font-serif italic">Rendering high-resolution multi-column layout with Docling-aligned highlights</p>
           </div>
         ) : error ? (
-          <div className="my-auto max-w-md p-6 bg-white rounded-xl border border-rose-200 shadow-md text-center">
-            <AlertCircle className="h-10 w-10 text-rose-500 mx-auto mb-2" />
-            <h3 className="text-sm font-bold text-slate-900 mb-1">Could not render PDF preview</h3>
-            <p className="text-xs text-slate-500 mb-4">{error}</p>
+          <div className="my-auto max-w-md p-6 bg-white rounded-2xl border border-[#AB3329]/30 shadow-md text-center">
+            <AlertCircle className="h-10 w-10 text-[#AB3329] mx-auto mb-2" />
+            <h3 className="text-sm font-bold text-[#381A61] mb-1">Could not render PDF preview</h3>
+            <p className="text-xs text-[#6B665E] mb-4">{error}</p>
             <div className="flex justify-center gap-3">
               <button
                 onClick={() => setRetryCount((prev) => prev + 1)}
-                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg transition-colors flex items-center gap-1.5"
+                className="btn-palette-secondary text-xs"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 Retry Loading
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-1.5"
+                className="btn-palette-primary text-xs"
               >
                 <Upload className="h-3.5 w-3.5" />
                 Upload Local PDF
@@ -522,10 +579,10 @@ export function ActualPdfViewer({
                 key={page.pageNumber}
                 id={`pdf-page-${page.pageNumber}`}
                 style={{ width: `${zoom}%`, maxWidth: `${Math.round(850 * (zoom / 100))}px` }}
-                className="bg-white rounded-xs shadow-2xl border border-slate-300 relative transition-all duration-150 shrink-0 select-text"
+                className="bg-white rounded-xs shadow-2xl border border-[#381A61]/15 relative transition-all duration-150 shrink-0 select-text"
               >
                 {/* Visual Page Number Badge in Margin */}
-                <div className="absolute -top-3 left-3 bg-slate-800 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow-sm z-30 select-none">
+                <div className="absolute -top-3 left-3 bg-[#381A61] text-[#F9D14A] font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-md shadow-xs z-30 select-none border border-[#7C4B73]/40">
                   Page {page.pageNumber}
                 </div>
 
@@ -542,10 +599,11 @@ export function ActualPdfViewer({
                   {overlays.map((overlay) => {
                     const isActive = overlay.variableId === activeHighlightId;
                     const isVerified = overlay.isVerified;
+                    const displayRects = mergeContiguousRects(overlay.rects);
 
                     return (
                       <React.Fragment key={overlay.variableId}>
-                        {overlay.rects.map((rect, rIdx) => (
+                        {displayRects.map((rect, rIdx) => (
                           <div
                             key={rIdx}
                             id={rIdx === 0 ? `pdf-highlight-${overlay.variableId}` : undefined}
@@ -563,26 +621,26 @@ export function ActualPdfViewer({
                               height: `${rect.height}%`,
                               mixBlendMode: "multiply",
                               backgroundColor: isActive
-                                ? "rgba(254, 240, 138, 0.90)" // Luminous highlighter yellow
+                                ? "rgba(249, 209, 74, 0.25)" // Canary Gold #F9D14A translucent highlight wash
                                 : isVerified
-                                ? "rgba(167, 243, 208, 0.35)" // Soft emerald highlighter
-                                : "rgba(254, 243, 199, 0.18)", // Faint unobtrusive tint for pending highlights
-                              borderBottom: isActive
-                                ? "2.5px solid #d97706"
+                                ? "rgba(124, 75, 115, 0.10)" // Berry Plum #7C4B73
+                                : "rgba(136, 160, 220, 0.10)", // Soft Periwinkle #88A0DC
+                              border: isActive
+                                ? "2px solid #E78429" // Boundary line all over the highlight block (Tangerine Amber)
                                 : isVerified
-                                ? "2px solid #059669"
-                                : "1.5px dashed rgba(217, 119, 6, 0.45)",
+                                ? "1.5px solid #7C4B73" // Boundary line all over the highlight block (Berry Plum)
+                                : "1.5px dashed #88A0DC", // Boundary line all over the highlight block (Soft Periwinkle)
                               boxShadow: isActive
-                                ? "0 0 0 2px rgba(245, 158, 11, 0.35), 0 2px 8px rgba(245, 158, 11, 0.25)"
+                                ? "0 0 0 2px rgba(231, 132, 41, 0.2), 0 3px 12px rgba(249, 209, 74, 0.35)"
                                 : "none",
-                              borderRadius: "2px",
+                              borderRadius: "4px",
                               cursor: "pointer",
                               zIndex: isActive ? 25 : 15,
                               transition: "all 0.15s ease",
                             }}
                             className={cn(
                               "group/highlight hover:brightness-95",
-                              isActive && "ring-2 ring-amber-500/40"
+                              isActive && "ring-1 ring-[#E78429]/40"
                             )}
                             title={`#${overlay.varIndex} ${overlay.label}: ${overlay.value || "Extracted"} (Click to review)`}
                           />
@@ -593,9 +651,9 @@ export function ActualPdfViewer({
                 </div>
 
                 {/* Page Bottom Running Footer */}
-                <div className="bg-slate-50 border-t border-slate-200 px-4 py-1.5 flex items-center justify-between text-[10px] font-sans text-slate-500 select-none">
+                <div className="bg-[#FAF9F3] border-t border-[#381A61]/10 px-4 py-1.5 flex items-center justify-between text-[10px] font-sans text-[#7C4B73] select-none">
                   <span className="italic">Actual PDF Page {page.pageNumber} of {numPages}</span>
-                  <span className="font-semibold text-slate-600">
+                  <span className="font-semibold text-[#381A61]">
                     {overlays.length} active extraction highlight{overlays.length === 1 ? "" : "s"}
                   </span>
                 </div>

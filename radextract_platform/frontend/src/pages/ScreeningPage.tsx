@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
 import {
@@ -50,7 +50,10 @@ import {
   BookOpen,
   Minimize2,
   Maximize2,
+  Keyboard,
+  FolderPlus,
 } from "lucide-react";
+import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -106,6 +109,11 @@ export function ScreeningPage() {
   // PDF upload for selected study
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Bulk Upload & Hotkeys state
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [showHotkeysModal, setShowHotkeysModal] = useState(false);
+  const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
 
   // While an AI screening run is in flight, poll so each screened study appears as soon as it is saved
   const isMutating = useIsMutating() > 0;
@@ -307,6 +315,113 @@ export function ScreeningPage() {
     },
   });
 
+  // Hotkey Screening decision handler (auto-advances to next study)
+  const handleScreenDecision = (decision: "included" | "excluded" | "maybe") => {
+    if (!selectedStudy) return;
+    const currentStudyId = selectedStudy.study_id;
+
+    // Advance to next study in filtered list
+    const currentIndex = filteredStudies.findIndex((s) => s.study_id === currentStudyId);
+    if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
+      setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
+    }
+
+    if (decision === "included") {
+      decisionMutation.mutate({
+        studyId: currentStudyId,
+        decision: "included",
+        reasonText: "Eligible under PICO criteria",
+      });
+    } else if (decision === "excluded") {
+      decisionMutation.mutate({
+        studyId: currentStudyId,
+        decision: "excluded",
+        reasonCode: excludeReasonCode || "wrong_population",
+        reasonText: excludeReasonText || "Ineligible based on criteria",
+      });
+    } else if (decision === "maybe") {
+      decisionMutation.mutate({
+        studyId: currentStudyId,
+        decision: "maybe",
+        reasonText: "Uncertain - requires further assessment",
+      });
+    }
+  };
+
+  const handleSelectPreviousStudy = () => {
+    if (!selectedStudy || filteredStudies.length === 0) return;
+    const currentIndex = filteredStudies.findIndex((s) => s.study_id === selectedStudy.study_id);
+    if (currentIndex > 0) {
+      setSelectedStudyId(filteredStudies[currentIndex - 1].study_id);
+    }
+  };
+
+  const handleSelectNextStudy = () => {
+    if (!selectedStudy || filteredStudies.length === 0) return;
+    const currentIndex = filteredStudies.findIndex((s) => s.study_id === selectedStudy.study_id);
+    if (currentIndex < filteredStudies.length - 1) {
+      setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
+    }
+  };
+
+  // Keyboard hotkeys listener: I/1 (Include), E/2 (Exclude), M/3 (Maybe), ←/J (Prev), →/K (Next), ? (Cheatsheet)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!hotkeysEnabled) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (showKeywordsDrawer || showBulkUploadModal || showHotkeysModal) {
+        if (e.key === "Escape") {
+          setShowBulkUploadModal(false);
+          setShowHotkeysModal(false);
+          setShowKeywordsDrawer(false);
+        }
+        return;
+      }
+
+      if (e.key === "i" || e.key === "I" || e.key === "1") {
+        e.preventDefault();
+        handleScreenDecision("included");
+      } else if (e.key === "e" || e.key === "E" || e.key === "2") {
+        e.preventDefault();
+        handleScreenDecision("excluded");
+      } else if (e.key === "m" || e.key === "M" || e.key === "3" || e.key === "u" || e.key === "U") {
+        e.preventDefault();
+        handleScreenDecision("maybe");
+      } else if (e.key === "ArrowLeft" || e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        handleSelectPreviousStudy();
+      } else if (e.key === "ArrowRight" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        handleSelectNextStudy();
+      } else if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        e.preventDefault();
+        setShowHotkeysModal(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    hotkeysEnabled,
+    selectedStudy,
+    filteredStudies,
+    excludeReasonCode,
+    excludeReasonText,
+    showKeywordsDrawer,
+    showBulkUploadModal,
+    showHotkeysModal,
+  ]);
+
   const addKeywordMutation = useMutation({
     mutationFn: (data: { keyword: string; type: "include" | "exclude" }) =>
       api.addScreeningKeyword(projectId!, data.keyword, data.type),
@@ -448,6 +563,27 @@ export function ScreeningPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Bulk Upload from Laptop Button */}
+            <button
+              onClick={() => setShowBulkUploadModal(true)}
+              className="px-3.5 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center gap-1.5 shadow-sm transition-all"
+              title="Bulk upload study PDFs, spreadsheets, or citations directly from your laptop"
+            >
+              <FolderPlus className="w-3.5 h-3.5 text-amber-300" />
+              <span>Bulk Upload from Laptop</span>
+            </button>
+
+            {/* Hotkeys Cheatsheet Button */}
+            <button
+              onClick={() => setShowHotkeysModal(true)}
+              className="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 shadow-sm transition-all"
+              title="Keyboard Shortcuts: [I/1] Include, [E/2] Exclude, [M/3] Maybe, [←/J] Prev, [→/K] Next"
+            >
+              <Keyboard className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Hotkeys</span>
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-indigo-200/70 text-indigo-900 rounded font-bold">?</kbd>
+            </button>
+
             <button
               onClick={() => setShowKeywordsDrawer(true)}
               className="px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-1.5 shadow-sm transition-all"
@@ -1248,52 +1384,83 @@ export function ScreeningPage() {
                   />
                 </div>
 
-                {/* Main Action Buttons */}
+                {/* Main Action Buttons with Hotkey badges */}
                 <div className="grid grid-cols-3 gap-3">
                   <button
-                    onClick={() =>
-                      decisionMutation.mutate({
-                        studyId: selectedStudy.study_id,
-                        decision: "included",
-                        reasonText: "Eligible under PICO criteria",
-                      })
-                    }
+                    onClick={() => handleScreenDecision("included")}
                     disabled={decisionMutation.isPending}
-                    className="py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                    className="py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Include Study (Hotkeys: 'I' or '1')"
                   >
-                    <CheckCircle className="w-4 h-4" />
-                    Include Study
+                    <CheckCircle className="w-4 h-4 shrink-0" />
+                    <span>Include Study</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/20 text-white font-mono text-[10px] font-bold">
+                      I / 1
+                    </kbd>
                   </button>
 
                   <button
-                    onClick={() =>
-                      decisionMutation.mutate({
-                        studyId: selectedStudy.study_id,
-                        decision: "excluded",
-                        reasonCode: excludeReasonCode || "wrong_population",
-                        reasonText: excludeReasonText || "Ineligible based on criteria",
-                      })
-                    }
+                    onClick={() => handleScreenDecision("excluded")}
                     disabled={decisionMutation.isPending}
-                    className="py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                    className="py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Exclude Study (Hotkeys: 'E' or '2')"
                   >
-                    <XCircle className="w-4 h-4" />
-                    Exclude Study
+                    <XCircle className="w-4 h-4 shrink-0" />
+                    <span>Exclude Study</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/20 text-white font-mono text-[10px] font-bold">
+                      E / 2
+                    </kbd>
                   </button>
 
                   <button
-                    onClick={() =>
-                      decisionMutation.mutate({
-                        studyId: selectedStudy.study_id,
-                        decision: "maybe",
-                        reasonText: "Uncertain - requires further assessment",
-                      })
-                    }
+                    onClick={() => handleScreenDecision("maybe")}
                     disabled={decisionMutation.isPending}
-                    className="py-2.5 text-xs font-bold text-slate-700 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    className="py-2.5 text-xs font-bold text-slate-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                    title="Maybe / Uncertain (Hotkeys: 'M' or '3')"
                   >
-                    <HelpCircle className="w-4 h-4 text-amber-700" />
-                    Maybe / Uncertain
+                    <HelpCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>Maybe / Uncertain</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/10 text-amber-900 font-mono text-[10px] font-bold">
+                      M / 3
+                    </kbd>
+                  </button>
+                </div>
+
+                {/* Hotkey Navigation Ribbon */}
+                <div className="flex items-center justify-between pt-1 px-1 text-xs text-slate-500 border-b border-slate-100 pb-2">
+                  <button
+                    type="button"
+                    onClick={handleSelectPreviousStudy}
+                    className="inline-flex items-center gap-1.5 hover:text-slate-900 transition-colors py-1 px-2 rounded hover:bg-slate-100"
+                    title="Previous Study (Hotkeys: '←' or 'J')"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Previous</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-800 text-[10px] font-mono font-medium">← / J</kbd>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[11px] text-slate-400">
+                      Study {filteredStudies.findIndex(s => s.study_id === selectedStudy.study_id) + 1} of {filteredStudies.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowHotkeysModal(true)}
+                      className="text-[10px] text-indigo-600 hover:underline flex items-center gap-0.5"
+                    >
+                      <Keyboard className="w-3 h-3" /> All Shortcuts
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSelectNextStudy}
+                    className="inline-flex items-center gap-1.5 hover:text-slate-900 transition-colors py-1 px-2 rounded hover:bg-slate-100"
+                    title="Next Study (Hotkeys: '→' or 'K')"
+                  >
+                    <span>Next</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-800 text-[10px] font-mono font-medium">→ / K</kbd>
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
@@ -1487,6 +1654,161 @@ export function ScreeningPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Universal Bulk Upload Modal for Screening */}
+      {showBulkUploadModal && (
+        <UniversalBulkUploadModal
+          projectId={projectId!}
+          isOpen={showBulkUploadModal}
+          onClose={() => setShowBulkUploadModal(false)}
+          defaultTarget="screening"
+          onSuccess={(count, target, firstStudyId) => {
+            queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            if (firstStudyId) {
+              setSelectedStudyId(firstStudyId);
+            }
+          }}
+        />
+      )}
+
+      {/* Keyboard Hotkeys Cheatsheet Modal */}
+      {showHotkeysModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs font-sans animate-in fade-in duration-150">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                  <Keyboard className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Screening Keyboard Hotkeys</h3>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-[11px] font-medium text-emerald-700">Hotkeys Active in Workspace</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHotkeysModal(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Screen hundreds of titles & abstracts efficiently without leaving your keyboard. Pressing a decision hotkey automatically applies the decision and advances to the next study.
+            </p>
+
+            <div className="space-y-2 border border-slate-100 rounded-xl p-3 bg-slate-50/60 text-xs">
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-600" /> Include Study & Advance
+                </span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">I</kbd>
+                  <span className="text-slate-400 font-mono text-[11px]">or</span>
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">1</kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-rose-600" /> Exclude Study & Advance
+                </span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">E</kbd>
+                  <span className="text-slate-400 font-mono text-[11px]">or</span>
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">2</kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <HelpCircle className="h-4 w-4 text-amber-600" /> Maybe / Uncertain & Advance
+                </span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">M</kbd>
+                  <span className="text-slate-400 font-mono text-[11px]">or</span>
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">3</kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <ArrowLeft className="h-4 w-4 text-slate-500" /> Navigate to Previous Study
+                </span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">←</kbd>
+                  <span className="text-slate-400 font-mono text-[11px]">or</span>
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">J</kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <ChevronRight className="h-4 w-4 text-slate-500" /> Navigate to Next Study
+                </span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">→</kbd>
+                  <span className="text-slate-400 font-mono text-[11px]">or</span>
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">K</kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <Keyboard className="h-4 w-4 text-indigo-500" /> Show / Hide Shortcuts
+                </span>
+                <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">?</kbd>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hotkeysEnabled}
+                  onChange={(e) => setHotkeysEnabled(e.target.checked)}
+                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>Enable keyboard shortcuts</span>
+              </label>
+
+              <button
+                type="button"
+                onClick={() => setShowHotkeysModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Universal Bulk Upload Modal from Laptop ── */}
+      {showBulkUploadModal && (
+        <UniversalBulkUploadModal
+          projectId={projectId!}
+          isOpen={showBulkUploadModal}
+          onClose={() => setShowBulkUploadModal(false)}
+          defaultTarget="screening"
+          onSuccess={(count, target, firstStudyId) => {
+            queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            if (firstStudyId) {
+              setSelectedStudyId(firstStudyId);
+            }
+          }}
+        />
       )}
     </div>
   );
