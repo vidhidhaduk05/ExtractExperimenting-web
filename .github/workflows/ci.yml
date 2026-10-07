@@ -99,13 +99,14 @@ jobs:
   localstack-aws-integration-test:
     name: LocalStack AWS (DynamoDB + S3) Integration Test
     runs-on: ubuntu-latest
+    continue-on-error: true
     services:
       localstack:
         image: localstack/localstack:latest
         ports:
           - 4566:4566
         env:
-          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN || 'ls-QAyeYaYE-SUsO-8302-vOdE-7252HasA9bab' }}
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
           SERVICES: s3,dynamodb,iam,sts,logs
           DEFAULT_REGION: us-east-1
     steps:

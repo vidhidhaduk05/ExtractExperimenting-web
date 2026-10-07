@@ -216,19 +216,22 @@ def create_agent_config(
     from services.antigravity_schemas import StudyProcessingResult
 
     # Resolve API key
-    try:
-        from services import llm_config_service
-        cfg_key = llm_config_service.get_active_config(mask_keys=False).get("active_key")
-    except Exception:
-        cfg_key = None
-
     resolved_key = (
         api_key
-        or cfg_key
         or os.environ.get("GEMINI_API_KEY")
         or getattr(settings, "antigravity_api_key", "")
-        or "AQ.Ab8RN6KpRDE0t3Zij8KVIm8jnloStXmx1UlzxjcMfcWLGYqKKg"
     )
+    if not resolved_key:
+        try:
+            from services import llm_config_service
+            cfg_key = llm_config_service.get_active_config(mask_keys=False).get("active_key")
+            if cfg_key:
+                resolved_key = cfg_key
+        except Exception:
+            pass
+
+    if not resolved_key:
+        raise RuntimeError("No Gemini API key configured. Set GEMINI_API_KEY or RADEXTRACT_ANTIGRAVITY_API_KEY.")
 
     # Resolve model
     resolved_model = model or getattr(settings, "antigravity_model", "gemini-2.5-flash")
