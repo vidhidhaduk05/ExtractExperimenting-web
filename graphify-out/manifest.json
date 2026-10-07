@@ -852,9 +852,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PdfViewerPage.tsx": {
-    "mtime": 1791306530.4680192,
-    "seen": 1791365658.2690146,
-    "ast_hash": "9305cbefc63cdc25dee0efcb5a3282d9",
+    "mtime": 1791366546.489264,
+    "seen": 1791366702.1890826,
+    "ast_hash": "206a98be460ed4f08b9dca6831aea2b9",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PicoHypothesisPage.tsx": {
@@ -1842,9 +1842,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/demoData.ts": {
-    "mtime": 1791299966.107404,
-    "seen": 1791365658.2689888,
-    "ast_hash": "ece8deddc8452ce69638c7e2858cd227",
+    "mtime": 1791366438.0129209,
+    "seen": 1791366702.1890585,
+    "ast_hash": "c579327df0d17f41726a2f6eb021cf42",
     "semantic_hash": ""
   },
   ".github/workflows/deploy-pages.yml": {
@@ -1986,9 +1986,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/pdfAutoIdentifier.ts": {
-    "mtime": 1791360457.6976044,
-    "seen": 1791365658.2689908,
-    "ast_hash": "ae9eccf94ba681155517925f1498c352",
+    "mtime": 1791366438.0129209,
+    "seen": 1791366702.189061,
+    "ast_hash": "77d8123a4a86b9f3dba08aac542234bc",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ExtractionSheetPage.tsx": {
