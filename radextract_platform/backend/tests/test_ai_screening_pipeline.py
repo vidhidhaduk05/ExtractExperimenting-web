@@ -414,9 +414,9 @@ def test_start_ai_analysis_check_project_access_denied(client, monkeypatch):
     finish_mock.assert_not_called()
 
 
-@pytest.mark.asyncio
-async def test_start_ai_analysis_direct_function_call(monkeypatch):
+def test_start_ai_analysis_direct_function_call(monkeypatch):
     """Directly test start_ai_analysis async function with mocks."""
+    import asyncio
     from unittest.mock import MagicMock
     from routers.ai_screening import start_ai_analysis
 
@@ -443,7 +443,10 @@ async def test_start_ai_analysis_direct_function_call(monkeypatch):
     monkeypatch.setattr("routers.ai_screening.pipeline", mock_pipeline)
     monkeypatch.setattr("routers.ai_screening.screening_progress", mock_progress)
 
-    res = await start_ai_analysis("p1", user={"id": "u1"}, conn=mock_conn)
+    async def run_test():
+        return await start_ai_analysis("p1", user={"id": "u1"}, conn=mock_conn)
+
+    res = asyncio.run(run_test())
 
     assert res.total == 10
     assert res.title_screened == 1
@@ -622,9 +625,9 @@ def test_get_ai_screening_status_forbidden_when_not_member(client, monkeypatch):
     assert r.json()["detail"] == "Insufficient permissions"
 
 
-@pytest.mark.asyncio
-async def test_get_ai_screening_status_unit_function_mock(monkeypatch):
+def test_get_ai_screening_status_unit_function_mock(monkeypatch):
     """Unit test for get_ai_screening_status router function directly."""
+    import asyncio
     from unittest.mock import MagicMock
     from routers.ai_screening import get_ai_screening_status, pipeline
     from models import AIScreeningSummary
@@ -646,7 +649,10 @@ async def test_get_ai_screening_status_unit_function_mock(monkeypatch):
     monkeypatch.setattr("routers.ai_screening.check_project_access", lambda conn, pid, user: None)
     monkeypatch.setattr(pipeline, "get_pipeline_summary", lambda pid, conn: mock_summary)
 
-    result = await get_ai_screening_status(project_id="test_pid", user={"id": "u1"}, conn=mock_conn)
+    async def run_test():
+        return await get_ai_screening_status(project_id="test_pid", user={"id": "u1"}, conn=mock_conn)
+
+    result = asyncio.run(run_test())
     assert isinstance(result, AIScreeningSummary)
     assert result.total == 10
     assert result.title_screened == 8

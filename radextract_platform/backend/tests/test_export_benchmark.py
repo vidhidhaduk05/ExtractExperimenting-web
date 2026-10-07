@@ -80,20 +80,26 @@ def _setup_benchmark_data(num_studies=300, num_variables=15):
     return pid, num_studies, num_variables
 
 
-@pytest.mark.asyncio
-async def test_export_performance_benchmark():
+def test_export_performance_benchmark():
+    import asyncio
+
     pid, num_studies, num_variables = _setup_benchmark_data(num_studies=300, num_variables=15)
     db = _db()
 
-    # Measure CSV export baseline time
-    t0 = time.perf_counter()
-    res_csv = await _export_csv(pid, "20260101_120000", include_rob=True, db=db)
-    csv_time = time.perf_counter() - t0
+    async def run_test():
+        # Measure CSV export baseline time
+        t0 = time.perf_counter()
+        res_csv = await _export_csv(pid, "20260101_120000", include_rob=True, db=db)
+        csv_time = time.perf_counter() - t0
 
-    # Measure XLSX export baseline time
-    t0 = time.perf_counter()
-    res_xlsx = await _export_xlsx(pid, "20260101_120000", include_rob=True, db=db)
-    xlsx_time = time.perf_counter() - t0
+        # Measure XLSX export baseline time
+        t0 = time.perf_counter()
+        res_xlsx = await _export_xlsx(pid, "20260101_120000", include_rob=True, db=db)
+        xlsx_time = time.perf_counter() - t0
+
+        return res_csv, res_xlsx, csv_time, xlsx_time
+
+    res_csv, res_xlsx, csv_time, xlsx_time = asyncio.run(run_test())
 
     print(f"\n[BENCHMARK] CSV Export ({num_studies} studies, {num_variables} vars): {csv_time:.4f} seconds")
     print(f"[BENCHMARK] XLSX Export ({num_studies} studies, {num_variables} vars): {xlsx_time:.4f} seconds")
