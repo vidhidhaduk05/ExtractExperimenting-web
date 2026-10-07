@@ -750,9 +750,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_tool_calling_client.py": {
-    "mtime": 1791198855.681166,
-    "seen": 1791265994.9995487,
-    "ast_hash": "9964656633924ab44b257f13ee9d1cdc",
+    "mtime": 1791368971.5357254,
+    "seen": 1791369135.1117442,
+    "ast_hash": "293efc05d69daa9179312e1d955e3b21",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_tool_registry.py": {
@@ -1302,9 +1302,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/keyword_highlight_service.py": {
-    "mtime": 1791198855.265488,
-    "seen": 1791265994.9993975,
-    "ast_hash": "6a74195b387b11c19076a6257c389bf3",
+    "mtime": 1791368988.6260374,
+    "seen": 1791369135.1114433,
+    "ast_hash": "3eedde25651d7214cda714b6eb114a2a",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_ai_screening_pipeline.py": {
@@ -1356,9 +1356,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/antigravity_agent.py": {
-    "mtime": 1791233574.820114,
-    "seen": 1791265994.9993546,
-    "ast_hash": "181e81349ee0c03b6b78ed0a23c17f31",
+    "mtime": 1791368971.5337253,
+    "seen": 1791369135.1113956,
+    "ast_hash": "95cfe04264d4d66f46cfae86fc661820",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/antigravity_schemas.py": {
@@ -1428,9 +1428,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_antigravity_agent.py": {
-    "mtime": 1791212679.8924406,
-    "seen": 1791265994.9994693,
-    "ast_hash": "5862566ae8e54c887f919f8156dfea3d",
+    "mtime": 1791368971.5347247,
+    "seen": 1791369135.1115286,
+    "ast_hash": "9db47cb9352e03d1bd69d88a8547e47a",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_antigravity_tools.py": {
@@ -1500,9 +1500,9 @@
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1791198852.9209275,
-    "seen": 1791265994.9996345,
-    "ast_hash": "0df5b71de3f0f6adeb53cba97439fcc4",
+    "mtime": 1791368971.5314796,
+    "seen": 1791369135.1119683,
+    "ast_hash": "2796bc5fc59ce83abcf9e107eb242c14",
     "semantic_hash": ""
   },
   ".github/workflows/deploy-aws.yml": {
@@ -1830,9 +1830,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_routers_analysis.py": {
-    "mtime": 1791216559.9152446,
-    "seen": 1791265994.9995263,
-    "ast_hash": "61c403b97fde5e00c347244706a0f929",
+    "mtime": 1791368971.5357254,
+    "seen": 1791369135.111706,
+    "ast_hash": "a693468a1163acc43cfeeb04dcf3b575",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_routers_auth.py": {
@@ -1995,6 +1995,12 @@
     "mtime": 1791363175.278571,
     "seen": 1791365658.2690067,
     "ast_hash": "1e4f2f991b0d82478fabed9d7f2356ac",
+    "semantic_hash": ""
+  },
+  ".jules/bolt.md": {
+    "mtime": 1791369011.2543235,
+    "seen": 1791369135.111979,
+    "ast_hash": "284da6db1e6a4f323152c9f70d19ccfd",
     "semantic_hash": ""
   }
 }
