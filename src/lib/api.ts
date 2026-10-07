@@ -36,6 +36,32 @@ export const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
   (API_HOST === "localhost" || API_HOST === "127.0.0.1" ? `http://${API_HOST}:8000/api` : `/api`);
 
+export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[] {
+  if (typeof window === "undefined") return [...DEMO_STUDIES];
+  try {
+    const isBlank = localStorage.getItem(`radextract_blank_${projectId}`) === "true";
+    if (isBlank) {
+      const saved = localStorage.getItem(`radextract_studies_${projectId}`);
+      return saved ? JSON.parse(saved) : [];
+    }
+    const saved = localStorage.getItem(`radextract_studies_${projectId}`);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [...DEMO_STUDIES];
+}
+
+export function saveStoredProjectStudies(projectId = "proj_pam_current", studies: Study[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(`radextract_studies_${projectId}`, JSON.stringify(studies));
+    if (studies.length === 0) {
+      localStorage.setItem(`radextract_blank_${projectId}`, "true");
+    } else {
+      localStorage.removeItem(`radextract_blank_${projectId}`);
+    }
+  } catch (e) {}
+}
+
 function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   const method = (options.method || "GET").toUpperCase();
   let body: any = {};
@@ -297,9 +323,10 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       } as unknown as T;
     }
     if (path.includes("/studies") && method === "POST") {
-      const newStudy = {
-        study_id: `study_custom_${Date.now()}`,
-        project_id: "proj_pam_current",
+      const projectId = body.project_id || "proj_pam_current";
+      const newStudy: Study = {
+        study_id: body.study_id || `study_custom_${Date.now()}`,
+        project_id: projectId,
         title: body.title || "Newly Imported Study",
         authors: body.authors || "Author et al.",
         publication_year: Number(body.publication_year) || 2024,
@@ -307,19 +334,29 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         doi: body.doi || "",
         pmid: body.pmid || "",
         abstract: body.abstract || "",
-        source: body.source || "Manual Entry",
-        study_design: body.study_design || "case_report",
-        screening_status: "included",
-        screening_stage: "fulltext",
-        extraction_status: "complete",
-        pdf_status: "parsed",
+        source: body.source || "PDF Auto-Extraction",
+        study_design: body.study_design || "diagnostic accuracy",
+        screening_status: body.screening_status || "included",
+        screening_stage: body.screening_stage || "fulltext",
+        screening_reason: body.screening_reason || "",
+        extraction_status: body.extraction_status || "complete",
+        pdf_status: body.pdf_status || "parsed",
+        pdf_path: body.pdf_path || "document.pdf",
         ai_priority_score: 0.95,
         ai_confidence: 0.96,
         ai_decision: "include"
       };
+      const cur = getStoredProjectStudies(projectId);
+      const updated = [newStudy, ...cur.filter((s: Study) => s.study_id !== newStudy.study_id)];
+      saveStoredProjectStudies(projectId, updated);
       return newStudy as unknown as T;
     }
     if (path.includes("/studies/") && method === "DELETE") {
+      const studyId = path.split("/").pop();
+      const projectId = "proj_pam_current";
+      const cur = getStoredProjectStudies(projectId);
+      const updated = cur.filter((s: Study) => s.study_id !== studyId);
+      saveStoredProjectStudies(projectId, updated);
       return { status: "deleted" } as unknown as T;
     }
     if (path.includes("/upload-references")) {
@@ -479,17 +516,20 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   }
   if (path.match(/\/studies\/[^/]+$/)) {
     const studyId = path.split("/").pop();
-    const found = DEMO_STUDIES.find((s: any) => s.study_id === studyId);
-    return (found || DEMO_STUDIES[0]) as unknown as T;
+    const all = getStoredProjectStudies();
+    const found = all.find((s: Study) => s.study_id === studyId);
+    return (found || all[0] || DEMO_STUDIES[0]) as unknown as T;
   }
   if (path.includes("/studies")) {
-    return DEMO_STUDIES as unknown as T;
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    return getStoredProjectStudies(projectId) as unknown as T;
   }
   if (path.includes("/prisma")) {
     return DEMO_PRISMA as unknown as T;
   }
   if (path.includes("/screening")) {
-    return DEMO_STUDIES as unknown as T;
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    return getStoredProjectStudies(projectId) as unknown as T;
   }
   if (path.includes("/pico")) {
     return JSON.parse(DEMO_PROJECT.pico_json) as unknown as T;
@@ -1785,6 +1825,23 @@ export const api = {
     request<Study>(`/projects/${projectId}/studies`, { method: "POST", body: JSON.stringify(data) }),
   updateStudy: (id: string, data: Partial<Study>) =>
     request<Study>(`/studies/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  resetStudies: async (projectId: string, toBlank = false): Promise<Study[]> => {
+    if (toBlank) {
+      saveStoredProjectStudies(projectId, []);
+    } else {
+      try {
+        localStorage.removeItem(`radextract_blank_${projectId}`);
+        localStorage.removeItem(`radextract_studies_${projectId}`);
+      } catch (e) {}
+    }
+    return getStoredProjectStudies(projectId);
+  },
+  bulkAddStudies: async (projectId: string, newStudies: Study[]): Promise<Study[]> => {
+    const cur = getStoredProjectStudies(projectId);
+    const updated = [...newStudies, ...cur.filter(s => !newStudies.some(n => n.study_id === s.study_id))];
+    saveStoredProjectStudies(projectId, updated);
+    return updated;
+  },
 
   deleteStudy: (id: string) =>
     request<{ deleted: boolean }>(`/studies/${id}`, { method: "DELETE" }),

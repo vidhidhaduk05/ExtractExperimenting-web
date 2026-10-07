@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
@@ -63,8 +63,41 @@ export function ExtractionSheetPage() {
 
   const variableList = variables && variables.length > 0 ? variables : DEMO_VARIABLES;
 
+  const { data: projectStudies } = useQuery({
+    queryKey: ["studies", projectId],
+    queryFn: () => api.listStudies(projectId!),
+    enabled: !!projectId,
+  });
+
+  const availablePapers = useMemo(() => {
+    if (!projectStudies) return BENCHMARK_PAPERS;
+    if (projectStudies.length === 0) return [];
+    return projectStudies.map((s, idx) => {
+      const match = BENCHMARK_PAPERS.find((b) => b.id === s.study_id);
+      if (match) return match;
+      return {
+        id: s.study_id,
+        shortId: `s${idx + 1}`,
+        title: s.title ? `${s.title} (${s.publication_year || 2024})` : `Study #${idx + 1}`,
+        filename: s.pdf_path || `${s.title}.pdf`,
+      };
+    });
+  }, [projectStudies]);
+
+  // Sync selectedStudyId if current is not in available papers
+  useEffect(() => {
+    if (availablePapers.length > 0 && !availablePapers.some((p) => p.id === selectedStudyId)) {
+      setSelectedStudyId(availablePapers[0].id);
+    }
+  }, [availablePapers, selectedStudyId]);
+
   // Active study object
-  const currentPaper = BENCHMARK_PAPERS.find((p) => p.id === selectedStudyId) || BENCHMARK_PAPERS[3]; // default Chua
+  const currentPaper = availablePapers.find((p) => p.id === selectedStudyId) || availablePapers[0] || {
+    id: selectedStudyId || "none",
+    shortId: "s0",
+    title: "No Study Selected",
+    filename: "",
+  };
 
   // Map extractions for the active study
   const extractionMap = useMemo(() => {
@@ -75,13 +108,13 @@ export function ExtractionSheetPage() {
     return map;
   }, [extractions]);
 
-  // Overall metrics across all benchmark papers
+  // Overall metrics across all papers
   const allBenchmarkStats = useMemo(() => {
     let totalVars = 0;
     let verifiedVars = 0;
     let highConfCount = 0;
 
-    BENCHMARK_PAPERS.forEach((paper) => {
+    availablePapers.forEach((paper) => {
       const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
       paperExts.forEach((e: any) => {
         totalVars++;
@@ -96,7 +129,7 @@ export function ExtractionSheetPage() {
       highConfCount,
       percent: totalVars > 0 ? Math.round((verifiedVars / totalVars) * 100) : 0,
     };
-  }, [extractions]);
+  }, [availablePapers, extractions]);
 
   // Filtered variables for single-study sheet
   const filteredVariables = useMemo(() => {
@@ -228,11 +261,11 @@ export function ExtractionSheetPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Export Combined Matrix CSV across all 6 benchmark studies
+  // Export Combined Matrix CSV across all studies
   const handleExportAllStudiesMatrixCsv = () => {
-    const headers = ["Variable ID", "Variable Name", "Section", ...BENCHMARK_PAPERS.map((p) => `"${p.title}"`)];
+    const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p) => `"${p.title}"`)];
     const rows = variableList.map((v: any) => {
-      const studyValues = BENCHMARK_PAPERS.map((p) => {
+      const studyValues = availablePapers.map((p) => {
         const exts = (DEMO_EXTRACTIONS as any)[p.id] || [];
         const found = exts.find((e: any) => e.variable_id === v.variable_id);
         const val = found?.value || "NR";
@@ -436,7 +469,7 @@ export function ExtractionSheetPage() {
             {/* If Single Mode: Study Selection Pills */}
             {viewMode === "single" && (
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-                {BENCHMARK_PAPERS.map((paper, idx) => {
+                {availablePapers.map((paper, idx) => {
                   const isSelected = paper.id === selectedStudyId;
                   const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
                   const paperVerified = paperExts.filter((e: any) => e.is_verified).length;
@@ -761,7 +794,7 @@ export function ExtractionSheetPage() {
                     <th className="px-4 py-3.5 text-left w-56 sticky left-0 bg-slate-50 dark:bg-slate-850 z-20 shadow-xs">
                       Variable & Domain
                     </th>
-                    {BENCHMARK_PAPERS.map((paper, idx) => (
+                    {availablePapers.map((paper, idx) => (
                       <th key={paper.id} className="px-4 py-3.5 text-left min-w-[200px]">
                         <div className="flex flex-col">
                           <span className="text-blue-600 font-bold text-[10px]">Study #{idx + 1}</span>
@@ -789,8 +822,8 @@ export function ExtractionSheetPage() {
                         </span>
                       </td>
 
-                      {/* Columns for Each Benchmark Study */}
-                      {BENCHMARK_PAPERS.map((paper) => {
+                      {/* Columns for Each Study */}
+                      {availablePapers.map((paper) => {
                         const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
                         const foundExt = paperExts.find((e: any) => e.variable_id === v.variable_id);
                         const isVerified = !!foundExt?.is_verified;

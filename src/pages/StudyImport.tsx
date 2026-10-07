@@ -2,7 +2,11 @@ import { useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { ArrowLeft, Upload, FileText, CheckCircle, Search, Loader2, BookOpen, ExternalLink, Copy } from "lucide-react";
+import { autoIdentifyPdf } from "../lib/pdfAutoIdentifier";
+import {
+  ArrowLeft, Upload, FileText, CheckCircle, Search, Loader2,
+  BookOpen, ExternalLink, Copy, Sparkles, CheckCircle2, ArrowRight
+} from "lucide-react";
 
 export function StudyImport() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -23,6 +27,9 @@ export function StudyImport() {
   });
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUploaded, setPdfUploaded] = useState(false);
+  const [isAutoIdentifying, setIsAutoIdentifying] = useState(false);
+  const [autoIdentifiedBadge, setAutoIdentifiedBadge] = useState<string | null>(null);
+  const [directExtract, setDirectExtract] = useState(true);
   const [error, setError] = useState("");
   const [createdStudyId, setCreatedStudyId] = useState<string | null>(null);
   const [activeCitationTab, setActiveCitationTab] = useState("vancouver");
@@ -66,7 +73,7 @@ export function StudyImport() {
   const { data: citations, refetch: refetchCitations } = useQuery({
     queryKey: ["citations", createdStudyId],
     queryFn: () => api.getCitations(createdStudyId!),
-    enabled: false, // manually triggered
+    enabled: false,
   });
 
   const createMutation = useMutation({
@@ -83,12 +90,41 @@ export function StudyImport() {
         }
       }
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-      // Fetch citations for the newly created study
       refetchCitations();
-      setTimeout(() => navigate(`/projects/${projectId}/studies`), 2500);
+
+      if (directExtract) {
+        setTimeout(() => navigate(`/projects/${projectId}/extraction-sheet?study=${study.study_id}`), 1000);
+      } else {
+        setTimeout(() => navigate(`/projects/${projectId}/studies`), 2000);
+      }
     },
     onError: (e: Error) => setError(e.message),
   });
+
+  const handlePdfSelected = async (file: File) => {
+    setPdfFile(file);
+    setIsAutoIdentifying(true);
+    setError("");
+    try {
+      const identified = await autoIdentifyPdf(file, projectId);
+      setForm({
+        title: identified.title,
+        authors: identified.authors,
+        publication_year: String(identified.publication_year),
+        journal: identified.journal,
+        doi: identified.doi,
+        pmid: identified.pmid || "",
+        abstract: identified.abstract,
+        study_design: identified.study_design,
+        source: "PDF Auto-Extraction",
+      });
+      setAutoIdentifiedBadge(`Auto-identified: "${identified.title}" (${identified.publication_year}, ${identified.journal})`);
+    } catch (err: any) {
+      setError(`Failed to parse PDF metadata: ${err?.message || "Unknown error"}`);
+    } finally {
+      setIsAutoIdentifying(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +137,9 @@ export function StudyImport() {
       ...form,
       publication_year: form.publication_year ? parseInt(form.publication_year) : null,
       project_id: projectId,
+      screening_status: directExtract ? "included" : "pending",
+      screening_stage: directExtract ? "fulltext" : "title_abstract",
+      extraction_status: directExtract ? "complete" : "pending",
     });
   };
 
@@ -115,11 +154,6 @@ export function StudyImport() {
     }
     setError("");
     pmidLookupMutation.mutate(form.pmid.trim());
-  };
-
-  const handleFulltextFetch = () => {
-    if (!form.pmid.trim()) return;
-    fulltextMutation.mutate(form.pmid.trim());
   };
 
   const copyCitation = (text: string) => {
@@ -144,244 +178,175 @@ export function StudyImport() {
   const citationFormats = ["vancouver", "apa", "mla", "chicago", "harvard", "bibtex"];
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <Link to={`/projects/${projectId}/studies`} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
+    <div className="p-8 max-w-3xl mx-auto space-y-6">
+      <Link to={`/projects/${projectId}/studies`} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
         <ArrowLeft className="h-3 w-3" /> Back to studies
       </Link>
 
-      <h1 className="text-2xl font-bold mb-1">Import Study</h1>
-      <p className="text-gray-500 text-sm mb-6">Add a study manually or via PubMed PMID, and optionally upload the full-text PDF</p>
+      <div>
+        <h1 className="text-2xl font-serif font-bold text-[#141413]">Import Study</h1>
+        <p className="text-[#6B665E] text-sm mt-1">
+          Upload a study PDF to auto-identify all metadata into JSON without manual typing, or look up via PubMed PMID.
+        </p>
+      </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 mb-4">
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {createMutation.isSuccess && (
-        <div className="rounded-md bg-phylo-green/10 border border-phylo-green/30 px-4 py-3 text-sm text-phylo-green mb-4 flex items-center gap-2">
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 flex items-center gap-2">
           <CheckCircle className="h-4 w-4" />
-          Study imported successfully{pdfUploaded ? " with PDF uploaded" : ""}. Redirecting...
+          Study imported successfully{pdfUploaded ? " with PDF registered" : ""}. {directExtract ? "Navigating to Extraction Sheet..." : "Redirecting..."}
         </div>
       )}
 
-      {/* Multi-Database Discovery Preview & Dry-Run Card */}
-      <div className="card p-5 bg-phylo-cream/30 border border-phylo-blue/20 mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-            <Search className="h-4 w-4 text-phylo-blue" />
-            Multi-Database Discovery (PubMed + OpenAlex)
+      {/* Primary Auto-Identification Dropzone */}
+      <div className="card-phylo-warm p-6 rounded-2xl border-2 border-dashed border-black/20 hover:border-black/50 transition-all">
+        <div className="flex items-center justify-between mb-3">
+          <label className="flex items-center gap-2 text-sm font-serif font-semibold text-[#141413]">
+            <Sparkles className="h-4 w-4 text-amber-600" />
+            PDF Auto-Identification & Instant JSON Conversion
           </label>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-phylo-blue/10 text-phylo-blue font-medium">
-            Dry-Run Enabled
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-mono font-medium">
+            RECOMMENDED (NO MANUAL TYPING)
           </span>
         </div>
-        <p className="text-xs text-gray-500 mb-3">
-          Test and preview complex search strings across PubMed and OpenAlex. Shows exact record counts and duplicate detection against your project.
+        <p className="text-xs text-[#6B665E] mb-4">
+          Drop your study PDF here. The engine will extract the title, authors, year, journal, DOI, abstract, and study design automatically.
         </p>
-        <div className="flex gap-2 mb-3">
-          <input
-            className="input flex-1 font-mono text-xs"
-            value={previewQuery}
-            onChange={(e) => setPreviewQuery(e.target.value)}
-            placeholder='e.g. ("Multiparametric MRI"[tiab] OR "mpMRI"[tiab]) AND ("Prostate Cancer"[MeSH])'
-          />
-          <button
-            type="button"
-            onClick={() => {
-              if (!previewQuery.trim()) {
-                setError("Enter a search query to preview");
-                return;
-              }
-              setError("");
-              previewMutation.mutate(previewQuery.trim());
-            }}
-            disabled={previewMutation.isPending}
-            className="btn-secondary whitespace-nowrap text-xs"
-          >
-            {previewMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-            Preview Count
-          </button>
-        </div>
 
-        {previewMutation.isPending && (
-          <div className="p-3 bg-white/70 rounded-lg border border-gray-200 text-xs text-gray-600 flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-phylo-blue" /> Querying multi-database API for deduplicated records...
-          </div>
-        )}
-
-        {previewMutation.isSuccess && (
-          <div className="space-y-3 mt-3 pt-3 border-t border-gray-200/60">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm text-center">
-                <div className="text-xs text-gray-500">Total Found</div>
-                <div className="text-lg font-bold text-phylo-blue">{previewMutation.data.total_found?.toLocaleString() || 0}</div>
-              </div>
-              <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm text-center">
-                <div className="text-xs text-gray-500">Deduplicated Records</div>
-                <div className="text-lg font-bold text-phylo-blue">
-                  {previewMutation.data.deduplicated_count || 0}
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm text-center">
-                <div className="text-xs text-gray-500">Source Breakdown</div>
-                <div className="text-xs font-semibold text-gray-700 mt-1">
-                  PubMed: {previewMutation.data.sources?.PubMed || 0} | OpenAlex: {previewMutation.data.sources?.OpenAlex || 0}
-                </div>
-              </div>
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            const f = e.dataTransfer.files?.[0];
+            if (f) handlePdfSelected(f);
+          }}
+          className="border border-black/10 rounded-xl p-6 text-center cursor-pointer bg-white/60 hover:bg-white transition-all shadow-2xs"
+        >
+          {isAutoIdentifying ? (
+            <div className="flex flex-col items-center justify-center gap-2 text-amber-800 py-2">
+              <Loader2 className="h-7 w-7 animate-spin text-amber-600" />
+              <span className="text-xs font-serif font-medium">Auto-identifying clinical metadata from PDF...</span>
             </div>
-
-            {previewMutation.data.results && previewMutation.data.results.length > 0 && (
-              <div className="bg-white rounded-lg p-3 border border-gray-200 text-xs space-y-2">
-                <div className="font-semibold text-gray-700">Top Sample Records:</div>
-                {previewMutation.data.results.map((sample: any) => (
-                  <div key={sample.pmid || sample.study_id} className="p-2 rounded bg-gray-50 border border-gray-100 flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-medium text-gray-900 line-clamp-1">{sample.title}</div>
-                      <div className="text-gray-500 text-[11px]">
-                        PMID: {sample.pmid || 'N/A'} · Source: {sample.source} · {sample.authors} · {sample.journal} ({sample.publication_year || "N/A"})
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        update("pmid", sample.pmid || "");
-                        if(sample.pmid) pmidLookupMutation.mutate(sample.pmid);
-                        else {
-                           setForm(prev => ({
-                             ...prev,
-                             title: sample.title || "",
-                             authors: sample.authors || "",
-                             journal: sample.journal || "",
-                             doi: sample.doi || "",
-                             abstract: sample.abstract || "",
-                             source: sample.source || "",
-                             publication_year: sample.publication_year ? String(sample.publication_year) : ""
-                           }))
-                        }
-                      }}
-                      className="px-2 py-1 text-[11px] rounded bg-phylo-blue/10 text-phylo-blue hover:bg-phylo-blue hover:text-white shrink-0"
-                    >
-                      Fill Form
-                    </button>
-                  </div>
-                ))}
+          ) : pdfFile ? (
+            <div className="flex flex-col items-center justify-center gap-1.5 text-emerald-800">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                <span className="text-sm font-medium">{pdfFile.name}</span>
               </div>
-            )}
+              <span className="text-xs text-emerald-600 font-mono">PDF Loaded & Parsed to JSON</span>
+            </div>
+          ) : (
+            <div className="text-[#8A817A] py-2">
+              <Upload className="h-7 w-7 mx-auto mb-1.5 text-[#6B665E]" />
+              <p className="text-sm font-serif font-medium text-[#141413]">Drop PDF here or click to browse</p>
+              <p className="text-[11px] font-sans text-[#8A817A] mt-0.5">Supports academic and clinical publications (.pdf)</p>
+            </div>
+          )}
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handlePdfSelected(f);
+          }}
+        />
+
+        {autoIdentifiedBadge && (
+          <div className="mt-3.5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-sans text-emerald-900 flex items-start gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <span className="font-semibold block">{autoIdentifiedBadge}</span>
+              <span className="text-[11px] text-emerald-700 block">Form fields below have been pre-filled automatically. You can review them or submit directly.</span>
+            </div>
           </div>
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* PubMed Lookup */}
-        <div className="card p-5 bg-phylo-cream/20">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-            <BookOpen className="h-4 w-4 text-phylo-blue" />
-            Single PMID Quick Lookup
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Direct Extraction Fast-Track Option */}
+        <div className="card-phylo p-4 rounded-xl flex items-start gap-3 border border-black/[0.08] bg-black/[0.02]">
+          <input
+            id="directExtract"
+            type="checkbox"
+            checked={directExtract}
+            onChange={(e) => setDirectExtract(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded-sm border-gray-300 text-[#141413] focus:ring-black"
+          />
+          <label htmlFor="directExtract" className="text-xs space-y-0.5 cursor-pointer">
+            <span className="font-serif font-medium text-[#141413] block">
+              Direct Data Extraction Mode (Skip manual screening)
+            </span>
+            <span className="font-sans text-[#6B665E] block leading-relaxed">
+              Auto-includes this study and immediately redirects to the Extraction Sheet for variable review.
+            </span>
           </label>
-          <div className="flex gap-2">
-            <input
-              className="input flex-1"
-              value={form.pmid}
-              onChange={(e) => update("pmid", e.target.value)}
-              placeholder="Enter PMID (e.g. 36789123)"
-            />
-            <button
-              type="button"
-              onClick={handlePmidLookup}
-              disabled={pmidLookupMutation.isPending}
-              className="btn-primary whitespace-nowrap"
-            >
-              {pmidLookupMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              Lookup
-            </button>
-          </div>
-          {pmidLookupMutation.isSuccess && (
-            <p className="text-xs text-phylo-green mt-2 flex items-center gap-1">
-              <CheckCircle className="h-3 w-3" /> Metadata fetched from PubMed. Fields below auto-filled.
-            </p>
-          )}
-          {fulltextMutation.isSuccess && (
-            <div className="mt-2 text-xs">
-              {fulltextMutation.data.has_fulltext ? (
-                <a
-                  href={fulltextMutation.data.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-phylo-blue hover:underline flex items-center gap-1"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Full text available via {fulltextMutation.data.source}
-                </a>
-              ) : (
-                <span className="text-gray-500">
-                  {fulltextMutation.data.message || "Full text not available via open access."}
-                </span>
-              )}
-            </div>
-          )}
-          {form.pmid && (
-            <button
-              type="button"
-              onClick={handleFulltextFetch}
-              disabled={fulltextMutation.isPending}
-              className="text-xs text-gray-500 hover:text-phylo-blue mt-2 flex items-center gap-1"
-            >
-              {fulltextMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
-              Check full-text availability
-            </button>
-          )}
         </div>
 
-        {/* Study metadata form */}
-        <div className="card p-6 space-y-4">
+        {/* Study Details Form (Pre-filled) */}
+        <div className="card-phylo p-6 rounded-2xl space-y-4">
+          <div className="flex items-center justify-between border-b border-black/[0.08] pb-3">
+            <h2 className="font-serif text-base font-semibold text-[#141413]">Study Information</h2>
+            <span className="text-[10px] font-mono text-[#8A817A]">
+              {autoIdentifiedBadge ? "AUTO-IDENTIFIED" : "MANUAL / PUBMED"}
+            </span>
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
             <input
-              className="input"
+              className="input text-xs"
               value={form.title}
               onChange={(e) => update("title", e.target.value)}
-              placeholder="Study title"
+              placeholder="e.g. Endovascular treatment of pure arterial malformations"
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Authors</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Authors</label>
               <input
-                className="input"
+                className="input text-xs"
                 value={form.authors}
                 onChange={(e) => update("authors", e.target.value)}
-                placeholder="e.g. Smith J, Doe A"
+                placeholder="e.g. Chua et al."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Publication Year</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Publication Year</label>
               <input
-                className="input"
+                className="input text-xs"
                 type="number"
                 value={form.publication_year}
                 onChange={(e) => update("publication_year", e.target.value)}
-                placeholder="e.g. 2024"
+                placeholder="e.g. 2021"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Journal</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Journal</label>
               <input
-                className="input"
+                className="input text-xs"
                 value={form.journal}
                 onChange={(e) => update("journal", e.target.value)}
-                placeholder="e.g. Radiology"
+                placeholder="e.g. World Neurosurgery"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Study Design</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Study Design</label>
               <select
-                className="input"
+                className="input text-xs"
                 value={form.study_design}
                 onChange={(e) => update("study_design", e.target.value)}
               >
@@ -394,123 +359,69 @@ export function StudyImport() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">DOI</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">DOI</label>
               <input
-                className="input"
+                className="input text-xs"
                 value={form.doi}
                 onChange={(e) => update("doi", e.target.value)}
-                placeholder="e.g. 10.1148/radiol.202323001"
+                placeholder="e.g. 10.1016/j.wneu.2021.05.012"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">PMID</label>
-              <input
-                className="input"
-                value={form.pmid}
-                onChange={(e) => update("pmid", e.target.value)}
-                placeholder="e.g. 36789123"
-              />
+              <label className="block text-xs font-medium text-gray-700 mb-1">PMID</label>
+              <div className="flex gap-2">
+                <input
+                  className="input text-xs flex-1"
+                  value={form.pmid}
+                  onChange={(e) => update("pmid", e.target.value)}
+                  placeholder="e.g. 34023533"
+                />
+                <button
+                  type="button"
+                  onClick={handlePmidLookup}
+                  disabled={pmidLookupMutation.isPending}
+                  className="btn-phylo-secondary text-xs px-2.5 shrink-0"
+                >
+                  {pmidLookupMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Lookup"}
+                </button>
+              </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Abstract</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Abstract</label>
             <textarea
-              className="input min-h-[120px] font-mono text-xs"
+              className="input min-h-[100px] font-mono text-xs"
               value={form.abstract}
               onChange={(e) => update("abstract", e.target.value)}
-              placeholder="Paste the study abstract here..."
+              placeholder="Study abstract text..."
             />
           </div>
         </div>
 
-        {/* Citation Preview (after study creation) */}
-        {citations && citations.citations && (
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <BookOpen className="h-4 w-4 text-phylo-blue" />
-                Citation Preview
-              </label>
-              {copied && <span className="text-xs text-phylo-green">Copied!</span>}
-            </div>
-            <div className="flex gap-1 mb-3 flex-wrap">
-              {citationFormats.map((fmt) => (
-                <button
-                  key={fmt}
-                  type="button"
-                  onClick={() => setActiveCitationTab(fmt)}
-                  className={`px-3 py-1 text-xs rounded-md font-medium capitalize transition-colors ${
-                    activeCitationTab === fmt
-                      ? "bg-phylo-blue text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  {fmt}
-                </button>
-              ))}
-            </div>
-            <div className="relative">
-              <pre className="bg-gray-50 rounded-lg p-4 text-xs text-gray-700 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto">
-                {citations.citations[activeCitationTab]}
-              </pre>
-              <button
-                type="button"
-                onClick={() => copyCitation(citations.citations[activeCitationTab])}
-                className="absolute top-2 right-2 text-gray-400 hover:text-phylo-blue p-1 rounded bg-white/80"
-                title="Copy citation"
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* PDF Upload */}
-        <div className="card p-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Full-Text PDF (optional)</label>
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-phylo-blue transition-colors"
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            className="btn-phylo-primary text-xs flex items-center gap-1.5"
+            disabled={createMutation.isPending}
           >
-            {pdfFile ? (
-              <div className="flex items-center justify-center gap-2 text-phylo-green">
-                <FileText className="h-5 w-5" />
-                <span className="text-sm font-medium">{pdfFile.name}</span>
-              </div>
+            {createMutation.isPending ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Importing...</span>
+              </>
+            ) : directExtract ? (
+              <>
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Import & Jump to Extraction Sheet</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </>
             ) : (
-              <div className="text-gray-400">
-                <Upload className="h-8 w-8 mx-auto mb-2" />
-                <p className="text-sm">Click to select a PDF file</p>
-              </div>
+              <span>Import Study</span>
             )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/pdf"
-            className="hidden"
-            onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-          />
-        </div>
-
-        {/* Info note */}
-        <div className="card p-4 bg-phylo-cream/30">
-          <div className="flex items-start gap-2 text-sm text-gray-600">
-            <FileText className="h-4 w-4 text-phylo-blue mt-0.5 shrink-0" />
-            <p>
-              After importing, use the Screening page to include studies at full-text,
-              then start risk-of-bias assessments from there. PDF processing and
-              auto-extraction are available from the study's PDF viewer page.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <button type="submit" className="btn-primary" disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Importing..." : "Import Study"}
           </button>
-          <Link to={`/projects/${projectId}/studies`} className="btn-secondary">
+          <Link to={`/projects/${projectId}/studies`} className="btn-phylo-secondary text-xs">
             Cancel
           </Link>
         </div>
