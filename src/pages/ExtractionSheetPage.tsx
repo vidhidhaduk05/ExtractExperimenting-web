@@ -1,18 +1,19 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, DEMO_EXTRACTIONS, DEMO_VARIABLES, type CodebookRule } from "../lib/demoData";
 import { BENCHMARK_PAPERS } from "./PdfViewerPage";
-// BENCHMARK_PAPERS replaced by dynamic data below
 import {
   FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
   Sparkles, ExternalLink, RefreshCw, CheckCheck, ChevronRight,
-  TrendingUp, Award, Layers, ShieldCheck, Tag
+  TrendingUp, Award, Layers, ShieldCheck, Tag, FolderPlus, Upload
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
+import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
+import { CuratedExcelModal } from "../components/common/CuratedExcelModal";
 
 export function ExtractionSheetPage() {
   const { projectId, studyId: routeStudyId } = useParams<{ projectId: string; studyId?: string }>();
@@ -29,6 +30,9 @@ export function ExtractionSheetPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "pending" | "low_conf">("all");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
   const [showCodebookDesigner, setShowCodebookDesigner] = useState<boolean>(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState<boolean>(false);
+  const [showCuratedExcelModal, setShowCuratedExcelModal] = useState<boolean>(false);
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
 
   // Inline editing state
   const [editingVarId, setEditingVarId] = useState<string | null>(null);
@@ -44,14 +48,6 @@ export function ExtractionSheetPage() {
   });
 
   // Queries
-  const { data: dynamicStudies } = useQuery({
-    queryKey: ["studies", projectId],
-    queryFn: () => api.listStudies(projectId!),
-    enabled: !!projectId,
-  });
-
-  const availablePapers = (dynamicStudies && dynamicStudies.length > 0) ? dynamicStudies : BENCHMARK_PAPERS;
-
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
     queryFn: () => api.getProject(projectId!),
@@ -72,8 +68,41 @@ export function ExtractionSheetPage() {
 
   const variableList = variables && variables.length > 0 ? variables : DEMO_VARIABLES;
 
+  const { data: projectStudies } = useQuery({
+    queryKey: ["studies", projectId],
+    queryFn: () => api.listStudies(projectId!),
+    enabled: !!projectId,
+  });
+
+  const availablePapers = useMemo(() => {
+    if (!projectStudies) return BENCHMARK_PAPERS;
+    if (projectStudies.length === 0) return [];
+    return projectStudies.map((s, idx) => {
+      const match = BENCHMARK_PAPERS.find((b) => b.id === s.study_id);
+      if (match) return match;
+      return {
+        id: s.study_id,
+        shortId: `s${idx + 1}`,
+        title: s.title ? `${s.title} (${s.publication_year || 2024})` : `Study #${idx + 1}`,
+        filename: s.pdf_path || `${s.title}.pdf`,
+      };
+    });
+  }, [projectStudies]);
+
+  // Sync selectedStudyId if current is not in available papers
+  useEffect(() => {
+    if (availablePapers.length > 0 && !availablePapers.some((p) => p.id === selectedStudyId)) {
+      setSelectedStudyId(availablePapers[0].id);
+    }
+  }, [availablePapers, selectedStudyId]);
+
   // Active study object
-  const currentPaper = availablePapers.find((p: any) => (p.id || p.study_id) === selectedStudyId) || availablePapers[0];
+  const currentPaper = availablePapers.find((p) => p.id === selectedStudyId) || availablePapers[0] || {
+    id: selectedStudyId || "none",
+    shortId: "s0",
+    title: "No Study Selected",
+    filename: "",
+  };
 
   // Map extractions for the active study
   const extractionMap = useMemo(() => {
@@ -84,14 +113,14 @@ export function ExtractionSheetPage() {
     return map;
   }, [extractions]);
 
-  // Overall metrics across all benchmark papers
+  // Overall metrics across all papers
   const allBenchmarkStats = useMemo(() => {
     let totalVars = 0;
     let verifiedVars = 0;
     let highConfCount = 0;
 
-    availablePapers.forEach((paper: any) => {
-      const paperExts = (DEMO_EXTRACTIONS as any)[(paper.id || paper.study_id)] || [];
+    availablePapers.forEach((paper) => {
+      const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
       paperExts.forEach((e: any) => {
         totalVars++;
         if (e.is_verified) verifiedVars++;
@@ -105,7 +134,7 @@ export function ExtractionSheetPage() {
       highConfCount,
       percent: totalVars > 0 ? Math.round((verifiedVars / totalVars) * 100) : 0,
     };
-  }, [extractions]);
+  }, [availablePapers, extractions]);
 
   // Filtered variables for single-study sheet
   const filteredVariables = useMemo(() => {
@@ -237,11 +266,11 @@ export function ExtractionSheetPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Export Combined Matrix CSV across all 6 benchmark studies
+  // Export Combined Matrix CSV across all studies
   const handleExportAllStudiesMatrixCsv = () => {
-    const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p: any) => `"${p.title}"`)];
+    const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p) => `"${p.title}"`)];
     const rows = variableList.map((v: any) => {
-      const studyValues = availablePapers.map((p: any) => {
+      const studyValues = availablePapers.map((p) => {
         const exts = (DEMO_EXTRACTIONS as any)[p.id] || [];
         const found = exts.find((e: any) => e.variable_id === v.variable_id);
         const val = found?.value || "NR";
@@ -304,13 +333,33 @@ export function ExtractionSheetPage() {
 
             {/* Right: Primary Quick Action Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Bulk Upload from Laptop */}
+              <button
+                onClick={() => setShowBulkUploadModal(true)}
+                className="btn-phylo-primary text-xs flex items-center gap-1.5 shadow-xs"
+                title="Bulk upload study PDFs, Excel spreadsheets, or citations directly from your laptop"
+              >
+                <FolderPlus className="h-3.5 w-3.5 text-[#E9ED4C]" />
+                <span>Bulk Upload from Laptop</span>
+              </button>
+
+              {/* Already Curated Excel Sheet */}
+              <button
+                onClick={() => setShowCuratedExcelModal(true)}
+                className="btn-phylo-secondary text-xs bg-white/90 hover:bg-[#E9ED4C]/20 border-black/15 flex items-center gap-1.5"
+                title="1-Click Load Curated Benchmark PAM Sheet, Import Laptop Excel/CSV, or Export Multi-Sheet Workbook"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-700" />
+                <span>Curated Excel Sheet</span>
+              </button>
+
               {/* Jump to Word-Style Track Changes PDF Viewer */}
               <Link
                 to={`/projects/${projectId}/studies/${selectedStudyId}/pdf`}
-                className="btn-phylo-primary text-xs"
+                className="btn-phylo-secondary text-xs bg-white/80"
                 title="Open Split PDF Word-Style Track Changes Viewer with spatial highlighting"
               >
-                <FileText className="h-3.5 w-3.5" />
+                <FileText className="h-3.5 w-3.5 text-[#141413]" />
                 <span>Open PDF Track Changes</span>
               </Link>
 
@@ -445,15 +494,15 @@ export function ExtractionSheetPage() {
             {/* If Single Mode: Study Selection Pills */}
             {viewMode === "single" && (
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-                {availablePapers.map((paper: any, idx: number) => {
-                  const isSelected = (paper.id || paper.study_id) === selectedStudyId;
-                  const paperExts = (DEMO_EXTRACTIONS as any)[(paper.id || paper.study_id)] || [];
+                {availablePapers.map((paper, idx) => {
+                  const isSelected = paper.id === selectedStudyId;
+                  const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
                   const paperVerified = paperExts.filter((e: any) => e.is_verified).length;
 
                   return (
                     <button
-                      key={(paper.id || paper.study_id) || paper.study_id}
-                      onClick={() => setSelectedStudyId((paper.id || paper.study_id) || paper.study_id)}
+                      key={paper.id}
+                      onClick={() => setSelectedStudyId(paper.id)}
                       className={cn(
                         "px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all border flex items-center gap-1.5 shrink-0",
                         isSelected
@@ -471,6 +520,16 @@ export function ExtractionSheetPage() {
                     </button>
                   );
                 })}
+
+                {/* Direct Upload Pill */}
+                <button
+                  onClick={() => setShowBulkUploadModal(true)}
+                  className="px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all border border-dashed border-black/30 bg-white/80 hover:bg-[#E9ED4C]/25 hover:border-black/60 text-[#141413] flex items-center gap-1.5 shrink-0 shadow-2xs"
+                  title="Bulk upload study PDFs or datasets directly from your laptop"
+                >
+                  <FolderPlus className="h-3.5 w-3.5 text-[#141413]" />
+                  <span>+ Upload PDFs from Laptop</span>
+                </button>
               </div>
             )}
           </div>
@@ -770,8 +829,8 @@ export function ExtractionSheetPage() {
                     <th className="px-4 py-3.5 text-left w-56 sticky left-0 bg-slate-50 dark:bg-slate-850 z-20 shadow-xs">
                       Variable & Domain
                     </th>
-                    {availablePapers.map((paper: any, idx: number) => (
-                      <th key={(paper.id || paper.study_id) || paper.study_id} className="px-4 py-3.5 text-left min-w-[200px]">
+                    {availablePapers.map((paper, idx) => (
+                      <th key={paper.id} className="px-4 py-3.5 text-left min-w-[200px]">
                         <div className="flex flex-col">
                           <span className="text-blue-600 font-bold text-[10px]">Study #{idx + 1}</span>
                           <span className="font-bold text-slate-900 dark:text-white truncate" title={paper.title}>
@@ -798,15 +857,15 @@ export function ExtractionSheetPage() {
                         </span>
                       </td>
 
-                      {/* Columns for Each Benchmark Study */}
-                      {availablePapers.map((paper: any) => {
-                        const paperExts = (DEMO_EXTRACTIONS as any)[(paper.id || paper.study_id)] || [];
+                      {/* Columns for Each Study */}
+                      {availablePapers.map((paper) => {
+                        const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
                         const foundExt = paperExts.find((e: any) => e.variable_id === v.variable_id);
                         const isVerified = !!foundExt?.is_verified;
                         const value = foundExt?.value || "Not Reported";
 
                         return (
-                          <td key={(paper.id || paper.study_id)} className="px-4 py-3.5 group/cell hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors">
+                          <td key={paper.id} className="px-4 py-3.5 group/cell hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors">
                             <div className="flex flex-col gap-1">
                               <div className="flex items-center justify-between gap-1">
                                 <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs truncate max-w-[150px]" title={value}>
@@ -830,7 +889,7 @@ export function ExtractionSheetPage() {
                                   {foundExt?.confidence ? `${Math.round(foundExt.confidence * 100)}% conf` : ""}
                                 </span>
                                 <Link
-                                  to={`/projects/${projectId}/studies/${(paper.id || paper.study_id)}/pdf?var=${v.variable_id}`}
+                                  to={`/projects/${projectId}/studies/${paper.id}/pdf?var=${v.variable_id}`}
                                   className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                                 >
                                   <span>View PDF</span>
@@ -882,6 +941,57 @@ export function ExtractionSheetPage() {
             queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
           }}
         />
+      )}
+
+      {/* ── Universal Bulk Upload Modal from Laptop ── */}
+      {showBulkUploadModal && (
+        <UniversalBulkUploadModal
+          projectId={projectId!}
+          isOpen={showBulkUploadModal}
+          onClose={() => setShowBulkUploadModal(false)}
+          defaultTarget="extraction"
+          onSuccess={(count, target, firstStudyId) => {
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["extractions"] });
+            if (firstStudyId) {
+              setSelectedStudyId(firstStudyId);
+            }
+            setFeedbackToast(`Successfully uploaded ${count} studies directly into extraction sheet!`);
+            setTimeout(() => setFeedbackToast(null), 5000);
+          }}
+        />
+      )}
+
+      {/* ── Curated Excel Sheet Modal ── */}
+      {showCuratedExcelModal && (
+        <CuratedExcelModal
+          projectId={projectId!}
+          selectedStudyId={selectedStudyId}
+          availablePapers={availablePapers}
+          isOpen={showCuratedExcelModal}
+          onClose={() => setShowCuratedExcelModal(false)}
+          onSuccess={(msg) => {
+            queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["extractions"] });
+            setFeedbackToast(msg);
+            setTimeout(() => setFeedbackToast(null), 5000);
+          }}
+        />
+      )}
+
+      {/* ── Feedback Toast ── */}
+      {feedbackToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#141413] text-[#FAF9F3] border border-black/20 rounded-xl px-4 py-3 shadow-xl flex items-center gap-2.5 animate-in slide-in-from-bottom-2 duration-200">
+          <CheckCircle2 className="h-4 w-4 text-[#E9ED4C] shrink-0" />
+          <span className="font-serif text-xs">{feedbackToast}</span>
+          <button
+            onClick={() => setFeedbackToast(null)}
+            className="text-white/60 hover:text-white ml-2 text-xs"
+          >
+            &times;
+          </button>
+        </div>
       )}
     </div>
   );
