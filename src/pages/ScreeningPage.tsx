@@ -176,6 +176,24 @@ export function ScreeningPage() {
     enabled: !!projectId,
   });
 
+  const { data: robRunProgress } = useQuery({
+    queryKey: ["rob-run-progress", projectId],
+    queryFn: () => (projectId ? api.getRobRunProgress(projectId) : Promise.resolve(null)),
+    enabled: !!projectId,
+    refetchInterval: 5000,
+  });
+
+  const startBatchRobMutation = useMutation({
+    mutationFn: () => api.startRobRun(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rob-run-progress", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["rob-summary", projectId] });
+    },
+    onError: (err: any) => {
+      alert(`Failed to start batch RoB: ${err.message}`);
+    },
+  });
+
   const [robStarting, setRobStarting] = useState<Record<string, boolean>>({});
   const [extractionMsg, setExtractionMsg] = useState<Record<string, string>>({});
   const [extractingStudyId, setExtractingStudyId] = useState<string | null>(null);
@@ -201,15 +219,8 @@ export function ScreeningPage() {
   };
 
   const handleRobAllIncluded = async () => {
-    const targets = (studies || []).filter(
-      (s) => s.screening_status === "included" && !robByStudy.has(s.study_id)
-    );
-    if (targets.length === 0) {
-      alert("All included studies already have a RoB assessment.");
-      return;
-    }
-    for (const s of targets) {
-      await handleStartRob(s);
+    if (projectId) {
+      startBatchRobMutation.mutate();
     }
   };
 
@@ -461,6 +472,10 @@ export function ScreeningPage() {
       queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
       queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
       queryClient.invalidateQueries({ queryKey: ["study-clarifications", selectedStudyId] });
+      queryClient.invalidateQueries({ queryKey: ["pending-clarifications", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["all-clarifications", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["rob-summary", projectId] });
     },
   });
 
@@ -904,14 +919,22 @@ export function ScreeningPage() {
               >
                 Advance Full-Text &rarr;
               </button>
-              <button
-                onClick={handleRobAllIncluded}
-                className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1"
-                title="Create + AI-prefill Risk of Bias assessments for all included studies that don't have one yet"
-              >
-                <ShieldCheck className="w-3 h-3" />
-                RoB All Included
-              </button>
+              {robRunProgress?.status === "running" ? (
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 animate-pulse">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Auto RoB Running ({robRunProgress.completed_studies}/{robRunProgress.total_studies})
+                </span>
+              ) : (
+                <button
+                  onClick={handleRobAllIncluded}
+                  disabled={startBatchRobMutation.isPending}
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1"
+                  title="Run automated batch Risk of Bias assessment on all included studies"
+                >
+                  <ShieldCheck className="w-3 h-3" />
+                  {startBatchRobMutation.isPending ? "Starting RoB..." : "Batch RoB Included"}
+                </button>
+              )}
             </div>
           </div>
 

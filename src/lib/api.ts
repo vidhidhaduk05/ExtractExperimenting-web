@@ -185,13 +185,26 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       return { status: "deleted" } as unknown as T;
     }
     if (path.includes("/clarifications/") && path.includes("/answer")) {
+      const qMatch = path.match(/\/clarifications\/([^/]+)\/answer/);
+      const qId = qMatch ? qMatch[1] : "q_clarify_1";
+      const qObj = (DEMO_STUDY_CLARIFICATIONS as any[]).find((q) => q.question_id === qId);
+      if (qObj) {
+        qObj.status = "answered";
+        qObj.answer = body.answer || "confirmed";
+        qObj.answer_label = body.answer_label || body.answer;
+        qObj.answered_by = body.answered_by || "Reviewer";
+        qObj.answered_at = new Date().toISOString();
+        qObj.final_decision = "include";
+        qObj.final_confidence = 0.98;
+        qObj.final_reason_text = "Verified via human clarification.";
+      }
       return {
-        question_id: "q_clarify_1",
-        study_id: "study_albina_2024",
+        question_id: qId,
+        study_id: qObj?.study_id || "study_albina_2024",
         status: "answered",
         final_decision: "include",
         final_confidence: 0.98,
-        final_reason_text: "Verified pure arterial malformation with absent venous shunting.",
+        final_reason_text: "Clarification recorded and study re-evaluated.",
         conflict_detected: false
       } as unknown as T;
     }
@@ -228,6 +241,38 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     }
     if (path.includes("/coded-extract")) {
       return { status: "complete", extracted_count: 5 } as unknown as T;
+    }
+    if (path.includes("/rob/run/cancel") || (path.includes("/rob/run") && path.includes("/cancel"))) {
+      return { status: "cancelled", run_id: "demo_rob_run_1" } as unknown as T;
+    }
+    if (path.includes("/rob/run") && method === "POST") {
+      return {
+        run_id: "demo_rob_run_1",
+        project_id: "proj_pam_current",
+        status: "completed",
+        total_studies: 6,
+        completed_studies: 6,
+        failed_studies: 0,
+        flagged_questions_count: 2,
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      } as unknown as T;
+    }
+    if (path.includes("/assessments/") && path.includes("/tool") && method === "PUT") {
+      const aId = path.split("/")[3];
+      const found = (DEMO_ROB_SUMMARY.assessments as any[]).find((a) => a.assessment_id === aId);
+      if (found) {
+        found.tool = body.tool;
+      }
+      return (found || DEMO_ROB_SUMMARY.assessments[0]) as unknown as T;
+    }
+    if (path.includes("/settings") && method === "PUT") {
+      return {
+        project_id: "proj_pam_current",
+        name: "Demo Project",
+        auto_rob_enabled: body.auto_rob_enabled !== undefined ? body.auto_rob_enabled : true,
+        rob_confidence_threshold: body.rob_confidence_threshold || 0.7
+      } as unknown as T;
     }
     if (path.includes("/rob/") && path.includes("/ai-prefill")) {
       return DEMO_ROB_SUMMARY.assessments[0] as unknown as T;
@@ -404,6 +449,34 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.includes("/analysis/profile") || path.includes("/analysis")) {
     return DEMO_ANALYSIS_PROFILE as unknown as T;
   }
+  if (path.includes("/rob/run/progress") || (path.includes("/rob/run") && path.includes("/progress"))) {
+    return {
+      run_id: "demo_rob_run_1",
+      project_id: "proj_pam_current",
+      status: "idle",
+      total_studies: 6,
+      completed_studies: 6,
+      failed_studies: 0,
+      flagged_questions_count: 2,
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString()
+    } as unknown as T;
+  }
+  if (path.includes("/settings")) {
+    return {
+      project_id: "proj_pam_current",
+      name: "Demo Project",
+      auto_rob_enabled: true,
+      rob_confidence_threshold: 0.7
+    } as unknown as T;
+  }
+  if (path.includes("/rob/tools/auto-select")) {
+    return {
+      tool: "rob2",
+      confidence: 0.95,
+      alternatives: ["robins_i", "nos"]
+    } as unknown as T;
+  }
   if (path.includes("/rob/summary") || path.includes("/rob-summary")) {
     return DEMO_ROB_SUMMARY as unknown as T;
   }
@@ -437,9 +510,12 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     return DEMO_ABSTRACT_HIGHLIGHTS.default as unknown as T;
   }
   if (path.includes("/clarifications/stats")) {
-    return { project_id: "proj_pam_current", total: 1, pending: 0, answered: 1, expired: 0, by_type: { eligibility: 1 }, by_stage: { fulltext: 1 } } as unknown as T;
+    return { project_id: "proj_pam_current", total: 3, pending: 2, answered: 1, expired: 0, by_type: { eligibility: 1, study_design: 1, intervention: 1 }, by_stage: { abstract: 1, fulltext: 2 } } as unknown as T;
   }
   if (path.includes("/clarifications")) {
+    if (path.includes("status=pending")) {
+      return (DEMO_STUDY_CLARIFICATIONS as any[]).filter((q) => q.status === "pending") as unknown as T;
+    }
     return DEMO_STUDY_CLARIFICATIONS as unknown as T;
   }
   if (path.includes("/exclusion-reasons")) {
@@ -682,6 +758,8 @@ export interface RobAssessment {
   outcome_label: string;
   overall_judgment: string;
   ai_prefilled: number;
+  run_id?: string | null;
+  auto_selected?: boolean;
   domain_judgments: RobDomainJudgment[];
   tool_definition?: RobToolDef;
 }
@@ -712,12 +790,17 @@ export interface RobSignalingAnswer {
   ai_page: number | null;
   ai_confidence: number;
   human_verified: number;
+  needs_human_review?: number;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
 }
 
 export interface RobSummary {
   project_id: string;
   tool: string;
   total_assessments: number;
+  pending_human_review_count?: number;
+  assessments_needing_review_count?: number;
   judgment_counts: Record<string, number>;
   assessments: RobSummaryAssessment[];
 }
@@ -730,6 +813,9 @@ export interface RobSummaryAssessment {
   outcome_label: string;
   overall_judgment: string;
   ai_prefilled: boolean;
+  run_id?: string | null;
+  auto_selected?: boolean;
+  needs_human_review_count?: number;
   domains: {
     domain_key: string;
     domain_label: string;
@@ -738,6 +824,26 @@ export interface RobSummaryAssessment {
     label: string;
     human_verified: boolean;
   }[];
+}
+
+export interface ProjectSettings {
+  project_id: string;
+  name?: string;
+  auto_rob_enabled: boolean;
+  rob_confidence_threshold: number;
+}
+
+export interface RobRunProgress {
+  run_id: string;
+  project_id: string;
+  status: "idle" | "running" | "completed" | "failed" | "cancelled";
+  total_studies: number;
+  completed_studies: number;
+  failed_studies: number;
+  flagged_questions_count: number;
+  error_message?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
 }
 
 export interface ScreeningSummary {
@@ -1942,7 +2048,31 @@ export const api = {
   listRobTools: () => request<RobToolDef[]>("/rob/tools"),
   getRobTool: (key: string) => request<RobToolDef>(`/rob/tools/${key}`),
   autoSelectTool: (design: string) =>
-    request<{ tool: string }>(`/rob/tools/auto-select/${encodeURIComponent(design)}`),
+    request<{ tool: string; confidence: number; alternatives: string[]; tool_definition?: RobToolDef }>(
+      `/rob/tools/auto-select/${encodeURIComponent(design)}`
+    ),
+  overrideAssessmentTool: (assessmentId: string, toolId: string) =>
+    request<RobAssessment>(`/rob/assessments/${assessmentId}/tool`, {
+      method: "PUT",
+      body: JSON.stringify({ tool: toolId }),
+    }),
+
+  // Batch RoB Runs
+  startRobRun: (projectId: string) =>
+    request<RobRunProgress>(`/projects/${projectId}/rob/run`, { method: "POST" }),
+  getRobRunProgress: (projectId: string) =>
+    request<RobRunProgress>(`/projects/${projectId}/rob/run/progress`),
+  cancelRobRun: (projectId: string) =>
+    request<{ status: string; run_id?: string }>(`/projects/${projectId}/rob/run/cancel`, { method: "POST" }),
+
+  // Project Settings (Auto-RoB & Confidence Threshold)
+  getProjectSettings: (projectId: string) =>
+    request<ProjectSettings>(`/projects/${projectId}/settings`),
+  updateProjectSettings: (projectId: string, settings: Partial<ProjectSettings>) =>
+    request<ProjectSettings>(`/projects/${projectId}/settings`, {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    }),
 
   // RoB Assessments
   createAssessment: (studyId: string, projectId: string, tool: string, outcomeLabel = "") =>
