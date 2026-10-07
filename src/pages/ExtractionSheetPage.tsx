@@ -8,10 +8,12 @@ import {
   FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
   Sparkles, ExternalLink, RefreshCw, CheckCheck, ChevronRight,
-  TrendingUp, Award, Layers, ShieldCheck, Tag
+  TrendingUp, Award, Layers, ShieldCheck, Tag, FolderPlus, Upload
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
+import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
+import { CuratedExcelModal } from "../components/common/CuratedExcelModal";
 
 export function ExtractionSheetPage() {
   const { projectId, studyId: routeStudyId } = useParams<{ projectId: string; studyId?: string }>();
@@ -28,6 +30,9 @@ export function ExtractionSheetPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "pending" | "low_conf">("all");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
   const [showCodebookDesigner, setShowCodebookDesigner] = useState<boolean>(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState<boolean>(false);
+  const [showCuratedExcelModal, setShowCuratedExcelModal] = useState<boolean>(false);
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
 
   // Inline editing state
   const [editingVarId, setEditingVarId] = useState<string | null>(null);
@@ -328,13 +333,33 @@ export function ExtractionSheetPage() {
 
             {/* Right: Primary Quick Action Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Bulk Upload from Laptop */}
+              <button
+                onClick={() => setShowBulkUploadModal(true)}
+                className="btn-phylo-primary text-xs flex items-center gap-1.5 shadow-xs"
+                title="Bulk upload study PDFs, Excel spreadsheets, or citations directly from your laptop"
+              >
+                <FolderPlus className="h-3.5 w-3.5 text-[#E9ED4C]" />
+                <span>Bulk Upload from Laptop</span>
+              </button>
+
+              {/* Already Curated Excel Sheet */}
+              <button
+                onClick={() => setShowCuratedExcelModal(true)}
+                className="btn-phylo-secondary text-xs bg-white/90 hover:bg-[#E9ED4C]/20 border-black/15 flex items-center gap-1.5"
+                title="1-Click Load Curated Benchmark PAM Sheet, Import Laptop Excel/CSV, or Export Multi-Sheet Workbook"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-700" />
+                <span>Curated Excel Sheet</span>
+              </button>
+
               {/* Jump to Word-Style Track Changes PDF Viewer */}
               <Link
                 to={`/projects/${projectId}/studies/${selectedStudyId}/pdf`}
-                className="btn-phylo-primary text-xs"
+                className="btn-phylo-secondary text-xs bg-white/80"
                 title="Open Split PDF Word-Style Track Changes Viewer with spatial highlighting"
               >
-                <FileText className="h-3.5 w-3.5" />
+                <FileText className="h-3.5 w-3.5 text-[#141413]" />
                 <span>Open PDF Track Changes</span>
               </Link>
 
@@ -495,6 +520,16 @@ export function ExtractionSheetPage() {
                     </button>
                   );
                 })}
+
+                {/* Direct Upload Pill */}
+                <button
+                  onClick={() => setShowBulkUploadModal(true)}
+                  className="px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all border border-dashed border-black/30 bg-white/80 hover:bg-[#E9ED4C]/25 hover:border-black/60 text-[#141413] flex items-center gap-1.5 shrink-0 shadow-2xs"
+                  title="Bulk upload study PDFs or datasets directly from your laptop"
+                >
+                  <FolderPlus className="h-3.5 w-3.5 text-[#141413]" />
+                  <span>+ Upload PDFs from Laptop</span>
+                </button>
               </div>
             )}
           </div>
@@ -906,6 +941,57 @@ export function ExtractionSheetPage() {
             queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
           }}
         />
+      )}
+
+      {/* ── Universal Bulk Upload Modal from Laptop ── */}
+      {showBulkUploadModal && (
+        <UniversalBulkUploadModal
+          projectId={projectId!}
+          isOpen={showBulkUploadModal}
+          onClose={() => setShowBulkUploadModal(false)}
+          defaultTarget="extraction"
+          onSuccess={(count, target, firstStudyId) => {
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["extractions"] });
+            if (firstStudyId) {
+              setSelectedStudyId(firstStudyId);
+            }
+            setFeedbackToast(`Successfully uploaded ${count} studies directly into extraction sheet!`);
+            setTimeout(() => setFeedbackToast(null), 5000);
+          }}
+        />
+      )}
+
+      {/* ── Curated Excel Sheet Modal ── */}
+      {showCuratedExcelModal && (
+        <CuratedExcelModal
+          projectId={projectId!}
+          selectedStudyId={selectedStudyId}
+          availablePapers={availablePapers}
+          isOpen={showCuratedExcelModal}
+          onClose={() => setShowCuratedExcelModal(false)}
+          onSuccess={(msg) => {
+            queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["extractions"] });
+            setFeedbackToast(msg);
+            setTimeout(() => setFeedbackToast(null), 5000);
+          }}
+        />
+      )}
+
+      {/* ── Feedback Toast ── */}
+      {feedbackToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#141413] text-[#FAF9F3] border border-black/20 rounded-xl px-4 py-3 shadow-xl flex items-center gap-2.5 animate-in slide-in-from-bottom-2 duration-200">
+          <CheckCircle2 className="h-4 w-4 text-[#E9ED4C] shrink-0" />
+          <span className="font-serif text-xs">{feedbackToast}</span>
+          <button
+            onClick={() => setFeedbackToast(null)}
+            className="text-white/60 hover:text-white ml-2 text-xs"
+          >
+            &times;
+          </button>
+        </div>
       )}
     </div>
   );
