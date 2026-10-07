@@ -79,7 +79,24 @@ export function PdfViewerPage() {
     queryFn: () => api.listStudies(projectId!),
     enabled: !!projectId,
   });
-  const allStudies = (dynamicStudies && dynamicStudies.length > 0) ? dynamicStudies : BENCHMARK_PAPERS;
+  const allStudies: any[] = useMemo(() => {
+    if (dynamicStudies && dynamicStudies.length > 0) {
+      return dynamicStudies.map((s, idx) => ({
+        ...s,
+        id: s.study_id,
+        shortId: `s${idx + 1}`,
+        title: s.title || `Study #${idx + 1}`,
+        filename: s.pdf_path || `${s.title}.pdf`,
+      }));
+    }
+    return BENCHMARK_PAPERS.map((b) => ({
+      ...b,
+      study_id: b.id,
+      authors: b.title.split("(")[0].trim(),
+      publication_year: 2024,
+      journal: "Journal of NeuroInterventional Surgery",
+    }));
+  }, [dynamicStudies]);
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
