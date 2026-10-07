@@ -49,6 +49,63 @@ interface PageHighlightOverlay {
   rects: PercentRect[];
 }
 
+/**
+ * Merges line-by-line quote rectangles into a unified block boundary rectangle.
+ * When quotes span multiple lines within the same column or paragraph, this creates
+ * a single perimeter bounding box rather than striped borders across every line.
+ */
+function mergeContiguousRects(rects: PercentRect[]): PercentRect[] {
+  if (!rects || rects.length <= 1) return rects || [];
+
+  // Sort by vertical position (top to bottom), then left to right
+  const sorted = [...rects].sort((a, b) => a.top - b.top || a.left - b.left);
+  const clusters: PercentRect[][] = [];
+  let currentCluster: PercentRect[] = [sorted[0]];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = currentCluster[currentCluster.length - 1];
+    const curr = sorted[i];
+
+    const verticalGap = curr.top - (prev.top + prev.height);
+    // Line spacing in multi-line quotes is typically within 3.5% page height
+    const isAdjacent = verticalGap >= -1.0 && verticalGap <= 3.5;
+
+    // Check horizontal overlap between curr and currentCluster bounding box
+    const clusterMinX = Math.min(...currentCluster.map((r) => r.left));
+    const clusterMaxX = Math.max(...currentCluster.map((r) => r.left + r.width));
+    const currRight = curr.left + curr.width;
+
+    const horizontalOverlap = Math.min(clusterMaxX, currRight) - Math.max(clusterMinX, curr.left);
+    const isInSameColumn = horizontalOverlap > -3.0; // allows indentations / line wraps
+
+    if (isAdjacent && isInSameColumn) {
+      currentCluster.push(curr);
+    } else {
+      clusters.push(currentCluster);
+      currentCluster = [curr];
+    }
+  }
+  clusters.push(currentCluster);
+
+  return clusters.map((cluster) => {
+    const minLeft = Math.min(...cluster.map((r) => r.left));
+    const minTop = Math.min(...cluster.map((r) => r.top));
+    const maxRight = Math.max(...cluster.map((r) => r.left + r.width));
+    const maxBottom = Math.max(...cluster.map((r) => r.top + r.height));
+
+    // Slight breathing padding around the text
+    const padX = 0.25;
+    const padY = 0.15;
+
+    const left = Math.max(0, minLeft - padX);
+    const top = Math.max(0, minTop - padY);
+    const width = Math.min(100 - left, (maxRight - minLeft) + padX * 2);
+    const height = Math.min(100 - top, (maxBottom - minTop) + padY * 2);
+
+    return { left, top, width, height };
+  });
+}
+
 export function ActualPdfViewer({
   pdfUrl,
   highlights,
@@ -542,10 +599,11 @@ export function ActualPdfViewer({
                   {overlays.map((overlay) => {
                     const isActive = overlay.variableId === activeHighlightId;
                     const isVerified = overlay.isVerified;
+                    const displayRects = mergeContiguousRects(overlay.rects);
 
                     return (
                       <React.Fragment key={overlay.variableId}>
-                        {overlay.rects.map((rect, rIdx) => (
+                        {displayRects.map((rect, rIdx) => (
                           <div
                             key={rIdx}
                             id={rIdx === 0 ? `pdf-highlight-${overlay.variableId}` : undefined}
@@ -563,19 +621,19 @@ export function ActualPdfViewer({
                               height: `${rect.height}%`,
                               mixBlendMode: "multiply",
                               backgroundColor: isActive
-                                ? "rgba(249, 209, 74, 0.35)" // Canary Gold #F9D14A (translucent for crystal-clear text readability)
+                                ? "rgba(249, 209, 74, 0.25)" // Canary Gold #F9D14A translucent highlight wash
                                 : isVerified
-                                ? "rgba(124, 75, 115, 0.14)" // Berry Plum #7C4B73
-                                : "rgba(136, 160, 220, 0.14)", // Soft Periwinkle #88A0DC
+                                ? "rgba(124, 75, 115, 0.10)" // Berry Plum #7C4B73
+                                : "rgba(136, 160, 220, 0.10)", // Soft Periwinkle #88A0DC
                               border: isActive
-                                ? "2px solid #E78429" // Boundary line all over the highlight (Tangerine Amber)
+                                ? "2px solid #E78429" // Boundary line all over the highlight block (Tangerine Amber)
                                 : isVerified
-                                ? "1.5px solid #7C4B73" // Boundary line all over the highlight (Berry Plum)
-                                : "1.5px dashed #88A0DC", // Boundary line all over the highlight (Soft Periwinkle)
+                                ? "1.5px solid #7C4B73" // Boundary line all over the highlight block (Berry Plum)
+                                : "1.5px dashed #88A0DC", // Boundary line all over the highlight block (Soft Periwinkle)
                               boxShadow: isActive
-                                ? "0 0 0 1px rgba(231, 132, 41, 0.25), 0 2px 8px rgba(249, 209, 74, 0.3)"
+                                ? "0 0 0 2px rgba(231, 132, 41, 0.2), 0 3px 12px rgba(249, 209, 74, 0.35)"
                                 : "none",
-                              borderRadius: "3px",
+                              borderRadius: "4px",
                               cursor: "pointer",
                               zIndex: isActive ? 25 : 15,
                               transition: "all 0.15s ease",
