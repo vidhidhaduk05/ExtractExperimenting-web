@@ -352,12 +352,156 @@ ROB_2 = RobTool(
 )
 
 
+# ── ROBINS-E (Exposures) ──
+
+ROBINS_E = RobTool(
+    key="robins_e",
+    name="ROBINS-E",
+    full_name="Risk of Bias in Non-randomized Studies of Exposures",
+    description="Assesses risk of bias in non-randomized observational studies evaluating environmental, occupational, or lifestyle exposures.",
+    study_designs=["exposure", "etiology", "environmental", "occupational", "toxicology", "observational exposure"],
+    judgment_options=ROBINS_I_JUDGMENTS,
+    domains=[
+        Domain(
+            key="confounding",
+            label="Bias due to confounding",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_1_1", "Did the authors identify important potential confounders in their protocol/methods?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+                SignalingQuestion("sq_1_2", "Did the authors use an appropriate analysis method to control for all important confounders?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+                SignalingQuestion("sq_1_3", "Were confounders measured validly and reliably across all participants?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+            ],
+        ),
+        Domain(
+            key="measurement_exposure",
+            label="Bias in measurement of the exposure",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_2_1", "Was exposure measurement objective, valid, and reliable?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+                SignalingQuestion("sq_2_2", "Was the exposure measured prior to the development of the outcome?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+                SignalingQuestion("sq_2_3", "Was exposure classification unaffected by knowledge of the outcome?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+            ],
+        ),
+        Domain(
+            key="selection_participants",
+            label="Bias in selection of participants into the study",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_3_1", "Was selection of participants into the study unrelated to both exposure and outcome status?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+                SignalingQuestion("sq_3_2", "Did the study include all eligible participants or a consecutive/random sample?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+            ],
+        ),
+        Domain(
+            key="post_exposure_interventions",
+            label="Bias due to post-exposure interventions or co-exposures",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_4_1", "Were there post-exposure interventions or co-exposures that could influence the outcome?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+                SignalingQuestion("sq_4_2", "Were important co-exposures balanced between groups or adjusted for?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+            ],
+        ),
+        Domain(
+            key="missing_data",
+            label="Bias due to missing data",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_5_1", "Were exposure and outcome data complete for a high proportion of participants?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+                SignalingQuestion("sq_5_2", "Were the proportions and reasons for missing data balanced across exposure levels?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+            ],
+        ),
+        Domain(
+            key="measurement_outcome",
+            label="Bias in measurement of the outcome",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_6_1", "Was outcome assessment objective or blinded to exposure status?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+                SignalingQuestion("sq_6_2", "Were measurement methods comparable across exposed and unexposed groups?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+            ],
+        ),
+        Domain(
+            key="selection_reported",
+            label="Bias in selection of the reported result",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_7_1", "Are reported results free from selective reporting among multiple exposure-outcome models?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+                SignalingQuestion("sq_7_2", "Was the analysis conducted according to a pre-specified analysis plan?",
+                                 response_options=ROBINS_ROB2_OPTIONS),
+            ],
+        ),
+    ],
+)
+
+
+# ── Newcastle-Ottawa Scale (NOS) ──
+
+NOS_JUDGMENTS = ["low", "moderate", "high"]
+NOS_OPTIONS = ["yes", "no", "unclear", "not_applicable"]
+
+NOS = RobTool(
+    key="nos",
+    name="Newcastle-Ottawa Scale",
+    full_name="Newcastle-Ottawa Scale for Assessing the Quality of Nonrandomised Studies in Meta-analyses",
+    description="Assesses observational cohort, case-control, and case series studies across Selection, Comparability, and Outcome/Exposure using star-based scoring.",
+    study_designs=["cohort", "case-control", "case series", "case report", "observational"],
+    judgment_options=NOS_JUDGMENTS,
+    domains=[
+        Domain(
+            key="selection",
+            label="Selection of Study Groups (Max 4 Stars ★★★★)",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_sel_1", "★ Representativeness of the exposed cohort (truly or somewhat representative of average in community)"),
+                SignalingQuestion("sq_sel_2", "★ Selection of the non-exposed cohort (drawn from the same community)"),
+                SignalingQuestion("sq_sel_3", "★ Ascertainment of exposure (secure record or structured interview)"),
+                SignalingQuestion("sq_sel_4", "★ Demonstration that outcome of interest was not present at start of study"),
+            ],
+        ),
+        Domain(
+            key="comparability",
+            label="Comparability of Cohorts (Max 2 Stars ★★)",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_comp_1", "★ Study controls for primary confounding factor (age/sex/disease severity)"),
+                SignalingQuestion("sq_comp_2", "★ Study controls for any additional important factor"),
+            ],
+        ),
+        Domain(
+            key="outcome",
+            label="Outcome / Exposure Assessment (Max 3 Stars ★★★)",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_out_1", "★ Assessment of outcome (independent blind assessment or record linkage)"),
+                SignalingQuestion("sq_out_2", "★ Was follow-up long enough for outcomes to occur?"),
+                SignalingQuestion("sq_out_3", "★ Adequacy of follow-up of cohorts (complete follow up or subjects lost unlikely to introduce bias)"),
+            ],
+        ),
+    ],
+)
+
+
 # ── Tool registry ──
 
 TOOLS: dict[str, RobTool] = {
     "quadas2": QUADAS_2,
     "robins_i": ROBINS_I,
     "rob2": ROB_2,
+    "robins_e": ROBINS_E,
+    "nos": NOS,
 }
 
 
@@ -374,41 +518,60 @@ def list_tools() -> list[RobTool]:
 def select_rob_tool(study_design: str) -> str:
     """Auto-select the appropriate RoB tool based on study design classification.
 
-    Returns tool key ('quadas2', 'robins_i', 'rob2') or 'manual' if no match.
+    Returns tool key ('quadas2', 'robins_i', 'rob2', 'robins_e', 'nos') or 'manual' if no match.
     """
+    selected, _, _ = select_rob_tool_with_alternatives(study_design)
+    return selected
+
+
+def select_rob_tool_with_alternatives(study_design: str) -> tuple[str, float, list[str]]:
+    """Auto-select RoB tool with confidence score and alternative suggestions."""
     design = (study_design or "").lower().strip()
+    if not design:
+        return ("manual", 0.0, ["rob2", "robins_i", "nos", "quadas2"])
 
     # Diagnostic accuracy studies → QUADAS-2
     if any(kw in design for kw in [
         "diagnostic accuracy", "diagnostic test", "dta", "diagnostic",
         "sensitivity", "specificity", "index test", "accuracy study",
     ]):
-        return "quadas2"
-
-    # Non-randomized intervention studies → ROBINS-I
-    # Check BEFORE RCT to avoid "non-randomized" matching "randomized"
-    if any(kw in design for kw in [
-        "non-randomized", "non randomised", "non-randomised",
-        "quasi-experimental", "quasi experimental",
-    ]):
-        return "robins_i"
+        return ("quadas2", 0.95, ["robins_i", "rob2"])
 
     # Randomized controlled trials → RoB 2
     if any(kw in design for kw in [
         "rct", "randomized", "randomised", "random", "controlled trial",
-        "randomized controlled",
-    ]):
-        return "rob2"
+        "randomized controlled", "crossover", "cluster",
+    ]) and not any(kw in design for kw in ["non-randomized", "non randomised", "non-randomised"]):
+        return ("rob2", 0.98, ["robins_i"])
 
-    # Other non-randomized study designs → ROBINS-I
+    # Non-randomized interventional studies → ROBINS-I
     if any(kw in design for kw in [
-        "cohort", "case-control", "case control", "cross-sectional",
-        "observational", "registry",
-        "propensity", "retrospective", "prospective cohort",
+        "non-randomized", "non randomised", "non-randomised",
+        "quasi-experimental", "quasi experimental", "quasi",
     ]):
-        return "robins_i"
+        return ("robins_i", 0.90, ["rob2", "nos"])
 
-    return "manual"
+    # Exposure / Etiology / Environmental / Occupational studies → ROBINS-E
+    if any(kw in design for kw in [
+        "exposure", "etiology", "environmental", "occupational", "toxicology",
+    ]):
+        return ("robins_e", 0.88, ["robins_i", "nos"])
+
+    # Case series or case report → NOS (or specialized case-series checklist)
+    if any(kw in design for kw in [
+        "case series", "case report", "cases", "clinical series",
+    ]):
+        return ("nos", 0.85, ["robins_i"])
+
+    # Observational cohort or case-control studies → ROBINS-I / NOS
+    if any(kw in design for kw in [
+        "prospective cohort", "retrospective cohort", "case-control", "case control",
+        "cross-sectional", "observational", "registry", "cohort",
+    ]):
+        # Default to robins_i per existing tests, with nos as strong alternative
+        return ("robins_i", 0.85, ["nos", "robins_e"])
+
+    return ("manual", 0.2, ["robins_i", "rob2", "nos", "quadas2"])
 
 
 # ── Judgment algorithms ──
@@ -448,13 +611,10 @@ def compute_robins_i_domain_judgment(answers: dict[str, str]) -> str:
         return "no_information"
 
     if any(a == "no_information" for a in active_answers):
-        # If key questions have no information, judgment is no_information
-        # unless there are clear "no" answers indicating serious/critical bias
         if any(a == "no" for a in active_answers):
             return "serious"
         return "no_information"
 
-    # Check for "no" answers (indicate bias)
     no_count = sum(1 for a in active_answers if a in ("no", "probably_no"))
     yes_count = sum(1 for a in active_answers if a in ("yes", "probably_yes"))
 
@@ -466,6 +626,11 @@ def compute_robins_i_domain_judgment(answers: dict[str, str]) -> str:
         return "moderate"
 
     return "moderate"
+
+
+def compute_robins_e_domain_judgment(answers: dict[str, str]) -> str:
+    """Compute ROBINS-E domain risk-of-bias judgment from signaling question answers."""
+    return compute_robins_i_domain_judgment(answers)
 
 
 def compute_rob2_domain_judgment(answers: dict[str, str]) -> str:
@@ -490,8 +655,6 @@ def compute_rob2_domain_judgment(answers: dict[str, str]) -> str:
     if no_count == 0 and yes_count > 0:
         return "low"
     if no_count >= 1:
-        # A "no" answer (especially a strong "no") typically indicates high risk
-        # unless it's a non-critical question
         strong_no = sum(1 for a in active_answers if a == "no")
         if strong_no >= 1:
             return "high"
@@ -500,14 +663,46 @@ def compute_rob2_domain_judgment(answers: dict[str, str]) -> str:
     return "some_concerns"
 
 
+def compute_nos_domain_judgment(answers: dict[str, str]) -> str:
+    """Compute Newcastle-Ottawa Scale domain judgment based on star counts.
+
+    Answers indicating a star: 'yes', 'yes_star', '1', 'true', etc.
+    Thresholds:
+      High quality / low risk: >= 75% of questions awarded stars
+      Moderate quality: >= 50% of questions awarded stars
+      Low quality / high risk: < 50% of questions awarded stars
+    """
+    active_answers = [a for a in answers.values() if a and a != ""]
+    if not active_answers:
+        return "high"
+
+    star_count = sum(1 for a in active_answers if a.lower() in ("yes", "yes_star", "1", "true", "star"))
+    total_q = len(active_answers)
+
+    if total_q == 0:
+        return "high"
+
+    ratio = star_count / total_q
+    if ratio >= 0.75:
+        return "low"
+    elif ratio >= 0.50:
+        return "moderate"
+    else:
+        return "high"
+
+
 def compute_domain_judgment(tool_key: str, answers: dict[str, str]) -> str:
     """Dispatch to the appropriate tool's domain judgment algorithm."""
     if tool_key == "quadas2":
         return compute_quadas2_domain_judgment(answers)
-    elif tool_key == "robins_i":
+    elif tool_key in ("robins_i", "robins-i"):
         return compute_robins_i_domain_judgment(answers)
-    elif tool_key == "rob2":
+    elif tool_key in ("robins_e", "robins-e"):
+        return compute_robins_e_domain_judgment(answers)
+    elif tool_key in ("rob2", "rob-2"):
         return compute_rob2_domain_judgment(answers)
+    elif tool_key == "nos":
+        return compute_nos_domain_judgment(answers)
     return "unclear"
 
 
@@ -531,14 +726,17 @@ def compute_robins_i_overall(domain_judgments: dict[str, str]) -> str:
     active = [j for j in domain_judgments.values() if j and j != ""]
     if not active:
         return "no_information"
-    # Overall is at least as severe as the most severe domain
     max_severity = max(severity_order.get(j, 1) for j in active)
-    # But if multiple domains are serious or worse, escalate
     serious_or_worse = sum(1 for j in active if severity_order.get(j, 0) >= 2)
     if serious_or_worse >= 2:
-        max_severity = max(max_severity, 2)  # at least serious
+        max_severity = max(max_severity, 2)
     reverse = {0: "low", 1: "moderate", 2: "serious", 3: "critical"}
     return reverse.get(max_severity, "moderate")
+
+
+def compute_robins_e_overall(domain_judgments: dict[str, str]) -> str:
+    """ROBINS-E overall: follows the ROBINS hierarchy."""
+    return compute_robins_i_overall(domain_judgments)
 
 
 def compute_rob2_overall(domain_judgments: dict[str, str]) -> str:
@@ -556,14 +754,30 @@ def compute_rob2_overall(domain_judgments: dict[str, str]) -> str:
     return "low"
 
 
+def compute_nos_overall(domain_judgments: dict[str, str]) -> str:
+    """Newcastle-Ottawa Scale overall: Low (all low), Moderate (1-2 moderate), High (any high)."""
+    active = [j for j in domain_judgments.values() if j and j != ""]
+    if not active:
+        return "moderate"
+    if any(j == "high" for j in active):
+        return "high"
+    if any(j == "moderate" for j in active):
+        return "moderate"
+    return "low"
+
+
 def compute_overall_judgment(tool_key: str, domain_judgments: dict[str, str]) -> str:
     """Dispatch to the appropriate tool's overall judgment algorithm."""
     if tool_key == "quadas2":
         return compute_quadas2_overall(domain_judgments)
-    elif tool_key == "robins_i":
+    elif tool_key in ("robins_i", "robins-i"):
         return compute_robins_i_overall(domain_judgments)
-    elif tool_key == "rob2":
+    elif tool_key in ("robins_e", "robins-e"):
+        return compute_robins_e_overall(domain_judgments)
+    elif tool_key in ("rob2", "rob-2"):
         return compute_rob2_overall(domain_judgments)
+    elif tool_key == "nos":
+        return compute_nos_overall(domain_judgments)
     return "unclear"
 
 

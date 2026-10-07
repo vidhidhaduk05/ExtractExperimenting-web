@@ -24,8 +24,12 @@ from models import (
     RobAssessmentCreate, RobAssessmentDetail, RobAssessmentResponse,
     RobDomainJudgmentUpdate, RobSignalingAnswerUpdate,
     RobAIPrefillRequest, RobAIPrefillResult, RobProjectSummary,
+    RobRunProgressResponse,
 )
-from services.rob_tools import list_tools, get_tool, tool_to_dict, select_rob_tool
+from services.rob_tools import (
+    list_tools, get_tool, tool_to_dict, select_rob_tool,
+    select_rob_tool_with_alternatives,
+)
 from services import rob_service, rob_ai
 from services import pdf_service
 from database import get_db
@@ -34,6 +38,11 @@ from dependencies import get_current_user_optional, check_project_access
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/rob", tags=["risk-of-bias"])
+
+
+class RobToolOverrideRequest(BaseModel):
+    """Request to change tool for an existing assessment."""
+    tool_id: str
 
 
 # ── Dual-reviewer models ──
@@ -72,11 +81,21 @@ async def get_rob_tool(tool_key: str):
 @router.get("/tools/auto-select/{study_design}")
 async def auto_select_tool(study_design: str):
     """Auto-select the appropriate RoB tool based on study design."""
-    tool_key = select_rob_tool(study_design)
+    tool_key, confidence, alternatives = select_rob_tool_with_alternatives(study_design)
     if tool_key == "manual":
-        return {"tool": "manual", "message": "No automatic match; please select manually."}
+        return {
+            "tool": "manual",
+            "confidence": confidence,
+            "alternatives": alternatives,
+            "message": "No automatic match; please select manually.",
+        }
     tool = get_tool(tool_key)
-    return {"tool": tool_key, "tool_definition": tool_to_dict(tool) if tool else None}
+    return {
+        "tool": tool_key,
+        "confidence": confidence,
+        "alternatives": alternatives,
+        "tool_definition": tool_to_dict(tool) if tool else None,
+    }
 
 
 # ── Assessment CRUD ──
@@ -147,6 +166,19 @@ async def delete_assessment(assessment_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Assessment not found")
     return {"deleted": True, "assessment_id": assessment_id}
+
+
+@router.put("/assessments/{assessment_id}/tool")
+async def override_assessment_tool(
+    assessment_id: str,
+    body: RobToolOverrideRequest,
+    conn: DBBackend = Depends(get_db),
+):
+    """Override or switch the tool used for an assessment."""
+    try:
+        return rob_service.change_assessment_tool(assessment_id, body.tool_id, db=conn)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ── Domain Judgment Updates ──
@@ -279,12 +311,46 @@ async def accept_ai_suggestions(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-# ── Project Summary ──
+# ── Project Summary & Batch Runner ──
 
 @router.get("/projects/{project_id}/summary")
 async def project_rob_summary(project_id: str):
     """Get RoB summary for traffic-light chart rendering."""
     return rob_service.get_project_summary(project_id)
+
+
+@router.post("/projects/{project_id}/run")
+async def run_batch_rob(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Start batch risk-of-bias assessment for included studies."""
+    check_project_access(conn, project_id, user)
+    return rob_service.start_batch_rob_run(project_id, db=conn)
+
+
+@router.get("/projects/{project_id}/run/progress")
+async def get_batch_rob_run_progress(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Get live progress of the batch risk-of-bias assessment."""
+    check_project_access(conn, project_id, user)
+    return rob_service.get_batch_rob_progress(project_id, db=conn)
+
+
+@router.post("/projects/{project_id}/run/cancel")
+async def cancel_batch_rob(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Cancel an active batch risk-of-bias run."""
+    check_project_access(conn, project_id, user)
+    success = rob_service.cancel_batch_rob_run(project_id, db=conn)
+    return {"cancelled": success}
 
 
 # ── Export ──

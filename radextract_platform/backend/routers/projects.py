@@ -22,6 +22,7 @@ from models import (
     ReferenceUploadResponse,
     ProjectMemberResponse, ProjectMemberInvite, ProjectMemberUpdate,
     KeywordGroupCreate, KeywordGroupUpdate, KeywordGroupResponse,
+    ProjectSettingsUpdate, ProjectSettingsResponse,
 )
 from database import get_db
 from services.db_backend import DBBackend
@@ -131,6 +132,104 @@ async def update_project(
         "SELECT * FROM projects WHERE project_id = ?", (project_id,)
     ).fetchone()
     return dict(row)
+
+
+@router.get("/projects/{project_id}/settings")
+async def get_project_settings(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Get project-specific settings including auto RoB and confidence thresholds."""
+    row = conn.execute(
+        "SELECT * FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_access(conn, project_id, user, min_role="viewer")
+    p = dict(row)
+    return {
+        "auto_rob_enabled": bool(p.get("auto_rob_enabled", 1)),
+        "rob_confidence_threshold": float(p.get("rob_confidence_threshold", 0.7) if p.get("rob_confidence_threshold") is not None else 0.7),
+    }
+
+
+@router.put("/projects/{project_id}/settings")
+async def update_project_settings(
+    project_id: str,
+    body: ProjectSettingsUpdate,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Update project-specific settings."""
+    row = conn.execute(
+        "SELECT * FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_access(conn, project_id, user, min_role="editor")
+
+    updates = []
+    params = []
+    if body.auto_rob_enabled is not None:
+        updates.append("auto_rob_enabled = ?")
+        params.append(1 if body.auto_rob_enabled else 0)
+    if body.rob_confidence_threshold is not None:
+        updates.append("rob_confidence_threshold = ?")
+        params.append(float(body.rob_confidence_threshold))
+
+    if updates:
+        params.append(project_id)
+        conn.execute(
+            f"UPDATE projects SET {', '.join(updates)} WHERE project_id = ?",
+            tuple(params),
+        )
+        conn.commit()
+
+    row = conn.execute(
+        "SELECT * FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    p = dict(row)
+    return {
+        "auto_rob_enabled": bool(p.get("auto_rob_enabled", 1)),
+        "rob_confidence_threshold": float(p.get("rob_confidence_threshold", 0.7) if p.get("rob_confidence_threshold") is not None else 0.7),
+    }
+
+
+@router.post("/projects/{project_id}/rob/run")
+async def start_project_rob_run_alias(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Alias for batch RoB run at /api/projects/{id}/rob/run."""
+    from services import rob_service
+    check_project_access(conn, project_id, user)
+    return rob_service.start_batch_rob_run(project_id, db=conn)
+
+
+@router.get("/projects/{project_id}/rob/run/progress")
+async def get_project_rob_run_progress_alias(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Alias for batch RoB run progress at /api/projects/{id}/rob/run/progress."""
+    from services import rob_service
+    check_project_access(conn, project_id, user)
+    return rob_service.get_batch_rob_progress(project_id, db=conn)
+
+
+@router.get("/projects/{project_id}/rob/summary")
+async def get_project_rob_summary_alias(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Alias for RoB summary at /api/projects/{id}/rob/summary."""
+    from services import rob_service
+    check_project_access(conn, project_id, user)
+    return rob_service.get_project_summary(project_id, db=conn)
 
 
 @router.delete("/projects/{project_id}")

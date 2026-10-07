@@ -1,10 +1,11 @@
 import { Outlet, NavLink, useParams, Link } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useState, useEffect } from "react";
-import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles } from "lucide-react";
+import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles, Bell } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ErrorBoundary } from "../common/ErrorBoundary";
+import { ClarificationNotificationCenter } from "../common/ClarificationNotificationCenter";
 
 const navItems = [
   { to: "/projects", label: "Projects", icon: Home, end: true },
@@ -445,6 +446,15 @@ export function AppLayout() {
     return localStorage.getItem("theme") === "dark";
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isClarificationDrawerOpen, setIsClarificationDrawerOpen] = useState(false);
+
+  const { data: pendingClarifications = [] } = useQuery({
+    queryKey: ["pending-clarifications", projectId],
+    queryFn: () => (projectId ? api.listClarifications(projectId, "pending") : Promise.resolve([])),
+    enabled: !!projectId,
+    refetchInterval: 8000,
+  });
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem("radextract_sidebar_collapsed") === "true";
@@ -643,6 +653,21 @@ export function AppLayout() {
                   <Moon className="h-4 w-4" />
                 )}
               </button>
+              {projectId && (
+                <button
+                  onClick={() => setIsClarificationDrawerOpen(true)}
+                  className="relative p-2 rounded-full hover:bg-black/5 text-[#6B665E] hover:text-[#141413] transition-colors"
+                  title={`Clarification Inbox (${pendingClarifications.length} pending)`}
+                  aria-label="Clarification Inbox"
+                >
+                  <Bell className="h-4 w-4" />
+                  {pendingClarifications.length > 0 && (
+                    <span className="absolute top-1 right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-purple-600 text-white text-[9px] font-mono font-bold">
+                      {pendingClarifications.length}
+                    </span>
+                  )}
+                </button>
+              )}
               {projectId && <SettingsPanel projectId={projectId} />}
             </div>
           </div>
@@ -653,6 +678,15 @@ export function AppLayout() {
             <Outlet />
           </ErrorBoundary>
         </div>
+
+        {/* Global Clarification Notification Center & Drawer */}
+        {projectId && (
+          <ClarificationNotificationCenter
+            projectId={projectId}
+            isDrawerOpen={isClarificationDrawerOpen}
+            onToggleDrawer={setIsClarificationDrawerOpen}
+          />
+        )}
       </main>
     </div>
   );

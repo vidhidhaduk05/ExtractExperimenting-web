@@ -453,11 +453,16 @@ class RobSignalingAnswerResponse(ORMBase):
     ai_page: Optional[int] = None
     ai_confidence: float = 0.0
     human_verified: int = 0
+    needs_human_review: int = 0
+    reviewed_by: str = ""
+    reviewed_at: str = ""
 
 
 class RobSignalingAnswerUpdate(BaseModel):
     answer: Optional[str] = None
     human_verified: Optional[bool] = None
+    needs_human_review: Optional[bool] = None
+    reviewed_by: Optional[str] = None
 
 
 class RobDomainJudgmentResponse(ORMBase):
@@ -496,6 +501,8 @@ class RobAssessmentResponse(ORMBase):
     assessed_at: str = ""
     ai_prefilled: int = 0
     ai_prefilled_at: str = ""
+    run_id: str = ""
+    auto_selected: int = 0
 
 
 class RobAssessmentDetail(RobAssessmentResponse):
@@ -528,6 +535,29 @@ class RobProjectSummary(BaseModel):
     total_assessments: int
     judgment_counts: dict[str, int]
     assessments: list[dict[str, Any]]
+    pending_human_review_count: int = 0
+    assessments_needing_review_count: int = 0
+
+
+class ProjectSettingsUpdate(BaseModel):
+    auto_rob_enabled: Optional[bool] = None
+    rob_confidence_threshold: Optional[float] = None
+
+
+class ProjectSettingsResponse(BaseModel):
+    auto_rob_enabled: bool = True
+    rob_confidence_threshold: float = 0.7
+
+
+class RobRunProgressResponse(BaseModel):
+    run_id: Optional[str] = None
+    active: bool = False
+    stage: str = "rob"
+    total: int = 0
+    completed: int = 0
+    current_study_id: Optional[str] = None
+    done_ids: list[str] = Field(default_factory=list)
+    pending_ids: list[str] = Field(default_factory=list)
 
 
 class RobExportRequest(BaseModel):

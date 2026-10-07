@@ -1,11 +1,13 @@
 """Tests for rob_tools.py — RoB tool definitions, auto-selection, and judgment algorithms."""
 import pytest
 from services.rob_tools import (
-    QUADAS_2, ROBINS_I, ROB_2,
-    TOOLS, get_tool, list_tools, select_rob_tool,
+    QUADAS_2, ROBINS_I, ROB_2, ROBINS_E, NOS,
+    TOOLS, get_tool, list_tools, select_rob_tool, select_rob_tool_with_alternatives,
     compute_quadas2_domain_judgment, compute_robins_i_domain_judgment,
-    compute_rob2_domain_judgment, compute_domain_judgment,
+    compute_rob2_domain_judgment, compute_robins_e_domain_judgment, compute_nos_domain_judgment,
+    compute_domain_judgment,
     compute_quadas2_overall, compute_robins_i_overall, compute_rob2_overall,
+    compute_robins_e_overall, compute_nos_overall,
     compute_overall_judgment,
     get_judgment_color, get_judgment_label, tool_to_dict,
     JUDGMENT_COLORS, JUDGMENT_LABELS,
@@ -15,17 +17,19 @@ from services.rob_tools import (
 class TestToolDefinitions:
     """Test that tool definitions are structurally correct."""
 
-    def test_three_tools_registered(self):
-        assert set(TOOLS.keys()) == {"quadas2", "robins_i", "rob2"}
+    def test_five_tools_registered(self):
+        assert set(TOOLS.keys()) == {"quadas2", "robins_i", "rob2", "robins_e", "nos"}
 
     def test_list_tools_returns_all(self):
         tools = list_tools()
-        assert len(tools) == 3
+        assert len(tools) == 5
 
     def test_get_tool_valid(self):
         assert get_tool("quadas2") is QUADAS_2
         assert get_tool("robins_i") is ROBINS_I
         assert get_tool("rob2") is ROB_2
+        assert get_tool("robins_e") is ROBINS_E
+        assert get_tool("nos") is NOS
 
     def test_get_tool_invalid(self):
         assert get_tool("nonexistent") is None
@@ -50,6 +54,14 @@ class TestToolDefinitions:
     def test_rob2_structure(self):
         assert ROB_2.key == "rob2"
         assert len(ROB_2.domains) == 5
+
+    def test_robins_e_structure(self):
+        assert ROBINS_E.key == "robins_e"
+        assert len(ROBINS_E.domains) == 7
+
+    def test_nos_structure(self):
+        assert NOS.key == "nos"
+        assert len(NOS.domains) == 3
 
     def test_conditional_questions_exist(self):
         """ROBINS-I and RoB 2 should have conditional signaling questions."""
@@ -191,7 +203,40 @@ class TestOverallJudgments:
         assert compute_overall_judgment("quadas2", {"d1": "low"}) == "low"
         assert compute_overall_judgment("robins_i", {"d1": "low"}) == "low"
         assert compute_overall_judgment("rob2", {"d1": "low"}) == "low"
+        assert compute_overall_judgment("robins_e", {"d1": "low"}) == "low"
+        assert compute_overall_judgment("nos", {"d1": "low"}) == "low"
         assert compute_overall_judgment("unknown", {}) == "unclear"
+
+
+class TestSelectRobToolWithAlternatives:
+    """Test auto-selection with confidence and alternatives."""
+
+    def test_rct_selects_rob2(self):
+        tool, conf, alts = select_rob_tool_with_alternatives("randomized controlled trial")
+        assert tool == "rob2"
+        assert conf >= 0.95
+        assert "robins_i" in alts
+
+    def test_exposure_selects_robins_e(self):
+        tool, conf, alts = select_rob_tool_with_alternatives("environmental exposure study")
+        assert tool == "robins_e"
+        assert "robins_i" in alts
+
+    def test_case_series_selects_nos(self):
+        tool, conf, alts = select_rob_tool_with_alternatives("case series report")
+        assert tool == "nos"
+        assert "robins_i" in alts
+
+    def test_diagnostic_selects_quadas2(self):
+        tool, conf, alts = select_rob_tool_with_alternatives("diagnostic test accuracy")
+        assert tool == "quadas2"
+        assert "robins_i" in alts
+
+    def test_empty_defaults_to_manual(self):
+        tool, conf, alts = select_rob_tool_with_alternatives("")
+        assert tool == "manual"
+        assert conf == 0.0
+        assert "robins_i" in alts
 
 
 class TestDisplayHelpers:

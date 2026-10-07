@@ -45,9 +45,9 @@ class TestToolEndpoints:
         r = client.get("/api/rob/tools")
         assert r.status_code == 200
         tools = r.json()
-        assert len(tools) == 3
+        assert len(tools) == 5
         keys = {t["key"] for t in tools}
-        assert keys == {"quadas2", "robins_i", "rob2"}
+        assert keys == {"quadas2", "robins_i", "rob2", "robins_e", "nos"}
 
     def test_get_specific_tool(self, client):
         r = client.get("/api/rob/tools/quadas2")
@@ -227,3 +227,50 @@ class TestExport:
         r = client.get(f"/api/rob/projects/{pid}/export?format=csv")
         assert r.status_code == 200
         assert "text/csv" in r.headers.get("content-type", "") or "octet-stream" in r.headers.get("content-type", "")
+
+
+class TestToolOverrideAndBatchRun:
+
+    def test_override_tool(self, client, project_and_study):
+        pid, sid = project_and_study
+        r = client.post(f"/api/rob/studies/{sid}/rob", json={
+            "study_id": sid, "project_id": pid, "tool": "quadas2",
+        })
+        aid = r.json()["assessment_id"]
+        # Override to rob2
+        r2 = client.put(f"/api/rob/assessments/{aid}/tool", json={"tool_id": "rob2"})
+        assert r2.status_code == 200
+        data = r2.json()
+        assert data["tool"] == "rob2"
+        assert len(data["domain_judgments"]) == 5
+
+    def test_batch_rob_endpoints(self, client, project_and_study):
+        pid, sid = project_and_study
+        # Mark study as included
+        client.put(f"/api/studies/{sid}", json={"screening_status": "included", "study_design": "RCT"})
+        # Start batch RoB
+        r = client.post(f"/api/rob/projects/{pid}/run")
+        assert r.status_code == 200
+        assert "run_id" in r.json()
+        # Progress
+        prog = client.get(f"/api/rob/projects/{pid}/run/progress")
+        assert prog.status_code == 200
+        # Cancel
+        c = client.post(f"/api/rob/projects/{pid}/run/cancel")
+        assert c.status_code == 200
+        assert c.json()["cancelled"] is True
+
+    def test_project_settings(self, client, project_and_study):
+        pid, _ = project_and_study
+        r = client.get(f"/api/projects/{pid}/settings")
+        assert r.status_code == 200
+        assert r.json()["auto_rob_enabled"] is True
+        assert r.json()["rob_confidence_threshold"] == 0.7
+
+        r2 = client.put(f"/api/projects/{pid}/settings", json={
+            "auto_rob_enabled": False,
+            "rob_confidence_threshold": 0.85,
+        })
+        assert r2.status_code == 200
+        assert r2.json()["auto_rob_enabled"] is False
+        assert r2.json()["rob_confidence_threshold"] == 0.85

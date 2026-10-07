@@ -259,6 +259,45 @@ export const DEMO_ABSTRACT_HIGHLIGHTS: Record<string, AbstractHighlights> = {
 
 export const DEMO_STUDY_CLARIFICATIONS: ClarificationQuestion[] = [
   {
+    question_id: "q_clarify_pending_1",
+    study_id: "study_birua_2022",
+    study_title: "Pure Artery Malformation of Posterior Cerebral Artery with Dysplastic Internal Carotid Artery",
+    project_id: "proj_pam_current",
+    stage: "abstract",
+    question_type: "study_design",
+    question_text: "Does the study report an isolated single-case observational report or a prospective comparative cohort?",
+    options: [
+      { value: "case_report", label: "Single Case Report", description: "Describes single patient angiographic presentation and clinical management" },
+      { value: "cohort_study", label: "Observational Cohort", description: "Follows multiple patients consecutively" },
+      { value: "unclear", label: "Unclear / Needs Full Text", description: "Abstract text insufficient to establish design" }
+    ],
+    pico_aspect: "Study Design",
+    ai_interim_decision: "include",
+    ai_interim_confidence: 0.65,
+    ai_interim_reason: "Title indicates single artery presentation, but cohort language used in background.",
+    status: "pending",
+    created_at: "2026-10-07T08:00:00Z"
+  },
+  {
+    question_id: "q_clarify_pending_2",
+    study_id: "study_brinjikji_2018",
+    study_title: "Pure Arterial Malformations: Multi-Center Case Series and Systematic Review of Natural History",
+    project_id: "proj_pam_current",
+    stage: "fulltext",
+    question_type: "intervention",
+    question_text: "Are conservative observation cases reported with distinct follow-up outcomes from coiled cases?",
+    options: [
+      { value: "stratified_outcomes", label: "Yes - Stratified Outcomes", description: "Outcomes reported separately for treated vs observed cohorts" },
+      { value: "pooled_only", label: "No - Pooled Follow-up Only", description: "Aggregate outcomes cannot be decoupled" }
+    ],
+    pico_aspect: "Intervention",
+    ai_interim_decision: "include",
+    ai_interim_confidence: 0.68,
+    ai_interim_reason: "Both conservative and surgical patients discussed in discussion section.",
+    status: "pending",
+    created_at: "2026-10-07T08:05:00Z"
+  },
+  {
     question_id: "q_clarify_1",
     study_id: "study_albina_2024",
     study_title: "A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery",
@@ -405,7 +444,9 @@ export const DEMO_ROB_SUMMARY = {
   project_id: "proj_pam_current",
   tool: "rob2",
   total_assessments: 6,
-  judgment_counts: { low: 4, some_concerns: 2, high: 0 },
+  pending_human_review_count: 2,
+  assessments_needing_review_count: 2,
+  judgment_counts: { low: 4, some_concerns: 2, high: 0, critical: 0, no_information: 0 },
   assessments: [
     {
       assessment_id: "rob_albina_2024",
@@ -415,6 +456,7 @@ export const DEMO_ROB_SUMMARY = {
       overall_judgment: "low",
       status: "completed",
       ai_prefilled: true,
+      needs_human_review_count: 0,
       domains: [
         { domain_key: "D1", domain_label: "Bias arising from randomization process", risk_judgment: "low", color: "#10b981", label: "Low", human_verified: true },
         { domain_key: "D2", domain_label: "Bias due to deviations from intended interventions", risk_judgment: "low", color: "#10b981", label: "Low", human_verified: true },
@@ -432,8 +474,9 @@ export const DEMO_ROB_SUMMARY = {
       overall_judgment: "some_concerns",
       status: "completed",
       ai_prefilled: true,
+      needs_human_review_count: 1,
       domains: [
-        { domain_key: "D1", domain_label: "Bias arising from randomization process", risk_judgment: "some_concerns", color: "#f59e0b", label: "Some concerns", human_verified: true },
+        { domain_key: "D1", domain_label: "Bias arising from randomization process", risk_judgment: "some_concerns", color: "#f59e0b", label: "Some concerns", human_verified: false },
         { domain_key: "D2", domain_label: "Bias due to deviations from intended interventions", risk_judgment: "low", color: "#10b981", label: "Low", human_verified: true },
         { domain_key: "D3", domain_label: "Bias due to missing outcome data", risk_judgment: "low", color: "#10b981", label: "Low", human_verified: true },
         { domain_key: "D4", domain_label: "Bias in measurement of the outcome", risk_judgment: "low", color: "#10b981", label: "Low", human_verified: true },

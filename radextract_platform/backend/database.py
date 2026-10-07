@@ -259,6 +259,26 @@ CREATE TABLE IF NOT EXISTS grade_factors (
     FOREIGN KEY (grade_id) REFERENCES grade_assessments(grade_id)
 );
 
+-- ── NEW: Batch Risk-of-Bias runs ──
+
+CREATE TABLE IF NOT EXISTS rob_runs (
+    run_id            TEXT PRIMARY KEY,
+    project_id        TEXT NOT NULL,
+    trigger           TEXT DEFAULT 'auto',
+    status            TEXT DEFAULT 'active',
+    started_at        TEXT DEFAULT (datetime('now')),
+    finished_at       TEXT DEFAULT '',
+    total_studies     INTEGER DEFAULT 0,
+    completed_studies INTEGER DEFAULT 0,
+    current_study_id  TEXT DEFAULT '',
+    done_ids_json     TEXT DEFAULT '[]',
+    pending_ids_json  TEXT DEFAULT '[]',
+    error             TEXT DEFAULT '',
+    FOREIGN KEY (project_id) REFERENCES projects(project_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rob_runs_project ON rob_runs(project_id);
+
 -- ── NEW: v2.4 Screening decisions (multi-reviewer) ──
 
 CREATE TABLE IF NOT EXISTS screening_decisions (
@@ -501,6 +521,14 @@ MIGRATION_COLUMNS = [
     ("extractions", "missing_code", "TEXT DEFAULT ''"),
     ("extractions", "extraction_prompt", "TEXT DEFAULT ''"),
     ("extractions", "calc_note", "TEXT DEFAULT ''"),
+    # Phase 2: Batch RoB and Human-in-the-loop screening settings & flags
+    ("projects", "auto_rob_enabled", "INTEGER DEFAULT 1"),
+    ("projects", "rob_confidence_threshold", "REAL DEFAULT 0.7"),
+    ("rob_assessments", "run_id", "TEXT DEFAULT ''"),
+    ("rob_assessments", "auto_selected", "INTEGER DEFAULT 0"),
+    ("rob_signaling_answers", "needs_human_review", "INTEGER DEFAULT 0"),
+    ("rob_signaling_answers", "reviewed_by", "TEXT DEFAULT ''"),
+    ("rob_signaling_answers", "reviewed_at", "TEXT DEFAULT ''"),
 ]
 
 

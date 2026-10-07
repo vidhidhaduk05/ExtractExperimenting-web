@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { ArrowLeft, Target, Lightbulb } from "lucide-react";
+import { ArrowLeft, Target, Lightbulb, ShieldCheck, Sparkles } from "lucide-react";
 
 export function ProjectCreate() {
   const navigate = useNavigate();
@@ -10,14 +10,27 @@ export function ProjectCreate() {
   const [form, setForm] = useState({
     name: "",
     description: "",
+    autoRobEnabled: true,
+    robConfidenceThreshold: 0.7,
   });
 
   const mutation = useMutation({
-    mutationFn: () =>
-      api.createProject({
+    mutationFn: async () => {
+      const project = await api.createProject({
         name: form.name,
         description: form.description,
-      }),
+      });
+      // Save project settings
+      try {
+        await api.updateProjectSettings(project.project_id, {
+          auto_rob_enabled: form.autoRobEnabled,
+          rob_confidence_threshold: form.robConfidenceThreshold,
+        });
+      } catch (e) {
+        // Fallback gracefully in demo/offline mode
+      }
+      return project;
+    },
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       // Navigate to PICO page to continue setup
@@ -36,7 +49,10 @@ export function ProjectCreate() {
       <h1 className="text-2xl font-bold mb-6">Create New Project</h1>
 
       <form
-        onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          mutation.mutate();
+        }}
         className="space-y-6"
       >
         <div className="card p-6 space-y-4">
@@ -59,6 +75,58 @@ export function ProjectCreate() {
               placeholder="Brief description of the systematic review..."
             />
           </div>
+        </div>
+
+        {/* Automated Risk of Bias Pipeline Configuration */}
+        <div className="card p-6 space-y-4 bg-white">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-phylo-blue" />
+            <h2 className="text-sm font-semibold text-[#141413]">
+              Automated Risk of Bias Pipeline
+            </h2>
+          </div>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.autoRobEnabled}
+              onChange={(e) => setForm((f) => ({ ...f, autoRobEnabled: e.target.checked }))}
+              className="mt-1 rounded text-purple-600 focus:ring-purple-500 h-4 w-4"
+            />
+            <div>
+              <div className="text-xs font-semibold text-[#141413]">
+                Automatically launch RoB batch phase after screening completes
+              </div>
+              <div className="text-[11px] text-[#6B665E] leading-relaxed mt-0.5">
+                When background AI screening completes for all included studies, automatically select the appropriate tool (RoB 2, ROBINS-I, ROBINS-E, QUADAS-2, NOS) based on study design and pre-fill signaling questions using full text.
+              </div>
+            </div>
+          </label>
+
+          {form.autoRobEnabled && (
+            <div className="pt-3 border-t border-black/[0.06] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-[#141413]">Human Review Confidence Threshold</span>
+                <span className="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                  {Math.round(form.robConfidenceThreshold * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0.4"
+                max="0.95"
+                step="0.05"
+                value={form.robConfidenceThreshold}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, robConfidenceThreshold: parseFloat(e.target.value) }))
+                }
+                className="w-full accent-purple-600"
+              />
+              <p className="text-[11px] text-[#6B665E]">
+                Questions where AI confidence is below {Math.round(form.robConfidenceThreshold * 100)}% will be flagged with an amber badge for human verification on the RoB assessment page.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Next steps preview */}

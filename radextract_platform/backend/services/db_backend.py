@@ -62,6 +62,7 @@ TABLE_PK = {
     "sessions": "session_id",
     "project_members": "member_id",
     "user_review_state": "state_id",
+    "rob_runs": "run_id",
 }
 
 # Tables that have project_id for GSI

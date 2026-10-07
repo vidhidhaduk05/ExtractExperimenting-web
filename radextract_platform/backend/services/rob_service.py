@@ -33,6 +33,8 @@ def create_assessment(
     tool: str,
     outcome_label: str = "",
     assessed_by: str = "",
+    run_id: str = "",
+    auto_selected: int = 0,
     db: Optional[DBBackend] = None,
 ) -> dict:
     """Create a new RoB assessment with all domain judgments and signaling answers."""
@@ -55,6 +57,8 @@ def create_assessment(
         "assessed_at": "",
         "ai_prefilled": 0,
         "ai_prefilled_at": "",
+        "run_id": run_id,
+        "auto_selected": auto_selected,
     })
 
     # Create domain judgments + signaling answers
@@ -89,6 +93,9 @@ def create_assessment(
                 "ai_page": None,
                 "ai_confidence": 0.0,
                 "human_verified": 0,
+                "needs_human_review": 0,
+                "reviewed_by": "",
+                "reviewed_at": "",
             })
 
     db.commit()
@@ -171,6 +178,8 @@ def update_signaling_answer(
     answer_id: str,
     answer: Optional[str] = None,
     human_verified: Optional[bool] = None,
+    needs_human_review: Optional[bool] = None,
+    reviewed_by: Optional[str] = None,
     db: Optional[DBBackend] = None,
 ) -> dict:
     """Update a signaling answer and recompute the parent domain judgment."""
@@ -182,8 +191,20 @@ def update_signaling_answer(
     updates = {}
     if answer is not None:
         updates["answer"] = answer
+        updates["needs_human_review"] = 0
+        updates["human_verified"] = 1
+        updates["reviewed_by"] = reviewed_by or "reviewer"
+        updates["reviewed_at"] = _now()
     if human_verified is not None:
         updates["human_verified"] = 1 if human_verified else 0
+        if human_verified:
+            updates["needs_human_review"] = 0
+            updates["reviewed_by"] = reviewed_by or "reviewer"
+            updates["reviewed_at"] = _now()
+    if needs_human_review is not None:
+        updates["needs_human_review"] = 1 if needs_human_review else 0
+    if reviewed_by is not None:
+        updates["reviewed_by"] = reviewed_by
 
     if updates:
         db.update("rob_signaling_answers", answer_id, updates)
@@ -313,6 +334,10 @@ def apply_ai_prefill(
     domain_judgments = db.query("rob_domain_judgments", {"assessment_id": assessment_id})
     domain_map = {j["domain_key"]: j for j in domain_judgments}
 
+    project_id = a_row.get("project_id")
+    p_row = db.get("projects", project_id) if project_id else None
+    threshold = float((p_row or {}).get("rob_confidence_threshold", 0.7) or 0.7)
+
     for domain_key, domain_data in domains_data.items():
         j_row = domain_map.get(domain_key)
         if not j_row:
@@ -342,15 +367,19 @@ def apply_ai_prefill(
             if not a_row2:
                 continue
 
+            q_conf = float(q_data.get("ai_confidence", 0.0) or 0.0)
+            needs_review = 1 if (q_conf < threshold) else 0
+
             db.update("rob_signaling_answers", a_row2["answer_id"], {
                 "ai_answer": q_data.get("ai_answer", ""),
                 "ai_quote": q_data.get("ai_quote", ""),
                 "ai_page": q_data.get("ai_page"),
-                "ai_confidence": q_data.get("ai_confidence", 0.0),
+                "ai_confidence": q_conf,
+                "needs_human_review": needs_review,
             })
             questions_prefilled += 1
-            if q_data.get("ai_confidence", 0) > 0:
-                confidences.append(q_data["ai_confidence"])
+            if q_conf > 0:
+                confidences.append(q_conf)
 
     db.update("rob_assessments", assessment_id, {
         "ai_prefilled": 1,
@@ -415,6 +444,8 @@ def get_project_summary(project_id: str, db: Optional[DBBackend] = None) -> dict
             "total_assessments": 0,
             "judgment_counts": {},
             "assessments": [],
+            "pending_human_review_count": 0,
+            "assessments_needing_review_count": 0,
         }
 
     tool = assessments[0].get("tool", "")
@@ -424,6 +455,9 @@ def get_project_summary(project_id: str, db: Optional[DBBackend] = None) -> dict
         judgment_counts[j] = judgment_counts.get(j, 0) + 1
 
     assessment_list = []
+    total_flagged_questions = 0
+    assessments_needing_review = 0
+
     for a in assessments:
         s = study_map.get(a.get("study_id"), {})
         detail = {
@@ -435,13 +469,19 @@ def get_project_summary(project_id: str, db: Optional[DBBackend] = None) -> dict
             "overall_judgment": a.get("overall_judgment", ""),
             "ai_prefilled": bool(a.get("ai_prefilled")),
             "domains": [],
+            "needs_human_review_count": 0,
         }
 
         domains = db.query("rob_domain_judgments", {"assessment_id": a["assessment_id"]})
         domains.sort(key=lambda x: x.get("domain_key", ""))
 
+        assessment_flagged = 0
         for d in domains:
             rj = d.get("risk_judgment", "")
+            answers = db.query("rob_signaling_answers", {"judgment_id": d["judgment_id"]})
+            domain_flagged = sum(1 for ans in answers if ans.get("needs_human_review") and not ans.get("human_verified"))
+            assessment_flagged += domain_flagged
+
             detail["domains"].append({
                 "domain_key": d.get("domain_key", ""),
                 "domain_label": d.get("domain_label", ""),
@@ -450,7 +490,13 @@ def get_project_summary(project_id: str, db: Optional[DBBackend] = None) -> dict
                 "human_verified": bool(d.get("human_verified")),
                 "color": get_judgment_color(rj),
                 "label": get_judgment_label(rj),
+                "needs_human_review_count": domain_flagged,
             })
+
+        detail["needs_human_review_count"] = assessment_flagged
+        if assessment_flagged > 0:
+            assessments_needing_review += 1
+            total_flagged_questions += assessment_flagged
 
         assessment_list.append(detail)
 
@@ -460,6 +506,8 @@ def get_project_summary(project_id: str, db: Optional[DBBackend] = None) -> dict
         "total_assessments": len(assessment_list),
         "judgment_counts": judgment_counts,
         "assessments": assessment_list,
+        "pending_human_review_count": total_flagged_questions,
+        "assessments_needing_review_count": assessments_needing_review,
     }
 
 
@@ -631,16 +679,20 @@ def auto_assess_study(
         return {**existing[0], "created": False, "prefilled": False}
 
     try:
-        assessment = auto_select_and_create_assessment(
+        tool_key = select_rob_tool(study.get("study_design", "") or "")
+        if tool_key == "manual":
+            tool_key = "robins_i"
+        assessment = create_assessment(
             study_id=study_id,
             project_id=project_id,
-            study_design=study.get("study_design", "") or "",
+            tool=tool_key,
             outcome_label="",
             assessed_by=assessed_by,
+            auto_selected=1,
             db=db,
         )
-    except ValueError as e:
-        logger.warning(f"[RoB] Tool auto-selection failed for {study_id}: {e}")
+    except Exception as e:
+        logger.warning(f"[RoB] Assessment creation failed for {study_id}: {e}")
         return None
 
     # AI prefill with real study metadata
@@ -680,3 +732,242 @@ def auto_assess_study(
         logger.warning(f"[RoB] AI prefill failed for {study_id}: {e}")
 
     return {**assessment, "created": True, "prefilled": prefilled}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Tool Override & Batch RoB Runner
+# ═══════════════════════════════════════════════════════════════════════
+
+def change_assessment_tool(assessment_id: str, new_tool: str, db: Optional[DBBackend] = None) -> dict:
+    """Change the tool used for an assessment, re-instantiating domains and signaling questions."""
+    rob_tool = get_tool(new_tool)
+    if not rob_tool:
+        raise ValueError(f"Unknown RoB tool: {new_tool}")
+
+    db = db or get_db_backend()
+    a_row = db.get("rob_assessments", assessment_id)
+    if not a_row:
+        raise ValueError(f"Assessment not found: {assessment_id}")
+
+    # Delete existing judgments and signaling answers
+    old_judgments = db.query("rob_domain_judgments", {"assessment_id": assessment_id})
+    for j in old_judgments:
+        old_answers = db.query("rob_signaling_answers", {"judgment_id": j["judgment_id"]})
+        for a in old_answers:
+            db.delete("rob_signaling_answers", a["answer_id"])
+        db.delete("rob_domain_judgments", j["judgment_id"])
+
+    # Update assessment row
+    db.update("rob_assessments", assessment_id, {
+        "tool": new_tool,
+        "overall_judgment": "pending",
+        "overall_risk": "",
+        "ai_prefilled": 0,
+        "ai_prefilled_at": "",
+    })
+
+    # Create new domain judgments + signaling answers
+    for domain in rob_tool.domains:
+        judgment_id = _uuid()
+        db.insert("rob_domain_judgments", {
+            "judgment_id": judgment_id,
+            "assessment_id": assessment_id,
+            "domain_key": domain.key,
+            "domain_label": domain.label,
+            "risk_judgment": "",
+            "applicability": "",
+            "support_text": "",
+            "ai_suggested": "",
+            "ai_support": "",
+            "ai_confidence": 0.0,
+            "human_verified": 0,
+            "verified_by": "",
+            "verified_at": "",
+        })
+
+        for sq in domain.signaling_questions:
+            answer_id = _uuid()
+            db.insert("rob_signaling_answers", {
+                "answer_id": answer_id,
+                "judgment_id": judgment_id,
+                "question_key": sq.key,
+                "question_text": sq.text,
+                "answer": "",
+                "ai_answer": "",
+                "ai_quote": "",
+                "ai_page": None,
+                "ai_confidence": 0.0,
+                "human_verified": 0,
+                "needs_human_review": 0,
+                "reviewed_by": "",
+                "reviewed_at": "",
+            })
+
+    db.commit()
+    return get_assessment(assessment_id, db=db)
+
+
+ROB_BATCH_RUNS: dict[str, dict] = {}
+
+
+def get_batch_rob_progress(project_id: str, db: Optional[DBBackend] = None) -> dict:
+    """Get live progress of a batch RoB run for a project."""
+    if project_id in ROB_BATCH_RUNS:
+        return dict(ROB_BATCH_RUNS[project_id])
+    db = db or get_db_backend()
+    rows = db.query("rob_runs", {"project_id": project_id})
+    if rows:
+        rows.sort(key=lambda r: r.get("started_at", ""), reverse=True)
+        latest = rows[0]
+        done_ids = json.loads(latest.get("done_ids_json", "[]") or "[]")
+        pending_ids = json.loads(latest.get("pending_ids_json", "[]") or "[]")
+        return {
+            "run_id": latest.get("run_id"),
+            "active": latest.get("status") == "active",
+            "stage": "rob",
+            "total": latest.get("total_studies", 0),
+            "completed": latest.get("completed_studies", 0),
+            "current_study_id": latest.get("current_study_id", ""),
+            "done_ids": done_ids,
+            "pending_ids": pending_ids,
+        }
+    return {
+        "run_id": None,
+        "active": False,
+        "stage": "rob",
+        "total": 0,
+        "completed": 0,
+        "current_study_id": None,
+        "done_ids": [],
+        "pending_ids": [],
+    }
+
+
+def cancel_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> bool:
+    """Cancel an active batch RoB run."""
+    if project_id in ROB_BATCH_RUNS:
+        ROB_BATCH_RUNS[project_id]["active"] = False
+        ROB_BATCH_RUNS[project_id]["status"] = "cancelled"
+    db = db or get_db_backend()
+    rows = db.query("rob_runs", {"project_id": project_id, "status": "active"})
+    for r in rows:
+        db.update("rob_runs", r["run_id"], {"status": "cancelled", "finished_at": _now()})
+    db.commit()
+    return True
+
+
+def start_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> dict:
+    """Start batch risk-of-bias assessment for all included studies lacking assessments."""
+    import threading
+    import logging
+    logger = logging.getLogger("radextract.rob")
+
+    db = db or get_db_backend()
+    all_studies = db.query("studies", {"project_id": project_id})
+    included = [
+        s for s in all_studies
+        if (s.get("screening_status") or "").lower() in ("included", "ta_included", "ft_included")
+    ]
+    existing_assessments = db.query("rob_assessments", {"project_id": project_id})
+    existing_study_ids = {a.get("study_id") for a in existing_assessments}
+
+    studies_to_assess = [s for s in included if s.get("study_id") not in existing_study_ids]
+
+    if not studies_to_assess:
+        return {
+            "run_id": "",
+            "total_studies": 0,
+            "active": False,
+            "message": "No included studies require RoB assessment."
+        }
+
+    run_id = _uuid()
+    pending_ids = [s["study_id"] for s in studies_to_assess]
+
+    run_state = {
+        "run_id": run_id,
+        "active": True,
+        "stage": "rob",
+        "total": len(studies_to_assess),
+        "completed": 0,
+        "current_study_id": pending_ids[0] if pending_ids else "",
+        "done_ids": [],
+        "pending_ids": list(pending_ids),
+    }
+    ROB_BATCH_RUNS[project_id] = run_state
+
+    try:
+        db.insert("rob_runs", {
+            "run_id": run_id,
+            "project_id": project_id,
+            "trigger": "auto",
+            "status": "active",
+            "started_at": _now(),
+            "finished_at": "",
+            "total_studies": len(studies_to_assess),
+            "completed_studies": 0,
+            "current_study_id": run_state["current_study_id"],
+            "done_ids_json": json.dumps([]),
+            "pending_ids_json": json.dumps(pending_ids),
+            "error": "",
+        })
+        db.commit()
+    except Exception as e:
+        logger.warning(f"[RoB] Failed to persist initial rob_runs record: {e}")
+
+    def _worker():
+        worker_db = get_db_backend()
+        try:
+            for s in studies_to_assess:
+                st_id = s["study_id"]
+                if not ROB_BATCH_RUNS.get(project_id, {}).get("active"):
+                    break
+
+                ROB_BATCH_RUNS[project_id]["current_study_id"] = st_id
+                try:
+                    auto_assess_study(
+                        study_id=st_id,
+                        project_id=project_id,
+                        db=worker_db,
+                        assessed_by="ai_batch",
+                    )
+                except Exception as ex:
+                    logger.warning(f"[RoB] Batch assess error for {st_id}: {ex}")
+
+                ROB_BATCH_RUNS[project_id]["completed"] += 1
+                ROB_BATCH_RUNS[project_id]["done_ids"].append(st_id)
+                if st_id in ROB_BATCH_RUNS[project_id]["pending_ids"]:
+                    ROB_BATCH_RUNS[project_id]["pending_ids"].remove(st_id)
+
+                try:
+                    worker_db.update("rob_runs", run_id, {
+                        "completed_studies": ROB_BATCH_RUNS[project_id]["completed"],
+                        "current_study_id": ROB_BATCH_RUNS[project_id].get("current_study_id", ""),
+                        "done_ids_json": json.dumps(ROB_BATCH_RUNS[project_id]["done_ids"]),
+                        "pending_ids_json": json.dumps(ROB_BATCH_RUNS[project_id]["pending_ids"]),
+                    })
+                    worker_db.commit()
+                except Exception:
+                    pass
+
+            ROB_BATCH_RUNS[project_id]["active"] = False
+            ROB_BATCH_RUNS[project_id]["current_study_id"] = ""
+            try:
+                worker_db.update("rob_runs", run_id, {
+                    "status": "completed",
+                    "finished_at": _now(),
+                    "current_study_id": "",
+                })
+                worker_db.commit()
+            except Exception:
+                pass
+        finally:
+            worker_db.close()
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+    return {
+        "run_id": run_id,
+        "total_studies": len(studies_to_assess),
+        "active": True,
+    }
