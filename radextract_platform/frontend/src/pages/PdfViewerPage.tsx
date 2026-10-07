@@ -73,6 +73,31 @@ interface UndoRecord {
 
 export function PdfViewerPage() {
   const { projectId, studyId } = useParams<{ projectId: string; studyId?: string }>();
+
+  const { data: dynamicStudies } = useQuery({
+    queryKey: ["studies", projectId],
+    queryFn: () => api.listStudies(projectId!),
+    enabled: !!projectId,
+  });
+  const allStudies: any[] = useMemo(() => {
+    if (dynamicStudies && dynamicStudies.length > 0) {
+      return dynamicStudies.map((s, idx) => ({
+        ...s,
+        id: s.study_id,
+        shortId: `s${idx + 1}`,
+        title: s.title || `Study #${idx + 1}`,
+        filename: s.pdf_path || `${s.title}.pdf`,
+      }));
+    }
+    return BENCHMARK_PAPERS.map((b) => ({
+      ...b,
+      study_id: b.id,
+      authors: b.title.split("(")[0].trim(),
+      publication_year: 2024,
+      journal: "Journal of NeuroInterventional Surgery",
+    }));
+  }, [dynamicStudies]);
+
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -89,20 +114,20 @@ export function PdfViewerPage() {
   const [reviewerName, setReviewerName] = useState<string>("Expert Reviewer");
   const [pdfZoom, setPdfZoom] = useState<number>(100);
   const [selectedPaperId, setSelectedPaperId] = useState<string>(() => {
-    const match = BENCHMARK_PAPERS.find((p) => p.id === rawTargetStudy || p.shortId === rawTargetStudy);
-    return match ? match.id : "study_birua_2022";
+    const match = allStudies?.find((p: any) => p.study_id === rawTargetStudy || p.shortId === rawTargetStudy);
+    return match ? match.study_id : "study_birua_2022";
   });
   const [customPdfUrl, setCustomPdfUrl] = useState<string | null>(null);
 
-  const activeStudyId = selectedPaperId || (rawTargetStudy ? (BENCHMARK_PAPERS.find(p => p.id === rawTargetStudy || p.shortId === rawTargetStudy)?.id || rawTargetStudy) : "study_birua_2022");
+  const activeStudyId = selectedPaperId || (rawTargetStudy ? (allStudies.find((p: any) => p.study_id === rawTargetStudy || p.shortId === rawTargetStudy)?.study_id || rawTargetStudy) : "study_birua_2022");
 
   // Synchronize selected paper with route parameter or query
   useEffect(() => {
     const target = studyId || searchParams.get("study");
     if (!target) return;
-    const match = BENCHMARK_PAPERS.find((p) => p.id === target || p.shortId === target);
-    if (match && match.id !== selectedPaperId) {
-      setSelectedPaperId(match.id);
+    const match = allStudies.find((p: any) => p.study_id === target || p.shortId === target);
+    if (match && match.study_id !== selectedPaperId) {
+      setSelectedPaperId(match.study_id);
     }
   }, [studyId, searchParams, selectedPaperId]);
 
@@ -165,7 +190,7 @@ export function PdfViewerPage() {
     enabled: !!projectId,
   });
 
-  const allStudies = (studyList && studyList.length > 0) ? studyList : DEMO_STUDIES;
+  // duplicate allStudies removed
   const currentStudyIndex = Math.max(0, allStudies.findIndex((s: any) => s.study_id === activeStudyId));
   const currentStudy = allStudies[currentStudyIndex] || allStudies[0];
 
@@ -246,10 +271,10 @@ export function PdfViewerPage() {
   // Active Publication PDF URL computation
   const currentPdfUrl = useMemo(() => {
     if (customPdfUrl) return customPdfUrl;
-    const paper = BENCHMARK_PAPERS.find((p) => p.id === activeStudyId) || BENCHMARK_PAPERS[0];
+    const paper = allStudies.find((p: any) => p.study_id === activeStudyId) || allStudies[0];
     const base = import.meta.env.BASE_URL || "/";
     const cleanBase = base.endsWith("/") ? base : base + "/";
-    return cleanBase + "papers/" + paper.filename;
+    return cleanBase + "papers/" + (paper.filename || paper.title + ".pdf");
   }, [customPdfUrl, activeStudyId]);
 
   // Map extraction variables to spatial PDF highlights for ActualPdfViewer
@@ -1072,7 +1097,7 @@ export function PdfViewerPage() {
             }}
             zoom={pdfZoom}
             onZoomChange={setPdfZoom}
-            availableStudies={BENCHMARK_PAPERS}
+            availableStudies={allStudies.map((s: any) => ({id: s.study_id, title: s.title, filename: s.filename || s.title + ".pdf"}))}
             currentStudyId={selectedPaperId}
             onSelectStudy={(id) => {
               setSelectedPaperId(id);

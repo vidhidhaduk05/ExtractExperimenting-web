@@ -285,3 +285,13 @@ function registerStudyJsonData(study: AutoIdentifiedStudy, file: File, objectUrl
     },
   ];
 }
+
+// Backward compatibility for Jules clinical research workflow
+export const parsePdfToStudyData = autoIdentifyPdf;
+export function registerPdfDemoData(studyId: string, data: any) {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("radextract_demo_data_" + studyId, JSON.stringify(data));
+    } catch (e) {}
+  }
+}
