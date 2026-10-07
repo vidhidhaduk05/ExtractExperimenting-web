@@ -6,6 +6,9 @@ import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Downlo
 import { cn } from "../../lib/utils";
 import { ErrorBoundary } from "../common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "../common/ClarificationNotificationCenter";
+import { ApiConnectionBanner } from "../common/ApiConnectionBanner";
+import { ApiSettingsModal } from "../common/ApiSettingsModal";
+import { subscribeApiConnection, ApiConnectionInfo, getApiConnectionInfo } from "../../lib/api";
 
 const navItems = [
   { to: "/projects", label: "Projects", icon: Home, end: true },
@@ -447,6 +450,14 @@ export function AppLayout() {
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isClarificationDrawerOpen, setIsClarificationDrawerOpen] = useState(false);
+  const [isApiSettingsOpen, setIsApiSettingsOpen] = useState(false);
+  const [apiInfo, setApiInfo] = useState<ApiConnectionInfo>(getApiConnectionInfo());
+
+  useEffect(() => {
+    return subscribeApiConnection((info) => {
+      setApiInfo(info);
+    });
+  }, []);
 
   const { data: pendingClarifications = [] } = useQuery({
     queryKey: ["pending-clarifications", projectId],
@@ -639,6 +650,32 @@ export function AppLayout() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* API Connection Indicator */}
+              <button
+                onClick={() => setIsApiSettingsOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border border-black/10 bg-white/70 hover:bg-white text-[#141413] transition-colors shadow-2xs"
+                title={`API Server: ${apiInfo.apiBase || "Default"} (${apiInfo.state})`}
+                aria-label="API Server Configuration"
+              >
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    apiInfo.state === "live"
+                      ? "bg-emerald-500 animate-pulse"
+                      : apiInfo.state === "error"
+                      ? "bg-rose-500"
+                      : "bg-amber-500"
+                  )}
+                />
+                <span className="font-mono text-[10px] text-[#6B665E]">
+                  {apiInfo.state === "live"
+                    ? "Live API"
+                    : apiInfo.state === "error"
+                    ? "API Offline"
+                    : "Demo Mode"}
+                </span>
+              </button>
+
               <span className="hidden lg:inline-flex tag-phylo-yellow text-[10px] px-2.5 py-0.5">
                 ✦ OPEN-DESIGN WARM EDITORIAL
               </span>
@@ -673,6 +710,9 @@ export function AppLayout() {
           </div>
         </header>
 
+        {/* Global API Connection Warning/Status Banner */}
+        <ApiConnectionBanner onOpenSettings={() => setIsApiSettingsOpen(true)} />
+
         <div className="flex-1 overflow-y-auto">
           <ErrorBoundary>
             <Outlet />
@@ -687,6 +727,12 @@ export function AppLayout() {
             onToggleDrawer={setIsClarificationDrawerOpen}
           />
         )}
+
+        {/* API Settings Modal */}
+        <ApiSettingsModal
+          isOpen={isApiSettingsOpen}
+          onClose={() => setIsApiSettingsOpen(false)}
+        />
       </main>
     </div>
   );

@@ -30,11 +30,133 @@ import {
   DEMO_ERROR_ANALYSIS
 } from "./demoData";
 
-const API_HOST = typeof window !== "undefined" ? window.location.hostname : "localhost";
-export const API_BASE =
-  (typeof localStorage !== "undefined" && localStorage.getItem("custom_api_base")) ||
-  import.meta.env.VITE_API_BASE_URL ||
-  (API_HOST === "localhost" || API_HOST === "127.0.0.1" ? `http://${API_HOST}:8000/api` : `/api`);
+export type ApiConnectionState = "live" | "demo_fallback" | "explicit_demo" | "error";
+
+export interface ApiConnectionInfo {
+  state: ApiConnectionState;
+  apiBase: string;
+  errorMessage?: string;
+  lastChecked: number;
+  isExplicitDemo: boolean;
+}
+
+type ApiListener = (info: ApiConnectionInfo) => void;
+const apiListeners: Set<ApiListener> = new Set();
+
+export function getApiBase(): string {
+  if (typeof window === "undefined") return "/api";
+  const custom = localStorage.getItem("custom_api_base");
+  if (custom && custom.trim()) return custom.trim().replace(/\/+$/, "");
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return `http://${host}:8000/api`;
+  return "/api";
+}
+
+export let API_BASE = getApiBase();
+
+export function isDemoModeEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("demo_mode") === "true";
+}
+
+export function shouldUseDemoFallback(): boolean {
+  if (typeof window === "undefined") return true;
+  if (isDemoModeEnabled()) return true;
+  const isGithubPages = window.location.hostname.includes("github.io");
+  const hasCustom = !!localStorage.getItem("custom_api_base");
+  const hasEnvBase = !!import.meta.env.VITE_API_BASE_URL;
+  if (isGithubPages && !hasCustom && !hasEnvBase) {
+    return true;
+  }
+  return false;
+}
+
+let currentApiState: ApiConnectionInfo = {
+  state: shouldUseDemoFallback() ? (isDemoModeEnabled() ? "explicit_demo" : "demo_fallback") : "live",
+  apiBase: getApiBase(),
+  lastChecked: Date.now(),
+  isExplicitDemo: isDemoModeEnabled(),
+};
+
+export function subscribeApiConnection(listener: ApiListener): () => void {
+  apiListeners.add(listener);
+  listener(currentApiState);
+  return () => {
+    apiListeners.delete(listener);
+  };
+}
+
+export function getApiConnectionInfo(): ApiConnectionInfo {
+  return { ...currentApiState };
+}
+
+function updateApiState(partial: Partial<ApiConnectionInfo>) {
+  currentApiState = { ...currentApiState, ...partial, lastChecked: Date.now() };
+  apiListeners.forEach((fn) => {
+    try {
+      fn(currentApiState);
+    } catch (e) {}
+  });
+}
+
+export function setCustomApiBase(url: string | null): void {
+  if (typeof window === "undefined") return;
+  if (url && url.trim()) {
+    localStorage.setItem("custom_api_base", url.trim().replace(/\/+$/, ""));
+  } else {
+    localStorage.removeItem("custom_api_base");
+  }
+  API_BASE = getApiBase();
+  updateApiState({
+    apiBase: API_BASE,
+    state: shouldUseDemoFallback() ? (isDemoModeEnabled() ? "explicit_demo" : "demo_fallback") : "live",
+  });
+}
+
+export function setDemoModeEnabled(enabled: boolean): void {
+  if (typeof window === "undefined") return;
+  if (enabled) {
+    localStorage.setItem("demo_mode", "true");
+  } else {
+    localStorage.removeItem("demo_mode");
+  }
+  updateApiState({
+    isExplicitDemo: enabled,
+    state: enabled ? "explicit_demo" : (shouldUseDemoFallback() ? "demo_fallback" : "live"),
+  });
+}
+
+export async function testBackendConnection(targetUrl?: string): Promise<{
+  ok: boolean;
+  statusText?: string;
+  version?: string;
+  env?: string;
+  latencyMs: number;
+  error?: string;
+}> {
+  const base = (targetUrl || getApiBase()).replace(/\/+$/, "");
+  const healthUrl = base.endsWith("/api") ? `${base.slice(0, -4)}/health` : `${base}/health`;
+  const t0 = performance.now();
+  try {
+    const res = await fetch(healthUrl, { method: "GET" });
+    const latency = Math.round(performance.now() - t0);
+    if (!res.ok) {
+      return { ok: false, latencyMs: latency, error: `HTTP ${res.status}: ${res.statusText}` };
+    }
+    const data = await res.json().catch(() => ({}));
+    return {
+      ok: true,
+      statusText: data.status || "healthy",
+      version: data.version || "2.4.0",
+      env: data.env || "production",
+      latencyMs: latency,
+    };
+  } catch (err: any) {
+    const latency = Math.round(performance.now() - t0);
+    return { ok: false, latencyMs: latency, error: err?.message || "Failed to reach server" };
+  }
+}
 
 export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[] {
   if (typeof window === "undefined") return [...DEMO_STUDIES];
@@ -641,6 +763,23 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.match(/\/projects\/[^/]+$/)) {
     return DEMO_PROJECT as unknown as T;
   }
+  if (path.includes("/auth/login")) {
+    return {
+      access_token: "demo_jwt_token_sample",
+      refresh_token: "demo_refresh_token_sample",
+      user_id: "demo_user_1",
+      username: body.username || "admin",
+      role: "owner"
+    } as unknown as T;
+  }
+  if (path.includes("/auth/me")) {
+    return {
+      user_id: "demo_user_1",
+      username: "admin",
+      email: "admin@radextract.local",
+      role: "owner"
+    } as unknown as T;
+  }
   if (path.includes("/health")) {
     return { status: "ok" } as unknown as T;
   }
@@ -653,16 +792,19 @@ async function request<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const isBrowser = typeof window !== "undefined";
-  const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
-  const isDemoExplicit = isBrowser && localStorage.getItem("demo_mode") === "true";
-  const isLocalhost = isBrowser && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  const base = getApiBase();
 
-  // On GitHub Pages or when demo mode is active, directly serve mock response without network 404 spam
-  if (isGithubPages || isDemoExplicit || (!isLocalhost && API_BASE === "/api")) {
+  // If explicit demo mode or unconfigured GitHub Pages (no custom or env API base set)
+  if (shouldUseDemoFallback()) {
+    updateApiState({
+      state: isDemoModeEnabled() ? "explicit_demo" : "demo_fallback",
+      apiBase: base,
+      isExplicitDemo: isDemoModeEnabled(),
+    });
     return handleDemoRequest<T>(path, options);
   }
 
-  const token = localStorage.getItem("token");
+  const token = isBrowser ? localStorage.getItem("token") : null;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...((options.headers as Record<string, string>) || {}),
@@ -670,15 +812,18 @@ async function request<T>(
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   try {
-    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }
+    updateApiState({ state: "live", apiBase: base, errorMessage: undefined });
     if (res.status === 204) return undefined as T;
     return res.json();
-  } catch (err) {
-    console.warn(`[Demo Preview Mode] Serving demo fallback for: ${path}`);
+  } catch (err: any) {
+    const msg = err?.message || "Network request failed";
+    console.warn(`[API Connection Failed] ${base}${path}:`, err);
+    updateApiState({ state: "error", apiBase: base, errorMessage: msg });
     return handleDemoRequest<T>(path, options);
   }
 }
@@ -1910,6 +2055,34 @@ export interface PdfHighlight {
 // ── API functions ──
 
 export const api = {
+  // Auth
+  login: async (username: string, password: string) => {
+    const res = await request<{
+      access_token: string;
+      refresh_token: string;
+      user_id: string;
+      username: string;
+      role: string;
+    }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    if (res?.access_token) {
+      localStorage.setItem("token", res.access_token);
+      if (res.refresh_token) localStorage.setItem("refresh_token", res.refresh_token);
+    }
+    return res;
+  },
+  logout: async () => {
+    try {
+      await request("/auth/logout", { method: "POST" });
+    } catch (e) {}
+    localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
+  },
+  getCurrentUser: () =>
+    request<{ user_id: string; username: string; email: string; role: string }>("/auth/me"),
+
   // Health
   health: () => request<{ status: string }>("/health"),
 
@@ -1981,11 +2154,6 @@ export const api = {
     }
   },
   batchUploadPdf: async (projectId: string, files: File[]) => {
-    const isBrowser = typeof window !== "undefined";
-    const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
-    const isDemoExplicit = isBrowser && localStorage.getItem("demo_mode") === "true";
-    const isLocalhost = isBrowser && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-
     const fallbackBatch: BatchUploadResult = {
       total_files: files.length,
       matched_and_processed: files.length,
@@ -2001,11 +2169,12 @@ export const api = {
       })),
     };
 
-    if (isGithubPages || isDemoExplicit || (!isLocalhost && API_BASE === "/api")) {
+    if (shouldUseDemoFallback()) {
       return fallbackBatch;
     }
 
     try {
+      const base = getApiBase();
       const formData = new FormData();
       for (const file of files) {
         formData.append("files", file);
@@ -2013,7 +2182,7 @@ export const api = {
       const token = localStorage.getItem("token");
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${API_BASE}/projects/${projectId}/screening/batch-upload-pdf`, {
+      const res = await fetch(`${base}/projects/${projectId}/screening/batch-upload-pdf`, {
         method: "POST",
         body: formData,
         headers,
@@ -2333,17 +2502,18 @@ export const api = {
       };
     };
 
-    if (isGithubPages || isDemoExplicit || (!isLocalhost && API_BASE === "/api")) {
+    if (shouldUseDemoFallback()) {
       return runClientSideExtraction();
     }
 
     try {
+      const base = getApiBase();
       const formData = new FormData();
       formData.append("file", file);
       const token = localStorage.getItem("token");
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${API_BASE}/projects/${projectId}/pico/extract`, {
+      const res = await fetch(`${base}/projects/${projectId}/pico/extract`, {
         method: "POST",
         body: formData,
         headers,
@@ -2396,22 +2566,18 @@ export const api = {
   // Reference Upload (supports multiple files)
   uploadReferences: async (projectId: string, files: File | File[]) => {
     const fileArray = Array.isArray(files) ? files : [files];
-    const isBrowser = typeof window !== "undefined";
-    const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
-    const isDemoExplicit = isBrowser && localStorage.getItem("demo_mode") === "true";
-    const isLocalhost = isBrowser && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-
     const fallbackResult: ReferenceUploadResponse = {
       imported_count: fileArray.length * 5,
       skipped_duplicates: 0,
       source: `Uploaded files (${fileArray.map((f) => f.name).join(", ")})`,
     };
 
-    if (isGithubPages || isDemoExplicit || (!isLocalhost && API_BASE === "/api")) {
+    if (shouldUseDemoFallback()) {
       return fallbackResult;
     }
 
     try {
+      const base = getApiBase();
       const formData = new FormData();
       for (const file of fileArray) {
         formData.append("files", file);
@@ -2419,7 +2585,7 @@ export const api = {
       const token = localStorage.getItem("token");
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${API_BASE}/projects/${projectId}/references/upload`, {
+      const res = await fetch(`${base}/projects/${projectId}/references/upload`, {
         method: "POST",
         body: formData,
         headers,
@@ -2453,10 +2619,11 @@ export const api = {
 
   // Reference Manager Export
   exportReferences: async (projectId: string, format: "ris" | "bibtex" | "endnote", status: "included" | "all" | "excluded" = "included") => {
+    const base = getApiBase();
     const token = localStorage.getItem("token");
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/projects/${projectId}/export/references?format=${format}&status=${status}`, {
+    const res = await fetch(`${base}/projects/${projectId}/export/references?format=${format}&status=${status}`, {
       headers,
     });
     if (!res.ok) {
