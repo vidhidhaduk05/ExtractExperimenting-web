@@ -5,32 +5,37 @@ from pathlib import Path
 from pydantic_settings import BaseSettings
 
 
+from pydantic import field_validator
+from typing import Any
+
+
 class Settings(BaseSettings):
     # Database
-    db_path: str = str(Path(__file__).parent / "radextract.db")
+    db_path: str = os.environ.get("DATABASE_PATH") or os.environ.get("RADEXTRACT_DB_PATH") or str(Path(__file__).parent / "radextract.db")
 
     # Environment
-    env: str = "development"
+    env: str = os.environ.get("ENV") or os.environ.get("ENVIRONMENT") or "development"
 
     # JWT
-    jwt_secret: str = ""  # Must be set via RADEXTRACT_JWT_SECRET in production
+    jwt_secret: str = os.environ.get("SECRET_KEY", "")  # Or set via RADEXTRACT_JWT_SECRET in production
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 15  # short-lived access tokens
     refresh_token_expire_days: int = 30  # long-lived refresh tokens
 
     @property
     def effective_jwt_secret(self) -> str:
-        if not self.jwt_secret:
+        secret = self.jwt_secret or os.environ.get("SECRET_KEY", "")
+        if not secret:
             if self.env == "production":
-                raise RuntimeError("RADEXTRACT_JWT_SECRET must be set in production")
+                raise RuntimeError("RADEXTRACT_JWT_SECRET or SECRET_KEY must be set in production")
             return "radextract-dev-secret-change-in-production"
-        return self.jwt_secret
+        return secret
 
-    # LLM Gateway (gemini-web2api)
-    llm_api_url: str = "http://127.0.0.1:8081/v1/chat/completions"
-    llm_api_key: str = "sk-gemini"
-    llm_models_url: str = "http://127.0.0.1:8081/v1/models"
-    llm_model: str = "gemini-3.7-flash"
+    # LLM Gateway (gemini-web2api or remote OpenAI-compatible endpoint)
+    llm_api_url: str = os.environ.get("LLM_BASE_URL") or os.environ.get("LLM_API_URL") or "http://127.0.0.1:8081/v1/chat/completions"
+    llm_api_key: str = os.environ.get("LLM_API_KEY") or "sk-gemini"
+    llm_models_url: str = os.environ.get("LLM_MODELS_URL") or "http://127.0.0.1:8081/v1/models"
+    llm_model: str = os.environ.get("LLM_MODEL") or "gemini-3.7-flash"
     llm_tool_calling_enabled: bool = True
     llm_tool_call_fallback: bool = True
     llm_provider: str = "gateway"
@@ -53,8 +58,8 @@ class Settings(BaseSettings):
     jev_clarify_band: float = 0.15        # |P - 0.5| below this counts as genuinely ambiguous
 
     # File storage
-    upload_root: str = str(Path(__file__).parent / "uploads")
-    export_root: str = str(Path(__file__).parent / "exports")
+    upload_root: str = os.environ.get("UPLOAD_ROOT") or os.environ.get("RADEXTRACT_UPLOAD_ROOT") or str(Path(__file__).parent / "uploads")
+    export_root: str = os.environ.get("EXPORT_ROOT") or os.environ.get("RADEXTRACT_EXPORT_ROOT") or str(Path(__file__).parent / "exports")
 
     # ── AWS / LocalStack settings (single block — no duplicates) ──
     aws_endpoint_url: str = ""           # "" = real AWS; "http://localhost:4566" = LocalStack
@@ -76,14 +81,32 @@ class Settings(BaseSettings):
     radextract_root: str = str(Path(__file__).parent / "radextract_core")
 
     # CORS
-    cors_origins: list[str] = [
+    cors_origins: Any = os.environ.get("CORS_ORIGINS") or [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
+        "https://vidhidhaduk05.github.io",
     ]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> list[str]:
+        raw = os.environ.get("CORS_ORIGINS") or v
+        if isinstance(raw, str):
+            raw = raw.strip()
+            if raw.startswith("[") and raw.endswith("]"):
+                try:
+                    import json
+                    return json.loads(raw)
+                except Exception:
+                    pass
+            return [origin.strip() for origin in raw.split(",") if origin.strip()]
+        if isinstance(raw, (list, tuple, set)):
+            return [str(x).strip() for x in raw if str(x).strip()]
+        return ["*"]
 
     # Upload limits
     max_upload_mb: int = 500
