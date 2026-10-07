@@ -563,26 +563,26 @@ export function ActualPdfViewer({
                               height: `${rect.height}%`,
                               mixBlendMode: "multiply",
                               backgroundColor: isActive
-                                ? "rgba(249, 209, 74, 0.88)" // Canary Gold #F9D14A
+                                ? "rgba(249, 209, 74, 0.35)" // Canary Gold #F9D14A (translucent for crystal-clear text readability)
                                 : isVerified
-                                ? "rgba(124, 75, 115, 0.22)" // Berry Plum #7C4B73
-                                : "rgba(136, 160, 220, 0.20)", // Soft Periwinkle #88A0DC
-                              borderBottom: isActive
-                                ? "2.5px solid #E78429" // Tangerine Amber #E78429
+                                ? "rgba(124, 75, 115, 0.14)" // Berry Plum #7C4B73
+                                : "rgba(136, 160, 220, 0.14)", // Soft Periwinkle #88A0DC
+                              border: isActive
+                                ? "2px solid #E78429" // Boundary line all over the highlight (Tangerine Amber)
                                 : isVerified
-                                ? "2px solid #7C4B73" // Berry Plum #7C4B73
-                                : "1.5px dashed rgba(124, 75, 115, 0.45)",
+                                ? "1.5px solid #7C4B73" // Boundary line all over the highlight (Berry Plum)
+                                : "1.5px dashed #88A0DC", // Boundary line all over the highlight (Soft Periwinkle)
                               boxShadow: isActive
-                                ? "0 0 0 2.5px rgba(231, 132, 41, 0.4), 0 2px 10px rgba(249, 209, 74, 0.5)"
+                                ? "0 0 0 1px rgba(231, 132, 41, 0.25), 0 2px 8px rgba(249, 209, 74, 0.3)"
                                 : "none",
-                              borderRadius: "2px",
+                              borderRadius: "3px",
                               cursor: "pointer",
                               zIndex: isActive ? 25 : 15,
                               transition: "all 0.15s ease",
                             }}
                             className={cn(
                               "group/highlight hover:brightness-95",
-                              isActive && "ring-2 ring-[#E78429]/50"
+                              isActive && "ring-1 ring-[#E78429]/40"
                             )}
                             title={`#${overlay.varIndex} ${overlay.label}: ${overlay.value || "Extracted"} (Click to review)`}
                           />
