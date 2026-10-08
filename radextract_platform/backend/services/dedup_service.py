@@ -165,15 +165,30 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
             union(indices[0], indices[j])
 
     # Strategy 3: Title similarity + author/year
+    # Performance optimizations:
+    # 1. Use pre-normalized title strings (`norm_titles`) to avoid re-normalizing/lowercasing in O(N^2) loop.
+    # 2. Mathematical upper-bound pre-check: Levenshtein ratio cannot exceed `2 * min(L1, L2) / (L1 + L2)`.
+    #    If max possible ratio < TITLE_SIMILARITY_THRESHOLD (0.90), skip expensive Levenshtein/difflib comparison.
     for i in range(len(studies)):
+        t1 = norm_titles[i]
+        len1 = len(t1)
+        if not len1:
+            continue
         for j in range(i + 1, len(studies)):
             if find(i) == find(j):
                 continue  # already grouped
 
-            sim = _title_similarity(
-                studies[i].get("title", ""),
-                studies[j].get("title", ""),
-            )
+            t2 = norm_titles[j]
+            len2 = len(t2)
+            if not len2:
+                continue
+
+            # Skip pairs where maximum possible similarity score cannot reach threshold
+            min_len = len1 if len1 < len2 else len2
+            if (2 * min_len / (len1 + len2)) < TITLE_SIMILARITY_THRESHOLD:
+                continue
+
+            sim = _title_similarity(t1, t2)
 
             if sim >= TITLE_SIMILARITY_THRESHOLD:
                 # Strong title match — check author/year as secondary signal
@@ -208,24 +223,24 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
         canonical = studies[canonical_idx]
         group_id = str(uuid.uuid4())
 
+        t_canonical = norm_titles[canonical_idx]
+        ndoi_c = norm_dois[canonical_idx]
+        npmid_c = norm_pmids[canonical_idx]
+
         duplicates = []
         for idx in indices[1:]:
             s = studies[idx]
-            # Determine match reason
+            # Determine match reason using pre-computed normalized attributes
             match_reason = "title_similarity"
-            sim_score = _title_similarity(
-                canonical.get("title", ""),
-                s.get("title", ""),
-            )
+            t_dup = norm_titles[idx]
+            sim_score = _title_similarity(t_canonical, t_dup) if (t_canonical and t_dup) else 0.0
 
-            ndoi_c = _normalize_doi(canonical.get("doi", ""))
-            ndoi_s = _normalize_doi(s.get("doi", ""))
+            ndoi_s = norm_dois[idx]
             if ndoi_c and ndoi_s and ndoi_c == ndoi_s:
                 match_reason = "doi"
                 sim_score = 1.0
             else:
-                npmid_c = _normalize_pmid(canonical.get("pmid", ""))
-                npmid_s = _normalize_pmid(s.get("pmid", ""))
+                npmid_s = norm_pmids[idx]
                 if npmid_c and npmid_s and npmid_c == npmid_s:
                     match_reason = "pmid"
                     sim_score = 1.0
