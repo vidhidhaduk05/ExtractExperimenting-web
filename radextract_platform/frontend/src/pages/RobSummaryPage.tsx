@@ -103,6 +103,15 @@ export function RobSummaryPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <a
+            href={`/api/rob/projects/${projectId}/export?format=zip`}
+            className="btn-secondary text-xs py-2 px-3 flex items-center gap-1 shadow-xs"
+            title="Export ZIP Package containing Excel workbooks, reporting completeness, manifest, and figures"
+            download
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Export ZIP Package
+          </a>
           <button
             onClick={() => startRunMutation.mutate()}
             disabled={startRunMutation.isPending || isRunning}

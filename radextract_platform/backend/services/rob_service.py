@@ -583,6 +583,7 @@ def export_project_rob(project_id: str, format: str = "csv", db: Optional[DBBack
                     "ai_answer": ans.get("ai_answer", ""),
                     "ai_quote": ans.get("ai_quote", ""),
                     "ai_confidence": ans.get("ai_confidence", 0.0),
+                    "needs_human_review": "Yes" if ans.get("needs_human_review", 0) else "No",
                     "human_verified": "Yes" if ans.get("human_verified") else "No",
                     "support_text": d.get("support_text", ""),
                 })
@@ -590,7 +591,105 @@ def export_project_rob(project_id: str, format: str = "csv", db: Optional[DBBack
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     storage = get_storage("export")
 
-    if format == "xlsx":
+    if format == "zip":
+        import openpyxl
+        import zipfile
+        import json
+
+        out_zip = io.BytesIO()
+        with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+
+            # 1. risk_of_bias.xlsx
+            wb_rob = openpyxl.Workbook()
+            ws_rob = wb_rob.active
+            ws_rob.title = "Risk of Bias"
+            if rows:
+                headers = list(rows[0].keys())
+                ws_rob.append(headers)
+                for r in rows:
+                    ws_rob.append([r[h] for h in headers])
+            rob_stream = io.BytesIO()
+            wb_rob.save(rob_stream)
+            zf.writestr("risk_of_bias.xlsx", rob_stream.getvalue())
+
+            # 2. reporting_completeness.xlsx
+            wb_rc = openpyxl.Workbook()
+
+            # MTR 10-item sheet
+            ws_mtr = wb_rc.active
+            ws_mtr.title = "MTR (10-item)"
+            mtr_headers = ["Study Title", "Tool", "Item 1", "Item 2", "Item 3", "Item 4", "Item 5", "Item 6", "Item 7", "Item 8", "Item 9", "Item 10"]
+            ws_mtr.append(mtr_headers)
+            for a in assessments:
+                s = study_map.get(a.get("study_id"), {})
+                ws_mtr.append([s.get("title", ""), a.get("tool", "")] + ["Pending"] * 10)
+
+            # RC 9-item sheet
+            ws_rc9 = wb_rc.create_sheet("RC (9-item)")
+            rc9_headers = ["Study Title", "Tool", "Item 1", "Item 2", "Item 3", "Item 4", "Item 5", "Item 6", "Item 7", "Item 8", "Item 9"]
+            ws_rc9.append(rc9_headers)
+            for a in assessments:
+                s = study_map.get(a.get("study_id"), {})
+                ws_rc9.append([s.get("title", ""), a.get("tool", "")] + ["Pending"] * 9)
+
+            rc_stream = io.BytesIO()
+            wb_rc.save(rc_stream)
+            zf.writestr("reporting_completeness.xlsx", rc_stream.getvalue())
+
+            # 3. manifest.json
+            manifest = {
+                "project_id": project_id,
+                "exported_at": timestamp,
+                "assessments_count": len(assessments)
+            }
+            zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+
+            # 4. SVG Figures
+            from services.r_plot_service import generate_robvis_plot
+            tool_keys = set(a.get("tool", "") for a in assessments)
+            for tk in tool_keys:
+                if tk:
+                    # Filter rows for this specific tool
+                    tool_rows = [r for r in rows if r["tool"] == tk]
+                    if tool_rows:
+                        # Write temporary CSV for robvis
+                        import tempfile
+                        import os
+                        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv') as tmp_csv:
+                            writer = csv.DictWriter(tmp_csv, fieldnames=list(tool_rows[0].keys()))
+                            writer.writeheader()
+                            writer.writerows(tool_rows)
+                            tmp_csv_path = tmp_csv.name
+
+                        try:
+                            # Generate traffic light and summary plots
+                            svg_traffic = generate_robvis_plot(tmp_csv_path, plot_type="traffic_light", tool=tk)
+                            if svg_traffic:
+                                zf.writestr(f"figures/{tk}_traffic_light.svg", svg_traffic)
+
+                            svg_summary = generate_robvis_plot(tmp_csv_path, plot_type="summary", tool=tk)
+                            if svg_summary:
+                                zf.writestr(f"figures/{tk}_summary.svg", svg_summary)
+
+                            # Convert to PNG (optional if required by instructions but SVG is typical)
+                            png_traffic = generate_robvis_plot(tmp_csv_path, plot_type="traffic_light", tool=tk, format="png")
+                            if png_traffic:
+                                zf.writestr(f"figures/{tk}_traffic_light.png", png_traffic)
+
+                            png_summary = generate_robvis_plot(tmp_csv_path, plot_type="summary", tool=tk, format="png")
+                            if png_summary:
+                                zf.writestr(f"figures/{tk}_summary.png", png_summary)
+
+                        except Exception as e:
+                            print(f"Failed to generate robvis plot for {tk}: {e}")
+                        finally:
+                            if os.path.exists(tmp_csv_path):
+                                os.remove(tmp_csv_path)
+
+        filename = f"rob_export_{project_id}_{timestamp}.zip"
+        return storage.save_bytes(filename, out_zip.getvalue())
+
+    elif format == "xlsx":
         import openpyxl
         wb = openpyxl.Workbook()
         ws = wb.active

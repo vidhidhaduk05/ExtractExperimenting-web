@@ -92,9 +92,10 @@ class TestAutoSelectAndCreate:
         assert result["tool"] == "rob2"
 
     def test_auto_select_cohort(self):
-        pid, sid = _create_project_and_study("retrospective cohort")
-        result = rob_service.auto_select_and_create_assessment(sid, pid, "retrospective cohort")
-        assert result["tool"] == "robins_i"
+        pid, sid = _create_project_and_study('retrospective cohort')
+        import pytest
+        with pytest.raises(ValueError):
+            rob_service.auto_select_and_create_assessment(sid, pid, 'retrospective cohort')
 
     def test_auto_select_no_match_raises(self):
         pid, sid = _create_project_and_study("narrative review")

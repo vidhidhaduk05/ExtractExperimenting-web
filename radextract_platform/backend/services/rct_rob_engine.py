@@ -87,17 +87,14 @@ def assess_study_risk_of_bias(
     if not study_text:
         return {"overall_judgment": "Unclear", "domains": []}
 
+    is_cochrane = tool_type in ("rob2", "robins_i", "robins_e")
+
+    tool_instructions = "Conduct a systematic Cochrane Risk of Bias assessment across the following 7 domains:\n1. Random sequence generation (Selection Bias)\n2. Allocation concealment (Selection Bias)\n3. Blinding of participants and personnel (Performance Bias)\n4. Blinding of outcome assessment (Detection Bias)\n5. Incomplete outcome data (Attrition Bias)\n6. Selective reporting (Reporting Bias)\n7. Other bias" if is_cochrane else f"Conduct a systematic Risk of Bias assessment for {tool_type}. Evaluate key domains relevant to this study design."
+
     prompt = f"""Clinical Publication Text:
 {study_text[:28000]}
 
-Conduct a systematic Cochrane Risk of Bias assessment across the following 7 domains:
-1. Random sequence generation (Selection Bias)
-2. Allocation concealment (Selection Bias)
-3. Blinding of participants and personnel (Performance Bias)
-4. Blinding of outcome assessment (Detection Bias)
-5. Incomplete outcome data (Attrition Bias)
-6. Selective reporting (Reporting Bias)
-7. Other bias
+{tool_instructions}
 
 Return JSON only in this exact shape:
 {{
@@ -130,12 +127,27 @@ Return JSON only in this exact shape:
         logger.error(f"Error in RCT-Reviewer RoB assessment: {e}")
 
     # Return fallback heuristic RoB evaluation
-    return _fallback_heuristic_assessment(study_text)
+    return _fallback_heuristic_assessment(study_text, tool_type)
 
 
-def _fallback_heuristic_assessment(text: str) -> Dict[str, Any]:
+def _fallback_heuristic_assessment(text: str, tool_type: str = "rob2") -> Dict[str, Any]:
     """Fast rule-based Cochrane domain assessment matching RCT-Reviewer classifier weights."""
     t_lower = text.lower()
+    if tool_type not in ("rob2", "robins_i", "robins_e"):
+        return {
+            "overall_judgment": "Unclear",
+            "domains": [
+                {
+                    "domain_id": "D1",
+                    "domain_name": "Quality Assessment",
+                    "judgment": "Unclear",
+                    "confidence": 0.50,
+                    "support_quote": "Automated evaluation fell back to default domain mapping for non-Cochrane tool.",
+                    "page_number": 1,
+                    "justification": "Manual review recommended for this tool."
+                }
+            ]
+        }
     domains = []
 
     # D1: Sequence Generation

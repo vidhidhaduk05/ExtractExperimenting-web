@@ -494,6 +494,68 @@ NOS = RobTool(
 )
 
 
+
+# ── JBI Critical Appraisal Tools ──
+
+JBI_OPTIONS = ["yes", "no", "unclear", "not applicable"]
+JBI_JUDGMENTS = ["yes", "no", "unclear", "not applicable"]
+
+JBI_CASE_REPORT = RobTool(
+    key="jbi_case_report",
+    name="JBI Case Report",
+    full_name="JBI Critical Appraisal Checklist for Case Reports",
+    description="Assesses the methodological quality of case reports.",
+    study_designs=["case report"],
+    judgment_options=JBI_JUDGMENTS,
+    has_overall=False,
+    domains=[
+        Domain(
+            key="jbi_cr",
+            label="JBI Critical Appraisal Checklist for Case Reports",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_cr_1", "Were patient's demographic characteristics clearly described?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cr_2", "Was the patient's history clearly described and presented as a timeline?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cr_3", "Was the current clinical condition of the patient on presentation clearly described?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cr_4", "Were diagnostic tests or assessment methods and the results clearly described?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cr_5", "Was the intervention(s) or treatment procedure(s) clearly described?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cr_6", "Was the post-intervention clinical condition clearly described?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cr_7", "Were adverse events (harms) or unanticipated events identified and described?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cr_8", "Does the case report provide takeaway lessons?", response_options=JBI_OPTIONS),
+            ],
+        ),
+    ]
+)
+
+JBI_CASE_SERIES = RobTool(
+    key="jbi_case_series",
+    name="JBI Case Series",
+    full_name="JBI Critical Appraisal Checklist for Case Series",
+    description="Assesses the methodological quality of case series.",
+    study_designs=["case series"],
+    judgment_options=JBI_JUDGMENTS,
+    has_overall=False,
+    domains=[
+        Domain(
+            key="jbi_cs",
+            label="JBI Critical Appraisal Checklist for Case Series",
+            has_applicability=False,
+            signaling_questions=[
+                SignalingQuestion("sq_cs_1", "Were there clear criteria for inclusion in the case series?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cs_2", "Was the condition measured in a standard, reliable way for all participants included in the case series?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cs_3", "Were valid methods used for identification of the condition for all participants included in the case series?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cs_4", "Did the case series have consecutive inclusion of participants?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cs_5", "Did the case series have complete inclusion of participants?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cs_6", "Was there clear reporting of the demographics of the participants in the study?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cs_7", "Was there clear reporting of clinical information of the participants?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cs_8", "Were the outcomes or follow up results of cases clearly reported?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cs_9", "Was there clear reporting of the presenting site(s)/clinic(s) demographic information?", response_options=JBI_OPTIONS),
+                SignalingQuestion("sq_cs_10", "Was statistical analysis appropriate?", response_options=JBI_OPTIONS),
+            ],
+        ),
+    ]
+)
+
 # ── Tool registry ──
 
 TOOLS: dict[str, RobTool] = {
@@ -502,6 +564,8 @@ TOOLS: dict[str, RobTool] = {
     "rob2": ROB_2,
     "robins_e": ROBINS_E,
     "nos": NOS,
+    "jbi_case_report": JBI_CASE_REPORT,
+    "jbi_case_series": JBI_CASE_SERIES,
 }
 
 
@@ -557,21 +621,24 @@ def select_rob_tool_with_alternatives(study_design: str) -> tuple[str, float, li
     ]):
         return ("robins_e", 0.88, ["robins_i", "nos"])
 
-    # Case series or case report → NOS (or specialized case-series checklist)
-    if any(kw in design for kw in [
-        "case series", "case report", "cases", "clinical series",
-    ]):
-        return ("nos", 0.85, ["robins_i"])
+    # Case report
+    if "case report" in design:
+        return ("jbi_case_report", 0.95, ["nos", "jbi_case_series"])
+
+    # Case series
+    if any(kw in design for kw in ["case series", "cases", "clinical series"]):
+        return ("jbi_case_series", 0.95, ["nos", "jbi_case_report"])
 
     # Observational cohort or case-control studies → ROBINS-I / NOS
     if any(kw in design for kw in [
         "prospective cohort", "retrospective cohort", "case-control", "case control",
         "cross-sectional", "observational", "registry", "cohort",
     ]):
-        # Default to robins_i per existing tests, with nos as strong alternative
-        return ("robins_i", 0.85, ["nos", "robins_e"])
+        # Confidence is borderline. Do not force ROBINS-I if confidence is below threshold.
+        # Returning "manual" for ambiguous non-randomized studies avoids forcing ROBINS-I.
+        return ("manual", 0.70, ["robins_i", "nos", "robins_e"])
 
-    return ("manual", 0.2, ["robins_i", "rob2", "nos", "quadas2"])
+    return ("manual", 0.2, ["robins_i", "rob2", "nos", "quadas2", "jbi_case_report", "jbi_case_series"])
 
 
 # ── Judgment algorithms ──
@@ -703,6 +770,8 @@ def compute_domain_judgment(tool_key: str, answers: dict[str, str]) -> str:
         return compute_rob2_domain_judgment(answers)
     elif tool_key == "nos":
         return compute_nos_domain_judgment(answers)
+    elif tool_key.startswith("jbi_"):
+        return "pending"
     return "unclear"
 
 
@@ -778,6 +847,8 @@ def compute_overall_judgment(tool_key: str, domain_judgments: dict[str, str]) ->
         return compute_rob2_overall(domain_judgments)
     elif tool_key == "nos":
         return compute_nos_overall(domain_judgments)
+    elif tool_key.startswith("jbi_"):
+        return "pending"
     return "unclear"
 
 

@@ -18,11 +18,11 @@ class TestToolDefinitions:
     """Test that tool definitions are structurally correct."""
 
     def test_five_tools_registered(self):
-        assert set(TOOLS.keys()) == {"quadas2", "robins_i", "rob2", "robins_e", "nos"}
+        assert set(TOOLS.keys()) == {"quadas2", "robins_i", "rob2", "robins_e", "nos", "jbi_case_report", "jbi_case_series"}
 
     def test_list_tools_returns_all(self):
         tools = list_tools()
-        assert len(tools) == 5
+        assert len(tools) == 7
 
     def test_get_tool_valid(self):
         assert get_tool("quadas2") is QUADAS_2
@@ -98,10 +98,10 @@ class TestAutoSelection:
         ("randomized controlled trial", "rob2"),
         ("RCT", "rob2"),
         ("randomised controlled trial", "rob2"),
-        ("prospective cohort study", "robins_i"),
-        ("retrospective cohort", "robins_i"),
-        ("case-control study", "robins_i"),
-        ("cross-sectional observational", "robins_i"),
+        ("prospective cohort study", "manual"),
+        ("retrospective cohort", "manual"),
+        ("case-control study", "manual"),
+        ("cross-sectional observational", "manual"),
         ("non-randomized intervention", "robins_i"),
         ("systematic review", "manual"),
         ("", "manual"),
@@ -224,7 +224,18 @@ class TestSelectRobToolWithAlternatives:
 
     def test_case_series_selects_nos(self):
         tool, conf, alts = select_rob_tool_with_alternatives("case series report")
-        assert tool == "nos"
+        assert tool == "jbi_case_series"
+        assert "nos" in alts
+
+    def test_case_report_selects_jbi(self):
+        tool, conf, alts = select_rob_tool_with_alternatives("case report")
+        assert tool == "jbi_case_report"
+        assert "nos" in alts
+
+    def test_observational_cohort_selects_manual(self):
+        tool, conf, alts = select_rob_tool_with_alternatives("prospective cohort")
+        assert tool == "manual"
+        assert conf == 0.70
         assert "robins_i" in alts
 
     def test_diagnostic_selects_quadas2(self):

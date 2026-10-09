@@ -358,9 +358,9 @@ async def cancel_batch_rob(
 @router.get("/projects/{project_id}/export")
 async def export_rob(
     project_id: str,
-    format: str = Query("csv", pattern="^(csv|xlsx)$"),
+    format: str = Query("csv", pattern="^(csv|xlsx|zip)$"),
 ):
-    """Export RoB assessments for a project as CSV or Excel."""
+    """Export RoB assessments for a project as CSV, Excel, or ZIP bundle."""
     filepath = rob_service.export_project_rob(project_id, format=format)
     filename = filepath.split("/")[-1]
     from fastapi.responses import FileResponse
