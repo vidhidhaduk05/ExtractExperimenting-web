@@ -2277,6 +2277,17 @@ export const api = {
   // RoB Summary & Export
   robSummary: (projectId: string) =>
     request<RobSummary>(`/rob/projects/${projectId}/summary`),
+  robvisFigure: (projectId: string, plot: "traffic" | "summary" = "traffic") =>
+    request<{
+      success: boolean;
+      engine: string;
+      plot: string;
+      tool: string;
+      study_count: number;
+      svg: string;
+      png_base64: string;
+      message: string;
+    }>(`/rob/projects/${projectId}/figure?plot=${plot}`),
   robExport: (projectId: string, format = "csv") =>
     `${API_BASE}/rob/projects/${projectId}/export?format=${format}`,
 

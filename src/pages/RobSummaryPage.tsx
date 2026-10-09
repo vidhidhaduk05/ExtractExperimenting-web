@@ -221,6 +221,8 @@ export function RobSummaryPage() {
 
       {summary && (summary?.total_assessments ?? 0) > 0 ? (
         <div className="space-y-6">
+          <RobvisFigures projectId={projectId!} />
+
           {/* Judgment Distribution */}
           <JudgmentDistribution summary={summary} />
 
@@ -246,6 +248,58 @@ export function RobSummaryPage() {
             <Sparkles className="h-3.5 w-3.5 mr-1" /> Run Batch RoB
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+function RobvisFigures({ projectId }: { projectId: string }) {
+  const traffic = useQuery({
+    queryKey: ["robvis", projectId, "traffic"],
+    queryFn: () => api.robvisFigure(projectId, "traffic"),
+    enabled: !!projectId,
+  });
+  const bars = useQuery({
+    queryKey: ["robvis", projectId, "summary"],
+    queryFn: () => api.robvisFigure(projectId, "summary"),
+    enabled: !!projectId,
+  });
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <RobvisPanel title="Traffic light (robvis)" figure={traffic.data} loading={traffic.isLoading} />
+      <RobvisPanel title="Domain summary (robvis)" figure={bars.data} loading={bars.isLoading} />
+    </div>
+  );
+}
+
+function RobvisPanel({
+  title,
+  figure,
+  loading,
+}: {
+  title: string;
+  figure?: {
+    tool: string;
+    svg: string;
+    message: string;
+    engine?: string;
+  };
+  loading: boolean;
+}) {
+  return (
+    <div className="card p-5">
+      <h2 className="font-semibold mb-1">{title}</h2>
+      <p className="text-xs text-[#6B665E] mb-3">
+        Publication figure from the robvis package
+        {figure?.tool ? ` (${figure.tool})` : ""}.
+      </p>
+      {loading ? (
+        <p className="text-sm text-gray-400">Drawing figure...</p>
+      ) : figure?.svg ? (
+        <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: figure.svg }} />
+      ) : (
+        <p className="text-sm text-gray-500">{figure?.message || "Figure unavailable."}</p>
       )}
     </div>
   );
