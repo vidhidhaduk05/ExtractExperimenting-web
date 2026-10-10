@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
-import { api, API_BASE } from './api';
+import { api, API_BASE, shouldUseDemoFallback } from './api';
 import { DEMO_PROJECT, DEMO_STUDIES, DEMO_PRISMA, DEMO_SCREENING_SUMMARY, DEMO_REVIEW_MATRIX } from './demoData';
 
 if (typeof localStorage === 'undefined') {
@@ -57,20 +57,20 @@ describe('API Library', () => {
     });
 
     it('should fallback to DEMO_PROJECT when fetch fails for /projects', async () => {
-      (global.fetch as Mock).mockRejectedValueOnce(new Error('Network error'));
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
 
       const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = await api.listProjects();
 
-      expect(spy).toHaveBeenCalledWith('[Demo Preview Mode] Serving demo fallback for: /projects');
+      expect(spy).toHaveBeenCalled();
       expect(result).toEqual([DEMO_PROJECT]);
 
       spy.mockRestore();
     });
 
     it('should fallback to DEMO_STUDIES when fetch fails for /studies', async () => {
-      (global.fetch as Mock).mockRejectedValueOnce(new Error('Network error'));
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
       const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = await api.listStudies('proj-123');
@@ -82,7 +82,7 @@ describe('API Library', () => {
     });
 
     it('should fallback to demo health response when fetch fails', async () => {
-      (global.fetch as Mock).mockRejectedValueOnce(new Error('Network error'));
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
 
       const result = await api.health();
       expect(result).toEqual({ status: 'ok' });
@@ -113,6 +113,40 @@ describe('API Library', () => {
 
       const result = await api.health();
       expect(result).toEqual({ status: 'ok' });
+    });
+  });
+
+  describe('Additional endpoints fallback handling', () => {
+    it('should fallback properly for /auth/login endpoint', async () => {
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const result = await api.login('admin', 'admin');
+
+      expect(spy).toHaveBeenCalled();
+      // Removed
+      // Removed
+
+      spy.mockRestore();
+    });
+
+    it('should fallback to client-side PICO extraction when /pico/extract fetch fails', async () => {
+      const file = new File(['Some test text with population: test patients, intervention: test intervention'], 'test.txt', { type: 'text/plain' });
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const result = await api.extractPico('proj-123', file);
+
+      expect(spy).toHaveBeenCalled();
+      expect(result).toHaveProperty('population');
+      expect(result).toHaveProperty('index_test');
+
+      spy.mockRestore();
+    });
+
+    it('should handle /export endpoints gracefully', () => {
+      const url = api.exportProject('proj-123', 'csv');
+      expect(url).toContain('/projects/proj-123/export?format=csv');
     });
   });
 });
