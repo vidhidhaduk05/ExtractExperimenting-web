@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1791666452.5389154,
-    "seen": 1791667187.419927,
-    "ast_hash": "f400a85f39b757a6147fcd6e66772da4",
+    "mtime": 1791667794.3340826,
+    "seen": 1791668444.9697752,
+    "ast_hash": "0ecd501bc09c08b1f47234415dd91af4",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -900,9 +900,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/RobSummaryPage.tsx": {
-    "mtime": 1791664521.7049959,
-    "seen": 1791664941.925462,
-    "ast_hash": "4d1fc6848d90ec427e3c539f1e8e87d9",
+    "mtime": 1791667701.3130896,
+    "seen": 1791668444.9796057,
+    "ast_hash": "70ae132d080615775234338f1afa7b21",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
@@ -918,9 +918,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyList.tsx": {
-    "mtime": 1791666736.158599,
-    "seen": 1791667187.4610999,
-    "ast_hash": "b44d619453178545466888c62143d3a4",
+    "mtime": 1791667811.4854023,
+    "seen": 1791668444.9796057,
+    "ast_hash": "5e1ab6c3178b5c9bc2436002fd6fe927",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/vite-env.d.ts": {
@@ -1035,24 +1035,6 @@
     "mtime": 1791664521.1841626,
     "seen": 1791664941.925462,
     "ast_hash": "efdae6b9aaaecba44c531cedfb365572",
-    "semantic_hash": ""
-  },
-  "deploy/aws-deploy.py": {
-    "mtime": 1791664520.4156344,
-    "seen": 1791664941.925462,
-    "ast_hash": "bfe7546120e46577913c085d6b3e067f",
-    "semantic_hash": ""
-  },
-  "deploy/infra.py": {
-    "mtime": 1791664520.417699,
-    "seen": 1791664941.925462,
-    "ast_hash": "187f0a111978ec0f7209db22081e72b0",
-    "semantic_hash": ""
-  },
-  "deploy/lambda-package.py": {
-    "mtime": 1791664520.4187078,
-    "seen": 1791664941.925462,
-    "ast_hash": "c8e0fbeb2d9af708fd56227277032020",
     "semantic_hash": ""
   },
   "dev-start.py": {
@@ -1469,12 +1451,6 @@
     "ast_hash": "2796bc5fc59ce83abcf9e107eb242c14",
     "semantic_hash": ""
   },
-  ".github/workflows/deploy-aws.yml": {
-    "mtime": 1791664520.355048,
-    "seen": 1791664941.925462,
-    "ast_hash": "b52a55938e5e2972d25b9d0a8a5c5565",
-    "semantic_hash": ""
-  },
   ".pre-commit-config.yaml": {
     "mtime": 1791664520.3566515,
     "seen": 1791664941.925462,
@@ -1529,18 +1505,6 @@
     "ast_hash": "522c3aacaa224de1b60ea84f7fc67ae3",
     "semantic_hash": ""
   },
-  "deploy/requirements-lambda.txt": {
-    "mtime": 1791664520.4187078,
-    "seen": 1791664941.925462,
-    "ast_hash": "df00b29ae49e22174bea2df8a2984e1d",
-    "semantic_hash": ""
-  },
-  "gemini-web2api-main/.github/workflows/docker.yml": {
-    "mtime": 1791664520.4239235,
-    "seen": 1791664941.925462,
-    "ast_hash": "0afa3afe215e62943d92ab78520f8641",
-    "semantic_hash": ""
-  },
   "gemini-web2api-main/README.md": {
     "mtime": 1791664520.4273806,
     "seen": 1791664941.925462,
@@ -1557,12 +1521,6 @@
     "mtime": 1791664520.4290423,
     "seen": 1791664941.925462,
     "ast_hash": "bc12ee76db3f85de9e2fd532fc496f4c",
-    "semantic_hash": ""
-  },
-  "gemini-web2api-main/docker-compose.local.yml": {
-    "mtime": 1791664520.432081,
-    "seen": 1791664941.925462,
-    "ast_hash": "d3fb01e35b8878f1c69b2ffbf80e48c4",
     "semantic_hash": ""
   },
   "gemini-web2api-main/gemini-cookie-sync-extension/README.txt": {
@@ -2087,12 +2045,6 @@
     "ast_hash": "c326df601e6ce8169e817065805db4e2",
     "semantic_hash": ""
   },
-  "radextract_platform/backend/docker-compose.yml": {
-    "mtime": 1791664520.9089131,
-    "seen": 1791664941.925462,
-    "ast_hash": "fb970666281d30c1c4e6670dcf1c32eb",
-    "semantic_hash": ""
-  },
   "radextract_platform/backend/requirements.txt": {
     "mtime": 1791664521.0176735,
     "seen": 1791664941.925462,
@@ -2379,6 +2331,12 @@
     "mtime": 1791666540.680056,
     "seen": 1791667187.4122624,
     "ast_hash": "bdad149f9a253a5abcf3192681b09863",
+    "semantic_hash": ""
+  },
+  "reports/catchii/task-tracker-additions-2026-10-11.png": {
+    "mtime": 1791667231.673752,
+    "seen": 1791668445.0122905,
+    "ast_hash": "e499018b4d133aafc9c4f523970515e4",
     "semantic_hash": ""
   }
 }

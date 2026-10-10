@@ -405,7 +405,7 @@ function StudyRow({ study, projectId, onDelete }: { study: Study; projectId: str
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${screeningBadge(study.screening_status)}`}>
             {study.screening_status || "pending"}
           </span>
-          {study.is_duplicate === 1 && (
+          {Boolean(study.is_duplicate) && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-100 text-amber-900 border border-amber-300 font-medium">
               <Copy className="h-2.5 w-2.5" />
               <span>DUPLICATE</span>

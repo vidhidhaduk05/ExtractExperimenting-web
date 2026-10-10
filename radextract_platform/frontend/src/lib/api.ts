@@ -775,7 +775,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         canonical_year: s1.publication_year || 2022,
         canonical_journal: s1.journal || "Asian Journal of Neurosurgery",
         canonical_abstract: s1.abstract || "Pure arterial malformations (PAMs) are unusual vascular lesions of the brain consisting of coiled arterial loops. We present a rare PCA PAM coexisting with dysplastic internal carotid artery managed conservatively.",
-        canonical_is_duplicate: s1.is_duplicate || 0,
+        canonical_is_duplicate: s1.is_duplicate ? 1 : 0,
         canonical_screening_status: s1.screening_status || "included",
         duplicates: [
           {
@@ -787,7 +787,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
             publication_year: s2.publication_year || 2022,
             journal: s2.journal || "ResearchSquare Clinical Preprints",
             abstract: s2.abstract || "Pure arterial malformations (PAMs) of the posterior circulation. Coiled arterial loops with dysplastic ICA.",
-            is_duplicate: s2.is_duplicate || 0,
+            is_duplicate: s2.is_duplicate ? 1 : 0,
             screening_status: s2.screening_status || "pending",
             match_reason: s1.doi && s2.doi && s1.doi === s2.doi ? "doi" : "title_similarity",
             similarity_score: 0.985,
@@ -952,7 +952,7 @@ export interface Study {
   extraction_status: string;
   pdf_status: string;
   pdf_path: string;
-  is_duplicate?: boolean;
+  is_duplicate?: boolean | number;
   duplicate_of_study_id?: string | null;
   ai_priority_score?: number | null;
   ai_confidence?: number | null;
