@@ -27,9 +27,57 @@ _lock = threading.Lock()
 _consecutive_failures = 0
 _open_until = 0.0
 
+_laya_model: Any = None
+_laya_init_failed = False
+
 
 class JevError(Exception):
     """Raised when a Jev request cannot be completed."""
+
+
+def _get_laya_model_dir() -> str:
+    if settings.laya_model_dir and os.path.exists(settings.laya_model_dir):
+        return settings.laya_model_dir
+    # Check default workspace location: <project_root>/laya/models
+    # services -> backend -> radextract_platform -> workspace_root
+    services_dir = os.path.abspath(os.path.dirname(__file__))
+    candidates = [
+        os.path.abspath(os.path.join(services_dir, "..", "..", "..", "laya", "models")),
+        os.path.abspath(os.path.join(services_dir, "..", "..", "laya", "models")),
+        os.path.abspath(os.path.join(services_dir, "..", "laya", "models")),
+    ]
+    for c in candidates:
+        if os.path.exists(os.path.join(c, "laya.onnx")):
+            return c
+    return ""
+
+
+def _get_laya_engine():
+    global _laya_model, _laya_init_failed
+    if _laya_model is not None:
+        return _laya_model
+    if _laya_init_failed:
+        return None
+    with _lock:
+        if _laya_model is not None:
+            return _laya_model
+        try:
+            model_dir = _get_laya_model_dir()
+            if not model_dir:
+                return None
+            # Import laya_engine from workspace
+            import sys
+            root_dir = os.path.abspath(os.path.join(model_dir, "..", ".."))
+            if root_dir not in sys.path:
+                sys.path.insert(0, root_dir)
+            from laya.laya_engine import LayaModel
+            _laya_model = LayaModel(model_dir)
+            logger.info("Loaded local Laya model from %s", model_dir)
+            return _laya_model
+        except Exception as e:
+            logger.warning("Could not load local Laya model: %s", e)
+            _laya_init_failed = True
+            return None
 
 
 def _api_key() -> str:
@@ -42,8 +90,16 @@ def jev_mode() -> str:
 
 
 def is_jev_enabled() -> bool:
-    """True when Jev should be attempted: mode is not off, a key exists and the breaker is closed."""
-    if jev_mode() == "off" or not _api_key():
+    """True when screening should be attempted via local Laya or TypeSafe Jev API."""
+    if jev_mode() == "off":
+        return False
+    # If using local Laya, verify model files exist
+    provider = getattr(settings, "jev_provider", "laya").lower()
+    if provider == "laya":
+        if bool(_get_laya_model_dir()):
+            return True
+        # If local Laya files not found, fallback to checking API key for remote typesafe
+    if not _api_key():
         return False
     return time.monotonic() >= _open_until
 
@@ -75,11 +131,25 @@ def reset_breaker() -> None:
 def ask(state: Any, questions: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Send one System One request and return the ``answers`` map (keyed by question id).
 
+    Uses local Laya ONNX engine if available, or TypeSafe cloud API if configured.
     Raises JevError on any failure after retries.
     """
+    provider = getattr(settings, "jev_provider", "laya").lower()
+    if provider == "laya":
+        engine = _get_laya_engine()
+        if engine is not None:
+            try:
+                answers = engine.system_one(state, questions)
+                _record_success()
+                return answers
+            except Exception as e:
+                _record_failure()
+                raise JevError(f"Local Laya inference failed: {e}")
+
+    # Fallback to Remote TypeSafe Jev API
     key = _api_key()
     if not key:
-        raise JevError("No Jev API key configured")
+        raise JevError("No Jev API key configured and local Laya unavailable")
 
     payload = {"state": state, "model": settings.jev_model, "questions": questions}
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
@@ -111,3 +181,4 @@ def ask(state: Any, questions: dict[str, dict[str, Any]]) -> dict[str, dict[str,
             break
     _record_failure()
     raise JevError(str(last_err) if last_err else "Jev request failed")
+

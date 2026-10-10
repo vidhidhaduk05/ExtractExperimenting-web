@@ -23,3 +23,12 @@
    - When a plan requires approval, inspect activities and call `POST /sessions/{id}:approvePlan`.
    - Once Jules creates a Pull Request, verify changes, merge into `main`, fast-forward the local branch, and re-run `graphify update .`.
    - Refer to `.agents/rules/jules.md` for complete API schemas and operational workflows.
+
+6. **Always Use Local Laya for Screening**:
+   - For study eligibility screening, always use local Laya (`JEV_MODE=on` / `settings.jev_mode = "on"`, `settings.jev_provider = "laya"`).
+   - Refer to `.agents/rules/laya.md` for engine details, fallback semantics, and local configuration.
+
+7. **Graphify-Guided Code Construction & Multi-Skill Coherence**:
+   - **Navigate First**: Before writing or refactoring code, inspect graph relationships via `graphify query` / `graphify path` to understand callers, callees, and dependencies.
+   - **Architectural Coherence**: Preserve established layering and avoid creating duplicate or competing abstractions. Re-run `graphify update .` post-edit.
+   - **Harmonize Skills**: Code changes must work coherently with active skills—coupling `python-testing`/`tdd-workflow` with `verification-loop`, and aligning clinical extraction with `.agents/skills/systematic-review` and `.agents/DECISIONS.md`. See `.agents/rules/coding_standards_coherence.md`.

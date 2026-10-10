@@ -42,12 +42,14 @@ class Settings(BaseSettings):
     llm_request_timeout: int = 90
     llm_max_retries: int = 2
 
-    # TypeSafe Jev screening (optional; "off" keeps the existing LLM screening untouched)
+    # TypeSafe Jev / Laya screening (optional; "off" keeps the existing LLM screening untouched)
     #   off    -> Jev never called
-    #   shadow -> Jev runs alongside and is logged for comparison; the LLM result is still returned
-    #   on     -> Jev result is returned; any Jev failure falls back to the LLM path
+    #   shadow -> runs alongside and is logged for comparison; the LLM result is still returned
+    #   on     -> Jev / Laya result is returned; any failure falls back to the LLM path
     jev_mode: str = "off"
-    jev_api_key: str = ""  # falls back to the TYPESAFE_API_KEY env var
+    jev_provider: str = "laya"  # "laya" (local ONNX, zero API key) or "typesafe" (remote cloud API)
+    laya_model_dir: str = ""    # Path to local Laya ONNX bundle; defaults to <project_root>/laya/models
+    jev_api_key: str = ""       # For "typesafe" provider; falls back to TYPESAFE_API_KEY env var
     jev_api_url: str = "https://api.typesafe.ai/v1/systemone"
     jev_model: str = "jev-latest"
     jev_timeout: int = 30

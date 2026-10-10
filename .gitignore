@@ -72,3 +72,9 @@ radextract_web_repo/
 open-design/
 .playwright-mcp/
 graphify-out/.*.stale
+
+# Large model weights
+*.onnx
+*.onnx.data
+laya/models/
+laya/.git/
