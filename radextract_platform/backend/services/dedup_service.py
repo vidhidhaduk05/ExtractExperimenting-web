@@ -17,19 +17,48 @@ from typing import Optional
 from database import get_db_backend
 from services.db_backend import DBBackend
 
-# Try python-Levenshtein (fast C extension), fall back to difflib
+from functools import lru_cache
+
+TITLE_SIMILARITY_THRESHOLD = 0.90
+
+# Try python-Levenshtein (fast C extension), fall back to difflib with length bound pre-check
 try:
     from Levenshtein import ratio as _lev_ratio
 
+    @lru_cache(maxsize=2048)
     def _title_similarity(a: str, b: str) -> float:
-        return _lev_ratio(a.lower(), b.lower())
+        if a == b:
+            return 1.0
+        a_lower, b_lower = a.lower(), b.lower()
+        if a_lower == b_lower:
+            return 1.0
+        return _lev_ratio(a_lower, b_lower)
 except ImportError:
     import difflib
 
+    @lru_cache(maxsize=2048)
     def _title_similarity(a: str, b: str) -> float:
-        return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
+        # Fast path 1: Exact string identity
+        if a == b:
+            return 1.0
+        a_lower, b_lower = a.lower(), b.lower()
+        if a_lower == b_lower:
+            return 1.0
 
-TITLE_SIMILARITY_THRESHOLD = 0.90
+        la, lb = len(a_lower), len(b_lower)
+        if not la or not lb:
+            return 1.0 if la == lb else 0.0
+
+        # Fast path 2: Mathematical upper bound on Levenshtein / SequenceMatcher ratio.
+        # SequenceMatcher ratio is defined as 2 * M / (la + lb), where M <= min(la, lb).
+        # Thus, max possible ratio = 2 * min(la, lb) / (la + lb).
+        # If this bound is below TITLE_SIMILARITY_THRESHOLD (0.90), difflib calculation can be safely skipped.
+        min_len = la if la < lb else lb
+        max_ratio = (2 * min_len) / (la + lb)
+        if max_ratio < TITLE_SIMILARITY_THRESHOLD:
+            return 0.0
+
+        return difflib.SequenceMatcher(None, a_lower, b_lower).ratio()
 
 
 def _normalize_doi(doi: str) -> str:
