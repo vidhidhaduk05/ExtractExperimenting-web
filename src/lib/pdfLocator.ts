@@ -24,6 +24,7 @@ const LINE_Y_TOLERANCE = 3;
 const COLUMN_GAP_THRESHOLD = 0.08;
 const COLUMN_LINE_RATIO = 0.3;
 const FUZZY_PREFIX_WORDS = 8; // fallback prefix word count for truncated LLM quotes
+const UNICODE_HYPHEN_REGEX = /[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/;
 
 /**
  * Maps raw PDF.js text items into normalized coordinate records.
@@ -92,8 +93,19 @@ function getReadingOrderedLines(items: TextItem[], pageWidth: number): TextItem[
     return lines;
   }
 
-  const colYMin = Math.min(...col1Lines.concat(col2Lines).map((l) => l[0].y));
-  const colYMax = Math.max(...col1Lines.concat(col2Lines).map((l) => l[0].y));
+  // Compute Y bounds in a single pass O(1) space to prevent call-stack overflow on large PDFs
+  let colYMin = Infinity;
+  let colYMax = -Infinity;
+  for (let i = 0; i < col1Lines.length; i++) {
+    const y = col1Lines[i][0].y;
+    if (y < colYMin) colYMin = y;
+    if (y > colYMax) colYMax = y;
+  }
+  for (let i = 0; i < col2Lines.length; i++) {
+    const y = col2Lines[i][0].y;
+    if (y < colYMin) colYMin = y;
+    if (y > colYMax) colYMax = y;
+  }
 
   const topSpanning: TextItem[][] = [];
   const leftLines: TextItem[][] = [];
@@ -188,7 +200,7 @@ function buildNormalizedIndex(orderedLines: TextItem[][]): { normText: string; n
 
     if (ch === "‘" || ch === "’" || ch === "‚" || ch === "‛") ch = "'";
     else if (ch === "“" || ch === "”" || ch === "„" || ch === "‟") ch = '"';
-    else if (/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/.test(ch)) ch = "-";
+    else if (UNICODE_HYPHEN_REGEX.test(ch)) ch = "-";
 
     // Rejoin hyphenated line breaks
     if (ch === "-" && i + 1 < rawChars.length && /\s/.test(rawChars[i + 1].ch)) {

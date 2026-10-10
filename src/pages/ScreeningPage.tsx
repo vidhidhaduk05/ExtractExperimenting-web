@@ -222,9 +222,11 @@ export function ScreeningPage() {
   const [extractingStudyId, setExtractingStudyId] = useState<string | null>(null);
 
   // Map study_id -> existing RoB assessment (for Start RoB / View RoB rendering)
-  const robByStudy = new Map(
-    (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
-  );
+  const robByStudy = useMemo(() => {
+    return new Map(
+      (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
+    );
+  }, [robSummary]);
 
   const handleStartRob = async (study: Study) => {
     setRobStarting((prev) => ({ ...prev, [study.study_id]: true }));
@@ -631,6 +633,15 @@ export function ScreeningPage() {
 
     return <div className="text-gray-800 leading-relaxed text-sm">{elements}</div>;
   };
+
+  // Memoize highlighted abstract to avoid re-sorting spans and re-generating React DOM nodes on unrelated re-renders
+  const highlightedAbstract = useMemo(() => {
+    if (!selectedStudy?.abstract) return null;
+    return renderHighlightedAbstract(
+      selectedStudy.abstract,
+      selectedHighlights?.all_spans || []
+    );
+  }, [selectedStudy?.abstract, selectedHighlights?.all_spans, showHighlights]);
 
   // Upload single PDF handler
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1446,10 +1457,7 @@ export function ScreeningPage() {
 
                 {/* Abstract Text Area */}
                 <div className="bg-slate-50/50 border border-slate-200 rounded-lg p-4 min-h-[140px]">
-                  {renderHighlightedAbstract(
-                    selectedStudy.abstract,
-                    selectedHighlights?.all_spans || []
-                  )}
+                  {highlightedAbstract}
                 </div>
               </div>
 
