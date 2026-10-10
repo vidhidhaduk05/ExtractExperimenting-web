@@ -64,4 +64,14 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
 - Backend endpoints:
   - `GET /api/projects/{project_id}/studies/duplicates`: Fetches candidate duplicate groups with side-by-side metadata without auto-marking.
   - `POST /api/projects/{project_id}/studies/deduplicate/resolve`: Applies user resolution decisions (`keep_primary`, `keep_both`, `merge_metadata`, `revert_duplicate`).
+## 2026-10-11 — Task 27: Screening Exclusion Reason Requirement & Removal of Fallback
 
+- Removed the automatic fallback that silently assigned `"wrong_population"` when an exclusion decision was executed without a selected reason.
+- Enforced strict validation across all exclusion triggers (main "Exclude Study" button, row-level quick exclude icons, and keyboard hotkeys `E` / `2`):
+  - Requires the reviewer to explicitly select an exclusion reason from the project/protocol reason selector.
+  - Displays a visible warning alert banner and focuses the reason selector when an exclusion is attempted without a reason.
+  - Halts the flow: does not submit an exclusion mutation and does not advance to the next study record until a valid reason is chosen.
+  - Clears the validation warning upon selecting an exclusion reason or navigating to another study.
+  - Preserves the selected reason (`reason_code` and `reason_text`) when persisting the decision.
+  - Preserves existing recorded historical screening decisions without modification.
+  - Preserves include and uncertain ("maybe") decisions and hotkeys (`I` / `1`, `M` / `3`) to advance and save normally without requiring exclusion reasons.
