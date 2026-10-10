@@ -8004,7 +8004,7 @@
       "file_type": "code",
       "norm_label": "get_batch_rob_progress()",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L874"
+      "source_location": "L973"
     },
     {
       "id": "radextract_platform_backend_services_search_audit_service_log_search",
@@ -11448,7 +11448,7 @@
       "file_type": "code",
       "norm_label": "_fallback_heuristic_assessment()",
       "source_file": "radextract_platform/backend/services/rct_rob_engine.py",
-      "source_location": "L136"
+      "source_location": "L133"
     },
     {
       "id": "radextract_platform_backend_radextract_core_litextract_adjudicate_agentadjudicator_decide",
@@ -32604,7 +32604,7 @@
       "file_type": "code",
       "norm_label": "auto_assess_study()",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L666"
+      "source_location": "L765"
     },
     {
       "id": "radextract_platform_backend_services_rob_service_auto_select_and_create_assessment",
@@ -32616,7 +32616,7 @@
       "file_type": "code",
       "norm_label": "auto_select_and_create_assessment()",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L640"
+      "source_location": "L739"
     },
     {
       "id": "radextract_platform_backend_services_rob_service_cancel_batch_rob_run",
@@ -32628,7 +32628,7 @@
       "file_type": "code",
       "norm_label": "cancel_batch_rob_run()",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L907"
+      "source_location": "L1006"
     },
     {
       "id": "radextract_platform_backend_services_rob_service_change_assessment_tool",
@@ -32640,7 +32640,7 @@
       "file_type": "code",
       "norm_label": "change_assessment_tool()",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L802"
+      "source_location": "L901"
     },
     {
       "id": "radextract_platform_backend_services_rob_service_create_assessment",
@@ -32748,7 +32748,7 @@
       "file_type": "code",
       "norm_label": "start_batch_rob_run()",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L920"
+      "source_location": "L1019"
     },
     {
       "id": "radextract_platform_backend_services_rob_service_start_batch_rob_run_worker",
@@ -32760,7 +32760,7 @@
       "file_type": "code",
       "norm_label": "_worker()",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L979"
+      "source_location": "L1078"
     },
     {
       "id": "radextract_platform_backend_services_rob_service_update_domain_judgment",
@@ -37206,7 +37206,7 @@
       "source_location": "L66"
     },
     {
-      "id": "radextract_platform_backend_services_rob_service_rationale_875",
+      "id": "radextract_platform_backend_services_rob_service_rationale_974",
       "label": "Get live progress of a batch RoB run for a project.",
       "_origin": "ast",
       "community": 0,
@@ -37214,7 +37214,7 @@
       "file_type": "rationale",
       "norm_label": "get live progress of a batch rob run for a project.",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L875"
+      "source_location": "L974"
     },
     {
       "id": "radextract_platform_backend_services_search_audit_service_rationale_28",
@@ -41268,7 +41268,7 @@
       "source_location": ""
     },
     {
-      "id": "radextract_platform_backend_services_rct_rob_engine_rationale_137",
+      "id": "radextract_platform_backend_services_rct_rob_engine_rationale_134",
       "label": "Fast rule-based Cochrane domain assessment matching RCT-Reviewer classifier\u2026",
       "_origin": "ast",
       "community": 130,
@@ -41276,7 +41276,7 @@
       "file_type": "rationale",
       "norm_label": "fast rule-based cochrane domain assessment matching rct-reviewer classifier...",
       "source_file": "radextract_platform/backend/services/rct_rob_engine.py",
-      "source_location": "L137"
+      "source_location": "L134"
     },
     {
       "id": "radextract_platform_backend_services_rct_rob_engine_rationale_86",
@@ -63570,6 +63570,28 @@
       "source_location": "L560"
     },
     {
+      "id": "radextract_platform_backend_services_rob_service_rationale_1007",
+      "label": "Cancel an active batch RoB run.",
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "get_db_backend",
+      "file_type": "rationale",
+      "norm_label": "cancel an active batch rob run.",
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L1007"
+    },
+    {
+      "id": "radextract_platform_backend_services_rob_service_rationale_1020",
+      "label": "Start batch risk-of-bias assessment for all included studies lacking\u2026",
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "get_db_backend",
+      "file_type": "rationale",
+      "norm_label": "start batch risk-of-bias assessment for all included studies lacking...",
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L1020"
+    },
+    {
       "id": "radextract_platform_backend_services_rob_service_rationale_106",
       "label": "Get full assessment detail with all domain judgments and signaling answers.",
       "_origin": "ast",
@@ -63691,7 +63713,7 @@
       "source_location": "L536"
     },
     {
-      "id": "radextract_platform_backend_services_rob_service_rationale_648",
+      "id": "radextract_platform_backend_services_rob_service_rationale_747",
       "label": "Auto-select the appropriate RoB tool based on study design and create\u2026",
       "_origin": "ast",
       "community": 74,
@@ -63699,10 +63721,10 @@
       "file_type": "rationale",
       "norm_label": "auto-select the appropriate rob tool based on study design and create...",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L648"
+      "source_location": "L747"
     },
     {
-      "id": "radextract_platform_backend_services_rob_service_rationale_672",
+      "id": "radextract_platform_backend_services_rob_service_rationale_771",
       "label": "Auto-create a RoB assessment for an included study and AI-prefill it. Used by\u2026",
       "_origin": "ast",
       "community": 74,
@@ -63710,10 +63732,10 @@
       "file_type": "rationale",
       "norm_label": "auto-create a rob assessment for an included study and ai-prefill it. used by...",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L672"
+      "source_location": "L771"
     },
     {
-      "id": "radextract_platform_backend_services_rob_service_rationale_803",
+      "id": "radextract_platform_backend_services_rob_service_rationale_902",
       "label": "Change the tool used for an assessment, re-instantiating domains and signaling\u2026",
       "_origin": "ast",
       "community": 74,
@@ -63721,29 +63743,7 @@
       "file_type": "rationale",
       "norm_label": "change the tool used for an assessment, re-instantiating domains and signaling...",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L803"
-    },
-    {
-      "id": "radextract_platform_backend_services_rob_service_rationale_908",
-      "label": "Cancel an active batch RoB run.",
-      "_origin": "ast",
-      "community": 74,
-      "community_name": "get_db_backend",
-      "file_type": "rationale",
-      "norm_label": "cancel an active batch rob run.",
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L908"
-    },
-    {
-      "id": "radextract_platform_backend_services_rob_service_rationale_921",
-      "label": "Start batch risk-of-bias assessment for all included studies lacking\u2026",
-      "_origin": "ast",
-      "community": 74,
-      "community_name": "get_db_backend",
-      "file_type": "rationale",
-      "norm_label": "start batch risk-of-bias assessment for all included studies lacking...",
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L921"
+      "source_location": "L902"
     },
     {
       "id": "radextract_platform_backend_services_rob_tools_rationale_579",
@@ -87739,7 +87739,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rct_rob_engine.py",
-      "source_location": "L119",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -87751,7 +87751,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rct_rob_engine.py",
-      "source_location": "L133",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -88819,7 +88819,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L685",
+      "source_location": "L784",
       "weight": 1.0
     },
     {
@@ -88831,7 +88831,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L693",
+      "source_location": "L792",
       "weight": 1.0
     },
     {
@@ -88843,7 +88843,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L701",
+      "source_location": "L800",
       "weight": 1.0
     },
     {
@@ -88855,7 +88855,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L707",
+      "source_location": "L806",
       "weight": 1.0
     },
     {
@@ -88867,7 +88867,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L709",
+      "source_location": "L808",
       "weight": 1.0
     },
     {
@@ -88879,7 +88879,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L716",
+      "source_location": "L815",
       "weight": 1.0
     },
     {
@@ -88891,7 +88891,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L717",
+      "source_location": "L816",
       "weight": 1.0
     },
     {
@@ -88903,7 +88903,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L730",
+      "source_location": "L829",
       "weight": 1.0
     },
     {
@@ -88915,7 +88915,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L731",
+      "source_location": "L830",
       "weight": 1.0
     },
     {
@@ -88927,7 +88927,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L742",
+      "source_location": "L841",
       "weight": 1.0
     },
     {
@@ -88939,7 +88939,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L776",
+      "source_location": "L875",
       "weight": 1.0
     },
     {
@@ -88951,7 +88951,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L789",
+      "source_location": "L888",
       "weight": 1.0
     },
     {
@@ -88963,7 +88963,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L649",
+      "source_location": "L748",
       "weight": 1.0
     },
     {
@@ -88975,7 +88975,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L655",
+      "source_location": "L754",
       "weight": 1.0
     },
     {
@@ -88987,7 +88987,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L912",
+      "source_location": "L1011",
       "weight": 1.0
     },
     {
@@ -88999,7 +88999,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L915",
+      "source_location": "L1014",
       "weight": 1.0
     },
     {
@@ -89011,7 +89011,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L804",
+      "source_location": "L903",
       "weight": 1.0
     },
     {
@@ -89023,7 +89023,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L808",
+      "source_location": "L907",
       "weight": 1.0
     },
     {
@@ -89035,7 +89035,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L832",
+      "source_location": "L931",
       "weight": 1.0
     },
     {
@@ -89047,7 +89047,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L868",
+      "source_location": "L967",
       "weight": 1.0
     },
     {
@@ -89143,7 +89143,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L608",
+      "source_location": "L609",
       "weight": 1.0
     },
     {
@@ -89191,7 +89191,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L878",
+      "source_location": "L977",
       "weight": 1.0
     },
     {
@@ -89203,7 +89203,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L883",
+      "source_location": "L982",
       "weight": 1.0
     },
     {
@@ -89335,7 +89335,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L926",
+      "source_location": "L1025",
       "weight": 1.0
     },
     {
@@ -89347,7 +89347,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L945",
+      "source_location": "L1044",
       "weight": 1.0
     },
     {
@@ -89359,7 +89359,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L966",
+      "source_location": "L1065",
       "weight": 1.0
     },
     {
@@ -89371,19 +89371,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L971",
-      "weight": 1.0
-    },
-    {
-      "source": "radextract_platform_backend_services_rob_service_start_batch_rob_run_worker",
-      "target": "radextract_platform_backend_services_rob_service_now",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L1019",
+      "source_location": "L1070",
       "weight": 1.0
     },
     {
@@ -89395,7 +89383,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L980",
+      "source_location": "L1079",
       "weight": 1.0
     },
     {
@@ -89407,7 +89395,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L989",
+      "source_location": "L1088",
+      "weight": 1.0
+    },
+    {
+      "source": "radextract_platform_backend_services_rob_service_start_batch_rob_run_worker",
+      "target": "radextract_platform_backend_services_rob_service_now",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L1118",
       "weight": 1.0
     },
     {
@@ -109352,7 +109352,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "radextract_platform/backend/services/rct_rob_engine.py",
-      "source_location": "L136",
+      "source_location": "L133",
       "weight": 1.0
     },
     {
@@ -122132,7 +122132,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L700",
+      "source_location": "L799",
       "weight": 1.0
     },
     {
@@ -122144,55 +122144,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L700",
-      "weight": 1.0
-    },
-    {
-      "source": "radextract_platform_backend_services_rob_service",
-      "target": "radextract_platform_backend_services_llm_extractor_is_llm_available",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L706",
-      "weight": 1.0
-    },
-    {
-      "source": "radextract_platform_backend_services_rob_service",
-      "target": "radextract_platform_backend_services_llm_client_get_client",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L708",
-      "weight": 1.0
-    },
-    {
-      "source": "radextract_platform_backend_services_rob_service",
-      "target": "radextract_platform_backend_services_reporting_profile_service_assess_profile",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L718",
-      "weight": 1.0
-    },
-    {
-      "source": "radextract_platform_backend_services_rob_service",
-      "target": "radextract_platform_backend_services_reporting_profile_service_persist_profile",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L718",
+      "source_location": "L799",
       "weight": 1.0
     },
     {
@@ -122205,6 +122157,54 @@
       "context": "import",
       "source_file": "radextract_platform/backend/services/rob_service.py",
       "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "radextract_platform_backend_services_rob_service",
+      "target": "radextract_platform_backend_services_llm_extractor_is_llm_available",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L805",
+      "weight": 1.0
+    },
+    {
+      "source": "radextract_platform_backend_services_rob_service",
+      "target": "radextract_platform_backend_services_llm_client_get_client",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L807",
+      "weight": 1.0
+    },
+    {
+      "source": "radextract_platform_backend_services_rob_service",
+      "target": "radextract_platform_backend_services_reporting_profile_service_assess_profile",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L817",
+      "weight": 1.0
+    },
+    {
+      "source": "radextract_platform_backend_services_rob_service",
+      "target": "radextract_platform_backend_services_reporting_profile_service_persist_profile",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L817",
       "weight": 1.0
     },
     {
@@ -144682,7 +144682,7 @@
       "confidence_score": 1.0,
       "context": "submodule_import",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L699",
+      "source_location": "L798",
       "weight": 1.0
     },
     {
@@ -144694,7 +144694,7 @@
       "confidence_score": 1.0,
       "context": "submodule_import",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L758",
+      "source_location": "L857",
       "weight": 1.0
     },
     {
@@ -162532,7 +162532,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/backend/services/rct_rob_engine.py",
-      "source_location": "L136",
+      "source_location": "L133",
       "weight": 1.0
     },
     {
@@ -163087,6 +163087,28 @@
     },
     {
       "source": "radextract_platform_backend_services_rob_service",
+      "target": "radextract_platform_backend_services_rob_service_cancel_batch_rob_run",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L1006",
+      "weight": 1.0
+    },
+    {
+      "source": "radextract_platform_backend_services_rob_service",
+      "target": "radextract_platform_backend_services_rob_service_start_batch_rob_run",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L1019",
+      "weight": 1.0
+    },
+    {
+      "source": "radextract_platform_backend_services_rob_service",
       "target": "radextract_platform_backend_services_rob_service_get_assessment",
       "relation": "contains",
       "_origin": "ast",
@@ -163258,7 +163280,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L640",
+      "source_location": "L739",
       "weight": 1.0
     },
     {
@@ -163269,7 +163291,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L666",
+      "source_location": "L765",
       "weight": 1.0
     },
     {
@@ -163280,7 +163302,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L802",
+      "source_location": "L901",
       "weight": 1.0
     },
     {
@@ -163291,29 +163313,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L874",
-      "weight": 1.0
-    },
-    {
-      "source": "radextract_platform_backend_services_rob_service",
-      "target": "radextract_platform_backend_services_rob_service_cancel_batch_rob_run",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L907",
-      "weight": 1.0
-    },
-    {
-      "source": "radextract_platform_backend_services_rob_service",
-      "target": "radextract_platform_backend_services_rob_service_start_batch_rob_run",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L920",
+      "source_location": "L973",
       "weight": 1.0
     },
     {
@@ -196733,14 +196733,14 @@
       "weight": 1.0
     },
     {
-      "source": "radextract_platform_backend_services_rct_rob_engine_rationale_137",
+      "source": "radextract_platform_backend_services_rct_rob_engine_rationale_134",
       "target": "radextract_platform_backend_services_rct_rob_engine_fallback_heuristic_assessment",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/backend/services/rct_rob_engine.py",
-      "source_location": "L137",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -197195,6 +197195,28 @@
       "weight": 1.0
     },
     {
+      "source": "radextract_platform_backend_services_rob_service_rationale_1007",
+      "target": "radextract_platform_backend_services_rob_service_cancel_batch_rob_run",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L1007",
+      "weight": 1.0
+    },
+    {
+      "source": "radextract_platform_backend_services_rob_service_rationale_1020",
+      "target": "radextract_platform_backend_services_rob_service_start_batch_rob_run",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "radextract_platform/backend/services/rob_service.py",
+      "source_location": "L1020",
+      "weight": 1.0
+    },
+    {
       "source": "radextract_platform_backend_services_rob_service_rationale_106",
       "target": "radextract_platform_backend_services_rob_service_get_assessment",
       "relation": "rationale_for",
@@ -197338,69 +197360,47 @@
       "weight": 1.0
     },
     {
-      "source": "radextract_platform_backend_services_rob_service_rationale_648",
+      "source": "radextract_platform_backend_services_rob_service_rationale_747",
       "target": "radextract_platform_backend_services_rob_service_auto_select_and_create_assessment",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L648",
+      "source_location": "L747",
       "weight": 1.0
     },
     {
-      "source": "radextract_platform_backend_services_rob_service_rationale_672",
+      "source": "radextract_platform_backend_services_rob_service_rationale_771",
       "target": "radextract_platform_backend_services_rob_service_auto_assess_study",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L672",
+      "source_location": "L771",
       "weight": 1.0
     },
     {
-      "source": "radextract_platform_backend_services_rob_service_rationale_803",
+      "source": "radextract_platform_backend_services_rob_service_rationale_902",
       "target": "radextract_platform_backend_services_rob_service_change_assessment_tool",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L803",
+      "source_location": "L902",
       "weight": 1.0
     },
     {
-      "source": "radextract_platform_backend_services_rob_service_rationale_875",
+      "source": "radextract_platform_backend_services_rob_service_rationale_974",
       "target": "radextract_platform_backend_services_rob_service_get_batch_rob_progress",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L875",
-      "weight": 1.0
-    },
-    {
-      "source": "radextract_platform_backend_services_rob_service_rationale_908",
-      "target": "radextract_platform_backend_services_rob_service_cancel_batch_rob_run",
-      "relation": "rationale_for",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L908",
-      "weight": 1.0
-    },
-    {
-      "source": "radextract_platform_backend_services_rob_service_rationale_921",
-      "target": "radextract_platform_backend_services_rob_service_start_batch_rob_run",
-      "relation": "rationale_for",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L921",
+      "source_location": "L974",
       "weight": 1.0
     },
     {
@@ -201809,7 +201809,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L1028",
+      "source_location": "L1127",
       "weight": 1.0
     },
     {
@@ -205133,7 +205133,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "radextract_platform/backend/services/rct_rob_engine.py",
-      "source_location": "L120",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -207917,7 +207917,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L669",
+      "source_location": "L768",
       "weight": 0.8
     },
     {
@@ -207929,7 +207929,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L646",
+      "source_location": "L745",
       "weight": 0.8
     },
     {
@@ -207941,7 +207941,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L907",
+      "source_location": "L1006",
       "weight": 0.8
     },
     {
@@ -207953,7 +207953,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L802",
+      "source_location": "L901",
       "weight": 0.8
     },
     {
@@ -208013,7 +208013,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L874",
+      "source_location": "L973",
       "weight": 0.8
     },
     {
@@ -208061,7 +208061,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "radextract_platform/backend/services/rob_service.py",
-      "source_location": "L920",
+      "source_location": "L1019",
       "weight": 0.8
     },
     {
@@ -213838,5 +213838,6 @@
       "weight": 0.8
     }
   ],
-  "hyperedges": []
+  "hyperedges": [],
+  "built_at_commit": "369eafc7333bee7a23be1c295330b3b4740cc703"
 }

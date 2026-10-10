@@ -1,7 +1,7 @@
 # Graph Report - Rad Extract Experimenting  (2026-10-11)
 
 ## Corpus Check
-- 349 files · ~703,747 words
+- 349 files · ~704,160 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 24 file(s) not represented in the graph (top: (none) 15, .bat 3, .example 2)
 
@@ -9,6 +9,11 @@
 - 5714 nodes · 12675 edges · 292 communities (205 shown, 87 thin omitted)
 - Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 1020 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `369eafc7`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - json
