@@ -33039,7 +33039,7 @@
       "file_type": "code",
       "norm_label": "screeningpage()",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L61"
+      "source_location": "L62"
     },
     {
       "id": "radextract_platform_frontend_src_pages_studylist_bulkuploadmodal",
@@ -102706,7 +102706,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L156",
+      "source_location": "L166",
       "weight": 1.0
     },
     {
@@ -102718,7 +102718,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L1787",
+      "source_location": "L1901",
       "weight": 1.0
     },
     {
@@ -102730,7 +102730,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L188",
+      "source_location": "L198",
       "weight": 1.0
     },
     {
@@ -102742,7 +102742,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L1941",
+      "source_location": "L2055",
       "weight": 1.0
     },
     {
@@ -102754,7 +102754,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L337",
+      "source_location": "L356",
       "weight": 1.0
     },
     {
@@ -130103,7 +130103,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L57",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -130115,7 +130115,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L58",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
@@ -142045,7 +142045,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L57",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -142057,7 +142057,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L58",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
@@ -173118,7 +173118,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L61",
+      "source_location": "L62",
       "weight": 1.0
     },
     {

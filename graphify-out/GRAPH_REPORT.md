@@ -1,7 +1,7 @@
 # Graph Report - Rad Extract Experimenting  (2026-10-11)
 
 ## Corpus Check
-- 349 files · ~715,426 words
+- 349 files · ~716,501 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 20 file(s) not represented in the graph (top: (none) 12, .bat 3, .example 2)
 
@@ -1131,4 +1131,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `sqlite3` be split into smaller, more focused modules?**
   _Cohesion score 0.06028368794326241 - nodes in this community are weakly interconnected._
 - **Why does `reset_db()` connect `init_db` to `backend/models.py`, `init_sqlite_db`, `test_ai_screening.py`, `test_dedup_service.py`, `Phase 4: Complete Database Migration (SQLite → DynamoDB)`, `antigravity_tools.py`, `test_ai_screening_pipeline.py`, `test_mixed_rob_export.py`, `test_routers_auth.py`, `test_clarification.py`, `pytest`, `test_new_features.py`, `get_db_backend`, `test_exclusion_reasons.py`, `test_prisma_export.py`, `test_routers_grade.py`, `test_pdf_service.py`, `test_screening_fixes.py`, `typing`, `test_routers_rob.py`, `VDExtract: Interactive AI Screening with Mid-Pipeline Clarification Questions`?**
-  _High betweenness centrality (0.111) - this node is a cross-community bridge._
+  _High betweenness centrality (0.110) - this node is a cross-community bridge._

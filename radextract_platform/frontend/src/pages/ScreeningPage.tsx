@@ -53,6 +53,7 @@ import {
   Keyboard,
   FolderPlus,
   ArrowLeftRight,
+  RotateCcw,
 } from "lucide-react";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
 import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
@@ -110,6 +111,15 @@ export function ScreeningPage() {
   const [excludeReasonText, setExcludeReasonText] = useState<string>("");
   const [reasonError, setReasonError] = useState<string | null>(null);
   const reasonSelectRef = useRef<HTMLSelectElement>(null);
+
+  // Save failure recovery state (Task 30)
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [failedDecision, setFailedDecision] = useState<{
+    studyId: string;
+    decision: "included" | "excluded" | "maybe";
+    reasonCode?: string;
+    reasonText?: string;
+  } | null>(null);
 
   // PDF upload for selected study
   const [uploadingPdf, setUploadingPdf] = useState(false);
@@ -275,12 +285,14 @@ export function ScreeningPage() {
     return studyList[0];
   }, [studyList, selectedStudyId]);
 
-  // Clear reason validation error when reviewer navigates to a different study
+  // Clear reason and save validation errors when reviewer navigates to a different study
   const prevActiveStudyIdRef = useRef<string | null>(null);
   useEffect(() => {
     const currentId = selectedStudy?.study_id || null;
     if (prevActiveStudyIdRef.current && currentId && prevActiveStudyIdRef.current !== currentId) {
       setReasonError(null);
+      setSaveError(null);
+      setFailedDecision(null);
     }
     prevActiveStudyIdRef.current = currentId;
   }, [selectedStudy?.study_id]);
@@ -332,8 +344,15 @@ export function ScreeningPage() {
     },
   });
 
+  type DecisionPayload = {
+    studyId: string;
+    decision: "included" | "excluded" | "maybe";
+    reasonCode?: string;
+    reasonText?: string;
+  };
+
   const decisionMutation = useMutation({
-    mutationFn: (data: { studyId: string; decision: "included" | "excluded" | "maybe"; reasonCode?: string; reasonText?: string }) =>
+    mutationFn: (data: DecisionPayload) =>
       api.screeningDecision(data.studyId, {
         project_id: projectId!,
         reviewer_id: reviewerId,
@@ -343,19 +362,51 @@ export function ScreeningPage() {
         reason_code: data.reasonCode,
         reason_text: data.reasonText,
       }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Clear errors on confirmed server save
+      setSaveError(null);
+      setFailedDecision(null);
+      setReasonError(null);
+
       queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
       queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+
+      // Clear the reason selector for the next record ONLY after successful save
+      if (variables.decision === "excluded") {
+        setExcludeReasonCode("");
+        setExcludeReasonText("");
+      }
+
+      // Advance to next study in filtered list ONLY after the server confirms a successful save
+      const currentIndex = filteredStudies.findIndex((s) => s.study_id === variables.studyId);
+      if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
+        setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
+      }
+    },
+    onError: (err: any, variables) => {
+      const errMsg = err?.message || "Failed to save screening decision due to a server or network error.";
+      setSaveError(errMsg);
+      setFailedDecision(variables);
     },
   });
 
-  // Screening decision handler (auto-advances to next study only on valid decisions)
+  // Retry the same decision without creating duplicate entries
+  const handleRetry = () => {
+    if (!failedDecision || decisionMutation.isPending) return;
+    setSaveError(null);
+    decisionMutation.mutate(failedDecision);
+  };
+
+  // Screening decision handler (auto-advances to next study ONLY on server confirmation)
   const handleScreenDecision = (decision: "included" | "excluded" | "maybe", targetStudyId?: string) => {
+    // Prevent duplicate submissions while a save is in flight
+    if (decisionMutation.isPending) return;
+
     const currentStudyId = targetStudyId || selectedStudy?.study_id;
     if (!currentStudyId) return;
 
     if (decision === "excluded") {
-      // Must have a valid exclusion reason selected
+      // Must have a valid exclusion reason selected (Task 27)
       if (!excludeReasonCode || !excludeReasonCode.trim()) {
         if (targetStudyId && selectedStudy?.study_id !== targetStudyId) {
           setSelectedStudyId(targetStudyId);
@@ -366,6 +417,8 @@ export function ScreeningPage() {
       }
 
       setReasonError(null);
+      setSaveError(null);
+      setFailedDecision(null);
 
       // Find label for reasonCode if custom rationale text is not provided
       const selectedReasonObj = exclusionReasons.find(
@@ -379,27 +432,13 @@ export function ScreeningPage() {
         reasonCode: excludeReasonCode,
         reasonText: excludeReasonText.trim() || reasonLabel || "Ineligible based on criteria",
       });
-
-      // Clear the reason selector for the next record
-      setExcludeReasonCode("");
-      setExcludeReasonText("");
-
-      // Advance to next study in filtered list ONLY after saving exclusion
-      const currentIndex = filteredStudies.findIndex((s) => s.study_id === currentStudyId);
-      if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
-        setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
-      }
       return;
     }
 
-    // Include and Maybe: clear any reason error, advance, and mutate
+    // Include and Maybe: clear any reason error & save error, and mutate
     setReasonError(null);
-
-    // Advance to next study in filtered list
-    const currentIndex = filteredStudies.findIndex((s) => s.study_id === currentStudyId);
-    if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
-      setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
-    }
+    setSaveError(null);
+    setFailedDecision(null);
 
     if (decision === "included") {
       decisionMutation.mutate({
@@ -455,6 +494,8 @@ export function ScreeningPage() {
         }
         return;
       }
+
+      if (decisionMutation.isPending) return;
 
       if (e.key === "i" || e.key === "I" || e.key === "1") {
         e.preventDefault();
@@ -1138,9 +1179,11 @@ export function ScreeningPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (decisionMutation.isPending) return;
                             handleScreenDecision("included", study.study_id);
                           }}
-                          className="p-1 hover:bg-emerald-100 rounded text-emerald-600"
+                          disabled={decisionMutation.isPending}
+                          className="p-1 hover:bg-emerald-100 rounded text-emerald-600 disabled:opacity-40"
                           title="Quick Include"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
@@ -1148,9 +1191,11 @@ export function ScreeningPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (decisionMutation.isPending) return;
                             handleScreenDecision("excluded", study.study_id);
                           }}
-                          className="p-1 hover:bg-rose-100 rounded text-rose-600"
+                          disabled={decisionMutation.isPending}
+                          className="p-1 hover:bg-rose-100 rounded text-rose-600 disabled:opacity-40"
                           title="Quick Exclude (Reason required)"
                         >
                           <XCircle className="w-3.5 h-3.5" />
@@ -1510,6 +1555,51 @@ export function ScreeningPage() {
                   )}
                 </div>
 
+                {/* Save in Progress Indicator */}
+                {decisionMutation.isPending && (
+                  <div
+                    role="status"
+                    className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-700 text-xs font-semibold animate-pulse"
+                  >
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
+                    <span>Saving screening decision to server... Please wait.</span>
+                  </div>
+                )}
+
+                {/* Save Failure Recovery Banner with Retry */}
+                {saveError && (
+                  <div
+                    role="alert"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 bg-rose-50 border border-rose-300 rounded-lg text-rose-900 text-xs shadow-xs"
+                  >
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Failed to save decision</p>
+                        <p className="text-rose-700 text-[11px] mt-0.5">{saveError}</p>
+                        <p className="text-slate-600 text-[11px] mt-0.5 font-medium">
+                          Your selected decision, exclusion reason, and rationale were kept.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <button
+                        type="button"
+                        onClick={handleRetry}
+                        disabled={decisionMutation.isPending}
+                        className="px-3 py-1.5 font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-md shadow-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 text-xs"
+                      >
+                        {decisionMutation.isPending ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        )}
+                        <span>Retry Save</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Main Action Buttons with Hotkey badges */}
                 <div className="grid grid-cols-3 gap-3">
                   <button
@@ -1518,8 +1608,16 @@ export function ScreeningPage() {
                     className="py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
                     title="Include Study (Hotkeys: 'I' or '1')"
                   >
-                    <CheckCircle className="w-4 h-4 shrink-0" />
-                    <span>Include Study</span>
+                    {decisionMutation.isPending && decisionMutation.variables?.decision === "included" ? (
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>
+                      {decisionMutation.isPending && decisionMutation.variables?.decision === "included"
+                        ? "Saving..."
+                        : "Include Study"}
+                    </span>
                     <kbd className="px-1.5 py-0.5 rounded bg-black/20 text-white font-mono text-[10px] font-bold">
                       I / 1
                     </kbd>
@@ -1531,8 +1629,16 @@ export function ScreeningPage() {
                     className="py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
                     title="Exclude Study (Hotkeys: 'E' or '2')"
                   >
-                    <XCircle className="w-4 h-4 shrink-0" />
-                    <span>Exclude Study</span>
+                    {decisionMutation.isPending && decisionMutation.variables?.decision === "excluded" ? (
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    ) : (
+                      <XCircle className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>
+                      {decisionMutation.isPending && decisionMutation.variables?.decision === "excluded"
+                        ? "Saving..."
+                        : "Exclude Study"}
+                    </span>
                     <kbd className="px-1.5 py-0.5 rounded bg-black/20 text-white font-mono text-[10px] font-bold">
                       E / 2
                     </kbd>
@@ -1544,8 +1650,16 @@ export function ScreeningPage() {
                     className="py-2.5 text-xs font-bold text-slate-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                     title="Maybe / Uncertain (Hotkeys: 'M' or '3')"
                   >
-                    <HelpCircle className="w-4 h-4 text-amber-700 shrink-0" />
-                    <span>Maybe / Uncertain</span>
+                    {decisionMutation.isPending && decisionMutation.variables?.decision === "maybe" ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-800 shrink-0" />
+                    ) : (
+                      <HelpCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                    )}
+                    <span>
+                      {decisionMutation.isPending && decisionMutation.variables?.decision === "maybe"
+                        ? "Saving..."
+                        : "Maybe / Uncertain"}
+                    </span>
                     <kbd className="px-1.5 py-0.5 rounded bg-black/10 text-amber-900 font-mono text-[10px] font-bold">
                       M / 3
                     </kbd>

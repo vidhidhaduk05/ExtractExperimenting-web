@@ -74,4 +74,17 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
   - Clears the validation warning upon selecting an exclusion reason or navigating to another study.
   - Preserves the selected reason (`reason_code` and `reason_text`) when persisting the decision.
   - Preserves existing recorded historical screening decisions without modification.
-  - Preserves include and uncertain ("maybe") decisions and hotkeys (`I` / `1`, `M` / `3`) to advance and save normally without requiring exclusion reasons.
+  - Preserves include and uncertain ("maybe") decisions and hotkeys (`I` / `1`, `M` / `3`) to advance and save normally without requiring exclusion reasons.## 2026-10-11 — Task 30: Screening Save Failure Recovery & Duplicate Submission Prevention
+
+- Screening decisions advance to the next study record strictly in `decisionMutation.onSuccess` only after the backend confirms successful persistence.
+- Added duplicate submission prevention across buttons, row-level quick actions, and keyboard hotkeys (`I`/`1`, `E`/`2`, `M`/`3`/`U`) by guarding with `if (decisionMutation.isPending) return;`.
+- Visual in-flight progress indicators:
+  - Active button displays loading spinner `<Loader2 className="animate-spin" />` with "Saving..." label and disables all decision buttons.
+  - Save progress status ribbon indicates network transmission.
+- Error retention and recovery:
+  - If server/network failure occurs, `onError` captures the error message and preserves the payload.
+  - The current record remains active (does not advance).
+  - Selected exclusion reason dropdown value and custom rationale notes are fully preserved.
+  - Renders an error alert banner with explicit error details and a prominent `Retry Save` action.
+- Retrying re-executes `decisionMutation.mutate(failedDecision)` targeting the same study without duplicating decision records.
+- Preserves Task 27's strict requirement that exclusion decisions must have a valid exclusion reason selected before mutating.
