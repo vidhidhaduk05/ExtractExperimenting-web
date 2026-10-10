@@ -5,10 +5,12 @@ import { autoIdentifyPdf } from "../lib/pdfAutoIdentifier";
 import {
   Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2,
   Highlighter, FileSpreadsheet, ArrowRight, CheckCircle2, X,
-  RefreshCw, Sparkles, FolderPlus, Check, AlertCircle
+  RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy
 } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
 import { useRef, useState, useCallback } from "react";
+import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
+
 
 export function StudyList() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -18,12 +20,20 @@ export function StudyList() {
   const bulkPdfInputRef = useRef<HTMLInputElement>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
 
   const { data: studies, isLoading } = useQuery({
     queryKey: ["studies", projectId],
     queryFn: () => api.listStudies(projectId!),
     enabled: !!projectId,
   });
+
+  const { data: dedupData } = useQuery({
+    queryKey: ["duplicate_groups", projectId],
+    queryFn: () => api.getDuplicateGroups(projectId!),
+    enabled: !!projectId,
+  });
+
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteStudy(id),
@@ -141,6 +151,22 @@ export function StudyList() {
             </button>
           )}
 
+          {/* Duplicate Review Button */}
+          <button
+            type="button"
+            onClick={() => setIsDuplicateModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/15 bg-white text-xs font-medium text-[#141413] hover:bg-black/5 transition-colors shadow-2xs"
+            title="Open side-by-side duplicate review workspace (Keep primary, Keep both, Merge metadata)"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5 text-[#6B665E]" />
+            <span>Duplicate Review</span>
+            {dedupData && dedupData.total_duplicates > 0 ? (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-100 text-amber-800 border border-amber-200">
+                {dedupData.total_duplicates}
+              </span>
+            ) : null}
+          </button>
+
           {/* Bulk Upload PDFs Button */}
           <button
             type="button"
@@ -158,6 +184,7 @@ export function StudyList() {
           </Link>
         </div>
       </div>
+
 
       {/* Quick Extraction Banner */}
       <div className="card-phylo-warm p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
@@ -197,7 +224,40 @@ export function StudyList() {
         </div>
       </div>
 
+      {/* Duplicate Detection Alert Banner */}
+      {dedupData && dedupData.total_duplicates > 0 && (
+        <div className="bg-amber-50/80 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 shrink-0">
+              <ArrowLeftRight className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-serif text-sm font-medium text-[#141413]">
+                  Duplicate Bibliographic Records Identified ({dedupData.total_duplicates} candidate duplicates in {dedupData.duplicate_groups.length} group{dedupData.duplicate_groups.length > 1 ? "s" : ""})
+                </h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 border border-amber-300">
+                  DEDUPLICATION STEP
+                </span>
+              </div>
+              <p className="font-sans text-xs text-[#6B665E] mt-0.5 max-w-2xl leading-relaxed">
+                Side-by-side comparison of title, abstract, DOI, PMID, year, and authors with match reasons. Keep this record, Keep both, or Merge metadata where appropriate with reversible duplicate marking.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsDuplicateModalOpen(true)}
+            className="btn-phylo-primary text-xs px-4 py-2 shrink-0 flex items-center gap-1.5 shadow-xs"
+          >
+            <span>Review Duplicates</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       {uploadMsg && (
+
         <div
           className={`rounded-xl px-4 py-3 text-xs font-sans flex items-center justify-between ${
             uploadMsg.startsWith("Error")
@@ -299,9 +359,21 @@ export function StudyList() {
           }}
         />
       )}
+
+      {/* Duplicate Review Modal */}
+      <DuplicateReviewModal
+        projectId={projectId!}
+        isOpen={isDuplicateModalOpen}
+        onClose={() => setIsDuplicateModalOpen(false)}
+        onResolved={() => {
+          queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+        }}
+      />
     </div>
   );
 }
+
 
 function StudyRow({ study, projectId, onDelete }: { study: Study; projectId: string; onDelete: () => void }) {
   const { data: assessments } = useQuery({
@@ -329,9 +401,17 @@ function StudyRow({ study, projectId, onDelete }: { study: Study; projectId: str
       <td className="px-4 py-3.5 font-mono text-xs text-[#6B665E]">{study.publication_year || "—"}</td>
       <td className="px-4 py-3.5 text-xs text-[#6B665E]">{study.study_design || "—"}</td>
       <td className="px-4 py-3.5">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${screeningBadge(study.screening_status)}`}>
-          {study.screening_status || "pending"}
-        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${screeningBadge(study.screening_status)}`}>
+            {study.screening_status || "pending"}
+          </span>
+          {Boolean(study.is_duplicate) && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-100 text-amber-900 border border-amber-300 font-medium">
+              <Copy className="h-2.5 w-2.5" />
+              <span>DUPLICATE</span>
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-4 py-3.5">
         {assessments && assessments.length > 0 ? (

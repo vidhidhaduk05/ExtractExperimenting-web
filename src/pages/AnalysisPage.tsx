@@ -32,6 +32,12 @@ export function AnalysisPage() {
 
   // ── Data queries ──
 
+  const { data: descriptive } = useQuery({
+    queryKey: ["analysis-descriptive", projectId],
+    queryFn: () => api.getDescriptiveSynthesis(projectId!),
+    enabled: !!projectId,
+  });
+
   const { data: profile, isLoading: profileLoading } = useQuery<AnalysisProfile>({
     queryKey: ["analysis-profile", projectId],
     queryFn: () => api.getAnalysisProfile(projectId!),
@@ -85,6 +91,37 @@ export function AnalysisPage() {
           deterministically (no LLM).
         </p>
       </div>
+
+      {descriptive && (
+        <div className="mb-6 rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="text-sm font-semibold text-slate-800">Descriptive synthesis</h2>
+          <p className="mt-1 text-xs text-slate-500">{descriptive.note}</p>
+          {descriptive.prisma && (
+            <p className="mt-2 text-sm text-slate-700">
+              Identified {descriptive.prisma.identified}. Duplicates removed {descriptive.prisma.duplicates_removed}.
+              {" "}
+              {Object.entries(descriptive.prisma.by_status || {})
+                .map(([status, count]) => `${status}: ${count}`)
+                .join(" · ")}
+            </p>
+          )}
+          {Array.isArray(descriptive.variables) && descriptive.variables.length > 0 && (
+            <ul className="mt-3 space-y-1 text-sm text-slate-700">
+              {descriptive.variables.slice(0, 12).map((item) => {
+                const row = item as { name?: string; summary?: string; result?: { median?: number; n?: number }; binary?: { proportion?: number; n?: number; ci_low?: number; ci_high?: number } };
+                const binary = row.binary;
+                const median = row.result;
+                const detail = binary
+                  ? `${Math.round((binary.proportion || 0) * 1000) / 10}% (n=${binary.n}, ${binary.ci_low}–${binary.ci_high})`
+                  : median
+                    ? `median ${median.median} (n=${median.n})`
+                    : row.summary;
+                return <li key={row.name}>{row.name}: {detail}</li>;
+              })}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-slate-200">

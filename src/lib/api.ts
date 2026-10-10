@@ -712,6 +712,99 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       }
     ] as unknown as T;
   }
+  if (path.includes("/studies/deduplicate/resolve") && method === "POST") {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    const studies = getStoredProjectStudies(projectId);
+    const { action, primary_study_id, duplicate_study_id, merged_fields } = (body || {}) as any;
+
+    const updated = studies.map((s) => {
+      if (s.study_id === primary_study_id) {
+        const next = { ...s, is_duplicate: 0, duplicate_of_study_id: "" };
+        if (action === "merge_metadata" && merged_fields) {
+          Object.assign(next, merged_fields);
+        }
+        return next;
+      }
+      if (s.study_id === duplicate_study_id) {
+        if (action === "keep_both" || action === "revert_duplicate") {
+          return {
+            ...s,
+            is_duplicate: 0,
+            duplicate_of_study_id: "",
+            screening_status: "pending",
+            screening_reason: "",
+          };
+        } else if (action === "keep_primary" || action === "merge_metadata") {
+          return {
+            ...s,
+            is_duplicate: 1,
+            duplicate_of_study_id: primary_study_id,
+            screening_status: "excluded",
+            screening_reason: action === "merge_metadata" ? "Duplicate publication (merged into primary)" : "Duplicate publication",
+          };
+        }
+      }
+      return s;
+    });
+    saveStoredProjectStudies(projectId, updated);
+    return {
+      status: "success",
+      action: action || "keep_primary",
+      message: `Resolution '${action}' applied successfully.`,
+      primary_study_id,
+      duplicate_study_id,
+      updated_fields: merged_fields ? Object.keys(merged_fields) : [],
+    } as unknown as T;
+  }
+
+  if (path.includes("/studies/duplicates") || path.includes("/studies/deduplicate")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    const studies = getStoredProjectStudies(projectId);
+    const groups: DuplicateGroup[] = [];
+
+    if (studies.length >= 2) {
+      const s1 = studies[0];
+      const s2 = studies[1];
+      groups.push({
+        group_id: "grp_demo_1",
+        canonical_study_id: s1.study_id,
+        canonical_title: s1.title,
+        canonical_doi: s1.doi || "10.1055/s-0042-1750831",
+        canonical_pmid: s1.pmid || "35928812",
+        canonical_authors: s1.authors || "Birua et al.",
+        canonical_year: s1.publication_year || 2022,
+        canonical_journal: s1.journal || "Asian Journal of Neurosurgery",
+        canonical_abstract: s1.abstract || "Pure arterial malformations (PAMs) are unusual vascular lesions of the brain consisting of coiled arterial loops. We present a rare PCA PAM coexisting with dysplastic internal carotid artery managed conservatively.",
+        canonical_is_duplicate: s1.is_duplicate ? 1 : 0,
+        canonical_screening_status: s1.screening_status || "included",
+        duplicates: [
+          {
+            study_id: s2.study_id,
+            title: s2.title || `${s1.title} [Preprint / Conference Edition]`,
+            doi: s2.doi || s1.doi || "10.1055/s-0042-1750831",
+            pmid: s2.pmid || s1.pmid || "35928812",
+            authors: s2.authors || s1.authors || "Birua et al.",
+            publication_year: s2.publication_year || 2022,
+            journal: s2.journal || "ResearchSquare Clinical Preprints",
+            abstract: s2.abstract || "Pure arterial malformations (PAMs) of the posterior circulation. Coiled arterial loops with dysplastic ICA.",
+            is_duplicate: s2.is_duplicate ? 1 : 0,
+            screening_status: s2.screening_status || "pending",
+            match_reason: s1.doi && s2.doi && s1.doi === s2.doi ? "doi" : "title_similarity",
+            similarity_score: 0.985,
+          },
+        ],
+      });
+    }
+
+    return {
+      project_id: projectId,
+      total_studies: studies.length,
+      duplicate_groups: groups,
+      total_duplicates: groups.reduce((acc, g) => acc + g.duplicates.length, 0),
+      duplicates_marked: groups.reduce((acc, g) => acc + g.duplicates.filter((d) => d.is_duplicate === 1).length, 0),
+    } as unknown as T;
+  }
+
   if (path.match(/\/studies\/[^/]+$/)) {
     const studyId = path.split("/").pop();
     const all = getStoredProjectStudies();
@@ -859,7 +952,7 @@ export interface Study {
   extraction_status: string;
   pdf_status: string;
   pdf_path: string;
-  is_duplicate?: boolean;
+  is_duplicate?: boolean | number;
   duplicate_of_study_id?: string | null;
   ai_priority_score?: number | null;
   ai_confidence?: number | null;
@@ -948,6 +1041,26 @@ export interface RobSummary {
   assessments_needing_review_count?: number;
   judgment_counts: Record<string, number>;
   assessments: RobSummaryAssessment[];
+  tool_groups?: Record<string, {
+    tool: string;
+    total_assessments: number;
+    judgment_counts: Record<string, number>;
+    assessments: RobSummaryAssessment[];
+  }>;
+  manual_review?: RobToolClassification[];
+}
+
+export interface RobToolClassification {
+  classification_id: string;
+  study_id: string;
+  study_title: string;
+  study_design: string;
+  selected_tool: string;
+  confidence: number;
+  alternatives: string[];
+  rationale: string;
+  evidence: string[];
+  status: "assigned" | "manual_review";
 }
 
 export interface RobSummaryAssessment {
@@ -1082,6 +1195,11 @@ export interface PrismaFlow {
     studies_in_meta_analysis: number;
   };
   pending: number;
+  audit?: {
+    human_decisions: number;
+    ai_decisions: number;
+    total_decisions: number;
+  };
 }
 
 // ── PDF Processing ──
@@ -1253,6 +1371,13 @@ export interface PicoExtractionResponse {
   extraction_confidence: string;
 }
 
+export interface ProtocolExtractionResponse extends PicoExtractionResponse {
+  inclusion?: string[];
+  exclusion?: string[];
+  search_strings?: Record<string, string>;
+  variables?: Array<Record<string, unknown>>;
+}
+
 // ── Hypothesis ──
 
 export interface SecondaryHypothesis {
@@ -1369,15 +1494,19 @@ export interface PubMedFulltextResult {
   doi?: string;
 }
 
-// ── v2.4: Duplicate Detection ──
+// ── v2.4: Duplicate Detection & Review ──
 
 export interface DuplicateMatch {
   study_id: string;
   title: string;
-  doi: string;
-  pmid: string;
-  authors: string;
-  publication_year: number | null;
+  doi?: string;
+  pmid?: string;
+  authors?: string;
+  publication_year?: number | null;
+  journal?: string;
+  abstract?: string;
+  is_duplicate?: number;
+  screening_status?: string;
   match_reason: string;
   similarity_score: number;
 }
@@ -1386,6 +1515,14 @@ export interface DuplicateGroup {
   group_id: string;
   canonical_study_id: string;
   canonical_title: string;
+  canonical_doi?: string;
+  canonical_pmid?: string;
+  canonical_authors?: string;
+  canonical_year?: number | null;
+  canonical_journal?: string;
+  canonical_abstract?: string;
+  canonical_is_duplicate?: number;
+  canonical_screening_status?: string;
   duplicates: DuplicateMatch[];
 }
 
@@ -1396,6 +1533,15 @@ export interface DeduplicationResult {
   total_duplicates: number;
   duplicates_marked: number;
 }
+
+export interface DuplicateResolveRequest {
+  action: "keep_primary" | "keep_both" | "merge_metadata" | "revert_duplicate";
+  primary_study_id: string;
+  duplicate_study_id?: string;
+  group_id?: string;
+  merged_fields?: Record<string, any>;
+}
+
 
 // ── v2.4: Exclusion Reason Taxonomy ──
 
@@ -2223,7 +2369,7 @@ export const api = {
   overrideAssessmentTool: (assessmentId: string, toolId: string) =>
     request<RobAssessment>(`/rob/assessments/${assessmentId}/tool`, {
       method: "PUT",
-      body: JSON.stringify({ tool: toolId }),
+      body: JSON.stringify({ tool_id: toolId }),
     }),
 
   // Batch RoB Runs
@@ -2277,6 +2423,16 @@ export const api = {
   // RoB Summary & Export
   robSummary: (projectId: string) =>
     request<RobSummary>(`/rob/projects/${projectId}/summary`),
+  robvisPlot: (projectId: string, plot: "traffic_light" | "summary" = "traffic_light") =>
+    request<{
+      success: boolean;
+      engine: string;
+      plot: string;
+      tool: string;
+      study_count: number;
+      svg: string;
+      message: string;
+    }>(`/rob/projects/${projectId}/figure?plot=${plot === "summary" ? "summary" : "traffic"}`),
   robvisFigure: (projectId: string, plot: "traffic" | "summary" = "traffic") =>
     request<{
       success: boolean;
@@ -2288,6 +2444,32 @@ export const api = {
       png_base64: string;
       message: string;
     }>(`/rob/projects/${projectId}/figure?plot=${plot}`),
+  robFigures: (projectId: string) =>
+    request<{
+      project_id: string;
+      figures: {
+        success: boolean;
+        engine: string;
+        plot: "traffic" | "summary";
+        tool: string;
+        study_count: number;
+        svg: string;
+        png_base64: string;
+        message: string;
+      }[];
+    }>(`/rob/projects/${projectId}/figures`),
+  reportingProfile: (projectId: string) =>
+    request<{
+      profile: {
+        profile_key: string;
+        name: string;
+        sections: { key: string; name: string; items: { key: string; label: string }[] }[];
+      };
+      counts: Record<string, Record<string, number>>;
+      study_count: number;
+      svg: string;
+      png_base64: string;
+    }>(`/rob/projects/${projectId}/reporting-profile`),
   robExport: (projectId: string, format = "csv") =>
     `${API_BASE}/rob/projects/${projectId}/export?format=${format}`,
 
@@ -2391,7 +2573,7 @@ export const api = {
     request<PICO>(`/projects/${projectId}/pico`),
   updatePico: (projectId: string, data: PICOUpdate) =>
     request<PICO>(`/projects/${projectId}/pico`, { method: "PUT", body: JSON.stringify(data) }),
-  extractPico: async (projectId: string, file: File): Promise<PicoExtractionResponse> => {
+  extractPico: async (projectId: string, file: File): Promise<ProtocolExtractionResponse> => {
     const isBrowser = typeof window !== "undefined";
     const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
     const isDemoExplicit = isBrowser && localStorage.getItem("demo_mode") === "true";
@@ -2480,25 +2662,27 @@ export const api = {
         : "Adult and pediatric patients undergoing diagnostic evaluation and interventional management for confirmed vascular lesions";
 
       const defaultIndexTest = isVascular
-        ? "High-resolution digital subtraction angiography (DSA) with 3D rotational reconstructions and hemodynamic wall shear stress analysis"
+        ? "Descriptive review. Treatment of the malformation is an extraction field, not an eligibility criterion."
         : "Contrast-enhanced cross-sectional imaging and catheter digital subtraction angiography";
 
       const defaultComparator = isVascular
-        ? "Conservative non-interventional observation or standard surgical parent-artery sacrifice"
+        ? "Pre-specified contrasts: aneurysm-present versus aneurysm-absent, and single-territory versus multi-territory."
         : "Standard-of-care medical management or historical reference standard";
 
       const defaultOutcome = isVascular
-        ? "Angiographic lesion obliteration, parent-artery patency preservation, freedom from intracranial hemorrhage, and functional outcome (mRS ≤ 2)"
+        ? "Ischemic stroke, hemorrhagic stroke, mass effect, hydrocephalus, symptom course, and radiographic progression."
         : "Diagnostic accuracy, complete lesion resolution, procedure-related morbidity, and long-term functional survival";
 
-      const defaultStudyDesign = "Multicenter observational cohort and systematic comparative review";
+      const defaultStudyDesign = isVascular
+        ? "Observational studies with original patient-level data, including case reports and case series, all languages."
+        : "Multicenter observational cohort and systematic comparative review";
 
       const defaultQuestion = isVascular
-        ? "In patients with intracranial pure arterial malformations (PAM), does parent-artery preserving targeted endovascular treatment yield superior clinical and angiographic outcomes compared to conservative management?"
+        ? "What are the angioarchitecture, aneurysm association, and stroke outcomes of intracranial pure arterial malformations?"
         : "What are the comparative diagnostic efficacy and long-term clinical safety profiles of targeted interventional protocols versus conservative observation?";
 
       const defaultHypothesis = isVascular
-        ? "Parent-artery preserving targeted endovascular intervention provides a significantly lower rate of long-term hemorrhage and neurological deficit compared to observational management in symptomatic PAM."
+        ? "Evidence is pooled as descriptive proportions with Wilson 95% CIs. NR values are not imputed."
         : "Targeted endovascular intervention achieves higher definitive lesion control with acceptable complication rates compared to non-interventional management.";
 
       return {
@@ -2698,9 +2882,23 @@ export const api = {
   prismaPngUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/png`,
   prismaDocxUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/docx`,
 
-  // v2.4: Duplicate Detection
+  // v2.4: Duplicate Detection & Review
   deduplicateStudies: (projectId: string, autoMark = true) =>
     request<DeduplicationResult>(`/projects/${projectId}/studies/deduplicate?auto_mark=${autoMark}`, { method: "POST" }),
+  getDuplicateGroups: (projectId: string) =>
+    request<DeduplicationResult>(`/projects/${projectId}/studies/duplicates`),
+  resolveDuplicate: (projectId: string, payload: DuplicateResolveRequest) =>
+    request<{
+      status: string;
+      action: string;
+      message: string;
+      primary_study_id?: string;
+      duplicate_study_id?: string;
+      updated_fields?: string[];
+    }>(`/projects/${projectId}/studies/deduplicate/resolve`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 
   // v2.4: Exclusion Reason Taxonomy
   getExclusionReasons: (projectId: string) =>
@@ -2776,6 +2974,13 @@ export const api = {
   // ── Analysis (Phase 4: Descriptive & Statistical Analysis) ──
 
   /** Full data profiling report: distributions, missing values, outliers, correlations */
+  getDescriptiveSynthesis: (projectId: string) =>
+    request<{
+      variables: Array<Record<string, unknown>>;
+      note: string;
+      prisma?: { identified: number; duplicates_removed: number; by_status: Record<string, number> };
+    }>(`/projects/${projectId}/analysis/descriptive`),
+
   getAnalysisProfile: (projectId: string) =>
     request<AnalysisProfile>(`/projects/${projectId}/analysis/profile`),
 

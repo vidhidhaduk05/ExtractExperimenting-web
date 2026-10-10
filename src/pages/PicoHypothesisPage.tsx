@@ -11,6 +11,8 @@ import {
 
 const DATABASES = [
   { key: "pubmed", label: "PubMed", hasAutoFetch: true },
+  { key: "ovid_medline", label: "Ovid MEDLINE", hasAutoFetch: false },
+  { key: "openalex", label: "OpenAlex", hasAutoFetch: false },
   { key: "embase", label: "Embase", hasAutoFetch: false },
   { key: "cochrane", label: "Cochrane", hasAutoFetch: false },
   { key: "web_of_science", label: "Web of Science", hasAutoFetch: false },
@@ -269,25 +271,66 @@ export function PicoHypothesisPage() {
     setUploadedFileName(file.name);
     try {
       const result = await api.extractPico(projectId!, file);
-      // Auto-fill PICO form
-      setPicoForm({
+      
+      const newPico = {
         population: result.population || picoForm.population,
         index_test: result.index_test || picoForm.index_test,
         comparator: result.comparator || picoForm.comparator,
         outcome: result.outcome || picoForm.outcome,
         study_design: result.study_design || picoForm.study_design,
-      });
-      // Auto-fill hypothesis fields
+      };
+
+      const newRq = result.research_question || researchQuestion;
+      const newHyp = result.hypothesis || hypothesis;
+
+      // Auto-fill PICO form and Hypothesis in local state immediately
+      setPicoForm(newPico);
       if (result.research_question) setResearchQuestion(result.research_question);
       if (result.hypothesis) setHypothesis(result.hypothesis);
       setExtractionConfidence(result.extraction_confidence || "high");
       setExtractionStatus("done");
-      // Auto-expand PICO and Hypothesis sections so user immediately sees results
+
+      // Synchronously populate React Query caches so refetches never revert values
+      queryClient.setQueryData(["pico", projectId], newPico);
+      queryClient.setQueryData(["hypothesis", projectId], (prev: any) => ({
+        ...(prev || {}),
+        hypothesis: newHyp,
+        research_question: newRq,
+      }));
+
+      // Immediately persist PICO and Hypothesis to ensure database & UI are synced
+      try {
+        await Promise.all([
+          api.updatePico(projectId!, newPico),
+          api.updateHypothesis(projectId!, {
+            hypothesis: newHyp,
+            research_question: newRq,
+            secondary_hypotheses: secondary,
+          }),
+        ]);
+        setPicoSaved(true);
+        setHypSaved(true);
+        setTimeout(() => {
+          setPicoSaved(false);
+          setHypSaved(false);
+        }, 3500);
+      } catch (saveErr) {
+        console.warn("[Auto-persist Warning]", saveErr);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["search-strings", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+
+      // Auto-expand PICO, Hypothesis, and Criteria sections so user immediately views all fields filled
       setOpenSections((prev) => ({
         ...prev,
         protocol: true,
         pico: true,
         hypothesis: true,
+        criteria: true,
       }));
     } catch (err) {
       console.error("[Protocol Upload Error]", err);
@@ -396,7 +439,7 @@ export function PicoHypothesisPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.docx,.txt,.md,.rtf"
+                accept=".pdf,.docx,.doc,.txt,.md,.rtf"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
