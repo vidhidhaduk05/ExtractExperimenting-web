@@ -19,6 +19,7 @@ from models import (
     ResearchQuestionRequest, ResearchQuestionResponse,
     PicoExtractionResponse,
     PubMedFetchRequest, PubMedFetchResponse,
+    OpenAlexFetchRequest,
     ReferenceUploadResponse,
     ProjectMemberResponse, ProjectMemberInvite, ProjectMemberUpdate,
     KeywordGroupCreate, KeywordGroupUpdate, KeywordGroupResponse,
@@ -244,7 +245,25 @@ async def delete_project(
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user, min_role="owner")
-    cursor = conn.execute(
+    study_ids = "SELECT study_id FROM studies WHERE project_id = ?"
+    for table in ("extractions", "pdf_documents", "pdf_highlights", "audit_log"):
+        conn.execute(
+            f"DELETE FROM {table} WHERE study_id IN ({study_ids})",
+            (project_id,),
+        )
+    for table in (
+        "search_logs",
+        "screening_decisions",
+        "screening_conflicts",
+        "screening_keywords",
+        "clarification_questions",
+        "project_members",
+        "user_review_state",
+        "variables",
+        "studies",
+    ):
+        conn.execute(f"DELETE FROM {table} WHERE project_id = ?", (project_id,))
+    conn.execute(
         "DELETE FROM projects WHERE project_id = ?", (project_id,)
     )
     conn.commit()
@@ -412,6 +431,100 @@ async def get_pubmed_key(
     return {"project_id": project_id, "has_key": bool(key), "key_preview": key[:8] + "..." if len(key) > 8 else key}
 
 
+def _slug_code(text: str) -> str:
+    chars = []
+    for ch in text.lower():
+        chars.append(ch if ch.isalnum() else "_")
+    slug = "".join(chars).strip("_")
+    while "__" in slug:
+        slug = slug.replace("__", "_")
+    return (slug[:48] or "criterion")
+
+
+def _persist_protocol_extraction(conn, project_id: str, result: dict) -> None:
+    """Save extracted protocol fields onto a project. A blank project stays blank until this runs."""
+    inclusion = [text for text in (result.get("inclusion") or []) if str(text).strip()]
+    exclusion = [text for text in (result.get("exclusion") or []) if str(text).strip()]
+    strings = dict(result.get("search_strings") or {})
+    variables = result.get("variables") or []
+    has_structure = bool(inclusion or exclusion or strings or variables)
+    has_pico = any(str(result.get(key) or "").strip() for key in (
+        "population", "index_test", "comparator", "outcome", "study_design",
+    ))
+    if not has_structure and not has_pico:
+        return
+
+    if strings.get("pubmed") and not strings.get("openalex"):
+        from services.literature_search_service import pubmed_query_to_openalex
+        strings["openalex"] = pubmed_query_to_openalex(strings["pubmed"])
+        result["search_strings"] = strings
+
+    pico = {
+        "population": result.get("population") or "",
+        "index_test": result.get("index_test") or "",
+        "comparator": result.get("comparator") or "",
+        "outcome": result.get("outcome") or "",
+        "study_design": result.get("study_design") or "",
+    }
+    sets = ["pico_json = ?", "hypothesis = ?", "research_question = ?"]
+    params = [
+        json.dumps(pico),
+        result.get("hypothesis") or "",
+        result.get("research_question") or "",
+    ]
+    if has_structure:
+        sets.extend([
+            "inclusion_criteria_json = ?",
+            "exclusion_criteria_json = ?",
+            "search_strings_json = ?",
+            "exclusion_reasons_json = ?",
+        ])
+        params.extend([
+            json.dumps([{"id": str(uuid.uuid4()), "text": text} for text in inclusion]),
+            json.dumps([{"id": str(uuid.uuid4()), "text": text} for text in exclusion]),
+            json.dumps(strings),
+            json.dumps([
+                {"code": _slug_code(text), "label": text}
+                for text in exclusion
+            ]),
+        ])
+    params.append(project_id)
+    conn.execute(
+        f"UPDATE projects SET {', '.join(sets)} WHERE project_id = ?",
+        tuple(params),
+    )
+
+    if variables:
+        from services.variable_generator import _default_extraction_prompt
+        existing = {
+            row["name"]
+            for row in conn.execute(
+                "SELECT name FROM variables WHERE project_id = ?", (project_id,)
+            ).fetchall()
+        }
+        for var in variables:
+            name = str(var.get("name") or "").strip()
+            if not name or name in existing:
+                continue
+            prompt = _default_extraction_prompt(
+                name, var.get("description") or "", var.get("field_type") or "text",
+            )
+            conn.execute(
+                """INSERT INTO variables
+                   (variable_id, project_id, section, name, field_type, allowed_values,
+                    range_min, range_max, description, extraction_prompt, order_index, is_base)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
+                (
+                    str(uuid.uuid4()), project_id, var.get("section") or "Context", name,
+                    var.get("field_type") or "text", var.get("allowed_values") or "",
+                    None, None, var.get("description") or "", prompt,
+                    int(var.get("order_index") or 0),
+                ),
+            )
+            existing.add(name)
+    conn.commit()
+
+
 # ═══════════════════════════════════════════════════════════════════════
 #  PICO Extraction from Document
 # ═══════════════════════════════════════════════════════════════════════
@@ -447,6 +560,7 @@ async def extract_pico_from_document(
 
     try:
         result = pico_extractor.extract_pico_from_file(tmp_path, filename)
+        _persist_protocol_extraction(conn, project_id, result)
         return PicoExtractionResponse(**result)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -683,8 +797,14 @@ async def pubmed_fetch_studies(project_id: str,
 
         api_key = row["pubmed_api_key"] or ""
 
-        # Search PubMed
-        results = pubmed_service.batch_search(pubmed_query, api_key=api_key, max_results=body.max_results)
+        # Search PubMed. Date bounds are optional; an empty bound does not filter.
+        results = pubmed_service.batch_search(
+            pubmed_query,
+            api_key=api_key,
+            max_results=body.max_results,
+            mindate=body.mindate,
+            maxdate=body.maxdate,
+        )
 
         # Get existing PMIDs to skip duplicates
         existing_pmids = set()
@@ -717,6 +837,25 @@ async def pubmed_fetch_studies(project_id: str,
             imported += 1
 
         conn.commit()
+        from services.search_audit_service import log_search
+        log_search(
+            project_id,
+            "PubMed",
+            pubmed_query,
+            filters={
+                "mindate": body.mindate,
+                "maxdate": body.maxdate,
+                "datetype": "pdat",
+                "note": (
+                    "Eligibility text may say no date restriction. "
+                    "The executed window is the search-strategy header when dates are set. "
+                    "Ovid MEDLINE has no API in this app. "
+                    "Scopus and Web of Science are not queried; OpenAlex is the substitute."
+                ),
+            },
+            results_count=len(results),
+            db=conn,
+        )
         return PubMedFetchResponse(
             query=pubmed_query,
             imported_count=imported,
@@ -727,6 +866,131 @@ async def pubmed_fetch_studies(project_id: str,
         raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"PubMed fetch failed: {str(e)}")
+
+@router.post("/projects/{project_id}/search-strings/openalex/fetch", response_model=PubMedFetchResponse)
+async def openalex_fetch_studies(
+    project_id: str,
+    body: OpenAlexFetchRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Import OpenAlex records for the saved PubMed concepts.
+
+    OpenAlex stands in for Scopus and Web of Science, which this app cannot query.
+    PubMed [tiab] tags are not sent; quoted phrases are searched in title and abstract.
+    """
+    from services.literature_search_service import openalex_phrases, search_openalex_phrases
+    from services.search_audit_service import log_search
+
+    row = conn.execute(
+        "SELECT search_strings_json FROM projects WHERE project_id = ?",
+        (project_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_access(conn, project_id, user, min_role="editor")
+
+    strings = {}
+    try:
+        strings = json.loads(row["search_strings_json"]) if row["search_strings_json"] else {}
+    except json.JSONDecodeError:
+        strings = {}
+    pubmed_query = strings.get("pubmed", "")
+    if not pubmed_query and not strings.get("openalex"):
+        raise HTTPException(status_code=400, detail="No search string found. Save a protocol search first.")
+
+    phrases = openalex_phrases(pubmed_query or strings.get("openalex", ""))
+    found = search_openalex_phrases(
+        phrases,
+        mindate=body.mindate or "1960-01-01",
+        maxdate=body.maxdate or "2026-08-31",
+        max_results=body.max_results,
+    )
+    if found["errors"] and not found["results"]:
+        raise HTTPException(status_code=502, detail="; ".join(found["errors"]))
+
+    existing_dois = set()
+    existing_pmids = set()
+    existing_titles = set()
+    for existing in conn.execute(
+        "SELECT doi, pmid, title FROM studies WHERE project_id = ?",
+        (project_id,),
+    ).fetchall():
+        if existing["doi"]:
+            existing_dois.add(existing["doi"].strip().lower().removeprefix("https://doi.org/"))
+        if existing["pmid"]:
+            existing_pmids.add(existing["pmid"].strip())
+        if existing["title"]:
+            existing_titles.add("".join(ch.lower() for ch in existing["title"] if ch.isalnum()))
+
+    imported = 0
+    skipped = 0
+    for study_data in found["results"]:
+        doi = (study_data.get("doi") or "").strip().lower()
+        pmid = (study_data.get("pmid") or "").strip()
+        title_key = "".join(ch.lower() for ch in (study_data.get("title") or "") if ch.isalnum())
+        if (doi and doi in existing_dois) or (pmid and pmid in existing_pmids) or (title_key and title_key in existing_titles):
+            skipped += 1
+            continue
+        conn.execute(
+            """INSERT INTO studies
+               (study_id, project_id, title, authors, publication_year, journal,
+                doi, pmid, abstract, source, study_design, metadata_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                str(uuid.uuid4()), project_id, study_data.get("title") or "",
+                study_data.get("authors") or "", study_data.get("publication_year"),
+                study_data.get("journal") or "", study_data.get("doi") or "",
+                pmid, study_data.get("abstract") or "", "OpenAlex", "",
+                json.dumps({"oa_url": study_data.get("oa_url") or "", "openalex_id": study_data.get("id") or ""}),
+            ),
+        )
+        if doi:
+            existing_dois.add(doi)
+        if pmid:
+            existing_pmids.add(pmid)
+        if title_key:
+            existing_titles.add(title_key)
+        imported += 1
+    conn.commit()
+
+    query_record = " OR ".join(f'"{phrase}"' for phrase in phrases)
+    for database_name, key, reason in (
+        ("Ovid MEDLINE", "ovid_medline", "No Ovid API connector in this app."),
+        ("Scopus", "scopus", "Scopus search is pending in the protocol and has no API connector here."),
+        ("Web of Science", "web_of_science", "Web of Science search is pending in the protocol and has no API connector here."),
+    ):
+        if strings.get(key):
+            log_search(
+                project_id,
+                database_name,
+                strings[key],
+                filters={"executed": False, "reason": reason},
+                results_count=0,
+                db=conn,
+            )
+    log_search(
+        project_id,
+        "OpenAlex",
+        query_record,
+        filters={
+            "mindate": body.mindate,
+            "maxdate": body.maxdate,
+            "phrases": phrases,
+            "reported_count": found["reported_count"],
+            "errors": found["errors"],
+            "note": "Substitute for pending Scopus and Web of Science searches. Ovid MEDLINE was not queried.",
+        },
+        results_count=len(found["results"]),
+        db=conn,
+    )
+    return PubMedFetchResponse(
+        query=query_record,
+        imported_count=imported,
+        skipped_duplicates=skipped,
+        total_found=len(found["results"]),
+    )
+
 
 # ═══════════════════════════════════════════════════════════════════════
 #  Reference Upload Endpoint

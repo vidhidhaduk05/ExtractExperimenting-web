@@ -11,6 +11,7 @@ Endpoints:
   PUT    /api/rob/answers/{id}             — update signaling answer
   POST   /api/rob/assessments/{id}/ai-prefill — run AI pre-fill
   GET    /api/projects/{project_id}/rob/summary — project summary
+  GET    /api/projects/{project_id}/rob/figure  — robvis traffic-light or summary figure
   GET    /api/projects/{project_id}/rob/export  — export RoB data
 """
 from __future__ import annotations
@@ -30,7 +31,7 @@ from services.rob_tools import (
     list_tools, get_tool, tool_to_dict, select_rob_tool,
     select_rob_tool_with_alternatives,
 )
-from services import rob_service, rob_ai
+from services import rob_service, rob_ai, robvis_service
 from services import pdf_service
 from database import get_db
 from services.db_backend import DBBackend
@@ -319,6 +320,61 @@ async def project_rob_summary(project_id: str):
     return rob_service.get_project_summary(project_id)
 
 
+@router.get("/projects/{project_id}/figure")
+async def project_rob_figure(
+    project_id: str,
+    plot: str = Query("traffic", pattern="^(traffic|traffic_light|summary)$"),
+    colour: str = Query("cochrane"),
+    tool: Optional[str] = Query(None),
+):
+    """Publication RoB figure from the robvis R package.
+
+    plot is traffic or summary. colour is cochrane or colourblind.
+    When R or robvis is missing, the traffic light uses the matplotlib chart.
+    """
+    summary = rob_service.get_project_summary(project_id)
+    groups = summary.get("tool_groups") or {}
+    if tool:
+        if tool not in groups:
+            raise HTTPException(status_code=404, detail=f"No assessments use tool: {tool}")
+        summary = {**groups[tool], "project_id": project_id, "tool": tool}
+    elif len(groups) > 1:
+        first_tool = sorted(groups)[0]
+        summary = {**groups[first_tool], "project_id": project_id, "tool": first_tool}
+    return robvis_service.render_robvis(summary, plot=plot, colour=colour)
+
+
+@router.get("/projects/{project_id}/figures")
+async def project_rob_figures(project_id: str, colour: str = Query("cochrane")):
+    """Traffic-light and summary figures separated by applicable tool."""
+    summary = rob_service.get_project_summary(project_id)
+    return {"project_id": project_id, "figures": robvis_service.render_project_figures(summary, colour)}
+
+
+@router.get("/projects/{project_id}/reporting-profile")
+async def project_reporting_profile(
+    project_id: str,
+    conn: DBBackend = Depends(get_db),
+):
+    """Separate MTR/RC reporting-completeness data and publication figure."""
+    import base64
+    from services.reporting_profile_service import get_project_profile, render_profile_figure
+    data = get_project_profile(project_id, conn)
+    if data.get("rows"):
+        svg = render_profile_figure(data, "svg").decode("utf-8")
+        png = base64.b64encode(render_profile_figure(data, "png")).decode("ascii")
+    else:
+        svg = ""
+        png = ""
+    return {
+        "profile": data["profile"],
+        "counts": data["counts"],
+        "study_count": len({row["study_id"] for row in data["rows"]}),
+        "svg": svg,
+        "png_base64": png,
+    }
+
+
 @router.post("/projects/{project_id}/run")
 async def run_batch_rob(
     project_id: str,
@@ -358,16 +414,23 @@ async def cancel_batch_rob(
 @router.get("/projects/{project_id}/export")
 async def export_rob(
     project_id: str,
-    format: str = Query("csv", pattern="^(csv|xlsx)$"),
+    format: str = Query("csv", pattern="^(csv|xlsx|zip)$"),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
-    """Export RoB assessments for a project as CSV or Excel."""
-    filepath = rob_service.export_project_rob(project_id, format=format)
+    """Export RoB assessments or the complete mixed-tool ZIP package."""
+    check_project_access(conn, project_id, user)
+    if format == "zip":
+        from services.rob_export_service import export_project_package
+        filepath = export_project_package(project_id, db=conn)
+    else:
+        filepath = rob_service.export_project_rob(project_id, format=format, db=conn)
     filename = filepath.split("/")[-1]
     from fastapi.responses import FileResponse
     return FileResponse(
         filepath,
         filename=filename,
-        media_type="application/octet-stream",
+        media_type="application/zip" if format == "zip" else "application/octet-stream",
     )
 
 

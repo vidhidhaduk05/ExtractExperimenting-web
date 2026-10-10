@@ -279,6 +279,60 @@ CREATE TABLE IF NOT EXISTS rob_runs (
 
 CREATE INDEX IF NOT EXISTS idx_rob_runs_project ON rob_runs(project_id);
 
+CREATE TABLE IF NOT EXISTS rob_tool_classifications (
+    classification_id TEXT PRIMARY KEY,
+    study_id           TEXT NOT NULL,
+    project_id         TEXT NOT NULL,
+    study_design       TEXT DEFAULT '',
+    selected_tool      TEXT DEFAULT '',
+    confidence         REAL DEFAULT 0.0,
+    alternatives_json  TEXT DEFAULT '[]',
+    rationale          TEXT DEFAULT '',
+    evidence_json      TEXT DEFAULT '[]',
+    status             TEXT DEFAULT 'manual_review',
+    model_name         TEXT DEFAULT '',
+    classified_at      TEXT DEFAULT (datetime('now')),
+    human_verified     INTEGER DEFAULT 0,
+    FOREIGN KEY (study_id) REFERENCES studies(study_id),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rob_classification_project
+    ON rob_tool_classifications(project_id);
+CREATE INDEX IF NOT EXISTS idx_rob_classification_study
+    ON rob_tool_classifications(study_id);
+
+CREATE TABLE IF NOT EXISTS reporting_profile_assessments (
+    profile_assessment_id TEXT PRIMARY KEY,
+    study_id              TEXT NOT NULL,
+    project_id            TEXT NOT NULL,
+    profile_key           TEXT NOT NULL,
+    assessed_at           TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (study_id) REFERENCES studies(study_id),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id)
+);
+
+CREATE TABLE IF NOT EXISTS reporting_profile_items (
+    profile_item_id       TEXT PRIMARY KEY,
+    profile_assessment_id TEXT NOT NULL,
+    section_key           TEXT NOT NULL,
+    item_key              TEXT NOT NULL,
+    item_label            TEXT NOT NULL,
+    status                TEXT DEFAULT 'not_reported',
+    evidence              TEXT DEFAULT '',
+    confidence            REAL DEFAULT 0.0,
+    human_verified        INTEGER DEFAULT 0,
+    FOREIGN KEY (profile_assessment_id)
+        REFERENCES reporting_profile_assessments(profile_assessment_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reporting_profile_project
+    ON reporting_profile_assessments(project_id);
+CREATE INDEX IF NOT EXISTS idx_reporting_profile_study
+    ON reporting_profile_assessments(study_id);
+CREATE INDEX IF NOT EXISTS idx_reporting_profile_items_assessment
+    ON reporting_profile_items(profile_assessment_id);
+
 -- ── NEW: v2.4 Screening decisions (multi-reviewer) ──
 
 CREATE TABLE IF NOT EXISTS screening_decisions (
@@ -442,6 +496,20 @@ CREATE TABLE IF NOT EXISTS screening_keywords (
     FOREIGN KEY (project_id) REFERENCES projects(project_id)
 );
 
+CREATE TABLE IF NOT EXISTS search_logs (
+    log_id            TEXT PRIMARY KEY,
+    project_id        TEXT NOT NULL,
+    database_name     TEXT NOT NULL,
+    date_searched     TEXT NOT NULL,
+    query_string      TEXT DEFAULT '',
+    filters_json      TEXT DEFAULT '{}',
+    results_count     INTEGER DEFAULT 0,
+    export_format     TEXT DEFAULT 'json',
+    raw_results_json  TEXT DEFAULT '[]',
+    created_by        TEXT DEFAULT '',
+    FOREIGN KEY (project_id) REFERENCES projects(project_id)
+);
+
 -- ── Indexes ──
 
 CREATE INDEX IF NOT EXISTS idx_studies_project ON studies(project_id);
@@ -470,6 +538,7 @@ CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_review_state_user ON user_review_state(user_id);
 CREATE INDEX IF NOT EXISTS idx_review_state_project ON user_review_state(project_id);
 CREATE INDEX IF NOT EXISTS idx_screening_keywords_project ON screening_keywords(project_id);
+CREATE INDEX IF NOT EXISTS idx_search_logs_project ON search_logs(project_id);
 """
 
 # ── Column migrations for existing tables ──
@@ -609,12 +678,16 @@ def reset_db():
             "meta_analysis_studies", "meta_analyses",
             "pdf_highlights",
             "pdf_documents",
+            "reporting_profile_items", "reporting_profile_assessments",
+            "rob_tool_classifications",
             "rob_signaling_answers", "rob_domain_judgments", "rob_assessments",
+            "rob_runs",
             "screening_conflicts", "screening_decisions",
             "user_review_state",
             "project_members",
             "sessions",
             "extractions", "audit_log", "variables", "studies",
+            "search_logs",
             "projects", "users", "cache_store",
         ]
         for t in tables:

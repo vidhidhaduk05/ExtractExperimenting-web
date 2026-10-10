@@ -63,6 +63,9 @@ TABLE_PK = {
     "project_members": "member_id",
     "user_review_state": "state_id",
     "rob_runs": "run_id",
+    "rob_tool_classifications": "classification_id",
+    "reporting_profile_assessments": "profile_assessment_id",
+    "reporting_profile_items": "profile_item_id",
 }
 
 # Tables that have project_id for GSI
@@ -70,6 +73,7 @@ PROJECT_GSI_TABLES = {
     "studies", "variables", "rob_assessments", "meta_analyses",
     "grade_assessments", "screening_decisions", "screening_conflicts",
     "pdf_highlights", "project_members", "user_review_state",
+    "rob_tool_classifications", "reporting_profile_assessments",
 }
 
 # Tables that have study_id for GSI
@@ -77,6 +81,7 @@ STUDY_GSI_TABLES = {
     "extractions", "audit_log", "rob_assessments", "pdf_documents",
     "screening_decisions", "screening_conflicts", "pdf_highlights",
     "user_review_state",
+    "rob_tool_classifications", "reporting_profile_assessments",
 }
 
 

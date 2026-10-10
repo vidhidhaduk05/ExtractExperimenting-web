@@ -204,6 +204,40 @@ def is_llm_available() -> bool:
 extract_variables_with_llm = extract_variables_with_aide_engine
 
 
+def _eligibility_block(
+    pico_criteria: Optional[Dict[str, Any]],
+    exclusion_reasons: Optional[List[str]] = None,
+    inclusion_criteria: Optional[List[str]] = None,
+) -> str:
+    """Render eligibility text. Only listed exclusions may exclude a study."""
+    pico_criteria = pico_criteria or {}
+    inclusion = list(inclusion_criteria or [])
+    extra = pico_criteria.get("inclusion_criteria") or pico_criteria.get("inclusion") or []
+    if isinstance(extra, str):
+        extra = [extra]
+    for item in extra:
+        if item and item not in inclusion:
+            inclusion.append(str(item))
+    lines = [
+        "PICO Eligibility Criteria:",
+        f"Population: {pico_criteria.get('population', 'Patients with relevant clinical conditions')}",
+        f"Intervention: {pico_criteria.get('intervention', pico_criteria.get('index_test', 'See the protocol. Do not invent an intervention criterion.'))}",
+        f"Comparator: {pico_criteria.get('comparator', 'See the protocol contrasts.')}",
+        f"Outcome: {pico_criteria.get('outcomes', pico_criteria.get('outcome', 'See the protocol outcomes.'))}",
+    ]
+    if inclusion:
+        lines.append("Inclusion Criteria:\n- " + "\n- ".join(str(item) for item in inclusion))
+    if exclusion_reasons:
+        lines.append("Exclusion Criteria:\n- " + "\n- ".join(str(item) for item in exclusion_reasons))
+    lines.append(
+        "Apply only the exclusion criteria listed above. "
+        "Do not exclude a study because it is a case report, a case series, or written in a "
+        "language other than English unless an exclusion criterion says so. "
+        "If the inclusion criteria allow case reports or all languages, those studies stay eligible."
+    )
+    return "\n".join(lines)
+
+
 
 # ── Optional Jev screening (settings.jev_mode; "off" leaves the LLM path untouched) ──
 
@@ -265,15 +299,9 @@ def screen_fulltext_with_llm(
     if study_text is None:
         return {"recommendation": "uncertain", "confidence": 0.0, "reason_text": "No text provided"}
 
-    exclusion_text = ""
-    if exclusion_reasons:
-        exclusion_text = f"\nSpecific Exclusion Criteria:\n- " + "\n- ".join(exclusion_reasons)
+    eligibility = _eligibility_block(pico_criteria, exclusion_reasons)
 
-    prompt = f"""PICO Eligibility Criteria:
-Population: {pico_criteria.get('population', 'Patients with neurovascular / radiological conditions')}
-Intervention: {pico_criteria.get('intervention', pico_criteria.get('index_test', 'Diagnostic or therapeutic interventions'))}
-Comparison: {pico_criteria.get('comparator', 'Control or alternate standard of care')}
-Outcome: {pico_criteria.get('outcomes', pico_criteria.get('outcome', 'Clinical and radiographic outcomes'))}{exclusion_text}
+    prompt = f"""{eligibility}
 
 Study Full Text:
 {study_text[:20000]}
@@ -358,21 +386,15 @@ def screen_title_only_with_llm(
             "matched_keywords": [],
         }
 
-    exclusion_text = ""
-    if exclusion_reasons:
-        exclusion_text = "\nExclusion Criteria:\n- " + "\n- ".join(exclusion_reasons)
+    eligibility = _eligibility_block(pico_criteria, exclusion_reasons)
 
-    prompt = f"""PICO Eligibility Criteria:
-Population: {pico_criteria.get('population', 'Patients with relevant clinical/radiological conditions')}
-Intervention: {pico_criteria.get('intervention', pico_criteria.get('index_test', 'Diagnostic or therapeutic interventions'))}
-Comparator: {pico_criteria.get('comparator', 'Control or alternate standard')}
-Outcome: {pico_criteria.get('outcomes', pico_criteria.get('outcome', 'Clinical or diagnostic outcomes'))}{exclusion_text}
+    prompt = f"""{eligibility}
 
 Study Title: {title}
 
 Based on the TITLE ONLY, determine if this study should be:
-- "include": Title clearly matches PICO criteria
-- "exclude": Title clearly does NOT match (wrong population, wrong intervention, animal/phantom study, review, etc.)
+- "include": Title clearly matches the eligibility criteria, including an eligible case report
+- "exclude": Title clearly matches one of the listed exclusion criteria
 - "uncertain": Cannot determine from title alone — needs abstract review
 
 Return JSON:
@@ -469,15 +491,9 @@ def screen_title_abstract_with_llm(
             "needs_clarification": False,
         }
 
-    exclusion_text = ""
-    if exclusion_reasons:
-        exclusion_text = "\nExclusion Criteria:\n- " + "\n- ".join(exclusion_reasons)
+    eligibility = _eligibility_block(pico_criteria, exclusion_reasons)
 
-    prompt = f"""PICO Eligibility Criteria:
-Population: {pico_criteria.get('population', 'Patients with relevant clinical/radiological conditions')}
-Intervention: {pico_criteria.get('intervention', pico_criteria.get('index_test', 'Diagnostic or therapeutic interventions'))}
-Comparator: {pico_criteria.get('comparator', 'Control or alternate standard')}
-Outcome: {pico_criteria.get('outcomes', pico_criteria.get('outcome', 'Clinical or diagnostic outcomes'))}{exclusion_text}
+    prompt = f"""{eligibility}
 
 Study Title: {title}
 Study Abstract: {abstract}

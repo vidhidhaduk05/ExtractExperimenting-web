@@ -437,18 +437,17 @@ def get_project_summary(project_id: str, db: Optional[DBBackend] = None) -> dict
     studies = db.query("studies", {"project_id": project_id})
     study_map = {s["study_id"]: s for s in studies}
 
-    if not assessments:
-        return {
-            "project_id": project_id,
-            "tool": "",
-            "total_assessments": 0,
-            "judgment_counts": {},
-            "assessments": [],
-            "pending_human_review_count": 0,
-            "assessments_needing_review_count": 0,
+    classifications = db.query("rob_tool_classifications", {"project_id": project_id})
+    from services.rob_classification_service import decode_classification
+    manual_review = [
+        {
+            **decode_classification(c),
+            "study_title": study_map.get(c.get("study_id"), {}).get("title", ""),
         }
+        for c in classifications
+        if c.get("status") == "manual_review"
+    ]
 
-    tool = assessments[0].get("tool", "")
     judgment_counts = {}
     for a in assessments:
         j = a.get("overall_judgment", "")
@@ -465,6 +464,7 @@ def get_project_summary(project_id: str, db: Optional[DBBackend] = None) -> dict
             "study_id": a["study_id"],
             "study_title": s.get("title", ""),
             "study_design": s.get("study_design", ""),
+            "tool": a.get("tool", ""),
             "outcome_label": a.get("outcome_label", ""),
             "overall_judgment": a.get("overall_judgment", ""),
             "ai_prefilled": bool(a.get("ai_prefilled")),
@@ -500,6 +500,21 @@ def get_project_summary(project_id: str, db: Optional[DBBackend] = None) -> dict
 
         assessment_list.append(detail)
 
+    tool_groups = {}
+    for item in assessment_list:
+        key = item.get("tool") or "unknown"
+        group = tool_groups.setdefault(key, {
+            "tool": key,
+            "total_assessments": 0,
+            "judgment_counts": {},
+            "assessments": [],
+        })
+        group["assessments"].append(item)
+        group["total_assessments"] += 1
+        judgment = item.get("overall_judgment", "")
+        group["judgment_counts"][judgment] = group["judgment_counts"].get(judgment, 0) + 1
+
+    tool = next(iter(tool_groups)) if len(tool_groups) == 1 else ("mixed" if tool_groups else "")
     return {
         "project_id": project_id,
         "tool": tool,
@@ -508,6 +523,8 @@ def get_project_summary(project_id: str, db: Optional[DBBackend] = None) -> dict
         "assessments": assessment_list,
         "pending_human_review_count": total_flagged_questions,
         "assessments_needing_review_count": assessments_needing_review,
+        "tool_groups": tool_groups,
+        "manual_review": manual_review,
     }
 
 
@@ -679,9 +696,49 @@ def auto_assess_study(
         return {**existing[0], "created": False, "prefilled": False}
 
     try:
-        tool_key = select_rob_tool(study.get("study_design", "") or "")
-        if tool_key == "manual":
-            tool_key = "robins_i"
+        from services import pdf_service
+        from services.rob_classification_service import classify_study, persist_classification
+        pdf_data = pdf_service.get_pdf_data(study_id, db=db)
+        project = db.get("projects", project_id) or {}
+        threshold = float(project.get("rob_confidence_threshold", 0.7) or 0.7)
+        model_fn = None
+        try:
+            from services.llm_extractor import is_llm_available
+            if is_llm_available():
+                from services.llm_client import get_client
+                model_fn = get_client().as_model_fn(
+                    "classify_rob_tool",
+                    system_prompt="You are a systematic-review methods expert. Select appraisal instruments only from the supplied closed list.",
+                    max_tokens=1200,
+                )
+        except Exception:
+            model_fn = None
+        classification = classify_study(study, pdf_data, threshold=threshold, model_fn=model_fn)
+        persist_classification(db, study_id, project_id, classification)
+        from services.reporting_profile_service import assess_profile, persist_profile
+        profile_model_fn = None
+        if model_fn is not None:
+            try:
+                from services.llm_client import get_client
+                profile_model_fn = get_client().as_model_fn(
+                    "assess_reporting_profile",
+                    system_prompt="Assess reporting completeness using only verbatim article evidence.",
+                    max_tokens=3000,
+                )
+            except Exception:
+                profile_model_fn = None
+        profile_items = assess_profile(study, pdf_data, model_fn=profile_model_fn)
+        persist_profile(db, project_id, study_id, profile_items)
+        tool_key = classification["tool"]
+        if classification["status"] != "assigned" or tool_key == "manual":
+            logger.info(f"[RoB] {study_id} requires manual tool review")
+            return {
+                "study_id": study_id,
+                "created": False,
+                "prefilled": False,
+                "classification": classification,
+                "manual_review": True,
+            }
         assessment = create_assessment(
             study_id=study_id,
             project_id=project_id,
@@ -710,7 +767,11 @@ def auto_assess_study(
         pdf_data = pdf_service.get_pdf_data(study_id, db=db)
         full_text = (pdf_data or {}).get("full_text", "") or ""
         if len(full_text) <= 100:
-            full_text = ""
+            full_text = "\n\n".join(
+                str(page.get("text") or "")
+                for page in ((pdf_data or {}).get("pages") or [])
+                if isinstance(page, dict)
+            )
 
         ai_results = rob_ai.prefill_assessment(
             tool_key=assessment["tool"],

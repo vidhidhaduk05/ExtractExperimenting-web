@@ -11,6 +11,7 @@ from __future__ import annotations
 import time
 import xml.etree.ElementTree as ET
 from typing import Optional
+from urllib.parse import quote
 
 import requests
 
@@ -55,7 +56,7 @@ def _eutils_url(endpoint: str, params: dict, api_key: str = "") -> str:
     params.setdefault("retmode", "xml")
     if api_key:
         params["api_key"] = api_key
-    query = "&".join(f"{k}={v}" for k, v in params.items())
+    query = "&".join(f"{k}={quote(str(v), safe='')}" for k, v in params.items())
     return f"{EUTILS_BASE}/{endpoint}?{query}"
 
 
@@ -278,76 +279,91 @@ def fetch_fulltext(pmid: str, api_key: str = "", email: str = "radextract@norepl
     }
 
 
-def batch_search(query: str, api_key: str = "", max_results: int = 50) -> list[dict]:
+def batch_search(query: str, api_key: str = "", max_results: int = 50,
+                 mindate: str = "", maxdate: str = "", datetype: str = "pdat") -> list[dict]:
     """Search PubMed and return metadata + abstracts for matching articles.
 
-    Args:
-        query: PubMed search query (e.g., "CT MRI metastasis colorectal cancer")
-        api_key: optional NCBI API key for higher rate limits
-        max_results: maximum number of results to return
-
-    Returns:
-        List of study metadata dicts (including abstracts)
+    Pages with retstart until the result count is exhausted or max_results is reached.
+    mindate and maxdate use NCBI form YYYY/MM/DD. Sort is omitted so the page
+    walk is a complete retrieval rather than a relevance sample.
     """
-    # 1. Search for PMIDs
-    esearch_url = _eutils_url("esearch.fcgi", {
-        "db": "pubmed",
-        "term": query,
-        "retmax": str(max_results),
-        "retmode": "json",
-        "sort": "relevance",
-    }, api_key)
+    if max_results < 1:
+        return []
 
-    resp = _eutils_get(esearch_url, api_key, timeout=15)
-    data = resp.json()
+    page_size = 200
+    pmids: list[str] = []
+    retstart = 0
+    total = None
+    while len(pmids) < max_results:
+        take = min(page_size, max_results - len(pmids))
+        params = {
+            "db": "pubmed",
+            "term": query,
+            "retmax": str(take),
+            "retstart": str(retstart),
+            "retmode": "json",
+        }
+        if mindate:
+            params["mindate"] = mindate
+            params["datetype"] = datetype
+        if maxdate:
+            params["maxdate"] = maxdate
+            params["datetype"] = datetype
+        resp = _eutils_get(_eutils_url("esearch.fcgi", params, api_key), api_key, timeout=30)
+        esearch_res = resp.json().get("esearchresult", {})
+        ids = [str(pmid) for pmid in esearch_res.get("idlist", []) if pmid]
+        if total is None:
+            raw_count = esearch_res.get("count")
+            total = int(raw_count) if raw_count not in (None, "") else None
+        if not ids:
+            break
+        pmids.extend(ids)
+        retstart += len(ids)
+        if len(ids) < take:
+            break
+        if total is not None and retstart >= total:
+            break
 
-    pmids = data.get("esearchresult", {}).get("idlist", [])
     if not pmids:
         return []
 
-    # 2. Fetch summaries for all PMIDs
-    summary_url = _eutils_url("esummary.fcgi", {
-        "db": "pubmed",
-        "id": ",".join(pmids),
-        "retmode": "json",
-    }, api_key)
-
-    resp2 = _eutils_get(summary_url, api_key, timeout=30)
-    summary_data = resp2.json()
-
     results = []
-    result_dict = summary_data.get("result", {})
-    for pmid in pmids:
-        article = result_dict.get(str(pmid), {})
-        if article.get("error"):
-            continue
+    abstracts: dict[str, str] = {}
+    for offset in range(0, len(pmids), page_size):
+        chunk = pmids[offset:offset + page_size]
+        summary_url = _eutils_url("esummary.fcgi", {
+            "db": "pubmed",
+            "id": ",".join(chunk),
+            "retmode": "json",
+        }, api_key)
+        summary_data = _eutils_get(summary_url, api_key, timeout=60).json()
+        result_dict = summary_data.get("result", {})
+        for pmid in chunk:
+            article = result_dict.get(str(pmid), {})
+            if not article or article.get("error"):
+                continue
+            metadata = _parse_article_metadata(article)
+            metadata["pmid"] = str(pmid)
+            metadata["source"] = "PubMed"
+            metadata["abstract"] = ""
+            results.append(metadata)
 
-        metadata = _parse_article_metadata(article)
-        metadata["pmid"] = str(pmid)
-        metadata["source"] = "PubMed"
-        metadata["abstract"] = ""  # Will be filled below
-        results.append(metadata)
-
-    # 3. Fetch abstracts for all PMIDs in one efetch call
-    if pmids:
         try:
             efetch_url = _eutils_url("efetch.fcgi", {
                 "db": "pubmed",
-                "id": ",".join(pmids),
+                "id": ",".join(chunk),
                 "rettype": "abstract",
                 "retmode": "xml",
             }, api_key)
-
-            resp3 = _eutils_get(efetch_url, api_key, timeout=30)
+            resp3 = _eutils_get(efetch_url, api_key, timeout=60)
             if resp3.status_code == 200:
-                abstracts = _parse_abstract_from_efetch(resp3.text)
-                for r in results:
-                    r["abstract"] = abstracts.get(r["pmid"], "")
+                abstracts.update(_parse_abstract_from_efetch(resp3.text))
         except Exception as e:
-            # Abstract fetch is non-fatal; results still have metadata
             import logging
             logging.getLogger(__name__).warning("PubMed abstract fetch failed: %s", e)
 
+    for record in results:
+        record["abstract"] = abstracts.get(record["pmid"], "")
     return results
 
 

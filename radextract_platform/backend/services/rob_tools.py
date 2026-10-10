@@ -493,6 +493,64 @@ NOS = RobTool(
     ],
 )
 
+# ── JBI critical-appraisal checklists ──
+
+JBI_OPTIONS = ["yes", "no", "unclear", "not_applicable"]
+
+JBI_CASE_REPORT = RobTool(
+    key="jbi_case_report",
+    name="JBI Case Report",
+    full_name="JBI Critical Appraisal Checklist for Case Reports",
+    description="Item-level critical appraisal for a single clinical case. JBI does not prescribe an overall risk-of-bias score.",
+    study_designs=["case report", "single case"],
+    judgment_options=["low", "some_concerns", "high", "unclear"],
+    has_overall=False,
+    domains=[
+        Domain(
+            key="critical_appraisal",
+            label="JBI Case Report critical-appraisal items",
+            signaling_questions=[
+                SignalingQuestion("jbi_cr_1", "Were the patient's demographic characteristics clearly described?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cr_2", "Was the patient's history clearly described and presented as a timeline?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cr_3", "Was the current clinical condition of the patient on presentation clearly described?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cr_4", "Were diagnostic tests or assessment methods and their results clearly described?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cr_5", "Was the intervention or treatment procedure clearly described?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cr_6", "Was the post-intervention clinical condition clearly described?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cr_7", "Were adverse events or unanticipated events identified and described?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cr_8", "Does the case report provide takeaway lessons?", JBI_OPTIONS),
+            ],
+        )
+    ],
+)
+
+JBI_CASE_SERIES = RobTool(
+    key="jbi_case_series",
+    name="JBI Case Series",
+    full_name="JBI Critical Appraisal Checklist for Case Series",
+    description="Item-level critical appraisal for case series. JBI does not prescribe an overall risk-of-bias score.",
+    study_designs=["case series", "clinical series"],
+    judgment_options=["low", "some_concerns", "high", "unclear"],
+    has_overall=False,
+    domains=[
+        Domain(
+            key="critical_appraisal",
+            label="JBI Case Series critical-appraisal items",
+            signaling_questions=[
+                SignalingQuestion("jbi_cs_1", "Were there clear criteria for inclusion in the case series?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cs_2", "Was the condition measured in a standard and reliable way for all participants?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cs_3", "Were valid methods used to identify the condition for all participants?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cs_4", "Did the case series have consecutive inclusion of participants?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cs_5", "Did the case series have complete inclusion of participants?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cs_6", "Was there clear reporting of participant demographics?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cs_7", "Was there clear reporting of clinical information?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cs_8", "Were outcomes or follow-up results clearly reported?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cs_9", "Was there clear reporting of site or clinic demographic information?", JBI_OPTIONS),
+                SignalingQuestion("jbi_cs_10", "Was the statistical analysis appropriate?", JBI_OPTIONS),
+            ],
+        )
+    ],
+)
+
 
 # ── Tool registry ──
 
@@ -502,6 +560,8 @@ TOOLS: dict[str, RobTool] = {
     "rob2": ROB_2,
     "robins_e": ROBINS_E,
     "nos": NOS,
+    "jbi_case_report": JBI_CASE_REPORT,
+    "jbi_case_series": JBI_CASE_SERIES,
 }
 
 
@@ -528,7 +588,7 @@ def select_rob_tool_with_alternatives(study_design: str) -> tuple[str, float, li
     """Auto-select RoB tool with confidence score and alternative suggestions."""
     design = (study_design or "").lower().strip()
     if not design:
-        return ("manual", 0.0, ["rob2", "robins_i", "nos", "quadas2"])
+        return ("manual", 0.0, ["rob2", "robins_i", "robins_e", "nos", "quadas2"])
 
     # Diagnostic accuracy studies → QUADAS-2
     if any(kw in design for kw in [
@@ -557,21 +617,20 @@ def select_rob_tool_with_alternatives(study_design: str) -> tuple[str, float, li
     ]):
         return ("robins_e", 0.88, ["robins_i", "nos"])
 
-    # Case series or case report → NOS (or specialized case-series checklist)
-    if any(kw in design for kw in [
-        "case series", "case report", "cases", "clinical series",
-    ]):
-        return ("nos", 0.85, ["robins_i"])
+    if any(kw in design for kw in ["case report", "single case"]):
+        return ("jbi_case_report", 0.96, ["jbi_case_series"])
+
+    if any(kw in design for kw in ["case series", "clinical series"]):
+        return ("jbi_case_series", 0.96, ["jbi_case_report", "nos"])
 
     # Observational cohort or case-control studies → ROBINS-I / NOS
     if any(kw in design for kw in [
         "prospective cohort", "retrospective cohort", "case-control", "case control",
         "cross-sectional", "observational", "registry", "cohort",
     ]):
-        # Default to robins_i per existing tests, with nos as strong alternative
-        return ("robins_i", 0.85, ["nos", "robins_e"])
+        return ("nos", 0.82, ["robins_i", "robins_e"])
 
-    return ("manual", 0.2, ["robins_i", "rob2", "nos", "quadas2"])
+    return ("manual", 0.2, ["robins_i", "rob2", "robins_e", "nos", "quadas2"])
 
 
 # ── Judgment algorithms ──
@@ -703,6 +762,16 @@ def compute_domain_judgment(tool_key: str, answers: dict[str, str]) -> str:
         return compute_rob2_domain_judgment(answers)
     elif tool_key == "nos":
         return compute_nos_domain_judgment(answers)
+    elif tool_key in ("jbi_case_report", "jbi_case_series"):
+        active = [a for a in answers.values() if a and a != "not_applicable"]
+        if not active or any(a == "unclear" for a in active):
+            return "unclear"
+        no_count = sum(1 for a in active if a == "no")
+        if no_count == 0:
+            return "low"
+        if no_count == 1:
+            return "some_concerns"
+        return "high"
     return "unclear"
 
 
@@ -778,6 +847,8 @@ def compute_overall_judgment(tool_key: str, domain_judgments: dict[str, str]) ->
         return compute_rob2_overall(domain_judgments)
     elif tool_key == "nos":
         return compute_nos_overall(domain_judgments)
+    elif tool_key in ("jbi_case_report", "jbi_case_series"):
+        return "not_applicable"
     return "unclear"
 
 
@@ -793,6 +864,7 @@ JUDGMENT_COLORS = {
     "critical": "#B00000",      # dark red
     "no_information": "#999999", # gray
     "pending": "#CCCCCC",       # light gray
+    "not_applicable": "#BDBDBD",
 }
 
 JUDGMENT_LABELS = {
@@ -805,6 +877,7 @@ JUDGMENT_LABELS = {
     "critical": "Critical",
     "no_information": "No Information",
     "pending": "Pending",
+    "not_applicable": "Not applicable",
 }
 
 

@@ -2,7 +2,7 @@
 from __future__ import annotations
 import uuid
 import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 import sqlite3
@@ -331,6 +331,7 @@ async def get_missing_data_summary(
 async def coded_extract(
     study_id: str,
     project_id: str,
+    require_fulltext: bool = Query(False),
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
@@ -358,6 +359,7 @@ async def coded_extract(
         return coded_extract_study(
             study_id, project_id, db=conn, model_fn=model_fn,
             reviewer=user["username"] if user else "coded_auto",
+            require_fulltext=require_fulltext,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

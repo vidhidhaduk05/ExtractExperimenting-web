@@ -35,6 +35,46 @@ def _verify_project(project_id: str, conn: sqlite3.Connection) -> None:
         raise HTTPException(status_code=404, detail="Project not found")
 
 
+@router.get("/projects/{project_id}/analysis/descriptive")
+async def get_descriptive_synthesis(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)):
+    """Wilson proportions and medians for extracted variables. NR stays missing."""
+    from services.descriptive_synthesis import synthesize_project
+    check_project_access(conn, project_id, user)
+    _verify_project(project_id, conn)
+    rows = conn.execute(
+        """SELECT v.name, v.field_type, e.value, e.study_id
+           FROM extractions e
+           JOIN variables v ON v.variable_id = e.variable_id
+           JOIN studies s ON s.study_id = e.study_id
+           WHERE v.project_id = ?
+             AND COALESCE(s.is_duplicate, 0) = 0
+             AND s.screening_status IN ('ta_included', 'ft_included', 'included')""",
+        (project_id,),
+    ).fetchall()
+    payload = synthesize_project([dict(row) for row in rows])
+    studies = conn.execute(
+        """SELECT screening_status, COUNT(*) AS n
+           FROM studies WHERE project_id = ? AND COALESCE(is_duplicate, 0) = 0
+           GROUP BY screening_status""",
+        (project_id,),
+    ).fetchall()
+    identified = conn.execute(
+        "SELECT COUNT(*) AS n FROM studies WHERE project_id = ?",
+        (project_id,),
+    ).fetchone()
+    duplicates = conn.execute(
+        "SELECT COUNT(*) AS n FROM studies WHERE project_id = ? AND COALESCE(is_duplicate, 0) = 1",
+        (project_id,),
+    ).fetchone()
+    payload["prisma"] = {
+        "identified": identified["n"] if identified else 0,
+        "duplicates_removed": duplicates["n"] if duplicates else 0,
+        "by_status": {row["screening_status"]: row["n"] for row in studies},
+    }
+    return payload
+
+
 @router.get("/projects/{project_id}/analysis/profile")
 async def get_analysis_profile(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):

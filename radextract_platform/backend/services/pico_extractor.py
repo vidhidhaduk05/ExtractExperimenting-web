@@ -178,6 +178,258 @@ def _is_any_header(line: str) -> bool:
     return False
 
 
+def _empty_pico() -> dict:
+    return {
+        "population": "",
+        "index_test": "",
+        "comparator": "",
+        "outcome": "",
+        "study_design": "",
+        "research_question": "",
+        "hypothesis": "",
+        "extraction_confidence": "low",
+        "inclusion": [],
+        "exclusion": [],
+        "search_strings": {},
+        "variables": [],
+    }
+
+
+def _section_body(text: str, start_needles: list[str], end_needles: list[str]) -> list[str]:
+    """Return lines after a short heading until the next heading."""
+    lines = text.split("\n")
+    start = None
+    for i, line in enumerate(lines):
+        low = line.strip().lower()
+        if not low or len(low) > 90:
+            continue
+        if any(needle in low for needle in start_needles):
+            start = i + 1
+            break
+    if start is None:
+        return []
+    body = []
+    for line in lines[start:]:
+        low = line.strip().lower()
+        if low and len(low) < 90 and any(low.startswith(needle) or needle in low for needle in end_needles):
+            break
+        if line.strip():
+            body.append(line.strip())
+    return body
+
+
+def _criteria_lines(lines: list[str]) -> list[str]:
+    skip_prefixes = (
+        "all of the following",
+        "any one of the following",
+        "studies included",
+        "period window",
+    )
+    criteria = []
+    for line in lines:
+        low = line.lower().lstrip("-•* ").strip()
+        if any(low.startswith(prefix) for prefix in skip_prefixes):
+            continue
+        if len(low) < 12:
+            continue
+        criteria.append(line.lstrip("-•* ").strip())
+    return criteria
+
+
+def _db_key(label: str) -> str:
+    low = label.lower()
+    if "pubmed" in low:
+        return "pubmed"
+    if "ovid" in low:
+        return "ovid_medline"
+    if "scopus" in low:
+        return "scopus"
+    if "web of science" in low or low.strip() in {"wos", "web of science"}:
+        return "web_of_science"
+    if "openalex" in low:
+        return "openalex"
+    return ""
+
+
+def _parse_search_strings(text: str) -> dict:
+    strings = {}
+    for line in text.split("\n"):
+        if "|" not in line:
+            continue
+        cells = [cell.strip() for cell in line.split("|")]
+        cells = [cell for cell in cells if cell]
+        if len(cells) < 2:
+            continue
+        key = _db_key(cells[0])
+        if not key:
+            continue
+        query = cells[1].strip()
+        if len(query) < 8:
+            continue
+        strings[key] = query
+    return strings
+
+
+def _variable_section(label: str) -> str:
+    match = re.match(r"V(\d+)", label.strip(), re.IGNORECASE)
+    if not match:
+        return "Context"
+    number = int(match.group(1))
+    if number <= 8:
+        return "Q1 - Angioarchitecture"
+    if number <= 12:
+        return "Q2 - Aneurysm Association"
+    if number <= 17:
+        return "Q3 - Atherosclerosis and Risk"
+    if number == 18:
+        return "Q4 - Treatment"
+    if number <= 22:
+        return "Q5 - Stroke Outcomes"
+    return "Context"
+
+
+def _variable_name(label: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9]+", "_", label).strip("_")
+    return cleaned[:80] or "variable"
+
+
+def _parse_variables(text: str) -> list[dict]:
+    variables = []
+    seen = set()
+    order = 1
+    for line in text.split("\n"):
+        if "|" not in line:
+            continue
+        cells = [cell.strip() for cell in line.split("|")]
+        cells = [cell for cell in cells if cell]
+        if len(cells) < 2:
+            continue
+        label = cells[0]
+        if not re.match(r"(V\d+\b|Demographics\b|Follow-up\b|Outcome\b)", label, re.IGNORECASE):
+            continue
+        name = _variable_name(label)
+        if name in seen:
+            continue
+        seen.add(name)
+        coding = cells[1]
+        notes = cells[-1] if len(cells) > 2 else ""
+        coding_low = coding.lower()
+        if "continuous" in coding_low:
+            field_type = "number"
+            allowed = ""
+        elif "/" in coding or coding_low.startswith("present"):
+            field_type = "categorical"
+            allowed = coding[:500]
+        else:
+            field_type = "text"
+            allowed = ""
+        variables.append({
+            "section": _variable_section(label),
+            "name": name,
+            "field_type": field_type,
+            "allowed_values": allowed,
+            "description": notes[:500] or label,
+            "order_index": order,
+        })
+        order += 1
+    return variables
+
+
+def _is_descriptive_case_review(text: str) -> bool:
+    low = text.lower()
+    has_bounds = "inclusion criteria" in low and "exclusion criteria" in low
+    allows_cases = "case report" in low
+    has_classic_intervention = bool(re.search(r"(?m)^(index test|intervention)\s*:?\s*$", low))
+    return has_bounds and allows_cases and not has_classic_intervention
+
+
+def _apply_descriptive_protocol(text: str, result: dict) -> dict:
+    """Fill PICO from an eligibility protocol that is not written as classic PICO headings."""
+    if not _is_descriptive_case_review(text):
+        return result
+
+    inclusion_body = _section_body(
+        text,
+        ["inclusion criteria"],
+        ["exclusion criteria", "1.2", "operational"],
+    )
+    exclusion_body = _section_body(
+        text,
+        ["exclusion criteria"],
+        ["operational", "1.3", "search strategy", "2. search", "2. "],
+    )
+    definition = _section_body(
+        text,
+        ["operational"],
+        ["search strategy", "2. search", "data extraction", "3. "],
+    )
+    analysis = _section_body(
+        text,
+        ["analysis plan"],
+        ["4.1", "current screening", "variable schema"],
+    )
+
+    result["inclusion"] = _criteria_lines(inclusion_body)
+    result["exclusion"] = _criteria_lines(exclusion_body)
+    result["search_strings"] = _parse_search_strings(text)
+    result["variables"] = _parse_variables(text)
+
+    if definition:
+        definition_text = " ".join(definition)[:1200]
+        current = (result.get("population") or "").lower()
+        # "Inclusion criteria" is a population synonym, so the header grab is the
+        # eligibility intro rather than the condition being reviewed.
+        if (
+            not current
+            or "all of the following" in current
+            or current.startswith("inclusion")
+            or len(current) < 80
+        ):
+            result["population"] = definition_text
+    if not result.get("study_design"):
+        for line in result["inclusion"]:
+            if line.lower().startswith("study design"):
+                result["study_design"] = line.split(":", 1)[-1].strip()
+                break
+        if not result.get("study_design"):
+            result["study_design"] = (
+                "Observational studies with original patient-level data, "
+                "including case reports and case series, all languages."
+            )
+    if not result.get("index_test"):
+        result["index_test"] = (
+            "Descriptive review. Treatment is recorded as an extraction field "
+            "and is not an eligibility criterion."
+        )
+    if not result.get("comparator") and "aneurysm" in text.lower() and "territor" in text.lower():
+        result["comparator"] = (
+            "Pre-specified contrasts: aneurysm-present versus aneurysm-absent, "
+            "and single-territory versus multi-territory."
+        )
+    if not result.get("outcome") and "stroke" in text.lower():
+        result["outcome"] = (
+            "Ischemic stroke, hemorrhagic stroke, mass effect, hydrocephalus, "
+            "symptom course, and radiographic progression."
+        )
+    if not result.get("research_question"):
+        title_lines = []
+        for line in text.split("\n"):
+            low = line.strip().lower()
+            if not low:
+                continue
+            if "eligibility" in low or "inclusion criteria" in low:
+                break
+            if len(line.strip()) > 20:
+                title_lines.append(line.strip())
+            if len(title_lines) >= 2:
+                break
+        if title_lines:
+            result["research_question"] = " ".join(title_lines)[:500]
+    if not result.get("hypothesis") and analysis:
+        result["hypothesis"] = " ".join(analysis)[:800]
+    return result
+
+
 def _find_keyword_match(text: str, patterns: list[str]) -> str:
     """Find content matching keyword patterns."""
     for pattern in patterns:
@@ -203,19 +455,11 @@ def extract_pico_from_text(text: str) -> dict:
         study_design, research_question, hypothesis, extraction_confidence.
     """
     if not text or not text.strip():
-        return {
-            "population": "",
-            "index_test": "",
-            "comparator": "",
-            "outcome": "",
-            "study_design": "",
-            "research_question": "",
-            "hypothesis": "",
-            "extraction_confidence": "low",
-        }
+        return _empty_pico()
 
     text = _normalize_text(text)
-    result = {}
+    result = _empty_pico()
+    result["extraction_confidence"] = "low"
 
     # Try section header detection first, then fall back to keyword patterns
     for field, headers in PICO_HEADERS.items():
@@ -223,6 +467,8 @@ def extract_pico_from_text(text: str) -> dict:
         if not content:
             content = _find_keyword_match(text, KEYWORD_PATTERNS.get(field, []))
         result[field] = content
+
+    result = _apply_descriptive_protocol(text, result)
 
     # Calculate confidence based on how many elements were found
     pico_fields = ["population", "index_test", "comparator", "outcome", "study_design"]
@@ -334,6 +580,17 @@ def _extract_docx_text(file_path: str) -> str:
         for para in doc.paragraphs:
             if para.text.strip():
                 paragraphs.append(para.text.strip())
+        for table in doc.tables:
+            for row in table.rows:
+                cells = [" ".join(cell.text.split()) for cell in row.cells]
+                cells = [cell for cell in cells if cell]
+                # Word merges cells, so the same text can repeat across a row.
+                deduped = []
+                for cell in cells:
+                    if not deduped or deduped[-1] != cell:
+                        deduped.append(cell)
+                if deduped:
+                    paragraphs.append(" | ".join(deduped))
         return "\n\n".join(paragraphs)
     except ImportError:
         raise RuntimeError("python-docx is not installed")

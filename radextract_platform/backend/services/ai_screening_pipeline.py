@@ -50,6 +50,20 @@ class AIScreeningPipeline:
                         exclusions.append(r)
             except Exception:
                 pass
+        inclusion = []
+        if proj.get("inclusion_criteria_json"):
+            try:
+                inclusion_data = json.loads(proj["inclusion_criteria_json"])
+                for item in inclusion_data:
+                    if isinstance(item, dict) and item.get("text"):
+                        inclusion.append(item["text"])
+                    elif isinstance(item, str):
+                        inclusion.append(item)
+            except Exception:
+                pass
+        if inclusion:
+            pico = dict(pico)
+            pico["inclusion_criteria"] = inclusion
         return pico, exclusions
 
     def run_full_pipeline(

@@ -125,6 +125,54 @@ TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             }
         }
     },
+    "classify_rob_tool": {
+        "type": "function",
+        "function": {
+            "name": "classify_rob_tool",
+            "description": "Classify a research study design and select the applicable validated risk-of-bias or critical-appraisal tool from a closed list.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "study_design": {"type": "string"},
+                    "tool": {
+                        "type": "string",
+                        "enum": ["rob2", "robins_i", "robins_e", "quadas2", "nos", "jbi_case_report", "jbi_case_series", "manual"]
+                    },
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "alternatives": {"type": "array", "items": {"type": "string"}},
+                    "rationale": {"type": "string"},
+                    "evidence": {"type": "array", "items": {"type": "string"}}
+                },
+                "required": ["study_design", "tool", "confidence", "alternatives", "rationale", "evidence"]
+            }
+        }
+    },
+    "assess_reporting_profile": {
+        "type": "function",
+        "function": {
+            "name": "assess_reporting_profile",
+            "description": "Assess MTR and reporting-completeness checklist items from a research article using verbatim evidence.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "item_key": {"type": "string"},
+                                "status": {"type": "string", "enum": ["complete", "not_reported", "not_applicable"]},
+                                "evidence": {"type": "string"},
+                                "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+                            },
+                            "required": ["item_key", "status", "evidence", "confidence"]
+                        }
+                    }
+                },
+                "required": ["items"]
+            }
+        }
+    },
     "prefill_rob_domain": {
         "type": "function",
         "function": {

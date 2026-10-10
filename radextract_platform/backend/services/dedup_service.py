@@ -164,6 +164,32 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
         for j in range(1, len(indices)):
             union(indices[0], indices[j])
 
+    # Strategy 3: case-insensitive exact title
+    exact_titles: dict[str, list[int]] = {}
+    for i, study in enumerate(studies):
+        exact = (study.get("title") or "").strip().casefold()
+        if exact:
+            exact_titles.setdefault(exact, []).append(i)
+    for indices in exact_titles.values():
+        for j in range(1, len(indices)):
+            union(indices[0], indices[j])
+
+    # Strategy 4: alphanumeric title + first author surname + year
+    author_year: dict[tuple, list[int]] = {}
+    for i, study in enumerate(studies):
+        alnum = "".join(ch for ch in (study.get("title") or "").lower() if ch.isalnum())
+        first = ""
+        authors = study.get("authors") or ""
+        if authors:
+            first = authors.split(",")[0].split(";")[0].strip().split()
+            first = first[0].lower() if first else ""
+        year = study.get("publication_year")
+        if alnum and first and year:
+            author_year.setdefault((alnum, first, year), []).append(i)
+    for indices in author_year.values():
+        for j in range(1, len(indices)):
+            union(indices[0], indices[j])
+
     # Strategy 3: Title similarity + author/year
     for i in range(len(studies)):
         for j in range(i + 1, len(studies)):
@@ -268,6 +294,9 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                     "is_duplicate": 1,
                     "duplicate_of_study_id": g["canonical_study_id"],
                     "duplicate_group_id": g["group_id"],
+                    "screening_status": "excluded",
+                    "screening_reason": "Duplicate publication",
+                    "screening_stage": "dedup",
                 })
                 duplicates_marked += 1
         db.commit()

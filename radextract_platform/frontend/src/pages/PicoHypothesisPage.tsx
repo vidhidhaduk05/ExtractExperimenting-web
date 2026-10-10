@@ -11,6 +11,8 @@ import {
 
 const DATABASES = [
   { key: "pubmed", label: "PubMed", hasAutoFetch: true },
+  { key: "ovid_medline", label: "Ovid MEDLINE", hasAutoFetch: false },
+  { key: "openalex", label: "OpenAlex", hasAutoFetch: false },
   { key: "embase", label: "Embase", hasAutoFetch: false },
   { key: "cochrane", label: "Cochrane", hasAutoFetch: false },
   { key: "web_of_science", label: "Web of Science", hasAutoFetch: false },
@@ -282,6 +284,11 @@ export function PicoHypothesisPage() {
       if (result.hypothesis) setHypothesis(result.hypothesis);
       setExtractionConfidence(result.extraction_confidence || "high");
       setExtractionStatus("done");
+      queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["search-strings", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       // Auto-expand PICO and Hypothesis sections so user immediately sees results
       setOpenSections((prev) => ({
         ...prev,

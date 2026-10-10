@@ -103,10 +103,19 @@ def screen_with_clarification(
             "evidence_quote": "",
         }
 
-    # Format exclusion reasons if provided
+    # Format exclusion reasons if provided. Do not invent case-report or language exclusions.
     exclusion_text = ""
+    inclusion = pico_criteria.get("inclusion_criteria") or pico_criteria.get("inclusion") or []
+    if isinstance(inclusion, str):
+        inclusion = [inclusion]
+    if inclusion:
+        exclusion_text += "Inclusion Criteria:\n" + "\n".join(f"- {item}" for item in inclusion) + "\n"
     if exclusion_reasons:
-        exclusion_text = "Exclusion Reasons / Criteria:\n" + "\n".join(f"- {r}" for r in exclusion_reasons)
+        exclusion_text += "Exclusion Reasons / Criteria:\n" + "\n".join(f"- {r}" for r in exclusion_reasons) + "\n"
+    exclusion_text += (
+        "Apply only the exclusion criteria listed above. "
+        "Do not exclude a case report, case series, or non-English paper unless an exclusion criterion says so."
+    )
 
     prompt = CLARIFICATION_SCREENING_PROMPT.format(
         population=pico_criteria.get("population", "N/A"),

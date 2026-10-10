@@ -17,6 +17,7 @@ import {
   Square,
   Play,
   RotateCcw,
+  Download,
 } from "lucide-react";
 import { judgmentLabel, judgmentDotColor, cn } from "../lib/utils";
 import {
@@ -103,6 +104,14 @@ export function RobSummaryPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <a
+            href={api.robExport(projectId!, "zip")}
+            className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-1.5"
+            title="Download Excel workbooks, per-tool PNG/SVG figures, and manifest"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download complete package
+          </a>
           <button
             onClick={() => startRunMutation.mutate()}
             disabled={startRunMutation.isPending || isRunning}
@@ -219,16 +228,19 @@ export function RobSummaryPage() {
         </div>
       )}
 
-      {summary && (summary?.total_assessments ?? 0) > 0 ? (
+      {summary && ((summary.total_assessments ?? 0) > 0 || (summary.manual_review?.length ?? 0) > 0) ? (
         <div className="space-y-6">
-          {/* Judgment Distribution */}
-          <JudgmentDistribution summary={summary} />
+          {(summary.total_assessments ?? 0) > 0 && <RobvisFigures projectId={projectId!} />}
+          <ReportingProfilePanel projectId={projectId!} />
+          <ManualReviewQueue items={summary.manual_review || []} />
 
-          {/* Traffic-Light Chart */}
-          <TrafficLightChart summary={summary} filterNeedsReview={filterNeedsReview} />
-
-          {/* Assessment List */}
-          <AssessmentList summary={summary} filterNeedsReview={filterNeedsReview} />
+          {(summary.total_assessments ?? 0) > 0 && (
+            <>
+              <JudgmentDistribution summary={summary} />
+              <ToolGroupedAssessmentTables summary={summary} filterNeedsReview={filterNeedsReview} />
+              <AssessmentList summary={summary} filterNeedsReview={filterNeedsReview} />
+            </>
+          )}
         </div>
       ) : (
         <div className="card p-12 text-center">
@@ -247,6 +259,142 @@ export function RobSummaryPage() {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function RobvisFigures({ projectId }: { projectId: string }) {
+  const figures = useQuery({
+    queryKey: ["robvis", projectId, "all"],
+    queryFn: () => api.robFigures(projectId),
+    enabled: !!projectId,
+  });
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {(figures.data?.figures || []).map((figure) => (
+        <RobvisPanel
+          key={`${figure.tool}-${figure.plot}`}
+          title={`${figure.tool}: ${figure.plot === "traffic" ? "Traffic light" : "Domain summary"}`}
+          figure={figure}
+          loading={figures.isLoading}
+        />
+      ))}
+      {figures.isLoading && <RobvisPanel title="Risk-of-bias figures" loading />}
+    </div>
+  );
+}
+
+function RobvisPanel({
+  title,
+  figure,
+  loading,
+}: {
+  title: string;
+  figure?: {
+    tool: string;
+    svg: string;
+    message: string;
+    engine?: string;
+  };
+  loading: boolean;
+}) {
+  return (
+    <div className="card p-5">
+      <h2 className="font-semibold mb-1">{title}</h2>
+      <p className="text-xs text-[#6B665E] mb-3">
+        Publication figure from the robvis package
+        {figure?.tool ? ` (${figure.tool})` : ""}.
+      </p>
+      {loading ? (
+        <p className="text-sm text-gray-400">Drawing figure...</p>
+      ) : figure?.svg ? (
+        <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: figure.svg }} />
+      ) : (
+        <p className="text-sm text-gray-500">{figure?.message || "Figure unavailable."}</p>
+      )}
+    </div>
+  );
+}
+
+function ReportingProfilePanel({ projectId }: { projectId: string }) {
+  const profile = useQuery({
+    queryKey: ["reporting-profile", projectId],
+    queryFn: () => api.reportingProfile(projectId),
+    enabled: !!projectId,
+  });
+  if (!profile.isLoading && !profile.data?.svg) return null;
+  return (
+    <div className="card p-5">
+      <h2 className="font-semibold mb-1">Methodological rigor and reporting completeness</h2>
+      <p className="text-xs text-[#6B665E] mb-3">
+        Separate MTR/RC reporting profile; this is not a risk-of-bias instrument.
+        {profile.data ? ` ${profile.data.study_count} studies assessed.` : ""}
+      </p>
+      {profile.isLoading ? (
+        <p className="text-sm text-gray-400">Drawing reporting profile...</p>
+      ) : (
+        <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: profile.data?.svg || "" }} />
+      )}
+    </div>
+  );
+}
+
+function ManualReviewQueue({ items }: { items: NonNullable<RobSummary["manual_review"]> }) {
+  if (!items.length) return null;
+  return (
+    <div className="card p-5 border-amber-200 bg-amber-50/40">
+      <h2 className="font-semibold flex items-center gap-2 mb-3">
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        Tool selection requires manual review ({items.length})
+      </h2>
+      <div className="space-y-2">
+        {items.map((item) => (
+          <div key={item.classification_id} className="rounded-lg border border-amber-200 bg-white p-3">
+            <div className="flex justify-between gap-3">
+              <span className="font-medium text-sm">{item.study_title || item.study_id}</span>
+              <span className="text-xs font-mono">{Math.round(item.confidence * 100)}% confidence</span>
+            </div>
+            <p className="text-xs text-gray-600 mt-1">{item.rationale}</p>
+            {item.alternatives.length > 0 && (
+              <p className="text-xs text-amber-800 mt-1">Suggested: {item.alternatives.join(", ")}</p>
+            )}
+            {item.evidence.length > 0 && (
+              <p className="text-xs italic text-gray-500 mt-1">Evidence: “{item.evidence.join("” · “")}”</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ToolGroupedAssessmentTables({
+  summary,
+  filterNeedsReview,
+}: {
+  summary: RobSummary;
+  filterNeedsReview: boolean;
+}) {
+  const groups = summary.tool_groups || {
+    [summary.tool || "Risk of bias"]: {
+      tool: summary.tool,
+      total_assessments: summary.total_assessments,
+      judgment_counts: summary.judgment_counts,
+      assessments: summary.assessments,
+    },
+  };
+  return (
+    <div className="space-y-6">
+      {Object.entries(groups).map(([tool, group]) => (
+        <div key={tool}>
+          <h2 className="font-semibold mb-2">{tool.toUpperCase().replace(/_/g, " ")}</h2>
+          <TrafficLightChart
+            summary={{ ...summary, tool, assessments: group.assessments }}
+            filterNeedsReview={filterNeedsReview}
+          />
+        </div>
+      ))}
     </div>
   );
 }
