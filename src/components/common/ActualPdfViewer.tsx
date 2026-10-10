@@ -62,6 +62,11 @@ function mergeContiguousRects(rects: PercentRect[]): PercentRect[] {
   const clusters: PercentRect[][] = [];
   let currentCluster: PercentRect[] = [sorted[0]];
 
+  // Bolt Optimization: Maintain bounding box minX/maxX in single-pass scalar variables
+  // rather than running multi-pass Math.min/max with array .map() allocations in every iteration.
+  let clusterMinX = sorted[0].left;
+  let clusterMaxX = sorted[0].left + sorted[0].width;
+
   for (let i = 1; i < sorted.length; i++) {
     const prev = currentCluster[currentCluster.length - 1];
     const curr = sorted[i];
@@ -71,8 +76,6 @@ function mergeContiguousRects(rects: PercentRect[]): PercentRect[] {
     const isAdjacent = verticalGap >= -1.0 && verticalGap <= 3.5;
 
     // Check horizontal overlap between curr and currentCluster bounding box
-    const clusterMinX = Math.min(...currentCluster.map((r) => r.left));
-    const clusterMaxX = Math.max(...currentCluster.map((r) => r.left + r.width));
     const currRight = curr.left + curr.width;
 
     const horizontalOverlap = Math.min(clusterMaxX, currRight) - Math.max(clusterMinX, curr.left);
@@ -80,18 +83,33 @@ function mergeContiguousRects(rects: PercentRect[]): PercentRect[] {
 
     if (isAdjacent && isInSameColumn) {
       currentCluster.push(curr);
+      if (curr.left < clusterMinX) clusterMinX = curr.left;
+      if (currRight > clusterMaxX) clusterMaxX = currRight;
     } else {
       clusters.push(currentCluster);
       currentCluster = [curr];
+      clusterMinX = curr.left;
+      clusterMaxX = currRight;
     }
   }
   clusters.push(currentCluster);
 
   return clusters.map((cluster) => {
-    const minLeft = Math.min(...cluster.map((r) => r.left));
-    const minTop = Math.min(...cluster.map((r) => r.top));
-    const maxRight = Math.max(...cluster.map((r) => r.left + r.width));
-    const maxBottom = Math.max(...cluster.map((r) => r.top + r.height));
+    // Bolt Optimization: Single-pass bounding box accumulation per cluster
+    let minLeft = Infinity;
+    let minTop = Infinity;
+    let maxRight = -Infinity;
+    let maxBottom = -Infinity;
+
+    for (let j = 0; j < cluster.length; j++) {
+      const r = cluster[j];
+      if (r.left < minLeft) minLeft = r.left;
+      if (r.top < minTop) minTop = r.top;
+      const right = r.left + r.width;
+      if (right > maxRight) maxRight = right;
+      const bottom = r.top + r.height;
+      if (bottom > maxBottom) maxBottom = bottom;
+    }
 
     // Slight breathing padding around the text
     const padX = 0.25;
