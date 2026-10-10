@@ -60,35 +60,48 @@ def approve_plan(session_id: str) -> bool:
         return False
 
 
-def monitor_loop(session_id: str, poll_interval_sec: int = 30):
-    logger.info(f"Starting Jules background monitor for session {session_id}")
+def monitor_loop(session_ids: List[str], poll_interval_sec: int = 30):
+    logger.info(f"Starting Jules background monitor for sessions: {session_ids}")
     seen_activity_ids = set()
 
     while True:
-        session = get_session(session_id)
-        if session:
+        all_done = True
+        for session_id in session_ids:
+            session = get_session(session_id)
+            if not session:
+                continue
             state = session.get("state", "UNKNOWN")
-            logger.info(f"Session {session_id} state: {state}")
+            title = session.get("title", "")[:40]
+            logger.info(f"Session {session_id} [{title}] state: {state}")
 
             if state == "AWAITING_PLAN_APPROVAL":
-                logger.info("Plan requires approval. Auto-approving per rule...")
+                logger.info(f"Plan for session {session_id} requires approval. Auto-approving per rule...")
                 approve_plan(session_id)
-            elif state in ("COMPLETED", "FAILED", "CANCELLED"):
-                logger.info(f"Session reached terminal state: {state}")
-                break
+                all_done = False
+            elif state in ("IN_PROGRESS", "QUEUED"):
+                all_done = False
+            elif state == "COMPLETED":
+                logger.info(f"Session {session_id} COMPLETED. Inspecting generated artifacts...")
+            elif state in ("FAILED", "CANCELLED"):
+                logger.warning(f"Session {session_id} reached {state}.")
 
-        activities = get_activities(session_id)
-        for act in activities:
-            act_id = act.get("name") or act.get("id") or str(act.get("createTime"))
-            if act_id not in seen_activity_ids:
-                seen_activity_ids.add(act_id)
-                act_type = act.get("type", "activity")
-                desc = act.get("description") or act.get("thought") or act.get("message") or ""
-                logger.info(f"New activity [{act_type}]: {desc[:120]}")
+            activities = get_activities(session_id)
+            for act in activities:
+                act_id = act.get("name") or act.get("id") or str(act.get("createTime"))
+                if act_id not in seen_activity_ids:
+                    seen_activity_ids.add(act_id)
+                    act_type = act.get("type", "activity")
+                    desc = act.get("description") or act.get("thought") or act.get("message") or ""
+                    logger.info(f"[{session_id}] New activity [{act_type}]: {desc[:120]}")
+
+        if all_done:
+            logger.info("All monitored sessions reached terminal states.")
+            break
 
         time.sleep(poll_interval_sec)
 
 
 if __name__ == "__main__":
-    sid = sys.argv[1] if len(sys.argv) > 1 else "8414239125544510714"
-    monitor_loop(sid)
+    sids = sys.argv[1:] if len(sys.argv) > 1 else ["8414239125544510714", "6704673216573859865"]
+    monitor_loop(sids)
+
