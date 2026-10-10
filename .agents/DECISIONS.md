@@ -42,3 +42,13 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
 - Cloned `receptron/laya` into workspace (`./laya`) and downloaded ONNX weights (`laya/models/`).
 - Added Python native engine [`laya/laya_engine.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/laya/laya_engine.py) using `onnxruntime` and `tokenizers`.
 - Integrated local Laya engine into [`radextract_platform/backend/services/jev_client.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/jev_client.py) as the primary provider (`settings.jev_provider = "laya"`), eliminating cloud API keys and latency while preserving full contract compatibility with TypeSafe Jev schemas and LLM fallback.
+
+## 2026-10-11 — Laya Extraction Evidence Tracing (choxos/jev-reviewer paradigm)
+
+- Adopted the `choxos/jev-reviewer` verbatim verification pattern: Every extracted variable must be traced back to an exact sentence quote and page number in the source document.
+- Created [`radextract_platform/backend/services/laya_extraction_tracer.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/laya_extraction_tracer.py):
+  - Chunks document text into candidate sentences per page.
+  - Formulates Laya System-1 `noul` queries to verify verbatim evidence accuracy and calibrate confidence.
+  - Binds verified `source_text`, `source_page`, and calibrated `laya_confidence` to extraction records.
+- Integrated tracing into [`radextract_platform/backend/services/auto_extract_service.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/auto_extract_service.py) (Step 4.5) and [`radextract_platform/backend/services/coded_extraction_service.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/coded_extraction_service.py) (Steps 3 & 4).
+

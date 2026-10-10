@@ -408,9 +408,9 @@
     "semantic_hash": "ca10f918bda7bdb5098ba4a234f0c3d5"
   },
   "radextract_platform/backend/services/auto_extract_service.py": {
-    "mtime": 1791198855.1489248,
-    "seen": 1791265994.99936,
-    "ast_hash": "b611053c87243dfe4ef3114442ec0dec",
+    "mtime": 1791661485.321757,
+    "seen": 1791661588.444711,
+    "ast_hash": "2437dc83cb0896053029eeab3ba09b7e",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/biomni_service.py": {
@@ -1356,9 +1356,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/coded_extraction_service.py": {
-    "mtime": 1791481186.123669,
-    "seen": 1791541136.3521652,
-    "ast_hash": "941b85d79439250f42faa1a48c2097be",
+    "mtime": 1791661507.469668,
+    "seen": 1791661588.4502342,
+    "ast_hash": "708b665173d02cf8cc24a7d7a47ea954",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/extraction_excel_service.py": {
@@ -2076,9 +2076,9 @@
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1791660114.129766,
-    "seen": 1791660466.162627,
-    "ast_hash": "67e121db78ab19c85f53307c706f294b",
+    "mtime": 1791661536.5959888,
+    "seen": 1791661588.6122131,
+    "ast_hash": "d3ff46b939b90248abbb8cb8c62e67ad",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {
@@ -2331,6 +2331,18 @@
     "mtime": 1791379641.4384823,
     "seen": 1791660796.5401947,
     "ast_hash": "278835d33c21c82c0d6607844102aef3",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/services/laya_extraction_tracer.py": {
+    "mtime": 1791661379.1531992,
+    "seen": 1791661588.4658177,
+    "ast_hash": "2856c007423e63276e297a8b063a2e18",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_laya_extraction_tracer.py": {
+    "mtime": 1791661450.8627,
+    "seen": 1791661588.5277505,
+    "ast_hash": "a1f3511e04207ce1d67c326ee4172185",
     "semantic_hash": ""
   }
 }

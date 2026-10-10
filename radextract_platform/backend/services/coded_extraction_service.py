@@ -24,6 +24,7 @@ from database import get_db_backend
 from services.db_backend import DBBackend
 from services import pdf_service
 from services.extraction_prompt_builder import build_field_prompt
+from services.laya_extraction_tracer import trace_variable_evidence
 
 logger = logging.getLogger("radextract.coded_extraction")
 
@@ -355,8 +356,13 @@ def coded_extract_study(
     db: Optional[DBBackend] = None,
     model_fn: Optional[Callable] = None,
     reviewer: str = "coded_auto",
+    require_fulltext: bool = False,
 ) -> dict:
-    """Run coded extraction for one study. Returns a per-study summary."""
+    """Run coded extraction for one study. Returns a per-study summary.
+
+    When require_fulltext is set, a missing PDF/PMC text is reported as not
+    retrieved and the abstract is not used as a substitute document.
+    """
     db = db or get_db_backend()
 
     study = db.get("studies", study_id)
@@ -365,6 +371,13 @@ def coded_extract_study(
 
     pdf_data = pdf_service.get_pdf_data(study_id, db=db) or {}
     full_text = pdf_data.get("full_text", "") or ""
+    if not full_text and require_fulltext:
+        return {
+            "study_id": study_id,
+            "extracted": 0,
+            "fulltext": "not_retrieved",
+            "message": "Full text not retrieved",
+        }
     if not full_text:
         full_text = f"Title: {study.get('title') or ''}\nAbstract: {study.get('abstract') or ''}"
     pages = _page_texts(pdf_data)
@@ -428,18 +441,30 @@ def coded_extract_study(
                 if tag == "CALC" and not calc_note:
                     tag = "INF"  # CALC requires shown arithmetic
 
-        # ── 3. Coding verification ──
-        if value and tag == "DS":
-            # DS requires a verbatim quote in the document
+        # ── 3. Coding verification & Laya Tracing ──
+        if value and tag in ("DS", "INF"):
+            # If quote is missing or not verbatim, attempt Laya trace to accurately bind verbatim quote & page
             if not _quote_verbatim(quote, pages, full_text):
-                tag = "INF"
+                traced = trace_variable_evidence(var_name, value, pdf_data, full_text)
+                if traced and traced.get("verified"):
+                    quote = traced["source_text"]
+                    src_page = traced["source_page"]
+                    tag = "DS"
+                elif tag == "DS":
+                    tag = "INF"
 
         # ── 4. Numeric double-check ──
         if value and not _numeric_double_check(var, value, quote, pages, full_text):
-            tag = "INF"
-            summary["conflicts"].append(
-                f"{var_name}: numeric value not re-located in source (kept, tagged [INF])"
-            )
+            # Attempt rescue via Laya numeric quote locator
+            traced_num = trace_variable_evidence(var_name, value, pdf_data, full_text)
+            if traced_num and traced_num.get("verified"):
+                quote = traced_num["source_text"]
+                src_page = traced_num["source_page"]
+            else:
+                tag = "INF"
+                summary["conflicts"].append(
+                    f"{var_name}: numeric value not re-located in source (kept, tagged [INF])"
+                )
 
         # ── 5-6. Exhaustive search + recheck before -99 ──
         if not value and not missing_code:

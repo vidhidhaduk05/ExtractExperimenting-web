@@ -20,6 +20,7 @@ from services.gap_rules import (
     apply_g4_immortal_time_bias,
     apply_g5_effect_conflict,
 )
+from services.laya_extraction_tracer import trace_all_extractions
 
 logger = logging.getLogger("radextract.extraction")
 
@@ -264,6 +265,12 @@ def auto_extract(study_id: str, project_id: str, reviewer: str = "auto", db: Opt
     extractions_work = apply_g3_subgroup_detection(extractions_work, full_text)
     extractions_work = apply_g4_immortal_time_bias(extractions_work, full_text)
     extractions_work = apply_g5_effect_conflict(extractions_work, full_text)
+
+    # 4.5. Laya Verbatim Evidence Tracing (choxos/jev-reviewer pattern)
+    try:
+        extractions_work = trace_all_extractions(extractions_work, pdf_data or {}, full_text=full_text)
+    except Exception as e:
+        logger.warning(f"Laya evidence tracing failed for {study_id}: {e}")
 
     # 5. Save to database
     extracted = 0
