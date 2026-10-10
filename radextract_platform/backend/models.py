@@ -590,14 +590,26 @@ class DuplicateMatch(BaseModel):
     pmid: str = ""
     authors: str = ""
     publication_year: Optional[int] = None
+    journal: str = ""
+    abstract: str = ""
+    is_duplicate: int = 0
+    screening_status: str = "pending"
     match_reason: str  # "doi" | "pmid" | "title_similarity" | "author_year"
     similarity_score: float = 0.0
 
 
 class DuplicateGroup(BaseModel):
     group_id: str
-    canonical_study_id: str  # the one to keep
+    canonical_study_id: str  # the primary one
     canonical_title: str
+    canonical_doi: str = ""
+    canonical_pmid: str = ""
+    canonical_authors: str = ""
+    canonical_year: Optional[int] = None
+    canonical_journal: str = ""
+    canonical_abstract: str = ""
+    canonical_is_duplicate: int = 0
+    canonical_screening_status: str = "pending"
     duplicates: list[DuplicateMatch] = Field(default_factory=list)
 
 
@@ -607,6 +619,15 @@ class DeduplicationResult(BaseModel):
     duplicate_groups: list[DuplicateGroup] = Field(default_factory=list)
     total_duplicates: int
     duplicates_marked: int
+
+
+class DuplicateResolveRequest(BaseModel):
+    action: str  # "keep_primary" | "keep_both" | "merge_metadata" | "revert_duplicate"
+    primary_study_id: str
+    duplicate_study_id: Optional[str] = None
+    group_id: Optional[str] = None
+    merged_fields: Optional[dict] = None
+
 
 
 # ═══════════════════════════════════════════════════════════════════════

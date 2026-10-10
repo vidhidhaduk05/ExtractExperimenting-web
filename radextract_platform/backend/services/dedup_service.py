@@ -274,6 +274,10 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                 "pmid": s.get("pmid", ""),
                 "authors": s.get("authors", ""),
                 "publication_year": s.get("publication_year"),
+                "journal": s.get("journal", ""),
+                "abstract": s.get("abstract", ""),
+                "is_duplicate": s.get("is_duplicate", 0),
+                "screening_status": s.get("screening_status", "pending"),
                 "match_reason": match_reason,
                 "similarity_score": round(sim_score, 4),
             })
@@ -282,6 +286,14 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
             "group_id": group_id,
             "canonical_study_id": canonical["study_id"],
             "canonical_title": canonical.get("title", ""),
+            "canonical_doi": canonical.get("doi", ""),
+            "canonical_pmid": canonical.get("pmid", ""),
+            "canonical_authors": canonical.get("authors", ""),
+            "canonical_year": canonical.get("publication_year"),
+            "canonical_journal": canonical.get("journal", ""),
+            "canonical_abstract": canonical.get("abstract", ""),
+            "canonical_is_duplicate": canonical.get("is_duplicate", 0),
+            "canonical_screening_status": canonical.get("screening_status", "pending"),
             "duplicates": duplicates,
         })
 
@@ -298,6 +310,8 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                     "screening_reason": "Duplicate publication",
                     "screening_stage": "dedup",
                 })
+                d["is_duplicate"] = 1
+                d["screening_status"] = "excluded"
                 duplicates_marked += 1
         db.commit()
 
@@ -310,5 +324,138 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
         "total_duplicates": total_dups,
         "duplicates_marked": duplicates_marked,
     }
+
+
+def resolve_duplicate_decision(
+    project_id: str,
+    action: str,  # "keep_primary", "keep_both", "merge_metadata", "revert_duplicate"
+    primary_study_id: str,
+    duplicate_study_id: Optional[str] = None,
+    group_id: Optional[str] = None,
+    merged_fields: Optional[dict] = None,
+    db: Optional[DBBackend] = None,
+) -> dict:
+    """Resolve duplicate review decision for a pair or group of studies.
+    
+    Actions:
+      - 'keep_primary': Marks duplicate_study_id as duplicate (is_duplicate=1, excluded)
+                        and ensures primary_study_id is not marked as duplicate (is_duplicate=0).
+      - 'keep_both': Reversibly unmarks duplicate_study_id (is_duplicate=0, screening_status='pending',
+                     screening_reason='', duplicate_of_study_id=''). Both records are retained.
+      - 'merge_metadata': Keeps primary_study_id, applies non-empty/chosen fields from duplicate
+                          (or merged_fields payload) to primary, and marks duplicate_study_id as duplicate.
+      - 'revert_duplicate': Alias for keep_both (reversible duplicate marking).
+    """
+    db = db or get_db_backend()
+
+    primary = db.query("studies", {"study_id": primary_study_id, "project_id": project_id})
+    if not primary:
+        raise ValueError(f"Primary study {primary_study_id} not found in project {project_id}")
+    primary_row = primary[0]
+
+    dup_row = None
+    if duplicate_study_id:
+        dup = db.query("studies", {"study_id": duplicate_study_id, "project_id": project_id})
+        if dup:
+            dup_row = dup[0]
+
+    if action in ("keep_both", "revert_duplicate"):
+        # Unmark duplicate - reversible
+        if duplicate_study_id:
+            db.update("studies", duplicate_study_id, {
+                "is_duplicate": 0,
+                "duplicate_of_study_id": "",
+                "screening_status": "pending",
+                "screening_reason": "",
+                "screening_stage": "",
+            })
+        if group_id:
+            # Also ensure primary is clear
+            db.update("studies", primary_study_id, {
+                "is_duplicate": 0,
+                "duplicate_of_study_id": "",
+            })
+        db.commit()
+        return {
+            "status": "success",
+            "action": action,
+            "message": f"Study {duplicate_study_id or primary_study_id} restored as non-duplicate (reversible).",
+            "primary_study_id": primary_study_id,
+            "duplicate_study_id": duplicate_study_id,
+        }
+
+    elif action == "keep_primary":
+        # Keep primary record, mark duplicate record as duplicate
+        db.update("studies", primary_study_id, {
+            "is_duplicate": 0,
+            "duplicate_of_study_id": "",
+        })
+        if duplicate_study_id:
+            db.update("studies", duplicate_study_id, {
+                "is_duplicate": 1,
+                "duplicate_of_study_id": primary_study_id,
+                "duplicate_group_id": group_id or primary_row.get("duplicate_group_id") or str(uuid.uuid4()),
+                "screening_status": "excluded",
+                "screening_reason": "Duplicate publication",
+                "screening_stage": "dedup",
+            })
+        db.commit()
+        return {
+            "status": "success",
+            "action": "keep_primary",
+            "message": f"Kept primary study {primary_study_id}; marked {duplicate_study_id} as duplicate.",
+            "primary_study_id": primary_study_id,
+            "duplicate_study_id": duplicate_study_id,
+        }
+
+    elif action == "merge_metadata":
+        # Merge fields from duplicate or custom payload into primary study
+        updates: dict = {}
+        fields_to_check = ["doi", "pmid", "abstract", "authors", "publication_year", "journal", "study_design"]
+        
+        if merged_fields and isinstance(merged_fields, dict):
+            for f in fields_to_check:
+                if f in merged_fields and merged_fields[f] not in (None, ""):
+                    updates[f] = merged_fields[f]
+        elif dup_row:
+            # Auto-fill missing fields on primary from duplicate
+            for f in fields_to_check:
+                p_val = primary_row.get(f)
+                d_val = dup_row.get(f)
+                if (p_val is None or p_val == "" or p_val == 0) and d_val not in (None, "", 0):
+                    updates[f] = d_val
+                # If duplicate has longer/more detailed abstract, can preserve
+                if f == "abstract" and len(str(d_val or "")) > len(str(p_val or "")):
+                    updates["abstract"] = d_val
+
+        if updates:
+            db.update("studies", primary_study_id, updates)
+
+        db.update("studies", primary_study_id, {
+            "is_duplicate": 0,
+            "duplicate_of_study_id": "",
+        })
+        if duplicate_study_id:
+            db.update("studies", duplicate_study_id, {
+                "is_duplicate": 1,
+                "duplicate_of_study_id": primary_study_id,
+                "duplicate_group_id": group_id or primary_row.get("duplicate_group_id") or str(uuid.uuid4()),
+                "screening_status": "excluded",
+                "screening_reason": "Duplicate publication (merged into primary)",
+                "screening_stage": "dedup",
+            })
+        db.commit()
+        return {
+            "status": "success",
+            "action": "merge_metadata",
+            "message": f"Merged metadata into primary study {primary_study_id} and marked {duplicate_study_id} as duplicate.",
+            "primary_study_id": primary_study_id,
+            "duplicate_study_id": duplicate_study_id,
+            "updated_fields": list(updates.keys()),
+        }
+
+    else:
+        raise ValueError(f"Unknown resolution action: {action}")
+
 
 

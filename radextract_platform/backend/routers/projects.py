@@ -550,8 +550,8 @@ async def extract_pico_from_document(
     # Save uploaded file to temp
     filename = file.filename or "document.txt"
     ext = os.path.splitext(filename)[1].lower()
-    if ext not in (".pdf", ".docx", ".txt", ".md", ".rtf"):
-        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}. Supported: PDF, DOCX, TXT")
+    if ext not in (".pdf", ".docx", ".doc", ".txt", ".md", ".rtf"):
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}. Supported: PDF, Word (DOCX/DOC), TXT, MD, RTF")
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
         content = await file.read()

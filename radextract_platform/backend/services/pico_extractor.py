@@ -529,8 +529,17 @@ def extract_pico_from_file(file_path: str, filename: str = "") -> dict:
 
     if ext == ".pdf":
         text = _extract_pdf_text(file_path)
-    elif ext == ".docx":
-        text = _extract_docx_text(file_path)
+    elif ext in (".docx", ".doc"):
+        try:
+            text = _extract_docx_text(file_path)
+        except Exception:
+            # Fallback for binary / legacy word text streams
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    raw = f.read()
+                    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", raw)
+            except Exception:
+                text = ""
     elif ext in (".txt", ".md", ".rtf"):
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             text = f.read()

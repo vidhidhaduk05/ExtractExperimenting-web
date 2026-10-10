@@ -712,6 +712,99 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       }
     ] as unknown as T;
   }
+  if (path.includes("/studies/deduplicate/resolve") && method === "POST") {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    const studies = getStoredProjectStudies(projectId);
+    const { action, primary_study_id, duplicate_study_id, merged_fields } = (body || {}) as any;
+
+    const updated = studies.map((s) => {
+      if (s.study_id === primary_study_id) {
+        const next = { ...s, is_duplicate: 0, duplicate_of_study_id: "" };
+        if (action === "merge_metadata" && merged_fields) {
+          Object.assign(next, merged_fields);
+        }
+        return next;
+      }
+      if (s.study_id === duplicate_study_id) {
+        if (action === "keep_both" || action === "revert_duplicate") {
+          return {
+            ...s,
+            is_duplicate: 0,
+            duplicate_of_study_id: "",
+            screening_status: "pending",
+            screening_reason: "",
+          };
+        } else if (action === "keep_primary" || action === "merge_metadata") {
+          return {
+            ...s,
+            is_duplicate: 1,
+            duplicate_of_study_id: primary_study_id,
+            screening_status: "excluded",
+            screening_reason: action === "merge_metadata" ? "Duplicate publication (merged into primary)" : "Duplicate publication",
+          };
+        }
+      }
+      return s;
+    });
+    saveStoredProjectStudies(projectId, updated);
+    return {
+      status: "success",
+      action: action || "keep_primary",
+      message: `Resolution '${action}' applied successfully.`,
+      primary_study_id,
+      duplicate_study_id,
+      updated_fields: merged_fields ? Object.keys(merged_fields) : [],
+    } as unknown as T;
+  }
+
+  if (path.includes("/studies/duplicates") || path.includes("/studies/deduplicate")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    const studies = getStoredProjectStudies(projectId);
+    const groups: DuplicateGroup[] = [];
+
+    if (studies.length >= 2) {
+      const s1 = studies[0];
+      const s2 = studies[1];
+      groups.push({
+        group_id: "grp_demo_1",
+        canonical_study_id: s1.study_id,
+        canonical_title: s1.title,
+        canonical_doi: s1.doi || "10.1055/s-0042-1750831",
+        canonical_pmid: s1.pmid || "35928812",
+        canonical_authors: s1.authors || "Birua et al.",
+        canonical_year: s1.publication_year || 2022,
+        canonical_journal: s1.journal || "Asian Journal of Neurosurgery",
+        canonical_abstract: s1.abstract || "Pure arterial malformations (PAMs) are unusual vascular lesions of the brain consisting of coiled arterial loops. We present a rare PCA PAM coexisting with dysplastic internal carotid artery managed conservatively.",
+        canonical_is_duplicate: s1.is_duplicate || 0,
+        canonical_screening_status: s1.screening_status || "included",
+        duplicates: [
+          {
+            study_id: s2.study_id,
+            title: s2.title || `${s1.title} [Preprint / Conference Edition]`,
+            doi: s2.doi || s1.doi || "10.1055/s-0042-1750831",
+            pmid: s2.pmid || s1.pmid || "35928812",
+            authors: s2.authors || s1.authors || "Birua et al.",
+            publication_year: s2.publication_year || 2022,
+            journal: s2.journal || "ResearchSquare Clinical Preprints",
+            abstract: s2.abstract || "Pure arterial malformations (PAMs) of the posterior circulation. Coiled arterial loops with dysplastic ICA.",
+            is_duplicate: s2.is_duplicate || 0,
+            screening_status: s2.screening_status || "pending",
+            match_reason: s1.doi && s2.doi && s1.doi === s2.doi ? "doi" : "title_similarity",
+            similarity_score: 0.985,
+          },
+        ],
+      });
+    }
+
+    return {
+      project_id: projectId,
+      total_studies: studies.length,
+      duplicate_groups: groups,
+      total_duplicates: groups.reduce((acc, g) => acc + g.duplicates.length, 0),
+      duplicates_marked: groups.reduce((acc, g) => acc + g.duplicates.filter((d) => d.is_duplicate === 1).length, 0),
+    } as unknown as T;
+  }
+
   if (path.match(/\/studies\/[^/]+$/)) {
     const studyId = path.split("/").pop();
     const all = getStoredProjectStudies();
@@ -1401,15 +1494,19 @@ export interface PubMedFulltextResult {
   doi?: string;
 }
 
-// ── v2.4: Duplicate Detection ──
+// ── v2.4: Duplicate Detection & Review ──
 
 export interface DuplicateMatch {
   study_id: string;
   title: string;
-  doi: string;
-  pmid: string;
-  authors: string;
-  publication_year: number | null;
+  doi?: string;
+  pmid?: string;
+  authors?: string;
+  publication_year?: number | null;
+  journal?: string;
+  abstract?: string;
+  is_duplicate?: number;
+  screening_status?: string;
   match_reason: string;
   similarity_score: number;
 }
@@ -1418,6 +1515,14 @@ export interface DuplicateGroup {
   group_id: string;
   canonical_study_id: string;
   canonical_title: string;
+  canonical_doi?: string;
+  canonical_pmid?: string;
+  canonical_authors?: string;
+  canonical_year?: number | null;
+  canonical_journal?: string;
+  canonical_abstract?: string;
+  canonical_is_duplicate?: number;
+  canonical_screening_status?: string;
   duplicates: DuplicateMatch[];
 }
 
@@ -1428,6 +1533,15 @@ export interface DeduplicationResult {
   total_duplicates: number;
   duplicates_marked: number;
 }
+
+export interface DuplicateResolveRequest {
+  action: "keep_primary" | "keep_both" | "merge_metadata" | "revert_duplicate";
+  primary_study_id: string;
+  duplicate_study_id?: string;
+  group_id?: string;
+  merged_fields?: Record<string, any>;
+}
+
 
 // ── v2.4: Exclusion Reason Taxonomy ──
 
@@ -2768,9 +2882,23 @@ export const api = {
   prismaPngUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/png`,
   prismaDocxUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/docx`,
 
-  // v2.4: Duplicate Detection
+  // v2.4: Duplicate Detection & Review
   deduplicateStudies: (projectId: string, autoMark = true) =>
     request<DeduplicationResult>(`/projects/${projectId}/studies/deduplicate?auto_mark=${autoMark}`, { method: "POST" }),
+  getDuplicateGroups: (projectId: string) =>
+    request<DeduplicationResult>(`/projects/${projectId}/studies/duplicates`),
+  resolveDuplicate: (projectId: string, payload: DuplicateResolveRequest) =>
+    request<{
+      status: string;
+      action: string;
+      message: string;
+      primary_study_id?: string;
+      duplicate_study_id?: string;
+      updated_fields?: string[];
+    }>(`/projects/${projectId}/studies/deduplicate/resolve`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 
   // v2.4: Exclusion Reason Taxonomy
   getExclusionReasons: (projectId: string) =>

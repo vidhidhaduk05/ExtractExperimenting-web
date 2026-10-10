@@ -52,8 +52,11 @@ import {
   Maximize2,
   Keyboard,
   FolderPlus,
+  ArrowLeftRight,
 } from "lucide-react";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
+import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
+
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -113,7 +116,15 @@ export function ScreeningPage() {
   // Bulk Upload & Hotkeys state
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showHotkeysModal, setShowHotkeysModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
+
+  const { data: dedupData } = useQuery({
+    queryKey: ["duplicate_groups", projectId],
+    queryFn: () => api.getDuplicateGroups(projectId!),
+    enabled: !!projectId,
+  });
+
 
   // While an AI screening run is in flight, poll so each screened study appears as soon as it is saved
   const isMutating = useIsMutating() > 0;
@@ -578,6 +589,21 @@ export function ScreeningPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Deduplication Step: Duplicate Review Button */}
+            <button
+              onClick={() => setShowDuplicateModal(true)}
+              className="px-3 py-2 text-xs font-semibold text-slate-800 bg-amber-50 border border-amber-300 hover:bg-amber-100 rounded-lg flex items-center gap-1.5 shadow-sm transition-all"
+              title="Deduplication Step: Review candidate duplicate pairs side-by-side with match score"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-amber-700" />
+              <span>Duplicate Review</span>
+              {dedupData && dedupData.total_duplicates > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-200 text-amber-900 font-bold">
+                  {dedupData.total_duplicates}
+                </span>
+              ) : null}
+            </button>
+
             {/* Bulk Upload from Laptop Button */}
             <button
               onClick={() => setShowBulkUploadModal(true)}
@@ -587,6 +613,7 @@ export function ScreeningPage() {
               <FolderPlus className="w-3.5 h-3.5 text-amber-300" />
               <span>Bulk Upload from Laptop</span>
             </button>
+
 
             {/* Hotkeys Cheatsheet Button */}
             <button
@@ -658,6 +685,20 @@ export function ScreeningPage() {
               <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider block">Uncertain</span>
               <span className="text-sm font-bold text-amber-800">{summary.uncertain ?? summary.pending}</span>
             </div>
+            {dedupData && dedupData.total_duplicates > 0 && (
+              <div
+                onClick={() => setShowDuplicateModal(true)}
+                className="bg-amber-100/70 border border-amber-300 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-amber-200/80 transition-colors shadow-2xs"
+                title="Click to review candidate duplicate pairs side-by-side"
+              >
+                <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider block">Duplicates</span>
+                <span className="text-sm font-bold text-amber-900 flex items-center gap-1">
+                  <span>{dedupData.total_duplicates}</span>
+                  <ArrowLeftRight className="w-3 h-3 text-amber-700" />
+                </span>
+              </div>
+            )}
+
             <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5">
               <span className="text-[10px] font-semibold text-purple-700 uppercase tracking-wider block">Questions</span>
               <span className="text-sm font-bold text-purple-800">{summary.awaiting_clarification ?? 0}</span>
@@ -1833,6 +1874,21 @@ export function ScreeningPage() {
           }}
         />
       )}
+
+      {/* ── Deduplication Step: Duplicate Review Modal ── */}
+      <DuplicateReviewModal
+        projectId={projectId!}
+        isOpen={showDuplicateModal}
+        onClose={() => setShowDuplicateModal(false)}
+        onResolved={() => {
+          queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["prisma", projectId] });
+        }}
+      />
     </div>
   );
 }
+

@@ -10,7 +10,7 @@ from database import get_db
 from services.db_backend import DBBackend
 from dependencies import get_current_user_optional, check_project_access
 from models import (
-    DeduplicationResult,
+    DeduplicationResult, DuplicateResolveRequest,
     ExclusionReason, ExclusionReasonsUpdate, ExclusionReasonsResponse,
     ScreeningConfig, ScreeningConfigUpdate, ScreeningConfigResponse,
     ScreeningDecisionCreate, ScreeningDecisionResponse,
@@ -237,6 +237,64 @@ async def deduplicate_studies(
 
     result = _dedup(project_id, auto_mark=auto_mark)
     return DeduplicationResult(**result)
+
+
+@router.get("/projects/{project_id}/studies/duplicates", response_model=DeduplicationResult)
+async def get_duplicate_studies(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Fetch duplicate candidate groups without marking or altering study records."""
+    check_project_access(conn, project_id, user)
+    from services.dedup_service import deduplicate_studies as _dedup
+
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    result = _dedup(project_id, auto_mark=False, db=conn)
+    return DeduplicationResult(**result)
+
+
+@router.post("/projects/{project_id}/studies/deduplicate/resolve")
+async def resolve_duplicate(
+    project_id: str,
+    payload: DuplicateResolveRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Resolve duplicate review decision for a pair or group:
+    - keep_primary: Keep primary, mark candidate as duplicate
+    - keep_both: Reversibly unmark duplicate, retaining both studies
+    - merge_metadata: Merge non-empty fields to primary and mark duplicate
+    - revert_duplicate: Reversible duplicate restoration
+    """
+    check_project_access(conn, project_id, user)
+    from services.dedup_service import resolve_duplicate_decision
+
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        res = resolve_duplicate_decision(
+            project_id=project_id,
+            action=payload.action,
+            primary_study_id=payload.primary_study_id,
+            duplicate_study_id=payload.duplicate_study_id,
+            group_id=payload.group_id,
+            merged_fields=payload.merged_fields,
+            db=conn,
+        )
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 
 # ═══════════════════════════════════════════════════════════════════════

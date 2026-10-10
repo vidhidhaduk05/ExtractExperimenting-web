@@ -7,14 +7,29 @@ from config import settings
 from services.dedup_service import deduplicate_studies, _title_similarity, _author_overlap
 
 
+import os
+import shutil
+
+TEST_TMP = os.path.join(os.path.dirname(__file__), ".test_dedup_tmp")
+
+
 @pytest.fixture(autouse=True)
-def fresh_db(tmp_path, monkeypatch):
-    monkeypatch.setattr(settings, "db_path", str(tmp_path / "test_dedup.db"))
-    monkeypatch.setattr(settings, "upload_root", str(tmp_path / "uploads"))
-    monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
+def fresh_db(monkeypatch):
+    os.makedirs(TEST_TMP, exist_ok=True)
+    db_file = os.path.join(TEST_TMP, "test_dedup.db")
+    upload_dir = os.path.join(TEST_TMP, "uploads")
+    export_dir = os.path.join(TEST_TMP, "exports")
+    os.makedirs(upload_dir, exist_ok=True)
+    os.makedirs(export_dir, exist_ok=True)
+    monkeypatch.setattr(settings, "db_path", db_file)
+    monkeypatch.setattr(settings, "upload_root", upload_dir)
+    monkeypatch.setattr(settings, "export_root", export_dir)
     reset_db()
     init_db()
     yield
+    reset_db()
+    shutil.rmtree(TEST_TMP, ignore_errors=True)
+
 
 
 @pytest.fixture
@@ -157,3 +172,123 @@ def test_dedup_marks_is_duplicate_flag(client):
         assert dup_count >= 1
     finally:
         conn.close()
+
+
+def test_get_duplicate_studies_endpoint(client):
+    """GET /projects/{id}/studies/duplicates should return candidates with side-by-side metadata without auto-marking."""
+    pid = _create_project(client)
+    sid1 = _create_study(client, pid, title="Study 1", doi="10.1000/dup", pmid="111", abstract="Abstract 1")
+    sid2 = _create_study(client, pid, title="Study 2", doi="10.1000/dup", pmid="111", abstract="Abstract 2")
+
+    r = client.get(f"/api/projects/{pid}/studies/duplicates")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["total_duplicates"] >= 1
+    assert len(data["duplicate_groups"]) >= 1
+
+    group = data["duplicate_groups"][0]
+    assert group["canonical_study_id"] in (sid1, sid2)
+    assert "canonical_title" in group
+    assert "canonical_doi" in group
+    assert "canonical_abstract" in group
+    assert len(group["duplicates"]) >= 1
+
+    dup = group["duplicates"][0]
+    assert "match_reason" in dup
+    assert "similarity_score" in dup
+    assert "abstract" in dup
+
+
+def test_resolve_keep_primary(client):
+    """POST /projects/{id}/studies/deduplicate/resolve with keep_primary."""
+    pid = _create_project(client)
+    sid1 = _create_study(client, pid, title="Alpha Study", doi="10.2000/keep")
+    sid2 = _create_study(client, pid, title="Beta Study", doi="10.2000/keep")
+
+    r = client.post(
+        f"/api/projects/{pid}/studies/deduplicate/resolve",
+        json={
+            "action": "keep_primary",
+            "primary_study_id": sid1,
+            "duplicate_study_id": sid2,
+        },
+    )
+    assert r.status_code == 200
+    res = r.json()
+    assert res["status"] == "success"
+    assert res["action"] == "keep_primary"
+
+    conn = get_connection()
+    try:
+        s1 = conn.execute("SELECT is_duplicate FROM studies WHERE study_id = ?", (sid1,)).fetchone()
+        s2 = conn.execute("SELECT is_duplicate, screening_status, duplicate_of_study_id FROM studies WHERE study_id = ?", (sid2,)).fetchone()
+        assert s1["is_duplicate"] == 0
+        assert s2["is_duplicate"] == 1
+        assert s2["screening_status"] == "excluded"
+        assert s2["duplicate_of_study_id"] == sid1
+    finally:
+        conn.close()
+
+
+def test_resolve_keep_both_reversible(client):
+    """POST /projects/{id}/studies/deduplicate/resolve with keep_both (reversible duplicate marking)."""
+    pid = _create_project(client)
+    sid1 = _create_study(client, pid, title="Gamma Study", doi="10.3000/both")
+    sid2 = _create_study(client, pid, title="Delta Study", doi="10.3000/both")
+
+    # First mark sid2 as duplicate
+    client.post(f"/api/projects/{pid}/studies/deduplicate")
+
+    # Now reversibly keep both
+    r = client.post(
+        f"/api/projects/{pid}/studies/deduplicate/resolve",
+        json={
+            "action": "keep_both",
+            "primary_study_id": sid1,
+            "duplicate_study_id": sid2,
+        },
+    )
+    assert r.status_code == 200
+    res = r.json()
+    assert res["status"] == "success"
+
+    conn = get_connection()
+    try:
+        s2 = conn.execute("SELECT is_duplicate, screening_status FROM studies WHERE study_id = ?", (sid2,)).fetchone()
+        assert s2["is_duplicate"] == 0
+        assert s2["screening_status"] == "pending"
+    finally:
+        conn.close()
+
+
+def test_resolve_merge_metadata(client):
+    """POST /projects/{id}/studies/deduplicate/resolve with merge_metadata."""
+    pid = _create_project(client)
+    sid1 = _create_study(client, pid, title="Epsilon Study", doi="10.4000/merge", abstract="Short abstract")
+    sid2 = _create_study(client, pid, title="Epsilon Study", doi="10.4000/merge", pmid="998877", abstract="A much longer and comprehensive abstract with full details")
+
+    r = client.post(
+        f"/api/projects/{pid}/studies/deduplicate/resolve",
+        json={
+            "action": "merge_metadata",
+            "primary_study_id": sid1,
+            "duplicate_study_id": sid2,
+        },
+    )
+    assert r.status_code == 200
+    res = r.json()
+    assert res["status"] == "success"
+    assert res["action"] == "merge_metadata"
+
+    conn = get_connection()
+    try:
+        s1 = conn.execute("SELECT pmid, abstract, is_duplicate FROM studies WHERE study_id = ?", (sid1,)).fetchone()
+        s2 = conn.execute("SELECT is_duplicate, screening_status FROM studies WHERE study_id = ?", (sid2,)).fetchone()
+        # pmid from s2 should have merged into s1
+        assert s1["pmid"] == "998877"
+        assert "much longer" in s1["abstract"]
+        assert s1["is_duplicate"] == 0
+        assert s2["is_duplicate"] == 1
+    finally:
+        conn.close()
+

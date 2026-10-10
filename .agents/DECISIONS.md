@@ -52,3 +52,16 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
   - Binds verified `source_text`, `source_page`, and calibrated `laya_confidence` to extraction records.
 - Integrated tracing into [`radextract_platform/backend/services/auto_extract_service.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/auto_extract_service.py) (Step 4.5) and [`radextract_platform/backend/services/coded_extraction_service.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/coded_extraction_service.py) (Steps 3 & 4).
 
+## 2026-10-11 — Side-by-Side Duplicate Review & Reversible Resolution
+- Added Duplicate Review Workspace to Deduplication step in Studies (`StudyList`) and Screening (`ScreeningPage`):
+  - Side-by-side comparison of Title, Abstract, DOI, PMID, Publication Year, Journal, and Authors.
+  - Transparent match reason diagnostics (`doi`, `pmid`, `title_similarity`, `author_year`) with similarity scoring.
+  - Supported resolution actions:
+    - `Keep this record`: Retains canonical record as active; marks candidate as excluded duplicate (`is_duplicate = 1`).
+    - `Keep both`: Reversibly restores both records as active non-duplicates (`is_duplicate = 0`, `screening_status = 'pending'`).
+    - `Merge metadata`: Copies non-empty and richer fields (DOI, PMID, longer abstract, journal, year) from candidate into canonical record, and marks candidate as merged duplicate.
+    - `Reversible duplicate marking`: Unmarks previously excluded duplicates at any time without data loss.
+- Backend endpoints:
+  - `GET /api/projects/{project_id}/studies/duplicates`: Fetches candidate duplicate groups with side-by-side metadata without auto-marking.
+  - `POST /api/projects/{project_id}/studies/deduplicate/resolve`: Applies user resolution decisions (`keep_primary`, `keep_both`, `merge_metadata`, `revert_duplicate`).
+
