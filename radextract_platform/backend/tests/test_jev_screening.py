@@ -36,6 +36,7 @@ def _reset(monkeypatch):
     jev_client.reset_breaker()
     monkeypatch.setattr(settings, "jev_api_key", "test-key")
     monkeypatch.setattr(settings, "jev_mode", "off")
+    monkeypatch.setattr(settings, "jev_provider", "typesafe")
     yield
     jev_client.reset_breaker()
 

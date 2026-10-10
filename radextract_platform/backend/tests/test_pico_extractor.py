@@ -119,8 +119,64 @@ class TestExtractPicoFromText:
         result = extract_pico_from_text("Population: test patients.")
         expected_keys = {"population", "index_test", "comparator", "outcome",
                          "study_design", "research_question", "hypothesis",
-                         "extraction_confidence"}
+                         "extraction_confidence", "inclusion", "exclusion",
+                         "search_strings", "variables"}
         assert set(result.keys()) == expected_keys
+
+    def test_descriptive_case_review_protocol(self):
+        """Eligibility protocols that include case reports are not classic PICO."""
+        text = """
+Pure Arterial Malformations of the Brain
+A Systematic Review of Angioarchitecture, Aneurysm Association, and Stroke Outcomes
+
+1.1 Inclusion Criteria
+All of the following must be met for a study to be included:
+Study design: Observational study (case report, case series, case-control, or cohort study) reporting original patient-level data.
+Condition: Pure arterial malformation (PAM) of the brain.
+Language: All languages. Non-English full texts are translated.
+Publication date: No restriction (database inception to present).
+
+1.2 Exclusion Criteria
+Any one of the following triggers exclusion:
+Publication type: Review, editorial, commentary, letter to editor, conference abstract, or protocol without original patient-level data.
+Wrong lesion type: Arteriovenous malformation (AVM), dural arteriovenous fistula, or cavernous malformation.
+
+1.3 Operational PAM Definition
+A lesion qualifies as a PAM if it meets all of the following:
+Dilated, elongated, tortuous arterial loops forming a mass-like configuration with coil-like appearance.
+No arteriovenous shunting.
+
+2. Search Strategy
+PubMed | ("pure arterial malformation"[tiab] OR "pial arterial malformation"[tiab]) | Completed
+Ovid MEDLINE | (pure arterial malformation*).ti,ab. | Completed
+Scopus | TITLE-ABS-KEY("pure arterial malformation*") | Pending
+Web of Science | TS=("pure arterial malformation*") | Pending
+
+3. Data Extraction Schema
+V1 — PAM location | ICA-supraclinoid / M1 / M2 / NR | Universal
+V3 — PAM maximum diameter | continuous (mm) | About half of studies
+Demographics — Age | continuous (years) | Universal
+
+4. Analysis Plan
+Pooled descriptive statistics across all included patients: proportions with Wilson 95% CIs.
+Pre-specified subgroup contrasts: aneurysm-present vs aneurysm-absent; single-territory vs multi-territory.
+"""
+        result = extract_pico_from_text(text)
+        assert "coil-like" in result["population"].lower() or "tortuous" in result["population"].lower()
+        assert "extraction field" in result["index_test"].lower()
+        assert "aneurysm-present" in result["comparator"]
+        assert "ischemic stroke" in result["outcome"].lower()
+        assert "case report" in result["study_design"].lower()
+        assert any("case report" in item.lower() for item in result["inclusion"])
+        assert any("review" in item.lower() for item in result["exclusion"])
+        assert "pure arterial malformation" in result["search_strings"]["pubmed"]
+        assert "ovid_medline" in result["search_strings"]
+        assert "scopus" in result["search_strings"]
+        assert "web_of_science" in result["search_strings"]
+        names = [item["name"] for item in result["variables"]]
+        assert any(name.startswith("V1") for name in names)
+        assert any("Age" in name for name in names)
+        assert result["extraction_confidence"] in ("high", "medium")
 
     def test_long_text_truncation(self):
         """Keyword pattern extraction should truncate very long matches."""

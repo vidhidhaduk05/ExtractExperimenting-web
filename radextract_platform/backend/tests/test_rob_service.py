@@ -94,7 +94,7 @@ class TestAutoSelectAndCreate:
     def test_auto_select_cohort(self):
         pid, sid = _create_project_and_study("retrospective cohort")
         result = rob_service.auto_select_and_create_assessment(sid, pid, "retrospective cohort")
-        assert result["tool"] == "robins_i"
+        assert result["tool"] == "nos"
 
     def test_auto_select_no_match_raises(self):
         pid, sid = _create_project_and_study("narrative review")

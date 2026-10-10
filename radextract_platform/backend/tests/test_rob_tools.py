@@ -1,7 +1,7 @@
 """Tests for rob_tools.py — RoB tool definitions, auto-selection, and judgment algorithms."""
 import pytest
 from services.rob_tools import (
-    QUADAS_2, ROBINS_I, ROB_2, ROBINS_E, NOS,
+    QUADAS_2, ROBINS_I, ROB_2, ROBINS_E, NOS, JBI_CASE_REPORT, JBI_CASE_SERIES,
     TOOLS, get_tool, list_tools, select_rob_tool, select_rob_tool_with_alternatives,
     compute_quadas2_domain_judgment, compute_robins_i_domain_judgment,
     compute_rob2_domain_judgment, compute_robins_e_domain_judgment, compute_nos_domain_judgment,
@@ -17,12 +17,15 @@ from services.rob_tools import (
 class TestToolDefinitions:
     """Test that tool definitions are structurally correct."""
 
-    def test_five_tools_registered(self):
-        assert set(TOOLS.keys()) == {"quadas2", "robins_i", "rob2", "robins_e", "nos"}
+    def test_seven_tools_registered(self):
+        assert set(TOOLS.keys()) == {
+            "quadas2", "robins_i", "rob2", "robins_e", "nos",
+            "jbi_case_report", "jbi_case_series",
+        }
 
     def test_list_tools_returns_all(self):
         tools = list_tools()
-        assert len(tools) == 5
+        assert len(tools) == 7
 
     def test_get_tool_valid(self):
         assert get_tool("quadas2") is QUADAS_2
@@ -30,6 +33,8 @@ class TestToolDefinitions:
         assert get_tool("rob2") is ROB_2
         assert get_tool("robins_e") is ROBINS_E
         assert get_tool("nos") is NOS
+        assert get_tool("jbi_case_report") is JBI_CASE_REPORT
+        assert get_tool("jbi_case_series") is JBI_CASE_SERIES
 
     def test_get_tool_invalid(self):
         assert get_tool("nonexistent") is None
@@ -98,10 +103,12 @@ class TestAutoSelection:
         ("randomized controlled trial", "rob2"),
         ("RCT", "rob2"),
         ("randomised controlled trial", "rob2"),
-        ("prospective cohort study", "robins_i"),
-        ("retrospective cohort", "robins_i"),
-        ("case-control study", "robins_i"),
-        ("cross-sectional observational", "robins_i"),
+        ("prospective cohort study", "nos"),
+        ("retrospective cohort", "nos"),
+        ("case-control study", "nos"),
+        ("cross-sectional observational", "nos"),
+        ("case report", "jbi_case_report"),
+        ("case series", "jbi_case_series"),
         ("non-randomized intervention", "robins_i"),
         ("systematic review", "manual"),
         ("", "manual"),
@@ -222,10 +229,10 @@ class TestSelectRobToolWithAlternatives:
         assert tool == "robins_e"
         assert "robins_i" in alts
 
-    def test_case_series_selects_nos(self):
+    def test_case_series_selects_jbi(self):
         tool, conf, alts = select_rob_tool_with_alternatives("case series report")
-        assert tool == "nos"
-        assert "robins_i" in alts
+        assert tool == "jbi_case_series"
+        assert "jbi_case_report" in alts
 
     def test_diagnostic_selects_quadas2(self):
         tool, conf, alts = select_rob_tool_with_alternatives("diagnostic test accuracy")

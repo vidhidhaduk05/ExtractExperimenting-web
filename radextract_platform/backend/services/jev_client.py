@@ -93,15 +93,18 @@ def is_jev_enabled() -> bool:
     """True when screening should be attempted via local Laya or TypeSafe Jev API."""
     if jev_mode() == "off":
         return False
-    # If using local Laya, verify model files exist
+    if time.monotonic() < _open_until:
+        return False
+
     provider = getattr(settings, "jev_provider", "laya").lower()
     if provider == "laya":
         if bool(_get_laya_model_dir()):
             return True
-        # If local Laya files not found, fallback to checking API key for remote typesafe
-    if not _api_key():
-        return False
-    return time.monotonic() >= _open_until
+        # If local Laya files not found, check if remote API key is configured
+        return bool(_api_key())
+
+    # Provider is "typesafe" (remote API)
+    return bool(_api_key())
 
 
 def _record_success() -> None:

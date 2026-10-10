@@ -45,9 +45,12 @@ class TestToolEndpoints:
         r = client.get("/api/rob/tools")
         assert r.status_code == 200
         tools = r.json()
-        assert len(tools) == 5
+        assert len(tools) == 7
         keys = {t["key"] for t in tools}
-        assert keys == {"quadas2", "robins_i", "rob2", "robins_e", "nos"}
+        assert keys == {
+            "quadas2", "robins_i", "rob2", "robins_e", "nos",
+            "jbi_case_report", "jbi_case_series",
+        }
 
     def test_get_specific_tool(self, client):
         r = client.get("/api/rob/tools/quadas2")
