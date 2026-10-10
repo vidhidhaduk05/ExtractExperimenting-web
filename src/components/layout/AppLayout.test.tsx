@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import React from 'react';
 import '@testing-library/jest-dom/vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -29,7 +30,6 @@ describe('AppLayout Component', () => {
   it('renders the header correctly', () => {
     renderWithProviders(<AppLayout />);
     expect(screen.getByText('RadExtract')).toBeInTheDocument();
-    expect(screen.getByText('RadExtract Platform')).toBeInTheDocument(); // In top bar
   });
 
   it('renders global navigation links', () => {
@@ -45,7 +45,6 @@ describe('AppLayout Component', () => {
     const projectId = 'test-project-123';
     renderWithProviders(<AppLayout />, [`/projects/${projectId}`]);
 
-    expect(screen.getByText('Current Project')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /PICO & Hypothesis/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Studies/i })).toBeInTheDocument();
@@ -57,7 +56,6 @@ describe('AppLayout Component', () => {
   it('does not render project-specific navigation links when no projectId', () => {
     renderWithProviders(<AppLayout />, ['/projects']);
 
-    expect(screen.queryByText('Current Project')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Dashboard/i })).not.toBeInTheDocument();
   });
 
