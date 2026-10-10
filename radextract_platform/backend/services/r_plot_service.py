@@ -20,14 +20,36 @@ from typing import Optional
 _CONDA_RSCRIPT = "/opt/conda/bin/Rscript"
 
 
+def _windows_rscript() -> Optional[str]:
+    """Newest Rscript.exe when R is installed but not on PATH."""
+    if os.name != "nt":
+        return None
+    roots = [
+        os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "R"),
+        os.path.join(os.environ.get("LOCALAPPDATA", ""), "R"),
+        os.path.join(os.path.expanduser("~"), "R"),
+    ]
+    candidates = []
+    for root in roots:
+        if not root or not os.path.isdir(root):
+            continue
+        for dirpath, _dirnames, filenames in os.walk(root):
+            if "Rscript.exe" in filenames and os.path.basename(dirpath).lower() == "bin":
+                candidates.append(os.path.join(dirpath, "Rscript.exe"))
+    return sorted(candidates, reverse=True)[0] if candidates else None
+
+
 def _resolve_rscript() -> str:
-    """RADEXTRACT_RSCRIPT env var, then the original conda path, then Rscript on PATH."""
+    """RADEXTRACT_RSCRIPT, conda, PATH, then a Windows Program Files install."""
     env_path = os.environ.get("RADEXTRACT_RSCRIPT")
-    if env_path:
+    if env_path and os.path.isfile(env_path):
         return env_path
-    if os.path.exists(_CONDA_RSCRIPT):
+    if os.path.isfile(_CONDA_RSCRIPT):
         return _CONDA_RSCRIPT
-    return shutil.which("Rscript") or _CONDA_RSCRIPT
+    found = shutil.which("Rscript")
+    if found:
+        return found
+    return _windows_rscript() or _CONDA_RSCRIPT
 
 
 RSCRIPT_PATH = _resolve_rscript()
@@ -35,8 +57,9 @@ R_SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "r_scripts")
 
 
 def _is_r_available() -> bool:
-    """Check if Rscript is available."""
-    return os.path.exists(RSCRIPT_PATH) and os.access(RSCRIPT_PATH, os.X_OK)
+    """Check if Rscript is available. Resolved on each call so a new install is picked up."""
+    path = _resolve_rscript()
+    return os.path.isfile(path) and os.access(path, os.X_OK)
 
 
 def _cache_key(data: dict) -> str:
@@ -77,7 +100,7 @@ def call_r_script(script_name: str, data: dict) -> Optional[str]:
 
     try:
         result = subprocess.run(
-            [RSCRIPT_PATH, script_path, input_path],
+            [_resolve_rscript(), script_path, input_path],
             capture_output=True,
             text=True,
             timeout=30,
@@ -131,7 +154,7 @@ def call_r_script_bytes(script_name: str, data: dict, ext: str = ".png") -> Opti
 
     try:
         subprocess.run(
-            [RSCRIPT_PATH, script_path, input_path],
+            [_resolve_rscript(), script_path, input_path],
             capture_output=True,
             text=True,
             timeout=30,
@@ -252,15 +275,26 @@ def generate_funnel_plot(
 
 
 def generate_prisma_flow(flow_data: dict) -> str:
-    """Generate a PRISMA 2020 flow diagram SVG using R grid graphics.
+    """Generate a PRISMA 2020 flow diagram SVG.
 
-    Falls back to Python chart_engine if R is unavailable.
+    Primary: R grid graphics (if R is available).
+    Fallback 1: High-fidelity Python PRISMA 2020 SVG engine (services.prisma_service).
+    Fallback 2: Python chart_engine matplotlib generator.
     """
     svg = call_r_script("prisma_flow.R", flow_data)
     if svg:
         return svg
 
-    # Fallback to chart_engine
+    # Fallback 1: Native PRISMA 2020 SVG engine
+    try:
+        from services.prisma_service import generate_prisma_2020_svg
+        svg2020 = generate_prisma_2020_svg(flow_data)
+        if svg2020 and svg2020.strip():
+            return svg2020
+    except Exception as e:
+        logger.debug(f"Native PRISMA SVG generation failed: {e}")
+
+    # Fallback 2: chart_engine
     try:
         from services.chart_engine import generate_prisma_flow as ce_prisma
         ident = {

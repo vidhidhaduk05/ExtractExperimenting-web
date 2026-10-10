@@ -366,9 +366,9 @@
     "semantic_hash": "d3327fbdf4184cb26a8c13f46880e191"
   },
   "radextract_platform/backend/routers/screening.py": {
-    "mtime": 1791481055.1929853,
-    "seen": 1791541136.3521078,
-    "ast_hash": "3e69632488a3ac0e9182533b3d0b22ad",
+    "mtime": 1791662882.8479216,
+    "seen": 1791663091.5457196,
+    "ast_hash": "07b1b2782205d31ef2b8cad6a5212eb5",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/statistics.py": {
@@ -516,9 +516,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/r_plot_service.py": {
-    "mtime": 1791539304.0671215,
-    "seen": 1791541136.3522277,
-    "ast_hash": "fcec0767f6355addb22b323a4c21836c",
+    "mtime": 1791662721.2351315,
+    "seen": 1791663091.616751,
+    "ast_hash": "0416b8757c9616708f4c16a442e58fe8",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/rct_rob_engine.py": {
@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1791540827.0254157,
-    "seen": 1791541136.3526332,
-    "ast_hash": "f94b959ea0536b58fa3221534f158deb",
+    "mtime": 1791662750.664112,
+    "seen": 1791663091.729458,
+    "ast_hash": "5e4acd44b1763382fd3d9d9f80888e1f",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -858,9 +858,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PrismaFlowPage.tsx": {
-    "mtime": 1791266092.3646138,
-    "seen": 1791275116.087485,
-    "ast_hash": "9c4442fef2606771c1cc0c067881104d",
+    "mtime": 1791662764.5388908,
+    "seen": 1791663091.7497594,
+    "ast_hash": "256fd3b043831d3d933034d6d1800430",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ProjectCreate.tsx": {
@@ -1386,9 +1386,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/prisma_export_service.py": {
-    "mtime": 1791208577.2696393,
-    "seen": 1791265994.9994226,
-    "ast_hash": "5ec93622e4e5de1ba07a0fad461196b0",
+    "mtime": 1791662702.1516676,
+    "seen": 1791663091.6157496,
+    "ast_hash": "cb77d23c2e1129ed853f31f868ef295b",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/screening_progress.py": {
@@ -2343,6 +2343,24 @@
     "mtime": 1791661450.8627,
     "seen": 1791661588.5277505,
     "ast_hash": "a1f3511e04207ce1d67c326ee4172185",
+    "semantic_hash": ""
+  },
+  ".agents/jules_monitor.py": {
+    "mtime": 1791661790.5068567,
+    "seen": 1791663091.4132643,
+    "ast_hash": "94d77e9bccc804544e146935575f967d",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/services/prisma_service.py": {
+    "mtime": 1791662674.8334012,
+    "seen": 1791663091.6157496,
+    "ast_hash": "cdc3d2c38c1936df7573d2b00c645d6b",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_prisma_service.py": {
+    "mtime": 1791662778.657659,
+    "seen": 1791663091.6793036,
+    "ast_hash": "929a2240549c649b6a087762d88d7471",
     "semantic_hash": ""
   }
 }

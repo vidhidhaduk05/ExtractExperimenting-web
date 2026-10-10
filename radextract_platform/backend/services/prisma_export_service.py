@@ -13,91 +13,18 @@ import io
 import logging
 from typing import Optional
 
+from services.prisma_service import get_prisma_2020_data
+
 logger = logging.getLogger(__name__)
 
 
 def get_prisma_flow_data(project_id: str, db) -> dict:
     """Compute PRISMA 2020 flow counts for a project.
 
-    This is the single source of truth used by the /prisma JSON endpoint,
-    the /prisma/svg endpoint, and the PNG/DOCX exporters.
+    Delegates to services.prisma_service.get_prisma_2020_data to guarantee
+    live sync across databases, registers, and human/AI screening decisions.
     """
-    total_records = db.execute(
-        "SELECT COUNT(*) as c FROM studies WHERE project_id = ?", (project_id,)
-    ).fetchone()["c"]
-    ta_screened = db.execute(
-        "SELECT COUNT(*) as c FROM studies WHERE project_id = ? AND screening_stage IN ('ta', 'ft')",
-        (project_id,),
-    ).fetchone()["c"]
-    ta_excluded = db.execute(
-        "SELECT COUNT(*) as c FROM studies WHERE project_id = ? AND screening_stage = 'ta' AND screening_status = 'excluded'",
-        (project_id,),
-    ).fetchone()["c"]
-    ta_excluded_reasons = db.execute(
-        "SELECT screening_reason, COUNT(*) as c FROM studies "
-        "WHERE project_id = ? AND screening_stage = 'ta' AND screening_status = 'excluded' "
-        "GROUP BY screening_reason ORDER BY c DESC",
-        (project_id,),
-    ).fetchall()
-    ft_assessed = db.execute(
-        "SELECT COUNT(*) as c FROM studies WHERE project_id = ? AND screening_stage = 'ft'",
-        (project_id,),
-    ).fetchone()["c"]
-    ft_excluded = db.execute(
-        "SELECT COUNT(*) as c FROM studies WHERE project_id = ? AND screening_stage = 'ft' AND screening_status = 'excluded'",
-        (project_id,),
-    ).fetchone()["c"]
-    ft_excluded_reasons = db.execute(
-        "SELECT screening_reason, COUNT(*) as c FROM studies "
-        "WHERE project_id = ? AND screening_stage = 'ft' AND screening_status = 'excluded' "
-        "GROUP BY screening_reason ORDER BY c DESC",
-        (project_id,),
-    ).fetchall()
-    included = db.execute(
-        "SELECT COUNT(*) as c FROM studies WHERE project_id = ? AND screening_status = 'included'",
-        (project_id,),
-    ).fetchone()["c"]
-    in_meta = db.execute(
-        """SELECT COUNT(DISTINCT s.study_id) as c FROM studies s
-           JOIN extractions e ON s.study_id = e.study_id
-           WHERE s.project_id = ? AND s.screening_status = 'included'""",
-        (project_id,),
-    ).fetchone()["c"]
-    pending = db.execute(
-        "SELECT COUNT(*) as c FROM studies WHERE project_id = ? AND screening_status = 'pending'",
-        (project_id,),
-    ).fetchone()["c"]
-
-    return {
-        "project_id": project_id,
-        "identification": {
-            "database_records": total_records,
-            "registers": 0,
-            "other_sources": 0,
-            "total": total_records,
-        },
-        "screening": {
-            "records_screened": ta_screened,
-            "records_excluded": ta_excluded,
-            "excluded_with_reasons": [
-                {"reason": r["screening_reason"] or "Not specified", "count": r["c"]}
-                for r in ta_excluded_reasons
-            ],
-        },
-        "eligibility": {
-            "full_text_assessed": ft_assessed,
-            "full_text_excluded": ft_excluded,
-            "excluded_reasons": [
-                {"reason": r["screening_reason"] or "Not specified", "count": r["c"]}
-                for r in ft_excluded_reasons
-            ],
-        },
-        "included": {
-            "studies_in_review": included,
-            "studies_in_meta_analysis": in_meta,
-        },
-        "pending": pending,
-    }
+    return get_prisma_2020_data(project_id, db)
 
 
 def render_prisma_png(flow_data: dict) -> Optional[bytes]:

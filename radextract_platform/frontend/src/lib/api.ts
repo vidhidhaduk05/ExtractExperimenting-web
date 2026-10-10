@@ -948,6 +948,26 @@ export interface RobSummary {
   assessments_needing_review_count?: number;
   judgment_counts: Record<string, number>;
   assessments: RobSummaryAssessment[];
+  tool_groups?: Record<string, {
+    tool: string;
+    total_assessments: number;
+    judgment_counts: Record<string, number>;
+    assessments: RobSummaryAssessment[];
+  }>;
+  manual_review?: RobToolClassification[];
+}
+
+export interface RobToolClassification {
+  classification_id: string;
+  study_id: string;
+  study_title: string;
+  study_design: string;
+  selected_tool: string;
+  confidence: number;
+  alternatives: string[];
+  rationale: string;
+  evidence: string[];
+  status: "assigned" | "manual_review";
 }
 
 export interface RobSummaryAssessment {
@@ -1082,6 +1102,11 @@ export interface PrismaFlow {
     studies_in_meta_analysis: number;
   };
   pending: number;
+  audit?: {
+    human_decisions: number;
+    ai_decisions: number;
+    total_decisions: number;
+  };
 }
 
 // ── PDF Processing ──
@@ -1251,6 +1276,13 @@ export interface PicoExtractionResponse {
   research_question: string;
   hypothesis: string;
   extraction_confidence: string;
+}
+
+export interface ProtocolExtractionResponse extends PicoExtractionResponse {
+  inclusion?: string[];
+  exclusion?: string[];
+  search_strings?: Record<string, string>;
+  variables?: Array<Record<string, unknown>>;
 }
 
 // ── Hypothesis ──
@@ -2223,7 +2255,7 @@ export const api = {
   overrideAssessmentTool: (assessmentId: string, toolId: string) =>
     request<RobAssessment>(`/rob/assessments/${assessmentId}/tool`, {
       method: "PUT",
-      body: JSON.stringify({ tool: toolId }),
+      body: JSON.stringify({ tool_id: toolId }),
     }),
 
   // Batch RoB Runs
@@ -2277,6 +2309,53 @@ export const api = {
   // RoB Summary & Export
   robSummary: (projectId: string) =>
     request<RobSummary>(`/rob/projects/${projectId}/summary`),
+  robvisPlot: (projectId: string, plot: "traffic_light" | "summary" = "traffic_light") =>
+    request<{
+      success: boolean;
+      engine: string;
+      plot: string;
+      tool: string;
+      study_count: number;
+      svg: string;
+      message: string;
+    }>(`/rob/projects/${projectId}/figure?plot=${plot === "summary" ? "summary" : "traffic"}`),
+  robvisFigure: (projectId: string, plot: "traffic" | "summary" = "traffic") =>
+    request<{
+      success: boolean;
+      engine: string;
+      plot: string;
+      tool: string;
+      study_count: number;
+      svg: string;
+      png_base64: string;
+      message: string;
+    }>(`/rob/projects/${projectId}/figure?plot=${plot}`),
+  robFigures: (projectId: string) =>
+    request<{
+      project_id: string;
+      figures: {
+        success: boolean;
+        engine: string;
+        plot: "traffic" | "summary";
+        tool: string;
+        study_count: number;
+        svg: string;
+        png_base64: string;
+        message: string;
+      }[];
+    }>(`/rob/projects/${projectId}/figures`),
+  reportingProfile: (projectId: string) =>
+    request<{
+      profile: {
+        profile_key: string;
+        name: string;
+        sections: { key: string; name: string; items: { key: string; label: string }[] }[];
+      };
+      counts: Record<string, Record<string, number>>;
+      study_count: number;
+      svg: string;
+      png_base64: string;
+    }>(`/rob/projects/${projectId}/reporting-profile`),
   robExport: (projectId: string, format = "csv") =>
     `${API_BASE}/rob/projects/${projectId}/export?format=${format}`,
 
@@ -2380,7 +2459,7 @@ export const api = {
     request<PICO>(`/projects/${projectId}/pico`),
   updatePico: (projectId: string, data: PICOUpdate) =>
     request<PICO>(`/projects/${projectId}/pico`, { method: "PUT", body: JSON.stringify(data) }),
-  extractPico: async (projectId: string, file: File): Promise<PicoExtractionResponse> => {
+  extractPico: async (projectId: string, file: File): Promise<ProtocolExtractionResponse> => {
     const isBrowser = typeof window !== "undefined";
     const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
     const isDemoExplicit = isBrowser && localStorage.getItem("demo_mode") === "true";
@@ -2469,25 +2548,27 @@ export const api = {
         : "Adult and pediatric patients undergoing diagnostic evaluation and interventional management for confirmed vascular lesions";
 
       const defaultIndexTest = isVascular
-        ? "High-resolution digital subtraction angiography (DSA) with 3D rotational reconstructions and hemodynamic wall shear stress analysis"
+        ? "Descriptive review. Treatment of the malformation is an extraction field, not an eligibility criterion."
         : "Contrast-enhanced cross-sectional imaging and catheter digital subtraction angiography";
 
       const defaultComparator = isVascular
-        ? "Conservative non-interventional observation or standard surgical parent-artery sacrifice"
+        ? "Pre-specified contrasts: aneurysm-present versus aneurysm-absent, and single-territory versus multi-territory."
         : "Standard-of-care medical management or historical reference standard";
 
       const defaultOutcome = isVascular
-        ? "Angiographic lesion obliteration, parent-artery patency preservation, freedom from intracranial hemorrhage, and functional outcome (mRS ≤ 2)"
+        ? "Ischemic stroke, hemorrhagic stroke, mass effect, hydrocephalus, symptom course, and radiographic progression."
         : "Diagnostic accuracy, complete lesion resolution, procedure-related morbidity, and long-term functional survival";
 
-      const defaultStudyDesign = "Multicenter observational cohort and systematic comparative review";
+      const defaultStudyDesign = isVascular
+        ? "Observational studies with original patient-level data, including case reports and case series, all languages."
+        : "Multicenter observational cohort and systematic comparative review";
 
       const defaultQuestion = isVascular
-        ? "In patients with intracranial pure arterial malformations (PAM), does parent-artery preserving targeted endovascular treatment yield superior clinical and angiographic outcomes compared to conservative management?"
+        ? "What are the angioarchitecture, aneurysm association, and stroke outcomes of intracranial pure arterial malformations?"
         : "What are the comparative diagnostic efficacy and long-term clinical safety profiles of targeted interventional protocols versus conservative observation?";
 
       const defaultHypothesis = isVascular
-        ? "Parent-artery preserving targeted endovascular intervention provides a significantly lower rate of long-term hemorrhage and neurological deficit compared to observational management in symptomatic PAM."
+        ? "Evidence is pooled as descriptive proportions with Wilson 95% CIs. NR values are not imputed."
         : "Targeted endovascular intervention achieves higher definitive lesion control with acceptable complication rates compared to non-interventional management.";
 
       return {
@@ -2765,6 +2846,13 @@ export const api = {
   // ── Analysis (Phase 4: Descriptive & Statistical Analysis) ──
 
   /** Full data profiling report: distributions, missing values, outliers, correlations */
+  getDescriptiveSynthesis: (projectId: string) =>
+    request<{
+      variables: Array<Record<string, unknown>>;
+      note: string;
+      prisma?: { identified: number; duplicates_removed: number; by_status: Record<string, number> };
+    }>(`/projects/${projectId}/analysis/descriptive`),
+
   getAnalysisProfile: (projectId: string) =>
     request<AnalysisProfile>(`/projects/${projectId}/analysis/profile`),
 

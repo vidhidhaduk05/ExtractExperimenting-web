@@ -146,9 +146,34 @@ export function PrismaFlowPage() {
           </button>
         </div>
       </div>
-      <p className="text-gray-500 text-sm mb-6">
-        Systematic review screening flow following PRISMA 2020 guidelines
+      <p className="text-gray-500 text-sm mb-4">
+        Systematic review screening flow following PRISMA 2020 guidelines with live database synchronization.
       </p>
+
+      {flow?.audit && (
+        <div className="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-6 text-sm">
+            <div>
+              <span className="text-xs text-slate-500 block font-medium">TOTAL SCREENING DECISIONS</span>
+              <span className="text-base font-bold text-slate-900">{flow.audit.total_decisions}</span>
+            </div>
+            <div className="border-l pl-6 border-slate-200">
+              <span className="text-xs text-slate-500 block font-medium">HUMAN DECISIONS</span>
+              <span className="text-base font-bold text-emerald-600">{flow.audit.human_decisions}</span>
+            </div>
+            <div className="border-l pl-6 border-slate-200">
+              <span className="text-xs text-slate-500 block font-medium">AI / LAYA DECISIONS</span>
+              <span className="text-base font-bold text-indigo-600">{flow.audit.ai_decisions}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+              Live Sync Active
+            </span>
+          </div>
+        </div>
+      )}
 
       {isLoading && <p className="text-gray-400">Loading flow data...</p>}
 

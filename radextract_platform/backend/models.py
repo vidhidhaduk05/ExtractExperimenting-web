@@ -148,12 +148,18 @@ class PicoExtractionResponse(BaseModel):
     research_question: str = ""
     hypothesis: str = ""
     extraction_confidence: str = "medium"
+    inclusion: list[str] = []
+    exclusion: list[str] = []
+    search_strings: dict = {}
+    variables: list[dict] = []
 
 
 # ── PubMed Fetch ──
 
 class PubMedFetchRequest(BaseModel):
-    max_results: int = 100
+    max_results: int = 10000
+    mindate: str = ""
+    maxdate: str = ""
 
 
 class PubMedFetchResponse(BaseModel):
@@ -161,6 +167,12 @@ class PubMedFetchResponse(BaseModel):
     imported_count: int
     skipped_duplicates: int
     total_found: int
+
+
+class OpenAlexFetchRequest(BaseModel):
+    max_results: int = 500
+    mindate: str = "1960-01-01"
+    maxdate: str = "2026-08-31"
 
 
 # ── Reference Upload ──
@@ -537,6 +549,8 @@ class RobProjectSummary(BaseModel):
     assessments: list[dict[str, Any]]
     pending_human_review_count: int = 0
     assessments_needing_review_count: int = 0
+    tool_groups: dict[str, Any] = Field(default_factory=dict)
+    manual_review: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ProjectSettingsUpdate(BaseModel):
@@ -562,7 +576,7 @@ class RobRunProgressResponse(BaseModel):
 
 class RobExportRequest(BaseModel):
     project_id: str
-    format: str = "csv"  # "csv" or "xlsx"
+    format: str = "csv"  # "csv", "xlsx", or complete "zip" package
 
 
 # ═══════════════════════════════════════════════════════════════════════

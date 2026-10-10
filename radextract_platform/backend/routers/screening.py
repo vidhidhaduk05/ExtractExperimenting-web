@@ -221,11 +221,12 @@ async def screening_summary(project_id: str, user: Optional[dict] = Depends(get_
 async def deduplicate_studies(
     project_id: str,
     auto_mark: bool = Query(True, description="Mark duplicates in the database"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    """Detect and optionally mark duplicate studies using DOI/PMID exact match
+    """Detect and optionally mark duplicate studies using DOI, PMID, exact title,
+    then normalized title plus first author and year."""
     check_project_access(conn, project_id, user)
-    and title similarity (Levenshtein ratio > 0.9)."""
     from services.dedup_service import deduplicate_studies as _dedup
 
     row = conn.execute(
@@ -251,12 +252,12 @@ DEFAULT_EXCLUSION_REASONS = [
     ExclusionReason(code="wrong_study_design", label="Wrong study design"),
     ExclusionReason(code="no_full_text", label="Full text not available"),
     ExclusionReason(code="duplicate", label="Duplicate publication"),
-    ExclusionReason(code="non_english", label="Non-English language"),
     ExclusionReason(code="conference_abstract", label="Conference abstract only"),
     ExclusionReason(code="no_data", label="No extractable data"),
-    ExclusionReason(code="case_report", label="Case report / case series (<10 patients)"),
     ExclusionReason(code="review_article", label="Review article / editorial"),
     ExclusionReason(code="animal_study", label="Animal / phantom study"),
+    ExclusionReason(code="language_non_english", label="Non-English language"),
+    ExclusionReason(code="wrong_setting", label="Wrong clinical setting"),
     ExclusionReason(code="other", label="Other (specify in reason text)"),
 ]
 
@@ -563,6 +564,20 @@ async def create_screening_decision(
         from services import rob_service
         background_tasks.add_task(
             rob_service.auto_assess_study, study_id, body.project_id,
+        )
+
+    # Laya background verification of exclusion reason for PRISMA audit
+    if body.decision == "excluded" and (body.reason_text or body.reason_code):
+        from services.prisma_service import verify_exclusion_with_laya
+        try:
+            title = study["title"] if "title" in study.keys() else ""
+            abstract = study["abstract"] if "abstract" in study.keys() else ""
+        except Exception:
+            title = getattr(study, "title", "") or ""
+            abstract = getattr(study, "abstract", "") or ""
+        reason_to_verify = body.reason_text or body.reason_code or ""
+        background_tasks.add_task(
+            verify_exclusion_with_laya, title, abstract, reason_to_verify,
         )
 
     if hasattr(conn, "commit"):
@@ -1260,11 +1275,35 @@ async def batch_ai_screen(
 
         if stage == "ta":
             pre = prefilter_study(title=title, abstract=abstract, signals=signals, stage="ta")
+            reasons_raw = proj["exclusion_reasons_json"] if proj["exclusion_reasons_json"] else "[]"
+            try:
+                reasons_data = json.loads(reasons_raw) if reasons_raw else []
+            except json.JSONDecodeError:
+                reasons_data = []
+            reason_labels = []
+            for reason in reasons_data:
+                if isinstance(reason, dict) and reason.get("label"):
+                    reason_labels.append(reason["label"])
+                elif isinstance(reason, str):
+                    reason_labels.append(reason)
+            try:
+                inclusion_data = json.loads(proj["inclusion_criteria_json"]) if proj["inclusion_criteria_json"] else []
+            except (json.JSONDecodeError, KeyError, TypeError):
+                inclusion_data = []
+            inclusion_labels = []
+            for item in inclusion_data:
+                if isinstance(item, dict) and item.get("text"):
+                    inclusion_labels.append(item["text"])
+                elif isinstance(item, str):
+                    inclusion_labels.append(item)
+            if inclusion_labels:
+                pico = dict(pico)
+                pico["inclusion_criteria"] = inclusion_labels
             llm_res = screen_with_clarification(
                 title=title,
                 abstract=abstract,
                 pico_criteria=pico,
-                exclusion_reasons=None,
+                exclusion_reasons=reason_labels,
                 stage="ta",
                 signals=signals,
             )
@@ -1278,13 +1317,21 @@ async def batch_ai_screen(
 
             pre = prefilter_study(title=title, abstract=full_text or abstract, signals=signals, stage="ft")
             reasons_raw = proj["exclusion_reasons_json"] if proj["exclusion_reasons_json"] else "[]"
-            reasons = json.loads(reasons_raw) if reasons_raw else []
+            try:
+                reasons = json.loads(reasons_raw) if reasons_raw else []
+            except json.JSONDecodeError:
+                reasons = []
+            reason_labels = [
+                reason.get("label") if isinstance(reason, dict) else str(reason)
+                for reason in reasons
+                if (isinstance(reason, dict) and reason.get("label")) or isinstance(reason, str)
+            ]
 
             llm_raw = screen_fulltext_with_llm(
                 text=full_text or abstract,
                 study_metadata=dict(s),
                 pico=pico,
-                exclusion_reasons=reasons,
+                exclusion_reasons=reason_labels,
             )
             llm_res = {
                 "recommendation": llm_raw.get("recommendation", "uncertain"),
