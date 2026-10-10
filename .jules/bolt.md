@@ -1,0 +1,3 @@
+## 2025-05-18 - Single-Pass Bounding Box Accumulation in PDF Highlight Overlay
+**Learning:** In React components processing geometry or layout boxes (such as PDF text highlight rects), using `Math.min(...cluster.map(r => r.left))` inside loops creates repeated array allocations and $O(N \cdot K)$ multi-pass iterations. Replacing array maps and spread operators with single-pass scalar tracking (`minX`, `maxX`, `minY`, `maxY`) eliminates unnecessary heap allocations and GC pressure.
+**Action:** Always prefer single-pass `for` loop accumulation over `.map()` + `Math.min/max(...spread)` when computing bounding boxes in hot render loops.
