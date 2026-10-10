@@ -108,6 +108,8 @@ export function ScreeningPage() {
   // Exclude reason code for selected study
   const [excludeReasonCode, setExcludeReasonCode] = useState<string>("");
   const [excludeReasonText, setExcludeReasonText] = useState<string>("");
+  const [reasonError, setReasonError] = useState<string | null>(null);
+  const reasonSelectRef = useRef<HTMLSelectElement>(null);
 
   // PDF upload for selected study
   const [uploadingPdf, setUploadingPdf] = useState(false);
@@ -273,6 +275,16 @@ export function ScreeningPage() {
     return studyList[0];
   }, [studyList, selectedStudyId]);
 
+  // Clear reason validation error when reviewer navigates to a different study
+  const prevActiveStudyIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentId = selectedStudy?.study_id || null;
+    if (prevActiveStudyIdRef.current && currentId && prevActiveStudyIdRef.current !== currentId) {
+      setReasonError(null);
+    }
+    prevActiveStudyIdRef.current = currentId;
+  }, [selectedStudy?.study_id]);
+
   // Filtered Studies List
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
@@ -337,10 +349,51 @@ export function ScreeningPage() {
     },
   });
 
-  // Hotkey Screening decision handler (auto-advances to next study)
-  const handleScreenDecision = (decision: "included" | "excluded" | "maybe") => {
-    if (!selectedStudy) return;
-    const currentStudyId = selectedStudy.study_id;
+  // Screening decision handler (auto-advances to next study only on valid decisions)
+  const handleScreenDecision = (decision: "included" | "excluded" | "maybe", targetStudyId?: string) => {
+    const currentStudyId = targetStudyId || selectedStudy?.study_id;
+    if (!currentStudyId) return;
+
+    if (decision === "excluded") {
+      // Must have a valid exclusion reason selected
+      if (!excludeReasonCode || !excludeReasonCode.trim()) {
+        if (targetStudyId && selectedStudy?.study_id !== targetStudyId) {
+          setSelectedStudyId(targetStudyId);
+        }
+        setReasonError("Please select a valid exclusion reason before excluding this record.");
+        reasonSelectRef.current?.focus();
+        return;
+      }
+
+      setReasonError(null);
+
+      // Find label for reasonCode if custom rationale text is not provided
+      const selectedReasonObj = exclusionReasons.find(
+        (r: any) => (r.code || r.reason_id) === excludeReasonCode
+      );
+      const reasonLabel = selectedReasonObj ? (selectedReasonObj.label || selectedReasonObj.code) : excludeReasonCode;
+
+      decisionMutation.mutate({
+        studyId: currentStudyId,
+        decision: "excluded",
+        reasonCode: excludeReasonCode,
+        reasonText: excludeReasonText.trim() || reasonLabel || "Ineligible based on criteria",
+      });
+
+      // Clear the reason selector for the next record
+      setExcludeReasonCode("");
+      setExcludeReasonText("");
+
+      // Advance to next study in filtered list ONLY after saving exclusion
+      const currentIndex = filteredStudies.findIndex((s) => s.study_id === currentStudyId);
+      if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
+        setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
+      }
+      return;
+    }
+
+    // Include and Maybe: clear any reason error, advance, and mutate
+    setReasonError(null);
 
     // Advance to next study in filtered list
     const currentIndex = filteredStudies.findIndex((s) => s.study_id === currentStudyId);
@@ -353,13 +406,6 @@ export function ScreeningPage() {
         studyId: currentStudyId,
         decision: "included",
         reasonText: "Eligible under PICO criteria",
-      });
-    } else if (decision === "excluded") {
-      decisionMutation.mutate({
-        studyId: currentStudyId,
-        decision: "excluded",
-        reasonCode: excludeReasonCode || "wrong_population",
-        reasonText: excludeReasonText || "Ineligible based on criteria",
       });
     } else if (decision === "maybe") {
       decisionMutation.mutate({
@@ -1092,7 +1138,7 @@ export function ScreeningPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            decisionMutation.mutate({ studyId: study.study_id, decision: "included" });
+                            handleScreenDecision("included", study.study_id);
                           }}
                           className="p-1 hover:bg-emerald-100 rounded text-emerald-600"
                           title="Quick Include"
@@ -1102,10 +1148,10 @@ export function ScreeningPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            decisionMutation.mutate({ studyId: study.study_id, decision: "excluded" });
+                            handleScreenDecision("excluded", study.study_id);
                           }}
                           className="p-1 hover:bg-rose-100 rounded text-rose-600"
-                          title="Quick Exclude"
+                          title="Quick Exclude (Reason required)"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                         </button>
@@ -1426,26 +1472,42 @@ export function ScreeningPage() {
                 </div>
 
                 {/* Exclude reason selection (for exclude decisions) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <select
-                    value={excludeReasonCode}
-                    onChange={(e) => setExcludeReasonCode(e.target.value)}
-                    className="text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    <option value="">Select Exclusion Reason (Optional)</option>
-                    {exclusionReasons.map((r: any) => (
-                      <option key={r.code || r.reason_id} value={r.code || r.reason_id}>
-                        {r.label || r.code}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Custom exclusion rationale..."
-                    value={excludeReasonText}
-                    onChange={(e) => setExcludeReasonText(e.target.value)}
-                    className="text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
+                <div className="space-y-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <select
+                      ref={reasonSelectRef}
+                      value={excludeReasonCode}
+                      onChange={(e) => {
+                        setExcludeReasonCode(e.target.value);
+                        if (e.target.value) setReasonError(null);
+                      }}
+                      className={`text-xs bg-white border rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 ${
+                        reasonError
+                          ? "border-rose-500 ring-1 ring-rose-500 bg-rose-50/40"
+                          : "border-slate-300 focus:ring-indigo-500"
+                      }`}
+                    >
+                      <option value="">Select Exclusion Reason (Required to exclude)</option>
+                      {exclusionReasons.map((r: any) => (
+                        <option key={r.code || r.reason_id} value={r.code || r.reason_id}>
+                          {r.label || r.code}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Custom exclusion rationale..."
+                      value={excludeReasonText}
+                      onChange={(e) => setExcludeReasonText(e.target.value)}
+                      className="text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  {reasonError && (
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{reasonError}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Main Action Buttons with Hotkey badges */}
@@ -1784,7 +1846,7 @@ export function ScreeningPage() {
 
               <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
                 <span className="text-slate-700 font-medium flex items-center gap-2">
-                  <XCircle className="h-4 w-4 text-rose-600" /> Exclude Study & Advance
+                  <XCircle className="h-4 w-4 text-rose-600" /> Exclude Study & Advance (Reason required)
                 </span>
                 <div className="flex items-center gap-1">
                   <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">E</kbd>
