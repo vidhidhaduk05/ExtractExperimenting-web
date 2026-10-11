@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, type PrismaFlow } from "../lib/api";
 import { ArrowLeft, GitBranch, Loader2, Download, FileText, Code2, Copy } from "lucide-react";
+import { sanitizeSvg } from "../lib/utils";
 
 /** Fetch a URL as a blob and trigger a browser download. */
 async function downloadFile(url: string, filename: string) {
@@ -186,7 +187,8 @@ export function PrismaFlowPage() {
 
       {useRSvg && rSvg && !rSvgLoading && (
         <div className="card p-6">
-          <div dangerouslySetInnerHTML={{ __html: rSvg }} />
+          {/* Sanitize raw R-generated SVG before rendering to prevent XSS */}
+          <div dangerouslySetInnerHTML={{ __html: sanitizeSvg(rSvg) }} />
         </div>
       )}
 
