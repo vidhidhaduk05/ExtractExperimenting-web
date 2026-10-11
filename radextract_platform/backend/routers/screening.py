@@ -8,7 +8,7 @@ import sqlite3
 
 from database import get_db
 from services.db_backend import DBBackend
-from dependencies import get_current_user_optional, check_project_access
+from dependencies import get_current_user, get_current_user_optional, check_project_access
 from models import (
     DeduplicationResult, DuplicateResolveRequest,
     ExclusionReason, ExclusionReasonsUpdate, ExclusionReasonsResponse,
@@ -68,6 +68,7 @@ async def update_screening(
     study_id: str,
     body: ScreeningUpdate,
     background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
     conn: DBBackend = Depends(get_db),
 ):
     row = conn.execute(
@@ -75,6 +76,14 @@ async def update_screening(
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Study not found")
+
+    check_project_access(conn, row["project_id"], user, min_role="reviewer")
+    if body.status in ("included", "excluded", "maybe"):
+        await create_screening_decision(study_id, ScreeningDecisionCreate(
+            study_id=study_id, project_id=row["project_id"], decision=body.status,
+            stage=body.stage, reason_text=body.reason,
+        ), background_tasks, user, conn)
+        return dict(conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone())
 
     conn.execute(
         """UPDATE studies
@@ -539,14 +548,14 @@ async def create_screening_decision(
     study_id: str,
     body: ScreeningDecisionCreate,
     background_tasks: BackgroundTasks,
-    user: Optional[dict] = Depends(get_current_user_optional),
+    user: dict = Depends(get_current_user),
     conn: DBBackend = Depends(get_db),
 ):
     """Record a single reviewer's screening decision for a study.
     In blind mode, other reviewers' decisions are not visible.
     Conflicts are auto-detected when 2+ reviewers disagree."""
     _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
-    if _pid: check_project_access(conn, _pid["project_id"], user)
+    if _pid: check_project_access(conn, _pid["project_id"], user, min_role="reviewer")
     if body.study_id != study_id:
         raise HTTPException(status_code=400, detail="study_id mismatch")
 
@@ -555,6 +564,19 @@ async def create_screening_decision(
     ).fetchone()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
+
+    if body.project_id != study["project_id"]:
+        raise HTTPException(status_code=400, detail="project_id mismatch")
+    record_stage = study["screening_stage"] or ""
+    if not record_stage:
+        record_stage = "ft" if study["screening_status"] == "awaiting_pdf" else "ta"
+    if record_stage not in ("ta", "ft"):
+        raise HTTPException(status_code=409, detail="Record has an invalid screening stage. Refresh before saving.")
+    if body.stage != record_stage:
+        raise HTTPException(status_code=409, detail="Screening stage changed or does not match this record. Refresh before saving.")
+
+    reviewer_id = user["user_id"]
+    reviewer_name = user["username"]
 
     # Get screening config for blind mode
     proj = conn.execute(
@@ -573,20 +595,19 @@ async def create_screening_decision(
     existing = conn.execute(
         """SELECT * FROM screening_decisions
            WHERE study_id = ? AND reviewer_id = ? AND stage = ?""",
-        (study_id, body.reviewer_id, body.stage),
+        (study_id, reviewer_id, body.stage),
     ).fetchone()
 
     decision_id = str(uuid.uuid4())
-    reviewer_name = body.reviewer_name or (user["username"] if user else body.reviewer_id)
 
     if existing:
         # Update existing decision
         conn.execute(
             """UPDATE screening_decisions SET
-               decision = ?, reason_code = ?, reason_text = ?, is_blinded = ?
+               decision = ?, reason_code = ?, reason_text = ?, is_blinded = ?, reviewer_name = ?
                WHERE decision_id = ?""",
             (body.decision, body.reason_code, body.reason_text,
-             1 if blind_mode else 0, existing["decision_id"]),
+             1 if blind_mode else 0, reviewer_name, existing["decision_id"]),
         )
         decision_id = existing["decision_id"]
     else:
@@ -595,7 +616,7 @@ async def create_screening_decision(
                (decision_id, study_id, project_id, reviewer_id, reviewer_name,
                 decision, reason_code, reason_text, stage, is_blinded)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (decision_id, study_id, body.project_id, body.reviewer_id,
+            (decision_id, study_id, body.project_id, reviewer_id,
              reviewer_name, body.decision, body.reason_code, body.reason_text,
              body.stage, 1 if blind_mode else 0),
         )
@@ -940,7 +961,7 @@ async def list_screening_conflicts(
 
 
 @router.put("/screening-conflicts/{conflict_id}/resolve", response_model=ScreeningConflictResponse)
-async def resolve_conflict(conflict_id: str, body: ConflictResolveRequest, user: Optional[dict] = Depends(get_current_user_optional),
+async def resolve_conflict(conflict_id: str, body: ConflictResolveRequest, user: dict = Depends(get_current_user),
     conn: DBBackend = Depends(get_db)):
     """Resolve a screening conflict with a final decision."""
     row = conn.execute(
@@ -949,12 +970,14 @@ async def resolve_conflict(conflict_id: str, body: ConflictResolveRequest, user:
     if not row:
         raise HTTPException(status_code=404, detail="Conflict not found")
 
+    check_project_access(conn, row["project_id"], user, min_role="reviewer")
+
     conn.execute(
         """UPDATE screening_conflicts SET
            resolution = ?, resolved_by = ?, resolved_at = datetime('now'),
            status = 'resolved'
            WHERE conflict_id = ?""",
-        (body.resolution, body.resolved_by, conflict_id),
+        (body.resolution, user["user_id"], conflict_id),
     )
 
     # Update the study's screening status to the resolved decision

@@ -7,6 +7,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ScreeningPage } from "./ScreeningPage";
 import { api } from "../lib/api";
 
+vi.mock("../lib/bookmarks", () => ({ useBookmarks: () => ({ ids: [], disabled: true, local: true, error: null, retry: vi.fn(), toggle: vi.fn() }) }));
+
 describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
   let queryClient: QueryClient;
 
@@ -85,6 +87,8 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
   };
 
   beforeEach(() => {
+    localStorage.setItem("token", "authenticated-test-token");
+    vi.spyOn(api, "getCurrentUser").mockResolvedValue({ user_id: "signed-in-id", username: "Signed-in reviewer", email: "", role: "reviewer" });
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -97,10 +101,17 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     vi.spyOn(api, "getExclusionReasons").mockResolvedValue({ reasons: mockReasons } as any);
     vi.spyOn(api, "screeningDecision").mockResolvedValue({ status: "success" } as any);
     vi.spyOn(api, "getAIScreeningProgress").mockResolvedValue({ active: false, done: 0, total: 0 } as any);
+    vi.spyOn(api, "getDuplicateGroups").mockResolvedValue({ groups: [], total_duplicates: 0 } as any);
+    vi.spyOn(api, "listScreeningKeywords").mockResolvedValue([]);
+    vi.spyOn(api, "getAbstractHighlights").mockResolvedValue({ all_spans: [], title_spans: [] } as any);
+    vi.spyOn(api, "getStudyClarifications").mockResolvedValue([] as any);
+    vi.spyOn(api, "robSummary").mockResolvedValue({ assessments: [] } as any);
+    vi.spyOn(api, "getRobRunProgress").mockResolvedValue({ active: false } as any);
   });
 
   afterEach(() => {
     cleanup();
+    localStorage.removeItem("token");
     vi.restoreAllMocks();
   });
 
@@ -115,6 +126,48 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
       </QueryClientProvider>
     );
   };
+
+  it("blocks decision buttons and hotkeys when no user is signed in", async () => {
+    localStorage.removeItem("token");
+    renderScreeningPage();
+    expect(await screen.findByRole("button", { name: /Include Study/i })).toBeDisabled();
+    fireEvent.keyDown(window, { key: "1" });
+    expect(api.screeningDecision).not.toHaveBeenCalled();
+    expect(screen.getByText("Sign in with a valid account to save screening decisions.")).toBeInTheDocument();
+  });
+
+  it("displays the verified account name rather than a browser-stored username", async () => {
+    localStorage.setItem("username", "Forged browser reviewer");
+    renderScreeningPage();
+    expect(await screen.findByText("Signed-in reviewer")).toBeInTheDocument();
+    expect(screen.queryByText("Forged browser reviewer")).not.toBeInTheDocument();
+    localStorage.removeItem("username");
+  });
+
+  it("saves full-text and abstract records with their own stages in All Stages", async () => {
+    vi.mocked(api.listScreening).mockResolvedValue([
+      { ...mockStudies[0], screening_stage: "ft" }, mockStudies[1],
+    ] as any);
+    renderScreeningPage();
+    const include = await screen.findByRole("button", { name: /Include Study/i });
+    fireEvent.click(include);
+    await waitFor(() => expect(api.screeningDecision).toHaveBeenNthCalledWith(1, "study_001", expect.objectContaining({ stage: "ft" })));
+    await waitFor(() => expect(screen.getByRole("heading", { name: mockStudies[1].title, level: 2 })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /Include Study/i }));
+    await waitFor(() => expect(api.screeningDecision).toHaveBeenNthCalledWith(2, "study_002", expect.objectContaining({ stage: "ta" })));
+  });
+
+  it("retains the original record stage when retrying a failed full-text save", async () => {
+    vi.mocked(api.listScreening).mockResolvedValue([{ ...mockStudies[0], screening_stage: "ft" }] as any);
+    vi.mocked(api.screeningDecision).mockRejectedValueOnce(new Error("Save interrupted"));
+    renderScreeningPage();
+    fireEvent.click(await screen.findByRole("button", { name: /Include Study/i }));
+    await screen.findByRole("button", { name: /Retry Save/i });
+    fireEvent.click(screen.getByRole("button", { name: "Title & Abstract" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Retry Save/i }));
+    await waitFor(() => expect(api.screeningDecision).toHaveBeenCalledTimes(2));
+    for (const [, body] of vi.mocked(api.screeningDecision).mock.calls) expect(body.stage).toBe("ft");
+  });
 
   it("blocks exclusion and displays prompt when no exclusion reason is selected (Button click)", async () => {
     renderScreeningPage();
@@ -172,8 +225,6 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     await waitFor(() => {
       expect(api.screeningDecision).toHaveBeenCalledWith("study_001", {
         project_id: "test_proj",
-        reviewer_id: "reviewer1",
-        reviewer_name: "Reviewer 1",
         decision: "excluded",
         stage: "ta",
         reason_code: "wrong_study_design",
@@ -203,8 +254,6 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     await waitFor(() => {
       expect(api.screeningDecision).toHaveBeenCalledWith("study_001", {
         project_id: "test_proj",
-        reviewer_id: "reviewer1",
-        reviewer_name: "Reviewer 1",
         decision: "excluded",
         stage: "ta",
         reason_code: "ineligible_outcome",
@@ -230,8 +279,6 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     await waitFor(() => {
       expect(api.screeningDecision).toHaveBeenCalledWith("study_001", {
         project_id: "test_proj",
-        reviewer_id: "reviewer1",
-        reviewer_name: "Reviewer 1",
         decision: "included",
         stage: "ta",
         reason_text: "Eligible under PICO criteria",
@@ -256,8 +303,6 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     await waitFor(() => {
       expect(api.screeningDecision).toHaveBeenCalledWith("study_001", {
         project_id: "test_proj",
-        reviewer_id: "reviewer1",
-        reviewer_name: "Reviewer 1",
         decision: "maybe",
         stage: "ta",
         reason_text: "Uncertain - requires further assessment",
@@ -317,8 +362,6 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     await waitFor(() => {
       expect(api.screeningDecision).toHaveBeenCalledWith("study_001", {
         project_id: "test_proj",
-        reviewer_id: "reviewer1",
-        reviewer_name: "Reviewer 1",
         decision: "excluded",
         stage: "ta",
         reason_code: "wrong_study_design",

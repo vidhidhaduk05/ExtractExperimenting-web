@@ -1,3 +1,4 @@
+import { resolveScreeningStage } from "../lib/screeningStage";
 import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
 import { useState, useRef, useMemo, useEffect } from "react";
@@ -95,8 +96,12 @@ export function ScreeningPage() {
   };
 
   // Reviewer identity
-  const [reviewerId] = useState(() => localStorage.getItem("username") || "reviewer1");
-  const [reviewerName] = useState(() => localStorage.getItem("username") || "Reviewer 1");
+  const authToken = localStorage.getItem("token");
+  const { data: currentReviewer, error: reviewerError } = useQuery({
+    queryKey: ["screening-reviewer", authToken], queryFn: api.getCurrentUser,
+    enabled: !!authToken, retry: false,
+  });
+  const reviewerName = currentReviewer?.username || "";
 
   // Highlight toggles & Keywords drawer state
   const [showHighlights, setShowHighlights] = useState(true);
@@ -120,6 +125,7 @@ export function ScreeningPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [failedDecision, setFailedDecision] = useState<{
     studyId: string;
+    stage: "ta" | "ft";
     decision: "included" | "excluded" | "maybe";
     reasonCode?: string;
     reasonText?: string;
@@ -351,6 +357,7 @@ export function ScreeningPage() {
 
   type DecisionPayload = {
     studyId: string;
+    stage: "ta" | "ft";
     decision: "included" | "excluded" | "maybe";
     reasonCode?: string;
     reasonText?: string;
@@ -360,10 +367,8 @@ export function ScreeningPage() {
     mutationFn: (data: DecisionPayload) =>
       api.screeningDecision(data.studyId, {
         project_id: projectId!,
-        reviewer_id: reviewerId,
-        reviewer_name: reviewerName,
         decision: data.decision,
-        stage: stageFilter === "ft" ? "ft" : "ta",
+        stage: data.stage,
         reason_code: data.reasonCode,
         reason_text: data.reasonText,
       }),
@@ -407,8 +412,25 @@ export function ScreeningPage() {
     // Prevent duplicate submissions while a save is in flight
     if (decisionMutation.isPending) return;
 
+    if (!currentReviewer) {
+      setSaveError("Sign in with a valid account to save screening decisions.");
+      return;
+    }
+
     const currentStudyId = targetStudyId || selectedStudy?.study_id;
     if (!currentStudyId) return;
+    const targetStudy = studyList.find(study => study.study_id === currentStudyId);
+    if (!targetStudy) {
+      setSaveError("Record could not be found. Refresh before saving.");
+      return;
+    }
+    let stage: "ta" | "ft";
+    try { stage = resolveScreeningStage(targetStudy); }
+    catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Screening stage could not be determined.");
+      return;
+    }
+
 
     if (decision === "excluded") {
       // Must have a valid exclusion reason selected (Task 27)
@@ -433,6 +455,7 @@ export function ScreeningPage() {
 
       decisionMutation.mutate({
         studyId: currentStudyId,
+        stage,
         decision: "excluded",
         reasonCode: excludeReasonCode,
         reasonText: excludeReasonText.trim() || reasonLabel || "Ineligible based on criteria",
@@ -448,12 +471,14 @@ export function ScreeningPage() {
     if (decision === "included") {
       decisionMutation.mutate({
         studyId: currentStudyId,
+        stage,
         decision: "included",
         reasonText: "Eligible under PICO criteria",
       });
     } else if (decision === "maybe") {
       decisionMutation.mutate({
         studyId: currentStudyId,
+        stage,
         decision: "maybe",
         reasonText: "Uncertain - requires further assessment",
       });
@@ -527,6 +552,7 @@ export function ScreeningPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     hotkeysEnabled,
+    currentReviewer,
     selectedStudy,
     filteredStudies,
     excludeReasonCode,
@@ -830,6 +856,10 @@ export function ScreeningPage() {
           </div>
         </div>
       )}
+
+      {!currentReviewer && <div role="alert" className="px-6 py-3 text-sm text-amber-800 bg-amber-50">
+        {reviewerError?.message || (authToken ? "Checking your sign-in…" : "Sign in to record screening decisions under your account.")}
+      </div>}
 
       {/* Filter and Search Bar */}
       <div className="bg-white border-b border-slate-200 px-6 py-2.5">
@@ -1191,7 +1221,7 @@ export function ScreeningPage() {
                             if (decisionMutation.isPending) return;
                             handleScreenDecision("included", study.study_id);
                           }}
-                          disabled={decisionMutation.isPending}
+                          disabled={decisionMutation.isPending || !currentReviewer}
                           className="p-1 hover:bg-emerald-100 rounded text-emerald-600 disabled:opacity-40"
                           title="Quick Include"
                         >
@@ -1203,7 +1233,7 @@ export function ScreeningPage() {
                             if (decisionMutation.isPending) return;
                             handleScreenDecision("excluded", study.study_id);
                           }}
-                          disabled={decisionMutation.isPending}
+                          disabled={decisionMutation.isPending || !currentReviewer}
                           className="p-1 hover:bg-rose-100 rounded text-rose-600 disabled:opacity-40"
                           title="Quick Exclude (Reason required)"
                         >
@@ -1522,7 +1552,7 @@ export function ScreeningPage() {
                     Reviewer Decision
                   </span>
                   <span className="text-xs text-slate-500">
-                    Reviewer: <span className="font-semibold text-slate-700">{reviewerName}</span>
+                    Reviewer: <span className="font-semibold text-slate-700">{reviewerName || "Not signed in"}</span>
                   </span>
                 </div>
 
@@ -1596,7 +1626,7 @@ export function ScreeningPage() {
                       <button
                         type="button"
                         onClick={handleRetry}
-                        disabled={decisionMutation.isPending}
+                        disabled={decisionMutation.isPending || !currentReviewer}
                         className="px-3 py-1.5 font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-md shadow-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 text-xs"
                       >
                         {decisionMutation.isPending ? (
@@ -1614,7 +1644,7 @@ export function ScreeningPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={() => handleScreenDecision("included")}
-                    disabled={decisionMutation.isPending}
+                    disabled={decisionMutation.isPending || !currentReviewer}
                     className="py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
                     title="Include Study (Hotkeys: 'I' or '1')"
                   >
@@ -1635,7 +1665,7 @@ export function ScreeningPage() {
 
                   <button
                     onClick={() => handleScreenDecision("excluded")}
-                    disabled={decisionMutation.isPending}
+                    disabled={decisionMutation.isPending || !currentReviewer}
                     className="py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
                     title="Exclude Study (Hotkeys: 'E' or '2')"
                   >
@@ -1656,7 +1686,7 @@ export function ScreeningPage() {
 
                   <button
                     onClick={() => handleScreenDecision("maybe")}
-                    disabled={decisionMutation.isPending}
+                    disabled={decisionMutation.isPending || !currentReviewer}
                     className="py-2.5 text-xs font-bold text-slate-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                     title="Maybe / Uncertain (Hotkeys: 'M' or '3')"
                   >
@@ -2077,4 +2107,3 @@ export function ScreeningPage() {
     </div>
   );
 }
-

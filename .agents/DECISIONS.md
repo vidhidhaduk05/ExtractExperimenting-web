@@ -116,3 +116,18 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
 - Reuse the existing serializer and access checks. Validate status parameters, return a clear error for no matches, and show visible retryable download errors without silently substituting demo references.
 - UTF-8 metadata is retained; absent fields are omitted. Citation keys are ASCII, unique within an export and stable for saved study IDs. Escape TeX-sensitive metadata in a single pass, including unbalanced literal braces.
 - Author names separated by semicolons/and or comma-separated full names remain independent; arbitrary adjacent names are no longer merged. Ambiguous comma-only name strings are preserved rather than guessed.
+
+## 2026-10-11 — Task 28: per-record screening stage routing
+
+- Human screening decisions use the target record's persisted ta/ft stage in every toolbar view, including All Stages and card actions. The stage is captured with the pending decision and retained on retry; a filter change cannot retarget the save.
+- Server requests accept only canonical ta/ft stages, verify project identity, and reject a stage mismatch before writing decisions, conflicts, status, or background work. Refresh is required after a stale-stage rejection.
+- Legacy records with a blank stage start at ta, except awaiting_pdf records which resolve to ft. Explicit ta/ft always takes precedence. Unknown nonblank stages are rejected rather than guessed. Deliberate workflow transitions must update the record stage through the existing workflow first; this endpoint does not silently change stages.
+- Reviewer identity and consensus rules remain separate tasks; no screening model or eligibility criteria change.
+
+## 2026-10-11 — Task 29: authenticated screening reviewer identity
+
+- Screening decision writes require a valid authenticated account and project reviewer-or-higher membership. Reviewer ID and name come exclusively from the authenticated user's database record; legacy identity fields in request bodies are accepted for compatibility but ignored.
+- Re-saving updates only that account's study/stage decision and refreshes its stored display name. One user cannot overwrite another reviewer's decision by forging body IDs or JWT display-name claims.
+- The legacy screening-status write route requires authentication and routes human eligibility decisions through the same attributed save path. Conflict resolution requires project reviewer access and records the authenticated resolver ID.
+- Screening uses a verified /auth/me response rather than localStorage username/reviewer1. Buttons and hotkeys cannot submit without a verified account. Auth reads, decision saves, and conflict resolution use strict requests; 401/403/server/network failures never become demo success or advance the record.
+- Existing anonymous/fallback history is not retroactively reassigned because its true author cannot be established. Task 28's stage capture/validation remains intact; local Laya screening configuration is unchanged.

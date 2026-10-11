@@ -6,7 +6,7 @@ signaling answers).
 """
 from __future__ import annotations
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional, Any, Literal
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -699,12 +699,12 @@ class ScreeningUpdate(BaseModel):
 class ScreeningDecisionCreate(BaseModel):
     study_id: str
     project_id: str
-    reviewer_id: str
+    reviewer_id: str = ""  # Legacy input ignored; authentication owns identity.
     reviewer_name: str = ""
     decision: str  # included | excluded | maybe
     reason_code: str = ""
     reason_text: str = ""
-    stage: str  # ta | ft
+    stage: Literal["ta", "ft"]
 
 
 class ScreeningDecisionResponse(ORMBase):
