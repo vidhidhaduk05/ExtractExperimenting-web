@@ -1,3 +1,5 @@
+import { BookmarkButton } from "../components/common/BookmarkButton";
+import { useBookmarks } from "../lib/bookmarks";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type Study } from "../lib/api";
@@ -12,6 +14,8 @@ import { useRef, useState, useCallback } from "react";
 
 export function StudyList() {
   const { projectId } = useParams<{ projectId: string }>();
+  const bookmarks = useBookmarks(projectId);
+  const [savedOnly, setSavedOnly] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -254,6 +258,12 @@ export function StudyList() {
         </div>
       )}
 
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length})</label>
+        <span className="text-xs text-slate-500">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
+        {bookmarks.error && <span role="alert" className="text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
+      </div>
+      {savedOnly && studies && studies.length > 0 && !studies.some(s => bookmarks.ids.includes(s.study_id)) && <p className="text-sm text-slate-500">No saved studies yet. Use the bookmark icon to save a study for later.</p>}
       {/* Populated Study Table */}
       {studies && studies.length > 0 && (
         <div className="card-phylo overflow-hidden rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
@@ -270,10 +280,11 @@ export function StudyList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/[0.04]">
-                {studies.map((s) => (
+                {studies.filter(s => !savedOnly || bookmarks.ids.includes(s.study_id)).map((s) => (
                   <StudyRow
                     key={s.study_id}
                     study={s}
+                    bookmark={<BookmarkButton saved={bookmarks.ids.includes(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
                     projectId={projectId!}
                     onDelete={() => deleteMutation.mutate(s.study_id)}
                   />
@@ -303,7 +314,7 @@ export function StudyList() {
   );
 }
 
-function StudyRow({ study, projectId, onDelete }: { study: Study; projectId: string; onDelete: () => void }) {
+function StudyRow({ study, projectId, onDelete, bookmark }: { study: Study; projectId: string; onDelete: () => void; bookmark: React.ReactNode }) {
   const { data: assessments } = useQuery({
     queryKey: ["study-rob", study.study_id],
     queryFn: () => api.listStudyAssessments(study.study_id),
@@ -321,7 +332,7 @@ function StudyRow({ study, projectId, onDelete }: { study: Study; projectId: str
   return (
     <tr className="hover:bg-black/[0.015] transition-colors">
       <td className="px-5 py-3.5">
-        <div className="font-serif font-medium text-sm text-[#141413] line-clamp-1">{study.title}</div>
+        <div className="flex items-start gap-2">{bookmark}<div className="font-serif font-medium text-sm text-[#141413] line-clamp-1">{study.title}</div></div>
         <div className="text-xs font-sans text-[#8A817A] mt-0.5 line-clamp-1">
           {study.authors || "Unknown Authors"} {study.journal ? `— ${study.journal}` : ""}
         </div>
