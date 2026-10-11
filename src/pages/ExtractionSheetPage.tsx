@@ -113,6 +113,21 @@ export function ExtractionSheetPage() {
     return map;
   }, [extractions]);
 
+  // Map (paperId_variableId) -> extraction for O(1) matrix cell lookup
+  // Avoids O(V * P * E) linear searches on every render in Matrix mode
+  const matrixExtractionMap = useMemo(() => {
+    const map = new Map<string, any>();
+    availablePapers.forEach((paper) => {
+      const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+      paperExts.forEach((e: any) => {
+        if (e.variable_id) {
+          map.set(`${paper.id}_${e.variable_id}`, e);
+        }
+      });
+    });
+    return map;
+  }, [availablePapers]);
+
   // Overall metrics across all papers
   const allBenchmarkStats = useMemo(() => {
     let totalVars = 0;
@@ -859,8 +874,8 @@ export function ExtractionSheetPage() {
 
                       {/* Columns for Each Study */}
                       {availablePapers.map((paper) => {
-                        const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
-                        const foundExt = paperExts.find((e: any) => e.variable_id === v.variable_id);
+                        // O(1) lookup using memoized matrix extraction map
+                        const foundExt = matrixExtractionMap.get(`${paper.id}_${v.variable_id}`);
                         const isVerified = !!foundExt?.is_verified;
                         const value = foundExt?.value || "Not Reported";
 
