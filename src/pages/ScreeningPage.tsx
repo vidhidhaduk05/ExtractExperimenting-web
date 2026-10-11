@@ -1,6 +1,8 @@
 import { resolveScreeningStage } from "../lib/screeningStage";
 import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
+import { matchesTag, useProjectTags } from "../lib/recordCollaboration";
+import { RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
@@ -57,6 +59,8 @@ import {
   FolderPlus,
   ArrowLeftRight,
   RotateCcw,
+  Pause,
+  Square,
 } from "lucide-react";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
 import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
@@ -65,6 +69,8 @@ import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal"
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const bookmarks = useBookmarks(projectId);
+  const tagIndex = useProjectTags(projectId);
+  const [tagFilter, setTagFilter] = useState("");
   const [savedOnly, setSavedOnly] = useState(false);
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -285,32 +291,11 @@ export function ScreeningPage() {
 
   const studyList = Array.isArray(studies) ? studies : [];
 
-  // Effective selected study
-  const selectedStudy = useMemo(() => {
-    if (!studyList || studyList.length === 0) return null;
-    if (selectedStudyId) {
-      const found = studyList.find((s) => s.study_id === selectedStudyId && (!savedOnly || bookmarks.ids.includes(s.study_id)));
-      if (found) return found;
-    }
-    return studyList.find(s => !savedOnly || bookmarks.ids.includes(s.study_id)) || null;
-  }, [studyList, selectedStudyId, savedOnly, bookmarks.ids]);
-
-  // Clear reason and save validation errors when reviewer navigates to a different study
-  const prevActiveStudyIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    const currentId = selectedStudy?.study_id || null;
-    if (prevActiveStudyIdRef.current && currentId && prevActiveStudyIdRef.current !== currentId) {
-      setReasonError(null);
-      setSaveError(null);
-      setFailedDecision(null);
-    }
-    prevActiveStudyIdRef.current = currentId;
-  }, [selectedStudy?.study_id]);
-
   // Filtered Studies List
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
       if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
+      if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
       // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -328,7 +313,20 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studies, searchQuery, confidenceFilter, savedOnly, bookmarks.ids]);
+  }, [studies, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
+
+  // Selection and keyboard actions use the same visible record set as all filters.
+  const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || null;
+  const prevActiveStudyIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentId = selectedStudy?.study_id || null;
+    if (prevActiveStudyIdRef.current && currentId && prevActiveStudyIdRef.current !== currentId) {
+      setReasonError(null);
+      setSaveError(null);
+      setFailedDecision(null);
+    }
+    prevActiveStudyIdRef.current = currentId;
+  }, [selectedStudy?.study_id]);
 
   // Mutations
   const startFullPipelineMutation = useMutation({
@@ -350,6 +348,29 @@ export function ScreeningPage() {
   const continuePipelineMutation = useMutation({
     mutationFn: (stage: "abstract" | "fulltext") => api.continueAIScreening(projectId!, stage),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+    },
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: () => api.pauseAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: () => api.resumeAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => api.cancelAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
       queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
       queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
     },
@@ -504,6 +525,7 @@ export function ScreeningPage() {
   // Keyboard hotkeys listener: I/1 (Include), E/2 (Exclude), M/3 (Maybe), ←/J (Prev), →/K (Next), ? (Cheatsheet)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"][data-record-collaboration]')) return;
       if (!hotkeysEnabled) return;
       const target = e.target as HTMLElement | null;
       if (
@@ -823,31 +845,95 @@ export function ScreeningPage() {
               Keywords & Highlighting ({keywords.length})
             </button>
 
-            <button
-              onClick={() => startAnalysisMutation.mutate()}
-              disabled={startAnalysisMutation.isPending || startFullPipelineMutation.isPending}
-              className="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 transition-all disabled:opacity-50"
-            >
-              {startAnalysisMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            {progress?.active ? (
+              progress.paused ? (
+                <>
+                  <button
+                    onClick={() => resumeMutation.mutate()}
+                    disabled={resumeMutation.isPending || cancelMutation.isPending}
+                    className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Resume AI screening from current study"
+                  >
+                    {resumeMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5 text-emerald-700 fill-emerald-700" />
+                    )}
+                    <span>Resume Screening</span>
+                  </button>
+                  <button
+                    onClick={() => cancelMutation.mutate()}
+                    disabled={cancelMutation.isPending || resumeMutation.isPending}
+                    className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Stop AI screening run completely"
+                  >
+                    {cancelMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Square className="w-3.5 h-3.5 text-rose-600 fill-rose-600" />
+                    )}
+                    <span>Stop</span>
+                  </button>
+                </>
               ) : (
-                <Play className="w-3.5 h-3.5 text-indigo-600" />
-              )}
-              Start Stage 1 (Title Only)
-            </button>
+                <>
+                  <button
+                    onClick={() => pauseMutation.mutate()}
+                    disabled={pauseMutation.isPending || cancelMutation.isPending}
+                    className="px-3.5 py-2 text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Pause screening cleanly after current study finishes"
+                  >
+                    {pauseMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Pause className="w-3.5 h-3.5 text-amber-800 fill-amber-800" />
+                    )}
+                    <span>{pauseMutation.isPending ? "Pausing..." : "Pause Screening"}</span>
+                  </button>
+                  <button
+                    onClick={() => cancelMutation.mutate()}
+                    disabled={cancelMutation.isPending || pauseMutation.isPending}
+                    className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Stop AI screening run completely"
+                  >
+                    {cancelMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Square className="w-3.5 h-3.5 text-rose-600 fill-rose-600" />
+                    )}
+                    <span>Stop</span>
+                  </button>
+                </>
+              )
+            ) : (
+              <>
+                <button
+                  onClick={() => startAnalysisMutation.mutate()}
+                  disabled={startAnalysisMutation.isPending || startFullPipelineMutation.isPending}
+                  className="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 transition-all disabled:opacity-50"
+                >
+                  {startAnalysisMutation.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5 text-indigo-600" />
+                  )}
+                  Start Stage 1 (Title Only)
+                </button>
 
-            <button
-              onClick={() => startFullPipelineMutation.mutate()}
-              disabled={startFullPipelineMutation.isPending || startAnalysisMutation.isPending}
-              className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
-            >
-              {startFullPipelineMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              Start Full AI Screening
-            </button>
+                <button
+                  onClick={() => startFullPipelineMutation.mutate()}
+                  disabled={startFullPipelineMutation.isPending || startAnalysisMutation.isPending}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                >
+                  {startFullPipelineMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  Start Full AI Screening
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -900,27 +986,73 @@ export function ScreeningPage() {
         )}
       </header>
 
-      {/* Live AI screening progress */}
+      {/* Live AI screening progress & controls */}
       {progress?.active && (
-        <div className="bg-indigo-50 border-b border-indigo-200 px-6 py-2.5">
+        <div className={`border-b px-6 py-2.5 transition-colors ${
+          progress.paused ? "bg-amber-50/95 border-amber-200" : "bg-indigo-50 border-indigo-200"
+        }`}>
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 min-w-0">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
-                <span className="font-semibold text-indigo-800 shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                {progress.paused ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-200 text-amber-900 border border-amber-300 shrink-0">
+                    <Pause className="w-3 h-3 fill-amber-800" />
+                    PAUSED
+                  </span>
+                ) : (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
+                )}
+                <span className={`font-semibold shrink-0 ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
                   AI screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
                 </span>
-                <span className="text-indigo-700 truncate">
-                  {progress.current_study_id ? `Screening: ${progress.current_title || progress.current_study_id}` : "Preparing next study…"}
+                <span className={`truncate ${progress.paused ? "text-amber-800" : "text-indigo-700"}`}>
+                  {progress.paused
+                    ? (progress.current_study_id ? `Paused at: ${progress.current_title || progress.current_study_id}` : "Paused between studies (clean state)")
+                    : (progress.current_study_id ? `Screening: ${progress.current_title || progress.current_study_id}` : "Preparing next study…")}
                 </span>
               </div>
-              <span className="font-bold text-indigo-800 whitespace-nowrap">
-                {progress.done} / {progress.total} screened
-              </span>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <span className={`font-bold whitespace-nowrap ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
+                  {progress.done} / {progress.total} screened ({progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%)
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {progress.paused ? (
+                    <button
+                      onClick={() => resumeMutation.mutate()}
+                      disabled={resumeMutation.isPending || cancelMutation.isPending}
+                      className="px-2.5 py-1 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded flex items-center gap-1 shadow-2xs transition-all disabled:opacity-50"
+                      title="Resume screening"
+                    >
+                      {resumeMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3 text-emerald-700 fill-emerald-700" />}
+                      <span>Resume</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => pauseMutation.mutate()}
+                      disabled={pauseMutation.isPending || cancelMutation.isPending}
+                      className="px-2.5 py-1 text-xs font-semibold text-amber-900 bg-amber-200 hover:bg-amber-300 border border-amber-300 rounded flex items-center gap-1 shadow-2xs transition-all disabled:opacity-50"
+                      title="Pause screening after current study"
+                    >
+                      {pauseMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Pause className="w-3 h-3 text-amber-800 fill-amber-800" />}
+                      <span>Pause</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => cancelMutation.mutate()}
+                    disabled={cancelMutation.isPending || pauseMutation.isPending || resumeMutation.isPending}
+                    className="px-2.5 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded flex items-center gap-1 shadow-2xs transition-all disabled:opacity-50"
+                    title="Stop screening run"
+                  >
+                    {cancelMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Square className="w-3 h-3 text-rose-600 fill-rose-600" />}
+                    <span>Stop</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="mt-1.5 h-1.5 bg-indigo-100 rounded-full overflow-hidden">
+            <div className={`mt-1.5 h-1.5 rounded-full overflow-hidden ${progress.paused ? "bg-amber-200/80" : "bg-indigo-100"}`}>
               <div
-                className="h-full bg-indigo-600 transition-all duration-500"
+                className={`h-full transition-all duration-500 ${progress.paused ? "bg-amber-500" : "bg-indigo-600"}`}
                 style={{ width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%` }}
               />
             </div>
@@ -933,6 +1065,9 @@ export function ScreeningPage() {
       </div>}
 
       {/* Filter and Search Bar */}
+      <div className="bg-white border-b border-slate-200 px-6 py-2"><div className="max-w-7xl mx-auto">
+        <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
+      </div></div>
       <div className="bg-white border-b border-slate-200 px-6 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({studyList.filter(s => bookmarks.ids.includes(s.study_id)).length})</label>
@@ -1229,6 +1364,7 @@ export function ScreeningPage() {
                     <p className="text-[11px] text-slate-500 line-clamp-1 mb-2">
                       {study.authors || "Unknown Authors"} &bull; {study.publication_year || "N/A"} &bull; {study.journal || "No Journal"}
                     </p>
+                    <TagBadges index={tagIndex.data} studyId={study.study_id} />
 
                     <div className="flex items-center justify-between gap-2 flex-wrap text-[10px]">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -1411,6 +1547,12 @@ export function ScreeningPage() {
                   )}
                 </div>
               )}
+
+              <TagBadges index={tagIndex.data} studyId={selectedStudy.study_id} />
+              <details className="rounded-lg border border-slate-200">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-800">Comments & tags</summary>
+                <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
+              </details>
 
               {/* Clarification Questions Panel (if study requires clarification) */}
               {studyClarifications.length > 0 && (

@@ -447,6 +447,15 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     if (path.includes("/coded-extract")) {
       return { status: "complete", extracted_count: 5 } as unknown as T;
     }
+    if (path.includes("/ai-screening/pause")) {
+      return { active: true, paused: true, canceled: false, stage: "title", total: 6, done: 2, current_study_id: null, current_title: "", pending_ids: [], done_ids: [] } as unknown as T;
+    }
+    if (path.includes("/ai-screening/resume")) {
+      return { active: true, paused: false, canceled: false, stage: "title", total: 6, done: 2, current_study_id: null, current_title: "", pending_ids: [], done_ids: [] } as unknown as T;
+    }
+    if (path.includes("/ai-screening/cancel") || path.includes("/ai-screening/stop")) {
+      return { active: false, paused: false, canceled: true, stage: "", total: 0, done: 0, current_study_id: null, current_title: "", pending_ids: [], done_ids: [] } as unknown as T;
+    }
     if (path.includes("/rob/run/cancel") || (path.includes("/rob/run") && path.includes("/cancel"))) {
       return { status: "cancelled", run_id: "demo_rob_run_1" } as unknown as T;
     }
@@ -1824,6 +1833,8 @@ export interface AIScreeningSummary {
 /** Live progress of a running AI screening (in-memory on the server; active=false when idle) */
 export interface AIScreeningProgress {
   active: boolean;
+  paused?: boolean;
+  canceled?: boolean;
   stage: "" | "title" | "abstract" | "fulltext";
   total: number;
   done: number;
@@ -3375,6 +3386,19 @@ export const api = {
   /** Get live progress of the running AI screening (current study, done / queued ids) */
   getAIScreeningProgress: (projectId: string) =>
     request<AIScreeningProgress>(`/projects/${projectId}/ai-screening/progress`),
+
+  /** Pause the active AI screening run */
+  pauseAIScreening: (projectId: string) =>
+    request<AIScreeningProgress>(`/projects/${projectId}/ai-screening/pause`, { method: "POST" }),
+
+  /** Resume a paused AI screening run */
+  resumeAIScreening: (projectId: string) =>
+    request<AIScreeningProgress>(`/projects/${projectId}/ai-screening/resume`, { method: "POST" }),
+
+  /** Cancel and stop the active AI screening run */
+  cancelAIScreening: (projectId: string) =>
+    request<AIScreeningProgress>(`/projects/${projectId}/ai-screening/cancel`, { method: "POST" }),
+
 
   /** Get abstract highlights (PICO spans, include/exclude keywords, AI keywords) */
   getAbstractHighlights: (studyId: string) =>
