@@ -129,6 +129,7 @@ export function ExtractionSheetPage() {
   }, [availablePapers]);
 
   // Overall metrics across all papers
+  // Removed `extractions` from dependencies as it was unused and caused stats to recompute on single-study extraction state changes
   const allBenchmarkStats = useMemo(() => {
     let totalVars = 0;
     let verifiedVars = 0;
@@ -149,7 +150,7 @@ export function ExtractionSheetPage() {
       highConfCount,
       percent: totalVars > 0 ? Math.round((verifiedVars / totalVars) * 100) : 0,
     };
-  }, [availablePapers, extractions]);
+  }, [availablePapers]);
 
   // Filtered variables for single-study sheet
   const filteredVariables = useMemo(() => {

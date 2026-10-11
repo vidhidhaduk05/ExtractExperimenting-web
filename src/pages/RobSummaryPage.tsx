@@ -346,14 +346,15 @@ function TrafficLightChart({
   summary: RobSummary;
   filterNeedsReview?: boolean;
 }) {
-  const rawAssessments = Array.isArray(summary?.assessments) ? summary.assessments : [];
+  // Memoize assessment list filtering directly to avoid re-allocating rawAssessments array on every render tick
   const assessments = useMemo(() => {
-    if (!filterNeedsReview) return rawAssessments;
-    return rawAssessments.filter((a) => (a.needs_human_review_count ?? 0) > 0);
-  }, [rawAssessments, filterNeedsReview]);
+    const raw = Array.isArray(summary?.assessments) ? summary.assessments : [];
+    if (!filterNeedsReview) return raw;
+    return raw.filter((a) => (a.needs_human_review_count ?? 0) > 0);
+  }, [summary?.assessments, filterNeedsReview]);
 
-  const domainKeys = rawAssessments[0]?.domains?.map((d) => d.domain_key) || [];
-  const domainLabels = rawAssessments[0]?.domains?.map((d) => d.domain_label) || [];
+  const domainKeys = assessments[0]?.domains?.map((d) => d.domain_key) || [];
+  const domainLabels = assessments[0]?.domains?.map((d) => d.domain_label) || [];
 
   return (
     <div className="card p-5 overflow-x-auto">
@@ -482,11 +483,12 @@ function AssessmentList({
   summary: RobSummary;
   filterNeedsReview?: boolean;
 }) {
-  const rawAssessments = Array.isArray(summary?.assessments) ? summary.assessments : [];
+  // Memoize assessment list filtering directly to avoid re-allocating rawAssessments array on every render tick
   const assessments = useMemo(() => {
-    if (!filterNeedsReview) return rawAssessments;
-    return rawAssessments.filter((a) => (a.needs_human_review_count ?? 0) > 0);
-  }, [rawAssessments, filterNeedsReview]);
+    const raw = Array.isArray(summary?.assessments) ? summary.assessments : [];
+    if (!filterNeedsReview) return raw;
+    return raw.filter((a) => (a.needs_human_review_count ?? 0) > 0);
+  }, [summary?.assessments, filterNeedsReview]);
 
   // Group assessments by study
   const studyGroups: Record<
