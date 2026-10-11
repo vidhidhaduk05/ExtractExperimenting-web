@@ -10,8 +10,12 @@ from services.laya_extraction_tracer import (
 @pytest.fixture(autouse=True)
 def setup_laya_settings(monkeypatch):
     jev_client.reset_breaker()
+    monkeypatch.setattr(settings, "jev_api_key", "test-key")
     monkeypatch.setattr(settings, "jev_mode", "on")
-    monkeypatch.setattr(settings, "jev_provider", "laya")
+    monkeypatch.setattr(settings, "jev_provider", "typesafe")
+    fake_ask = lambda state, questions: {q: {"noul": 0.85} for q in questions}
+    monkeypatch.setattr(jev_client, "ask", fake_ask)
+    monkeypatch.setattr("services.laya_extraction_tracer.ask", fake_ask)
     yield
     jev_client.reset_breaker()
 

@@ -1,11 +1,11 @@
 import pytest
-from radextract_platform.backend.services.prisma_service import (
+from services.prisma_service import (
     get_prisma_2020_data,
     generate_prisma_2020_svg,
     verify_exclusion_with_laya,
 )
-from radextract_platform.backend.config import settings
-from radextract_platform.backend.database import get_connection, init_db, reset_db
+from config import settings
+from database import get_connection, init_db, reset_db
 
 
 @pytest.fixture(autouse=True)
