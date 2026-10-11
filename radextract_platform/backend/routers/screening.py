@@ -35,7 +35,9 @@ from services.keyword_highlight_service import (
     extract_pico_highlights,
     find_keyword_matches,
     merge_and_sort_spans,
+    resolve_character_spans,
     auto_generate_keywords_from_pico,
+    auto_generate_keywords_from_protocol,
     DEFAULT_INCLUDE_KEYWORDS,
     DEFAULT_EXCLUDE_KEYWORDS,
 )
@@ -693,20 +695,9 @@ async def get_abstract_highlights(
     check_project_access(conn, project_id, user)
     abstract = s_dict.get("abstract") or ""
 
-    if not abstract.strip():
-        return AbstractHighlightsResponse(
-            study_id=study_id,
-            abstract="",
-            all_spans=[],
-            pico_spans=[],
-            keyword_spans=[],
-            ai_keyword_spans=[],
-        )
+    title = s_dict.get("title") or ""
 
-    # 1. PICO spans
-    pico_spans = extract_pico_highlights(abstract)
-
-    # 2. Project keywords from screening_keywords table (or defaults if none)
+    # Project keywords from screening_keywords table (or protocol-derived if none)
     kw_rows = conn.execute(
         "SELECT * FROM screening_keywords WHERE project_id = ?", (project_id,)
     ).fetchall()
@@ -714,14 +705,34 @@ async def get_abstract_highlights(
     if kw_rows:
         keywords = [dict(r) for r in kw_rows]
     else:
-        # Use default include/exclude keywords
+        # Load project to derive protocol-matched keywords
+        proj_row = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+        proto_kws = auto_generate_keywords_from_protocol(dict(proj_row) if proj_row else {})
         keywords = [
-            {"keyword": k, "keyword_type": "include"} for k in DEFAULT_INCLUDE_KEYWORDS
+            {"keyword": k, "keyword_type": "include"} for k in proto_kws.get("include_keywords", [])
         ] + [
-            {"keyword": k, "keyword_type": "exclude"} for k in DEFAULT_EXCLUDE_KEYWORDS
+            {"keyword": k, "keyword_type": "exclude"} for k in proto_kws.get("exclude_keywords", [])
         ]
 
+    title_spans = find_keyword_matches(title, keywords) if title else []
+
+    if not abstract.strip():
+        # Title can still have keyword highlights
+        return AbstractHighlightsResponse(
+            study_id=study_id,
+            abstract="",
+            all_spans=[],
+            pico_spans=[],
+            keyword_spans=[],
+            ai_keyword_spans=[],
+            title_spans=[HighlightSpan(**s) for s in title_spans],
+        )
+
+    # 1. PICO spans
+    pico_spans = extract_pico_highlights(abstract)
+
     keyword_spans = find_keyword_matches(abstract, keywords)
+    title_spans = find_keyword_matches(title, keywords) if title else []
 
     # 3. AI-identified keywords from latest AI screening decision if any
     ai_dec = conn.execute(
@@ -736,10 +747,12 @@ async def get_abstract_highlights(
         d = dict(ai_dec)
         ai_kws = []
         if d.get("reason_text"):
-            # If AI mentioned specific keywords in reason
             pass
 
-    all_spans = merge_and_sort_spans(pico_spans, keyword_spans, ai_keyword_spans)
+    # Resolve character spans by priority so include/exclude keywords are NEVER swallowed by PICO spans
+    all_spans = resolve_character_spans(abstract, pico_spans, keyword_spans, ai_keyword_spans)
+    if not all_spans and (pico_spans or keyword_spans or ai_keyword_spans):
+        all_spans = merge_and_sort_spans(pico_spans, keyword_spans, ai_keyword_spans)
 
     return AbstractHighlightsResponse(
         study_id=study_id,
@@ -748,6 +761,7 @@ async def get_abstract_highlights(
         pico_spans=[HighlightSpan(**s) for s in pico_spans],
         keyword_spans=[HighlightSpan(**s) for s in keyword_spans],
         ai_keyword_spans=[HighlightSpan(**s) for s in ai_keyword_spans],
+        title_spans=[HighlightSpan(**s) for s in title_spans],
     )
 
 
@@ -765,23 +779,27 @@ async def list_screening_keywords(
     ).fetchall()
 
     if not rows:
-        # Initialize defaults for this project
+        # Initialize keywords directly from project protocol
+        proj = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+        proto_kws = auto_generate_keywords_from_protocol(dict(proj) if proj else {})
         defaults = []
-        for kw in DEFAULT_INCLUDE_KEYWORDS:
+        for kw in proto_kws.get("include_keywords", []):
             kid = str(uuid.uuid4())
-            conn.execute(
-                "INSERT INTO screening_keywords (keyword_id, project_id, keyword, keyword_type, color) VALUES (?, ?, ?, 'include', 'green')",
-                (kid, project_id, kw),
-            )
+            if proj:
+                conn.execute(
+                    "INSERT INTO screening_keywords (keyword_id, project_id, keyword, keyword_type, color) VALUES (?, ?, ?, 'include', 'green')",
+                    (kid, project_id, kw),
+                )
             defaults.append(ScreeningKeywordResponse(keyword_id=kid, project_id=project_id, keyword=kw, keyword_type="include", color="green"))
-        for kw in DEFAULT_EXCLUDE_KEYWORDS:
+        for kw in proto_kws.get("exclude_keywords", []):
             kid = str(uuid.uuid4())
-            conn.execute(
-                "INSERT INTO screening_keywords (keyword_id, project_id, keyword, keyword_type, color) VALUES (?, ?, ?, 'exclude', 'red')",
-                (kid, project_id, kw),
-            )
+            if proj:
+                conn.execute(
+                    "INSERT INTO screening_keywords (keyword_id, project_id, keyword, keyword_type, color) VALUES (?, ?, ?, 'exclude', 'red')",
+                    (kid, project_id, kw),
+                )
             defaults.append(ScreeningKeywordResponse(keyword_id=kid, project_id=project_id, keyword=kw, keyword_type="exclude", color="red"))
-        if hasattr(conn, "commit"):
+        if proj and hasattr(conn, "commit"):
             conn.commit()
         return defaults
 
@@ -859,20 +877,13 @@ async def auto_generate_keywords(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    """Auto-generate inclusion/exclusion keywords from project's PICO criteria and defaults."""
+    """Auto-generate inclusion/exclusion keywords from project protocol (PICO, search strings, criteria)."""
     check_project_access(conn, project_id, user)
     proj = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    pico = {}
-    if dict(proj).get("pico_json"):
-        try:
-            pico = json.loads(dict(proj)["pico_json"])
-        except Exception:
-            pico = {}
-
-    generated = auto_generate_keywords_from_pico(pico)
+    generated = auto_generate_keywords_from_protocol(dict(proj))
 
     # Delete existing keywords for fresh generation
     conn.execute("DELETE FROM screening_keywords WHERE project_id = ?", (project_id,))

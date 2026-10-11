@@ -117,6 +117,27 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
 - UTF-8 metadata is retained; absent fields are omitted. Citation keys are ASCII, unique within an export and stable for saved study IDs. Escape TeX-sensitive metadata in a single pass, including unbalanced literal braces.
 - Author names separated by semicolons/and or comma-separated full names remain independent; arbitrary adjacent names are no longer merged. Ambiguous comma-only name strings are preserved rather than guessed.
 
+## 2026-10-11 — Protocol-Aware Screening Keywords & Priority Span Highlighting
+
+- **Root Cause Resolution**:
+  - Previously, newly created projects and keyword generation defaulted to hardcoded Randomized Controlled Trial (RCT) terms (`randomized`, `double-blind`, and excluding `case report`, `case series`), directly contradicting observational, case-report, and condition-specific systematic review protocols (such as Pure Arterial Malformation Protocol V2).
+  - Furthermore, `auto_generate_keywords_from_pico` used substring checks (`w in clean.lower()` for `for` and `or`), which incorrectly discarded medical keywords containing those substrings (e.g. `pure arterial malformation` contains `for`).
+  - In the abstract highlight renderer, broad outer sentence spans (e.g. full PICO sentences) swallowed inner inclusion/exclusion keyword spans because `currentIdx` advanced to the sentence end.
+- **Protocol Keyword Extraction**:
+  - Implemented `auto_generate_keywords_from_protocol(project_data)` in `services/keyword_highlight_service.py`:
+    - Gold-standard concept search strings (PubMed, Ovid, Scopus queries) are parsed for core medical phrases and morphology plurals.
+    - Acronyms (e.g. PAM, AVM, dAVF, DVA) are extracted and categorized based on protocol inclusions/exclusions.
+    - Study design criteria explicitly dictate whether `case report` and `case series` are included or excluded.
+    - Exclusion criteria are dynamically parsed for specific excluded pathologies (`AVM`, `dAVF`, `rete mirabile`, `dolichoectasia`, `animal study`, `in vitro`).
+  - `list_screening_keywords` and `auto_generate_keywords` in `routers/screening.py` now derive keywords from the project's real protocol data instead of generic RCT defaults.
+- **Priority Character-Level Span Resolution**:
+  - Implemented `resolve_character_spans` in Python backend and `renderHighlightedText` in React frontend.
+  - Resolves overlapping spans with strict priority: `exclude_keyword` (red) > `include_keyword` (green) > `ai_keyword` (yellow/blue) > PICO sentence spans.
+  - Keyword marks nested inside PICO sentences light up in bold green or red without being suppressed.
+  - Added keyword highlighting to study titles (`title_spans`) and an instant client-side keyword fallback when highlights are loading.
+  - Added "Sync with Protocol" action in the Screening Keywords drawer.
+
+
 ## 2026-10-11 — Task 28: per-record screening stage routing
 
 - Human screening decisions use the target record's persisted ta/ft stage in every toolbar view, including All Stages and card actions. The stage is captured with the pending decision and retained on retry; a filter change cannot retarget the save.

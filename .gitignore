@@ -79,3 +79,9 @@ graphify-out/.*.stale
 laya/models/
 laya/.git/
 node_modules
+
+# Test artifacts & temp
+.test_tmp/
+*_tmp/
+tests_tmp/
+radextract_platform/backend/tests/.test_tmp/

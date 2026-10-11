@@ -972,6 +972,8 @@ class AbstractHighlightsResponse(BaseModel):
     pico_spans: list[HighlightSpan] = Field(default_factory=list)
     keyword_spans: list[HighlightSpan] = Field(default_factory=list)
     ai_keyword_spans: list[HighlightSpan] = Field(default_factory=list)
+    title_spans: list[HighlightSpan] = Field(default_factory=list)
+
 
 
 class ScreeningKeywordCreate(BaseModel):

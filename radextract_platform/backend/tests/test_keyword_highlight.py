@@ -9,18 +9,28 @@ from services.keyword_highlight_service import (
     extract_pico_highlights,
     find_keyword_matches,
     merge_and_sort_spans,
+    resolve_character_spans,
     auto_generate_keywords_from_pico,
+    auto_generate_keywords_from_protocol,
 )
 
 
+import pathlib
+
+_TEST_DIR = pathlib.Path(__file__).parent / ".test_tmp"
+_TEST_DIR.mkdir(parents=True, exist_ok=True)
+
+
 @pytest.fixture(autouse=True)
-def fresh_db(tmp_path, monkeypatch):
-    monkeypatch.setattr(settings, "db_path", str(tmp_path / "test_highlight.db"))
-    monkeypatch.setattr(settings, "upload_root", str(tmp_path / "uploads"))
-    monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
+def fresh_db(monkeypatch):
+    test_db = _TEST_DIR / "test_highlight.db"
+    monkeypatch.setattr(settings, "db_path", str(test_db))
+    monkeypatch.setattr(settings, "upload_root", str(_TEST_DIR / "uploads"))
+    monkeypatch.setattr(settings, "export_root", str(_TEST_DIR / "exports"))
     reset_db()
     init_db()
     yield
+    reset_db()
 
 
 @pytest.fixture
@@ -145,3 +155,70 @@ def test_auto_generate_keywords_from_pico():
     assert len(result["include_keywords"]) > 0
     assert len(result["exclude_keywords"]) > 0
     assert any("randomized" in k.lower() for k in result["include_keywords"])
+
+
+def test_auto_generate_keywords_from_protocol():
+    project_data = {
+        "title": "Pure Arterial Malformation Systematic Review",
+        "pico": {
+            "population": "Patients with pure arterial malformation (PAM). Distinct from rete mirabile, dolichoectasia, and arteriovenous malformation.",
+            "study_design": "Case reports, case series, and observational studies.",
+        },
+        "search_strings": {
+            "pubmed": '"pure arterial malformation" OR "PAM" OR "pial arterial malformation"',
+        },
+        "exclusion_criteria": [
+            {"text": "Wrong pathology: arteriovenous malformation, dAVF, or developmental venous anomaly"},
+            {"text": "Animal studies or in vitro models"},
+        ],
+    }
+    res = auto_generate_keywords_from_protocol(project_data)
+    inc = [k.lower() for k in res["include_keywords"]]
+    exc = [k.lower() for k in res["exclude_keywords"]]
+
+    assert "pure arterial malformation" in inc
+    assert "pam" in inc
+    assert "case report" in inc  # Allowed and included in this protocol!
+    assert "case report" not in exc
+    assert any("arteriovenous malformation" in x for x in exc)
+    assert any("davf" in x for x in exc)
+
+
+def test_resolve_character_spans_priority():
+    text = "Patients with pure arterial malformation treated."
+    pico_span = {"start": 0, "end": 40, "type": "population", "color": "purple", "label": "P"}
+    kw_span = {"start": 14, "end": 40, "type": "include_keyword", "color": "green", "label": "Include"}
+
+    resolved = resolve_character_spans(text, [pico_span], [kw_span])
+    # The keyword should take precedence over the overlapping portion
+    assert len(resolved) == 2
+    assert resolved[0]["text"] == "Patients with "
+    assert resolved[0]["color"] == "purple"
+    assert resolved[1]["text"] == "pure arterial malformation"
+    assert resolved[1]["color"] == "green"
+
+
+def test_title_spans_in_abstract_highlights(client):
+    p_resp = client.post("/api/projects", json={"name": "Title Highlight Project"})
+    pid = p_resp.json()["project_id"]
+
+    client.post(f"/api/projects/{pid}/screening-keywords", json={
+        "keyword": "aneurysm",
+        "keyword_type": "include",
+    })
+
+    s_resp = client.post(f"/api/projects/{pid}/studies", json={
+        "project_id": pid,
+        "title": "Case of intracranial aneurysm with rupture",
+        "abstract": "Patient presented with sudden headache.",
+    })
+    sid = s_resp.json()["study_id"]
+
+    r = client.get(f"/api/studies/{sid}/abstract-highlights")
+    assert r.status_code == 200
+    data = r.json()
+    assert "title_spans" in data
+    assert len(data["title_spans"]) >= 1
+    assert data["title_spans"][0]["text"].lower() == "aneurysm"
+    assert data["title_spans"][0]["color"] == "green"
+

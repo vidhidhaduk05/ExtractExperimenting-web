@@ -49,7 +49,7 @@ export function getApiBase(): string {
   if (custom && custom.trim()) return custom.trim().replace(/\/+$/, "");
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
   const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1") return `http://${host}:8000/api`;
+  if (host === "localhost" || host === "127.0.0.1") return "/api";
   return "/api";
 }
 
@@ -1850,6 +1850,7 @@ export interface AbstractHighlights {
   pico_spans: HighlightSpan[];
   keyword_spans: HighlightSpan[];
   ai_keyword_spans: HighlightSpan[];
+  title_spans?: HighlightSpan[];
 }
 
 export interface ScreeningKeyword {

@@ -608,59 +608,130 @@ export function ScreeningPage() {
     },
   });
 
-  // Render Highlighted Abstract
-  const renderHighlightedAbstract = (abstractText: string, spans: HighlightSpan[] = []) => {
-    if (!abstractText) {
-      return <p className="text-gray-400 italic">No abstract available for this study.</p>;
+  // Render Highlighted Text (Abstract or Title) with Priority Resolution & Instant Fallback
+  const renderHighlightedText = (
+    rawText: string,
+    spans: HighlightSpan[] = [],
+    fallbackKeywordsList: ScreeningKeyword[] = [],
+    isTitle: boolean = false
+  ) => {
+    if (!rawText) {
+      return isTitle ? null : <p className="text-gray-400 italic">No abstract available for this study.</p>;
     }
-    if (!showHighlights || spans.length === 0) {
-      return <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{abstractText}</p>;
+    if (!showHighlights) {
+      return isTitle ? (
+        <span className="text-slate-900">{rawText}</span>
+      ) : (
+        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
+      );
     }
 
-    // Sort spans by start offset
-    const sorted = [...spans].sort((a, b) => a.start - b.start);
-    const elements: React.ReactNode[] = [];
-    let currentIdx = 0;
-
-    sorted.forEach((span, i) => {
-      if (span.start > currentIdx) {
-        elements.push(
-          <span key={`text-${currentIdx}`}>{abstractText.substring(currentIdx, span.start)}</span>
-        );
-      }
-      if (span.end > span.start && span.start >= currentIdx) {
-        const text = abstractText.substring(span.start, span.end);
-        let colorClass = "bg-yellow-100 text-yellow-900 border-yellow-300";
-        if (span.color === "green" || span.type === "include_keyword") {
-          colorClass = "bg-emerald-100 text-emerald-900 border-emerald-300 font-medium";
-        } else if (span.color === "red" || span.type === "exclude_keyword") {
-          colorClass = "bg-rose-100 text-rose-900 border-rose-300 font-medium";
-        } else if (span.color === "purple" || span.type === "population") {
-          colorClass = "bg-purple-100 text-purple-900 border-purple-300";
-        } else if (span.color === "blue" || span.type === "intervention" || span.type === "comparator") {
-          colorClass = "bg-sky-100 text-sky-900 border-sky-300";
-        } else if (span.color === "orange" || span.type === "outcome") {
-          colorClass = "bg-amber-100 text-amber-900 border-amber-300";
+    // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
+    let activeSpans = [...spans];
+    if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
+      fallbackKeywordsList.forEach((kw) => {
+        const word = kw.keyword.trim();
+        if (!word) return;
+        try {
+          const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+          let match;
+          while ((match = regex.exec(rawText)) !== null) {
+            activeSpans.push({
+              start: match.index,
+              end: match.index + match[0].length,
+              text: match[0],
+              type: kw.keyword_type === "include" ? "include_keyword" : "exclude_keyword",
+              color: kw.keyword_type === "include" ? "green" : "red",
+              confidence: 1.0,
+              label: `${kw.keyword_type === "include" ? "Include" : "Exclude"} keyword: ${kw.keyword}`,
+            });
+          }
+        } catch {
+          // ignore regex errors for special chars
         }
+      });
+    }
 
-        elements.push(
-          <mark
-            key={`span-${span.start}-${i}`}
-            className={`px-1 py-0.5 rounded border text-sm inline-block transition-colors ${colorClass}`}
-            title={`${span.label} (${span.type})`}
-          >
-            {text}
-          </mark>
-        );
-        currentIdx = span.end;
+    if (activeSpans.length === 0) {
+      return isTitle ? (
+        <span className="text-slate-900">{rawText}</span>
+      ) : (
+        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
+      );
+    }
+
+    // Resolve character-level priority so keywords (green/red) are never swallowed by broad sentence spans
+    const priorityMap: Record<string, number> = {
+      exclude_keyword: 40,
+      include_keyword: 30,
+      ai_keyword: 20,
+      population: 10,
+      intervention: 10,
+      comparator: 10,
+      outcome: 10,
+    };
+
+    const charSpans: (HighlightSpan | null)[] = new Array(rawText.length).fill(null);
+    for (const span of activeSpans) {
+      const start = Math.max(0, span.start);
+      const end = Math.min(rawText.length, span.end);
+      if (end <= start) continue;
+      const prio = priorityMap[span.type] || 0;
+      for (let i = start; i < end; i++) {
+        const curr = charSpans[i];
+        if (!curr || (priorityMap[curr.type] || 0) < prio) {
+          charSpans[i] = span;
+        }
       }
+    }
+
+    const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
+    let currentSpan = charSpans[0];
+    let currentStart = 0;
+    for (let i = 1; i < rawText.length; i++) {
+      if (charSpans[i] !== currentSpan) {
+        segments.push({ start: currentStart, end: i, span: currentSpan });
+        currentSpan = charSpans[i];
+        currentStart = i;
+      }
+    }
+    segments.push({ start: currentStart, end: rawText.length, span: currentSpan });
+
+    const elements: React.ReactNode[] = segments.map((seg, idx) => {
+      const segText = rawText.substring(seg.start, seg.end);
+      if (!seg.span) {
+        return <span key={`plain-${seg.start}-${idx}`}>{segText}</span>;
+      }
+      const s = seg.span;
+      let colorClass = "bg-yellow-100 text-yellow-900 border-yellow-300";
+      if (s.color === "green" || s.type === "include_keyword") {
+        colorClass = "bg-emerald-100 text-emerald-900 border-emerald-300 font-semibold";
+      } else if (s.color === "red" || s.type === "exclude_keyword") {
+        colorClass = "bg-rose-100 text-rose-900 border-rose-300 font-semibold";
+      } else if (s.color === "purple" || s.type === "population") {
+        colorClass = "bg-purple-100 text-purple-900 border-purple-300";
+      } else if (s.color === "blue" || s.type === "intervention" || s.type === "comparator") {
+        colorClass = "bg-sky-100 text-sky-900 border-sky-300";
+      } else if (s.color === "orange" || s.type === "outcome") {
+        colorClass = "bg-amber-100 text-amber-900 border-amber-300";
+      }
+
+      return (
+        <mark
+          key={`mark-${seg.start}-${idx}`}
+          className={`px-1 py-0.5 rounded border ${isTitle ? "text-base inline" : "text-sm inline"} transition-colors ${colorClass}`}
+          title={`${s.label || s.type} (${s.type})`}
+        >
+          {segText}
+        </mark>
+      );
     });
 
-    if (currentIdx < abstractText.length) {
-      elements.push(<span key={`text-end`}>{abstractText.substring(currentIdx)}</span>);
+    if (isTitle) {
+      return <span className="leading-tight">{elements}</span>;
     }
-
-    return <div className="text-gray-800 leading-relaxed text-sm">{elements}</div>;
+    return <div className="text-gray-800 leading-relaxed text-sm whitespace-pre-wrap">{elements}</div>;
   };
 
   // Upload single PDF handler
@@ -1256,7 +1327,12 @@ export function ScreeningPage() {
               <div>
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <h2 className="text-base font-bold text-slate-900 leading-tight">
-                    {selectedStudy.title}
+                    {renderHighlightedText(
+                      selectedStudy.title,
+                      selectedHighlights?.title_spans || [],
+                      keywords,
+                      true
+                    )}
                   </h2>
                   <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
                   <span
@@ -1486,9 +1562,11 @@ export function ScreeningPage() {
 
                 {/* Abstract Text Area */}
                 <div className="bg-slate-50/50 border border-slate-200 rounded-lg p-4 min-h-[140px]">
-                  {renderHighlightedAbstract(
+                  {renderHighlightedText(
                     selectedStudy.abstract,
-                    selectedHighlights?.all_spans || []
+                    selectedHighlights?.all_spans || [],
+                    keywords,
+                    false
                   )}
                 </div>
               </div>
@@ -1812,10 +1890,10 @@ export function ScreeningPage() {
                 </button>
               </div>
 
-              {/* Auto-generate from PICO */}
+              {/* Sync from Protocol */}
               <div className="bg-indigo-50/70 border border-indigo-200 rounded-lg p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-indigo-900">Auto-Generate Keywords</span>
+                  <span className="text-xs font-bold text-indigo-900">Sync with Protocol</span>
                   <button
                     onClick={() => autoGenerateKeywordsMutation.mutate()}
                     disabled={autoGenerateKeywordsMutation.isPending}
@@ -1826,11 +1904,11 @@ export function ScreeningPage() {
                     ) : (
                       <Sparkles className="w-3 h-3" />
                     )}
-                    Generate from PICO
+                    Sync from Protocol
                   </button>
                 </div>
                 <p className="text-[11px] text-indigo-700">
-                  Automatically derives include/exclude keywords from the project's PICO statement and study designs.
+                  Automatically synchronizes include and exclude keywords with this review's research protocol, PICO criteria, study designs, and search strings.
                 </p>
               </div>
 
@@ -2107,3 +2185,4 @@ export function ScreeningPage() {
     </div>
   );
 }
+
