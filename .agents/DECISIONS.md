@@ -109,3 +109,10 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
 
 - Project navigation and Studies include a Bookmarked studies destination at /projects/:projectId/bookmarks. It reuses the existing study table and personal bookmarks with saved-only filtering forced on.
 - The bookmarked view includes a saved count, empty-state guidance, removal controls, existing study review actions, and a View all studies link. Screening decisions and storage semantics are unchanged.
+
+## 2026-10-11 — Task 16: included-study BibTeX download
+
+- The Export page downloads a .bib attachment through the existing project reference-export endpoint with status=included. Only the current persisted included status qualifies; ta_included, pending, maybe and excluded records are omitted. This exports current recorded eligibility, not a claim of reviewer consensus or confirmation.
+- Reuse the existing serializer and access checks. Validate status parameters, return a clear error for no matches, and show visible retryable download errors without silently substituting demo references.
+- UTF-8 metadata is retained; absent fields are omitted. Citation keys are ASCII, unique within an export and stable for saved study IDs. Escape TeX-sensitive metadata in a single pass, including unbalanced literal braces.
+- Author names separated by semicolons/and or comma-separated full names remain independent; arbitrary adjacent names are no longer merged. Ambiguous comma-only name strings are preserved rather than guessed.

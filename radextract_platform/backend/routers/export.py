@@ -254,7 +254,7 @@ async def _export_xlsx(project_id: str, timestamp: str, include_rob: bool, db: D
 async def export_references(
     project_id: str,
     format: str = Query("ris", pattern="^(ris|bibtex|endnote)$"),
-    status: str = Query("included", description="Filter by screening status: included, all, excluded"),
+    status: str = Query("included", pattern="^(included|all|excluded)$", description="Filter by screening status: included, all, excluded"),
     user: dict = Depends(get_current_user_optional),
     db: DBBackend = Depends(get_db),
 ):
@@ -263,6 +263,9 @@ async def export_references(
     By default exports only included studies. Use ?status=all for all studies.
     """
     check_project_access(db, project_id, user)
+
+    if not db.get("projects", project_id):
+        raise HTTPException(status_code=404, detail="Project not found")
 
     # Get studies
     if status == "all":
@@ -284,7 +287,7 @@ async def export_references(
     elif format == "bibtex":
         content = export_bibtex(studies)
         ext = "bib"
-        media = "text/plain"
+        media = "application/x-bibtex"
     else:  # endnote
         content = export_endnote_xml(studies)
         ext = "xml"

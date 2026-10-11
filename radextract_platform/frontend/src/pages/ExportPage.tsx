@@ -8,6 +8,8 @@ export function ExportPage() {
   const [projectName, setProjectName] = useState<string>('export');
   const [downloading, setDownloading] = useState<string | null>(null);
 
+  const [referenceError, setReferenceError] = useState<string | null>(null);
+
   // Scientific Agent State
   const [manuscriptOpen, setManuscriptOpen] = useState(false);
   const [manuscriptText, setManuscriptText] = useState<string>('');
@@ -60,6 +62,27 @@ export function ExportPage() {
       console.error('Error drafting manuscript:', err);
     } finally {
       setDraftLoading(false);
+    }
+  };
+
+  const handleIncludedBibtex = async () => {
+    if (!projectId || downloading === 'bibtex') return;
+    setDownloading('bibtex');
+    setReferenceError(null);
+    let url: string | undefined;
+    try {
+      const blob = await api.exportReferences(projectId, 'bibtex', 'included');
+      url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `included_references_${projectId}.bib`;
+      document.body.appendChild(link);
+      try { link.click(); } finally { link.remove(); }
+    } catch (error) {
+      setReferenceError(error instanceof Error ? error.message : 'Reference export failed. Please retry.');
+    } finally {
+      if (url) window.URL.revokeObjectURL(url);
+      setDownloading(null);
     }
   };
 
@@ -202,12 +225,15 @@ export function ExportPage() {
               <p className="text-xs text-slate-500">Export verified BibTeX, RIS, or APA formatted citations</p>
             </div>
           </div>
+          <p className="text-xs text-slate-500 mt-2">BibTeX downloads only studies currently marked Included. Abstract-only inclusions, pending and excluded studies are omitted.</p>
+          {referenceError && <p role="alert" className="mt-2 text-sm text-red-600">{referenceError} Please retry the download after resolving the issue.</p>}
           <div className="flex gap-2 mt-4">
             <button
-              onClick={() => handleExportBibliography('bibtex')}
+              onClick={handleIncludedBibtex}
+              disabled={downloading === 'bibtex'}
               className="flex-1 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
             >
-              BibTeX (.bib)
+              {downloading === 'bibtex' ? 'Exporting…' : 'Download included studies (.bib)'}
             </button>
             <button
               onClick={() => handleExportBibliography('ris')}

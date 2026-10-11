@@ -7,6 +7,7 @@ EndNote, Zotero, Mendeley, etc.
 from __future__ import annotations
 
 import html
+import hashlib
 import re
 from typing import Optional
 
@@ -15,21 +16,23 @@ def _escape_bibtex(text: str) -> str:
     """Escape special characters for BibTeX."""
     if not text:
         return ""
-    text = text.replace("&", r"\&")
-    text = text.replace("%", r"\%")
-    text = text.replace("_", r"\_")
-    text = text.replace("#", r"\#")
-    text = text.replace("{", r"\{")
-    text = text.replace("}", r"\}")
-    return text
+    replacements = {
+        "\\": r"{\textbackslash{}}", "&": r"\&", "%": r"\%",
+        "_": r"\_", "#": r"\#", "$": r"\$",
+        "{": r"{\textbraceleft{}}", "}": r"{\textbraceright{}}",
+        "~": r"{\textasciitilde{}}", "^": r"{\textasciicircum{}}",
+    }
+    return "".join(replacements.get(char, char) for char in str(text))
 
 
-def _make_bibtex_key(title: str, year: Optional[int], index: int) -> str:
+
+def _make_bibtex_key(title: str, year: Optional[int], index: int | str) -> str:
     """Generate a BibTeX citation key from title and year."""
     # Take first significant word from title
     words = re.findall(r"[a-zA-Z]+", title or "")
     first_word = words[0].lower() if words else "ref"
-    return f"{first_word}{year or 'nd'}{index}"
+    year_part = re.sub(r"[^0-9]", "", str(year or "")) or "nd"
+    return f"{first_word}{year_part}{index}"
 
 
 def export_ris(studies: list[dict]) -> str:
@@ -114,28 +117,38 @@ def export_bibtex(studies: list[dict]) -> str:
         BibTeX format string ready for download.
     """
     entries = []
+    used_keys = set()
 
     for i, study in enumerate(studies, 1):
         key = _make_bibtex_key(study.get("title", ""), study.get("publication_year"), i)
+        if study.get("study_id"):
+            suffix = hashlib.sha256(str(study["study_id"]).encode("utf-8")).hexdigest()[:10]
+            key = _make_bibtex_key(study.get("title", ""), study.get("publication_year"), suffix)
+        base_key = key
+        collision = 2
+        while key in used_keys:
+            key = f"{base_key}_{collision}"
+            collision += 1
+        used_keys.add(key)
         lines = [f"@article{{{key},"]
 
         # Authors — BibTeX uses "and" separator
         authors = study.get("authors", "")
         if authors:
-            # Convert comma-separated to "and" separated
-            author_list = [a.strip() for a in authors.split(",") if a.strip()]
-            # Pair consecutive entries (LastName, FirstName → "FirstName LastName")
-            paired = []
-            j = 0
-            while j < len(author_list):
-                if j + 1 < len(author_list) and "," not in author_list[j + 1]:
-                    paired.append(f"{author_list[j]} {author_list[j + 1]}")
-                    j += 2
-                else:
-                    paired.append(author_list[j])
-                    j += 1
-            bib_authors = " and ".join(paired)
-            lines.append(f"  author = {{{_escape_bibtex(bib_authors)}}},")
+            # Prefer explicit author separators. Do not pair arbitrary adjacent names.
+            literal_author = False
+            if re.search(r";|\s+and\s+", authors):
+                names = re.split(r"\s*;\s*|\s+and\s+", authors)
+            else:
+                parts = [part.strip() for part in authors.split(",") if part.strip()]
+                names = parts if len(parts) > 1 and all(" " in part for part in parts) else [authors]
+                literal_author = len(parts) > 2 and names == [authors]
+            bib_authors = " and ".join(_escape_bibtex(name.strip()) for name in names if name.strip())
+            if literal_author:
+                # Flattened imports can lose author boundaries. Preserve their text
+                # as a literal name instead of emitting an invalid multi-comma name.
+                bib_authors = "{" + bib_authors + "}"
+            lines.append(f"  author = {{{bib_authors}}},")
 
         if study.get("title"):
             lines.append(f"  title = {{{_escape_bibtex(study['title'])}}},")
@@ -144,28 +157,28 @@ def export_bibtex(studies: list[dict]) -> str:
             lines.append(f"  journal = {{{_escape_bibtex(study['journal'])}}},")
 
         if study.get("publication_year"):
-            lines.append(f"  year = {{{study['publication_year']}}},")
+            lines.append(f"  year = {{{_escape_bibtex(str(study['publication_year']))}}},")
 
         if study.get("doi"):
-            lines.append(f"  doi = {{{study['doi']}}},")
+            lines.append(f"  doi = {{{_escape_bibtex(str(study['doi']))}}},")
 
         if study.get("abstract"):
             lines.append(f"  abstract = {{{_escape_bibtex(study['abstract'])}}},")
 
         if study.get("volume"):
-            lines.append(f"  volume = {{{study['volume']}}},")
+            lines.append(f"  volume = {{{_escape_bibtex(str(study['volume']))}}},")
 
         if study.get("issue"):
-            lines.append(f"  number = {{{study['issue']}}},")
+            lines.append(f"  number = {{{_escape_bibtex(str(study['issue']))}}},")
 
         if study.get("start_page"):
             pages = study["start_page"]
             if study.get("end_page"):
                 pages = f"{study['start_page']}--{study['end_page']}"
-            lines.append(f"  pages = {{{pages}}},")
+            lines.append(f"  pages = {{{_escape_bibtex(str(pages))}}},")
 
         if study.get("pmid"):
-            lines.append(f"  pmid = {{{study['pmid']}}},")
+            lines.append(f"  pmid = {{{_escape_bibtex(str(study['pmid']))}}},")
 
         # Remove trailing comma from last field
         if lines[-1].endswith(","):
