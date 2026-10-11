@@ -5,6 +5,7 @@ import os
 import tempfile
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import Optional
 import sqlite3
@@ -20,7 +21,7 @@ from models import (
     PicoExtractionResponse,
     PubMedFetchRequest, PubMedFetchResponse,
     OpenAlexFetchRequest,
-    ReferenceUploadResponse,
+    ReferenceUploadResponse, ReferencePreviewResponse, MalformedRecordDetail,
     ProjectMemberResponse, ProjectMemberInvite, ProjectMemberUpdate,
     KeywordGroupCreate, KeywordGroupUpdate, KeywordGroupResponse,
     ProjectSettingsUpdate, ProjectSettingsResponse,
@@ -658,7 +659,7 @@ async def generate_search_strings(project_id: str,
     from services import search_string_generator
 
     row = conn.execute(
-        "SELECT pico_json FROM projects WHERE project_id = ?", (project_id,)
+        "SELECT pico_json, research_question FROM projects WHERE project_id = ?", (project_id,)
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -666,7 +667,13 @@ async def generate_search_strings(project_id: str,
     pico = json.loads(row["pico_json"]) if row["pico_json"] else {}
     if not any(v.strip() for v in pico.values() if isinstance(v, str)):
         raise HTTPException(status_code=400, detail="PICO framework is not defined. Please define PICO first.")
-    strings = search_string_generator.generate_search_strings(pico)
+    try:
+        strings = await run_in_threadpool(
+            search_string_generator.generate_ai_search_strings, pico,
+            dict(row).get("research_question") or "",
+        )
+    except search_string_generator.SearchGenerationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     strings_json = json.dumps(strings)
     conn.execute(
         "UPDATE projects SET search_strings_json = ? WHERE project_id = ?",
@@ -746,7 +753,10 @@ async def search_from_question(
         raise HTTPException(status_code=400, detail="Research question is required.")
 
     # Extract PICO from the question
-    result = search_string_generator.extract_pico_from_question(body.question.strip())
+    try:
+        result = await run_in_threadpool(search_string_generator.extract_pico_from_question, body.question.strip())
+    except search_string_generator.SearchGenerationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     pico = result["pico"]
     strings = result["strings"]
 
@@ -996,13 +1006,94 @@ async def openalex_fetch_studies(
 #  Reference Upload Endpoint
 # ═══════════════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════════════
+#  Reference Preview & Upload Endpoints
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.post("/projects/{project_id}/references/preview", response_model=ReferencePreviewResponse)
+async def preview_references(
+    project_id: str,
+    file: UploadFile = File(...),
+    column_mapping: Optional[str] = None,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)
+):
+    """Preview a reference file before importing: detect format, preview records, inspect malformed rows."""
+    from services import reference_parser
+    import csv, io
+
+    # Verify project exists
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_access(conn, project_id, user, min_role="viewer")
+
+    content_bytes = await file.read()
+    try:
+        content = content_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        content = content_bytes.decode("latin-1")
+
+    filename = file.filename or "references.ris"
+    parsed_mapping = None
+    if column_mapping:
+        try:
+            parsed_mapping = json.loads(column_mapping)
+        except Exception:
+            parsed_mapping = None
+
+    # Detect columns if it's CSV
+    detected_cols = []
+    fmt = reference_parser.detect_reference_format(content, filename)
+    if fmt == "CSV with column mapping" or filename.lower().endswith(".csv"):
+        try:
+            sample_reader = csv.DictReader(io.StringIO(content))
+            if sample_reader.fieldnames:
+                detected_cols = [c for c in sample_reader.fieldnames if c]
+        except Exception:
+            pass
+
+    result = reference_parser.parse_references_detailed(
+        content=content,
+        filename=filename,
+        column_mapping=parsed_mapping,
+    )
+
+    malformed_details = [
+        MalformedRecordDetail(
+            index=m.get("index"),
+            reason=m.get("reason", "Malformed record"),
+            snippet=m.get("snippet")
+        )
+        for m in result.get("malformed_records", [])
+    ]
+
+    return ReferencePreviewResponse(
+        format=result.get("format", "Unknown"),
+        filename=filename,
+        total_found=result.get("total_parsed", 0) + result.get("total_malformed", 0),
+        total_valid=result.get("total_parsed", 0),
+        total_malformed=result.get("total_malformed", 0),
+        preview_records=result.get("records", [])[:10],
+        malformed_records=malformed_details,
+        columns_detected=detected_cols,
+    )
+
+
 @router.post("/projects/{project_id}/references/upload", response_model=ReferenceUploadResponse)
-async def upload_references(project_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional), files: list[UploadFile] = File(...), conn: DBBackend = Depends(get_db)):
+async def upload_references(
+    project_id: str,
+    files: list[UploadFile] = File(...),
+    column_mapping: Optional[str] = None,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)
+):
     """Upload one or more reference files and import studies.
 
-    Supports RIS, BibTeX, CSV, PubMed XML, NBIB, EndNote XML, and OVID formats.
-    Multiple files can be uploaded in a single request.
+    Supports RIS, BibTeX, CSV with column mapping, PubMed/NBIB, EndNote Tagged,
+    EndNote XML, PubMed XML, and Web of Science CIW.
     """
     from services import reference_parser
 
@@ -1013,6 +1104,13 @@ async def upload_references(project_id: str,
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user, min_role="editor")
+
+    parsed_mapping = None
+    if column_mapping:
+        try:
+            parsed_mapping = json.loads(column_mapping)
+        except Exception:
+            parsed_mapping = None
 
     # Collect existing DOIs and titles for dedup across all files
     existing_dois = set()
@@ -1030,6 +1128,8 @@ async def upload_references(project_id: str,
     total_skipped = 0
     source_names = []
     errors = []
+    all_malformed: list[MalformedRecordDetail] = []
+    detected_formats = []
 
     for file in files:
         # Read file content
@@ -1041,9 +1141,23 @@ async def upload_references(project_id: str,
 
         filename = file.filename or "references.ris"
 
-        # Parse references
+        # Parse references with detailed reporting
         try:
-            studies = reference_parser.parse_file(content, filename)
+            parse_res = reference_parser.parse_references_detailed(
+                content=content,
+                filename=filename,
+                column_mapping=parsed_mapping,
+            )
+            detected_formats.append(parse_res.get("format", "Unknown"))
+            studies = parse_res.get("records", [])
+            for m in parse_res.get("malformed_records", []):
+                all_malformed.append(
+                    MalformedRecordDetail(
+                        index=m.get("index"),
+                        reason=f"[{filename}] {m.get('reason', 'Malformed')}",
+                        snippet=m.get("snippet")
+                    )
+                )
         except Exception as e:
             errors.append(f"Failed to parse {filename}: {str(e)}")
             continue
@@ -1094,7 +1208,9 @@ async def upload_references(project_id: str,
         imported_count=total_imported,
         skipped_duplicates=total_skipped,
         source=", ".join(source_names) if source_names else "unknown",
+        format=", ".join(set(detected_formats)) if detected_formats else None,
         errors=errors,
+        malformed_records=all_malformed,
     )
 
 

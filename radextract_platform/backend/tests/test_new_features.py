@@ -449,6 +449,15 @@ class TestExpandedSearchStrings:
 # ═══════════════════════════════════════════════════════════════════════
 
 class TestResearchQuestionExtraction:
+    @pytest.fixture(autouse=True)
+    def mock_search_model(self, monkeypatch):
+        # These tests exercise PICO extraction, not a live model connection.
+        monkeypatch.setattr("services.tool_calling_client.ToolCallingClient.call_with_tool", lambda *args, **kwargs: {})
+        monkeypatch.setattr(
+            "services.search_string_generator.generate_ai_search_strings",
+            lambda pico, research_question="": generate_search_strings(pico),
+        )
+
     def test_simple_extraction_population(self):
         """Simple extraction should find population from 'in patients with X'."""
         pico = _simple_pico_extraction(
@@ -710,7 +719,15 @@ class TestReferenceExportAPI:
 # ═══════════════════════════════════════════════════════════════════════
 
 class TestResearchQuestionAPI:
-    def test_search_from_question(self, client, project):
+    def test_search_from_question(self, client, project, monkeypatch):
+        pico = {"population": "colorectal cancer", "index_test": "MRI"}
+        strings = generate_search_strings(pico) | {
+            "ovid_medline": "MRI.ti,ab.", "ovid_embase": "MRI.ti,ab.",
+        }
+        monkeypatch.setattr(
+            "services.tool_calling_client.ToolCallingClient.call_with_tool",
+            lambda self, tool_name, **kwargs: pico if tool_name == "extract_pico" else {"strings": strings},
+        )
         r = client.post(
             f"/api/projects/{project}/search-from-question",
             json={"question": "Is MRI better than CT for detecting liver metastases in patients with colorectal cancer?"},

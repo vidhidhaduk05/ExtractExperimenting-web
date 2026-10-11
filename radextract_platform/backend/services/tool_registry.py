@@ -328,6 +328,21 @@ TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
     }
 }
 
+TOOL_DEFINITIONS["generate_search_strings"] = {
+    "type": "function",
+    "function": {
+        "name": "generate_search_strings",
+        "description": "Design or repair database-specific literature searches without imposing fixed concept blocks.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "strings": {"type": "object", "additionalProperties": {"type": "string"}},
+            },
+            "required": ["strings"],
+        },
+    },
+}
+
 # Validation schemas used internally
 RESPONSE_SCHEMAS: Dict[str, Dict[str, Any]] = {
     name: definition["function"]["parameters"]

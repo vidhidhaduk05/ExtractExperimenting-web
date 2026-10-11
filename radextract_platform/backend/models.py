@@ -177,11 +177,29 @@ class OpenAlexFetchRequest(BaseModel):
 
 # ── Reference Upload ──
 
+class MalformedRecordDetail(BaseModel):
+    index: Optional[int] = None
+    reason: str
+    snippet: Optional[str] = None
+
 class ReferenceUploadResponse(BaseModel):
     imported_count: int
     skipped_duplicates: int
     source: str
+    format: Optional[str] = None
     errors: list[str] = []
+    malformed_records: list[MalformedRecordDetail] = []
+
+class ReferencePreviewResponse(BaseModel):
+    format: str
+    filename: str
+    total_found: int
+    total_valid: int
+    total_malformed: int
+    preview_records: list[dict] = []
+    malformed_records: list[MalformedRecordDetail] = []
+    columns_detected: list[str] = []
+
 
 
 # ── Keyword Groups (customizable highlighting) ──

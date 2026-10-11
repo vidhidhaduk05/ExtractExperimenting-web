@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from radextract_platform.backend.services.jev_client import ask, is_jev_enabled
+from services.jev_client import ask, is_jev_enabled
 
 logger = logging.getLogger(__name__)
 

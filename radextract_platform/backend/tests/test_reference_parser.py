@@ -232,3 +232,81 @@ class TestCleanLatex:
         result = _clean_latex("\\textit{italic}")
         assert "italic" in result
         assert "\\textit" not in result
+
+
+# ── EndNote Tagged and WoS CIW tests ──
+
+ENDNOTE_TAGGED_SAMPLE = """%0 Journal Article
+%A Smith, John
+%A Williams, David
+%T Endovascular treatment of pure arterial malformations
+%J J Neurosurg
+%D 2024
+%R 10.3171/2024.JNS001
+%M 38291021
+%X Pure arterial malformations (PAM) represent rare vascular entities without arteriovenous shunting.
+"""
+
+WOS_CIW_SAMPLE = """FN Clarivate Analytics Web of Science
+VR 1.0
+PT J
+AU Smith, J.
+   Williams, D.
+AF Smith, John
+   Williams, David
+TI Clinical outcome of pure arterial malformations
+SO JOURNAL OF NEUROSURGERY
+PY 2023
+DI 10.3171/2023.JNS999
+PM 37891234
+AB Pure arterial malformations (PAMs) are rare tortuous arterial lesions.
+ER
+"""
+
+
+def test_parse_endnote_tagged():
+    from services.reference_parser import parse_endnote_tagged, detect_reference_format
+    fmt = detect_reference_format(ENDNOTE_TAGGED_SAMPLE, "citations.enw")
+    assert fmt == "EndNote Tagged Export"
+    records = parse_endnote_tagged(ENDNOTE_TAGGED_SAMPLE)
+    assert len(records) == 1
+    assert "Endovascular treatment" in records[0]["title"]
+    assert "Smith, John" in records[0]["authors"]
+    assert records[0]["publication_year"] == 2024
+    assert records[0]["doi"] == "10.3171/2024.JNS001"
+    assert records[0]["pmid"] == "38291021"
+    assert "rare vascular entities" in records[0]["abstract"]
+
+
+def test_parse_wos_ciw():
+    from services.reference_parser import parse_wos_ciw, detect_reference_format
+    fmt = detect_reference_format(WOS_CIW_SAMPLE, "savedrecs.ciw")
+    assert fmt == "Web of Science CIW"
+    records = parse_wos_ciw(WOS_CIW_SAMPLE)
+    assert len(records) == 1
+    assert "Clinical outcome" in records[0]["title"]
+    assert "Smith, John" in records[0]["authors"]
+    assert records[0]["publication_year"] == 2023
+    assert records[0]["doi"] == "10.3171/2023.JNS999"
+    assert records[0]["pmid"] == "37891234"
+    assert "rare tortuous arterial lesions" in records[0]["abstract"]
+
+
+def test_parse_references_detailed_malformed():
+    from services.reference_parser import parse_references_detailed
+    malformed_content = """TY  - JOUR
+AU  - Anonymous
+ER  - 
+TY  - JOUR
+TI  - Valid Study Title
+AU  - Real Author
+DO  - 10.1234/real
+ER  - 
+"""
+    result = parse_references_detailed(malformed_content, "test.ris")
+    assert result["format"] == "RIS"
+    assert result["total_parsed"] == 1
+    assert result["total_malformed"] == 1
+    assert len(result["malformed_records"]) == 1
+    assert result["records"][0]["title"] == "Valid Study Title"
+

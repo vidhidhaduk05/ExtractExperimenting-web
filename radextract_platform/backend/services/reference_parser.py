@@ -961,20 +961,397 @@ def _finalize_ovid_record(record: dict) -> None:
     record.setdefault("source", "OVID import")
 
 
+# ── EndNote Tagged Export parsing ──
+
+ENDNOTE_TAG_MAP = {
+    "%A": "authors",
+    "%E": "secondary_authors",
+    "%T": "title",
+    "%J": "journal",
+    "%B": "journal",
+    "%D": "publication_year",
+    "%R": "doi",
+    "%M": "pmid",
+    "%X": "abstract",
+    "%V": "volume",
+    "%N": "issue",
+    "%P": "pages",
+    "%0": "reference_type",
+}
+
+
+def parse_endnote_tagged(content: str) -> list[dict]:
+    """Parse EndNote tagged export (%A, %T, %J, %D, %X, %R, %M...) format into a list of study metadata dicts."""
+    if not content or not content.strip():
+        return []
+
+    records = []
+    current_record: dict = {}
+    current_tag: Optional[str] = None
+    current_value: list[str] = []
+
+    lines = content.split("\n")
+    for line in lines:
+        match = re.match(r"^(%[A-Za-z0-9])\s*(.*)$", line)
+        if match:
+            tag = match.group(1)
+            val = match.group(2).strip()
+
+            # Record delimiter: %0 denotes a new record in EndNote tagged export
+            if tag == "%0":
+                if current_record and current_record.get("title"):
+                    _finalize_endnote_tagged_record(current_record)
+                    records.append(current_record)
+                current_record = {"source": "EndNote Tagged import"}
+                current_tag = None
+                current_value = []
+                continue
+
+            if current_tag and current_value:
+                _add_endnote_tagged_field(current_record, current_tag, "\n".join(current_value))
+
+            current_tag = tag
+            current_value = [val] if val else []
+        elif current_tag and line.strip():
+            current_value.append(line.strip())
+
+    if current_tag and current_value:
+        _add_endnote_tagged_field(current_record, current_tag, "\n".join(current_value))
+
+    if current_record and current_record.get("title"):
+        _finalize_endnote_tagged_record(current_record)
+        records.append(current_record)
+
+    return records
+
+
+def _add_endnote_tagged_field(record: dict, tag: str, value: str) -> None:
+    value = value.strip()
+    if not value:
+        return
+    field_name = ENDNOTE_TAG_MAP.get(tag)
+    if not field_name:
+        return
+
+    if field_name == "authors":
+        if "authors" not in record:
+            record["authors"] = []
+        record["authors"].append(value)
+    elif field_name == "publication_year":
+        year_match = re.search(r"(\d{4})", value)
+        if year_match:
+            record["publication_year"] = int(year_match.group(1))
+    elif field_name == "doi":
+        record["doi"] = re.sub(r"^https?://(dx\.)?doi\.org/", "", value, flags=re.IGNORECASE).strip().rstrip(".")
+    elif field_name == "pmid":
+        pmid_clean = re.sub(r"[^\d]", "", value)
+        if pmid_clean:
+            record["pmid"] = pmid_clean
+    else:
+        record[field_name] = value
+
+
+def _finalize_endnote_tagged_record(record: dict) -> None:
+    if isinstance(record.get("authors"), list):
+        record["authors"] = ", ".join(record["authors"])
+    record.setdefault("title", "")
+    record.setdefault("authors", "")
+    record.setdefault("journal", "")
+    record.setdefault("doi", "")
+    record.setdefault("pmid", "")
+    record.setdefault("abstract", "")
+    record.setdefault("publication_year", None)
+    record.setdefault("source", "EndNote Tagged import")
+
+
+# ── Web of Science CIW parsing ──
+
+WOS_TAG_MAP = {
+    "TI": "title",
+    "AU": "authors",
+    "AF": "authors_full",
+    "SO": "journal",
+    "PY": "publication_year",
+    "DI": "doi",
+    "PM": "pmid",
+    "AB": "abstract",
+    "VL": "volume",
+    "IS": "issue",
+    "BP": "start_page",
+    "EP": "end_page",
+    "DT": "publication_type",
+}
+
+
+def parse_wos_ciw(content: str) -> list[dict]:
+    """Parse Web of Science export (.ciw) or plain text format into study metadata dicts."""
+    if not content or not content.strip():
+        return []
+
+    records = []
+    current_record: dict = {}
+    current_tag: Optional[str] = None
+    current_value: list[str] = []
+
+    lines = content.split("\n")
+    for line in lines:
+        # Check for 2-letter tag at start of line followed by space (WoS standard: "TI ", "AU ", "ER")
+        tag_match = re.match(r"^([A-Z0-9]{2})\s+(.*)$", line)
+        if tag_match:
+            tag = tag_match.group(1)
+            val = tag_match.group(2).strip()
+
+            if tag == "ER":
+                if current_tag and current_value:
+                    _add_wos_field(current_record, current_tag, "\n".join(current_value))
+                if current_record and current_record.get("title"):
+                    _finalize_wos_record(current_record)
+                    records.append(current_record)
+                current_record = {}
+                current_tag = None
+                current_value = []
+                continue
+
+            if tag in ("PT", "FN", "VR") and not current_record:
+                current_record = {"source": "Web of Science CIW import"}
+
+            if current_tag and current_value:
+                _add_wos_field(current_record, current_tag, "\n".join(current_value))
+
+            current_tag = tag
+            current_value = [val] if val else []
+        elif line.startswith("   ") and current_tag:
+            # WoS continuation line (starts with 3 spaces)
+            current_value.append(line.strip())
+        elif current_tag and line.strip() and not line.startswith("ER"):
+            current_value.append(line.strip())
+
+    if current_tag and current_value:
+        _add_wos_field(current_record, current_tag, "\n".join(current_value))
+    if current_record and current_record.get("title"):
+        _finalize_wos_record(current_record)
+        records.append(current_record)
+
+    return records
+
+
+def _add_wos_field(record: dict, tag: str, value: str) -> None:
+    value = value.strip()
+    if not value:
+        return
+    field_name = WOS_TAG_MAP.get(tag)
+    if not field_name:
+        return
+
+    if field_name == "authors":
+        if "authors" not in record:
+            record["authors"] = []
+        author_lines = [a.strip() for a in value.split("\n") if a.strip()]
+        record["authors"].extend(author_lines)
+    elif field_name == "authors_full":
+        if "authors_full" not in record:
+            record["authors_full"] = []
+        author_lines = [a.strip() for a in value.split("\n") if a.strip()]
+        record["authors_full"].extend(author_lines)
+    elif field_name == "publication_year":
+        year_match = re.search(r"(\d{4})", value)
+        if year_match:
+            record["publication_year"] = int(year_match.group(1))
+    elif field_name == "doi":
+        record["doi"] = re.sub(r"^https?://(dx\.)?doi\.org/", "", value, flags=re.IGNORECASE).strip().rstrip(".")
+    elif field_name == "pmid":
+        pmid_clean = re.sub(r"[^\d]", "", value)
+        if pmid_clean:
+            record["pmid"] = pmid_clean
+    elif field_name == "abstract":
+        record["abstract"] = value.replace("\n", " ")
+    else:
+        record[field_name] = value.replace("\n", " ")
+
+
+def _finalize_wos_record(record: dict) -> None:
+    authors_list = record.pop("authors_full", None) or record.pop("authors", [])
+    if isinstance(authors_list, list):
+        record["authors"] = ", ".join(authors_list)
+    record.setdefault("title", "")
+    record.setdefault("authors", "")
+    record.setdefault("journal", "")
+    record.setdefault("doi", "")
+    record.setdefault("pmid", "")
+    record.setdefault("abstract", "")
+    record.setdefault("publication_year", None)
+    record.setdefault("source", "Web of Science CIW import")
+
+
+# ── Format Detector ──
+
+def detect_reference_format(content: str, filename: str = "") -> str:
+    """Detect reference format from content inspection and file extension."""
+    if not content or not content.strip():
+        return "Unknown"
+
+    ext = ""
+    if filename:
+        ext_match = re.search(r"\.([^.]+)$", filename)
+        ext = ext_match.group(1).lower() if ext_match else ""
+
+    sample = content[:3000]
+
+    # Explicit extension checks first
+    if ext == "ciw" or "FN Clarivate" in sample or "FN Thomson" in sample:
+        return "Web of Science CIW"
+    if ext == "bib" or ext == "bibtex":
+        return "BibTeX"
+    if ext == "nbib":
+        return "PubMed/NBIB"
+    if ext == "ris":
+        return "RIS"
+
+    # XML formats
+    if "<PubmedArticle" in sample or "<PubmedArticleSet" in sample:
+        return "PubMed XML"
+    if ("<record" in sample or "<records" in sample) and ("<xml" in sample.lower() or "<?xml" in sample or "<contributors>" in sample):
+        return "EndNote XML"
+
+    # Content-based detection
+    if re.search(r"^\s*%0\s+", sample, re.MULTILINE) or (re.search(r"^\s*%A\s+", sample, re.MULTILINE) and re.search(r"^\s*%T\s+", sample, re.MULTILINE)):
+        return "EndNote Tagged Export"
+    if re.search(r"^PT\s+[A-Za-z]+", sample, re.MULTILINE) and re.search(r"^TI\s+", sample, re.MULTILINE):
+        return "Web of Science CIW"
+    if re.search(r"^PMID\s*-\s", sample, re.MULTILINE):
+        return "PubMed/NBIB"
+    if re.search(r"^TY\s{2,}-\s", sample, re.MULTILINE):
+        return "RIS"
+    if re.search(r"^@\w+\s*\{", sample, re.MULTILINE):
+        return "BibTeX"
+    if re.search(r"^\s*1\.\s+Author", sample, re.MULTILINE):
+        return "OVID/MEDLINE"
+
+    first_line = content.split("\n")[0] if "\n" in content else ""
+    if ("," in first_line or "\t" in first_line) and (ext == "csv" or "title" in first_line.lower()):
+        return "CSV with column mapping"
+
+    return "RIS"
+
+
+# ── Detailed Unified Parser ──
+
+def parse_references_detailed(
+    content: str,
+    filename: str = "",
+    column_mapping: Optional[dict[str, str]] = None
+) -> dict:
+    """Parse reference file with explicit format detection, record preview, and malformed diagnostics.
+
+    Returns dict with keys:
+      - format: string identified format
+      - records: list of valid study metadata dicts
+      - malformed_records: list of diagnostic dicts for invalid or missing-title entries
+      - total_parsed: int count of valid studies
+      - total_malformed: int count of rejected entries
+    """
+    if not content or not content.strip():
+        return {
+            "format": "Empty",
+            "records": [],
+            "malformed_records": [{"line": 1, "reason": "File is empty"}],
+            "total_parsed": 0,
+            "total_malformed": 1,
+        }
+
+    fmt = detect_reference_format(content, filename)
+    raw_records: list[dict] = []
+
+    try:
+        if fmt == "Web of Science CIW":
+            raw_records = parse_wos_ciw(content)
+        elif fmt == "EndNote Tagged Export":
+            raw_records = parse_endnote_tagged(content)
+        elif fmt == "EndNote XML":
+            raw_records = parse_endnote_xml(content)
+        elif fmt == "PubMed XML":
+            raw_records = parse_pubmed_xml(content)
+        elif fmt == "PubMed/NBIB":
+            raw_records = parse_nbib(content)
+        elif fmt == "BibTeX":
+            raw_records = parse_bibtex(content)
+        elif fmt == "OVID/MEDLINE":
+            raw_records = parse_ovid(content)
+        elif fmt == "CSV with column mapping":
+            raw_records = parse_csv_mapped(content, column_mapping) if column_mapping else parse_csv(content)
+        else:
+            raw_records = parse_file(content, filename)
+    except Exception as e:
+        return {
+            "format": fmt,
+            "records": [],
+            "malformed_records": [{"reason": f"Syntax error parsing {fmt}: {str(e)}"}],
+            "total_parsed": 0,
+            "total_malformed": 1,
+        }
+
+    valid_records = []
+    malformed = []
+
+    for idx, r in enumerate(raw_records, 1):
+        title = (r.get("title") or "").strip()
+        if not title or len(title) < 3:
+            malformed.append({
+                "index": idx,
+                "reason": "Missing or too short title",
+                "snippet": str(r)[:160],
+            })
+            continue
+
+        # Clean DOI if present
+        if r.get("doi"):
+            r["doi"] = re.sub(r"^https?://(dx\.)?doi\.org/", "", r["doi"], flags=re.IGNORECASE).strip().rstrip(".")
+
+        valid_records.append(r)
+
+    return {
+        "format": fmt,
+        "records": valid_records,
+        "malformed_records": malformed,
+        "total_parsed": len(valid_records),
+        "total_malformed": len(malformed),
+    }
+
+
+def parse_csv_mapped(content: str, custom_mapping: dict[str, str]) -> list[dict]:
+    """Parse CSV with custom user-supplied column mappings."""
+    if not content or not content.strip():
+        return []
+    reader = csv.DictReader(io.StringIO(content))
+    if not reader.fieldnames:
+        return []
+
+    records = []
+    for row in reader:
+        record: dict = {"source": "CSV import"}
+        for user_col, target_field in custom_mapping.items():
+            if user_col in row and target_field:
+                val = (row.get(user_col) or "").strip()
+                if val:
+                    record[target_field] = val
+
+        if record.get("publication_year"):
+            m = re.search(r"(\d{4})", str(record["publication_year"]))
+            if m:
+                record["publication_year"] = int(m.group(1))
+
+        if record.get("title"):
+            _finalize_csv_record(record)
+            records.append(record)
+    return records
+
+
 # ── Unified parser ──
 
 def parse_file(content: str, filename: str = "") -> list[dict]:
     """Parse a reference file, auto-detecting format.
 
-    Supports: RIS, BibTeX, CSV, PubMed XML, NBIB, EndNote XML, OVID/MEDLINE.
-    Detection is by file extension first, then by content patterns.
-
-    Args:
-        content: File content as a string.
-        filename: Original filename (used for format detection).
-
-    Returns:
-        List of study metadata dicts.
+    Supports: RIS, BibTeX, CSV, PubMed XML, NBIB, EndNote Tagged, EndNote XML, WoS CIW, OVID/MEDLINE.
     """
     if not content or not content.strip():
         return []
@@ -985,6 +1362,10 @@ def parse_file(content: str, filename: str = "") -> list[dict]:
         ext = ext_match.group(1).lower() if ext_match else ""
 
     # Detect by extension first
+    if ext == "ciw":
+        return parse_wos_ciw(content)
+    if ext == "enw":
+        return parse_endnote_tagged(content)
     if ext == "ris":
         return parse_ris(content)
     elif ext in ("bib", "bibtex"):
@@ -994,12 +1375,10 @@ def parse_file(content: str, filename: str = "") -> list[dict]:
     elif ext == "nbib":
         return parse_nbib(content)
     elif ext == "xml":
-        # Could be PubMed XML or EndNote XML — detect by content
         if "<PubmedArticle" in content or "<PubmedArticleSet" in content:
             return parse_pubmed_xml(content)
         elif "<record" in content or "<records" in content:
             return parse_endnote_xml(content)
-        # Fallback: try PubMed XML first, then EndNote
         try:
             records = parse_pubmed_xml(content)
             if records:
@@ -1008,7 +1387,11 @@ def parse_file(content: str, filename: str = "") -> list[dict]:
             pass
         return parse_endnote_xml(content)
     elif ext == "txt":
-        # Could be OVID/MEDLINE, RIS, NBIB, PubMed XML, or CSV — detect by content
+        # Check specific formats
+        if "FN Clarivate" in content[:1000] or "FN Thomson" in content[:1000] or (re.search(r"^PT\s+[A-Za-z]+", content[:1000], re.MULTILINE) and re.search(r"^TI\s+", content[:1000], re.MULTILINE)):
+            return parse_wos_ciw(content)
+        if re.search(r"^\s*%0\s+", content[:1000], re.MULTILINE):
+            return parse_endnote_tagged(content)
         if "<PubmedArticle" in content or "<PubmedArticleSet" in content:
             return parse_pubmed_xml(content)
         if re.search(r"^\s*1\.\s+Author", content, re.MULTILINE):
@@ -1019,29 +1402,28 @@ def parse_file(content: str, filename: str = "") -> list[dict]:
             return parse_ris(content)
         if re.search(r"^@\w+\{", content, re.MULTILINE):
             return parse_bibtex(content)
-        # Try CSV (tab or comma separated)
         if "," in content.split("\n")[0] or "\t" in content.split("\n")[0]:
             return parse_csv(content)
-        # Default: try RIS
         return parse_ris(content)
 
-    # Auto-detect by content (no extension or unknown extension)
-    if re.search(r"^TY\s{2,}-\s", content, re.MULTILINE):
-        return parse_ris(content)
-    if re.search(r"^@\w+\{", content, re.MULTILINE):
-        return parse_bibtex(content)
-    if "<PubmedArticle" in content or "<PubmedArticleSet" in content:
-        return parse_pubmed_xml(content)
-    if "<record" in content and ("<xml" in content[:200].lower() or "<?xml" in content[:200]):
+    # Auto-detect by content
+    fmt = detect_reference_format(content, filename)
+    if fmt == "Web of Science CIW":
+        return parse_wos_ciw(content)
+    if fmt == "EndNote Tagged Export":
+        return parse_endnote_tagged(content)
+    if fmt == "EndNote XML":
         return parse_endnote_xml(content)
-    if re.search(r"^\s*1\.\s+Author", content, re.MULTILINE):
-        return parse_ovid(content)
-    if re.search(r"^PMID\s*-\s", content, re.MULTILINE):
+    if fmt == "PubMed XML":
+        return parse_pubmed_xml(content)
+    if fmt == "PubMed/NBIB":
         return parse_nbib(content)
-    # Try CSV (has commas/tabs in first line and multiple lines)
-    first_line = content.split("\n")[0] if "\n" in content else ""
-    if first_line and ("," in first_line or "\t" in first_line) and content.count("\n") > 0:
+    if fmt == "BibTeX":
+        return parse_bibtex(content)
+    if fmt == "OVID/MEDLINE":
+        return parse_ovid(content)
+    if fmt == "CSV with column mapping":
         return parse_csv(content)
 
-    # Default: try RIS (most common export format)
     return parse_ris(content)
+

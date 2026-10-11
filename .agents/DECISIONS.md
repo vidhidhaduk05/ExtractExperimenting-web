@@ -88,3 +88,12 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
   - Renders an error alert banner with explicit error details and a prominent `Retry Save` action.
 - Retrying re-executes `decisionMutation.mutate(failedDecision)` targeting the same study without duplicating decision records.
 - Preserves Task 27's strict requirement that exclusion decisions must have a valid exclusion reason selected before mutating.
+
+
+## 2026-10-11 — AI-led search generation with syntax guardrails
+
+- Automatic PICO/question generation uses the configured model to choose concepts, synonyms, headings and breadth. No forced P AND I AND C AND O or invented restrictions.
+- Syntax guidance distinguishes PubMed, Embase.com, Ovid MEDLINE, Ovid Embase, Cochrane Search Manager, Web of Science, Scopus and CINAHL/EBSCOhost.
+- Conservative lint checks obvious delimiters/operators, known cross-interface syntax, placeholders and PubMed wildcard/proximity incompatibility; it does not certify live database acceptance or vocabulary validity.
+- One AI repair attempt; valid queries stay unchanged. Failure returns a clear error before persistence and preserves saved searches; no silent deterministic fallback. Legacy deterministic helper remains for compatibility only.
+- Manual edits and uploaded protocol searches are not rewritten.
