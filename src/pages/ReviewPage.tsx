@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
@@ -48,6 +48,15 @@ export function ReviewPage() {
     queryFn: () => api.listVariables(projectId!),
     enabled: !!projectId,
   });
+
+  // Memoize Set of study IDs with PDFs for O(1) lookup in matrix render loop instead of O(N^2) linear array .find()
+  const studiesWithPdf = useMemo(() => {
+    return new Set(
+      (studies || [])
+        .filter((st) => Boolean(st.pdf_path))
+        .map((st) => st.study_id)
+    );
+  }, [studies]);
 
   const autoExtractMutation = useMutation({
     mutationFn: async () => {
@@ -266,7 +275,7 @@ export function ReviewPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {(matrix.studies || []).map((s) => {
-                const studyHasPdf = (studies || []).find((st) => st.study_id === s.study_id)?.pdf_path;
+                const studyHasPdf = studiesWithPdf.has(s.study_id);
                 return (
                 <tr key={s.study_id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 sticky left-0 bg-white">

@@ -49,3 +49,14 @@ export function judgmentDotColor(judgment: string): string {
   };
   return colors[judgment] || "#CCCCCC";
 }
+
+export function sanitizeSvg(svg: string): string {
+  if (!svg) return "";
+  // Strip <script> tags and their contents
+  let sanitized = svg.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+  // Remove inline event handlers (e.g. onload, onerror, onclick)
+  sanitized = sanitized.replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  // Remove dangerous javascript: URIs in href or xlink:href
+  sanitized = sanitized.replace(/(href|xlink:href)\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, "");
+  return sanitized;
+}

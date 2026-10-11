@@ -238,9 +238,12 @@ export function ScreeningPage() {
   const [extractingStudyId, setExtractingStudyId] = useState<string | null>(null);
 
   // Map study_id -> existing RoB assessment (for Start RoB / View RoB rendering)
-  const robByStudy = new Map(
-    (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
-  );
+  // Memoize Map to avoid Map instantiation overhead on every render frame
+  const robByStudy = useMemo(() => {
+    return new Map(
+      (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
+    );
+  }, [robSummary?.assessments]);
 
   const handleStartRob = async (study: Study) => {
     setRobStarting((prev) => ({ ...prev, [study.study_id]: true }));
