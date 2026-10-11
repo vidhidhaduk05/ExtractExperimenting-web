@@ -6,12 +6,17 @@ import {
   ArrowLeft, Users, Stethoscope, GitCompare, Target, FlaskConical,
   Lightbulb, HelpCircle, Plus, Trash2, Loader2, CheckCircle,
   Upload, FileText, Copy, Search, Sparkles, Database,
-  ChevronDown, ChevronRight, AlertCircle, AlertTriangle,
+  ChevronDown, ChevronRight, AlertCircle, AlertTriangle, FileUp,
 } from "lucide-react";
+import { ReferenceImportModal } from "../components/common/ReferenceImportModal";
+
 
 const DATABASES = [
   { key: "pubmed", label: "PubMed", hasAutoFetch: true },
-  { key: "embase", label: "Embase", hasAutoFetch: false },
+  { key: "ovid_medline", label: "Ovid MEDLINE", hasAutoFetch: false },
+  { key: "openalex", label: "OpenAlex", hasAutoFetch: false },
+  { key: "embase", label: "Embase.com", hasAutoFetch: false },
+  { key: "ovid_embase", label: "Ovid Embase", hasAutoFetch: false },
   { key: "cochrane", label: "Cochrane", hasAutoFetch: false },
   { key: "web_of_science", label: "Web of Science", hasAutoFetch: false },
   { key: "scopus", label: "Scopus", hasAutoFetch: false },
@@ -190,6 +195,8 @@ export function PicoHypothesisPage() {
   const [copiedDb, setCopiedDb] = useState<string | null>(null);
   const [fetchResult, setFetchResult] = useState<string | null>(null);
   const [uploadResult, setUploadResult] = useState<string | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
 
   // ── Research question state ──
   const [researchQuestionInput, setResearchQuestionInput] = useState("");
@@ -199,7 +206,7 @@ export function PicoHypothesisPage() {
     mutationFn: (question: string) => api.searchFromQuestion(projectId!, question),
     onSuccess: (data) => {
       setQuestionResult(
-        `PICO extracted and search strings generated for all 6 databases.`
+        `PICO extracted and AI search strings generated for the supported database interfaces.`
       );
       queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
       queryClient.invalidateQueries({ queryKey: ["search-strings", projectId] });
@@ -269,25 +276,66 @@ export function PicoHypothesisPage() {
     setUploadedFileName(file.name);
     try {
       const result = await api.extractPico(projectId!, file);
-      // Auto-fill PICO form
-      setPicoForm({
+      
+      const newPico = {
         population: result.population || picoForm.population,
         index_test: result.index_test || picoForm.index_test,
         comparator: result.comparator || picoForm.comparator,
         outcome: result.outcome || picoForm.outcome,
         study_design: result.study_design || picoForm.study_design,
-      });
-      // Auto-fill hypothesis fields
+      };
+
+      const newRq = result.research_question || researchQuestion;
+      const newHyp = result.hypothesis || hypothesis;
+
+      // Auto-fill PICO form and Hypothesis in local state immediately
+      setPicoForm(newPico);
       if (result.research_question) setResearchQuestion(result.research_question);
       if (result.hypothesis) setHypothesis(result.hypothesis);
       setExtractionConfidence(result.extraction_confidence || "high");
       setExtractionStatus("done");
-      // Auto-expand PICO and Hypothesis sections so user immediately sees results
+
+      // Synchronously populate React Query caches so refetches never revert values
+      queryClient.setQueryData(["pico", projectId], newPico);
+      queryClient.setQueryData(["hypothesis", projectId], (prev: any) => ({
+        ...(prev || {}),
+        hypothesis: newHyp,
+        research_question: newRq,
+      }));
+
+      // Immediately persist PICO and Hypothesis to ensure database & UI are synced
+      try {
+        await Promise.all([
+          api.updatePico(projectId!, newPico),
+          api.updateHypothesis(projectId!, {
+            hypothesis: newHyp,
+            research_question: newRq,
+            secondary_hypotheses: secondary,
+          }),
+        ]);
+        setPicoSaved(true);
+        setHypSaved(true);
+        setTimeout(() => {
+          setPicoSaved(false);
+          setHypSaved(false);
+        }, 3500);
+      } catch (saveErr) {
+        console.warn("[Auto-persist Warning]", saveErr);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["search-strings", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+
+      // Auto-expand PICO, Hypothesis, and Criteria sections so user immediately views all fields filled
       setOpenSections((prev) => ({
         ...prev,
         protocol: true,
         pico: true,
         hypothesis: true,
+        criteria: true,
       }));
     } catch (err) {
       console.error("[Protocol Upload Error]", err);
@@ -396,7 +444,7 @@ export function PicoHypothesisPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.docx,.txt,.md,.rtf"
+                accept=".pdf,.docx,.doc,.txt,.md,.rtf"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -707,7 +755,7 @@ export function PicoHypothesisPage() {
             <div className="text-sm">
               <span className="font-semibold text-phylo-orange">Auto-generated search strings are a starting point.</span>{" "}
               <span className="text-gray-600">
-                These strings are generated from your PICO framework using built-in MeSH/Emtree mappings.
+                AI chooses the search concepts and synonyms from your PICO. Basic syntax checks and an automatic repair step help catch formatting errors; searches have not been tested in the databases.
                 They must be reviewed and refined by a medical librarian or systematic review methodologist
                 before use in a formal search. Synonym coverage, database-specific syntax, and field tags
                 may require adjustment for your specific research question.
@@ -847,6 +895,7 @@ export function PicoHypothesisPage() {
         onToggle={() => toggleSection("search")}
       >
         <div className="space-y-4">
+          <p className="text-sm text-gray-600">AI designs each search for the database interface shown below. It can omit unnecessary PICO blocks and choose suitable synonyms and proximity searches. Basic syntax is checked automatically; review the strategy and subject headings before running it.</p>
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -934,6 +983,17 @@ export function PicoHypothesisPage() {
                       AutoFetch
                     </button>
                   )}
+
+                  {/* Reference Import Button (all formats) */}
+                  <button
+                    type="button"
+                    className="btn-secondary flex items-center gap-1.5 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                    onClick={() => setIsImportModalOpen(true)}
+                    title="Import reference files: RIS, BibTeX, CSV with mapping, PubMed/NBIB, EndNote (.enw/.xml), PubMed XML, Web of Science CIW"
+                  >
+                    <FileUp className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>Import References</span>
+                  </button>
                 </div>
 
                 {/* Fetch result */}
@@ -958,6 +1018,19 @@ export function PicoHypothesisPage() {
           </div>
         </div>
       </SectionCard>
+
+      {/* Reference Import Modal */}
+      {projectId && (
+        <ReferenceImportModal
+          projectId={projectId}
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onSuccess={(count, source) => {
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            setFetchResult(`Successfully imported ${count} references from ${source}`);
+          }}
+        />
+      )}
     </div>
   );
 }
