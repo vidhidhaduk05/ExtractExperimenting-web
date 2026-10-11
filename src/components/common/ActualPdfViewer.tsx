@@ -354,23 +354,23 @@ export function ActualPdfViewer({
     const timer = setTimeout(() => {
       requestAnimationFrame(() => {
         const highlightElement = document.getElementById(`pdf-highlight-${activeHighlightId}`);
-        if (highlightElement) {
+        if (highlightElement && typeof highlightElement.scrollIntoView === "function") {
           highlightElement.scrollIntoView({
             behavior: "smooth",
             block: "center",
             inline: "nearest",
           });
           // Flash pulse animation
-          highlightElement.classList.add("ring-4", "ring-amber-500", "scale-102");
+          highlightElement.classList?.add("ring-4", "ring-amber-500", "scale-102");
           if (activePulseTimeoutRef.current) clearTimeout(activePulseTimeoutRef.current);
           activePulseTimeoutRef.current = setTimeout(() => {
-            highlightElement.classList.remove("ring-4", "ring-amber-500", "scale-102");
+            highlightElement.classList?.remove("ring-4", "ring-amber-500", "scale-102");
           }, 1200);
         } else {
           // Fallback: scroll to target page if highlight rect is missing
           const targetPage = parseTargetPage(highlightItem.pageNumber, numPages);
           const pageElement = document.getElementById(`pdf-page-${targetPage}`);
-          if (pageElement) {
+          if (pageElement && typeof pageElement.scrollIntoView === "function") {
             pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
           }
         }
@@ -388,16 +388,16 @@ export function ActualPdfViewer({
 
       const triggerScrollAndFlash = () => {
         const highlightElement = document.getElementById(`pdf-highlight-${vid}`);
-        if (highlightElement) {
+        if (highlightElement && typeof highlightElement.scrollIntoView === "function") {
           highlightElement.scrollIntoView({
             behavior: "smooth",
             block: "center",
             inline: "nearest",
           });
-          highlightElement.classList.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+          highlightElement.classList?.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
           if (activePulseTimeoutRef.current) clearTimeout(activePulseTimeoutRef.current);
           activePulseTimeoutRef.current = setTimeout(() => {
-            highlightElement.classList.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+            highlightElement.classList?.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
           }, 1500);
           return true;
         }
@@ -408,7 +408,7 @@ export function ActualPdfViewer({
         const item = highlights.find((h) => h.id === vid);
         const targetPage = parseTargetPage(item?.pageNumber || 1, numPages);
         const pageElement = document.getElementById(`pdf-page-${targetPage}`);
-        if (pageElement) {
+        if (pageElement && typeof pageElement.scrollIntoView === "function") {
           pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
           setTimeout(() => {
             triggerScrollAndFlash();
@@ -432,7 +432,7 @@ export function ActualPdfViewer({
   // Jump to specific page
   const jumpToPage = (p: number) => {
     const el = document.getElementById(`pdf-page-${p}`);
-    if (el) {
+    if (el && typeof el.scrollIntoView === "function") {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       setCurrentPage(p);
     }

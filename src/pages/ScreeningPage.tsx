@@ -52,12 +52,8 @@ import {
   Maximize2,
   Keyboard,
   FolderPlus,
-  ArrowLeftRight,
-  RotateCcw,
 } from "lucide-react";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
-import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
-
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -109,17 +105,6 @@ export function ScreeningPage() {
   // Exclude reason code for selected study
   const [excludeReasonCode, setExcludeReasonCode] = useState<string>("");
   const [excludeReasonText, setExcludeReasonText] = useState<string>("");
-  const [reasonError, setReasonError] = useState<string | null>(null);
-  const reasonSelectRef = useRef<HTMLSelectElement>(null);
-
-  // Save failure recovery state (Task 30)
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [failedDecision, setFailedDecision] = useState<{
-    studyId: string;
-    decision: "included" | "excluded" | "maybe";
-    reasonCode?: string;
-    reasonText?: string;
-  } | null>(null);
 
   // PDF upload for selected study
   const [uploadingPdf, setUploadingPdf] = useState(false);
@@ -128,15 +113,7 @@ export function ScreeningPage() {
   // Bulk Upload & Hotkeys state
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showHotkeysModal, setShowHotkeysModal] = useState(false);
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
-
-  const { data: dedupData } = useQuery({
-    queryKey: ["duplicate_groups", projectId],
-    queryFn: () => api.getDuplicateGroups(projectId!),
-    enabled: !!projectId,
-  });
-
 
   // While an AI screening run is in flight, poll so each screened study appears as soon as it is saved
   const isMutating = useIsMutating() > 0;
@@ -285,18 +262,6 @@ export function ScreeningPage() {
     return studyList[0];
   }, [studyList, selectedStudyId]);
 
-  // Clear reason and save validation errors when reviewer navigates to a different study
-  const prevActiveStudyIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    const currentId = selectedStudy?.study_id || null;
-    if (prevActiveStudyIdRef.current && currentId && prevActiveStudyIdRef.current !== currentId) {
-      setReasonError(null);
-      setSaveError(null);
-      setFailedDecision(null);
-    }
-    prevActiveStudyIdRef.current = currentId;
-  }, [selectedStudy?.study_id]);
-
   // Filtered Studies List
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
@@ -344,15 +309,8 @@ export function ScreeningPage() {
     },
   });
 
-  type DecisionPayload = {
-    studyId: string;
-    decision: "included" | "excluded" | "maybe";
-    reasonCode?: string;
-    reasonText?: string;
-  };
-
   const decisionMutation = useMutation({
-    mutationFn: (data: DecisionPayload) =>
+    mutationFn: (data: { studyId: string; decision: "included" | "excluded" | "maybe"; reasonCode?: string; reasonText?: string }) =>
       api.screeningDecision(data.studyId, {
         project_id: projectId!,
         reviewer_id: reviewerId,
@@ -362,89 +320,35 @@ export function ScreeningPage() {
         reason_code: data.reasonCode,
         reason_text: data.reasonText,
       }),
-    onSuccess: (_, variables) => {
-      // Clear errors on confirmed server save
-      setSaveError(null);
-      setFailedDecision(null);
-      setReasonError(null);
-
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
       queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
-
-      // Clear the reason selector for the next record ONLY after successful save
-      if (variables.decision === "excluded") {
-        setExcludeReasonCode("");
-        setExcludeReasonText("");
-      }
-
-      // Advance to next study in filtered list ONLY after the server confirms a successful save
-      const currentIndex = filteredStudies.findIndex((s) => s.study_id === variables.studyId);
-      if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
-        setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
-      }
-    },
-    onError: (err: any, variables) => {
-      const errMsg = err?.message || "Failed to save screening decision due to a server or network error.";
-      setSaveError(errMsg);
-      setFailedDecision(variables);
     },
   });
 
-  // Retry the same decision without creating duplicate entries
-  const handleRetry = () => {
-    if (!failedDecision || decisionMutation.isPending) return;
-    setSaveError(null);
-    decisionMutation.mutate(failedDecision);
-  };
+  // Hotkey Screening decision handler (auto-advances to next study)
+  const handleScreenDecision = (decision: "included" | "excluded" | "maybe") => {
+    if (!selectedStudy) return;
+    const currentStudyId = selectedStudy.study_id;
 
-  // Screening decision handler (auto-advances to next study ONLY on server confirmation)
-  const handleScreenDecision = (decision: "included" | "excluded" | "maybe", targetStudyId?: string) => {
-    // Prevent duplicate submissions while a save is in flight
-    if (decisionMutation.isPending) return;
-
-    const currentStudyId = targetStudyId || selectedStudy?.study_id;
-    if (!currentStudyId) return;
-
-    if (decision === "excluded") {
-      // Must have a valid exclusion reason selected (Task 27)
-      if (!excludeReasonCode || !excludeReasonCode.trim()) {
-        if (targetStudyId && selectedStudy?.study_id !== targetStudyId) {
-          setSelectedStudyId(targetStudyId);
-        }
-        setReasonError("Please select a valid exclusion reason before excluding this record.");
-        reasonSelectRef.current?.focus();
-        return;
-      }
-
-      setReasonError(null);
-      setSaveError(null);
-      setFailedDecision(null);
-
-      // Find label for reasonCode if custom rationale text is not provided
-      const selectedReasonObj = exclusionReasons.find(
-        (r: any) => (r.code || r.reason_id) === excludeReasonCode
-      );
-      const reasonLabel = selectedReasonObj ? (selectedReasonObj.label || selectedReasonObj.code) : excludeReasonCode;
-
-      decisionMutation.mutate({
-        studyId: currentStudyId,
-        decision: "excluded",
-        reasonCode: excludeReasonCode,
-        reasonText: excludeReasonText.trim() || reasonLabel || "Ineligible based on criteria",
-      });
-      return;
+    // Advance to next study in filtered list
+    const currentIndex = filteredStudies.findIndex((s) => s.study_id === currentStudyId);
+    if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
+      setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
     }
-
-    // Include and Maybe: clear any reason error & save error, and mutate
-    setReasonError(null);
-    setSaveError(null);
-    setFailedDecision(null);
 
     if (decision === "included") {
       decisionMutation.mutate({
         studyId: currentStudyId,
         decision: "included",
         reasonText: "Eligible under PICO criteria",
+      });
+    } else if (decision === "excluded") {
+      decisionMutation.mutate({
+        studyId: currentStudyId,
+        decision: "excluded",
+        reasonCode: excludeReasonCode || "wrong_population",
+        reasonText: excludeReasonText || "Ineligible based on criteria",
       });
     } else if (decision === "maybe") {
       decisionMutation.mutate({
@@ -494,8 +398,6 @@ export function ScreeningPage() {
         }
         return;
       }
-
-      if (decisionMutation.isPending) return;
 
       if (e.key === "i" || e.key === "I" || e.key === "1") {
         e.preventDefault();
@@ -676,21 +578,6 @@ export function ScreeningPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Deduplication Step: Duplicate Review Button */}
-            <button
-              onClick={() => setShowDuplicateModal(true)}
-              className="px-3 py-2 text-xs font-semibold text-slate-800 bg-amber-50 border border-amber-300 hover:bg-amber-100 rounded-lg flex items-center gap-1.5 shadow-sm transition-all"
-              title="Deduplication Step: Review candidate duplicate pairs side-by-side with match score"
-            >
-              <ArrowLeftRight className="w-3.5 h-3.5 text-amber-700" />
-              <span>Duplicate Review</span>
-              {dedupData && dedupData.total_duplicates > 0 ? (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-200 text-amber-900 font-bold">
-                  {dedupData.total_duplicates}
-                </span>
-              ) : null}
-            </button>
-
             {/* Bulk Upload from Laptop Button */}
             <button
               onClick={() => setShowBulkUploadModal(true)}
@@ -700,7 +587,6 @@ export function ScreeningPage() {
               <FolderPlus className="w-3.5 h-3.5 text-amber-300" />
               <span>Bulk Upload from Laptop</span>
             </button>
-
 
             {/* Hotkeys Cheatsheet Button */}
             <button
@@ -772,20 +658,6 @@ export function ScreeningPage() {
               <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider block">Uncertain</span>
               <span className="text-sm font-bold text-amber-800">{summary.uncertain ?? summary.pending}</span>
             </div>
-            {dedupData && dedupData.total_duplicates > 0 && (
-              <div
-                onClick={() => setShowDuplicateModal(true)}
-                className="bg-amber-100/70 border border-amber-300 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-amber-200/80 transition-colors shadow-2xs"
-                title="Click to review candidate duplicate pairs side-by-side"
-              >
-                <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider block">Duplicates</span>
-                <span className="text-sm font-bold text-amber-900 flex items-center gap-1">
-                  <span>{dedupData.total_duplicates}</span>
-                  <ArrowLeftRight className="w-3 h-3 text-amber-700" />
-                </span>
-              </div>
-            )}
-
             <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5">
               <span className="text-[10px] font-semibold text-purple-700 uppercase tracking-wider block">Questions</span>
               <span className="text-sm font-bold text-purple-800">{summary.awaiting_clarification ?? 0}</span>
@@ -1179,11 +1051,9 @@ export function ScreeningPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (decisionMutation.isPending) return;
-                            handleScreenDecision("included", study.study_id);
+                            decisionMutation.mutate({ studyId: study.study_id, decision: "included" });
                           }}
-                          disabled={decisionMutation.isPending}
-                          className="p-1 hover:bg-emerald-100 rounded text-emerald-600 disabled:opacity-40"
+                          className="p-1 hover:bg-emerald-100 rounded text-emerald-600"
                           title="Quick Include"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
@@ -1191,12 +1061,10 @@ export function ScreeningPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (decisionMutation.isPending) return;
-                            handleScreenDecision("excluded", study.study_id);
+                            decisionMutation.mutate({ studyId: study.study_id, decision: "excluded" });
                           }}
-                          disabled={decisionMutation.isPending}
-                          className="p-1 hover:bg-rose-100 rounded text-rose-600 disabled:opacity-40"
-                          title="Quick Exclude (Reason required)"
+                          className="p-1 hover:bg-rose-100 rounded text-rose-600"
+                          title="Quick Exclude"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                         </button>
@@ -1517,88 +1385,27 @@ export function ScreeningPage() {
                 </div>
 
                 {/* Exclude reason selection (for exclude decisions) */}
-                <div className="space-y-1.5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <select
-                      ref={reasonSelectRef}
-                      value={excludeReasonCode}
-                      onChange={(e) => {
-                        setExcludeReasonCode(e.target.value);
-                        if (e.target.value) setReasonError(null);
-                      }}
-                      className={`text-xs bg-white border rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 ${
-                        reasonError
-                          ? "border-rose-500 ring-1 ring-rose-500 bg-rose-50/40"
-                          : "border-slate-300 focus:ring-indigo-500"
-                      }`}
-                    >
-                      <option value="">Select Exclusion Reason (Required to exclude)</option>
-                      {exclusionReasons.map((r: any) => (
-                        <option key={r.code || r.reason_id} value={r.code || r.reason_id}>
-                          {r.label || r.code}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Custom exclusion rationale..."
-                      value={excludeReasonText}
-                      onChange={(e) => setExcludeReasonText(e.target.value)}
-                      className="text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-                  {reasonError && (
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      <span>{reasonError}</span>
-                    </div>
-                  )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <select
+                    value={excludeReasonCode}
+                    onChange={(e) => setExcludeReasonCode(e.target.value)}
+                    className="text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="">Select Exclusion Reason (Optional)</option>
+                    {exclusionReasons.map((r: any) => (
+                      <option key={r.code || r.reason_id} value={r.code || r.reason_id}>
+                        {r.label || r.code}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Custom exclusion rationale..."
+                    value={excludeReasonText}
+                    onChange={(e) => setExcludeReasonText(e.target.value)}
+                    className="text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
                 </div>
-
-                {/* Save in Progress Indicator */}
-                {decisionMutation.isPending && (
-                  <div
-                    role="status"
-                    className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-700 text-xs font-semibold animate-pulse"
-                  >
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
-                    <span>Saving screening decision to server... Please wait.</span>
-                  </div>
-                )}
-
-                {/* Save Failure Recovery Banner with Retry */}
-                {saveError && (
-                  <div
-                    role="alert"
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 bg-rose-50 border border-rose-300 rounded-lg text-rose-900 text-xs shadow-xs"
-                  >
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold">Failed to save decision</p>
-                        <p className="text-rose-700 text-[11px] mt-0.5">{saveError}</p>
-                        <p className="text-slate-600 text-[11px] mt-0.5 font-medium">
-                          Your selected decision, exclusion reason, and rationale were kept.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                      <button
-                        type="button"
-                        onClick={handleRetry}
-                        disabled={decisionMutation.isPending}
-                        className="px-3 py-1.5 font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-md shadow-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 text-xs"
-                      >
-                        {decisionMutation.isPending ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <RotateCcw className="w-3.5 h-3.5" />
-                        )}
-                        <span>Retry Save</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
 
                 {/* Main Action Buttons with Hotkey badges */}
                 <div className="grid grid-cols-3 gap-3">
@@ -1608,16 +1415,8 @@ export function ScreeningPage() {
                     className="py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
                     title="Include Study (Hotkeys: 'I' or '1')"
                   >
-                    {decisionMutation.isPending && decisionMutation.variables?.decision === "included" ? (
-                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4 shrink-0" />
-                    )}
-                    <span>
-                      {decisionMutation.isPending && decisionMutation.variables?.decision === "included"
-                        ? "Saving..."
-                        : "Include Study"}
-                    </span>
+                    <CheckCircle className="w-4 h-4 shrink-0" />
+                    <span>Include Study</span>
                     <kbd className="px-1.5 py-0.5 rounded bg-black/20 text-white font-mono text-[10px] font-bold">
                       I / 1
                     </kbd>
@@ -1629,16 +1428,8 @@ export function ScreeningPage() {
                     className="py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
                     title="Exclude Study (Hotkeys: 'E' or '2')"
                   >
-                    {decisionMutation.isPending && decisionMutation.variables?.decision === "excluded" ? (
-                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                    ) : (
-                      <XCircle className="w-4 h-4 shrink-0" />
-                    )}
-                    <span>
-                      {decisionMutation.isPending && decisionMutation.variables?.decision === "excluded"
-                        ? "Saving..."
-                        : "Exclude Study"}
-                    </span>
+                    <XCircle className="w-4 h-4 shrink-0" />
+                    <span>Exclude Study</span>
                     <kbd className="px-1.5 py-0.5 rounded bg-black/20 text-white font-mono text-[10px] font-bold">
                       E / 2
                     </kbd>
@@ -1650,16 +1441,8 @@ export function ScreeningPage() {
                     className="py-2.5 text-xs font-bold text-slate-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                     title="Maybe / Uncertain (Hotkeys: 'M' or '3')"
                   >
-                    {decisionMutation.isPending && decisionMutation.variables?.decision === "maybe" ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-amber-800 shrink-0" />
-                    ) : (
-                      <HelpCircle className="w-4 h-4 text-amber-700 shrink-0" />
-                    )}
-                    <span>
-                      {decisionMutation.isPending && decisionMutation.variables?.decision === "maybe"
-                        ? "Saving..."
-                        : "Maybe / Uncertain"}
-                    </span>
+                    <HelpCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>Maybe / Uncertain</span>
                     <kbd className="px-1.5 py-0.5 rounded bg-black/10 text-amber-900 font-mono text-[10px] font-bold">
                       M / 3
                     </kbd>
@@ -1960,7 +1743,7 @@ export function ScreeningPage() {
 
               <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
                 <span className="text-slate-700 font-medium flex items-center gap-2">
-                  <XCircle className="h-4 w-4 text-rose-600" /> Exclude Study & Advance (Reason required)
+                  <XCircle className="h-4 w-4 text-rose-600" /> Exclude Study & Advance
                 </span>
                 <div className="flex items-center gap-1">
                   <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">E</kbd>
@@ -2050,21 +1833,6 @@ export function ScreeningPage() {
           }}
         />
       )}
-
-      {/* ── Deduplication Step: Duplicate Review Modal ── */}
-      <DuplicateReviewModal
-        projectId={projectId!}
-        isOpen={showDuplicateModal}
-        onClose={() => setShowDuplicateModal(false)}
-        onResolved={() => {
-          queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
-          queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
-          queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-          queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
-          queryClient.invalidateQueries({ queryKey: ["prisma", projectId] });
-        }}
-      />
     </div>
   );
 }
-

@@ -1,0 +1,8 @@
+{
+  "name": "RadExtract",
+  "description": "AI Agents for Biomedical Literature & Extraction",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

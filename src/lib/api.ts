@@ -69,6 +69,10 @@ export function shouldUseDemoFallback(): boolean {
   if (isGithubPages && !hasCustom && !hasEnvBase) {
     return true;
   }
+  const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  if (!isLocalhost && !hasCustom && !hasEnvBase) {
+    return true;
+  }
   return false;
 }
 
@@ -184,48 +188,30 @@ export function saveStoredProjectStudies(projectId = "proj_pam_current", studies
   } catch (e) {}
 }
 
-export function getStoredProjectExtractions(studyId: string): any[] {
+export function getStoredExtractions(studyId: string): any[] {
   if (typeof window === "undefined") {
-    return (DEMO_EXTRACTIONS as any)[studyId] || [];
+    return [...((DEMO_EXTRACTIONS as any)[studyId] || (DEMO_EXTRACTIONS as any)["study_birua_2022"] || [])];
   }
   try {
     const saved = localStorage.getItem(`radextract_extractions_${studyId}`);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
   } catch (e) {}
-  return (DEMO_EXTRACTIONS as any)[studyId] || [];
+  return [...((DEMO_EXTRACTIONS as any)[studyId] || (DEMO_EXTRACTIONS as any)["study_birua_2022"] || [])];
 }
 
-export function saveStoredProjectExtractions(studyId: string, extractions: any[]): void {
+export function saveStoredExtractions(studyId: string, extractions: any[]): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(`radextract_extractions_${studyId}`, JSON.stringify(extractions));
-  } catch (e) {}
-}
-
-export function getStoredScreeningDecisions(projectId = "proj_pam_current"): ScreeningDecision[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const saved = localStorage.getItem(`radextract_screening_decisions_${projectId}`);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [];
-}
-
-export function saveStoredScreeningDecision(projectId = "proj_pam_current", decision: ScreeningDecision): void {
-  if (typeof window === "undefined") return;
-  try {
-    const current = getStoredScreeningDecisions(projectId);
-    const existingIdx = current.findIndex(d => d.study_id === decision.study_id);
-    if (existingIdx !== -1) {
-      current[existingIdx] = decision;
-    } else {
-      current.push(decision);
-    }
-    localStorage.setItem(`radextract_screening_decisions_${projectId}`, JSON.stringify(current));
+    (DEMO_EXTRACTIONS as any)[studyId] = extractions;
   } catch (e) {}
 }
 
 function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
+  console.warn(`[Demo Preview Mode] Serving demo fallback for: ${path}`);
   const method = (options.method || "GET").toUpperCase();
   let body: any = {};
   if (options.body && typeof options.body === "string") {
@@ -245,13 +231,14 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       const orig = body.original_value || "";
 
       if (dec === "undone") {
-        const list = (DEMO_EXTRACTIONS as any)[studyId] || [];
+        const list = getStoredExtractions(studyId);
         const item = list.find((e: any) => e.variable_id === varId);
         if (item) {
           item.value = orig || item.value;
           item.is_verified = false;
           item.is_edited = false;
         }
+        saveStoredExtractions(studyId, list);
         if (DEMO_ERROR_ANALYSIS && DEMO_ERROR_ANALYSIS.recent_records.length > 0) {
           const recIdx = DEMO_ERROR_ANALYSIS.recent_records.findIndex(
             (r: any) => r.variable_id === varId && r.study_id === studyId
@@ -300,17 +287,28 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         notes: body.notes || ""
       };
 
-      // Update in-memory and persistent localStorage extractions
-      const currentExts = getStoredProjectExtractions(studyId);
-      const targetList = currentExts.length > 0 ? currentExts : ((DEMO_EXTRACTIONS as any)[studyId] || []);
-      const item = targetList.find((e: any) => e.variable_id === varId);
+      // Update in-memory & stored extractions
+      const list = getStoredExtractions(studyId);
+      let item = list.find((e: any) => e.variable_id === varId);
       if (item) {
         item.value = corr;
         item.is_verified = true;
         item.is_edited = dec === "modified";
+      } else {
+        item = {
+          extraction_id: `ext_${studyId}_${varId}_${Date.now()}`,
+          study_id: studyId,
+          variable_id: varId,
+          value: corr,
+          quote: body.evidence_quote || "",
+          source_page: body.page_number || 1,
+          confidence: 0.98,
+          is_verified: true,
+          is_edited: dec === "modified",
+        };
+        list.push(item);
       }
-      (DEMO_EXTRACTIONS as any)[studyId] = targetList;
-      saveStoredProjectExtractions(studyId, targetList);
+      saveStoredExtractions(studyId, list);
 
       // Update in-memory error analysis records
       if (DEMO_ERROR_ANALYSIS) {
@@ -323,6 +321,24 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         }
         DEMO_ERROR_ANALYSIS.accuracy_rate = Math.round((DEMO_ERROR_ANALYSIS.verified_accurate / DEMO_ERROR_ANALYSIS.total_decisions) * 1000) / 10;
         DEMO_ERROR_ANALYSIS.recent_records.unshift(record);
+        try {
+          localStorage.setItem("radextract_error_analysis", JSON.stringify(DEMO_ERROR_ANALYSIS));
+        } catch (e) {}
+      }
+
+      // Also sync into DEMO_REVIEW_MATRIX
+      const matrixStudy = (DEMO_REVIEW_MATRIX.studies as any[]).find((s: any) => s.study_id === studyId);
+      if (matrixStudy) {
+        if (!matrixStudy.values) matrixStudy.values = {};
+        (matrixStudy.values as any)[varId] = {
+          value: corr,
+          confidence: 0.98,
+          is_edited: dec === "modified",
+          extraction_id: item?.extraction_id || `ext_${varId}`,
+        };
+        try {
+          localStorage.setItem("radextract_review_matrix", JSON.stringify(DEMO_REVIEW_MATRIX));
+        } catch (e) {}
       }
 
       return { status: "success", record } as unknown as T;
@@ -331,46 +347,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       return DEMO_SCREENING_SUMMARY as unknown as T;
     }
     if (path.includes("/screening-decision")) {
-      const studyId = body.study_id || (path.split("/studies/")[1]?.split("/")[0]) || "";
-      const projectId = body.project_id || "proj_pam_current";
-      const decision = body.decision || "included";
-      const reasonCode = body.reason_code;
-      const reasonText = body.reason_text;
-      const stage = body.stage || "ta";
-
-      // 1. Persist decision object to localStorage
-      const decisionObj: ScreeningDecision = {
-        decision_id: `dec_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        study_id: studyId,
-        project_id: projectId,
-        reviewer_id: body.reviewer_id || "rev_local_expert",
-        reviewer_name: body.reviewer_name || "Expert Reviewer",
-        stage,
-        decision,
-        reason_code: reasonCode || "",
-        reason_text: reasonText || "",
-        is_blinded: 0,
-        created_at: new Date().toISOString(),
-      };
-      saveStoredScreeningDecision(projectId, decisionObj);
-
-      // 2. Update study status in persistent localStorage studies list
-      if (studyId) {
-        const studies = getStoredProjectStudies(projectId);
-        const studyIdx = studies.findIndex(s => s.study_id === studyId || (s as any).id === studyId);
-        if (studyIdx !== -1) {
-          const updatedStatus = decision === "maybe" ? "awaiting_clarification" : decision;
-          studies[studyIdx] = {
-            ...studies[studyIdx],
-            screening_status: updatedStatus,
-            screening_stage: stage,
-            ...(reasonCode ? { screening_reason: reasonCode } : {}),
-          };
-          saveStoredProjectStudies(projectId, studies);
-        }
-      }
-
-      return { status: "success", decision, decision_record: decisionObj } as unknown as T;
+      return { status: "success", decision: body.decision || "included" } as unknown as T;
     }
     if (path.includes("/screening-keywords/auto-generate")) {
       return DEMO_SCREENING_KEYWORDS as unknown as T;
@@ -706,6 +683,10 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     return DEMO_REVIEW_PROGRESS as unknown as T;
   }
   if (path.includes("/review/matrix") || path.includes("/review")) {
+    try {
+      const savedMatrix = localStorage.getItem("radextract_review_matrix");
+      if (savedMatrix) return JSON.parse(savedMatrix) as unknown as T;
+    } catch (e) {}
     return DEMO_REVIEW_MATRIX as unknown as T;
   }
   if (path.includes("/screening-keywords")) {
@@ -713,15 +694,6 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   }
   if (path.includes("/abstract-highlights")) {
     return DEMO_ABSTRACT_HIGHLIGHTS.default as unknown as T;
-  }
-  if (path.includes("/screening-decisions")) {
-    const studyId = path.split("/studies/")[1]?.split("/")[0];
-    const projectId = path.split("/projects/")[1]?.split("/")[0] || "proj_pam_current";
-    const allDecisions = getStoredScreeningDecisions(projectId);
-    if (studyId) {
-      return allDecisions.filter(d => d.study_id === studyId) as unknown as T;
-    }
-    return allDecisions as unknown as T;
   }
   if (path.includes("/clarifications/stats")) {
     return { project_id: "proj_pam_current", total: 3, pending: 2, answered: 1, expired: 0, by_type: { eligibility: 1, study_design: 1, intervention: 1 }, by_stage: { abstract: 1, fulltext: 2 } } as unknown as T;
@@ -780,12 +752,8 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   }
   if (path.includes("/extractions") || path.includes("/coded-extract")) {
     const rawStudyId = path.split("/").filter(Boolean)[1] || "study_birua_2022";
-    const resolvedId = (DEMO_EXTRACTIONS as any)[rawStudyId] ? rawStudyId : (studyAliasMap[rawStudyId] || "study_birua_2022");
-    const stored = getStoredProjectExtractions(resolvedId);
-    if (stored && stored.length > 0) {
-      return stored as unknown as T;
-    }
-    return ((DEMO_EXTRACTIONS as any)[resolvedId] || DEMO_EXTRACTIONS.study_birua_2022) as unknown as T;
+    const resolvedId = (DEMO_EXTRACTIONS as any)[rawStudyId] ? rawStudyId : (studyAliasMap[rawStudyId] || rawStudyId);
+    return getStoredExtractions(resolvedId) as unknown as T;
   }
   if (path.includes("/pdf-highlights")) {
     return [] as unknown as T;
@@ -794,6 +762,10 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     return DEMO_CODEBOOK_RULES as unknown as T;
   }
   if (path.includes("/extraction/error-analysis")) {
+    try {
+      const savedErrors = localStorage.getItem("radextract_error_analysis");
+      if (savedErrors) return JSON.parse(savedErrors) as unknown as T;
+    } catch (e) {}
     return DEMO_ERROR_ANALYSIS as unknown as T;
   }
   if (path.includes("/extraction/export-training-data")) {
@@ -808,99 +780,6 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       }
     ] as unknown as T;
   }
-  if (path.includes("/studies/deduplicate/resolve") && method === "POST") {
-    const projectId = path.split("/")[2] || "proj_pam_current";
-    const studies = getStoredProjectStudies(projectId);
-    const { action, primary_study_id, duplicate_study_id, merged_fields } = (body || {}) as any;
-
-    const updated = studies.map((s) => {
-      if (s.study_id === primary_study_id) {
-        const next = { ...s, is_duplicate: 0, duplicate_of_study_id: "" };
-        if (action === "merge_metadata" && merged_fields) {
-          Object.assign(next, merged_fields);
-        }
-        return next;
-      }
-      if (s.study_id === duplicate_study_id) {
-        if (action === "keep_both" || action === "revert_duplicate") {
-          return {
-            ...s,
-            is_duplicate: 0,
-            duplicate_of_study_id: "",
-            screening_status: "pending",
-            screening_reason: "",
-          };
-        } else if (action === "keep_primary" || action === "merge_metadata") {
-          return {
-            ...s,
-            is_duplicate: 1,
-            duplicate_of_study_id: primary_study_id,
-            screening_status: "excluded",
-            screening_reason: action === "merge_metadata" ? "Duplicate publication (merged into primary)" : "Duplicate publication",
-          };
-        }
-      }
-      return s;
-    });
-    saveStoredProjectStudies(projectId, updated);
-    return {
-      status: "success",
-      action: action || "keep_primary",
-      message: `Resolution '${action}' applied successfully.`,
-      primary_study_id,
-      duplicate_study_id,
-      updated_fields: merged_fields ? Object.keys(merged_fields) : [],
-    } as unknown as T;
-  }
-
-  if (path.includes("/studies/duplicates") || path.includes("/studies/deduplicate")) {
-    const projectId = path.split("/")[2] || "proj_pam_current";
-    const studies = getStoredProjectStudies(projectId);
-    const groups: DuplicateGroup[] = [];
-
-    if (studies.length >= 2) {
-      const s1 = studies[0];
-      const s2 = studies[1];
-      groups.push({
-        group_id: "grp_demo_1",
-        canonical_study_id: s1.study_id,
-        canonical_title: s1.title,
-        canonical_doi: s1.doi || "10.1055/s-0042-1750831",
-        canonical_pmid: s1.pmid || "35928812",
-        canonical_authors: s1.authors || "Birua et al.",
-        canonical_year: s1.publication_year || 2022,
-        canonical_journal: s1.journal || "Asian Journal of Neurosurgery",
-        canonical_abstract: s1.abstract || "Pure arterial malformations (PAMs) are unusual vascular lesions of the brain consisting of coiled arterial loops. We present a rare PCA PAM coexisting with dysplastic internal carotid artery managed conservatively.",
-        canonical_is_duplicate: s1.is_duplicate ? 1 : 0,
-        canonical_screening_status: s1.screening_status || "included",
-        duplicates: [
-          {
-            study_id: s2.study_id,
-            title: s2.title || `${s1.title} [Preprint / Conference Edition]`,
-            doi: s2.doi || s1.doi || "10.1055/s-0042-1750831",
-            pmid: s2.pmid || s1.pmid || "35928812",
-            authors: s2.authors || s1.authors || "Birua et al.",
-            publication_year: s2.publication_year || 2022,
-            journal: s2.journal || "ResearchSquare Clinical Preprints",
-            abstract: s2.abstract || "Pure arterial malformations (PAMs) of the posterior circulation. Coiled arterial loops with dysplastic ICA.",
-            is_duplicate: s2.is_duplicate ? 1 : 0,
-            screening_status: s2.screening_status || "pending",
-            match_reason: s1.doi && s2.doi && s1.doi === s2.doi ? "doi" : "title_similarity",
-            similarity_score: 0.985,
-          },
-        ],
-      });
-    }
-
-    return {
-      project_id: projectId,
-      total_studies: studies.length,
-      duplicate_groups: groups,
-      total_duplicates: groups.reduce((acc, g) => acc + g.duplicates.length, 0),
-      duplicates_marked: groups.reduce((acc, g) => acc + g.duplicates.filter((d) => d.is_duplicate === 1).length, 0),
-    } as unknown as T;
-  }
-
   if (path.match(/\/studies\/[^/]+$/)) {
     const studyId = path.split("/").pop();
     const all = getStoredProjectStudies();
@@ -1048,7 +927,7 @@ export interface Study {
   extraction_status: string;
   pdf_status: string;
   pdf_path: string;
-  is_duplicate?: boolean | number;
+  is_duplicate?: boolean;
   duplicate_of_study_id?: string | null;
   ai_priority_score?: number | null;
   ai_confidence?: number | null;
@@ -1137,26 +1016,6 @@ export interface RobSummary {
   assessments_needing_review_count?: number;
   judgment_counts: Record<string, number>;
   assessments: RobSummaryAssessment[];
-  tool_groups?: Record<string, {
-    tool: string;
-    total_assessments: number;
-    judgment_counts: Record<string, number>;
-    assessments: RobSummaryAssessment[];
-  }>;
-  manual_review?: RobToolClassification[];
-}
-
-export interface RobToolClassification {
-  classification_id: string;
-  study_id: string;
-  study_title: string;
-  study_design: string;
-  selected_tool: string;
-  confidence: number;
-  alternatives: string[];
-  rationale: string;
-  evidence: string[];
-  status: "assigned" | "manual_review";
 }
 
 export interface RobSummaryAssessment {
@@ -1291,11 +1150,6 @@ export interface PrismaFlow {
     studies_in_meta_analysis: number;
   };
   pending: number;
-  audit?: {
-    human_decisions: number;
-    ai_decisions: number;
-    total_decisions: number;
-  };
 }
 
 // ── PDF Processing ──
@@ -1467,13 +1321,6 @@ export interface PicoExtractionResponse {
   extraction_confidence: string;
 }
 
-export interface ProtocolExtractionResponse extends PicoExtractionResponse {
-  inclusion?: string[];
-  exclusion?: string[];
-  search_strings?: Record<string, string>;
-  variables?: Array<Record<string, unknown>>;
-}
-
 // ── Hypothesis ──
 
 export interface SecondaryHypothesis {
@@ -1538,34 +1385,14 @@ export interface PubMedFetchResponse {
   total_found: number;
 }
 
-// ── Reference Upload & Preview ──
-
-export interface MalformedRecordDetail {
-  index?: number;
-  reason: string;
-  snippet?: string;
-}
+// ── Reference Upload ──
 
 export interface ReferenceUploadResponse {
   imported_count: number;
   skipped_duplicates: number;
   source: string;
-  format?: string;
   errors?: string[];
-  malformed_records?: MalformedRecordDetail[];
 }
-
-export interface ReferencePreviewResponse {
-  format: string;
-  filename: string;
-  total_found: number;
-  total_valid: number;
-  total_malformed: number;
-  preview_records: Array<Record<string, any>>;
-  malformed_records: MalformedRecordDetail[];
-  columns_detected: string[];
-}
-
 
 // ── Keyword Groups (customizable highlighting) ──
 
@@ -1610,19 +1437,15 @@ export interface PubMedFulltextResult {
   doi?: string;
 }
 
-// ── v2.4: Duplicate Detection & Review ──
+// ── v2.4: Duplicate Detection ──
 
 export interface DuplicateMatch {
   study_id: string;
   title: string;
-  doi?: string;
-  pmid?: string;
-  authors?: string;
-  publication_year?: number | null;
-  journal?: string;
-  abstract?: string;
-  is_duplicate?: number;
-  screening_status?: string;
+  doi: string;
+  pmid: string;
+  authors: string;
+  publication_year: number | null;
   match_reason: string;
   similarity_score: number;
 }
@@ -1631,14 +1454,6 @@ export interface DuplicateGroup {
   group_id: string;
   canonical_study_id: string;
   canonical_title: string;
-  canonical_doi?: string;
-  canonical_pmid?: string;
-  canonical_authors?: string;
-  canonical_year?: number | null;
-  canonical_journal?: string;
-  canonical_abstract?: string;
-  canonical_is_duplicate?: number;
-  canonical_screening_status?: string;
   duplicates: DuplicateMatch[];
 }
 
@@ -1649,15 +1464,6 @@ export interface DeduplicationResult {
   total_duplicates: number;
   duplicates_marked: number;
 }
-
-export interface DuplicateResolveRequest {
-  action: "keep_primary" | "keep_both" | "merge_metadata" | "revert_duplicate";
-  primary_study_id: string;
-  duplicate_study_id?: string;
-  group_id?: string;
-  merged_fields?: Record<string, any>;
-}
-
 
 // ── v2.4: Exclusion Reason Taxonomy ──
 
@@ -2485,7 +2291,7 @@ export const api = {
   overrideAssessmentTool: (assessmentId: string, toolId: string) =>
     request<RobAssessment>(`/rob/assessments/${assessmentId}/tool`, {
       method: "PUT",
-      body: JSON.stringify({ tool_id: toolId }),
+      body: JSON.stringify({ tool: toolId }),
     }),
 
   // Batch RoB Runs
@@ -2539,16 +2345,6 @@ export const api = {
   // RoB Summary & Export
   robSummary: (projectId: string) =>
     request<RobSummary>(`/rob/projects/${projectId}/summary`),
-  robvisPlot: (projectId: string, plot: "traffic_light" | "summary" = "traffic_light") =>
-    request<{
-      success: boolean;
-      engine: string;
-      plot: string;
-      tool: string;
-      study_count: number;
-      svg: string;
-      message: string;
-    }>(`/rob/projects/${projectId}/figure?plot=${plot === "summary" ? "summary" : "traffic"}`),
   robvisFigure: (projectId: string, plot: "traffic" | "summary" = "traffic") =>
     request<{
       success: boolean;
@@ -2560,32 +2356,6 @@ export const api = {
       png_base64: string;
       message: string;
     }>(`/rob/projects/${projectId}/figure?plot=${plot}`),
-  robFigures: (projectId: string) =>
-    request<{
-      project_id: string;
-      figures: {
-        success: boolean;
-        engine: string;
-        plot: "traffic" | "summary";
-        tool: string;
-        study_count: number;
-        svg: string;
-        png_base64: string;
-        message: string;
-      }[];
-    }>(`/rob/projects/${projectId}/figures`),
-  reportingProfile: (projectId: string) =>
-    request<{
-      profile: {
-        profile_key: string;
-        name: string;
-        sections: { key: string; name: string; items: { key: string; label: string }[] }[];
-      };
-      counts: Record<string, Record<string, number>>;
-      study_count: number;
-      svg: string;
-      png_base64: string;
-    }>(`/rob/projects/${projectId}/reporting-profile`),
   robExport: (projectId: string, format = "csv") =>
     `${API_BASE}/rob/projects/${projectId}/export?format=${format}`,
 
@@ -2689,7 +2459,7 @@ export const api = {
     request<PICO>(`/projects/${projectId}/pico`),
   updatePico: (projectId: string, data: PICOUpdate) =>
     request<PICO>(`/projects/${projectId}/pico`, { method: "PUT", body: JSON.stringify(data) }),
-  extractPico: async (projectId: string, file: File): Promise<ProtocolExtractionResponse> => {
+  extractPico: async (projectId: string, file: File): Promise<PicoExtractionResponse> => {
     const isBrowser = typeof window !== "undefined";
     const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
     const isDemoExplicit = isBrowser && localStorage.getItem("demo_mode") === "true";
@@ -2778,27 +2548,25 @@ export const api = {
         : "Adult and pediatric patients undergoing diagnostic evaluation and interventional management for confirmed vascular lesions";
 
       const defaultIndexTest = isVascular
-        ? "Descriptive review. Treatment of the malformation is an extraction field, not an eligibility criterion."
+        ? "High-resolution digital subtraction angiography (DSA) with 3D rotational reconstructions and hemodynamic wall shear stress analysis"
         : "Contrast-enhanced cross-sectional imaging and catheter digital subtraction angiography";
 
       const defaultComparator = isVascular
-        ? "Pre-specified contrasts: aneurysm-present versus aneurysm-absent, and single-territory versus multi-territory."
+        ? "Conservative non-interventional observation or standard surgical parent-artery sacrifice"
         : "Standard-of-care medical management or historical reference standard";
 
       const defaultOutcome = isVascular
-        ? "Ischemic stroke, hemorrhagic stroke, mass effect, hydrocephalus, symptom course, and radiographic progression."
+        ? "Angiographic lesion obliteration, parent-artery patency preservation, freedom from intracranial hemorrhage, and functional outcome (mRS ≤ 2)"
         : "Diagnostic accuracy, complete lesion resolution, procedure-related morbidity, and long-term functional survival";
 
-      const defaultStudyDesign = isVascular
-        ? "Observational studies with original patient-level data, including case reports and case series, all languages."
-        : "Multicenter observational cohort and systematic comparative review";
+      const defaultStudyDesign = "Multicenter observational cohort and systematic comparative review";
 
       const defaultQuestion = isVascular
-        ? "What are the angioarchitecture, aneurysm association, and stroke outcomes of intracranial pure arterial malformations?"
+        ? "In patients with intracranial pure arterial malformations (PAM), does parent-artery preserving targeted endovascular treatment yield superior clinical and angiographic outcomes compared to conservative management?"
         : "What are the comparative diagnostic efficacy and long-term clinical safety profiles of targeted interventional protocols versus conservative observation?";
 
       const defaultHypothesis = isVascular
-        ? "Evidence is pooled as descriptive proportions with Wilson 95% CIs. NR values are not imputed."
+        ? "Parent-artery preserving targeted endovascular intervention provides a significantly lower rate of long-term hemorrhage and neurological deficit compared to observational management in symptomatic PAM."
         : "Targeted endovascular intervention achieves higher definitive lesion control with acceptable complication rates compared to non-interventional management.";
 
       return {
@@ -2874,66 +2642,8 @@ export const api = {
       body: JSON.stringify({ max_results: maxResults }),
     }),
 
-  // Reference Preview
-  previewReferences: async (
-    projectId: string,
-    file: File,
-    columnMapping?: Record<string, string>
-  ): Promise<ReferencePreviewResponse> => {
-    const fallbackResult: ReferencePreviewResponse = {
-      format: "Auto-detected",
-      filename: file.name,
-      total_found: 1,
-      total_valid: 1,
-      total_malformed: 0,
-      preview_records: [
-        {
-          title: "Sample Parsed Reference Preview",
-          authors: "Author, A. et al.",
-          publication_year: 2024,
-          journal: "Journal of Medical Informatics",
-          doi: "10.1000/demo.123",
-          abstract: "Abstract preview for imported reference.",
-        },
-      ],
-      malformed_records: [],
-      columns_detected: [],
-    };
-
-    if (shouldUseDemoFallback()) {
-      return fallbackResult;
-    }
-
-    try {
-      const base = getApiBase();
-      const formData = new FormData();
-      formData.append("file", file);
-      if (columnMapping && Object.keys(columnMapping).length > 0) {
-        formData.append("column_mapping", JSON.stringify(columnMapping));
-      }
-      const token = localStorage.getItem("token");
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${base}/projects/${projectId}/references/preview`, {
-        method: "POST",
-        body: formData,
-        headers,
-      });
-      if (!res.ok) {
-        return fallbackResult;
-      }
-      return (await res.json()) as ReferencePreviewResponse;
-    } catch (err) {
-      return fallbackResult;
-    }
-  },
-
-  // Reference Upload (supports multiple files + optional column mapping)
-  uploadReferences: async (
-    projectId: string,
-    files: File | File[],
-    columnMapping?: Record<string, string>
-  ) => {
+  // Reference Upload (supports multiple files)
+  uploadReferences: async (projectId: string, files: File | File[]) => {
     const fileArray = Array.isArray(files) ? files : [files];
     const fallbackResult: ReferenceUploadResponse = {
       imported_count: fileArray.length * 5,
@@ -2950,9 +2660,6 @@ export const api = {
       const formData = new FormData();
       for (const file of fileArray) {
         formData.append("files", file);
-      }
-      if (columnMapping && Object.keys(columnMapping).length > 0) {
-        formData.append("column_mapping", JSON.stringify(columnMapping));
       }
       const token = localStorage.getItem("token");
       const headers: Record<string, string> = {};
@@ -3059,23 +2766,9 @@ export const api = {
   prismaPngUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/png`,
   prismaDocxUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/docx`,
 
-  // v2.4: Duplicate Detection & Review
+  // v2.4: Duplicate Detection
   deduplicateStudies: (projectId: string, autoMark = true) =>
     request<DeduplicationResult>(`/projects/${projectId}/studies/deduplicate?auto_mark=${autoMark}`, { method: "POST" }),
-  getDuplicateGroups: (projectId: string) =>
-    request<DeduplicationResult>(`/projects/${projectId}/studies/duplicates`),
-  resolveDuplicate: (projectId: string, payload: DuplicateResolveRequest) =>
-    request<{
-      status: string;
-      action: string;
-      message: string;
-      primary_study_id?: string;
-      duplicate_study_id?: string;
-      updated_fields?: string[];
-    }>(`/projects/${projectId}/studies/deduplicate/resolve`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
 
   // v2.4: Exclusion Reason Taxonomy
   getExclusionReasons: (projectId: string) =>
@@ -3151,13 +2844,6 @@ export const api = {
   // ── Analysis (Phase 4: Descriptive & Statistical Analysis) ──
 
   /** Full data profiling report: distributions, missing values, outliers, correlations */
-  getDescriptiveSynthesis: (projectId: string) =>
-    request<{
-      variables: Array<Record<string, unknown>>;
-      note: string;
-      prisma?: { identified: number; duplicates_removed: number; by_status: Record<string, number> };
-    }>(`/projects/${projectId}/analysis/descriptive`),
-
   getAnalysisProfile: (projectId: string) =>
     request<AnalysisProfile>(`/projects/${projectId}/analysis/profile`),
 

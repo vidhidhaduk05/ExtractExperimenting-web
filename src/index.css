@@ -24,6 +24,10 @@
     --accent-yellow-text: #381A61;
   }
 
+  html, body, #root {
+    @apply h-full min-h-screen;
+  }
+
   body {
     @apply bg-[#FAF9F3] text-[#141413] font-sans antialiased selection:bg-[#F9D14A] selection:text-[#381A61];
   }

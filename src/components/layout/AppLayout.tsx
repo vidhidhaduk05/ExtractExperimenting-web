@@ -586,7 +586,7 @@ export function AppLayout() {
                   <div className="w-6 h-px bg-black/[0.08] my-1" title="Current Project" />
                 ) : (
                   <div className="text-[10px] font-mono font-semibold text-[#8A817A] uppercase tracking-wider">
-                    Review Workflow
+                    Current Project
                   </div>
                 )}
               </div>
@@ -641,7 +641,7 @@ export function AppLayout() {
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-[#141413] animate-pulse" />
                 <span className="font-serif text-sm font-medium text-[#141413] truncate">
-                  {projectId ? `Project: ${projectId}` : "RadExtract Lab"}
+                  {projectId ? `Project: ${projectId.substring(0, 20)}` : "RadExtract Platform"}
                 </span>
                 <span className="hidden sm:inline-block text-[#8A817A] text-xs font-serif italic">
                   — Systematic Review & Literature Synthesis

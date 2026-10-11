@@ -333,29 +333,29 @@ export function PdfViewerPage() {
     // 2. Direct DOM scroll fallback with pulsing glow
     requestAnimationFrame(() => {
       const highlightElement = document.getElementById(`pdf-highlight-${vid}`);
-      if (highlightElement) {
+      if (highlightElement && typeof highlightElement.scrollIntoView === "function") {
         highlightElement.scrollIntoView({
           behavior: "smooth",
           block: "center",
           inline: "nearest",
         });
-        highlightElement.classList.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+        highlightElement.classList?.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
         setTimeout(() => {
-          highlightElement.classList.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+          highlightElement.classList?.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
         }, 1500);
       } else {
         const ext = extractionMap[vid];
         const pageNum = ext?.source_page || 1;
         const pageElement = document.getElementById(`pdf-page-${pageNum}`);
-        if (pageElement) {
+        if (pageElement && typeof pageElement.scrollIntoView === "function") {
           pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
           setTimeout(() => {
             const retryEl = document.getElementById(`pdf-highlight-${vid}`);
-            if (retryEl) {
+            if (retryEl && typeof retryEl.scrollIntoView === "function") {
               retryEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-              retryEl.classList.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+              retryEl.classList?.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
               setTimeout(() => {
-                retryEl.classList.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+                retryEl.classList?.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
               }, 1500);
             }
           }, 350);
@@ -370,7 +370,7 @@ export function PdfViewerPage() {
 
     // Center column card auto-scroll
     const targetCard = cardRefs.current[selectedVarId];
-    if (targetCard) {
+    if (targetCard && typeof targetCard.scrollIntoView === "function") {
       targetCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [selectedVarId]);
@@ -722,7 +722,7 @@ export function PdfViewerPage() {
 
   const jumpToPage = (pageNum: number) => {
     const pageEl = pageRefs.current[pageNum];
-    if (pageEl) {
+    if (pageEl && typeof pageEl.scrollIntoView === "function") {
       pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
@@ -1089,7 +1089,10 @@ export function PdfViewerPage() {
             activeHighlightId={selectedVarId}
             onHighlightClick={(varId) => {
               setSelectedVarId(varId);
-              cardRefs.current[varId]?.scrollIntoView({ behavior: "smooth", block: "center" });
+              const card = cardRefs.current[varId];
+              if (card && typeof card.scrollIntoView === "function") {
+                card.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
             }}
             onPdfUpload={(file) => {
               const url = URL.createObjectURL(file);

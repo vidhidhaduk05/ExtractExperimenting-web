@@ -130,11 +130,6 @@ export function ClarificationNotificationCenter({
     },
   });
 
-  // Questions to display in bottom-right toast stack (up to 2 un-dismissed pending items)
-  const activeToasts = useMemo(() => {
-    return pendingQuestions.filter((q) => !dismissedToastIds.has(q.question_id)).slice(0, 2);
-  }, [pendingQuestions, dismissedToastIds]);
-
   // Drawer list filtered by tab and stage
   const drawerList = useMemo(() => {
     const list = activeDrawerTab === "pending" ? pendingQuestions : allQuestions.filter((q) => q.status === "answered");
@@ -142,214 +137,33 @@ export function ClarificationNotificationCenter({
     return list.filter((q) => q.stage === stageFilter);
   }, [activeDrawerTab, pendingQuestions, allQuestions, stageFilter]);
 
-  // Keyboard shortcut for toast (digits 1, 2, 3 to select and Enter to submit on topmost toast)
-  useEffect(() => {
-    if (activeToasts.length === 0 || isDrawerOpen) return;
-    const topToast = activeToasts[0];
-    const options = topToast.options || [];
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in an input
-      if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) return;
-
-      const num = parseInt(e.key, 10);
-      if (num >= 1 && num <= options.length) {
-        e.preventDefault();
-        const opt = options[num - 1];
-        setSelectedOptions((prev) => ({ ...prev, [topToast.question_id]: opt.value }));
-      } else if (e.key === "Enter") {
-        const curSelected = selectedOptions[topToast.question_id];
-        if (curSelected) {
-          e.preventDefault();
-          const opt = options.find((o) => o.value === curSelected);
-          answerMutation.mutate({
-            questionId: topToast.question_id,
-            answer: curSelected,
-            answerLabel: opt?.label,
-          });
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeToasts, selectedOptions, isDrawerOpen]);
-
   if (!projectId) return null;
 
   return (
     <>
       {/* ─────────────────────────────────────────────────────────────
-          1. BOTTOM-RIGHT TOAST STACK (Screening Clarification Alerts)
+          1. BOTTOM-RIGHT INBOX DOCK (Clarification Inbox)
           ───────────────────────────────────────────────────────────── */}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 max-w-md w-full pointer-events-none px-4 sm:px-0">
-        {/* Floating counter pill if there are pending questions */}
-        {pendingQuestions.length > 0 && !isDrawerOpen && (
+      <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3 pointer-events-none px-4 sm:px-0">
+        {/* Floating inbox pill if there are pending questions */}
+        {pendingQuestions.length > 0 && (
           <button
-            onClick={() => setDrawerOpen(true)}
-            className="pointer-events-auto flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#141413] text-[#FAF9F3] text-xs font-medium shadow-lg hover:bg-black/85 transition-all transform hover:-translate-y-0.5 border border-purple-500/30"
+            onClick={() => setDrawerOpen(!isDrawerOpen)}
+            className="pointer-events-auto flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#141413] text-[#FAF9F3] text-xs font-medium shadow-xl hover:bg-black/90 active:scale-95 transition-all transform hover:-translate-y-0.5 border border-purple-500/40 cursor-pointer group"
+            title={`Clarification Inbox (${pendingQuestions.length} pending questions)`}
+            aria-label="Clarification Inbox"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
             </span>
+            <Inbox className="h-3.5 w-3.5 text-purple-400 group-hover:text-purple-300 transition-colors" />
             <span className="font-serif italic font-medium">Clarification Inbox</span>
-            <span className="bg-purple-600 text-white font-mono text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+            <span className="bg-purple-600 text-white font-mono text-[10px] px-2 py-0.5 rounded-full font-bold">
               {pendingQuestions.length}
             </span>
           </button>
         )}
-
-        {/* Sequential Toast Notifications */}
-        {activeToasts.map((q, idx) => {
-          const feedback = successFeedback[q.question_id];
-          const curSelected = selectedOptions[q.question_id] || "";
-          const isSubmitting = answerMutation.isPending && (answerMutation.variables as any)?.questionId === q.question_id;
-
-          return (
-            <div
-              key={q.question_id}
-              className={cn(
-                "pointer-events-auto w-full rounded-2xl border p-4 shadow-xl backdrop-blur-md transition-all duration-300",
-                feedback
-                  ? "bg-emerald-50/95 border-emerald-300 text-emerald-950"
-                  : "bg-[#FAF9F3]/95 border-black/10 text-[#141413]"
-              )}
-            >
-              {/* Toast Header */}
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-                    <HelpCircle className="h-2.5 w-2.5" />
-                    AI Screening Clarification
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase font-medium bg-black/[0.05] text-[#6B665E]">
-                    {q.stage}
-                  </span>
-                  {q.pico_aspect && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                      {q.pico_aspect}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => setDismissedToastIds((prev) => new Set([...prev, q.question_id]))}
-                  className="p-1 rounded-full text-[#6B665E] hover:text-[#141413] hover:bg-black/5 transition-colors"
-                  title="Dismiss toast (remains in Inbox)"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              {/* Study Title with Link */}
-              <div className="mb-2">
-                <Link
-                  to={`/projects/${projectId}/screening`}
-                  className="font-serif font-semibold text-xs text-[#141413] hover:underline line-clamp-1 flex items-center gap-1 group"
-                >
-                  <span>{q.study_title || `Study ${q.study_id}`}</span>
-                  <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 text-[#8A817A] transition-opacity" />
-                </Link>
-              </div>
-
-              {/* Success Banner if just answered */}
-              {feedback ? (
-                <div className="p-3 rounded-xl bg-emerald-100/80 border border-emerald-300 flex items-start gap-2.5 text-xs text-emerald-900 animate-fadeIn">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold">Answer recorded & study re-evaluated!</p>
-                    <p className="text-[11px] text-emerald-800 mt-0.5">
-                      Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% conf)
-                    </p>
-                    <p className="text-[10px] text-emerald-700 italic mt-0.5">{feedback.final_reason_text}</p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Question Text */}
-                  <p className="text-xs text-[#141413]/90 font-medium leading-relaxed mb-3">
-                    {q.question_text}
-                  </p>
-
-                  {/* Context excerpt if present */}
-                  {q.context_excerpt && (
-                    <div className="mb-3 text-[11px] text-[#6B665E] bg-black/[0.03] rounded-lg p-2 border-l-2 border-purple-400 font-serif italic line-clamp-2">
-                      "{q.context_excerpt}"
-                    </div>
-                  )}
-
-                  {/* Options List */}
-                  <div className="space-y-1.5 mb-3">
-                    {q.options.map((opt, optIdx) => {
-                      const isChosen = curSelected === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          onClick={() => {
-                            setSelectedOptions((prev) => ({ ...prev, [q.question_id]: opt.value }));
-                          }}
-                          className={cn(
-                            "w-full text-left px-2.5 py-1.5 rounded-lg border text-xs transition-all flex items-start gap-2",
-                            isChosen
-                              ? "bg-purple-50 border-purple-400 text-purple-950 font-medium shadow-xs"
-                              : "bg-white/80 border-black/10 hover:border-black/20 text-[#141413]"
-                          )}
-                        >
-                          <span className="font-mono text-[10px] font-bold px-1 rounded bg-black/[0.06] text-[#6B665E] shrink-0 mt-0.5">
-                            {optIdx + 1}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="leading-tight">{opt.label}</div>
-                            {opt.description && (
-                              <div className="text-[10px] text-[#6B665E] truncate mt-0.5 font-normal">
-                                {opt.description}
-                              </div>
-                            )}
-                          </div>
-                          {isChosen && <Check className="h-3.5 w-3.5 text-purple-600 shrink-0 mt-0.5" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Action Bar */}
-                  <div className="flex items-center justify-between pt-2 border-t border-black/[0.08]">
-                    <span className="text-[10px] text-[#8A817A] font-mono">
-                      Keys [1-{q.options.length}], Enter to submit
-                    </span>
-                    <button
-                      disabled={!curSelected || isSubmitting}
-                      onClick={() => {
-                        const opt = q.options.find((o) => o.value === curSelected);
-                        answerMutation.mutate({
-                          questionId: q.question_id,
-                          answer: curSelected,
-                          answerLabel: opt?.label,
-                        });
-                      }}
-                      className={cn(
-                        "btn-primary text-xs py-1 px-3 flex items-center gap-1.5 shadow-xs",
-                        !curSelected && "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          <span>Re-evaluating...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Submit Answer</span>
-                          <ChevronRight className="h-3 w-3" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        })}
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
