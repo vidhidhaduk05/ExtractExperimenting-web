@@ -8,6 +8,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 API_KEY = "AQ.Ab8RN6KpRDE0t3Zij8KVIm8jnloStXmx1UlzxjcMfcWLGYqKKg"
 SESSIONS = {
+    "backend_debug": "3045434958937034980",
     "backend": "5898143549150228709",
     "frontend": "2272339315693485275"
 }
