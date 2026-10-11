@@ -1017,6 +1017,21 @@ async function request<T>(
   }
 }
 
+// Human identity and decision writes must never fall back to demo data.
+async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Sign in to save screening decisions.");
+  const res = await fetch(`${getApiBase()}${path}`, {
+    ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    const detail = typeof error.detail === "string" ? error.detail : `Screening request failed (HTTP ${res.status}).`;
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
 // ── Types ──
 
 export interface Project {
@@ -2343,7 +2358,7 @@ export const api = {
     localStorage.removeItem("refresh_token");
   },
   getCurrentUser: () =>
-    request<{ user_id: string; username: string; email: string; role: string }>("/auth/me"),
+    authenticatedRequest<{ user_id: string; username: string; email: string; role: string }>("/auth/me"),
 
   // Health
   health: () => request<{ status: string }>("/health"),
@@ -3098,24 +3113,24 @@ export const api = {
   createScreeningDecision: (studyId: string, data: {
     study_id: string;
     project_id: string;
-    reviewer_id: string;
+    reviewer_id?: string;
     reviewer_name?: string;
     decision: string;
     reason_code?: string;
     reason_text?: string;
     stage: string;
   }) =>
-    request<ScreeningDecision>(`/studies/${studyId}/screening-decision`, { method: "POST", body: JSON.stringify(data) }),
+    authenticatedRequest<ScreeningDecision>(`/studies/${studyId}/screening-decision`, { method: "POST", body: JSON.stringify(data) }),
   screeningDecision: (studyId: string, data: {
     project_id: string;
-    reviewer_id: string;
+    reviewer_id?: string;
     reviewer_name?: string;
     decision: string;
     reason_code?: string;
     reason_text?: string;
     stage: string;
   }) =>
-    request<ScreeningDecision>(`/studies/${studyId}/screening-decision`, {
+    authenticatedRequest<ScreeningDecision>(`/studies/${studyId}/screening-decision`, {
       method: "POST",
       body: JSON.stringify({ study_id: studyId, ...data }),
     }),
@@ -3128,7 +3143,7 @@ export const api = {
   listScreeningConflicts: (projectId: string, status?: string) =>
     request<ScreeningConflict[]>(`/projects/${projectId}/screening-conflicts${status ? `?status=${status}` : ""}`),
   resolveConflict: (conflictId: string, data: { resolution: string; resolved_by?: string }) =>
-    request<ScreeningConflict>(`/screening-conflicts/${conflictId}/resolve`, { method: "PUT", body: JSON.stringify(data) }),
+    authenticatedRequest<ScreeningConflict>(`/screening-conflicts/${conflictId}/resolve`, { method: "PUT", body: JSON.stringify(data) }),
 
   // v2.4: AI Screening Prioritization
   prioritizeScreening: (projectId: string) =>
