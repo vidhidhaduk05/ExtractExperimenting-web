@@ -774,15 +774,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/App.tsx": {
-    "mtime": 1791664521.5939481,
-    "seen": 1791664941.925462,
-    "ast_hash": "9bd1de5ee51ccb6d3fc2174f380dc73d",
+    "mtime": 1791712815.430681,
+    "seen": 1791712902.2457058,
+    "ast_hash": "ffadb75ed25817ce21bbb0bcdfd723b6",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/layout/AppLayout.tsx": {
-    "mtime": 1791664521.6112013,
-    "seen": 1791664941.925462,
-    "ast_hash": "8c62607d1bde76a12733bb096d5e06ea",
+    "mtime": 1791712815.4326804,
+    "seen": 1791712902.2580988,
+    "ast_hash": "f72c124f7381b99105b08798daef1cef",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
@@ -918,9 +918,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyList.tsx": {
-    "mtime": 1791711977.5750647,
-    "seen": 1791712008.2835758,
-    "ast_hash": "82e177372c3ffd8c77c1d707830a806d",
+    "mtime": 1791712815.4342115,
+    "seen": 1791712902.276485,
+    "ast_hash": "adf4f928d67ebb309b50acfc20d8fba5",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/vite-env.d.ts": {
@@ -2034,9 +2034,9 @@
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1791711924.5751595,
-    "seen": 1791712008.3048954,
-    "ast_hash": "029ed15e3691813c570dce984458f04b",
+    "mtime": 1791712819.9579637,
+    "seen": 1791712902.2824976,
+    "ast_hash": "c5c67a027c6cd74f5487a16860fd424f",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {

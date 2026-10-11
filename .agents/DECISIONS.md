@@ -104,3 +104,8 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
 - Authenticated bookmarks are personal to each reviewer and project, reusing user_review_state with stage=bookmark and status=saved. Viewer membership is sufficient; non-members and unauthenticated requests are rejected.
 - Saves are idempotent. Removing a study cleans up its personal bookmarks. Failed saves/removals are surfaced with retry and do not report success.
 - Demo bookmarks persist in browser storage, scoped by demo user and project, with explicit browser-only labeling. Live API failures never silently switch bookmark storage to demo mode.
+
+## 2026-10-11 — Dedicated bookmarked studies view
+
+- Project navigation and Studies include a Bookmarked studies destination at /projects/:projectId/bookmarks. It reuses the existing study table and personal bookmarks with saved-only filtering forced on.
+- The bookmarked view includes a saved count, empty-state guidance, removal controls, existing study review actions, and a View all studies link. Screening decisions and storage semantics are unchanged.
