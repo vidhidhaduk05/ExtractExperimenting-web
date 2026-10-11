@@ -432,9 +432,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/dedup_service.py": {
-    "mtime": 1791665991.4987123,
-    "seen": 1791667187.2430139,
-    "ast_hash": "c0e7b0e8084fc8c0e428cb61f767e62a",
+    "mtime": 1791671982.9663792,
+    "seen": 1791672247.681666,
+    "ast_hash": "fe6a71afa031afea4db341b1df32016c",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/docling_extract_service.py": {
@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1791667794.3340826,
-    "seen": 1791668444.9697752,
-    "ast_hash": "0ecd501bc09c08b1f47234415dd91af4",
+    "mtime": 1791704140.994742,
+    "seen": 1791704264.206807,
+    "ast_hash": "134870af5f210b2ff93326cc930dd05e",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -1794,15 +1794,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/layout/AppLayout.test.tsx": {
-    "mtime": 1791664521.6101868,
-    "seen": 1791664941.925462,
-    "ast_hash": "635d56e3e75d15c7418ee6a67ba4410a",
+    "mtime": 1791672101.8019176,
+    "seen": 1791672247.7432792,
+    "ast_hash": "50f62c72cb2912547b4ce91eba3dcb31",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.test.ts": {
-    "mtime": 1791664521.6127713,
-    "seen": 1791664941.925462,
-    "ast_hash": "00bc1789a785c18fe19fcaf638c5cf91",
+    "mtime": 1791672101.8029182,
+    "seen": 1791672247.7432792,
+    "ast_hash": "e34f0de7da29e654eefc18857512a12f",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/setupTests.ts": {
@@ -1920,9 +1920,9 @@
     "semantic_hash": ""
   },
   ".jules/bolt.md": {
-    "mtime": 1791664520.3566515,
-    "seen": 1791664941.925462,
-    "ast_hash": "284da6db1e6a4f323152c9f70d19ccfd",
+    "mtime": 1791671982.9647427,
+    "seen": 1791672247.7689023,
+    "ast_hash": "7dc613766bfd772079fcacca74d5a60e",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/ClarificationNotificationCenter.tsx": {
@@ -2343,6 +2343,12 @@
     "mtime": 1791670028.2531793,
     "seen": 1791670184.405132,
     "ast_hash": "a110ad0ddd06803d4380762fdff859fb",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/vitest.config.ts": {
+    "mtime": 1791672101.8051014,
+    "seen": 1791672247.7631311,
+    "ast_hash": "6bd5cef250e0a67e5eab624540df78da",
     "semantic_hash": ""
   }
 }
