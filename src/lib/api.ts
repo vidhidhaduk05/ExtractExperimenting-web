@@ -184,6 +184,47 @@ export function saveStoredProjectStudies(projectId = "proj_pam_current", studies
   } catch (e) {}
 }
 
+export function getStoredProjectExtractions(studyId: string): any[] {
+  if (typeof window === "undefined") {
+    return (DEMO_EXTRACTIONS as any)[studyId] || [];
+  }
+  try {
+    const saved = localStorage.getItem(`radextract_extractions_${studyId}`);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return (DEMO_EXTRACTIONS as any)[studyId] || [];
+}
+
+export function saveStoredProjectExtractions(studyId: string, extractions: any[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(`radextract_extractions_${studyId}`, JSON.stringify(extractions));
+  } catch (e) {}
+}
+
+export function getStoredScreeningDecisions(projectId = "proj_pam_current"): ScreeningDecision[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = localStorage.getItem(`radextract_screening_decisions_${projectId}`);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [];
+}
+
+export function saveStoredScreeningDecision(projectId = "proj_pam_current", decision: ScreeningDecision): void {
+  if (typeof window === "undefined") return;
+  try {
+    const current = getStoredScreeningDecisions(projectId);
+    const existingIdx = current.findIndex(d => d.study_id === decision.study_id);
+    if (existingIdx !== -1) {
+      current[existingIdx] = decision;
+    } else {
+      current.push(decision);
+    }
+    localStorage.setItem(`radextract_screening_decisions_${projectId}`, JSON.stringify(current));
+  } catch (e) {}
+}
+
 function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   const method = (options.method || "GET").toUpperCase();
   let body: any = {};
@@ -259,14 +300,17 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         notes: body.notes || ""
       };
 
-      // Update in-memory DEMO_EXTRACTIONS
-      const list = (DEMO_EXTRACTIONS as any)[studyId] || [];
-      const item = list.find((e: any) => e.variable_id === varId);
+      // Update in-memory and persistent localStorage extractions
+      const currentExts = getStoredProjectExtractions(studyId);
+      const targetList = currentExts.length > 0 ? currentExts : ((DEMO_EXTRACTIONS as any)[studyId] || []);
+      const item = targetList.find((e: any) => e.variable_id === varId);
       if (item) {
         item.value = corr;
         item.is_verified = true;
         item.is_edited = dec === "modified";
       }
+      (DEMO_EXTRACTIONS as any)[studyId] = targetList;
+      saveStoredProjectExtractions(studyId, targetList);
 
       // Update in-memory error analysis records
       if (DEMO_ERROR_ANALYSIS) {
@@ -287,7 +331,46 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       return DEMO_SCREENING_SUMMARY as unknown as T;
     }
     if (path.includes("/screening-decision")) {
-      return { status: "success", decision: body.decision || "included" } as unknown as T;
+      const studyId = body.study_id || (path.split("/studies/")[1]?.split("/")[0]) || "";
+      const projectId = body.project_id || "proj_pam_current";
+      const decision = body.decision || "included";
+      const reasonCode = body.reason_code;
+      const reasonText = body.reason_text;
+      const stage = body.stage || "ta";
+
+      // 1. Persist decision object to localStorage
+      const decisionObj: ScreeningDecision = {
+        decision_id: `dec_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        study_id: studyId,
+        project_id: projectId,
+        reviewer_id: body.reviewer_id || "rev_local_expert",
+        reviewer_name: body.reviewer_name || "Expert Reviewer",
+        stage,
+        decision,
+        reason_code: reasonCode || "",
+        reason_text: reasonText || "",
+        is_blinded: 0,
+        created_at: new Date().toISOString(),
+      };
+      saveStoredScreeningDecision(projectId, decisionObj);
+
+      // 2. Update study status in persistent localStorage studies list
+      if (studyId) {
+        const studies = getStoredProjectStudies(projectId);
+        const studyIdx = studies.findIndex(s => s.study_id === studyId || (s as any).id === studyId);
+        if (studyIdx !== -1) {
+          const updatedStatus = decision === "maybe" ? "awaiting_clarification" : decision;
+          studies[studyIdx] = {
+            ...studies[studyIdx],
+            screening_status: updatedStatus,
+            screening_stage: stage,
+            ...(reasonCode ? { screening_reason: reasonCode } : {}),
+          };
+          saveStoredProjectStudies(projectId, studies);
+        }
+      }
+
+      return { status: "success", decision, decision_record: decisionObj } as unknown as T;
     }
     if (path.includes("/screening-keywords/auto-generate")) {
       return DEMO_SCREENING_KEYWORDS as unknown as T;
@@ -631,6 +714,15 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.includes("/abstract-highlights")) {
     return DEMO_ABSTRACT_HIGHLIGHTS.default as unknown as T;
   }
+  if (path.includes("/screening-decisions")) {
+    const studyId = path.split("/studies/")[1]?.split("/")[0];
+    const projectId = path.split("/projects/")[1]?.split("/")[0] || "proj_pam_current";
+    const allDecisions = getStoredScreeningDecisions(projectId);
+    if (studyId) {
+      return allDecisions.filter(d => d.study_id === studyId) as unknown as T;
+    }
+    return allDecisions as unknown as T;
+  }
   if (path.includes("/clarifications/stats")) {
     return { project_id: "proj_pam_current", total: 3, pending: 2, answered: 1, expired: 0, by_type: { eligibility: 1, study_design: 1, intervention: 1 }, by_stage: { abstract: 1, fulltext: 2 } } as unknown as T;
   }
@@ -689,6 +781,10 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.includes("/extractions") || path.includes("/coded-extract")) {
     const rawStudyId = path.split("/").filter(Boolean)[1] || "study_birua_2022";
     const resolvedId = (DEMO_EXTRACTIONS as any)[rawStudyId] ? rawStudyId : (studyAliasMap[rawStudyId] || "study_birua_2022");
+    const stored = getStoredProjectExtractions(resolvedId);
+    if (stored && stored.length > 0) {
+      return stored as unknown as T;
+    }
     return ((DEMO_EXTRACTIONS as any)[resolvedId] || DEMO_EXTRACTIONS.study_birua_2022) as unknown as T;
   }
   if (path.includes("/pdf-highlights")) {
