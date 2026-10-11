@@ -49,3 +49,51 @@ export function judgmentDotColor(judgment: string): string {
   };
   return colors[judgment] || "#CCCCCC";
 }
+
+/**
+ * Sanitizes raw SVG markup to prevent Cross-Site Scripting (XSS) attacks.
+ * Strips script tags, unsafe elements, event handler attributes (on*),
+ * and dangerous URIs (javascript:, data:text/html).
+ */
+export function sanitizeSvg(svgContent: string): string {
+  if (!svgContent || typeof window === "undefined") return svgContent || "";
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgContent, "text/html");
+
+    const FORBIDDEN_TAGS = ["script", "iframe", "object", "embed", "applet", "meta", "form", "base"];
+
+    // Remove forbidden executable / context elements
+    FORBIDDEN_TAGS.forEach((tag) => {
+      const elements = doc.querySelectorAll(tag);
+      elements.forEach((el) => el.remove());
+    });
+
+    // Inspect all remaining elements
+    const allElements = doc.body.querySelectorAll("*");
+    allElements.forEach((el) => {
+      Array.from(el.attributes).forEach((attr) => {
+        const attrName = attr.name.toLowerCase();
+        const attrValue = attr.value.trim().toLowerCase();
+
+        // Strip inline event handlers (e.g. onload, onerror, onclick)
+        if (attrName.startsWith("on")) {
+          el.removeAttribute(attr.name);
+        }
+        // Strip javascript: or dangerous data: URIs in link attributes
+        else if (
+          (attrName === "href" || attrName === "xlink:href" || attrName === "src") &&
+          (attrValue.startsWith("javascript:") || attrValue.startsWith("data:text/html") || attrValue.startsWith("vbscript:"))
+        ) {
+          el.removeAttribute(attr.name);
+        }
+      });
+    });
+
+    return doc.body.innerHTML;
+  } catch (err) {
+    console.error("Failed to sanitize SVG:", err);
+    return "";
+  }
+}
