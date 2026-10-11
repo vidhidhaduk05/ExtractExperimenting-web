@@ -121,10 +121,44 @@ async def get_ai_screening_progress(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    """Live progress of a running AI screening: current study, done/pending ids, stage.
-
-    Kept in memory per process; reports ``active: false`` when nothing is running (or the run
-    is on another worker), in which case clients should rely on the persisted per-study results.
-    """
+    """Live progress of a running AI screening: current study, done/pending ids, stage, paused."""
     check_project_access(conn, project_id, user)
     return screening_progress.get(project_id)
+
+
+@router.post("/projects/{project_id}/ai-screening/pause")
+async def pause_ai_screening(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Pause the active AI screening run. The current in-flight study finishes, then the loop pauses."""
+    check_project_access(conn, project_id, user)
+    screening_progress.pause(project_id)
+    return screening_progress.get(project_id)
+
+
+@router.post("/projects/{project_id}/ai-screening/resume")
+async def resume_ai_screening(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Resume a paused AI screening run."""
+    check_project_access(conn, project_id, user)
+    screening_progress.resume(project_id)
+    return screening_progress.get(project_id)
+
+
+@router.post("/projects/{project_id}/ai-screening/cancel")
+@router.post("/projects/{project_id}/ai-screening/stop")
+async def cancel_ai_screening(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Cancel and stop the active AI screening run."""
+    check_project_access(conn, project_id, user)
+    screening_progress.cancel(project_id)
+    return screening_progress.get(project_id)
+

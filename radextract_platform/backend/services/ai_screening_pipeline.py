@@ -79,8 +79,14 @@ class AIScreeningPipeline:
         # Stage 1: Title screening on pending studies
         title_results = self.run_title_screening(project_id, conn, client=client)
 
+        if not progress.check_pause_or_cancel(project_id):
+            return self.get_pipeline_summary(project_id, conn, title_count=len(title_results), abstract_count=0, ft_count=0)
+
         # Stage 2: Abstract screening on uncertain/pending studies
         abstract_results = self.run_abstract_screening(project_id, conn, client=client)
+
+        if not progress.check_pause_or_cancel(project_id):
+            return self.get_pipeline_summary(project_id, conn, title_count=len(title_results), abstract_count=len(abstract_results), ft_count=0)
 
         # Stage 3: Full-text screening on ta_included studies
         ft_results = self.run_fulltext_screening(project_id, conn, client=client)
@@ -109,6 +115,8 @@ class AIScreeningPipeline:
         now_str = datetime.now(timezone.utc).isoformat()
 
         for s_row in studies:
+            if not progress.check_pause_or_cancel(project_id):
+                break
             s = dict(s_row)
             study_id = s["study_id"]
             progress.set_current(project_id, study_id, s.get("title") or "")
@@ -229,6 +237,8 @@ class AIScreeningPipeline:
         now_str = datetime.now(timezone.utc).isoformat()
 
         for s_row in studies:
+            if not progress.check_pause_or_cancel(project_id):
+                break
             s = dict(s_row)
             study_id = s["study_id"]
             progress.set_current(project_id, study_id, s.get("title") or "")
@@ -378,6 +388,8 @@ class AIScreeningPipeline:
         now_str = datetime.now(timezone.utc).isoformat()
 
         for s_row in studies:
+            if not progress.check_pause_or_cancel(project_id):
+                break
             s = dict(s_row)
             study_id = s["study_id"]
             progress.set_current(project_id, study_id, s.get("title") or "")

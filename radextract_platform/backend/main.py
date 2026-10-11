@@ -22,6 +22,7 @@ from services.logging_config import setup_logging
 from services.metrics import metrics_collector
 from services.rate_limiter import RateLimiter
 from routers import (
+    record_collaboration,
     charts,
     statistics,
     literature_search,
@@ -118,6 +119,7 @@ def create_app() -> FastAPI:
         )
 
     # Register routers
+    app.include_router(record_collaboration.router)
     app.include_router(auth.router)
     app.include_router(projects.router)
     app.include_router(studies.router)

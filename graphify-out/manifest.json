@@ -6,9 +6,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/database.py": {
-    "mtime": 1791664520.9079032,
-    "seen": 1791664941.925462,
-    "ast_hash": "df3b4565d4edc5a4ed755130a0e8a53b",
+    "mtime": 1791717465.3334928,
+    "seen": 1791718451.560252,
+    "ast_hash": "2d67f88a69134d511df50d4b3b263506",
     "semantic_hash": ""
   },
   "radextract_platform/backend/dependencies.py": {
@@ -18,9 +18,9 @@
     "semantic_hash": "0a4cd961473a30f008fc0d5fa0bc7e96"
   },
   "radextract_platform/backend/main.py": {
-    "mtime": 1791664520.9105537,
-    "seen": 1791664941.925462,
-    "ast_hash": "544ec143f83343583b00923e8a74205c",
+    "mtime": 1791716874.3312986,
+    "seen": 1791718451.5679357,
+    "ast_hash": "a3672846527342592bc5df9ee38a818c",
     "semantic_hash": ""
   },
   "radextract_platform/backend/models.py": {
@@ -336,9 +336,9 @@
     "semantic_hash": "d702b6b6f68f555ca0234bca94b9a1f7"
   },
   "radextract_platform/backend/routers/projects.py": {
-    "mtime": 1791709290.2216933,
-    "seen": 1791709318.3790305,
-    "ast_hash": "72b74c46c12f00a6864ff9df231e132c",
+    "mtime": 1791716878.68684,
+    "seen": 1791718451.765903,
+    "ast_hash": "7f5c1816c6a31ba3aee46e5234e4d652",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/pubmed.py": {
@@ -378,9 +378,9 @@
     "semantic_hash": "00702c0f804b51e9fe1af3cf813f76ff"
   },
   "radextract_platform/backend/routers/studies.py": {
-    "mtime": 1791711918.4163344,
-    "seen": 1791712007.8093872,
-    "ast_hash": "9a0baf1b0a9090a0e866be2784755cc0",
+    "mtime": 1791716876.2934902,
+    "seen": 1791718451.7919483,
+    "ast_hash": "0d9d7981b4d142af25326bbf56d798cc",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/variables.py": {
@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1791715339.5913174,
-    "seen": 1791715552.2538867,
-    "ast_hash": "33e8fc6238fea37dfec66aa81d2854f7",
+    "mtime": 1791717154.0736651,
+    "seen": 1791718452.4346712,
+    "ast_hash": "ec90fbf9500d90cbe47661104e167c30",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
-    "mtime": 1791715149.3351855,
-    "seen": 1791715552.2643101,
-    "ast_hash": "b7b07dfc969f13e157d8ae7e44a4c3a7",
+    "mtime": 1791717398.076534,
+    "seen": 1791718452.5728045,
+    "ast_hash": "7e2fcdbb26a53568e8d52bb593d1485f",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyImport.tsx": {
@@ -918,9 +918,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyList.tsx": {
-    "mtime": 1791712815.4342115,
-    "seen": 1791712902.276485,
-    "ast_hash": "adf4f928d67ebb309b50acfc20d8fba5",
+    "mtime": 1791717104.6702006,
+    "seen": 1791718452.5758824,
+    "ast_hash": "690d948b193807a59628c8c3d42e56f0",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/vite-env.d.ts": {
@@ -972,9 +972,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/db_backend.py": {
-    "mtime": 1791664521.0614536,
-    "seen": 1791664941.925462,
-    "ast_hash": "4425dfb4e6868f9707e49b1f51745225",
+    "mtime": 1791716871.2667286,
+    "seen": 1791718451.8864589,
+    "ast_hash": "24ae163dbf3075f9ae5a54dc906a6ccc",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/storage_backend.py": {
@@ -1248,15 +1248,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/ai_screening.py": {
-    "mtime": 1791664521.0192814,
-    "seen": 1791664941.925462,
-    "ast_hash": "19e25ed9662f5f69c8f89a799385f31f",
+    "mtime": 1791717023.0596604,
+    "seen": 1791718451.718522,
+    "ast_hash": "8dfd14f56a1a43e414852c70e103922a",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/ai_screening_pipeline.py": {
-    "mtime": 1791664521.0453453,
-    "seen": 1791664941.925462,
-    "ast_hash": "0332e809ed112b9fff22033404c63e75",
+    "mtime": 1791717001.243265,
+    "seen": 1791718451.8339963,
+    "ast_hash": "bd38942358111b90cc0d47def08aa02f",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/keyword_highlight_service.py": {
@@ -1374,9 +1374,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/screening_progress.py": {
-    "mtime": 1791664521.1076622,
-    "seen": 1791664941.925462,
-    "ast_hash": "18defb7a5dce2e906d45728d11d06b64",
+    "mtime": 1791716916.7578132,
+    "seen": 1791718452.052718,
+    "ast_hash": "ad6b465418ccb002be31bb36aaa59d71",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/search_audit_service.py": {
@@ -1428,9 +1428,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_screening_progress.py": {
-    "mtime": 1791664521.2046494,
-    "seen": 1791664941.925462,
-    "ast_hash": "abf3d5304d95a7dfe4675c768e08403a",
+    "mtime": 1791717043.3612294,
+    "seen": 1791718452.3232906,
+    "ast_hash": "b03fee43c515a950a35c35efea234f27",
     "semantic_hash": ""
   },
   "radextract_platform/mcp_server/index.js": {
@@ -1932,9 +1932,9 @@
     "semantic_hash": ""
   },
   ".agents/jules_auto_merge.py": {
-    "mtime": 1791664520.3426237,
-    "seen": 1791664941.925462,
-    "ast_hash": "2489660255c3a888a7f60486dd361800",
+    "mtime": 1791716021.8643517,
+    "seen": 1791718451.4292033,
+    "ast_hash": "16b2e5878451c93a8f288d997c673c76",
     "semantic_hash": ""
   },
   ".agents/launch_jules.py": {
@@ -2034,9 +2034,9 @@
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1791715345.8237941,
-    "seen": 1791715552.2693462,
-    "ast_hash": "05c74578932756e168db813eb356ccb9",
+    "mtime": 1791718497.028811,
+    "seen": 1791718615.5328846,
+    "ast_hash": "398f532baa4a0abf0cba3eea7614c6fc",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {
@@ -2340,9 +2340,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningExclusion.test.tsx": {
-    "mtime": 1791715339.5993645,
-    "seen": 1791715552.2643101,
-    "ast_hash": "489e2a572dbacfad162230ca88ac7d8a",
+    "mtime": 1791717334.7722478,
+    "seen": 1791718452.5728045,
+    "ast_hash": "b77de2cdd430bf4d064e29512783f5ef",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/vitest.config.ts": {
@@ -2433,6 +2433,54 @@
     "mtime": 1791715215.885074,
     "seen": 1791715552.2561908,
     "ast_hash": "debc9ae7554af76cd0fcf220a1d79e53",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/routers/record_collaboration.py": {
+    "mtime": 1791716866.121485,
+    "seen": 1791718451.7704237,
+    "ast_hash": "66d5c78719d779593f86de931040ef48",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_record_collaboration.py": {
+    "mtime": 1791717467.2366004,
+    "seen": 1791718452.2406921,
+    "ast_hash": "0041f6d9a89d084dfd8c77a5f86f16cc",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/common/RecordCollaboration.test.tsx": {
+    "mtime": 1791717812.134158,
+    "seen": 1791718452.412725,
+    "ast_hash": "c1acb228d2dfa95f1eda029a0a823c9c",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/common/RecordCollaboration.tsx": {
+    "mtime": 1791717806.6012678,
+    "seen": 1791718452.412725,
+    "ast_hash": "99feb1c0c1dc2e2d6cd60d329144c73e",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/lib/recordCollaboration.test.ts": {
+    "mtime": 1791717254.1742132,
+    "seen": 1791718452.4614913,
+    "ast_hash": "4ae5fa1f189dcd30fe03eab007fc94b5",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/lib/recordCollaboration.ts": {
+    "mtime": 1791717056.988579,
+    "seen": 1791718452.4614913,
+    "ast_hash": "16a377a279ea8751c049b8da34e934a2",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/pages/StudyListCollaboration.test.tsx": {
+    "mtime": 1791717392.6152976,
+    "seen": 1791718452.5758824,
+    "ast_hash": "a04628890e8136e0443dce469186662a",
+    "semantic_hash": ""
+  },
+  "outputs/record-collaboration-preview.jpg": {
+    "mtime": 1791717910.9581766,
+    "seen": 1791718452.873892,
+    "ast_hash": "4eeb53ccc6030203bce54fb0bf277e69",
     "semantic_hash": ""
   }
 }

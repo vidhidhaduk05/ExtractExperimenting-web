@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ScreeningPage } from "./ScreeningPage";
 import { api } from "../lib/api";
+import { recordCollaboration } from "../lib/recordCollaboration";
 
 vi.mock("../lib/bookmarks", () => ({ useBookmarks: () => ({ ids: [], disabled: true, local: true, error: null, retry: vi.fn(), toggle: vi.fn() }) }));
 
@@ -87,6 +88,8 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
   };
 
   beforeEach(() => {
+    vi.spyOn(recordCollaboration, "listTags").mockResolvedValue({ tags: [], study_tags: {}, can_write: true });
+    vi.spyOn(recordCollaboration, "listAnnotations").mockResolvedValue({ annotations: [], can_write: true });
     localStorage.setItem("token", "authenticated-test-token");
     vi.spyOn(api, "getCurrentUser").mockResolvedValue({ user_id: "signed-in-id", username: "Signed-in reviewer", email: "", role: "reviewer" });
     queryClient = new QueryClient({
@@ -126,6 +129,18 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
       </QueryClientProvider>
     );
   };
+
+  it("tag filtering updates the preview and prevents hotkeys acting on hidden records", async () => {
+    vi.mocked(recordCollaboration.listTags).mockResolvedValue({ tags: [{ tag_id: "pilot", project_id: "test_proj", name: "Pilot", archived: false }],
+      study_tags: { study_002: ["pilot"] }, can_write: true });
+    renderScreeningPage();
+    await screen.findByRole("option", { name: "Pilot" });
+    fireEvent.change(screen.getByLabelText("Filter studies by tag"), { target: { value: "pilot" } });
+    await waitFor(() => expect(screen.getByRole("heading", { name: mockStudies[1].title, level: 2 })).toBeInTheDocument());
+    expect(screen.queryByRole("heading", { name: mockStudies[0].title })).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "1" });
+    await waitFor(() => expect(api.screeningDecision).toHaveBeenCalledWith("study_002", expect.objectContaining({ stage: "ta" })));
+  });
 
   it("blocks decision buttons and hotkeys when no user is signed in", async () => {
     localStorage.removeItem("token");

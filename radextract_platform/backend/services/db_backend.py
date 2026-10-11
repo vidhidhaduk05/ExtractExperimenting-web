@@ -41,6 +41,9 @@ from config import settings
 # ── Table primary key mapping ──
 # Maps table name → primary key column name
 TABLE_PK = {
+    "record_annotations": "annotation_id",
+    "project_tags": "tag_id",
+    "study_tag_links": "link_id",
     "projects": "project_id",
     "studies": "study_id",
     "variables": "variable_id",
@@ -70,6 +73,7 @@ TABLE_PK = {
 
 # Tables that have project_id for GSI
 PROJECT_GSI_TABLES = {
+    "record_annotations", "project_tags", "study_tag_links",
     "studies", "variables", "rob_assessments", "meta_analyses",
     "grade_assessments", "screening_decisions", "screening_conflicts",
     "pdf_highlights", "project_members", "user_review_state",
@@ -78,6 +82,7 @@ PROJECT_GSI_TABLES = {
 
 # Tables that have study_id for GSI
 STUDY_GSI_TABLES = {
+    "record_annotations", "study_tag_links",
     "extractions", "audit_log", "rob_assessments", "pdf_documents",
     "screening_decisions", "screening_conflicts", "pdf_highlights",
     "user_review_state",

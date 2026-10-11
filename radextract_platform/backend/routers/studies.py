@@ -163,6 +163,10 @@ async def delete_study(study_id: str, user: Optional[dict] = Depends(get_current
     for bookmark in conn.query("user_review_state", {"study_id": study_id, "stage": "bookmark"}):
         if not conn.delete("user_review_state", bookmark["state_id"]):
             raise HTTPException(status_code=503, detail="Study bookmarks could not be removed. Please retry.")
+    for table, pk in (("record_annotations", "annotation_id"), ("study_tag_links", "link_id")):
+        for row in conn.query(table, {"study_id": study_id}):
+            if not conn.delete(table, row[pk]):
+                raise HTTPException(status_code=503, detail="Record collaboration data could not be removed. Please retry.")
     cursor = conn.execute(
         "DELETE FROM studies WHERE study_id = ?", (study_id,)
     )

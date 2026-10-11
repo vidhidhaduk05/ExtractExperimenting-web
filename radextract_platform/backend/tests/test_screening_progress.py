@@ -67,3 +67,57 @@ def test_pipeline_reports_progress(monkeypatch):
     assert seen[0] == ("start", "title", ("s1", "s2"))
     assert [e for e in seen if e[0] == "done"] == [("done", "s1"), ("done", "s2")]
     assert seen.index(("cur", "s1")) < seen.index(("done", "s1")) < seen.index(("cur", "s2"))
+
+
+def test_pause_and_resume():
+    sp.start("p3", "title", ["s1", "s2", "s3"])
+    snap = sp.get("p3")
+    assert snap["active"] is True
+    assert snap["paused"] is False
+
+    sp.pause("p3")
+    assert sp.is_paused("p3") is True
+    snap_paused = sp.get("p3")
+    assert snap_paused["paused"] is True
+    assert snap_paused["active"] is True
+
+    sp.resume("p3")
+    assert sp.is_paused("p3") is False
+    snap_resumed = sp.get("p3")
+    assert snap_resumed["paused"] is False
+
+
+def test_cancel_stops_pipeline():
+    sp.start("p4", "title", ["s1", "s2", "s3"])
+    assert sp.get("p4")["active"] is True
+
+    sp.cancel("p4")
+    assert sp.is_canceled("p4") is True
+    assert sp.get("p4")["active"] is False
+    assert sp.check_pause_or_cancel("p4") is False
+
+
+def test_router_pause_resume_endpoints():
+    from fastapi.testclient import TestClient
+    from main import create_app
+
+    app = create_app()
+    client = TestClient(app)
+
+    sp.start("p5", "abstract", ["s1", "s2"])
+
+    # Pause
+    res_pause = client.post("/api/projects/p5/ai-screening/pause")
+    assert res_pause.status_code == 200
+    assert res_pause.json()["paused"] is True
+
+    # Resume
+    res_resume = client.post("/api/projects/p5/ai-screening/resume")
+    assert res_resume.status_code == 200
+    assert res_resume.json()["paused"] is False
+
+    # Cancel
+    res_cancel = client.post("/api/projects/p5/ai-screening/cancel")
+    assert res_cancel.status_code == 200
+    assert res_cancel.json()["active"] is False
+    assert res_cancel.json()["canceled"] is True

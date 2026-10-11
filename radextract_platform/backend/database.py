@@ -15,6 +15,40 @@ from services.db_backend import DBBackend, SQLiteBackend, get_db_backend, init_d
 
 
 SCHEMA_SQL = """
+-- Record collaboration. CREATE IF NOT EXISTS also upgrades existing databases.
+CREATE TABLE IF NOT EXISTS record_annotations (
+    annotation_id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    study_id TEXT NOT NULL REFERENCES studies(study_id) ON DELETE CASCADE,
+    author_id TEXT NOT NULL,
+    author_name TEXT NOT NULL,
+    text TEXT NOT NULL,
+    visibility TEXT NOT NULL CHECK (visibility IN ('shared', 'private')),
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_record_annotations_study ON record_annotations(study_id, visibility, author_id);
+CREATE TABLE IF NOT EXISTS project_tags (
+    tag_id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    normalized_name TEXT NOT NULL,
+    archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1)),
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (project_id, normalized_name)
+);
+CREATE TABLE IF NOT EXISTS study_tag_links (
+    link_id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    study_id TEXT NOT NULL REFERENCES studies(study_id) ON DELETE CASCADE,
+    tag_id TEXT NOT NULL REFERENCES project_tags(tag_id) ON DELETE CASCADE,
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (study_id, tag_id)
+);
+CREATE INDEX IF NOT EXISTS idx_study_tag_links_project ON study_tag_links(project_id, tag_id);
+CREATE INDEX IF NOT EXISTS idx_study_tag_links_study ON study_tag_links(study_id);
 -- ── Existing tables (migrated from Streamlit app) ──
 
 CREATE TABLE IF NOT EXISTS projects (
@@ -672,6 +706,7 @@ def reset_db():
     conn = get_connection()
     try:
         tables = [
+            "record_annotations", "study_tag_links", "project_tags",
             "screening_keywords", "keyword_groups",
             "clarification_questions",
             "grade_factors", "grade_assessments",

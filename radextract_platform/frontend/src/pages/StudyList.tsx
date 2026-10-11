@@ -12,11 +12,16 @@ import { useRef, useState, useCallback } from "react";
 import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
 import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
+import { matchesTag, useProjectTags, type TagIndex } from "../lib/recordCollaboration";
+import { CollaborationDialog, RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
 
 
 export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean }) {
   const { projectId } = useParams<{ projectId: string }>();
   const bookmarks = useBookmarks(projectId);
+  const tagIndex = useProjectTags(projectId);
+  const [tagFilter, setTagFilter] = useState("");
+  const [collaborationStudy, setCollaborationStudy] = useState<Study | null>(null);
   const [savedFilter, setSavedOnly] = useState(false);
   const savedOnly = bookmarkedOnly || savedFilter;
   const navigate = useNavigate();
@@ -85,6 +90,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   };
 
   const isBlank = studies && studies.length === 0;
+  const visibleStudies = (studies || []).filter(s => (!savedOnly || bookmarks.ids.includes(s.study_id)) && matchesTag(tagIndex.data, s.study_id, tagFilter));
 
   return (
     <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
@@ -323,12 +329,15 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       )}
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
+        <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
         {bookmarkedOnly ? <span className="font-medium">{(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length} bookmarked studies</span> : <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length})</label>}
         <span className="text-xs text-slate-500">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
         {bookmarks.error && <span role="alert" className="text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
       </div>
       {savedOnly && studies && studies.length > 0 && !studies.some(s => bookmarks.ids.includes(s.study_id)) && <p className="text-sm text-slate-500">No saved studies yet. Use the bookmark icon to save a study for later.</p>}
       {/* Populated Study Table */}
+      {studies && studies.length > 0 && <p className="text-xs text-slate-500">{visibleStudies.length} matching studies</p>}
+      {tagFilter && studies && studies.length > 0 && visibleStudies.length === 0 && <p className="text-sm text-slate-500">No studies match this tag and the current filters.</p>}
       {studies && studies.length > 0 && (
         <div className="card-phylo overflow-hidden rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
           <div className="overflow-x-auto">
@@ -344,10 +353,12 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/[0.04]">
-                {studies.filter(s => !savedOnly || bookmarks.ids.includes(s.study_id)).map((s) => (
+                {visibleStudies.map((s) => (
                   <StudyRow
                     key={s.study_id}
                     study={s}
+                    tags={tagIndex.data}
+                    onComments={() => setCollaborationStudy(s)}
                     bookmark={<BookmarkButton saved={bookmarks.ids.includes(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
                     projectId={projectId!}
                     onDelete={() => deleteMutation.mutate(s.study_id)}
@@ -360,6 +371,9 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       )}
 
       {/* Bulk Upload Modal */}
+      {collaborationStudy && <CollaborationDialog title={collaborationStudy.title} onClose={() => setCollaborationStudy(null)}>
+        <RecordCollaborationPanel key={collaborationStudy.study_id} projectId={projectId!} studyId={collaborationStudy.study_id} />
+      </CollaborationDialog>}
       {isBulkModalOpen && (
         <BulkUploadModal
           projectId={projectId!}
@@ -390,7 +404,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
 }
 
 
-function StudyRow({ study, projectId, onDelete, bookmark }: { study: Study; projectId: string; onDelete: () => void; bookmark: React.ReactNode }) {
+function StudyRow({ study, projectId, onDelete, bookmark, tags, onComments }: { study: Study; projectId: string; onDelete: () => void; bookmark: React.ReactNode; tags: TagIndex | undefined; onComments: () => void }) {
   const { data: assessments } = useQuery({
     queryKey: ["study-rob", study.study_id],
     queryFn: () => api.listStudyAssessments(study.study_id),
@@ -409,6 +423,7 @@ function StudyRow({ study, projectId, onDelete, bookmark }: { study: Study; proj
     <tr className="hover:bg-black/[0.015] transition-colors">
       <td className="px-5 py-3.5">
         <div className="flex items-start gap-2">{bookmark}<div className="font-serif font-medium text-sm text-[#141413] line-clamp-1">{study.title}</div></div>
+        <TagBadges index={tags} studyId={study.study_id} />
         <div className="text-xs font-sans text-[#8A817A] mt-0.5 line-clamp-1">
           {study.authors || "Unknown Authors"} {study.journal ? `— ${study.journal}` : ""}
         </div>
@@ -445,6 +460,7 @@ function StudyRow({ study, projectId, onDelete, bookmark }: { study: Study; proj
       </td>
       <td className="px-5 py-3.5 text-right">
         <div className="flex items-center justify-end gap-2">
+          <button type="button" onClick={onComments} className="rounded-full border border-black/15 bg-white px-3 py-1 text-xs hover:bg-black/5" aria-label={`Comments and tags for ${study.title}`}>Comments & tags</button>
           <Link
             to={`/projects/${projectId}/studies/${study.study_id}/pdf`}
             className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-[#141413] text-[#FAF9F3] hover:bg-[#282724] transition-all shadow-2xs"

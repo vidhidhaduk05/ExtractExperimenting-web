@@ -152,3 +152,25 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
 - The legacy screening-status write route requires authentication and routes human eligibility decisions through the same attributed save path. Conflict resolution requires project reviewer access and records the authenticated resolver ID.
 - Screening uses a verified /auth/me response rather than localStorage username/reviewer1. Buttons and hotkeys cannot submit without a verified account. Auth reads, decision saves, and conflict resolution use strict requests; 401/403/server/network failures never become demo success or advance the record.
 - Existing anonymous/fallback history is not retroactively reassigned because its true author cannot be established. Task 28's stage capture/validation remains intact; local Laya screening configuration is unchanged.
+
+## 2026-10-11 — Record comments, private notes and project tags (Task 23)
+
+- Record collaboration is available from Studies and Screening through one shared panel. Shared comments are visible to project members; private notes are queried on the server with the authenticated author's ID and never returned to another reviewer, including project owners.
+- All collaboration routes require authentication and project membership. Viewer members can read shared comments and tags; reviewer-or-higher members can add annotations and create, assign, rename, archive or restore project tags. Authors and UTC timestamps are server-owned.
+- Comments and private notes are separate immutable entries. Per-request IDs make comment retries idempotent; failed saves retain the current draft. Private annotations do not use demo/browser-storage fallbacks. Query caches are scoped by backend, authenticated session, project and study.
+- Tags have stable IDs, project-scoped case-insensitive unique names, and multiple assignments per record. Rename retains assignments; archive preserves historical assignments, disables new assignments and hides the tag from ordinary selectors. Restore is available in Manage tags. Tag filtering combines with existing study/screening filters, and screening preview/hotkeys use the visible record set.
+- Existing databases acquire the three collaboration tables at normal initialization. Record/project deletion and test reset clean up the new data. Screening eligibility, criteria and local Laya configuration are unaffected.
+- User explicitly authorized direct local implementation in this chat because the prescribed Jules API key was unavailable.
+
+
+## 2026-10-11 — AI Multi-Stage Screening Pause, Resume, and Cancel Controls
+
+- Thread-safe tracking in screening_progress.py (pause, 
+esume, cancel, is_paused, is_canceled, check_pause_or_cancel).
+- AI screening sequential loops (
+un_title_screening, 
+un_abstract_screening, 
+un_fulltext_screening, and inter-stage transitions in 
+un_full_pipeline) verify pause and cancellation cleanly between individual studies, guaranteeing that in-flight study decisions are committed and persisted cleanly before halting to prevent partial writes or database locks.
+- REST endpoints added: POST /projects/{project_id}/ai-screening/pause, POST /projects/{project_id}/ai-screening/resume, and POST /projects/{project_id}/ai-screening/cancel (with alias /stop).
+- Frontend UI updated in ScreeningPage.tsx with dynamic toolbar buttons (Pause button when active; Resume + Stop buttons when paused) and a Live AI Screening Status & Control banner with real-time progress bar, study count, current title, and inline Pause/Resume/Stop controls.

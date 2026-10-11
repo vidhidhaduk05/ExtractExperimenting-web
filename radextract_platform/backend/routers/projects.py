@@ -253,6 +253,9 @@ async def delete_project(
             (project_id,),
         )
     for table in (
+        "record_annotations",
+        "study_tag_links",
+        "project_tags",
         "search_logs",
         "screening_decisions",
         "screening_conflicts",
