@@ -6,8 +6,10 @@ import {
   ArrowLeft, Users, Stethoscope, GitCompare, Target, FlaskConical,
   Lightbulb, HelpCircle, Plus, Trash2, Loader2, CheckCircle,
   Upload, FileText, Copy, Search, Sparkles, Database,
-  ChevronDown, ChevronRight, AlertCircle, AlertTriangle,
+  ChevronDown, ChevronRight, AlertCircle, AlertTriangle, FileUp,
 } from "lucide-react";
+import { ReferenceImportModal } from "../components/common/ReferenceImportModal";
+
 
 const DATABASES = [
   { key: "pubmed", label: "PubMed", hasAutoFetch: true },
@@ -193,6 +195,8 @@ export function PicoHypothesisPage() {
   const [copiedDb, setCopiedDb] = useState<string | null>(null);
   const [fetchResult, setFetchResult] = useState<string | null>(null);
   const [uploadResult, setUploadResult] = useState<string | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
 
   // ── Research question state ──
   const [researchQuestionInput, setResearchQuestionInput] = useState("");
@@ -979,6 +983,17 @@ export function PicoHypothesisPage() {
                       AutoFetch
                     </button>
                   )}
+
+                  {/* Reference Import Button (all formats) */}
+                  <button
+                    type="button"
+                    className="btn-secondary flex items-center gap-1.5 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                    onClick={() => setIsImportModalOpen(true)}
+                    title="Import reference files: RIS, BibTeX, CSV with mapping, PubMed/NBIB, EndNote (.enw/.xml), PubMed XML, Web of Science CIW"
+                  >
+                    <FileUp className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>Import References</span>
+                  </button>
                 </div>
 
                 {/* Fetch result */}
@@ -1003,6 +1018,19 @@ export function PicoHypothesisPage() {
           </div>
         </div>
       </SectionCard>
+
+      {/* Reference Import Modal */}
+      {projectId && (
+        <ReferenceImportModal
+          projectId={projectId}
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onSuccess={(count, source) => {
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            setFetchResult(`Successfully imported ${count} references from ${source}`);
+          }}
+        />
+      )}
     </div>
   );
 }

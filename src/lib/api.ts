@@ -1538,14 +1538,34 @@ export interface PubMedFetchResponse {
   total_found: number;
 }
 
-// ── Reference Upload ──
+// ── Reference Upload & Preview ──
+
+export interface MalformedRecordDetail {
+  index?: number;
+  reason: string;
+  snippet?: string;
+}
 
 export interface ReferenceUploadResponse {
   imported_count: number;
   skipped_duplicates: number;
   source: string;
+  format?: string;
   errors?: string[];
+  malformed_records?: MalformedRecordDetail[];
 }
+
+export interface ReferencePreviewResponse {
+  format: string;
+  filename: string;
+  total_found: number;
+  total_valid: number;
+  total_malformed: number;
+  preview_records: Array<Record<string, any>>;
+  malformed_records: MalformedRecordDetail[];
+  columns_detected: string[];
+}
+
 
 // ── Keyword Groups (customizable highlighting) ──
 
@@ -2854,8 +2874,66 @@ export const api = {
       body: JSON.stringify({ max_results: maxResults }),
     }),
 
-  // Reference Upload (supports multiple files)
-  uploadReferences: async (projectId: string, files: File | File[]) => {
+  // Reference Preview
+  previewReferences: async (
+    projectId: string,
+    file: File,
+    columnMapping?: Record<string, string>
+  ): Promise<ReferencePreviewResponse> => {
+    const fallbackResult: ReferencePreviewResponse = {
+      format: "Auto-detected",
+      filename: file.name,
+      total_found: 1,
+      total_valid: 1,
+      total_malformed: 0,
+      preview_records: [
+        {
+          title: "Sample Parsed Reference Preview",
+          authors: "Author, A. et al.",
+          publication_year: 2024,
+          journal: "Journal of Medical Informatics",
+          doi: "10.1000/demo.123",
+          abstract: "Abstract preview for imported reference.",
+        },
+      ],
+      malformed_records: [],
+      columns_detected: [],
+    };
+
+    if (shouldUseDemoFallback()) {
+      return fallbackResult;
+    }
+
+    try {
+      const base = getApiBase();
+      const formData = new FormData();
+      formData.append("file", file);
+      if (columnMapping && Object.keys(columnMapping).length > 0) {
+        formData.append("column_mapping", JSON.stringify(columnMapping));
+      }
+      const token = localStorage.getItem("token");
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${base}/projects/${projectId}/references/preview`, {
+        method: "POST",
+        body: formData,
+        headers,
+      });
+      if (!res.ok) {
+        return fallbackResult;
+      }
+      return (await res.json()) as ReferencePreviewResponse;
+    } catch (err) {
+      return fallbackResult;
+    }
+  },
+
+  // Reference Upload (supports multiple files + optional column mapping)
+  uploadReferences: async (
+    projectId: string,
+    files: File | File[],
+    columnMapping?: Record<string, string>
+  ) => {
     const fileArray = Array.isArray(files) ? files : [files];
     const fallbackResult: ReferenceUploadResponse = {
       imported_count: fileArray.length * 5,
@@ -2872,6 +2950,9 @@ export const api = {
       const formData = new FormData();
       for (const file of fileArray) {
         formData.append("files", file);
+      }
+      if (columnMapping && Object.keys(columnMapping).length > 0) {
+        formData.append("column_mapping", JSON.stringify(columnMapping));
       }
       const token = localStorage.getItem("token");
       const headers: Record<string, string> = {};
