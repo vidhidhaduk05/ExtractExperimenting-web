@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { sanitizeSvg } from "./utils";
 
@@ -31,6 +32,12 @@ describe("sanitizeSvg", () => {
     const maliciousSvg = `<svg><a href="javascript:alert('xss')"><text>Click</text></a></svg>`;
     const sanitized = sanitizeSvg(maliciousSvg);
     expect(sanitized).not.toContain("javascript:");
+  });
+
+  it("removes HTML entity-encoded dangerous URIs in href", () => {
+    const maliciousSvg = `<svg><a href="java&#x09;script:alert('xss')"><text>Click</text></a></svg>`;
+    const sanitized = sanitizeSvg(maliciousSvg);
+    expect(sanitized).not.toContain("script:");
   });
 
   it("handles empty or falsy inputs gracefully", () => {

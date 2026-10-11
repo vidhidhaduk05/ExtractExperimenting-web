@@ -1,8 +1,6 @@
 import { resolveScreeningStage } from "../lib/screeningStage";
 import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
-import { matchesTag, useProjectTags } from "../lib/recordCollaboration";
-import { RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
@@ -69,7 +67,6 @@ import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal"
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const bookmarks = useBookmarks(projectId);
-  const tagIndex = useProjectTags(projectId);
   const [tagFilter, setTagFilter] = useState("");
   const [savedOnly, setSavedOnly] = useState(false);
   const queryClient = useQueryClient();
@@ -295,7 +292,6 @@ export function ScreeningPage() {
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
       if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
-      if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
       // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -313,7 +309,7 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studies, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
+  }, [studies, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagFilter]);
 
   // Selection and keyboard actions use the same visible record set as all filters.
   const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || null;
@@ -1065,9 +1061,6 @@ export function ScreeningPage() {
       </div>}
 
       {/* Filter and Search Bar */}
-      <div className="bg-white border-b border-slate-200 px-6 py-2"><div className="max-w-7xl mx-auto">
-        <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
-      </div></div>
       <div className="bg-white border-b border-slate-200 px-6 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({studyList.filter(s => bookmarks.ids.includes(s.study_id)).length})</label>
@@ -1364,7 +1357,6 @@ export function ScreeningPage() {
                     <p className="text-[11px] text-slate-500 line-clamp-1 mb-2">
                       {study.authors || "Unknown Authors"} &bull; {study.publication_year || "N/A"} &bull; {study.journal || "No Journal"}
                     </p>
-                    <TagBadges index={tagIndex.data} studyId={study.study_id} />
 
                     <div className="flex items-center justify-between gap-2 flex-wrap text-[10px]">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -1548,11 +1540,6 @@ export function ScreeningPage() {
                 </div>
               )}
 
-              <TagBadges index={tagIndex.data} studyId={selectedStudy.study_id} />
-              <details className="rounded-lg border border-slate-200">
-                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-800">Comments & tags</summary>
-                <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
-              </details>
 
               {/* Clarification Questions Panel (if study requires clarification) */}
               {studyClarifications.length > 0 && (
