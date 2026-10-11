@@ -175,17 +175,17 @@ class TestPicoExtraction:
         assert r.status_code == 404
 
     def test_extract_does_not_auto_save(self, client, project):
-        """Extraction should return data but NOT save to DB."""
+        """Extraction returns extracted data and persists protocol fields."""
         content = "Population: Patients with liver cancer.\nIndex Test: MRI."
         r = client.post(
             f"/api/projects/{project}/pico/extract",
             files={"file": ("protocol.txt", content.encode(), "text/plain")},
         )
         assert r.status_code == 200
-        # Verify PICO was NOT saved
+        # Verify PICO was saved
         pico_r = client.get(f"/api/projects/{project}/pico")
         pico_data = pico_r.json()
-        assert pico_data["population"] == ""  # Not saved
+        assert pico_data["population"] == "Patients with liver cancer."
 
 
 # ── PubMed fetch endpoint ──
@@ -218,7 +218,7 @@ class TestPubMedFetch:
         """Mock the PubMed search to avoid real API calls."""
         from services import pubmed_service
 
-        def mock_batch_search(query, api_key="", max_results=50):
+        def mock_batch_search(query, api_key="", max_results=50, **kwargs):
             return [
                 {"title": "Test Study 1", "authors": "Smith J", "journal": "Radiology",
                  "publication_year": 2023, "doi": "10.1/test1", "pmid": "11111", "source": "PubMed"},
@@ -242,7 +242,7 @@ class TestPubMedFetch:
         """Studies with existing PMIDs should be skipped."""
         from services import pubmed_service
 
-        def mock_batch_search(query, api_key="", max_results=50):
+        def mock_batch_search(query, api_key="", max_results=50, **kwargs):
             return [
                 {"title": "Test Study 1", "authors": "Smith J", "journal": "Radiology",
                  "publication_year": 2023, "doi": "10.1/test1", "pmid": "11111", "source": "PubMed"},
