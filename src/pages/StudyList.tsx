@@ -12,10 +12,11 @@ import {
 import { judgmentColor, judgmentLabel } from "../lib/utils";
 import { useRef, useState, useCallback } from "react";
 
-export function StudyList() {
+export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean }) {
   const { projectId } = useParams<{ projectId: string }>();
   const bookmarks = useBookmarks(projectId);
-  const [savedOnly, setSavedOnly] = useState(false);
+  const [savedFilter, setSavedOnly] = useState(false);
+  const savedOnly = bookmarkedOnly || savedFilter;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -101,14 +102,17 @@ export function StudyList() {
             )}
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#141413] tracking-tight">
-            Studies & Clinical Benchmarks
+            {bookmarkedOnly ? "Bookmarked studies" : "Studies & Clinical Benchmarks"}
           </h1>
           <p className="font-serif italic text-sm text-[#6B665E] mt-1">
-            Verified study extraction records, bounding box quote locators, and evidence quality reviews.
+            {bookmarkedOnly ? "Your saved studies for reviewing later. Remove a bookmark when you no longer need it." : "Verified study extraction records, bounding box quote locators, and evidence quality reviews."}
           </p>
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5 shrink-0">
+          <Link to={`/projects/${projectId}/${bookmarkedOnly ? "studies" : "bookmarks"}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/15 text-xs font-medium hover:bg-black/5">
+            {bookmarkedOnly ? "View all studies" : "View bookmarked studies"}
+          </Link>
           {/* Hidden reference file input */}
           <input
             ref={fileInputRef}
@@ -259,7 +263,7 @@ export function StudyList() {
       )}
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length})</label>
+        {bookmarkedOnly ? <span className="font-medium">{(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length} bookmarked studies</span> : <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length})</label>}
         <span className="text-xs text-slate-500">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
         {bookmarks.error && <span role="alert" className="text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
       </div>

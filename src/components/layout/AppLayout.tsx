@@ -2,7 +2,7 @@ import { Outlet, NavLink, useParams, Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useState, useEffect } from "react";
-import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles, Bell } from "lucide-react";
+import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles, Bell, Bookmark } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ErrorBoundary } from "../common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "../common/ClarificationNotificationCenter";
@@ -19,6 +19,7 @@ const projectNavItems = (projectId: string) => [
   { to: `/projects/${projectId}`, label: "Dashboard", icon: Folder, end: true },
   { to: `/projects/${projectId}/pico`, label: "PICO & Hypothesis", icon: Target },
   { to: `/projects/${projectId}/studies`, label: "Studies", icon: FileText },
+  { to: `/projects/${projectId}/bookmarks`, label: "Bookmarked studies", icon: Bookmark },
   { to: `/projects/${projectId}/screening`, label: "Screening", icon: CheckSquare },
   { to: `/projects/${projectId}/extraction`, label: "Data Extraction (PDF)", icon: Highlighter, badge: "Docling" },
   { to: `/projects/${projectId}/extraction-sheet`, label: "Extraction Sheet", icon: FileSpreadsheet, badge: "Matrix" },
