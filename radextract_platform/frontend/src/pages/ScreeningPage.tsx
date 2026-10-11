@@ -1,3 +1,5 @@
+import { BookmarkButton } from "../components/common/BookmarkButton";
+import { useBookmarks } from "../lib/bookmarks";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
@@ -61,6 +63,8 @@ import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal"
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const bookmarks = useBookmarks(projectId);
+  const [savedOnly, setSavedOnly] = useState(false);
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -279,11 +283,11 @@ export function ScreeningPage() {
   const selectedStudy = useMemo(() => {
     if (!studyList || studyList.length === 0) return null;
     if (selectedStudyId) {
-      const found = studyList.find((s) => s.study_id === selectedStudyId);
+      const found = studyList.find((s) => s.study_id === selectedStudyId && (!savedOnly || bookmarks.ids.includes(s.study_id)));
       if (found) return found;
     }
-    return studyList[0];
-  }, [studyList, selectedStudyId]);
+    return studyList.find(s => !savedOnly || bookmarks.ids.includes(s.study_id)) || null;
+  }, [studyList, selectedStudyId, savedOnly, bookmarks.ids]);
 
   // Clear reason and save validation errors when reviewer navigates to a different study
   const prevActiveStudyIdRef = useRef<string | null>(null);
@@ -300,6 +304,7 @@ export function ScreeningPage() {
   // Filtered Studies List
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
+      if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
       // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -317,7 +322,7 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studies, searchQuery, confidenceFilter]);
+  }, [studies, searchQuery, confidenceFilter, savedOnly, bookmarks.ids]);
 
   // Mutations
   const startFullPipelineMutation = useMutation({
@@ -829,6 +834,9 @@ export function ScreeningPage() {
       {/* Filter and Search Bar */}
       <div className="bg-white border-b border-slate-200 px-6 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({studyList.filter(s => bookmarks.ids.includes(s.study_id)).length})</label>
+          <span className="text-xs text-slate-500">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
+          {bookmarks.error && <span role="alert" className="text-xs text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
           {/* Stage & Status Filter Tabs */}
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex bg-slate-100 p-0.5 rounded-lg text-xs font-medium text-slate-600">
@@ -1101,6 +1109,7 @@ export function ScreeningPage() {
                       <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 leading-snug">
                         {study.title}
                       </h3>
+                      <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
                       {conf !== null && (
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
@@ -1219,6 +1228,7 @@ export function ScreeningPage() {
                   <h2 className="text-base font-bold text-slate-900 leading-tight">
                     {selectedStudy.title}
                   </h2>
+                  <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
                   <span
                     className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap ${
                       selectedStudy.screening_status === "included" || selectedStudy.screening_status === "ta_included"

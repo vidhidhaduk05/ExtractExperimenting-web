@@ -378,9 +378,9 @@
     "semantic_hash": "00702c0f804b51e9fe1af3cf813f76ff"
   },
   "radextract_platform/backend/routers/studies.py": {
-    "mtime": 1791664521.036887,
-    "seen": 1791664941.925462,
-    "ast_hash": "5f8db13d20cb660785247dcdd782bc86",
+    "mtime": 1791711918.4163344,
+    "seen": 1791712007.8093872,
+    "ast_hash": "9a0baf1b0a9090a0e866be2784755cc0",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/variables.py": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
-    "mtime": 1791669962.178494,
-    "seen": 1791670184.405132,
-    "ast_hash": "57c967ca3cc98f16484c98f9d4e3b809",
+    "mtime": 1791711653.573143,
+    "seen": 1791712008.2835758,
+    "ast_hash": "eac6f02ee0519e0938d92b0d74f4747d",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyImport.tsx": {
@@ -918,9 +918,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyList.tsx": {
-    "mtime": 1791667811.4854023,
-    "seen": 1791668444.9796057,
-    "ast_hash": "5e1ab6c3178b5c9bc2436002fd6fe927",
+    "mtime": 1791711977.5750647,
+    "seen": 1791712008.2835758,
+    "ast_hash": "82e177372c3ffd8c77c1d707830a806d",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/vite-env.d.ts": {
@@ -2034,9 +2034,9 @@
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1791709049.1632538,
-    "seen": 1791709179.190181,
-    "ast_hash": "fb66bd6fc2a39cdd22d98c0d4acc9d01",
+    "mtime": 1791711924.5751595,
+    "seen": 1791712008.3048954,
+    "ast_hash": "029ed15e3691813c570dce984458f04b",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {
@@ -2361,6 +2361,36 @@
     "mtime": 1791709161.4493504,
     "seen": 1791709318.9008532,
     "ast_hash": "4ae87743fc85e60aac18f59e7949beb3",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_bookmarks.py": {
+    "mtime": 1791711919.6924212,
+    "seen": 1791712008.0339231,
+    "ast_hash": "39518b9099f62fc59690467520d29199",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/common/BookmarkButton.test.tsx": {
+    "mtime": 1791711819.4427247,
+    "seen": 1791712008.1726446,
+    "ast_hash": "43af4991d318f05a7c7a04ba8a5f4299",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/common/BookmarkButton.tsx": {
+    "mtime": 1791711615.2610133,
+    "seen": 1791712008.1726446,
+    "ast_hash": "e20e2443b6823392d55c1d7ec0ed7551",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/lib/bookmarks.test.ts": {
+    "mtime": 1791711817.026474,
+    "seen": 1791712008.2188687,
+    "ast_hash": "1f150b1424394ee8bc049b8b41981391",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/lib/bookmarks.ts": {
+    "mtime": 1791711612.3490126,
+    "seen": 1791712008.2188687,
+    "ast_hash": "f0fc675583a3daf749a69a507cf818a7",
     "semantic_hash": ""
   }
 }

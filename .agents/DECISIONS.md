@@ -97,3 +97,10 @@ Source file: `d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protoc
 - Conservative lint checks obvious delimiters/operators, known cross-interface syntax, placeholders and PubMed wildcard/proximity incompatibility; it does not certify live database acceptance or vocabulary validity.
 - One AI repair attempt; valid queries stay unchanged. Failure returns a clear error before persistence and preserves saved searches; no silent deterministic fallback. Legacy deterministic helper remains for compatibility only.
 - Manual edits and uploaded protocol searches are not rewritten.
+
+## 2026-10-11 — Personal study bookmarks
+
+- Save-for-later controls appear in Studies and Screening, with a saved-only filter and count. Bookmarking does not change study eligibility, screening decisions, reasons, or extraction status.
+- Authenticated bookmarks are personal to each reviewer and project, reusing user_review_state with stage=bookmark and status=saved. Viewer membership is sufficient; non-members and unauthenticated requests are rejected.
+- Saves are idempotent. Removing a study cleans up its personal bookmarks. Failed saves/removals are surfaced with retry and do not report success.
+- Demo bookmarks persist in browser storage, scoped by demo user and project, with explicit browser-only labeling. Live API failures never silently switch bookmark storage to demo mode.

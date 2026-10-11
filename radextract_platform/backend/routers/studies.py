@@ -10,13 +10,59 @@ from models import StudyCreate, StudyUpdate, StudyResponse
 from database import get_db
 from services.db_backend import DBBackend
 from config import settings
-from dependencies import get_current_user_optional, check_project_access
+from dependencies import get_current_user, get_current_user_optional, check_project_access
+from pydantic import BaseModel, StrictBool
 from services import pdf_service, auto_extract_service
 from services.pipeline_service import run_pdf_screening_pipeline
 from services import docling_extract_service
 from services.storage_backend import get_storage, resolve_pdf_path
 
 router = APIRouter(prefix="/api", tags=["studies"])
+
+
+class BookmarkUpdate(BaseModel):
+    bookmarked: StrictBool
+
+
+@router.get("/projects/{project_id}/bookmarks")
+async def list_bookmarks(project_id: str, user: dict = Depends(get_current_user),
+                         conn: DBBackend = Depends(get_db)):
+    if not conn.get("projects", project_id):
+        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_access(conn, project_id, user, min_role="viewer")
+    saved = conn.query("user_review_state", {
+        "user_id": user["user_id"], "project_id": project_id,
+        "stage": "bookmark", "status": "saved",
+    })
+    existing = {s["study_id"] for s in conn.query("studies", {"project_id": project_id})}
+    return {"study_ids": sorted({s["study_id"] for s in saved if s["study_id"] in existing})}
+
+
+@router.put("/studies/{study_id}/bookmark")
+async def set_bookmark(study_id: str, body: BookmarkUpdate,
+                       user: dict = Depends(get_current_user), conn: DBBackend = Depends(get_db)):
+    study = conn.get("studies", study_id)
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    project_id = study["project_id"]
+    check_project_access(conn, project_id, user, min_role="viewer")
+    # Deterministic per-user ID makes repeated saves idempotent across stores.
+    state_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f'bookmark:{user["user_id"]}:{project_id}:{study_id}'))
+    if body.bookmarked:
+        data = {"user_id": user["user_id"], "project_id": project_id,
+                "study_id": study_id, "stage": "bookmark", "status": "saved"}
+        if not conn.update("user_review_state", state_id, data):
+            try:
+                conn.insert("user_review_state", {"state_id": state_id, **data})
+            except sqlite3.IntegrityError:
+                # Another request may have inserted the same bookmark meanwhile.
+                if not conn.update("user_review_state", state_id, data):
+                    raise HTTPException(status_code=503, detail="Bookmark could not be saved. Please retry.")
+    else:
+        if not conn.delete("user_review_state", state_id) and conn.get("user_review_state", state_id):
+            raise HTTPException(status_code=503, detail="Bookmark could not be removed. Please retry.")
+    conn.commit()
+    return {"study_id": study_id, "bookmarked": body.bookmarked}
 
 
 @router.get("/projects/{project_id}/studies")
@@ -114,6 +160,9 @@ async def delete_study(study_id: str, user: Optional[dict] = Depends(get_current
     conn: DBBackend = Depends(get_db)):
     _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
     if _pid: check_project_access(conn, _pid["project_id"], user)
+    for bookmark in conn.query("user_review_state", {"study_id": study_id, "stage": "bookmark"}):
+        if not conn.delete("user_review_state", bookmark["state_id"]):
+            raise HTTPException(status_code=503, detail="Study bookmarks could not be removed. Please retry.")
     cursor = conn.execute(
         "DELETE FROM studies WHERE study_id = ?", (study_id,)
     )
