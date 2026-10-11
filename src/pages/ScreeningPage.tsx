@@ -238,8 +238,9 @@ export function ScreeningPage() {
   const [extractingStudyId, setExtractingStudyId] = useState<string | null>(null);
 
   // Map study_id -> existing RoB assessment (for Start RoB / View RoB rendering)
-  const robByStudy = new Map(
-    (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
+  const robByStudy = useMemo(
+    () => new Map((robSummary?.assessments || []).map((a: any) => [a.study_id, a])),
+    [robSummary?.assessments]
   );
 
   const handleStartRob = async (study: Study) => {
@@ -316,7 +317,10 @@ export function ScreeningPage() {
   }, [studies, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
 
   // Selection and keyboard actions use the same visible record set as all filters.
-  const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || null;
+  const selectedStudy = useMemo(
+    () => filteredStudies.find((s) => s.study_id === selectedStudyId) || filteredStudies[0] || null,
+    [filteredStudies, selectedStudyId]
+  );
   const prevActiveStudyIdRef = useRef<string | null>(null);
   useEffect(() => {
     const currentId = selectedStudy?.study_id || null;

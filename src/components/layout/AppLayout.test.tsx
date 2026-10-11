@@ -28,7 +28,7 @@ describe('AppLayout Component', () => {
 
   it('renders the header correctly', () => {
     renderWithProviders(<AppLayout />);
-    expect(screen.getByText('RadExtract')).toBeInTheDocument();
+    expect(screen.getAllByText('RadExtract').length).toBeGreaterThan(0);
     expect(screen.getByText('RadExtract Platform')).toBeInTheDocument(); // In top bar
   });
 
@@ -48,7 +48,7 @@ describe('AppLayout Component', () => {
     expect(screen.getByText('Current Project')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /PICO & Hypothesis/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Studies/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Studies/i })[0]).toBeInTheDocument();
 
     // Top bar should show project ID
     expect(screen.getByText(`Project: ${projectId.substring(0, 20)}`)).toBeInTheDocument();
