@@ -9,15 +9,28 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 import time
 import urllib.request
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("jules_monitor")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-API_KEY = "AQ.Ab8RN6KpRDE0t3Zij8KVIm8jnloStXmx1UlzxjcMfcWLGYqKKg"
+# Load .env from the same directory as this script
+_env_path = Path(__file__).parent / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
+
+API_KEY = os.environ.get("JULES_API_KEY", "")
+if not API_KEY:
+    raise RuntimeError("JULES_API_KEY not set. Add it to .agents/.env")
 BASE_URL = "https://jules.googleapis.com/v1alpha"
 
 

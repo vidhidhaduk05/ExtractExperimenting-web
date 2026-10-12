@@ -1,10 +1,23 @@
 import urllib.request
 import json
+import os
 import sys
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-API_KEY = "AQ.Ab8RN6KpRDE0t3Zij8KVIm8jnloStXmx1UlzxjcMfcWLGYqKKg"
+# Load .env from the same directory as this script
+_env_path = Path(__file__).parent / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
+
+API_KEY = os.environ.get("JULES_API_KEY", "")
+if not API_KEY:
+    raise RuntimeError("JULES_API_KEY not set. Add it to .agents/.env")
 URL = "https://jules.googleapis.com/v1alpha/sessions"
 
 prompt_text = """Fix all failing pytest tests and stabilize deployment configs for ExtractExperimenting:
