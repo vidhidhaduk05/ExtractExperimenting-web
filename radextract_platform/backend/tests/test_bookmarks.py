@@ -94,6 +94,7 @@ def test_http_routes_require_authentication(db):
     with TestClient(app) as client:
         assert client.get("/api/projects/p1/bookmarks").status_code == 401
         assert client.put("/api/studies/p1-study/bookmark", json={"bookmarked": True}).status_code == 401
+    app.dependency_overrides.clear()
 
 
 def test_failed_removal_is_reported(db, monkeypatch):
