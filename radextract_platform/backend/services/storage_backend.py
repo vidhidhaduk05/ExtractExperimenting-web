@@ -72,7 +72,12 @@ class LocalStorage(StorageBackend):
         self.root.mkdir(parents=True, exist_ok=True)
 
     def _full_path(self, key: str) -> Path:
-        return self.root / key
+        resolved_root = self.root.resolve()
+        key_norm = key.replace("\\", "/")
+        resolved_path = (self.root / key_norm).resolve()
+        if not resolved_path.is_relative_to(resolved_root):
+            raise ValueError(f"Access denied: path traversal attempt in key '{key}'")
+        return resolved_path
 
     def save_bytes(self, key: str, data: bytes) -> str:
         path = self._full_path(key)

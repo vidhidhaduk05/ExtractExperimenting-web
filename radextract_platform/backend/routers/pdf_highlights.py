@@ -190,7 +190,7 @@ async def list_project_highlights(project_id: str, user: Optional[dict] = Depend
     ).fetchone()
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
-        check_project_access(conn, project_id, user)
+    check_project_access(conn, project_id, user)
 
     rows = conn.execute(
         """SELECT h.*, s.title as study_title

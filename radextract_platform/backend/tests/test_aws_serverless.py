@@ -48,6 +48,23 @@ class TestStorageBackend:
             backend = get_storage()
             assert isinstance(backend, LocalStorage)
 
+    def test_local_storage_path_traversal_protection(self, tmp_path):
+        storage = LocalStorage(root=str(tmp_path))
+        traversal_keys = ["../../../etc/passwd", "/etc/passwd", "..\\..\\windows\\system32"]
+
+        for key in traversal_keys:
+            with pytest.raises(ValueError, match="Access denied: path traversal attempt"):
+                storage.get_bytes(key)
+
+            with pytest.raises(ValueError, match="Access denied: path traversal attempt"):
+                storage.save_bytes(key, b"malicious content")
+
+            with pytest.raises(ValueError, match="Access denied: path traversal attempt"):
+                storage.get_file_path(key)
+
+            with pytest.raises(ValueError, match="Access denied: path traversal attempt"):
+                storage.delete_file(key)
+
 
 class TestDBBackend:
     def test_sqlite_backend_crud(self, tmp_path, monkeypatch):
