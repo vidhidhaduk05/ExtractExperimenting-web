@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
+from services.db_backend import SQLiteBackend
 from config import settings
 
 
@@ -14,7 +15,16 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
     reset_db()
     init_db()
+    db = SQLiteBackend(get_connection())
+    db.insert("users", {"user_id": "single_reviewer", "username": "Reviewer One", "password_hash": "test"})
+    db.commit()
+    from dependencies import get_current_user, get_current_user_optional
+    mock_user = {"user_id": "single_reviewer", "username": "Reviewer One", "role": "owner"}
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_current_user_optional] = lambda: mock_user
     yield
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_current_user_optional, None)
 
 
 @pytest.fixture

@@ -26,7 +26,17 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
     reset_db()
     init_db()
+    db = SQLiteBackend(get_connection())
+    db.insert("users", {"user_id": "test_user", "username": "test_user", "password_hash": "test"})
+    db.commit()
+    from main import app
+    from dependencies import get_current_user, get_current_user_optional
+    mock_user = {"user_id": "test_user", "username": "test_user", "role": "owner"}
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_current_user_optional] = lambda: mock_user
     yield
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_current_user_optional, None)
 
 
 @pytest.fixture
@@ -46,6 +56,9 @@ def _make_project_and_study(client, title="RCT of Drug X", design="randomized co
         "abstract": "A randomized trial of Drug X versus placebo in 200 adults.",
     })
     sid = r.json()["study_id"]
+    conn = get_connection()
+    conn.execute("UPDATE studies SET screening_stage = 'ft' WHERE study_id = ?", (sid,))
+    conn.commit()
     return pid, sid
 
 

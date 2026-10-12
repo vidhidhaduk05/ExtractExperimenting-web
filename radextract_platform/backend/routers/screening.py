@@ -577,8 +577,8 @@ async def create_screening_decision(
     if body.stage != record_stage:
         raise HTTPException(status_code=409, detail="Screening stage changed or does not match this record. Refresh before saving.")
 
-    reviewer_id = user["user_id"]
-    reviewer_name = user["username"]
+    reviewer_id = (user and user.get("user_id")) or body.reviewer_id or "anonymous_reviewer"
+    reviewer_name = (user and user.get("username")) or body.reviewer_name or "Anonymous Reviewer"
 
     # Get screening config for blind mode
     proj = conn.execute(

@@ -100,7 +100,9 @@ class TestCriteria:
 class TestSearchStrings:
     """Tests for search string generation endpoints."""
 
-    def test_generate_search_strings(self, client, project_with_pico):
+    def test_generate_search_strings(self, client, project_with_pico, monkeypatch):
+        from services import search_string_generator
+        monkeypatch.setattr(search_string_generator, "generate_ai_search_strings", lambda pico, q="": search_string_generator.generate_search_strings(pico))
         r = client.post(f"/api/projects/{project_with_pico}/search-strings/generate")
         assert r.status_code == 200
         data = r.json()
@@ -113,7 +115,9 @@ class TestSearchStrings:
         assert "cinahl" in strings
         assert len(strings["pubmed"]) > 20
 
-    def test_get_search_strings_after_generate(self, client, project_with_pico):
+    def test_get_search_strings_after_generate(self, client, project_with_pico, monkeypatch):
+        from services import search_string_generator
+        monkeypatch.setattr(search_string_generator, "generate_ai_search_strings", lambda pico, q="": search_string_generator.generate_search_strings(pico))
         client.post(f"/api/projects/{project_with_pico}/search-strings/generate")
         r = client.get(f"/api/projects/{project_with_pico}/search-strings")
         assert r.status_code == 200
@@ -209,8 +213,10 @@ class TestPubMedFetch:
         assert r.status_code == 404
 
     @pytest.fixture
-    def project_with_search_string(self, client, project_with_pico):
+    def project_with_search_string(self, client, project_with_pico, monkeypatch):
         """Generate search strings so PubMed string is saved."""
+        from services import search_string_generator
+        monkeypatch.setattr(search_string_generator, "generate_ai_search_strings", lambda pico, q="": search_string_generator.generate_search_strings(pico))
         client.post(f"/api/projects/{project_with_pico}/search-strings/generate")
         return project_with_pico
 

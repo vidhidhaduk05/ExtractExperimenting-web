@@ -14,7 +14,17 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
     reset_db()
     init_db()
+    from services.db_backend import SQLiteBackend
+    db = SQLiteBackend(get_connection())
+    db.insert("users", {"user_id": "test_user", "username": "test_user", "password_hash": "test"})
+    db.commit()
+    from dependencies import get_current_user, get_current_user_optional
+    mock_user = {"user_id": "test_user", "username": "test_user", "role": "owner"}
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_current_user_optional] = lambda: mock_user
     yield
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_current_user_optional, None)
 
 
 @pytest.fixture
