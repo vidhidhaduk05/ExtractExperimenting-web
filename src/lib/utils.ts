@@ -49,3 +49,51 @@ export function judgmentDotColor(judgment: string): string {
   };
   return colors[judgment] || "#CCCCCC";
 }
+
+/**
+ * Sanitizes raw SVG strings by parsing them with DOMParser and removing
+ * dangerous tags (<script>, <iframe>, etc.), inline event handlers (onload, onerror, etc.),
+ * and dangerous URI protocols (javascript:, data:) from href and xlink:href attributes.
+ */
+export function sanitizeSvg(svgString: string): string {
+  if (!svgString) return "";
+
+  // Return original input if DOMParser is unavailable (e.g. non-browser test environment without DOM)
+  if (typeof DOMParser === "undefined") {
+    return svgString;
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svgString, "text/html");
+
+  // Remove dangerous executable / embed tags
+  const forbiddenTags = ["script", "iframe", "object", "embed", "foreignobject"];
+  forbiddenTags.forEach((tag) => {
+    const elements = doc.querySelectorAll(tag);
+    elements.forEach((el) => el.remove());
+  });
+
+  // Clean attributes on all elements
+  const allElements = doc.querySelectorAll("*");
+  allElements.forEach((el) => {
+    const attrs = Array.from(el.attributes);
+    attrs.forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      const val = attr.value.trim().toLowerCase();
+
+      // Remove inline event handlers (e.g. onload, onerror, onclick)
+      if (name.startsWith("on")) {
+        el.removeAttribute(attr.name);
+      }
+
+      // Remove dangerous protocol schemes in link attributes
+      if (name === "href" || name === "xlink:href" || name.endsWith(":href")) {
+        if (val.startsWith("javascript:") || val.startsWith("data:")) {
+          el.removeAttribute(attr.name);
+        }
+      }
+    });
+  });
+
+  return doc.body.innerHTML || "";
+}
