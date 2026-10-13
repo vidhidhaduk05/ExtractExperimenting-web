@@ -3,8 +3,19 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
-from database import get_connection
+from database import get_connection, reset_db, init_db
+from config import settings
 from dependencies import create_access_token
+
+
+@pytest.fixture(autouse=True)
+def fresh_db(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "db_path", str(tmp_path / "test_graphify_auth.db"))
+    monkeypatch.setattr(settings, "upload_root", str(tmp_path / "uploads"))
+    monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
+    reset_db()
+    init_db()
+    yield
 
 
 @pytest.fixture
