@@ -664,6 +664,12 @@ ABSTRACT_PICO_PATTERNS = {
     ],
 }
 
+# Module-level pre-compiled regex objects for high-throughput abstract scanning
+_COMPILED_ABSTRACT_PICO_PATTERNS = {
+    field: [re.compile(p, re.IGNORECASE) for p in patterns]
+    for field, patterns in ABSTRACT_PICO_PATTERNS.items()
+}
+
 
 def extract_pico_spans_from_abstract(abstract: str) -> list[dict]:
     """Extract PICO spans from a study abstract for highlighting.
@@ -680,11 +686,10 @@ def extract_pico_spans_from_abstract(abstract: str) -> list[dict]:
         return []
 
     spans = []
-    abstract_lower = abstract.lower()
 
-    for field, patterns in ABSTRACT_PICO_PATTERNS.items():
-        for pattern in patterns:
-            for match in re.finditer(pattern, abstract, re.IGNORECASE):
+    for field, compiled_patterns in _COMPILED_ABSTRACT_PICO_PATTERNS.items():
+        for pattern in compiled_patterns:
+            for match in pattern.finditer(abstract):
                 # Determine the span — use the full match or the captured group
                 if match.lastindex and match.lastindex >= 1:
                     # Use the captured group if it's substantial
@@ -711,7 +716,8 @@ def extract_pico_spans_from_abstract(abstract: str) -> list[dict]:
                     continue
 
                 # Confidence based on pattern specificity
-                confidence = 0.8 if "index test" in pattern or "reference standard" in pattern or "primary outcome" in pattern else 0.6
+                pat_str = pattern.pattern
+                confidence = 0.8 if "index test" in pat_str or "reference standard" in pat_str or "primary outcome" in pat_str else 0.6
 
                 spans.append({
                     "field": field,
