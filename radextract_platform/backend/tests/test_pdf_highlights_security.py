@@ -1,12 +1,13 @@
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from database import get_connection
+from database import get_connection, init_db
 
 client = TestClient(app)
 
 def test_list_project_highlights_access_control():
     """Verify that list_project_highlights enforces project access control."""
+    init_db()
     # Create a dummy project directly in DB
     conn = get_connection()
     conn.execute("INSERT OR REPLACE INTO projects (project_id, name) VALUES ('p_sec_test', 'Security Test Project')")
@@ -21,6 +22,7 @@ def test_list_project_highlights_access_control():
 
 def test_list_study_highlights_access_control():
     """Verify that list_study_highlights enforces project access control for study."""
+    init_db()
     conn = get_connection()
     conn.execute("INSERT OR REPLACE INTO projects (project_id, name) VALUES ('p_sec_test2', 'Security Test Project 2')")
     conn.execute("INSERT OR REPLACE INTO studies (study_id, project_id, title) VALUES ('s_sec_test2', 'p_sec_test2', 'Test Study')")
