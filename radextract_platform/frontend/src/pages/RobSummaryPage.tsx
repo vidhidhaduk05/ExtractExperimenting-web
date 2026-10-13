@@ -354,6 +354,18 @@ function TrafficLightChart({
   const domainKeys = rawAssessments[0]?.domains?.map((d) => d.domain_key) || [];
   const domainLabels = rawAssessments[0]?.domains?.map((d) => d.domain_label) || [];
 
+  const domainMapByAssessment = useMemo(() => {
+    const map = new Map<string, Map<string, any>>();
+    assessments.forEach((a) => {
+      const dMap = new Map<string, any>();
+      (a.domains || []).forEach((d) => {
+        if (d.domain_key) dMap.set(d.domain_key, d);
+      });
+      map.set(a.assessment_id, dMap);
+    });
+    return map;
+  }, [assessments]);
+
   return (
     <div className="card p-5 overflow-x-auto">
       <div className="flex items-center justify-between mb-4">
@@ -419,7 +431,7 @@ function TrafficLightChart({
                   </div>
                 </td>
                 {domainKeys.map((dKey, i) => {
-                  const domain = a.domains.find((d) => d.domain_key === dKey);
+                  const domain = domainMapByAssessment.get(a.assessment_id)?.get(dKey);
                   const judgment = domain?.risk_judgment || "pending";
                   return (
                     <td key={i} className="px-2 py-2 border-b border-gray-100 text-center">

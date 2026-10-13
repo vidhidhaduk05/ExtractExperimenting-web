@@ -1,5 +1,9 @@
 # Bolt's Journal - Performance Learnings
 
+## 2026-10-12 - Fast Substring Pre-Check & Map Memoization for Matrix Views
+**Learning:** In React screening and data matrix views, re-instantiating `RegExp` objects inside render loops and executing linear array `.find()` scans for study PDF lookups, matrix cell extractions, or domain assessments causes significant render frame lag during interactions and scrolling. Fast `String.prototype.includes` pre-filtering before regex execution eliminates unnecessary regex matching. Pre-building Map lookup tables with `useMemo` for $O(1)$ constant-time key access eliminates $O(N)$ and $O(N \times M)$ array scans across large study and variable matrices.
+**Action:** Pre-check string presence with `.includes()` prior to `RegExp` execution in highlight render functions, cache compiled `RegExp` objects, and wrap array-to-Map lookup conversions in `useMemo` for tabular matrix views.
+
 ## 2026-10-10 - Length Ratio Upper-Bound Pre-Check & LRU Caching for Title Similarity
 **Learning:** In systematic review deduplication services running $O(N^2)$ pairwise title comparisons across hundreds or thousands of studies, difflib `SequenceMatcher` string similarity ratio calculations are a major CPU bottleneck. Since SequenceMatcher's ratio is bounded above by $2 \cdot \min(|a|, |b|) / (|a| + |b|)$, checking if this mathematical upper bound is strictly below the duplicate similarity threshold (e.g., 0.90) allows skipping expensive edit distance calculations for string pairs with dissimilar lengths. Combining this bound check with exact string equality fast-paths and `@lru_cache(maxsize=2048)` speeds up pairwise title deduplication by ~40% to >900x for duplicate pairs.
 **Action:** When computing pairwise string similarity thresholds with `difflib.SequenceMatcher`, check the $2 \cdot \min(|a|, |b|) / (|a| + |b|)$ length upper bound before invoking `ratio()` and memoize similarity calls with `@lru_cache`.

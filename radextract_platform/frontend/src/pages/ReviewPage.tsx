@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
@@ -42,6 +42,12 @@ export function ReviewPage() {
     queryFn: () => api.listStudies(projectId!),
     enabled: !!projectId,
   });
+
+  const studyPdfMap = useMemo(() => {
+    const map = new Map<string, string | null | undefined>();
+    (studies || []).forEach((st) => map.set(st.study_id, st.pdf_path));
+    return map;
+  }, [studies]);
 
   const { data: variables } = useQuery({
     queryKey: ["variables", projectId],
@@ -266,7 +272,7 @@ export function ReviewPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {(matrix.studies || []).map((s) => {
-                const studyHasPdf = (studies || []).find((st) => st.study_id === s.study_id)?.pdf_path;
+                const studyHasPdf = studyPdfMap.get(s.study_id);
                 return (
                 <tr key={s.study_id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 sticky left-0 bg-white">
