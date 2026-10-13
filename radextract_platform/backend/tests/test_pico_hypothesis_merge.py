@@ -100,6 +100,28 @@ class TestCriteria:
 class TestSearchStrings:
     """Tests for search string generation endpoints."""
 
+    @pytest.fixture(autouse=True)
+    def mock_generator(self, monkeypatch):
+        from services import search_string_generator
+        mock_strings = {
+            "pubmed": "(colorectal cancer[MeSH Terms]) AND (MRI[Title/Abstract])",
+            "embase": "'colorectal cancer'/exp AND 'mri'",
+            "cochrane": "#1 AND #2",
+            "web_of_science": "TS=(colorectal cancer) AND TS=(MRI)",
+            "scopus": "TITLE-ABS-KEY(colorectal cancer)",
+            "cinahl": "(MH colorectal cancer) AND (MRI)",
+        }
+        monkeypatch.setattr(
+            search_string_generator,
+            "generate_search_strings",
+            lambda pico, req_q="", hyp="": mock_strings,
+        )
+        monkeypatch.setattr(
+            search_string_generator,
+            "generate_ai_search_strings",
+            lambda pico, req_q="": mock_strings,
+        )
+
     def test_generate_search_strings(self, client, project_with_pico):
         r = client.post(f"/api/projects/{project_with_pico}/search-strings/generate")
         assert r.status_code == 200
@@ -209,8 +231,27 @@ class TestPubMedFetch:
         assert r.status_code == 404
 
     @pytest.fixture
-    def project_with_search_string(self, client, project_with_pico):
+    def project_with_search_string(self, client, project_with_pico, monkeypatch):
         """Generate search strings so PubMed string is saved."""
+        from services import search_string_generator
+        mock_strings = {
+            "pubmed": "(colorectal cancer[MeSH Terms]) AND (MRI[Title/Abstract])",
+            "embase": "'colorectal cancer'/exp AND 'mri'",
+            "cochrane": "#1 AND #2",
+            "web_of_science": "TS=(colorectal cancer) AND TS=(MRI)",
+            "scopus": "TITLE-ABS-KEY(colorectal cancer)",
+            "cinahl": "(MH colorectal cancer) AND (MRI)",
+        }
+        monkeypatch.setattr(
+            search_string_generator,
+            "generate_search_strings",
+            lambda pico, req_q="", hyp="": mock_strings,
+        )
+        monkeypatch.setattr(
+            search_string_generator,
+            "generate_ai_search_strings",
+            lambda pico, req_q="": mock_strings,
+        )
         client.post(f"/api/projects/{project_with_pico}/search-strings/generate")
         return project_with_pico
 

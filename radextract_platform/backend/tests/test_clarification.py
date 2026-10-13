@@ -8,8 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from config import settings
-from database import init_db, reset_db
+from database import init_db, reset_db, get_connection
 from main import app
+from dependencies import get_current_user, get_current_user_optional
 from services.clarification_generator import screen_with_clarification
 from services.clarification_resolver import resolve_clarification
 
@@ -19,9 +20,19 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "db_path", str(tmp_path / "test_clar.db"))
     monkeypatch.setattr(settings, "upload_root", str(tmp_path / "uploads"))
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": "human_reviewer1", "username": "Human Reviewer", "role": "owner"}
+    app.dependency_overrides[get_current_user_optional] = lambda: {"user_id": "human_reviewer1", "username": "Human Reviewer", "role": "owner"}
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES (?, ?, ?, ?)",
+        ("human_reviewer1", "Human Reviewer", "test", "reviewer")
+    )
+    conn.commit()
     yield
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_current_user_optional, None)
 
 
 @pytest.fixture

@@ -24,9 +24,20 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "db_path", db_path)
     monkeypatch.setattr(settings, "upload_root", str(tmp_path / "uploads"))
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
+    from dependencies import get_current_user, get_current_user_optional
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": "r1", "username": "Alice", "role": "owner"}
+    app.dependency_overrides[get_current_user_optional] = lambda: {"user_id": "r1", "username": "Alice", "role": "owner"}
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES (?, ?, ?, ?)",
+        ("r1", "Alice", "test", "reviewer")
+    )
+    conn.commit()
     yield
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_current_user_optional, None)
 
 
 @pytest.fixture
@@ -38,7 +49,7 @@ def _db():
     return SQLiteBackend(get_connection())
 
 
-def _make_project_and_study(client, title="RCT of Drug X", design="randomized controlled trial"):
+def _make_project_and_study(client, title="RCT of Drug X", design="randomized controlled trial", stage="ft"):
     r = client.post("/api/projects", json={"name": "RoB Integration Review"})
     pid = r.json()["project_id"]
     r = client.post(f"/api/projects/{pid}/studies", json={
@@ -46,6 +57,8 @@ def _make_project_and_study(client, title="RCT of Drug X", design="randomized co
         "abstract": "A randomized trial of Drug X versus placebo in 200 adults.",
     })
     sid = r.json()["study_id"]
+    if stage:
+        client.put(f"/api/studies/{sid}", json={"screening_stage": stage})
     return pid, sid
 
 

@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import get_current_user
 
 
 @pytest.fixture(autouse=True)
@@ -12,9 +13,11 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "db_path", str(tmp_path / "test_screen_fixes.db"))
     monkeypatch.setattr(settings, "upload_root", str(tmp_path / "uploads"))
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": "single_reviewer", "username": "Reviewer One", "role": "reviewer"}
     reset_db()
     init_db()
     yield
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.fixture
@@ -25,6 +28,16 @@ def client():
 def _setup_project_and_study(client):
     p = client.post("/api/projects", json={"name": "Fixes Test Project"}).json()
     pid = p["project_id"]
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES (?, ?, ?, ?)",
+        ("single_reviewer", "Reviewer One", "test", "reviewer")
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)",
+        (f"pm_{pid}", pid, "single_reviewer", "owner")
+    )
+    conn.commit()
     s = client.post(f"/api/projects/{pid}/studies", json={
         "project_id": pid,
         "title": "Clinical Trial in Diagnostic Imaging",

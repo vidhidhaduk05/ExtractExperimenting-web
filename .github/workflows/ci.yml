@@ -102,7 +102,7 @@ jobs:
     continue-on-error: true
     services:
       localstack:
-        image: localstack/localstack:latest
+        image: localstack/localstack:3.4.0
         ports:
           - 4566:4566
         env:

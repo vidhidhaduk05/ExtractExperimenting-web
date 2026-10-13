@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import get_current_user, get_current_user_optional
 import uuid
 
 
@@ -12,9 +13,19 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "db_path", str(tmp_path / "test_grade_api.db"))
     monkeypatch.setattr(settings, "upload_root", str(tmp_path / "uploads"))
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": "r1", "username": "Alice", "role": "owner"}
+    app.dependency_overrides[get_current_user_optional] = lambda: {"user_id": "r1", "username": "Alice", "role": "owner"}
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES (?, ?, ?, ?)",
+        ("r1", "Alice", "test", "reviewer")
+    )
+    conn.commit()
     yield
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_current_user_optional, None)
 
 
 @pytest.fixture
@@ -67,6 +78,7 @@ class TestGradeCRUD:
             "study_design": "retrospective cohort",
         })
         sid = r.json()["study_id"]
+        client.put(f"/api/studies/{sid}", json={"screening_stage": "ft"})
         client.put(f"/api/studies/{sid}/screening", json={"status": "included", "stage": "ft", "reason": ""})
 
         r = client.post(f"/api/projects/{pid}/grade", json={"outcome_label": "O"})
