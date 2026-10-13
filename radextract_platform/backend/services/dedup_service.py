@@ -29,6 +29,16 @@ try:
     def _title_similarity(a: str, b: str) -> float:
         if a == b:
             return 1.0
+        la, lb = len(a), len(b)
+        if not la or not lb:
+            return 1.0 if la == lb else 0.0
+
+        # Fast path: Mathematical upper bound on Levenshtein ratio based on string lengths.
+        # Evaluated BEFORE lowercasing to skip string allocations for dissimilar titles.
+        min_len = la if la < lb else lb
+        if (2 * min_len) / (la + lb) < TITLE_SIMILARITY_THRESHOLD:
+            return 0.0
+
         a_lower, b_lower = a.lower(), b.lower()
         if a_lower == b_lower:
             return 1.0
@@ -41,22 +51,20 @@ except ImportError:
         # Fast path 1: Exact string identity
         if a == b:
             return 1.0
-        a_lower, b_lower = a.lower(), b.lower()
-        if a_lower == b_lower:
-            return 1.0
-
-        la, lb = len(a_lower), len(b_lower)
+        la, lb = len(a), len(b)
         if not la or not lb:
             return 1.0 if la == lb else 0.0
 
         # Fast path 2: Mathematical upper bound on Levenshtein / SequenceMatcher ratio.
         # SequenceMatcher ratio is defined as 2 * M / (la + lb), where M <= min(la, lb).
-        # Thus, max possible ratio = 2 * min(la, lb) / (la + lb).
-        # If this bound is below TITLE_SIMILARITY_THRESHOLD (0.90), difflib calculation can be safely skipped.
+        # Evaluated BEFORE lowercasing to skip string allocations for dissimilar titles.
         min_len = la if la < lb else lb
-        max_ratio = (2 * min_len) / (la + lb)
-        if max_ratio < TITLE_SIMILARITY_THRESHOLD:
+        if (2 * min_len) / (la + lb) < TITLE_SIMILARITY_THRESHOLD:
             return 0.0
+
+        a_lower, b_lower = a.lower(), b.lower()
+        if a_lower == b_lower:
+            return 1.0
 
         return difflib.SequenceMatcher(None, a_lower, b_lower).ratio()
 
@@ -220,27 +228,36 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
             union(indices[0], indices[j])
 
     # Strategy 3: Title similarity + author/year
+    titles = [s.get("title", "") for s in studies]
+    years = [s.get("publication_year") for s in studies]
+    authors = [s.get("authors", "") for s in studies]
+
     for i in range(len(studies)):
+        t_i = titles[i]
+        if not t_i:
+            continue
+        y_i = years[i]
+        a_i = authors[i]
+
         for j in range(i + 1, len(studies)):
             if find(i) == find(j):
                 continue  # already grouped
 
-            sim = _title_similarity(
-                studies[i].get("title", ""),
-                studies[j].get("title", ""),
-            )
+            t_j = titles[j]
+            if not t_j:
+                continue
+
+            sim = _title_similarity(t_i, t_j)
 
             if sim >= TITLE_SIMILARITY_THRESHOLD:
                 # Strong title match — check author/year as secondary signal
+                y_j = years[j]
                 year_match = (
-                    studies[i].get("publication_year")
-                    and studies[j].get("publication_year")
-                    and studies[i]["publication_year"] == studies[j]["publication_year"]
+                    y_i is not None
+                    and y_j is not None
+                    and y_i == y_j
                 )
-                author_sim = _author_overlap(
-                    studies[i].get("authors", ""),
-                    studies[j].get("authors", ""),
-                )
+                author_sim = _author_overlap(a_i, authors[j])
 
                 # If title is very similar (>0.95), group regardless
                 # If title is 0.90-0.95, require either year match or author overlap > 0.3
