@@ -351,6 +351,7 @@ def _build_review_graph(project_id: str, conn: sqlite3.Connection) -> Dict[str, 
 async def get_review_graph(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
     """Get the review data graph for a project."""
+    check_project_access(conn, project_id, user)
     return _build_review_graph(project_id, conn)
 
 
