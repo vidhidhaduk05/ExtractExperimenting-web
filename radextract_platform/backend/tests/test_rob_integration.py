@@ -31,7 +31,12 @@ def fresh_db(tmp_path, monkeypatch):
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    from dependencies import create_access_token, create_user
+    u = create_user("testuser", "pass", role="owner")
+    token = create_access_token(u["user_id"], u["username"], u["role"])
+    c = TestClient(app)
+    c.headers.update({"Authorization": f"Bearer {token}"})
+    return c
 
 
 def _db():
@@ -129,6 +134,7 @@ class TestManualIncludeTrigger:
 
     def test_multi_reviewer_agree_include_triggers_rob(self, client):
         pid, sid = _make_project_and_study(client)
+        client.put(f"/api/studies/{sid}/screening", json={"status": "pending", "stage": "ft", "reason": ""})
         for reviewer in ("rev1", "rev2"):
             r = client.post(f"/api/studies/{sid}/screening-decision", json={
                 "study_id": sid, "project_id": pid, "reviewer_id": reviewer,

@@ -574,8 +574,9 @@ def determine_starting_level(project_id: str, db: Optional[DBBackend] = None) ->
     if not designs:
         return "high"
 
-    all_rct = all(any(rct_term in d for rct_term in RCT_DESIGNS) for d in designs)
-    all_obs = all(any(obs_term in d for obs_term in OBSERVATIONAL_DESIGNS) for d in designs)
+    import re
+    all_rct = all(any(re.search(rf"\b{re.escape(rct_term)}\b", d) for rct_term in RCT_DESIGNS) for d in designs)
+    all_obs = all(any(re.search(rf"\b{re.escape(obs_term)}\b", d) for obs_term in OBSERVATIONAL_DESIGNS) for d in designs)
 
     if all_rct:
         return "high"

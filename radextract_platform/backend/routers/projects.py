@@ -675,8 +675,8 @@ async def generate_search_strings(project_id: str,
             search_string_generator.generate_ai_search_strings, pico,
             dict(row).get("research_question") or "",
         )
-    except search_string_generator.SearchGenerationError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except search_string_generator.SearchGenerationError:
+        strings = search_string_generator.generate_search_strings(pico)
     strings_json = json.dumps(strings)
     conn.execute(
         "UPDATE projects SET search_strings_json = ? WHERE project_id = ?",

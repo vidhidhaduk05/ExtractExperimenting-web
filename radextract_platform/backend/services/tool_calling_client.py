@@ -167,7 +167,7 @@ class ToolCallingClient:
             if cached is not None:
                 return cached
 
-        if not _circuit_breaker.can_execute():
+        if not self.circuit_breaker.can_execute():
             logger.warning(f"Circuit breaker OPEN. Skipping async call for '{tool_name}'.")
             return None
 
@@ -205,7 +205,7 @@ class ToolCallingClient:
                             args = json.loads(args_str) if isinstance(args_str, str) else args_str
                             valid, _ = validate_tool_response(tool_name, args)
                             if valid:
-                                _circuit_breaker.record_success()
+                                self.circuit_breaker.record_success()
                                 if use_cache:
                                     self._set_cached(cache_key, args)
                                 return args
@@ -214,14 +214,14 @@ class ToolCallingClient:
                         if parsed:
                             repaired = self._repair_response(tool_name, parsed)
                             if repaired:
-                                _circuit_breaker.record_success()
+                                self.circuit_breaker.record_success()
                                 if use_cache:
                                     self._set_cached(cache_key, repaired)
                                 return repaired
         except Exception as e:
             logger.warning(f"Async tool call error for '{tool_name}': {e}")
 
-        _circuit_breaker.record_failure()
+        self.circuit_breaker.record_failure()
         return None
 
     def _try_tool_call(

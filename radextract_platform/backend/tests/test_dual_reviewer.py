@@ -19,7 +19,12 @@ def fresh_db(tmp_path, monkeypatch):
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    from dependencies import create_access_token, create_user
+    u = create_user("reviewer_one", "pass", role="owner")
+    token = create_access_token(u["user_id"], u["username"], u["role"])
+    c = TestClient(app)
+    c.headers.update({"Authorization": f"Bearer {token}"})
+    return c
 
 
 @pytest.fixture
