@@ -87,6 +87,12 @@ KEYWORD_PATTERNS = {
     ],
 }
 
+# Pre-compiled regex patterns for performance optimization
+_KEYWORD_COMPILED_PATTERNS: dict[str, list[re.Pattern]] = {
+    field: [re.compile(pat, re.IGNORECASE | re.DOTALL) for pat in patterns]
+    for field, patterns in KEYWORD_PATTERNS.items()
+}
+
 
 def _normalize_text(text: str) -> str:
     """Normalize whitespace while preserving line breaks for section detection."""
@@ -430,10 +436,16 @@ def _apply_descriptive_protocol(text: str, result: dict) -> dict:
     return result
 
 
-def _find_keyword_match(text: str, patterns: list[str]) -> str:
-    """Find content matching keyword patterns."""
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+def _find_keyword_match(text: str, field_or_patterns: str | list[str]) -> str:
+    """Find content matching keyword patterns using pre-compiled regex objects when possible."""
+    if isinstance(field_or_patterns, str) and field_or_patterns in _KEYWORD_COMPILED_PATTERNS:
+        compiled_list = _KEYWORD_COMPILED_PATTERNS[field_or_patterns]
+    else:
+        raw_list = field_or_patterns if isinstance(field_or_patterns, list) else []
+        compiled_list = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in raw_list]
+
+    for compiled in compiled_list:
+        match = compiled.search(text)
         if match:
             content = match.group(1).strip()
             if content and len(content) > 3:
@@ -465,7 +477,7 @@ def extract_pico_from_text(text: str) -> dict:
     for field, headers in PICO_HEADERS.items():
         content = _find_section_content(text, headers)
         if not content:
-            content = _find_keyword_match(text, KEYWORD_PATTERNS.get(field, []))
+            content = _find_keyword_match(text, field)
         result[field] = content
 
     result = _apply_descriptive_protocol(text, result)
@@ -664,6 +676,12 @@ ABSTRACT_PICO_PATTERNS = {
     ],
 }
 
+# Pre-compiled compiled regex patterns for abstract PICO span extraction
+_ABSTRACT_PICO_COMPILED_PATTERNS: dict[str, list[tuple[re.Pattern, str]]] = {
+    field: [(re.compile(pat, re.IGNORECASE), pat) for pat in patterns]
+    for field, patterns in ABSTRACT_PICO_PATTERNS.items()
+}
+
 
 def extract_pico_spans_from_abstract(abstract: str) -> list[dict]:
     """Extract PICO spans from a study abstract for highlighting.
@@ -680,11 +698,10 @@ def extract_pico_spans_from_abstract(abstract: str) -> list[dict]:
         return []
 
     spans = []
-    abstract_lower = abstract.lower()
 
-    for field, patterns in ABSTRACT_PICO_PATTERNS.items():
-        for pattern in patterns:
-            for match in re.finditer(pattern, abstract, re.IGNORECASE):
+    for field, compiled_tuples in _ABSTRACT_PICO_COMPILED_PATTERNS.items():
+        for compiled_pat, raw_pat in compiled_tuples:
+            for match in compiled_pat.finditer(abstract):
                 # Determine the span — use the full match or the captured group
                 if match.lastindex and match.lastindex >= 1:
                     # Use the captured group if it's substantial
@@ -711,7 +728,7 @@ def extract_pico_spans_from_abstract(abstract: str) -> list[dict]:
                     continue
 
                 # Confidence based on pattern specificity
-                confidence = 0.8 if "index test" in pattern or "reference standard" in pattern or "primary outcome" in pattern else 0.6
+                confidence = 0.8 if "index test" in raw_pat or "reference standard" in raw_pat or "primary outcome" in raw_pat else 0.6
 
                 spans.append({
                     "field": field,

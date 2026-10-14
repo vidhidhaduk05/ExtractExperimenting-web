@@ -43,6 +43,8 @@ _LATEX_BRACE_RE = re.compile(r"[{}]")
 _AND_SPLIT_RE = re.compile(r"\s+and\s+")
 _CSV_AUTHOR_SPLIT_RE = re.compile(r";\s*|\s+and\s+")
 _FILE_EXT_RE = re.compile(r"\.([^.]+)$")
+_ENDNOTE_LINE_RE = re.compile(r"^(%[A-Za-z0-9])\s*(.*)$")
+_WOS_LINE_RE = re.compile(r"^([A-Z0-9]{2})\s+(.*)$")
 
 
 # ── RIS field tag mapping ──
@@ -1009,7 +1011,7 @@ def parse_endnote_tagged(content: str) -> list[dict]:
 
     lines = content.split("\n")
     for line in lines:
-        match = re.match(r"^(%[A-Za-z0-9])\s*(.*)$", line)
+        match = _ENDNOTE_LINE_RE.match(line)
         if match:
             tag = match.group(1)
             val = match.group(2).strip()
@@ -1055,13 +1057,13 @@ def _add_endnote_tagged_field(record: dict, tag: str, value: str) -> None:
             record["authors"] = []
         record["authors"].append(value)
     elif field_name == "publication_year":
-        year_match = re.search(r"(\d{4})", value)
+        year_match = _YEAR_RE.search(value)
         if year_match:
             record["publication_year"] = int(year_match.group(1))
     elif field_name == "doi":
-        record["doi"] = re.sub(r"^https?://(dx\.)?doi\.org/", "", value, flags=re.IGNORECASE).strip().rstrip(".")
+        record["doi"] = _DOI_PREFIX_RE.sub("", value).strip().rstrip(".")
     elif field_name == "pmid":
-        pmid_clean = re.sub(r"[^\d]", "", value)
+        pmid_clean = _NON_DIGIT_RE.sub("", value)
         if pmid_clean:
             record["pmid"] = pmid_clean
     else:
@@ -1113,7 +1115,7 @@ def parse_wos_ciw(content: str) -> list[dict]:
     lines = content.split("\n")
     for line in lines:
         # Check for 2-letter tag at start of line followed by space (WoS standard: "TI ", "AU ", "ER")
-        tag_match = re.match(r"^([A-Z0-9]{2})\s+(.*)$", line)
+        tag_match = _WOS_LINE_RE.match(line)
         if tag_match:
             tag = tag_match.group(1)
             val = tag_match.group(2).strip()
@@ -1171,13 +1173,13 @@ def _add_wos_field(record: dict, tag: str, value: str) -> None:
         author_lines = [a.strip() for a in value.split("\n") if a.strip()]
         record["authors_full"].extend(author_lines)
     elif field_name == "publication_year":
-        year_match = re.search(r"(\d{4})", value)
+        year_match = _YEAR_RE.search(value)
         if year_match:
             record["publication_year"] = int(year_match.group(1))
     elif field_name == "doi":
-        record["doi"] = re.sub(r"^https?://(dx\.)?doi\.org/", "", value, flags=re.IGNORECASE).strip().rstrip(".")
+        record["doi"] = _DOI_PREFIX_RE.sub("", value).strip().rstrip(".")
     elif field_name == "pmid":
-        pmid_clean = re.sub(r"[^\d]", "", value)
+        pmid_clean = _NON_DIGIT_RE.sub("", value)
         if pmid_clean:
             record["pmid"] = pmid_clean
     elif field_name == "abstract":
