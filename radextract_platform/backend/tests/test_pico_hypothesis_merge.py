@@ -100,6 +100,14 @@ class TestCriteria:
 class TestSearchStrings:
     """Tests for search string generation endpoints."""
 
+    @pytest.fixture(autouse=True)
+    def mock_ai_search(self, monkeypatch):
+        from services.search_string_generator import generate_search_strings
+        monkeypatch.setattr(
+            "services.search_string_generator.generate_ai_search_strings",
+            lambda pico, research_question="": generate_search_strings(pico),
+        )
+
     def test_generate_search_strings(self, client, project_with_pico):
         r = client.post(f"/api/projects/{project_with_pico}/search-strings/generate")
         assert r.status_code == 200
@@ -209,8 +217,13 @@ class TestPubMedFetch:
         assert r.status_code == 404
 
     @pytest.fixture
-    def project_with_search_string(self, client, project_with_pico):
+    def project_with_search_string(self, client, project_with_pico, monkeypatch):
         """Generate search strings so PubMed string is saved."""
+        from services.search_string_generator import generate_search_strings
+        monkeypatch.setattr(
+            "services.search_string_generator.generate_ai_search_strings",
+            lambda pico, research_question="": generate_search_strings(pico),
+        )
         client.post(f"/api/projects/{project_with_pico}/search-strings/generate")
         return project_with_pico
 
