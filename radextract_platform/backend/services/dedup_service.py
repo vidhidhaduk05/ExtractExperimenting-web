@@ -32,6 +32,17 @@ try:
         a_lower, b_lower = a.lower(), b.lower()
         if a_lower == b_lower:
             return 1.0
+
+        la, lb = len(a_lower), len(b_lower)
+        if not la or not lb:
+            return 1.0 if la == lb else 0.0
+
+        # Mathematical upper bound on ratio: 2 * min(|a|, |b|) / (|a| + |b|)
+        min_len = la if la < lb else lb
+        max_ratio = (2 * min_len) / (la + lb)
+        if max_ratio < TITLE_SIMILARITY_THRESHOLD:
+            return 0.0
+
         return _lev_ratio(a_lower, b_lower)
 except ImportError:
     import difflib
@@ -219,16 +230,23 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
         for j in range(1, len(indices)):
             union(indices[0], indices[j])
 
+    # Pre-extract titles for fast pairwise title comparison
+    titles = [s.get("title", "") or "" for s in studies]
+
     # Strategy 3: Title similarity + author/year
     for i in range(len(studies)):
+        title_i = titles[i]
+        if not title_i:
+            continue
         for j in range(i + 1, len(studies)):
             if find(i) == find(j):
                 continue  # already grouped
 
-            sim = _title_similarity(
-                studies[i].get("title", ""),
-                studies[j].get("title", ""),
-            )
+            title_j = titles[j]
+            if not title_j:
+                continue
+
+            sim = _title_similarity(title_i, title_j)
 
             if sim >= TITLE_SIMILARITY_THRESHOLD:
                 # Strong title match — check author/year as secondary signal

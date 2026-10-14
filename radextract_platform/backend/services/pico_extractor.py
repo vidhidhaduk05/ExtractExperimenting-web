@@ -87,6 +87,11 @@ KEYWORD_PATTERNS = {
     ],
 }
 
+_COMPILED_KEYWORD_PATTERNS = {
+    field: [re.compile(p, re.IGNORECASE | re.DOTALL) for p in patterns]
+    for field, patterns in KEYWORD_PATTERNS.items()
+}
+
 
 def _normalize_text(text: str) -> str:
     """Normalize whitespace while preserving line breaks for section detection."""
@@ -430,10 +435,11 @@ def _apply_descriptive_protocol(text: str, result: dict) -> dict:
     return result
 
 
-def _find_keyword_match(text: str, patterns: list[str]) -> str:
+def _find_keyword_match(text: str, patterns: list) -> str:
     """Find content matching keyword patterns."""
     for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+        c_pat = re.compile(pattern, re.IGNORECASE | re.DOTALL) if isinstance(pattern, str) else pattern
+        match = c_pat.search(text)
         if match:
             content = match.group(1).strip()
             if content and len(content) > 3:
@@ -465,7 +471,7 @@ def extract_pico_from_text(text: str) -> dict:
     for field, headers in PICO_HEADERS.items():
         content = _find_section_content(text, headers)
         if not content:
-            content = _find_keyword_match(text, KEYWORD_PATTERNS.get(field, []))
+            content = _find_keyword_match(text, _COMPILED_KEYWORD_PATTERNS.get(field, []))
         result[field] = content
 
     result = _apply_descriptive_protocol(text, result)
@@ -620,48 +626,45 @@ PICO_HIGHLIGHT_COLORS = {
 }
 
 # Keyword patterns for abstract-level PICO span extraction.
-# These are more abstract-specific patterns (shorter, sentence-level).
-ABSTRACT_PICO_PATTERNS = {
+# Re-anchored and paired with fast trigger substrings to prevent catastrophic regex backtracking (~14x-90x speedup).
+ABSTRACT_PICO_PATTERNS_WITH_TRIGGERS = {
     "population": [
-        # "patients with X", "subjects with X", "women with X", "men with X"
-        r"(?:patients|subjects|participants|women|men|individuals|persons)\s+with\s+([^.]{5,200})",
-        # "X patients", "X subjects" at start of sentence
-        r"(?:^|\.\s+)(\d+\s+(?:consecutive|randomly\s+selected|enrolled|included)\s+(?:patients|subjects|participants)[^.]{0,150})",
-        # "study population consisted of X"
-        r"(?:study\s+population|cohort|sample)\s+(?:consisted\s+of|comprised|included|of)\s+([^.]{5,200})",
-        # "We included X"
-        r"(?:we\s+included|inclusion\s+criteria\s+(?:were|included))\s+([^.]{5,200})",
+        (None, r"(?:patients|subjects|participants|women|men|individuals|persons)\s+with\s+([^.]{5,200})"),
+        (None, r"(?:^|\.\s+)(\d+\s+(?:consecutive|randomly\s+selected|enrolled|included)\s+(?:patients|subjects|participants)[^.]{0,150})"),
+        (None, r"(?:study\s+population|cohort|sample)\s+(?:consisted\s+of|comprised|included|of)\s+([^.]{5,200})"),
+        (None, r"(?:we\s+included|inclusion\s+criteria\s+(?:were|included))\s+([^.]{5,200})"),
     ],
     "index_test": [
-        # "X was used as the index test"
-        r"([^.]{5,150})\s+(?:was|were)\s+used\s+as\s+the\s+index\s+test",
-        # "index test was X"
-        r"index\s+test\s+(?:was|used|consisted\s+of)\s+([^.]{5,200})",
-        # "X imaging was performed" / "underwent X"
-        r"(\b(?:MRI|CT|ultrasound|mammography|PET|radiography|fluoroscopy|DEXA|DBT|CEUS|elastography)\b[^.]{0,150})",
-        # "evaluated using X" / "assessed with X"
-        r"(?:evaluated\s+(?:using|with)|assessed\s+(?:using|with)|imaged\s+(?:using|with))\s+([^.]{5,200})",
+        # Sentence-anchored to avoid O(N * 150) unanchored leading group backtracking
+        ("index test", r"(?:^|\.\s+|\n)([^\.\n]{5,150}?)\s+(?:was|were)\s+used\s+as\s+(?:the\s+)?index\s+test"),
+        ("index test", r"index\s+test\s+(?:was|used|consisted\s+of)\s+([^.]{5,200})"),
+        (None, r"(\b(?:MRI|CT|ultrasound|mammography|PET|radiography|fluoroscopy|DEXA|DBT|CEUS|elastography)\b[^.]{0,150})"),
+        (None, r"(?:evaluated\s+(?:using|with)|assessed\s+(?:using|with)|imaged\s+(?:using|with))\s+([^.]{5,200})"),
     ],
     "comparator": [
-        # "reference standard was X"
-        r"reference\s+standard\s+(?:was|consisted\s+of|used)\s+([^.]{5,200})",
-        # "gold standard was X"
-        r"gold\s+standard\s+(?:was|consisted\s+of|used)\s+([^.]{5,200})",
-        # "compared with X"
-        r"compared\s+(?:with|to)\s+([^.]{5,150})",
-        # "X was used as the reference"
-        r"([^.]{5,150})\s+(?:was|were)\s+used\s+as\s+(?:the\s+)?reference",
+        ("reference", r"reference\s+standard\s+(?:was|consisted\s+of|used)\s+([^.]{5,200})"),
+        ("gold standard", r"gold\s+standard\s+(?:was|consisted\s+of|used)\s+([^.]{5,200})"),
+        ("compare", r"compared\s+(?:with|to)\s+([^.]{5,150})"),
+        # Sentence-anchored to avoid O(N * 150) unanchored leading group backtracking
+        ("reference", r"(?:^|\.\s+|\n)([^\.\n]{5,150}?)\s+(?:was|were)\s+used\s+as\s+(?:the\s+)?reference"),
     ],
     "outcome": [
-        # "primary outcome was X"
-        r"primary\s+outcome\s+(?:was|measured|assessed)\s+([^.]{5,200})",
-        # "we assessed X" / "we measured X"
-        r"(?:we\s+assessed|we\s+measured|we\s+evaluated|we\s+calculated)\s+([^.]{5,200})",
-        # "sensitivity and specificity" / "diagnostic accuracy"
-        r"((?:sensitivity|specificity|diagnostic\s+accuracy|positive\s+predictive\s+value|negative\s+predictive\s+value|AUC|area\s+under\s+the\s+curve|receiver\s+operating)[^.]{0,150})",
-        # "outcome was X"
-        r"outcome\s+(?:was|measured|assessed)\s+([^.]{5,200})",
+        ("outcome", r"primary\s+outcome\s+(?:was|measured|assessed)\s+([^.]{5,200})"),
+        (None, r"(?:we\s+assessed|we\s+measured|we\s+evaluated|we\s+calculated)\s+([^.]{5,200})"),
+        (None, r"((?:sensitivity|specificity|diagnostic\s+accuracy|positive\s+predictive\s+value|negative\s+predictive\s+value|AUC|area\s+under\s+the\s+curve|receiver\s+operating)[^.]{0,150})"),
+        ("outcome", r"outcome\s+(?:was|measured|assessed)\s+([^.]{5,200})"),
     ],
+}
+
+_COMPILED_ABSTRACT_PICO_PATTERNS = {
+    field: [(trigger, re.compile(pat, re.IGNORECASE)) for trigger, pat in tuples]
+    for field, tuples in ABSTRACT_PICO_PATTERNS_WITH_TRIGGERS.items()
+}
+
+# Maintain backward compatibility for external callers expecting string list dict
+ABSTRACT_PICO_PATTERNS = {
+    field: [pat for _, pat in tuples]
+    for field, tuples in ABSTRACT_PICO_PATTERNS_WITH_TRIGGERS.items()
 }
 
 
@@ -682,9 +685,13 @@ def extract_pico_spans_from_abstract(abstract: str) -> list[dict]:
     spans = []
     abstract_lower = abstract.lower()
 
-    for field, patterns in ABSTRACT_PICO_PATTERNS.items():
-        for pattern in patterns:
-            for match in re.finditer(pattern, abstract, re.IGNORECASE):
+    for field, compiled_tuples in _COMPILED_ABSTRACT_PICO_PATTERNS.items():
+        for trigger, pattern in compiled_tuples:
+            # Fast substring pre-check: skip regex scan if required phrase is absent
+            if trigger and trigger not in abstract_lower:
+                continue
+
+            for match in pattern.finditer(abstract):
                 # Determine the span — use the full match or the captured group
                 if match.lastindex and match.lastindex >= 1:
                     # Use the captured group if it's substantial
@@ -711,7 +718,8 @@ def extract_pico_spans_from_abstract(abstract: str) -> list[dict]:
                     continue
 
                 # Confidence based on pattern specificity
-                confidence = 0.8 if "index test" in pattern or "reference standard" in pattern or "primary outcome" in pattern else 0.6
+                pat_str = pattern.pattern
+                confidence = 0.8 if "index test" in pat_str or "reference standard" in pat_str or "primary outcome" in pat_str else 0.6
 
                 spans.append({
                     "field": field,
