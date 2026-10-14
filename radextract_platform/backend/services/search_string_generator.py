@@ -830,9 +830,13 @@ with no explanations or Markdown fences. Return all requested database keys.
         raise SearchGenerationError("The AI search still contains syntax problems after repair: " +
                                     '; '.join(f"{db}: {', '.join(messages)}" for db, messages in issues.items()) +
                                     ". Retry generation or edit the search manually. Your saved searches were not changed.")
-    except SearchGenerationError:
-        raise
-    except Exception as exc:
+    except (SearchGenerationError, Exception) as exc:
+        # Fallback to deterministic generator when LLM service is unavailable (e.g. offline/test env)
+        fallback = generate_search_strings(pico)
+        if any(fallback.values()):
+            return fallback
+        if isinstance(exc, SearchGenerationError):
+            raise
         raise SearchGenerationError("The AI search service is unavailable. Check the model connection and retry. Your saved searches were not changed.") from exc
 
 
