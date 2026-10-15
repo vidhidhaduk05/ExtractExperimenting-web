@@ -277,3 +277,22 @@ class TestToolOverrideAndBatchRun:
         assert r2.status_code == 200
         assert r2.json()["auto_rob_enabled"] is False
         assert r2.json()["rob_confidence_threshold"] == 0.85
+
+    def test_auto_assess_study_rob(self, client, project_and_study):
+        pid, sid = project_and_study
+        # Call auto-assess endpoint
+        r = client.post(f"/api/rob/projects/{pid}/studies/{sid}/auto-assess?tool_id=rob2")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["success"] is True
+        assert "assessment_id" in data
+        assert "overall_judgment" in data
+
+        # Test repeat call (updates existing assessment)
+        r_repeat = client.post(f"/api/rob/projects/{pid}/studies/{sid}/auto-assess?tool_id=rob2")
+        assert r_repeat.status_code == 200
+        assert r_repeat.json()["success"] is True
+
+        # Test calling with non-existent study_id returns 404
+        r_invalid = client.post(f"/api/rob/projects/{pid}/studies/nonexistent-sid/auto-assess?tool_id=rob2")
+        assert r_invalid.status_code == 404

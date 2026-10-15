@@ -1,0 +1,4 @@
+## 2025-05-18 - Missing Project Authorization in Auto-Assess Endpoint
+**Vulnerability:** The `/api/projects/{project_id}/studies/{study_id}/auto-assess` endpoint in `routers/rob.py` was missing `check_project_access(conn, project_id, user)`, allowing unauthorized users to execute AI Risk of Bias auto-assessments. In addition, the python authorization call had been mistakenly copy-pasted directly into a multi-line SQL `UPDATE` string.
+**Learning:** Python route parameters must always be explicitly validated via `check_project_access(conn, project_id, user)` at the top of route handler functions before executing SQL statements. Multi-line SQL strings should be checked for accidentally copy-pasted code.
+**Prevention:** Ensure every project-level and study-level route handler calls `check_project_access(conn, project_id, user)` before interacting with the database or triggering background tasks.
