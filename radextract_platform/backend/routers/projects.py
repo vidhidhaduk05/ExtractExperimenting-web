@@ -136,66 +136,57 @@ async def update_project(
     return dict(row)
 
 
-@router.get("/projects/{project_id}/settings")
+def _settings_payload(p: dict) -> dict:
+    threshold = p.get("rob_confidence_threshold")
+    return {
+        "project_id": p["project_id"],
+        "name": p.get("name") or "",
+        "auto_rob_enabled": bool(p.get("auto_rob_enabled") or 0),
+        "rob_confidence_threshold": float(threshold if threshold is not None else 0.7),
+    }
+
+
+@router.get("/projects/{project_id}/settings", response_model=ProjectSettingsResponse)
 async def get_project_settings(
     project_id: str,
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    """Get project-specific settings including auto RoB and confidence thresholds."""
-    row = conn.execute(
-        "SELECT * FROM projects WHERE project_id = ?", (project_id,)
-    ).fetchone()
+    """Project settings: automatic risk of bias after screening, and the AI confidence threshold."""
+    row = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user, min_role="viewer")
-    p = dict(row)
-    return {
-        "auto_rob_enabled": bool(p.get("auto_rob_enabled", 1)),
-        "rob_confidence_threshold": float(p.get("rob_confidence_threshold", 0.7) if p.get("rob_confidence_threshold") is not None else 0.7),
-    }
+    return _settings_payload(dict(row))
 
 
-@router.put("/projects/{project_id}/settings")
+@router.put("/projects/{project_id}/settings", response_model=ProjectSettingsResponse)
 async def update_project_settings(
     project_id: str,
     body: ProjectSettingsUpdate,
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    """Update project-specific settings."""
-    row = conn.execute(
-        "SELECT * FROM projects WHERE project_id = ?", (project_id,)
-    ).fetchone()
+    """Change project settings. Only the fields that are sent are updated."""
+    row = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user, min_role="editor")
 
-    updates = []
-    params = []
+    updates, params = [], []
     if body.auto_rob_enabled is not None:
         updates.append("auto_rob_enabled = ?")
         params.append(1 if body.auto_rob_enabled else 0)
     if body.rob_confidence_threshold is not None:
         updates.append("rob_confidence_threshold = ?")
         params.append(float(body.rob_confidence_threshold))
-
     if updates:
         params.append(project_id)
-        conn.execute(
-            f"UPDATE projects SET {', '.join(updates)} WHERE project_id = ?",
-            tuple(params),
-        )
+        conn.execute(f"UPDATE projects SET {', '.join(updates)} WHERE project_id = ?", tuple(params))
         conn.commit()
 
-    row = conn.execute(
-        "SELECT * FROM projects WHERE project_id = ?", (project_id,)
-    ).fetchone()
-    p = dict(row)
-    return {
-        "auto_rob_enabled": bool(p.get("auto_rob_enabled", 1)),
-        "rob_confidence_threshold": float(p.get("rob_confidence_threshold", 0.7) if p.get("rob_confidence_threshold") is not None else 0.7),
-    }
+    row = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+    return _settings_payload(dict(row))
 
 
 @router.post("/projects/{project_id}/rob/run")
@@ -246,20 +237,44 @@ async def delete_project(
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user, min_role="owner")
+    # Children first: foreign keys are enforced, so a project that has members,
+    # studies, tags or assessments cannot be deleted with a bare DELETE.
     study_ids = "SELECT study_id FROM studies WHERE project_id = ?"
     for table in ("extractions", "pdf_documents", "pdf_highlights", "audit_log"):
-        conn.execute(
-            f"DELETE FROM {table} WHERE study_id IN ({study_ids})",
-            (project_id,),
-        )
+        conn.execute(f"DELETE FROM {table} WHERE study_id IN ({study_ids})", (project_id,))
     for table in (
         "record_annotations",
         "study_tag_links",
         "project_tags",
-        "search_logs",
+        "reporting_profile_items",  # keyed by assessment, cleared below
+    ):
+        if table == "reporting_profile_items":
+            conn.execute(
+                "DELETE FROM reporting_profile_items WHERE profile_assessment_id IN "
+                "(SELECT profile_assessment_id FROM reporting_profile_assessments WHERE project_id = ?)",
+                (project_id,),
+            )
+        else:
+            conn.execute(f"DELETE FROM {table} WHERE project_id = ?", (project_id,))
+    conn.execute(
+        "DELETE FROM rob_signaling_answers WHERE judgment_id IN (SELECT judgment_id FROM rob_domain_judgments "
+        "WHERE assessment_id IN (SELECT assessment_id FROM rob_assessments WHERE project_id = ?))",
+        (project_id,),
+    )
+    conn.execute(
+        "DELETE FROM rob_domain_judgments WHERE assessment_id IN "
+        "(SELECT assessment_id FROM rob_assessments WHERE project_id = ?)",
+        (project_id,),
+    )
+    for table in (
+        "rob_assessments",
+        "rob_runs",
+        "reporting_profile_assessments",
+        "extraction_decisions",
         "screening_decisions",
         "screening_conflicts",
         "screening_keywords",
+        "search_logs",
         "clarification_questions",
         "project_members",
         "user_review_state",
@@ -267,9 +282,7 @@ async def delete_project(
         "studies",
     ):
         conn.execute(f"DELETE FROM {table} WHERE project_id = ?", (project_id,))
-    conn.execute(
-        "DELETE FROM projects WHERE project_id = ?", (project_id,)
-    )
+    conn.execute("DELETE FROM projects WHERE project_id = ?", (project_id,))
     conn.commit()
     return {"deleted": True, "project_id": project_id}
 

@@ -43,28 +43,20 @@ class ToolCallingClient:
         max_retries: Optional[int] = None,
         circuit_breaker: Optional[CircuitBreaker] = None,
     ):
+        # Settings saved from the UI (services/llm_config_service) override config.py, but explicit
+        # arguments always win. With nothing saved this is identical to using config.py.
         try:
             from services import llm_config_service
-            active_cfg = llm_config_service.get_active_config(mask_keys=False)
-            if active_cfg.get("provider") == "local":
-                default_url = f"{active_cfg.get('local_endpoint_url', 'http://localhost:11434/v1').rstrip('/')}/chat/completions"
-                default_key = active_cfg.get("active_key", "")
-                default_model = active_cfg.get("local_model_name", "llama3.3")
-            else:
-                default_url = settings.llm_api_url or ""
-                default_key = active_cfg.get("active_key") or settings.llm_api_key
-                default_model = active_cfg.get("active_model") or getattr(settings, "llm_model", "gemini-3.7-flash")
+            override = llm_config_service.get_runtime_override()
         except Exception:
-            default_url = settings.llm_api_url or ""
-            default_key = settings.llm_api_key
-            default_model = getattr(settings, "llm_model", "gemini-3.7-flash")
+            override = {}
 
-        raw_url = api_url or default_url
+        raw_url = api_url or override.get("api_url") or settings.llm_api_url or ""
         if raw_url and not raw_url.endswith("/chat/completions"):
             raw_url = raw_url.rstrip("/") + "/chat/completions"
         self.api_url = raw_url
-        self.api_key = api_key or default_key
-        self.model = model or default_model
+        self.api_key = api_key or override.get("api_key") or settings.llm_api_key
+        self.model = model or override.get("model") or getattr(settings, "llm_model", "gemini-3.7-flash")
         self.tool_calling_enabled = (
             tool_calling_enabled
             if tool_calling_enabled is not None

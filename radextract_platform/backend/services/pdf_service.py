@@ -16,7 +16,7 @@ from database import get_db_backend
 from services.db_backend import DBBackend
 from services.storage_backend import resolve_pdf_path
 from radextract_core.radextract.document_processor import (
-    get_processor, ProcessedDocument, DoclingProcessor, FallbackProcessor,
+    convert_with_fallback, ProcessedDocument, DoclingProcessor, FallbackProcessor,
 )
 
 
@@ -37,11 +37,8 @@ def process_pdf(study_id: str, db: Optional[DBBackend] = None) -> dict:
     if not pdf_path:
         raise ValueError(f"No uploaded PDF for study {study_id}")
 
-    # Get the best available processor
-    processor = get_processor(prefer_docling=True)
-
-    # Convert
-    doc = processor.convert(pdf_path, doc_id=study_id)
+    # Convert with graceful fallback
+    doc = convert_with_fallback(pdf_path, doc_id=study_id, prefer_docling=True)
 
     # Build storage dict
     doc_id = str(uuid.uuid4())
@@ -53,7 +50,7 @@ def process_pdf(study_id: str, db: Optional[DBBackend] = None) -> dict:
     annotations_json = json.dumps(annotations, ensure_ascii=False)
     tables_json = json.dumps(doc.parsed.get("tables", []), ensure_ascii=False)
     metadata_json = json.dumps(doc.metadata, ensure_ascii=False)
-    engine = doc.metadata.get("engine", processor.name)
+    engine = doc.metadata.get("engine", "unknown")
 
     # Delete any existing record for this study
     existing = db.query("pdf_documents", {"study_id": study_id})

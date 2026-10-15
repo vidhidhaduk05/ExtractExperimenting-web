@@ -377,6 +377,15 @@ def resolve_duplicate_decision(
     """
     db = db or get_db_backend()
 
+    if action not in ("keep_primary", "keep_both", "merge_metadata", "revert_duplicate"):
+        raise ValueError(f"Invalid action: {action}")
+    if not primary_study_id:
+        raise ValueError("primary_study_id is required")
+    if duplicate_study_id and primary_study_id == duplicate_study_id:
+        raise ValueError("primary_study_id and duplicate_study_id cannot be the same")
+    if not duplicate_study_id and not group_id:
+        raise ValueError("duplicate_study_id or group_id is required")
+
     primary = db.query("studies", {"study_id": primary_study_id, "project_id": project_id})
     if not primary:
         raise ValueError(f"Primary study {primary_study_id} not found in project {project_id}")
@@ -385,19 +394,23 @@ def resolve_duplicate_decision(
     dup_row = None
     if duplicate_study_id:
         dup = db.query("studies", {"study_id": duplicate_study_id, "project_id": project_id})
-        if dup:
-            dup_row = dup[0]
+        if not dup:
+            raise ValueError(f"Duplicate study {duplicate_study_id} not found in project {project_id}")
+        dup_row = dup[0]
 
     if action in ("keep_both", "revert_duplicate"):
         # Unmark duplicate - reversible
         if duplicate_study_id:
-            db.update("studies", duplicate_study_id, {
+            updates = {
                 "is_duplicate": 0,
                 "duplicate_of_study_id": "",
-                "screening_status": "pending",
-                "screening_reason": "",
-                "screening_stage": "",
-            })
+            }
+            # Only reset status to pending if it was excluded by dedup
+            if not dup_row or dup_row.get("screening_stage") == "dedup":
+                updates["screening_status"] = "pending"
+                updates["screening_reason"] = ""
+                updates["screening_stage"] = ""
+            db.update("studies", duplicate_study_id, updates)
         if group_id:
             # Also ensure primary is clear
             db.update("studies", primary_study_id, {

@@ -37,6 +37,8 @@ from routers import (
     clarification,
     ai_screening,
     agent,
+    fulltext,
+    rob_run,
     settings as system_settings,
 )
 
@@ -143,6 +145,8 @@ def create_app() -> FastAPI:
     app.include_router(clarification.router)
     app.include_router(ai_screening.router)
     app.include_router(agent.router)
+    app.include_router(fulltext.router)
+    app.include_router(rob_run.router)
     app.include_router(system_settings.router)
 
     # Health check

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { api, type PrismaFlow } from "../lib/api";
-import { ArrowLeft, GitBranch, Loader2, Download, FileText, Code2, Copy } from "lucide-react";
+import { api, type Prisma2020Sync, type PrismaFlow } from "../lib/api";
+import { ArrowLeft, GitBranch, Loader2, Download, FileText, Code2, Copy, ExternalLink, RefreshCw } from "lucide-react";
 
 /** Fetch a URL as a blob and trigger a browser download. */
 async function downloadFile(url: string, filename: string) {
@@ -61,6 +61,23 @@ export function PrismaFlowPage() {
     queryFn: () => api.prismaFlow(projectId!),
     enabled: !!projectId,
   });
+
+  const { data: official } = useQuery({
+    queryKey: ["prisma-2020-official", projectId],
+    queryFn: () => api.prisma2020(projectId!),
+    enabled: !!projectId,
+    refetchInterval: 20000,
+  });
+
+  const [officialFrameUrl, setOfficialFrameUrl] = useState<string | null>(null);
+  useEffect(() => {
+    setOfficialFrameUrl(null);
+  }, [projectId]);
+  useEffect(() => {
+    if (official?.shiny_url && officialFrameUrl === null) {
+      setOfficialFrameUrl(official.shiny_url);
+    }
+  }, [official?.shiny_url, officialFrameUrl]);
 
   // Fetch R-generated SVG
   useEffect(() => {
@@ -147,8 +164,22 @@ export function PrismaFlowPage() {
         </div>
       </div>
       <p className="text-gray-500 text-sm mb-4">
-        Systematic review screening flow following PRISMA 2020 guidelines with live database synchronization.
+        Screening counts sync into the official PRISMA2020 flow diagram and stay available in the built-in view.
       </p>
+
+      {official && (
+        <OfficialPrismaPanel
+          sync={official}
+          frameUrl={officialFrameUrl}
+          onRefreshFrame={() => official.shiny_url && setOfficialFrameUrl(official.shiny_url)}
+          onDownloadCsv={() => {
+            if (!projectId) return;
+            downloadFile(api.prisma2020CsvUrl(projectId), `PRISMA2020_${projectId}.csv`).catch((e: any) => {
+              alert(e.message || "Download failed");
+            });
+          }}
+        />
+      )}
 
       {flow?.audit && (
         <div className="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
@@ -247,6 +278,138 @@ export function PrismaFlowPage() {
         </div>
       )}
 
+    </div>
+  );
+}
+
+function OfficialPrismaPanel({
+  sync, frameUrl, onRefreshFrame, onDownloadCsv,
+}: {
+  sync: Prisma2020Sync;
+  frameUrl: string | null;
+  onRefreshFrame: () => void;
+  onDownloadCsv: () => void;
+}) {
+  const counts = sync.counts;
+  const stale = Boolean(frameUrl && sync.shiny_url && frameUrl !== sync.shiny_url);
+  const databaseBoxes: [string, number][] = [
+    ["Databases", counts.database_results],
+    ["Registers", counts.register_results],
+    ["Duplicates removed", counts.duplicates],
+    ["Removed by automation", counts.excluded_automatic],
+    ["Records screened", counts.records_screened],
+    ["Records excluded", counts.records_excluded],
+    ["Reports sought", counts.dbr_sought_reports],
+    ["Reports not retrieved", counts.dbr_notretrieved_reports],
+    ["Reports assessed", counts.dbr_assessed],
+    ["Reports excluded", counts.dbr_excluded],
+    ["New studies", counts.new_studies],
+  ];
+  const otherBoxes: [string, number][] = [
+    ["Websites", counts.website_results],
+    ["Organisations", counts.organisation_results],
+    ["Citation searching", counts.citations_results],
+    ["Reports sought", counts.other_sought_reports],
+    ["Reports not retrieved", counts.other_notretrieved_reports],
+    ["Reports assessed", counts.other_assessed],
+    ["Reports excluded", counts.other_excluded],
+    ["Studies included", counts.other_included],
+  ];
+
+  return (
+    <div className="card p-4 mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Official PRISMA2020 diagram</h2>
+          <p className="text-xs text-slate-500 mt-1 max-w-xl">
+            Counts below are filled into the Haddaway PRISMA2020 app. Inside that app, open Create flow diagram.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={sync.shiny_url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs px-3 py-1.5 rounded-md font-medium bg-phylo-blue text-white hover:opacity-90 flex items-center gap-1"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Open PRISMA2020
+          </a>
+          <button
+            type="button"
+            onClick={onDownloadCsv}
+            className="text-xs px-3 py-1.5 rounded-md font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-1"
+          >
+            <Download className="h-3 w-3" />
+            PRISMA2020 CSV
+          </button>
+          <button
+            type="button"
+            onClick={onRefreshFrame}
+            className="text-xs px-3 py-1.5 rounded-md font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-1"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Refresh diagram
+          </button>
+        </div>
+      </div>
+
+      {stale && (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Screening counts changed. Refresh the official diagram to load the latest numbers.
+        </div>
+      )}
+
+      <div className={`grid gap-4 ${sync.options.other ? "md:grid-cols-2" : "grid-cols-1"}`}>
+        <CountGrid title="Databases and registers" rows={databaseBoxes} />
+        {sync.options.other === 1 && <CountGrid title="Other methods" rows={otherBoxes} />}
+      </div>
+      <p className="mt-3 text-xs text-slate-600">
+        Total studies included: <span className="font-semibold">{counts.total_studies}</span>
+        {sync.options.metaAnalysis === 1 && (
+          <> · In meta-analysis: <span className="font-semibold">{counts.total_studies_ma}</span></>
+        )}
+      </p>
+      {sync.fields.dbr_excluded !== "0" && (
+        <p className="mt-1 text-xs text-slate-500">Full-text exclusions: {sync.fields.dbr_excluded}</p>
+      )}
+      {sync.options.other === 1 && sync.fields.other_excluded !== "0" && (
+        <p className="mt-1 text-xs text-slate-500">Other-method exclusions: {sync.fields.other_excluded}</p>
+      )}
+      {sync.notes.map((note) => (
+        <p key={note} className="mt-2 text-xs text-slate-500">{note}</p>
+      ))}
+      <p className="mt-2 text-[11px] text-slate-400">
+        <a className="underline" href="https://doi.org/10.1002/cl2.1230" target="_blank" rel="noreferrer">
+          Haddaway et al., 2022
+        </a>
+      </p>
+
+      {frameUrl && (
+        <iframe
+          key={frameUrl}
+          title="Official PRISMA2020 flow diagram"
+          src={frameUrl}
+          className="mt-4 w-full rounded-lg border border-slate-200 bg-white"
+          style={{ height: "820px" }}
+        />
+      )}
+    </div>
+  );
+}
+
+function CountGrid({ title, rows }: { title: string; rows: [string, number][] }) {
+  return (
+    <div>
+      <h3 className="text-xs font-semibold text-slate-500 mb-2">{title}</h3>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex items-baseline justify-between border-b border-slate-100 py-1">
+            <dt className="text-slate-500">{label}</dt>
+            <dd className="font-semibold text-slate-900">{value}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }

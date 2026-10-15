@@ -1263,6 +1263,33 @@ async def prisma_flow_docx(project_id: str, user: Optional[dict] = Depends(get_c
     )
 
 
+@router.get("/projects/{project_id}/prisma/prisma2020.csv")
+async def prisma2020_csv(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)):
+    """Official PRISMA2020 template CSV filled with this project's live counts."""
+    from services.prisma2020_sync import render_prisma2020_csv, sync_prisma2020
+    from fastapi.responses import Response
+
+    check_project_access(conn, project_id, user)
+    payload = sync_prisma2020(project_id, conn)
+    csv_text = render_prisma2020_csv(payload["fields"])
+    return Response(
+        content=csv_text,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="PRISMA2020_{project_id}.csv"'},
+    )
+
+
+@router.get("/projects/{project_id}/prisma/prisma2020")
+async def prisma2020_sync(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)):
+    """Live counts for the Haddaway PRISMA2020 Shiny app, plus a prefilled URL."""
+    from services.prisma2020_sync import sync_prisma2020
+
+    check_project_access(conn, project_id, user)
+    return sync_prisma2020(project_id, conn)
+
+
 @router.get("/projects/{project_id}/prisma")
 async def prisma_flow(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):

@@ -61,7 +61,9 @@ CREATE TABLE IF NOT EXISTS projects (
     config_path       TEXT DEFAULT '',
     created_at        TEXT DEFAULT (datetime('now')),
     created_by        TEXT DEFAULT '',
-    status            TEXT DEFAULT 'active'
+    status            TEXT DEFAULT 'active',
+    auto_rob_enabled  INTEGER DEFAULT 0,
+    rob_confidence_threshold REAL DEFAULT 0.7
 );
 
 CREATE TABLE IF NOT EXISTS studies (
@@ -474,6 +476,33 @@ CREATE TABLE IF NOT EXISTS sessions (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
+-- ── Human Track Changes decisions on AI extractions (error analysis / training data) ──
+
+CREATE TABLE IF NOT EXISTS extraction_decisions (
+    decision_id     TEXT PRIMARY KEY,
+    project_id      TEXT NOT NULL,
+    study_id        TEXT NOT NULL,
+    variable_id     TEXT NOT NULL,
+    variable_name   TEXT DEFAULT '',
+    decision        TEXT NOT NULL,      -- accepted | modified | rejected
+    original_value  TEXT DEFAULT '',
+    corrected_value TEXT DEFAULT '',
+    category        TEXT DEFAULT '',    -- VERIFIED_ACCURATE | NORMALIZATION | ...
+    has_discrepancy INTEGER DEFAULT 0,
+    rationale       TEXT DEFAULT '',
+    evidence_quote  TEXT DEFAULT '',
+    page_number     INTEGER,
+    codebook_rules  TEXT DEFAULT '',
+    reviewer        TEXT DEFAULT '',
+    notes           TEXT DEFAULT '',
+    undone          INTEGER DEFAULT 0,
+    created_at      TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_extraction_decisions_project ON extraction_decisions(project_id);
+CREATE INDEX IF NOT EXISTS idx_extraction_decisions_cell ON extraction_decisions(study_id, variable_id);
+
 -- ── Project membership (roles-based access control) ──
 
 CREATE TABLE IF NOT EXISTS project_members (
@@ -625,7 +654,7 @@ MIGRATION_COLUMNS = [
     ("extractions", "extraction_prompt", "TEXT DEFAULT ''"),
     ("extractions", "calc_note", "TEXT DEFAULT ''"),
     # Phase 2: Batch RoB and Human-in-the-loop screening settings & flags
-    ("projects", "auto_rob_enabled", "INTEGER DEFAULT 1"),
+    ("projects", "auto_rob_enabled", "INTEGER DEFAULT 0"),
     ("projects", "rob_confidence_threshold", "REAL DEFAULT 0.7"),
     ("rob_assessments", "run_id", "TEXT DEFAULT ''"),
     ("rob_assessments", "auto_selected", "INTEGER DEFAULT 0"),
@@ -721,6 +750,7 @@ def reset_db():
             "user_review_state",
             "project_members",
             "sessions",
+            "extraction_decisions",
             "extractions", "audit_log", "variables", "studies",
             "search_logs",
             "projects", "users", "cache_store",

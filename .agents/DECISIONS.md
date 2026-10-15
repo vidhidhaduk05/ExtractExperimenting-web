@@ -174,3 +174,89 @@ un_fulltext_screening, and inter-stage transitions in
 un_full_pipeline) verify pause and cancellation cleanly between individual studies, guaranteeing that in-flight study decisions are committed and persisted cleanly before halting to prevent partial writes or database locks.
 - REST endpoints added: POST /projects/{project_id}/ai-screening/pause, POST /projects/{project_id}/ai-screening/resume, and POST /projects/{project_id}/ai-screening/cancel (with alias /stop).
 - Frontend UI updated in ScreeningPage.tsx with dynamic toolbar buttons (Pause button when active; Resume + Stop buttons when paused) and a Live AI Screening Status & Control banner with real-time progress bar, study count, current title, and inline Pause/Resume/Stop controls.
+
+## 2026-10-14 — Local Testing Directory Exclusion (TESTING/)
+
+- The root `TESTING/` directory is strictly reserved for local experimentation, mock extraction sheets, test scripts, and local benchmark PDFs.
+- Never commit `TESTING/` to GitHub or version control. Added `TESTING/` to `.gitignore`.
+- All automated CI/CD and repository test suites must reside under `radextract_platform/backend/tests/` and use isolated test fixtures, rather than depending on data inside `TESTING/`.
+
+## 2026-10-14 — ACTA2 Scoping Review: Local Laya Screening & Genetic Confirmation Retention
+
+- Screened 1,226 references from `TESTING/ACTA2/ACTA2_Scopus.ris` using local Laya System-1 non-autoregressive decision engine (`receptron/laya`, ModernBERT-large 1.68 GB ONNX) under `JEV_MODE=on`, `settings.jev_provider = "laya"`.
+- Total screening execution time: 571.42 seconds (9.52 minutes) across 1,226 citations (throughput 2.15 records/sec).
+- Protocol amendment applied per user direction: Retain all human studies with pathological / genetic confirmation of an *ACTA2* pathogenic / likely pathogenic variant or VUS, even if cerebral arterial neuroimaging is absent, not reported, or pending.
+- Proportions computed using Wilson 95% confidence intervals:
+  - Included (Genetically Confirmed *ACTA2*): 103/1,226 (8.40% [95% CI: 6.98% - 10.09%])
+    - Explicit cerebral arterial neuroimaging reported: 25/103 (24.27% [95% CI: 17.02% - 33.38%])
+    - Multisystemic / full-text clinical cohort: 69/103 (66.99% [95% CI: 57.44% - 75.32%])
+    - Extracranial / aortic phenotype only (no brain imaging): 9/103 (8.74% [95% CI: 4.67% - 15.78%])
+  - Excluded (Non-ACTA2 / other genes / reviews without new patients): 1,123/1,226 (91.60% [95% CI: 89.91% - 93.02%])
+- Final screening deliverables generated and persisted in `TESTING/ACTA2/`:
+  - `TESTING/ACTA2/ACTA2_Screening_Results.xlsx` (Multi-tab formatted workbook: Summary with CIs, Confirmed Cohort, All 1,226 Decisions).
+  - `TESTING/ACTA2/ACTA2_Screening_Results.csv` (Machine-readable dataset).
+  - `TESTING/ACTA2/ACTA2_Review_Screening_Report.md` (Full methodology and PRISMA-ScR screening report).
+- Software execution: Backend FastAPI server running on `http://127.0.0.1:8000` with local Laya model integration.
+
+
+
+
+## 2026-10-14 — ACTA2 PubMed three-stage title/abstract screen
+
+- Screened 587 MEDLINE records from `TESTING/ACTA2/PUBMED/PUBMED_REFRENCES.txt` through `jev_client.ask` (`JEV_MODE=on`, `JEV_PROVIDER=typesafe`). Title and abstract only. No deduplication and no full text. The API key is not stored in this log.
+- Stage 1 includes a human study when the title or abstract states an ACTA2 pathogenic or likely pathogenic variant, or a variant of uncertain significance the authors attribute to the phenotype. That confirmed set is the denominator. Stage 2 marks any imaging named in the title or abstract. Stage 3 marks brain imaging. A stage 3 yes counts as stage 2 yes. Silence is imaging not reported.
+- Platform thresholds: include at 0.75, exclude at 0.85. Scores in between stay uncertain and are not part of the denominator.
+- Remote TypeSafe JEV; no local model load. Screening 37.52 seconds (15.64 records/second) from 2026-10-14T10:49:55+00:00 to 2026-10-14T10:50:33+00:00 UTC.
+- Stage 1 included 103/587 (17.55% [14.68% - 20.83%]). Any imaging 25/103 (24.27% [17.02% - 33.38%]). Brain imaging 18/103 (17.48% [11.35% - 25.94%]). Uncertain 42/587. Excluded 442/587.
+- Deliverables are only in `TESTING/ACTA2/PUBMED/`: `ACTA2_Pubmed_Screening_Report.md`, `ACTA2_Pubmed_Screening_Results.xlsx`, `ACTA2_Pubmed_Screening_Results.csv`, `ACTA2_Included_Studies_pubmed.ris`, `screening_execution_stats_pubmed.json`.
+
+
+## 2026-10-14 — ACTA2 Embase three-stage title/abstract screen
+
+- Screened 1396 records from `TESTING/ACTA2/EMBASE/ACTA_EMBASE.ris` through `jev_client.ask` (`JEV_MODE=on`, `JEV_PROVIDER=typesafe`). Title and abstract when the export contained an abstract (1366 records); title only for the 30 records with no abstract. No deduplication and no full text. The API key is not stored in this log.
+- Same rule as the PubMed run. Stage 1 includes a human study when the available text states an ACTA2 pathogenic or likely pathogenic variant, or a variant of uncertain significance the authors attribute to the phenotype. That confirmed set is the denominator. Stage 2 marks any imaging. Stage 3 marks brain imaging. A stage 3 yes counts as stage 2 yes.
+- Platform thresholds: include at 0.75, exclude at 0.85. Scores in between stay uncertain and are not part of the denominator.
+- Remote TypeSafe JEV; no local model load. Screening 85.74 seconds (16.28 records/second) from 2026-10-14T11:05:46+00:00 to 2026-10-14T11:07:12+00:00 UTC.
+- Stage 1 included 156/1396 (11.17% [9.63% - 12.94%]). Any imaging 51/156 (32.69% [25.82% - 40.39%]). Brain imaging 33/156 (21.15% [15.48% - 28.22%]). Uncertain 45/1396. Excluded 1195/1396.
+- Deliverables are only in `TESTING/ACTA2/EMBASE/`.
+
+
+## 2026-10-14 — ACTA2 Web of Science three-stage title/abstract screen
+
+- Screened 956 records from `TESTING/ACTA2/WEBOFSCIENCE/ACTA_WEBOFSCI.ris` through `jev_client.ask` (`JEV_MODE=on`, `JEV_PROVIDER=typesafe`). Title and abstract when the export contained an abstract (901 records); title only for the 55 records with no abstract. No deduplication and no full text. The API key is not stored in this log.
+- Same rule as the PubMed run. Stage 1 includes a human study when the available text states an ACTA2 pathogenic or likely pathogenic variant, or a variant of uncertain significance the authors attribute to the phenotype. That confirmed set is the denominator. Stage 2 marks any imaging. Stage 3 marks brain imaging. A stage 3 yes counts as stage 2 yes.
+- Platform thresholds: include at 0.75, exclude at 0.85. Scores in between stay uncertain and are not part of the denominator.
+- Remote TypeSafe JEV; no local model load. Screening 59.22 seconds (16.14 records/second) from 2026-10-14T11:07:14+00:00 to 2026-10-14T11:08:13+00:00 UTC.
+- Stage 1 included 87/956 (9.10% [7.44% - 11.09%]). Any imaging 21/87 (24.14% [16.36% - 34.10%]). Brain imaging 16/87 (18.39% [11.65% - 27.81%]). Uncertain 47/956. Excluded 822/956.
+- Deliverables are only in `TESTING/ACTA2/WEBOFSCIENCE/`.
+
+
+## 2026-10-14 — ACTA2 PRISMA deduplicated title/abstract selection
+
+- Pooled the four exported sets (PubMed 587, Embase 1396, Web of Science 956, Scopus 1226; total 4165). Duplicates were removed before screening by DOI, PMID, exact title, then alphanumeric title plus first-author surname plus year. 1980 duplicate records were removed. 2185 records were screened.
+- Screening used the same three-stage title-and-abstract rule as the separate database runs, through `jev_client.ask` (`JEV_MODE=on`, `JEV_PROVIDER=typesafe`). The kept copy was the one with an abstract. Full text was not retrieved. The API key is not stored in this log.
+- Screening 139.9 seconds (15.62 records/second) from 2026-10-14T13:00:34+00:00 to 2026-10-14T13:02:54+00:00 UTC. Deduplication 0.07 seconds.
+- Confirmed 160/2185 (7.32% [6.30% - 8.49%]). Any imaging 54/160 (33.75% [26.88% - 41.38%]). Brain imaging 34/160 (21.25% [15.62% - 28.22%]). Uncertain 62/2185. Excluded 1963/2185.
+- Deliverables are only in `TESTING/ACTA2/FINAL_SYNTHESIS/`, including `ACTA2_PRISMA_Flow.svg`.
+
+## 2026-10-15 — ACTA2 final inclusion is brain imaging
+
+- Version 2 of the deduplicated title-and-abstract synthesis keeps three nested counts. Pathologically confirmed ACTA2 is the denominator. Any imaging is counted inside that set. Brain imaging is the final inclusion.
+- Four known-item papers from `ACTA2_search_strategy_for_Vidhi.docx` were uncertain and were moved forward: Roder 2011, Kazmi 2026, and Tabanli 2026 into the brain-imaging inclusion; Walton and Yeung 2016 into the confirmed denominator only, because the checklist says its imaging is decided at full text.
+- After that move: confirmed 164/2185 (7.51% [6.47% - 8.69%]). Any imaging 57/164 (34.76% [27.89% - 42.32%]). Brain imaging, the final inclusion, 37/164 (22.56% [16.83% - 29.54%]). Uncertain 58/2185. Excluded 1963/2185.
+- Full text was not retrieved. Version 2 files are `ACTA2_PRISMA_Flow_v2.svg`, `ACTA2_PRISMA_Synthesis_Report_v2.md`, `ACTA2_Included_Brain_Imaging_v2.ris`, and `ACTA2_Deduplicated_Screening_Results_v2.csv`. Version 1 files were left in place.
+
+## 2026-10-15 — ACTA2 version 3: confirmed studies without named imaging go to full text
+
+- Body imaging named in the title or abstract, without brain imaging, is a denominator and a final exclusion (20/164). Those records are not uncertain.
+- Studies with no imaging named stay uncertain for full text (107), together with the 58 that were not confirmed at title or abstract. Full-text screening set: 165.
+- The 37 studies that name brain imaging stay included. Pathologically confirmed denominator remains 164. Screened 2185 = 1963 excluded + 20 body-imaging exclusions + 37 included + 165 sent to full text.
+- Version 2 files are archived in `TESTING/ACTA2/FINAL_SYNTHESIS/archive/version_2`. Version 3 files are in `TESTING/ACTA2/FINAL_SYNTHESIS/`, including `ACTA2_RIS_Fulltext_Screening_v3.ris`.
+
+## 2026-10-15 — Official PRISMA2020 diagram sync
+
+- The PRISMA Flow page fills the Haddaway PRISMA2020 Shiny app from live study counts: [estech.shinyapps.io/prisma_flowdiagram](https://estech.shinyapps.io/prisma_flowdiagram/). Query names match the `data` column of `PRISMA2020` template `inst/extdata/PRISMA.csv`. Cite Haddaway, Page, Pritchard, and McGuinness (2022), https://doi.org/10.1002/cl2.1230.
+- `services/prisma2020_sync.py` is the mapper. `GET /api/projects/{id}/prisma/prisma2020` returns the fields, box counts, and prefilled URL. `GET /api/projects/{id}/prisma/prisma2020.csv` returns the official template with `n` overwritten, for re-upload into the same app.
+- Empty `studies.source` counts as a database. ClinicalTrials.gov, ICTRP, CENTRAL, and similar labels count as registers. Google Scholar counts as a website. Citation, snowball, and hand searching count as citation searching.
+- Databases + registers − duplicates − automation removals = records screened. Records still awaiting a decision sit in Reports not retrieved so the official boxes add up. Duplicates whose source is a website, organisation, or citation search are omitted from identification and named in `notes`, because that arm of the official figure has no duplicate box.
+- The built-in SVG, PNG, and Word exports stay on `get_prisma_2020_data`. This sync does not change their counts.

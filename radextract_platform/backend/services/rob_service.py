@@ -967,6 +967,112 @@ def change_assessment_tool(assessment_id: str, new_tool: str, db: Optional[DBBac
     return get_assessment(assessment_id, db=db)
 
 
+def _resolve_prefill_model_fn():
+    """Resolve AI prefill model function. Returns None if AI service not reachable."""
+    try:
+        from services.llm_extractor import is_llm_available
+        if is_llm_available():
+            from services.llm_client import get_client
+            return get_client().as_model_fn("prefill_rob_domain")
+    except Exception:
+        pass
+    return None
+
+
+def assess_study_for_batch(
+    study_id: str,
+    project_id: str,
+    db: Optional[DBBackend] = None,
+    run_id: str = "",
+) -> dict:
+    """Assess a single study as part of a batch RoB run.
+
+    Determines the tool from study_design, resolves prefill model function,
+    creates the assessment and prefills it (or leaves empty if AI unreachable).
+    If tool cannot be determined, returns manual_review flag.
+    """
+    db = db or get_db_backend()
+    study = db.get("studies", study_id)
+    if not study:
+        return {"status": "skipped", "study_id": study_id, "reason": "study not found"}
+
+    design = (study.get("study_design") or "").lower()
+    tool_key = None
+    if any(k in design for k in ("random", "rct")):
+        tool_key = "rob2"
+    elif any(k in design for k in ("cohort", "case-control", "observational", "non-random")):
+        tool_key = "robins_i"
+    elif any(k in design for k in ("diagnostic", "quadas")):
+        tool_key = "quadas2"
+    elif "rob2" in design:
+        tool_key = "rob2"
+    elif "robins" in design:
+        tool_key = "robins_i"
+
+    if not tool_key:
+        return {"status": "manual_review", "manual_review": True, "study_id": study_id}
+
+    model_fn = _resolve_prefill_model_fn()
+    ai_reachable = model_fn is not None
+
+    assessment = create_assessment(
+        study_id=study_id,
+        project_id=project_id,
+        tool=tool_key,
+        outcome_label="",
+        assessed_by="ai_batch",
+        run_id=run_id,
+        auto_selected=1,
+        db=db,
+    )
+
+    if not ai_reachable:
+        return {
+            "status": "empty",
+            "study_id": study_id,
+            "assessment_id": assessment["assessment_id"],
+            "ai_reachable": False,
+        }
+
+    try:
+        from services import rob_ai, pdf_service
+        pdf_data = pdf_service.get_pdf_data(study_id, db=db)
+        full_text = (pdf_data or {}).get("full_text", "") or ""
+        if len(full_text) <= 100:
+            full_text = "\n\n".join(
+                str(page.get("text") or "")
+                for page in ((pdf_data or {}).get("pages") or [])
+                if isinstance(page, dict)
+            )
+
+        ai_results = rob_ai.prefill_assessment(
+            tool_key=tool_key,
+            study_metadata={
+                "title": study.get("title", "") or "",
+                "authors": study.get("authors", "") or "",
+                "journal": study.get("journal", "") or "",
+                "publication_year": study.get("publication_year", "") or "",
+                "study_design": study.get("study_design", "") or "",
+            },
+            full_text=full_text,
+            abstract=study.get("abstract", "") or "",
+            model_fn=model_fn,
+        )
+        apply_ai_prefill(assessment["assessment_id"], ai_results, db=db)
+        db.update("rob_assessments", assessment["assessment_id"], {"ai_prefilled": 1, "run_id": run_id})
+        db.commit()
+    except Exception as e:
+        import logging
+        logging.getLogger("radextract.rob").warning(f"[RoB] Prefill error for {study_id}: {e}")
+
+    return {
+        "status": "assessed",
+        "study_id": study_id,
+        "assessment_id": assessment["assessment_id"],
+        "ai_reachable": True,
+    }
+
+
 ROB_BATCH_RUNS: dict[str, dict] = {}
 
 
@@ -981,10 +1087,20 @@ def get_batch_rob_progress(project_id: str, db: Optional[DBBackend] = None) -> d
         latest = rows[0]
         done_ids = json.loads(latest.get("done_ids_json", "[]") or "[]")
         pending_ids = json.loads(latest.get("pending_ids_json", "[]") or "[]")
+        manual_review_ids = json.loads(latest.get("manual_review_ids_json", "[]") or "[]")
+        raw_status = latest.get("status", "idle")
+        status = "running" if raw_status == "active" else raw_status
         return {
             "run_id": latest.get("run_id"),
-            "active": latest.get("status") == "active",
+            "status": status,
+            "active": status == "running",
             "stage": "rob",
+            "total_studies": latest.get("total_studies", 0),
+            "completed_studies": latest.get("completed_studies", 0),
+            "failed_studies": latest.get("failed_studies", 0),
+            "flagged_questions_count": latest.get("flagged_questions_count", 0),
+            "manual_review_ids": manual_review_ids,
+            "error_message": latest.get("error_message", "") or latest.get("error", ""),
             "total": latest.get("total_studies", 0),
             "completed": latest.get("completed_studies", 0),
             "current_study_id": latest.get("current_study_id", ""),
@@ -992,9 +1108,16 @@ def get_batch_rob_progress(project_id: str, db: Optional[DBBackend] = None) -> d
             "pending_ids": pending_ids,
         }
     return {
+        "status": "idle",
         "run_id": None,
         "active": False,
         "stage": "rob",
+        "total_studies": 0,
+        "completed_studies": 0,
+        "failed_studies": 0,
+        "flagged_questions_count": 0,
+        "manual_review_ids": [],
+        "error_message": "",
         "total": 0,
         "completed": 0,
         "current_study_id": None,
@@ -1003,7 +1126,7 @@ def get_batch_rob_progress(project_id: str, db: Optional[DBBackend] = None) -> d
     }
 
 
-def cancel_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> bool:
+def cancel_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> dict:
     """Cancel an active batch RoB run."""
     if project_id in ROB_BATCH_RUNS:
         ROB_BATCH_RUNS[project_id]["active"] = False
@@ -1013,14 +1136,21 @@ def cancel_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> boo
     for r in rows:
         db.update("rob_runs", r["run_id"], {"status": "cancelled", "finished_at": _now()})
     db.commit()
-    return True
+    return {"status": "cancelled", "project_id": project_id}
 
 
-def start_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> dict:
+def start_batch_rob_run(
+    project_id: str,
+    db: Optional[DBBackend] = None,
+    trigger: str = "manual",
+) -> dict:
     """Start batch risk-of-bias assessment for all included studies lacking assessments."""
     import threading
     import logging
     logger = logging.getLogger("radextract.rob")
+
+    if project_id in ROB_BATCH_RUNS and ROB_BATCH_RUNS[project_id].get("status") == "running":
+        return dict(ROB_BATCH_RUNS[project_id])
 
     db = db or get_db_backend()
     all_studies = db.query("studies", {"project_id": project_id})
@@ -1036,9 +1166,17 @@ def start_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> dict
     if not studies_to_assess:
         return {
             "run_id": "",
-            "total_studies": 0,
+            "status": "idle",
             "active": False,
-            "message": "No included studies require RoB assessment."
+            "total_studies": 0,
+            "completed_studies": 0,
+            "failed_studies": 0,
+            "flagged_questions_count": 0,
+            "manual_review_ids": [],
+            "error_message": "",
+            "total": 0,
+            "completed": 0,
+            "message": "No included studies require RoB assessment.",
         }
 
     run_id = _uuid()
@@ -1046,8 +1184,15 @@ def start_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> dict
 
     run_state = {
         "run_id": run_id,
+        "status": "running",
         "active": True,
         "stage": "rob",
+        "total_studies": len(studies_to_assess),
+        "completed_studies": 0,
+        "failed_studies": 0,
+        "flagged_questions_count": 0,
+        "manual_review_ids": [],
+        "error_message": "",
         "total": len(studies_to_assess),
         "completed": 0,
         "current_study_id": pending_ids[0] if pending_ids else "",
@@ -1060,15 +1205,19 @@ def start_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> dict
         db.insert("rob_runs", {
             "run_id": run_id,
             "project_id": project_id,
-            "trigger": "auto",
+            "trigger": trigger,
             "status": "active",
             "started_at": _now(),
             "finished_at": "",
             "total_studies": len(studies_to_assess),
             "completed_studies": 0,
+            "failed_studies": 0,
+            "flagged_questions_count": 0,
+            "manual_review_ids_json": json.dumps([]),
             "current_study_id": run_state["current_study_id"],
             "done_ids_json": json.dumps([]),
             "pending_ids_json": json.dumps(pending_ids),
+            "error_message": "",
             "error": "",
         })
         db.commit()
@@ -1080,54 +1229,77 @@ def start_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> dict
         try:
             for s in studies_to_assess:
                 st_id = s["study_id"]
-                if not ROB_BATCH_RUNS.get(project_id, {}).get("active"):
+                if project_id not in ROB_BATCH_RUNS:
+                    break
+                state = ROB_BATCH_RUNS[project_id]
+                if not state.get("active") or state.get("status") == "cancelled":
                     break
 
-                ROB_BATCH_RUNS[project_id]["current_study_id"] = st_id
+                state["current_study_id"] = st_id
                 try:
-                    auto_assess_study(
+                    res = assess_study_for_batch(
                         study_id=st_id,
                         project_id=project_id,
                         db=worker_db,
-                        assessed_by="ai_batch",
+                        run_id=run_id,
                     )
+                    if project_id not in ROB_BATCH_RUNS:
+                        break
+                    state["completed_studies"] += 1
+                    state["completed"] += 1
+                    if res.get("manual_review"):
+                        state["manual_review_ids"].append(st_id)
+                    if res.get("ai_reachable") is False:
+                        if not state["error_message"]:
+                            state["error_message"] = "AI service not reachable; created empty assessments"
                 except Exception as ex:
                     logger.warning(f"[RoB] Batch assess error for {st_id}: {ex}")
+                    if project_id not in ROB_BATCH_RUNS:
+                        break
+                    state["failed_studies"] += 1
+                    current_err = state["error_message"]
+                    state["error_message"] = f"{current_err} {st_id}: {ex}".strip()
 
-                ROB_BATCH_RUNS[project_id]["completed"] += 1
-                ROB_BATCH_RUNS[project_id]["done_ids"].append(st_id)
-                if st_id in ROB_BATCH_RUNS[project_id]["pending_ids"]:
-                    ROB_BATCH_RUNS[project_id]["pending_ids"].remove(st_id)
+                if project_id not in ROB_BATCH_RUNS:
+                    break
+                state["done_ids"].append(st_id)
+                if st_id in state["pending_ids"]:
+                    state["pending_ids"].remove(st_id)
 
                 try:
                     worker_db.update("rob_runs", run_id, {
-                        "completed_studies": ROB_BATCH_RUNS[project_id]["completed"],
-                        "current_study_id": ROB_BATCH_RUNS[project_id].get("current_study_id", ""),
-                        "done_ids_json": json.dumps(ROB_BATCH_RUNS[project_id]["done_ids"]),
-                        "pending_ids_json": json.dumps(ROB_BATCH_RUNS[project_id]["pending_ids"]),
+                        "completed_studies": state["completed_studies"],
+                        "failed_studies": state["failed_studies"],
+                        "manual_review_ids_json": json.dumps(state["manual_review_ids"]),
+                        "current_study_id": state.get("current_study_id", ""),
+                        "done_ids_json": json.dumps(state["done_ids"]),
+                        "pending_ids_json": json.dumps(state["pending_ids"]),
+                        "error_message": state["error_message"],
                     })
                     worker_db.commit()
                 except Exception:
                     pass
 
-            ROB_BATCH_RUNS[project_id]["active"] = False
-            ROB_BATCH_RUNS[project_id]["current_study_id"] = ""
-            try:
-                worker_db.update("rob_runs", run_id, {
-                    "status": "completed",
-                    "finished_at": _now(),
-                    "current_study_id": "",
-                })
-                worker_db.commit()
-            except Exception:
-                pass
+            if project_id in ROB_BATCH_RUNS and ROB_BATCH_RUNS[project_id].get("status") != "cancelled":
+                ROB_BATCH_RUNS[project_id]["status"] = "completed"
+                ROB_BATCH_RUNS[project_id]["active"] = False
+                ROB_BATCH_RUNS[project_id]["current_study_id"] = ""
+                try:
+                    worker_db.update("rob_runs", run_id, {
+                        "status": "completed",
+                        "finished_at": _now(),
+                        "completed_studies": ROB_BATCH_RUNS[project_id]["completed_studies"],
+                        "failed_studies": ROB_BATCH_RUNS[project_id]["failed_studies"],
+                        "manual_review_ids_json": json.dumps(ROB_BATCH_RUNS[project_id]["manual_review_ids"]),
+                        "current_study_id": "",
+                        "error_message": ROB_BATCH_RUNS[project_id]["error_message"],
+                    })
+                    worker_db.commit()
+                except Exception:
+                    pass
         finally:
             worker_db.close()
 
     threading.Thread(target=_worker, daemon=True).start()
 
-    return {
-        "run_id": run_id,
-        "total_studies": len(studies_to_assess),
-        "active": True,
-    }
+    return dict(run_state)

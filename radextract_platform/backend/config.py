@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 15  # short-lived access tokens
     refresh_token_expire_days: int = 30  # long-lived refresh tokens
+    contact_email: str = os.environ.get("CONTACT_EMAIL") or os.environ.get("ADMIN_EMAIL") or ""
 
     @property
     def effective_jwt_secret(self) -> str:

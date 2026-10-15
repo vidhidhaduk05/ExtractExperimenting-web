@@ -86,3 +86,5 @@ node_modules
 *_tmp/
 tests_tmp/
 radextract_platform/backend/tests/.test_tmp/
+TESTING/
+

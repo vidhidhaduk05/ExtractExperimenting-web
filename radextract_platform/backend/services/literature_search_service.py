@@ -9,15 +9,61 @@ import urllib.parse
 import json
 from typing import List, Dict, Any, Optional
 
+_PUBMED_USER_AGENT = "RadExtract/2.4 (Scientific-Agent-Skills)"
+# Words that carry no meaning in a "every word must appear" search.
+_STOPWORDS = {"a", "an", "the", "of", "in", "on", "for", "and", "or", "to", "by", "with", "at", "from", "is", "are"}
+# Anything that shows the user already wrote a PubMed query: boolean operators, field tags,
+# quotes, parentheses, wildcards.
+_ADVANCED_QUERY = re.compile(r'\b(AND|OR|NOT)\b|\[[^\]]+\]|["()*]')
+
+
+def is_advanced_pubmed_query(query: str) -> bool:
+    return bool(_ADVANCED_QUERY.search(query or ""))
+
+
+def pubmed_terms(query: str) -> List[str]:
+    """PubMed search terms to try, most precise first.
+
+    PubMed's default "automatic term mapping" matches each word of an unquoted query anywhere in
+    the record, so "pure arterial malformation" returns heart and surgery papers that merely contain
+    "pure". Plain text is therefore searched as an exact phrase in the title/abstract first, then as
+    "every word in the title/abstract". Queries that already use operators, quotes or field tags are
+    sent exactly as written.
+    """
+    text = " ".join((query or "").split())
+    if not text:
+        return []
+    if is_advanced_pubmed_query(text):
+        return [text]
+    terms = [f'"{text}"[Title/Abstract]']
+    words = [w for w in re.findall(r"[\w'-]+", text) if w.lower() not in _STOPWORDS]
+    if len(words) > 1:
+        terms.append(" AND ".join(f"{w}[Title/Abstract]" for w in words))
+    return terms
+
+
+def _pubmed_ids(term: str, max_results: int) -> List[str]:
+    url = (
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed"
+        f"&term={urllib.parse.quote(term)}&retmode=json&retmax={max_results}"
+    )
+    with httpx.Client(timeout=10) as client:
+        resp = client.get(url, headers={"User-Agent": _PUBMED_USER_AGENT})
+        resp.raise_for_status()
+        return resp.json().get("esearchresult", {}).get("idlist", [])
+
+
 def search_pubmed(query: str, max_results: int = 15) -> List[Dict[str, Any]]:
-    """Search PubMed via NCBI E-Utilities."""
+    """Search PubMed via NCBI E-Utilities (phrase first, see pubmed_terms)."""
     try:
-        esearch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={urllib.parse.quote(query)}&retmode=json&retmax={max_results}"
-        with httpx.Client(timeout=10) as client:
-            resp = client.get(esearch_url, headers={"User-Agent": "RadExtract/2.4 (Scientific-Agent-Skills)"})
-            resp.raise_for_status()
-            data = resp.json()
-            id_list = data.get("esearchresult", {}).get("idlist", [])
+        id_list: List[str] = []
+        for term in pubmed_terms(query):
+            for pmid in _pubmed_ids(term, max_results):
+                if pmid not in id_list:
+                    id_list.append(pmid)
+            if len(id_list) >= max_results:
+                break
+        id_list = id_list[:max_results]
 
         if not id_list:
             return []

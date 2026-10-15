@@ -382,6 +382,19 @@ class AIScreeningPipeline:
                WHERE project_id = ? AND screening_status = 'ta_included'""",
             (project_id,),
         ).fetchall()
+        # Studies parked at awaiting_pdf are picked up again once their full text exists
+        # (uploaded PDF or retrieved open-access text); the rest stay parked.
+        waiting = conn.execute(
+            """SELECT * FROM studies
+               WHERE project_id = ? AND screening_status = 'awaiting_pdf'""",
+            (project_id,),
+        ).fetchall()
+        for w in waiting:
+            doc = conn.execute(
+                "SELECT full_text FROM pdf_documents WHERE study_id = ?", (dict(w)["study_id"],)
+            ).fetchone()
+            if doc and (dict(doc).get("full_text") or "").strip():
+                studies = list(studies) + [w]
         progress.start(project_id, "fulltext", [dict(r)["study_id"] for r in studies])
 
         results: list[dict[str, Any]] = []

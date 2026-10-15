@@ -26,8 +26,13 @@ import gc
 import json
 import time
 import hashlib
+import logging
 from dataclasses import dataclass, field
 from typing import Optional, Dict, List, Any, Tuple
+
+logger = logging.getLogger("radextract.document_processor")
+
+from . import table_rebuild  # noqa: E402
 
 # Disable PyTorch compilation to avoid warnings (matches Docling server convention)
 os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
@@ -280,27 +285,58 @@ class DoclingProcessor:
             bbox = self._normalize_bbox(provs[0].bbox, page_sizes.get(page_no)) if provs else None
 
             data = tbl_item.data
-            rows = self._table_data_to_rows(data) if data else []
-            n_rows = data.num_rows if data else len(rows)
-            n_cols = data.num_cols if data else (len(rows[0]) if rows else 0)
+            grid = self._table_data_to_rows(data) if data else []
 
-            # Cell-level bounding boxes
+            # Upright, per-record layout + checks against the PDF text (see table_rebuild.py).
+            layout = table_rebuild.analyze_table(
+                pdf_path, page_no, provs[0].bbox if provs else None, grid,
+            )
+            rows = layout["rows"]
+            index_map = layout["index_map"]
+            table_id = f"t{len(tables_parsed) + 1}"
+
+            # Cell-level bounding boxes so highlights match rows. Word-position tables carry their
+            # own boxes (one per cell); Docling tables are re-pointed at the upright grid.
             cell_bboxes = []
-            if data and data.table_cells:
+            if layout["cell_boxes"] is not None:
+                cell_bboxes = [
+                    {"row": cb["row"], "col": cb["col"], "text": cb["text"], "bbox": cb["bbox"]}
+                    for cb in layout["cell_boxes"]
+                ]
+            elif data and data.table_cells:
                 for cell in data.table_cells:
                     cell_bbox = self._normalize_bbox(cell.bbox, page_sizes.get(page_no))
+                    mapped = index_map(cell.start_row_offset_idx, cell.start_col_offset_idx)
+                    if mapped is None:  # title or spacer cell removed from the upright grid
+                        continue
+                    r, c = mapped
                     cell_bboxes.append({
-                        "row": cell.start_row_offset_idx,
-                        "col": cell.start_col_offset_idx,
+                        "row": r,
+                        "col": c,
                         "text": cell.text or "",
                         "bbox": cell_bbox,
                     })
+
+            n_rows = len(rows)
+            n_cols = max((len(r) for r in rows), default=0)
 
             table_annotations.append(TableAnnotation(
                 page=page_no, rows=rows, bbox=bbox,
                 n_rows=n_rows, n_cols=n_cols, cell_bboxes=cell_bboxes,
             ))
-            tables_parsed.append({"page": page_no, "rows": rows})
+            tables_parsed.append({
+                "type": "table",
+                "table_id": table_id,
+                "page": page_no,
+                "orientation": layout["orientation"],
+                "method": layout["method"],  # word_positions | docling_transposed | docling_grid
+                "rows": rows,            # upright: row 0 = header, one row per record
+                "header": layout["header"],
+                "records": layout["records"],
+                "caption": layout.get("caption", ""),  # table title peeled off an upright table
+                "raw_rows": grid,        # exactly what Docling returned, for audit
+                "issues": layout["issues"],
+            })
 
         # --- Picture/figure items ---
         figure_annotations: List[FigureAnnotation] = []
@@ -556,9 +592,32 @@ def get_processor(prefer_docling: bool = True) -> Any:
     return FallbackProcessor()
 
 
+def convert_with_fallback(pdf_path: str, *, doc_id: Optional[str] = None,
+                          prefer_docling: bool = True) -> ProcessedDocument:
+    """Convert a PDF, falling back to pdfplumber if Docling fails at conversion time.
+
+    ``DoclingProcessor.available`` only checks that Docling imports; it does not catch
+    failures inside Docling's own pipeline (for example a model that fails to load), which
+    otherwise surface as an unhandled exception on every document, Docling-specific or not.
+    This wraps that call so a broken Docling install degrades to the pdfplumber fallback
+    (with reduced table/figure fidelity) instead of failing the whole request.
+    """
+    if prefer_docling:
+        dp = DoclingProcessor()
+        if dp.available:
+            try:
+                return dp.convert(pdf_path, doc_id=doc_id)
+            except Exception as e:
+                logger.warning(
+                    "Docling conversion failed for %s (%s: %s); falling back to pdfplumber",
+                    pdf_path, type(e).__name__, e,
+                )
+    return FallbackProcessor().convert(pdf_path, doc_id=doc_id)
+
+
 def process_pdf(pdf_path: str, *, doc_id: Optional[str] = None,
                 prefer_docling: bool = True, autorotate: bool = False) -> ProcessedDocument:
-    """Convert a single PDF using the best available processor."""
+    """Convert a single PDF using the best available processor with graceful fallback."""
     from ..litextract.document import _autorotate_pdf
     import os
 
@@ -568,8 +627,7 @@ def process_pdf(pdf_path: str, *, doc_id: Optional[str] = None,
         active_path, is_temp = _autorotate_pdf(pdf_path)
 
     try:
-        proc = get_processor(prefer_docling=prefer_docling)
-        result = proc.convert(active_path, doc_id=doc_id)
+        result = convert_with_fallback(active_path, doc_id=doc_id, prefer_docling=prefer_docling)
         # Update metadata to reflect the original source_path
         if result.metadata:
             result.metadata["source_path"] = pdf_path
@@ -583,25 +641,8 @@ def process_pdf(pdf_path: str, *, doc_id: Optional[str] = None,
 
 
 def process_batch(pdf_paths: List[str], *, prefer_docling: bool = True, autorotate: bool = False) -> List[ProcessedDocument]:
-    """Convert multiple PDFs using the best available processor."""
-    # If autorotate is True, we process them one by one to handle temp files easily
-    if autorotate:
-        results = []
-        for path in pdf_paths:
-            try:
-                results.append(process_pdf(path, prefer_docling=prefer_docling, autorotate=autorotate))
-            except Exception as e:
-                import os
-                results.append(ProcessedDocument(
-                    doc_id=os.path.splitext(os.path.basename(path))[0],
-                    parsed={"full_text": "", "pages": [], "tables": [], "figures": [],
-                            "triage": "ERROR", "n_pages": 0, "n_text_pages": 0},
-                    metadata={"engine": "unknown", "source_path": path, "error": str(e)},
-                ))
-        return results
-
-    proc = get_processor(prefer_docling=prefer_docling)
-    return proc.convert_batch(pdf_paths)
+    """Convert multiple PDFs using the best available processor with graceful fallback."""
+    return [process_pdf(p, prefer_docling=prefer_docling, autorotate=autorotate) for p in pdf_paths]
 
 
 def save_processed_document(doc: ProcessedDocument, output_path: str) -> str:

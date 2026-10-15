@@ -23,6 +23,23 @@ router = APIRouter(prefix="/api", tags=["ai_screening"])
 pipeline = AIScreeningPipeline()
 
 
+def _maybe_start_batch_rob(db: DBBackend, project_id: str):
+    """Start batch RoB run if project has opted in via auto_rob_enabled (default: off)."""
+    try:
+        if hasattr(db, "execute"):
+            p_row = db.execute("SELECT auto_rob_enabled FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+            enabled = bool(p_row[0] if (p_row and p_row[0] is not None) else 0)
+        else:
+            p = db.get("projects", project_id)
+            enabled = bool(p.get("auto_rob_enabled")) if p else False
+        if enabled:
+            from services import rob_service
+            return rob_service.start_batch_rob_run(project_id, db=db)
+    except Exception:
+        pass
+    return None
+
+
 @router.post("/projects/{project_id}/ai-screening/start", response_model=AIScreeningSummary)
 async def start_ai_screening(
     project_id: str,
@@ -37,14 +54,7 @@ async def start_ai_screening(
     # Run off the event loop so status/study requests are answered while screening is in progress
     try:
         summary = await run_in_threadpool(pipeline.run_full_pipeline, project_id, conn)
-        # Check auto_rob_enabled
-        try:
-            p_row = conn.execute("SELECT auto_rob_enabled FROM projects WHERE project_id = ?", (project_id,)).fetchone()
-            if p_row is None or bool(p_row[0] if p_row[0] is not None else 1):
-                from services import rob_service
-                rob_service.start_batch_rob_run(project_id, db=conn)
-        except Exception:
-            pass
+        _maybe_start_batch_rob(conn, project_id)
     finally:
         screening_progress.finish(project_id)
     return AIScreeningSummary(**summary)

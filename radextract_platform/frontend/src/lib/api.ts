@@ -1,7 +1,8 @@
 import { 
   DEMO_PROJECT, 
   DEMO_STUDIES, 
-  DEMO_PRISMA, 
+  DEMO_PRISMA,
+  DEMO_PRISMA2020, 
   DEMO_SCREENING_SUMMARY, 
   DEMO_SCREENING_KEYWORDS,
   DEMO_ABSTRACT_HIGHLIGHTS,
@@ -920,6 +921,9 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     const projectId = path.split("/")[2] || "proj_pam_current";
     return getStoredProjectStudies(projectId) as unknown as T;
   }
+  if (path.includes("/prisma/prisma2020")) {
+    return DEMO_PRISMA2020 as unknown as T;
+  }
   if (path.includes("/prisma")) {
     return DEMO_PRISMA as unknown as T;
   }
@@ -1320,6 +1324,48 @@ export interface PrismaFlow {
     ai_decisions: number;
     total_decisions: number;
   };
+}
+
+export interface Prisma2020Sync {
+  project_id?: string;
+  app_url: string;
+  shiny_url: string;
+  citation: string;
+  fields: Record<string, string>;
+  options: {
+    previous: number;
+    other: number;
+    dbDetail: number;
+    regDetail: number;
+    metaAnalysis: number;
+  };
+  counts: {
+    database_results: number;
+    register_results: number;
+    duplicates: number;
+    excluded_automatic: number;
+    records_screened: number;
+    records_excluded: number;
+    dbr_sought_reports: number;
+    dbr_notretrieved_reports: number;
+    dbr_assessed: number;
+    dbr_excluded: number;
+    new_studies: number;
+    website_results: number;
+    organisation_results: number;
+    citations_results: number;
+    other_sought_reports: number;
+    other_notretrieved_reports: number;
+    other_assessed: number;
+    other_excluded: number;
+    other_included: number;
+    total_studies: number;
+    total_studies_ma: number;
+    open_dbr: number;
+    open_other: number;
+    other_duplicates_omitted: number;
+  };
+  notes: string[];
 }
 
 // ── PDF Processing ──
@@ -2629,6 +2675,8 @@ export const api = {
   // PRISMA Flow
   prismaFlow: (projectId: string) =>
     request<PrismaFlow>(`/projects/${projectId}/prisma`),
+  prisma2020: (projectId: string) =>
+    request<Prisma2020Sync>(`/projects/${projectId}/prisma/prisma2020`),
 
   // PDF Processing
   processPdf: (studyId: string) =>
@@ -3085,6 +3133,7 @@ export const api = {
   prismaSvgUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/svg`,
   prismaPngUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/png`,
   prismaDocxUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/docx`,
+  prisma2020CsvUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/prisma2020.csv`,
 
   // v2.4: Duplicate Detection & Review
   deduplicateStudies: (projectId: string, autoMark = true) =>

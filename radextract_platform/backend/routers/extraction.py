@@ -417,9 +417,9 @@ class ExtractionDecisionRequest(BaseModel):
     project_id: str
     study_id: str
     variable_id: str
-    variable_name: str
-    original_value: str
-    corrected_value: str
+    variable_name: Optional[str] = ""
+    original_value: Optional[str] = ""
+    corrected_value: Optional[str] = ""
     decision: str  # 'accepted' | 'modified' | 'rejected'
     evidence_quote: Optional[str] = ""
     page_number: Optional[int] = None
@@ -434,89 +434,105 @@ async def record_extraction_decision(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    """Record human Track Changes decision (accepted/modified/rejected).
-    
-    Persists update to study extraction record, classifies discrepancies into
-    error modalities (NORMALIZATION, MISSED_CONTEXT, NUMERIC_MISMATCH, etc.),
-    and registers record into active learning pipeline.
+    """Record a human Track Changes decision on one AI-extracted value.
+
+    accepted keeps the value, modified stores corrected_value, rejected sets it to NR,
+    undone restores original_value and retires the last decision. The decision is also
+    classified (normalization, false extraction, missed context, ...) for error analysis.
     """
-    from services.error_analysis_service import error_analysis_service
-    
-    check_project_access(conn, body.project_id, user)
-    
-    # Update SQLite database if extraction row exists
+    from services import error_analysis_service as eas
+
+    check_project_access(conn, body.project_id, user, "editor")
+    if body.decision not in (*eas.VALID_DECISIONS, "undone"):
+        raise HTTPException(status_code=400, detail=f"Unknown decision: {body.decision}")
+    if body.decision == "modified" and not (body.corrected_value or "").strip():
+        raise HTTPException(status_code=400, detail="A modified decision needs corrected_value")
+    study = conn.execute(
+        "SELECT study_id FROM studies WHERE study_id = ? AND project_id = ?",
+        (body.study_id, body.project_id),
+    ).fetchone()
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found in this project")
+    variable = conn.execute(
+        "SELECT variable_id, name FROM variables WHERE variable_id = ? AND project_id = ?",
+        (body.variable_id, body.project_id),
+    ).fetchone()
+    if not variable:
+        raise HTTPException(status_code=404, detail="Variable not found in this project")
+    var_name = body.variable_name or (variable["name"] if variable and "name" in variable.keys() else "") or ""
+
+    actor = body.reviewer or (user["username"] if user else "") or "reviewer"
     now = datetime.datetime.utcnow().isoformat()
     existing = conn.execute(
-        "SELECT extraction_id FROM extractions WHERE study_id = ? AND variable_id = ?",
+        "SELECT extraction_id, value FROM extractions WHERE study_id = ? AND variable_id = ?",
         (body.study_id, body.variable_id),
     ).fetchone()
-    
+
     if body.decision == "undone":
         if existing:
             conn.execute(
-                """UPDATE extractions 
-                   SET value = ?, is_verified = 0, verified_by = NULL, verified_at = NULL,
-                       notes = ?, updated_at = ?
-                   WHERE extraction_id = ?""",
-                (body.original_value, body.notes, now, existing["extraction_id"])
+                "UPDATE extractions SET value = ?, is_edited = 0, edited_by = '', edited_at = '' WHERE extraction_id = ?",
+                (body.original_value, existing["extraction_id"]),
             )
             conn.commit()
+        eas.undo_last_decision(conn, body.study_id, body.variable_id)
         return {"status": "success", "undone": True}
 
-    final_val = body.corrected_value if body.decision == "modified" else (
-        "NR" if body.decision == "rejected" else body.original_value
+    final_value = (
+        body.corrected_value if body.decision == "modified"
+        else "NR" if body.decision == "rejected"
+        else body.original_value
     )
-    
     if existing:
-        conn.execute(
-            """UPDATE extractions 
-               SET value = ?, is_verified = 1, verified_by = ?, verified_at = ?,
-                   notes = ?, updated_at = ?
-               WHERE extraction_id = ?""",
-            (final_val, body.reviewer or "reviewer", now, body.notes, now, existing["extraction_id"])
-        )
+        if final_value != existing["value"]:
+            conn.execute(
+                "UPDATE extractions SET value = ?, is_edited = 1, edited_by = ?, edited_at = ? WHERE extraction_id = ?",
+                (final_value, actor, now, existing["extraction_id"]),
+            )
+            conn.execute(
+                """INSERT INTO audit_log
+                   (audit_id, study_id, variable_id, variable_name, old_value, new_value, changed_by, reason)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (str(uuid.uuid4()), body.study_id, body.variable_id, var_name,
+                 existing["value"], final_value, actor, f"Track Changes: {body.decision}"),
+            )
     else:
-        new_id = f"ext_{uuid.uuid4().hex[:12]}"
         conn.execute(
-            """INSERT INTO extractions
-               (extraction_id, study_id, variable_id, value, is_verified, verified_by, verified_at, notes, created_at, updated_at)
-               VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)""",
-            (new_id, body.study_id, body.variable_id, final_val, body.reviewer or "reviewer", now, body.notes, now, now)
+            "INSERT INTO extractions (extraction_id, study_id, variable_id, value, extracted_by) VALUES (?, ?, ?, ?, ?)",
+            (str(uuid.uuid4()), body.study_id, body.variable_id, final_value, actor),
         )
     conn.commit()
 
-    record = error_analysis_service.record_decision(
-        project_id=body.project_id,
-        study_id=body.study_id,
-        variable_id=body.variable_id,
-        variable_name=body.variable_name,
-        original_value=body.original_value,
-        corrected_value=final_val,
-        decision=body.decision,
-        evidence_quote=body.evidence_quote or "",
-        page_number=body.page_number,
-        codebook_rules=body.codebook_rules or "",
-        reviewer=body.reviewer or (user["username"] if user else "Expert Reviewer"),
-        notes=body.notes or ""
+    record = eas.record_decision(
+        conn,
+        project_id=body.project_id, study_id=body.study_id, variable_id=body.variable_id,
+        variable_name=var_name, original_value=body.original_value or "",
+        corrected_value=final_value, decision=body.decision,
+        evidence_quote=body.evidence_quote or "", page_number=body.page_number,
+        codebook_rules=body.codebook_rules or "", reviewer=actor, notes=body.notes or "",
     )
     return {"status": "success", "record": record}
 
 
 @router.get("/extraction/error-analysis")
 async def get_extraction_error_analysis(
-    project_id: Optional[str] = None,
+    project_id: str,
     user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
-    """Retrieve aggregate error analysis breakdown and prompt tuning rules."""
-    from services.error_analysis_service import error_analysis_service
-    return error_analysis_service.get_analysis_summary(project_id)
+    """Error breakdown by category and variable, with suggested prompt-tuning rules."""
+    from services import error_analysis_service as eas
+    check_project_access(conn, project_id, user)
+    return eas.get_analysis_summary(conn, project_id)
 
 
 @router.get("/extraction/export-training-data")
 async def export_extraction_training_data(
-    project_id: Optional[str] = None,
+    project_id: str,
     user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
-    """Export verified human decisions in fine-tuning / prompt format."""
-    from services.error_analysis_service import error_analysis_service
-    return error_analysis_service.export_training_dataset(project_id)
+    """Verified human decisions as chat-format fine-tuning examples."""
+    from services import error_analysis_service as eas
+    check_project_access(conn, project_id, user)
+    return eas.export_training_dataset(conn, project_id)

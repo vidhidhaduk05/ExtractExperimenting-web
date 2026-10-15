@@ -573,11 +573,13 @@ class RobProjectSummary(BaseModel):
 
 class ProjectSettingsUpdate(BaseModel):
     auto_rob_enabled: Optional[bool] = None
-    rob_confidence_threshold: Optional[float] = None
+    rob_confidence_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
 
 
 class ProjectSettingsResponse(BaseModel):
-    auto_rob_enabled: bool = True
+    project_id: str
+    name: str = ""
+    auto_rob_enabled: bool = False
     rob_confidence_threshold: float = 0.7
 
 
