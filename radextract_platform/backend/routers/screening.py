@@ -80,6 +80,10 @@ async def update_screening(
         raise HTTPException(status_code=404, detail="Study not found")
 
     check_project_access(conn, row["project_id"], user, min_role="reviewer")
+    if body.stage and body.stage in ("ta", "ft"):
+        conn.execute("UPDATE studies SET screening_stage = ? WHERE study_id = ?", (body.stage, study_id))
+        conn.commit()
+
     if body.status in ("included", "excluded", "maybe"):
         await create_screening_decision(study_id, ScreeningDecisionCreate(
             study_id=study_id, project_id=row["project_id"], decision=body.status,
@@ -569,9 +573,13 @@ async def create_screening_decision(
 
     if body.project_id != study["project_id"]:
         raise HTTPException(status_code=400, detail="project_id mismatch")
-    record_stage = body.stage if body.stage in ("ta", "ft") else (study["screening_stage"] or "ta")
+    record_stage = study["screening_stage"] or ""
+    if not record_stage:
+        record_stage = "ft" if study["screening_status"] == "awaiting_pdf" else "ta"
     if record_stage not in ("ta", "ft"):
         raise HTTPException(status_code=409, detail="Record has an invalid screening stage. Refresh before saving.")
+    if body.stage != record_stage:
+        raise HTTPException(status_code=409, detail="Screening stage changed or does not match this record. Refresh before saving.")
 
     reviewer_id = user["user_id"]
     reviewer_name = user["username"]
