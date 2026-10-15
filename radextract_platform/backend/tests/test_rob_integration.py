@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 from services.db_backend import SQLiteBackend
 
 
@@ -26,12 +27,18 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES ('rev1', 'Reviewer One', 'test', 'owner')")
+    conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES ('rev2', 'Reviewer Two', 'test', 'owner')")
+    conn.commit()
     yield
 
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    c = TestClient(app)
+    c.headers["Authorization"] = f"Bearer {create_access_token('rev1', 'Reviewer One', 'owner')}"
+    return c
 
 
 def _db():
@@ -129,7 +136,17 @@ class TestManualIncludeTrigger:
 
     def test_multi_reviewer_agree_include_triggers_rob(self, client):
         pid, sid = _make_project_and_study(client)
+        db_inst = _db()
+        db_inst.update("studies", sid, {"screening_stage": "ft"})
+        db_inst.commit()
+        conn = get_connection()
         for reviewer in ("rev1", "rev2"):
+            conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES (?, ?, 'test', 'owner')", (reviewer, reviewer))
+            conn.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, 'owner')", (f"{pid}-{reviewer}", pid, reviewer))
+        conn.commit()
+
+        for reviewer in ("rev1", "rev2"):
+            client.headers["Authorization"] = f"Bearer {create_access_token(reviewer, reviewer, 'owner')}"
             r = client.post(f"/api/studies/{sid}/screening-decision", json={
                 "study_id": sid, "project_id": pid, "reviewer_id": reviewer,
                 "decision": "included", "stage": "ft",
