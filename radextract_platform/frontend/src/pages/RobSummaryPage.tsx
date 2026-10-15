@@ -18,7 +18,7 @@ import {
   Play,
   RotateCcw,
 } from "lucide-react";
-import { judgmentLabel, judgmentDotColor, cn } from "../lib/utils";
+import { judgmentLabel, judgmentDotColor, cn, sanitizeSvg } from "../lib/utils";
 import {
   BarChart,
   Bar,
@@ -297,7 +297,7 @@ function RobvisPanel({
       {loading ? (
         <p className="text-sm text-gray-400">Drawing figure...</p>
       ) : figure?.svg ? (
-        <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: figure.svg }} />
+        <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: sanitizeSvg(figure.svg) }} />
       ) : (
         <p className="text-sm text-gray-500">{figure?.message || "Figure unavailable."}</p>
       )}
