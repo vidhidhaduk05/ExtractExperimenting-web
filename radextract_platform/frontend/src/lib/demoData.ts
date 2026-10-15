@@ -36,7 +36,7 @@ export const DEMO_PROJECT: Project = {
   status: "active",
 };
 
-export const DEMO_STUDIES: Study[] = [
+export let DEMO_STUDIES: Study[] = [
   {
     study_id: "study_birua_2022",
     project_id: "proj_pam_current",

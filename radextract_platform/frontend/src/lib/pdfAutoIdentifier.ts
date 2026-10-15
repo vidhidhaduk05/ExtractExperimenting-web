@@ -106,7 +106,7 @@ export async function autoIdentifyPdf(file: File, projectId = "proj_pam_current"
     title = titleMetaMatch[1].trim();
   } else {
     // Convert filename to clean human-readable title
-    const cleaned = nameWithoutExt
+    let cleaned = nameWithoutExt
       .replace(/\b(19\d{2}|20\d{2})\b/g, "")
       .replace(/\b(et\s+al|_et_al)\b/gi, "")
       .replace(/[-_]+/g, " ")
