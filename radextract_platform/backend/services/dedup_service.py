@@ -32,6 +32,16 @@ try:
         a_lower, b_lower = a.lower(), b.lower()
         if a_lower == b_lower:
             return 1.0
+
+        la, lb = len(a_lower), len(b_lower)
+        if not la or not lb:
+            return 1.0 if la == lb else 0.0
+
+        min_len = la if la < lb else lb
+        max_ratio = (2 * min_len) / (la + lb)
+        if max_ratio < TITLE_SIMILARITY_THRESHOLD:
+            return 0.0
+
         return _lev_ratio(a_lower, b_lower)
 except ImportError:
     import difflib

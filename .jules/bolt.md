@@ -1,5 +1,9 @@
 # Bolt's Journal - Performance Learnings
 
+## 2026-10-24 - Pre-Compile Static Regex Patterns & Length Ratio Bounds on Fast-Path C Extensions
+**Learning:** Pre-compiling static regex pattern lists (e.g. `ABSTRACT_PICO_PATTERNS`) at module level into compiled `re.Pattern` objects avoids re-parsing pattern strings during high-frequency abstract scanning. In addition, applying mathematical length ratio upper bounds $2 \cdot \min(|a|, |b|) / (|a| + |b|) < \text{threshold}$ even before invoking C-optimized Levenshtein C extensions (`python-Levenshtein`) avoids allocating C data structures or computing matrix edit distances for string pairs whose length disparity mathematically precludes reaching similarity thresholds.
+**Action:** Always pre-compile module-level regex pattern sets and apply length upper-bound mathematical checks prior to invoking Levenshtein or edit-distance functions.
+
 ## 2026-10-10 - Length Ratio Upper-Bound Pre-Check & LRU Caching for Title Similarity
 **Learning:** In systematic review deduplication services running $O(N^2)$ pairwise title comparisons across hundreds or thousands of studies, difflib `SequenceMatcher` string similarity ratio calculations are a major CPU bottleneck. Since SequenceMatcher's ratio is bounded above by $2 \cdot \min(|a|, |b|) / (|a| + |b|)$, checking if this mathematical upper bound is strictly below the duplicate similarity threshold (e.g., 0.90) allows skipping expensive edit distance calculations for string pairs with dissimilar lengths. Combining this bound check with exact string equality fast-paths and `@lru_cache(maxsize=2048)` speeds up pairwise title deduplication by ~40% to >900x for duplicate pairs.
 **Action:** When computing pairwise string similarity thresholds with `difflib.SequenceMatcher`, check the $2 \cdot \min(|a|, |b|) / (|a| + |b|)$ length upper bound before invoking `ratio()` and memoize similarity calls with `@lru_cache`.
