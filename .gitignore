@@ -85,6 +85,8 @@ node_modules
 .test_tmp/
 *_tmp/
 tests_tmp/
+.test_db_dir/
 radextract_platform/backend/tests/.test_tmp/
+radextract_platform/backend/tests/.test_db_dir/
 TESTING/
 

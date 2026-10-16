@@ -8,7 +8,7 @@ import {
   RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy
 } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useMemo } from "react";
 import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
 import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
@@ -43,6 +43,25 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
     queryFn: () => api.getDuplicateGroups(projectId!),
     enabled: !!projectId,
   });
+
+  // Performance optimization: Batch Risk of Bias assessment lookups in a single request (1 query vs N queries)
+  const { data: robSummary } = useQuery({
+    queryKey: ["rob-summary", projectId],
+    queryFn: () => api.robSummary(projectId!),
+    enabled: !!projectId,
+  });
+
+  const robMap = useMemo(() => {
+    const map = new Map<string, { assessment_id: string; overall_judgment: string }>();
+    if (robSummary?.assessments) {
+      for (const a of robSummary.assessments) {
+        if (a.study_id && !map.has(a.study_id)) {
+          map.set(a.study_id, a);
+        }
+      }
+    }
+    return map;
+  }, [robSummary]);
 
 
   const deleteMutation = useMutation({
@@ -357,6 +376,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                   <StudyRow
                     key={s.study_id}
                     study={s}
+                    assessment={robMap.get(s.study_id)}
                     tags={tagIndex.data}
                     onComments={() => setCollaborationStudy(s)}
                     bookmark={<BookmarkButton saved={bookmarks.ids.includes(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
@@ -404,11 +424,31 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
 }
 
 
-function StudyRow({ study, projectId, onDelete, bookmark, tags, onComments }: { study: Study; projectId: string; onDelete: () => void; bookmark: React.ReactNode; tags: TagIndex | undefined; onComments: () => void }) {
-  const { data: assessments } = useQuery({
+function StudyRow({
+  study,
+  projectId,
+  onDelete,
+  bookmark,
+  tags,
+  onComments,
+  assessment,
+}: {
+  study: Study;
+  projectId: string;
+  onDelete: () => void;
+  bookmark: React.ReactNode;
+  tags: TagIndex | undefined;
+  onComments: () => void;
+  assessment?: { assessment_id: string; overall_judgment: string };
+}) {
+  // Batch optimization: Only query per-study if bulk assessment was not supplied
+  const { data: studyAssessments } = useQuery({
     queryKey: ["study-rob", study.study_id],
     queryFn: () => api.listStudyAssessments(study.study_id),
+    enabled: !assessment,
   });
+
+  const activeAssessment = assessment || (studyAssessments && studyAssessments[0]);
 
   const screeningBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -444,14 +484,14 @@ function StudyRow({ study, projectId, onDelete, bookmark, tags, onComments }: { 
         </div>
       </td>
       <td className="px-4 py-3.5">
-        {assessments && assessments.length > 0 ? (
+        {activeAssessment ? (
           <Link
-            to={`/projects/${projectId}/rob/${assessments[0].assessment_id}`}
+            to={`/projects/${projectId}/rob/${activeAssessment.assessment_id}`}
             className="inline-flex items-center gap-1.5 text-xs text-[#141413] hover:underline"
           >
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
-            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono ${judgmentColor(assessments[0].overall_judgment)}`}>
-              {judgmentLabel(assessments[0].overall_judgment)}
+            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono ${judgmentColor(activeAssessment.overall_judgment)}`}>
+              {judgmentLabel(activeAssessment.overall_judgment)}
             </span>
           </Link>
         ) : (
