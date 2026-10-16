@@ -1,7 +1,7 @@
-# Graph Report - Rad Extract Experimenting  (2026-10-15)
+# Graph Report - Rad Extract Experimenting  (2026-10-16)
 
 ## Corpus Check
-- 371 files · ~730,908 words
+- 371 files · ~730,922 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 19 file(s) not represented in the graph (top: (none) 10, .bat 3, .example 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5710a61f`
+- Built from commit: `66a7dc44`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1079,7 +1079,7 @@ Nodes (9): client(), fresh_db(), project_with_study(), TestAutoPopulate, TestCom
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Modified Files Summary` connect `clarification.py` to `models.py`, `test_clarification.py`, `init_db`, `VDExtract: Interactive AI Screening with Mid-Pipeline Clarification Questions`, `Deployment Readiness Plan — ExtractExperimenting (Systematic Review Tool)`?**
-  _High betweenness centrality (0.171) - this node is a cross-community bridge._
+  _High betweenness centrality (0.163) - this node is a cross-community bridge._
 - **Are the 301 inferred relationships involving `DBBackend` (e.g. with `4A. Fix dependencies.py to use DBBackend` and `4C. Migrate services to DBBackend`) actually correct?**
   _`DBBackend` has 301 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `../tsconfig.json`, `@eslint/js`, `@types/node` to the rest of the system?**
@@ -1087,7 +1087,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `rob_service.py` be split into smaller, more focused modules?**
   _Cohesion score 0.07265306122448979 - nodes in this community are weakly interconnected._
 - **Why does `ClarificationQuestion` connect `Deployment Readiness Plan — ExtractExperimenting (Systematic Review Tool)` to `ScreeningPage.tsx`, `react`, `clarification.py`, `api.ts`?**
-  _High betweenness centrality (0.167) - this node is a cross-community bridge._
+  _High betweenness centrality (0.160) - this node is a cross-community bridge._
 - **Are the 5 inferred relationships involving `get_connection()` (e.g. with `Mandatory Rules for AI Agents (Antigravity, Claude, Cline)` and `Mandatory Rules for AI Agents (Antigravity, Claude, Cline)`) actually correct?**
   _`get_connection()` has 5 INFERRED edges - model-reasoned connections that need verification._
 - **Should `test_table_rebuild.py` be split into smaller, more focused modules?**
