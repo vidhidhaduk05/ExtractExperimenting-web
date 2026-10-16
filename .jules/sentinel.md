@@ -1,0 +1,4 @@
+## 2026-03-31 - Missing Project Authorization Checks on Study PDF Endpoints
+**Vulnerability:** Several PDF processing, serving, and data management endpoints in `routers/studies.py` (e.g. `/studies/{study_id}/process-pdf`, `/studies/{study_id}/pdf-data`, `/studies/{study_id}/upload-pdf`) omitted calling `check_project_access(conn, project_id, user)`.
+**Learning:** Endpoints retrieving or modifying resource sub-components (such as processed PDF documents or summary data) by `study_id` directly without explicit project access checks created an Broken Object Level Authorization (BOLA) risk.
+**Prevention:** Always lookup `project_id` associated with a `study_id` and explicitly invoke `check_project_access(conn, project_id, user)` in FastAPI routes before serving or modifying project-scoped assets.
