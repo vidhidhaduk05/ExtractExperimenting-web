@@ -1,4 +1,4 @@
-## 2026-09-01 - DOM XSS Prevention in Dynamic SVG Rendering
-**Vulnerability:** Dynamic SVG strings returned from backend endpoints (such as R `robvis` and `PRISMA2020` plot generators) were injected directly into React DOM using `dangerouslySetInnerHTML`, exposing the frontend to DOM-based XSS if malicious tags (`<script>`, `<iframe>`, `foreignObject`) or inline event handlers (`onload`, `onclick`) were embedded in the SVG markup.
-**Learning:** React does not automatically sanitize raw SVG/HTML strings passed to `dangerouslySetInnerHTML`. Browsers parse and execute embedded `<script>` elements and event handlers (`onload=...`, `javascript:`) inside SVG contexts if inserted raw into the document.
-**Prevention:** Always pass dynamic raw SVG markup through DOMParser-based sanitization (`sanitizeSvg` in `src/lib/sanitize.ts`) before rendering with `dangerouslySetInnerHTML`.
+## 2026-03-31 - Missing Project Authorization Checks on Study PDF Endpoints
+**Vulnerability:** Several PDF processing, serving, and data management endpoints in `routers/studies.py` (e.g. `/studies/{study_id}/process-pdf`, `/studies/{study_id}/pdf-data`, `/studies/{study_id}/upload-pdf`) omitted calling `check_project_access(conn, project_id, user)`.
+**Learning:** Endpoints retrieving or modifying resource sub-components (such as processed PDF documents or summary data) by `study_id` directly without explicit project access checks created an Broken Object Level Authorization (BOLA) risk.
+**Prevention:** Always lookup `project_id` associated with a `study_id` and explicitly invoke `check_project_access(conn, project_id, user)` in FastAPI routes before serving or modifying project-scoped assets.

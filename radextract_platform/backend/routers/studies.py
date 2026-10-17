@@ -182,6 +182,7 @@ async def upload_pdf(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     auto_process: bool = Query(False, description="Automatically convert PDF to Docling JSON and run screening pipeline"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     row = conn.execute(
@@ -191,6 +192,7 @@ async def upload_pdf(
         raise HTTPException(status_code=404, detail="Study not found")
 
     project_id = row["project_id"]
+    check_project_access(conn, project_id, user)
 
     # Save file via storage backend
     storage = get_storage("upload")
@@ -780,14 +782,16 @@ async def serve_pdf(study_id: str, user: Optional[dict] = Depends(get_current_us
 async def process_pdf(
     study_id: str,
     user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
     """Process the uploaded PDF for a study using Docling or pdfplumber fallback.
 
-    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
-    if _pid: check_project_access(conn, _pid["project_id"], user)
     Extracts full text, pages, tables, and bounding-box annotations.
     Stores results in the pdf_documents table.
     """
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid:
+        check_project_access(conn, _pid["project_id"], user)
     try:
         result = pdf_service.process_pdf(study_id)
         return result
@@ -798,8 +802,15 @@ async def process_pdf(
 
 
 @router.get("/studies/{study_id}/pdf-data")
-async def get_pdf_data(study_id: str):
+async def get_pdf_data(
+    study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Get processed PDF data (full text, pages, annotations, tables)."""
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid:
+        check_project_access(conn, _pid["project_id"], user)
     data = pdf_service.get_pdf_data(study_id)
     if not data:
         raise HTTPException(status_code=404, detail="No processed PDF data. Process the PDF first.")
@@ -807,14 +818,28 @@ async def get_pdf_data(study_id: str):
 
 
 @router.get("/studies/{study_id}/pdf-summary")
-async def get_pdf_summary(study_id: str):
+async def get_pdf_summary(
+    study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Get a lightweight summary of the processed PDF (no full text payload)."""
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid:
+        check_project_access(conn, _pid["project_id"], user)
     return pdf_service.get_pdf_summary(study_id)
 
 
 @router.delete("/studies/{study_id}/pdf-data")
-async def delete_pdf_data(study_id: str):
+async def delete_pdf_data(
+    study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Delete processed PDF data for a study."""
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid:
+        check_project_access(conn, _pid["project_id"], user)
     success = pdf_service.delete_pdf_data(study_id)
     if not success:
         raise HTTPException(status_code=404, detail="No processed PDF data to delete.")
@@ -826,7 +851,9 @@ async def auto_extract(
     study_id: str,
     project_id: str = Query(...),
     user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
+    check_project_access(conn, project_id, user)
     """Run automated data extraction from the processed PDF.
 
     Uses the improved Docling-based extraction service when available, which
