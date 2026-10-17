@@ -758,10 +758,11 @@ async def serve_pdf(study_id: str, user: Optional[dict] = Depends(get_current_us
     conn: DBBackend = Depends(get_db)):
     """Serve the raw PDF file for the PDF.js viewer."""
     row = conn.execute(
-        "SELECT pdf_path FROM studies WHERE study_id = ?", (study_id,)
+        "SELECT project_id, pdf_path FROM studies WHERE study_id = ?", (study_id,)
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Study not found")
+    check_project_access(conn, row["project_id"], user)
     pdf_path = resolve_pdf_path(row["pdf_path"]) if row["pdf_path"] else None
     if not pdf_path:
         raise HTTPException(status_code=404, detail="No PDF file uploaded")
