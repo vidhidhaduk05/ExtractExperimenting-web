@@ -6,6 +6,7 @@ ENV/
 .env
 .env.local
 .env.*.local
+.condarc
 
 # Python
 __pycache__/

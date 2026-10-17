@@ -260,3 +260,11 @@ un_full_pipeline) verify pause and cancellation cleanly between individual studi
 - Empty `studies.source` counts as a database. ClinicalTrials.gov, ICTRP, CENTRAL, and similar labels count as registers. Google Scholar counts as a website. Citation, snowball, and hand searching count as citation searching.
 - Databases + registers − duplicates − automation removals = records screened. Records still awaiting a decision sit in Reports not retrieved so the official boxes add up. Duplicates whose source is a website, organisation, or citation search are omitted from identification and named in `notes`, because that arm of the official figure has no duplicate box.
 - The built-in SVG, PNG, and Word exports stay on `get_prisma_2020_data`. This sync does not change their counts.
+
+## 2026-10-17 — WVU CTSI HPC Deployment & Local Laya Activation
+
+- Activated local Laya System-1 screening engine (`receptron/laya`) on the WVU CTSI HPC cluster (`ctsi-hpc.hsc.wvu.edu`). Downloaded full ONNX bundle to `laya/models/` and installed `onnxruntime` + `tokenizers` into `.venv`.
+- Validated local Laya inference against test clinical criteria with zero external API calls.
+- Integrated Open OnDemand (OOD) Web Proxy (`/rnode/${HOSTNAME}/5173/`) enabling browser access directly from university network/VPN without SSH port forwarding.
+- Added Slurm batch scripts under `jobs/` (`radextract_web.slurm`, `screening_laya_gpu.slurm`, `compose_continuous_pipeline.sh`) for Open OnDemand Job Composer and automated batch execution on Tesla V100S GPUs.
+- Configured local node scratch (`$TMPDIR`) database staging to eliminate SQLite WAL locking issues across NFS filesystems.

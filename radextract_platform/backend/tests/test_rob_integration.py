@@ -155,6 +155,7 @@ class TestManualIncludeTrigger:
     def test_multi_reviewer_agree_include_triggers_rob(self, client):
         pid, sid = _make_project_and_study(client)
         client.put(f"/api/studies/{sid}/screening", json={"status": "pending", "stage": "ft", "reason": ""})
+        conn = get_connection()
         for reviewer in ("rev1", "rev2"):
             conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES (?, ?, 'test', 'owner')", (reviewer, reviewer))
             conn.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, 'owner')", (f"{pid}-{reviewer}", pid, reviewer))

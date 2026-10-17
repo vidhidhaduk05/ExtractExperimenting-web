@@ -220,7 +220,7 @@ def resolve_character_spans(text: str, *span_lists: list[dict[str, Any]]) -> lis
 
     curr_span = char_spans[0]
     curr_start = 0
-    for i in range(1, n):
+    for i in range(1, text_len):
         if char_spans[i] != curr_span:
             if curr_span is not None:
                 result.append({
@@ -238,7 +238,7 @@ def resolve_character_spans(text: str, *span_lists: list[dict[str, Any]]) -> lis
     if curr_span is not None:
         result.append({
             "start": curr_start,
-            "end": n,
+            "end": text_len,
             "text": text[curr_start:],
             "type": curr_span.get("type", "highlight"),
             "color": curr_span.get("color", "yellow"),

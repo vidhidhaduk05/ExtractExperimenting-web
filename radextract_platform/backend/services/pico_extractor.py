@@ -738,7 +738,7 @@ def extract_pico_spans_from_abstract(abstract: str) -> list[dict]:
                     continue
 
                 # Confidence based on pattern specificity
-                confidence = 0.8 if "index test" in raw_pat or "reference standard" in raw_pat or "primary outcome" in raw_pat else 0.6
+                confidence = 0.8 if "index test" in pattern or "reference standard" in pattern or "primary outcome" in pattern else 0.6
 
                 spans.append({
                     "field": field,
