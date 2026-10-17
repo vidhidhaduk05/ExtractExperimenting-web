@@ -1,4 +1,6 @@
-## 2025-05-18 - Missing Project Authorization in Auto-Assess Endpoint
-**Vulnerability:** The `/api/projects/{project_id}/studies/{study_id}/auto-assess` endpoint in `routers/rob.py` was missing `check_project_access(conn, project_id, user)`, allowing unauthorized users to execute AI Risk of Bias auto-assessments. In addition, the python authorization call had been mistakenly copy-pasted directly into a multi-line SQL `UPDATE` string.
-**Learning:** Python route parameters must always be explicitly validated via `check_project_access(conn, project_id, user)` at the top of route handler functions before executing SQL statements. Multi-line SQL strings should be checked for accidentally copy-pasted code.
-**Prevention:** Ensure every project-level and study-level route handler calls `check_project_access(conn, project_id, user)` before interacting with the database or triggering background tasks.
+# Sentinel's Journal - Security Learnings
+
+## 2026-10-10 - Project Authorization Enforcement on Graph Endpoints
+**Vulnerability:** Missing `check_project_access(conn, project_id, user)` check in `GET /api/projects/{project_id}/graphify/review/graph`.
+**Learning:** When adding new analytical or visualization endpoints (such as graphify review data endpoints), endpoint parameters like `project_id` must explicitly enforce project membership authorization via `check_project_access`. Omission allows authenticated non-members to exfiltrate project study details.
+**Prevention:** Ensure all FastAPI routes receiving `project_id` call `check_project_access(conn, project_id, user)` prior to database query execution and data retrieval.

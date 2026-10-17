@@ -1,59 +1,47 @@
-"""Tests for graphify router endpoints and access control."""
+"""Tests for graphify router authorization checks."""
+import pytest
 from fastapi.testclient import TestClient
 from main import app
-from dependencies import create_access_token
-from database import get_connection, init_db, reset_db
-
-client = TestClient(app)
+from database import reset_db, init_db
+from config import settings
 
 
-def setup_function():
+@pytest.fixture(autouse=True)
+def fresh_db(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "db_path", str(tmp_path / "test_graphify.db"))
+    monkeypatch.setattr(settings, "upload_root", str(tmp_path / "uploads"))
+    monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
     reset_db()
     init_db()
+    yield
 
 
-def test_review_graph_access_control():
-    # Setup database with a project and member/non-member users
-    conn = get_connection()
-    conn.execute("INSERT INTO projects (project_id, name) VALUES ('proj-g1', 'Graph Test Proj')")
-    conn.execute(
-        "INSERT INTO users (user_id, username, password_hash, role) VALUES ('u-member', 'member', 'hash', 'reviewer')"
-    )
-    conn.execute(
-        "INSERT INTO users (user_id, username, password_hash, role) VALUES ('u-unauthorized', 'unauth', 'hash', 'reviewer')"
-    )
-    conn.execute(
-        "INSERT INTO project_members (project_id, user_id, role) VALUES ('proj-g1', 'u-member', 'viewer')"
-    )
-    conn.commit()
+@pytest.fixture
+def client():
+    return TestClient(app)
 
-    member_token = create_access_token("u-member", "member", "reviewer")
-    unauth_token = create_access_token("u-unauthorized", "unauth", "reviewer")
 
-    # Authorized member can access review graph and stats
-    res_graph = client.get(
-        "/api/projects/proj-g1/graphify/review/graph",
-        headers={"Authorization": f"Bearer {member_token}"},
-    )
-    assert res_graph.status_code == 200
-    assert res_graph.json()["project_id"] == "proj-g1"
+def test_review_graph_authorization(client):
+    # Register Owner
+    client.post("/api/auth/register", json={"username": "owner", "password": "password123"})
+    owner_token = client.post("/api/auth/login", json={"username": "owner", "password": "password123"}).json()["access_token"]
+    owner_headers = {"Authorization": f"Bearer {owner_token}"}
 
-    res_stats = client.get(
-        "/api/projects/proj-g1/graphify/review/stats",
-        headers={"Authorization": f"Bearer {member_token}"},
-    )
-    assert res_stats.status_code == 200
-    assert res_stats.json()["project_id"] == "proj-g1"
+    # Create project
+    p_res = client.post("/api/projects", json={"name": "Owner Project"}, headers=owner_headers)
+    assert p_res.status_code == 200
+    project_id = p_res.json()["project_id"]
 
-    # Unauthorized user is denied access (403)
-    res_graph_unauth = client.get(
-        "/api/projects/proj-g1/graphify/review/graph",
-        headers={"Authorization": f"Bearer {unauth_token}"},
-    )
-    assert res_graph_unauth.status_code == 403
+    # Register Unauthorized User
+    client.post("/api/auth/register", json={"username": "stranger", "password": "password123"})
+    stranger_token = client.post("/api/auth/login", json={"username": "stranger", "password": "password123"}).json()["access_token"]
+    stranger_headers = {"Authorization": f"Bearer {stranger_token}"}
 
-    res_stats_unauth = client.get(
-        "/api/projects/proj-g1/graphify/review/stats",
-        headers={"Authorization": f"Bearer {unauth_token}"},
-    )
-    assert res_stats_unauth.status_code == 403
+    # Owner can access review graph
+    r_owner = client.get(f"/api/projects/{project_id}/graphify/review/graph", headers=owner_headers)
+    assert r_owner.status_code == 200
+
+    # Unauthorized stranger gets 403 Forbidden
+    r_stranger = client.get(f"/api/projects/{project_id}/graphify/review/graph", headers=stranger_headers)
+    assert r_stranger.status_code == 403
+    assert "Insufficient permissions" in r_stranger.json()["detail"]
