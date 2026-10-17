@@ -36,7 +36,6 @@ from services.auto_extract_service import (
 NUMERIC_PATTERNS: dict[str, list[re.Pattern]] = {
     "sensitivity": [
         re.compile(r"sensitiv(?:ity|ities)\s*(?:was|of|=|:|\s)\s*\(?\s*(\d+\.?\d*)\s*[%\)]?", re.I),
-        re.compile(r"sensitiv(?:ity|ities)\s*(?:was|of|=|:|\s)\s*\(?\s*(\d+\.?\d*)\s*[%\)]?", re.I),
         re.compile(r"(?:sensitivity|sens)\s*[:=]\s*(\d+\.?\d*)\s*%?", re.I),
     ],
     "specificity": [

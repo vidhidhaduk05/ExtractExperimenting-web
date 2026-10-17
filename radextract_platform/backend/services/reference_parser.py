@@ -43,6 +43,8 @@ _LATEX_BRACE_RE = re.compile(r"[{}]")
 _AND_SPLIT_RE = re.compile(r"\s+and\s+")
 _CSV_AUTHOR_SPLIT_RE = re.compile(r";\s*|\s+and\s+")
 _FILE_EXT_RE = re.compile(r"\.([^.]+)$")
+_ENDNOTE_LINE_RE = re.compile(r"^(%[A-Za-z0-9])\s*(.*)$")
+_WOS_LINE_RE = re.compile(r"^([A-Z0-9]{2})\s+(.*)$")
 
 # Additional pre-compiled regex patterns for format detection & EndNote/WoS parsing
 _ENDNOTE_TAG_LINE_RE = re.compile(r"^(%[A-Za-z0-9])\s*(.*)$")
@@ -1023,7 +1025,7 @@ def parse_endnote_tagged(content: str) -> list[dict]:
 
     lines = content.split("\n")
     for line in lines:
-        match = _ENDNOTE_TAG_LINE_RE.match(line)
+        match = _ENDNOTE_LINE_RE.match(line)
         if match:
             tag = match.group(1)
             val = match.group(2).strip()
@@ -1127,7 +1129,7 @@ def parse_wos_ciw(content: str) -> list[dict]:
     lines = content.split("\n")
     for line in lines:
         # Check for 2-letter tag at start of line followed by space (WoS standard: "TI ", "AU ", "ER")
-        tag_match = _WOS_TAG_LINE_RE.match(line)
+        tag_match = _WOS_LINE_RE.match(line)
         if tag_match:
             tag = tag_match.group(1)
             val = tag_match.group(2).strip()

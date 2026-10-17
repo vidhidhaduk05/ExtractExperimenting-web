@@ -8,9 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from config import settings
-from database import get_connection, init_db, reset_db
-from dependencies import create_access_token
+from database import init_db, reset_db, get_connection
 from main import app
+from dependencies import create_access_token
 from services.clarification_generator import screen_with_clarification
 from services.clarification_resolver import resolve_clarification
 
@@ -22,12 +22,17 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES ('human_reviewer1', 'Human Reviewer 1', 'test', 'owner')")
+    conn.commit()
     yield
 
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    c = TestClient(app)
+    c.headers["Authorization"] = f"Bearer {create_access_token('human_reviewer1', 'Human Reviewer 1', 'owner')}"
+    return c
 
 
 @pytest.fixture
