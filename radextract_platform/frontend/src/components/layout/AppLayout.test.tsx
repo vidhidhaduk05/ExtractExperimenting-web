@@ -47,7 +47,7 @@ describe('AppLayout Component', () => {
 
     expect(screen.getByRole('link', { name: /Dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /PICO & Hypothesis/i })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: /Studies/i })[0]).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Studies$/i })).toBeInTheDocument();
 
     // Top bar should show project ID
     expect(screen.getByText(`Project: ${projectId.substring(0, 20)}`)).toBeInTheDocument();
