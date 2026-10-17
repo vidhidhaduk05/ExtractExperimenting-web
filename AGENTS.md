@@ -46,3 +46,12 @@
    - **Navigate First**: Before writing or refactoring code, inspect graph relationships via `graphify query` / `graphify path` to understand callers, callees, and dependencies.
    - **Architectural Coherence**: Preserve established layering and avoid creating duplicate or competing abstractions. Re-run `graphify update .` post-edit.
    - **Harmonize Skills**: Code changes must work coherently with active skills—coupling `python-testing`/`tdd-workflow` with `verification-loop`, and aligning clinical extraction with `.agents/skills/systematic-review` and `.agents/DECISIONS.md`. See `.agents/rules/coding_standards_coherence.md`.
+
+9. **GRAVITAS Engineering Reliability Invariants**:
+   - Always adhere to the 6 Gravitas invariants (`.agents/skills/gravitas`, `.agents/rules/gravitas-invariants.md`):
+     1. **Ground before mutating**: Read the target, tests, and callers before editing. Never act on assumed state.
+     2. **Stay in declared scope**: Only mutate files within the task scope.
+     3. **Completion needs evidence**: Changes are verified only by real test/build output observed in this session.
+     4. **Never exact-retry a failure**: Change the diagnosis, context, or strategy before attempting a fix again.
+     5. **Satisfy the contract**: Acceptance criteria and required tests gate completion.
+     6. **Report what actually happened**: Say what you can or cannot verify; never fabricate certainty.
