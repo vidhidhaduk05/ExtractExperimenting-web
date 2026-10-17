@@ -622,6 +622,24 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     if (path.includes("/upload-references")) {
       return { imported_count: 5, skipped_duplicates: 1, errors: [] } as unknown as T;
     }
+    if ((path === "/projects" || path.startsWith("/projects?")) && method === "POST") {
+      const newProj = {
+        project_id: `proj_${Date.now()}`,
+        name: body.name || "New Systematic Review",
+        description: body.description || "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        status: "active",
+        auto_rob_enabled: true,
+        rob_confidence_threshold: 0.7,
+      };
+      try {
+        const stored = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
+        stored.push(newProj);
+        localStorage.setItem("radextract_custom_projects", JSON.stringify(stored));
+      } catch (e) {}
+      return newProj as unknown as T;
+    }
     return { status: "success" } as unknown as T;
   }
 
@@ -960,10 +978,21 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     return DEMO_MULTI_DATABASE_SEARCH as unknown as T;
   }
   if (path === "/projects" || path.startsWith("/projects?")) {
-    return [DEMO_PROJECT] as unknown as T;
+    let custom: any[] = [];
+    try {
+      custom = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
+    } catch (e) {}
+    return [DEMO_PROJECT, ...custom] as unknown as T;
   }
   if (path.match(/\/projects\/[^/]+$/)) {
-    return DEMO_PROJECT as unknown as T;
+    const pId = path.split("/").pop();
+    if (pId === DEMO_PROJECT.project_id) return DEMO_PROJECT as unknown as T;
+    try {
+      const custom = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
+      const found = custom.find((p: any) => p.project_id === pId);
+      if (found) return found as unknown as T;
+    } catch (e) {}
+    return { ...DEMO_PROJECT, project_id: pId || "proj_new", name: "Custom Project" } as unknown as T;
   }
   if (path.includes("/auth/login")) {
     return {
