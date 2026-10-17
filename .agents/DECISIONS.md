@@ -319,3 +319,11 @@ un_full_pipeline) verify pause and cancellation cleanly between individual studi
   2. **Universal Inline Clarification Workspace**: When viewing the screening interface (`ScreeningPage`), clarification questions are displayed directly *then-and-there* in a dedicated, high-contrast reviewer banner right above the study queue.
   3. **One-Click Study Inspection & Multi-Question Carousel**: Reviewers can cycle through pending clarification questions (`< Prev`, `Next >`), immediately jump to and highlight the corresponding study in the split document viewer (`Inspect study details in viewer ↓`), and select decisions (with custom freetext support) with instant re-evaluation (`Submit & Re-Screen`).
   4. **Interactive Status Filtering**: Clicking the "Questions" stat card in the screening header toggles filter mode to `awaiting_clarification` to immediately isolate studies pending clarification.
+
+## 2026-10-17 — Reverse Engineer Anything (REA) MCP Server & Skill Integration
+
+- Configured Node.js 22 runtime (`v22.23.3`) in `~/.local/node22` with symlinks in `~/.local/bin` (`node`, `npm`, `npx`), enabling modern agent orchestration tools on glibc 2.28 host environments.
+- Installed and configured `rea-agents@6.5.0` (morluto/rea):
+  - Configured MCP server registration in `~/.gemini/config/mcp_config.json` and `~/.gemini/settings.json` under server ID `rea` (`npx -y rea-agents@6.5.0 mcp`).
+  - Installed `reverse-engineer-anything` skill (version 42, 207 MCP tools / 153 CLI commands) into global customizations (`~/.gemini/config/skills/reverse-engineer-anything`) and workspace repository (`.agents/skills/reverse-engineer-anything`).
+  - Verified health and alignment using `npx -y rea-agents doctor` (skill aligned, Antigravity and Gemini CLI registrations aligned).
