@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 
 
 @pytest.fixture(autouse=True)
@@ -30,6 +31,13 @@ def _setup_project_and_study(client):
         "title": "Clinical Trial in Diagnostic Imaging",
         "abstract": "Evaluation of diagnostic accuracy in stroke.",
     }).json()
+    reviewer_id = "single_reviewer"
+    reviewer_name = "Reviewer One"
+    db = get_connection()
+    db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", (reviewer_id, reviewer_name, "test"))
+    db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{pid}-{reviewer_id}", pid, reviewer_id, "reviewer"))
+    db.commit()
+    client.headers["Authorization"] = f"Bearer {create_access_token(reviewer_id, reviewer_name, 'reviewer')}"
     return pid, s["study_id"]
 
 

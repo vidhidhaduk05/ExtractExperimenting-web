@@ -65,7 +65,7 @@ jobs:
           python -m pip install --upgrade pip
           cd radextract_platform/backend
           pip install .
-          pip install pytest pytest-asyncio moto faker httpx scikit-learn reportlab
+          pip install pytest pytest-asyncio moto faker httpx scikit-learn reportlab pymupdf
 
       - name: Run Backend Platform Tests
         working-directory: radextract_platform/backend
@@ -102,7 +102,7 @@ jobs:
     continue-on-error: true
     services:
       localstack:
-        image: localstack/localstack:latest
+        image: localstack/localstack:3.8.1
         ports:
           - 4566:4566
         env:

@@ -8,7 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from config import settings
-from database import init_db, reset_db
+from database import get_connection, init_db, reset_db
+from dependencies import create_access_token
 from main import app
 from services.clarification_generator import screen_with_clarification
 from services.clarification_resolver import resolve_clarification
@@ -739,6 +740,12 @@ def test_clarification_answer_conflicts_with_human(client, project):
     r_s = client.post(f"/api/projects/{project}/studies", json={"project_id": project, "title": "Conflict Study", "abstract": "Abs"})
     sid = r_s.json()["study_id"]
 
+    db = get_connection()
+    db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", ("human_reviewer1", "human_reviewer1", "test"))
+    db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{project}-human_reviewer1", project, "human_reviewer1", "reviewer"))
+    db.commit()
+    client.headers["Authorization"] = f"Bearer {create_access_token('human_reviewer1', 'human_reviewer1', 'reviewer')}"
+
     # Human screens "included"
     client.post(f"/api/studies/{sid}/screening-decision", json={
         "study_id": sid,
@@ -768,6 +775,12 @@ def test_clarification_answer_conflicts_with_human(client, project):
 def test_clarification_answer_agrees_with_human(client, project):
     r_s = client.post(f"/api/projects/{project}/studies", json={"project_id": project, "title": "Agreement Study", "abstract": "Abs"})
     sid = r_s.json()["study_id"]
+
+    db = get_connection()
+    db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", ("human_reviewer1", "human_reviewer1", "test"))
+    db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{project}-human_reviewer1", project, "human_reviewer1", "reviewer"))
+    db.commit()
+    client.headers["Authorization"] = f"Bearer {create_access_token('human_reviewer1', 'human_reviewer1', 'reviewer')}"
 
     # Human screens "included"
     client.post(f"/api/studies/{sid}/screening-decision", json={

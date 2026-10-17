@@ -2,8 +2,9 @@
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from database import reset_db, init_db
+from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 import os
 
 
@@ -249,8 +250,15 @@ class TestToolOverrideAndBatchRun:
 
     def test_batch_rob_endpoints(self, client, project_and_study):
         pid, sid = project_and_study
+        db = get_connection()
+        db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES ('rev1', 'rev1', 'test')")
+        db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, 'rev1', 'reviewer')", (f"{pid}-rev1", pid))
+        db.execute("UPDATE studies SET screening_stage = 'ft' WHERE study_id = ?", (sid,))
+        db.commit()
+        db.close()
+        client.headers["Authorization"] = f"Bearer {create_access_token('rev1', 'rev1', 'reviewer')}"
         # Mark study as included
-        client.put(f"/api/studies/{sid}", json={"screening_status": "included", "study_design": "RCT"})
+        client.put(f"/api/studies/{sid}/screening", json={"status": "included", "stage": "ft", "reason": ""})
         # Start batch RoB
         r = client.post(f"/api/rob/projects/{pid}/run")
         assert r.status_code == 200
@@ -267,7 +275,7 @@ class TestToolOverrideAndBatchRun:
         pid, _ = project_and_study
         r = client.get(f"/api/projects/{pid}/settings")
         assert r.status_code == 200
-        assert r.json()["auto_rob_enabled"] is True
+        assert r.json()["auto_rob_enabled"] is False
         assert r.json()["rob_confidence_threshold"] == 0.7
 
         r2 = client.put(f"/api/projects/{pid}/settings", json={

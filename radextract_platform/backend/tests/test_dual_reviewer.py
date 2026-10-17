@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 import uuid
 
 
@@ -177,6 +178,11 @@ class TestPrismaFlow:
     def test_prisma_with_studies(self, client):
         r = client.post("/api/projects", json={"name": "Test"})
         pid = r.json()["project_id"]
+        db = get_connection()
+        db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", ("rev1", "Reviewer 1", "test"))
+        db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{pid}-rev1", pid, "rev1", "reviewer"))
+        db.commit()
+        client.headers["Authorization"] = f"Bearer {create_access_token('rev1', 'Reviewer 1', 'reviewer')}"
         # Add 5 studies
         for i in range(5):
             r = client.post(f"/api/projects/{pid}/studies", json={

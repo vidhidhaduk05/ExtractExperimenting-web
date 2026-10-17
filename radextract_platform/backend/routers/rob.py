@@ -405,8 +405,8 @@ async def cancel_batch_rob(
 ):
     """Cancel an active batch risk-of-bias run."""
     check_project_access(conn, project_id, user)
-    success = rob_service.cancel_batch_rob_run(project_id, db=conn)
-    return {"cancelled": success}
+    res = rob_service.cancel_batch_rob_run(project_id, db=conn)
+    return {"cancelled": True if res.get("status") == "cancelled" else False}
 
 
 # ── Export ──
