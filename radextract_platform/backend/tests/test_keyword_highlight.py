@@ -222,3 +222,18 @@ def test_title_spans_in_abstract_highlights(client):
     assert data["title_spans"][0]["text"].lower() == "aneurysm"
     assert data["title_spans"][0]["color"] == "green"
 
+
+
+def test_resolve_character_spans_first_win_tie_break():
+    from services.keyword_highlight_service import resolve_character_spans
+
+    text = "1234567890"
+    span_a = {"start": 0, "end": 5, "type": "population", "color": "purple", "label": "A"}
+    span_b = {"start": 3, "end": 8, "type": "intervention", "color": "blue", "label": "B"}
+
+    res = resolve_character_spans(text, [span_a], [span_b])
+    assert len(res) == 2
+    assert res[0]["text"] == "12345"
+    assert res[0]["type"] == "population"
+    assert res[1]["text"] == "678"
+    assert res[1]["type"] == "intervention"
