@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 import uuid
 import json
+from functools import lru_cache
 from typing import Optional
 
 # ── MeSH / Emtree / CINAHL heading mapping ──
@@ -472,21 +473,33 @@ def _extract_key_phrases(text: str) -> list[str]:
     return phrases
 
 
+_SORTED_MESH_KEYS = tuple(sorted(MESH_MAPPING.keys(), key=len, reverse=True))
+
+
+@lru_cache(maxsize=1024)
+def _get_key_regex(key: str) -> re.Pattern:
+    """Compile and cache word-boundary regex for MeSH mapping term lookup."""
+    return re.compile(r"\b" + re.escape(key) + r"\b")
+
+
+@lru_cache(maxsize=2048)
 def _lookup_term(phrase: str) -> Optional[dict]:
     """Look up a phrase in the MeSH mapping (case-insensitive).
 
-    Tries exact match first, then partial whole-word match (sorting keys
-    by length descending so longer, more specific keys match first).
+    Tries exact match first, then fast substring pre-check before word-boundary
+    regex matching against pre-sorted keys (longer, more specific keys first).
     """
     phrase_lower = phrase.lower().strip()
     if phrase_lower in MESH_MAPPING:
         return MESH_MAPPING[phrase_lower]
-    for key in sorted(MESH_MAPPING.keys(), key=len, reverse=True):
-        if re.search(r'\b' + re.escape(key) + r'\b', phrase_lower):
-            return MESH_MAPPING[key]
+    for key in _SORTED_MESH_KEYS:
+        if key in phrase_lower:
+            if _get_key_regex(key).search(phrase_lower):
+                return MESH_MAPPING[key]
     return None
 
 
+@lru_cache(maxsize=2048)
 def _get_synonyms(phrase: str) -> list[str]:
     """Get synonyms for a phrase from the synonym map."""
     phrase_lower = phrase.lower().strip()

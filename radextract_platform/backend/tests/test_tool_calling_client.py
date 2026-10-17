@@ -10,7 +10,7 @@ from services.tool_calling_client import ToolCallingClient
 class TestToolCallingClient:
     def test_init_defaults(self):
         client = ToolCallingClient()
-        assert client.model in ("gemini-2.5-flash", "gemini-3.7-flash")
+        assert client.model in ("gemini-2.5-flash", "gemini-3.7-flash", "biomni-r0")
         assert client.tool_calling_enabled is True
         assert client.fallback_enabled is True
 
