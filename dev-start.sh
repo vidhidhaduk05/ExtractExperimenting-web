@@ -1,2 +1,6 @@
 #!/usr/bin/env bash
-python3 dev-start.py "$@"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -d "$SCRIPT_DIR/.venv/bin" ]; then
+    export PATH="$SCRIPT_DIR/.venv/bin:$PATH"
+fi
+python3 "$SCRIPT_DIR/dev-start.py" "$@"

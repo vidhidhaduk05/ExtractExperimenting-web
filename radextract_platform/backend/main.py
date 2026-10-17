@@ -159,9 +159,29 @@ def create_app() -> FastAPI:
             "env": settings.env,
             "db_backend": settings.db_backend,
             "storage_backend": settings.storage_backend,
-            "aws_endpoint": settings.aws_endpoint_url or "real AWS",
             "metrics": metrics_collector.get_stats(),
         }
+
+    # Mount built frontend dist files if present
+    import os
+    frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+    if os.path.isdir(frontend_dist):
+        from fastapi.staticfiles import StaticFiles
+        from fastapi.responses import FileResponse
+
+        assets_dir = os.path.join(frontend_dist, "assets")
+        if os.path.isdir(assets_dir):
+            app.mount("/assets", StaticFiles(directory=assets_dir), name="static-assets")
+
+        @app.get("/{full_path:path}")
+        async def serve_spa(full_path: str):
+            if full_path.startswith("api/") or full_path.startswith("health") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+                from fastapi import HTTPException
+                raise HTTPException(status_code=404, detail="Not found")
+            file_path = os.path.join(frontend_dist, full_path)
+            if os.path.isfile(file_path):
+                return FileResponse(file_path)
+            return FileResponse(os.path.join(frontend_dist, "index.html"))
 
     return app
 
