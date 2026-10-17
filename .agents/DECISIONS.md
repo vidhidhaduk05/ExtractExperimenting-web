@@ -327,3 +327,17 @@ un_full_pipeline) verify pause and cancellation cleanly between individual studi
   - Configured MCP server registration in `~/.gemini/config/mcp_config.json` and `~/.gemini/settings.json` under server ID `rea` (`npx -y rea-agents@6.5.0 mcp`).
   - Installed `reverse-engineer-anything` skill (version 42, 207 MCP tools / 153 CLI commands) into global customizations (`~/.gemini/config/skills/reverse-engineer-anything`) and workspace repository (`.agents/skills/reverse-engineer-anything`).
   - Verified health and alignment using `npx -y rea-agents doctor` (skill aligned, Antigravity and Gemini CLI registrations aligned).
+
+## 2026-10-17 — Reverse Engineering & Implementation of ClaimScape Evidence Map Landing Page
+
+- **Objective**: Create the primary platform landing page (`/` and `/claimscape`) modeled after the evidence map methodology from K-Dense AI's Claimscape (v0.1), using REA reverse-engineering capabilities to extract deterministic physics algorithms, Wilson score intervals, and transparent evaluation criteria.
+- **Reverse-Engineered Components & Algorithms**:
+  1. *Physics-Based 1D Bee-Swarm Algorithm*: Reconstructed the exact deterministic collision-free circle packing algorithm (`computeSwarmY`), placing study dots along the continuous publication year X-axis with vertical repulsion across 7 study design rows.
+  2. *95% Wilson Score Confidence Intervals*: Implemented Wilson score formula (`wilsonScore`) with categorical verdict rules (`few`, `mostly_for`, `leans_for`, `split`, `leans_against`, `mostly_against`).
+  3. *Dual-Prompt Stance Verification*: Implemented inter-prompt agreement checking (evaluating claims across 2 independently worded questions with a 60% confidence gate).
+  4. *NLM Indexing & Study Tier Hierarchy*: Integrated PubMed publication type resolution rules with fallback to model classification.
+  5. *Sentence-Level Grounded Findings*: Extracted key finding sentences highlighted in context with `<mark>` in the paper inspector.
+- **Branding & Academic Credit Alignment**:
+  - The UI uses RadExtract platform branding (`RadExtract ClaimScape`) with no external company branding in the product interface, per user directive.
+  - Formally included the academic credit statement in the published methodology section (`#method`), acknowledging K-Dense AI's foundational Claimscape framework.
+  - Added full interactive "Copy method as JSON" functionality exporting the complete machine-readable specification.

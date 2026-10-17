@@ -1,0 +1,6305 @@
+{
+  "id": "hrt",
+  "label": "HRT and heart disease",
+  "claim": "Hormone replacement therapy reduces the risk of coronary heart disease in postmenopausal women",
+  "query": "Hormone replacement therapy coronary heart disease postmenopausal women",
+  "size": 200,
+  "includeCommentary": false,
+  "total": 593,
+  "translation": "((\"hormone replacement therapy\"[MeSH Terms] OR (\"hormone\"[All Fields] AND \"replacement\"[All Fields] AND \"therapy\"[All Fields]) OR \"hormone replacement therapy\"[All Fields]) AND (\"coronary disease\"[MeSH Terms] OR (\"coronary\"[All Fields] AND \"disease\"[All Fields]) OR \"coronary disease\"[All Fields] OR (\"coronary\"[All Fields] AND \"heart\"[All Fields] AND \"disease\"[All Fields]) OR \"coronary heart disease\"[All Fields]) AND (\"postmenopausal\"[All Fields] OR \"postmenopausally\"[All Fields] OR \"postmenopausals\"[All Fields] OR \"postmenopause\"[MeSH Terms] OR \"postmenopause\"[All Fields] OR \"postmenopausic\"[All Fields]) AND (\"womans\"[All Fields] OR \"women\"[MeSH Terms] OR \"women\"[All Fields] OR \"woman\"[All Fields] OR \"women s\"[All Fields] OR \"womens\"[All Fields]) AND \"hasabstract\"[All Fields] AND \"english\"[Language]) NOT ((\"review\"[Publication Type] NOT \"systematic\"[Filter]) OR \"editorial\"[Publication Type] OR \"comment\"[Publication Type] OR \"letter\"[Publication Type] OR \"news\"[Publication Type])",
+  "builtAt": "2026-09-24",
+  "papers": [
+    {
+      "pmid": "12117397",
+      "title": "Risks and benefits of estrogen plus progestin in healthy postmenopausal women: principal results From the Women's Health Initiative randomized controlled trial.",
+      "journal": "JAMA",
+      "date": 2002.542,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1001/jama.288.3.321",
+      "findingText": "Estimated hazard ratios (HRs) (nominal 95% confidence intervals [CIs]) were as follows: CHD, 1.29 (1.02-1.63) with 286 cases; breast cancer, 1.26 (1.00-1.59) with 290 cases; stroke, 1.41 (1.07-1.85) with 212 cases; PE, 2.13 (1.39-3.25) with 101 cases; colorectal cancer, 0.63 (0.43-0.92) with 112 cases; endometrial cancer, 0.83 (0.47-1.47) with 47 cases; hip fracture, 0.66 (0.45-0.98) with 106 cases; and death due to other causes, 0.92 (0.74-1.14) with 331 cases."
+    },
+    {
+      "pmid": "24084921",
+      "title": "Menopausal hormone therapy and health outcomes during the intervention and extended poststopping phases of the Women's Health Initiative randomized trials.",
+      "journal": "JAMA",
+      "date": 2013.792,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1001/jama.2013.278040",
+      "findingText": "RESULTS: During the CEE plus MPA intervention phase, the numbers of CHD cases were 196 for CEE plus MPA vs 159 for placebo (hazard ratio [HR], 1.18; 95% CI, 0.95-1.45) and 206 vs 155, respectively, for invasive breast cancer (HR, 1.24; 95% CI, 1.01-1.53)."
+    },
+    {
+      "pmid": "28093732",
+      "title": "Long-term hormone therapy for perimenopausal and postmenopausal women.",
+      "journal": "Cochrane Database Syst Rev",
+      "date": 2017.042,
+      "pubTypes": [
+        "Meta-Analysis",
+        "Systematic Review"
+      ],
+      "doi": "10.1002/14651858.cd004143.pub5",
+      "findingText": "$1f"
+    },
+    {
+      "pmid": "25754617",
+      "title": "Hormone therapy for preventing cardiovascular disease in post-menopausal women.",
+      "journal": "Cochrane Database Syst Rev",
+      "date": 2015.208,
+      "pubTypes": [
+        "Meta-Analysis",
+        "Systematic Review"
+      ],
+      "doi": "10.1002/14651858.cd002229.pub4",
+      "findingText": "We found high quality evidence that hormone therapy in both primary and secondary prevention conferred no protective effects for all-cause mortality, cardiovascular death, non-fatal myocardial infarction, angina, or revascularisation."
+    },
+    {
+      "pmid": "31738818",
+      "title": "Association of Premature Natural and Surgical Menopause With Incident Cardiovascular Disease.",
+      "journal": "JAMA",
+      "date": 2019.958,
+      "pubTypes": [],
+      "doi": "10.1001/jama.2019.19191",
+      "findingText": "For the primary outcome, natural and surgical premature menopause were associated with hazard ratios of 1.36 (95% CI, 1.19-1.56; P < .001) and 1.87 (95% CI, 1.36-2.58; P < .001), respectively, after adjustment for conventional cardiovascular disease risk factors and use of menopausal hormone therapy."
+    },
+    {
+      "pmid": "41307293",
+      "title": "Long-term hormone therapy for perimenopausal and postmenopausal women.",
+      "journal": "Cochrane Database Syst Rev",
+      "date": 2025.875,
+      "pubTypes": [
+        "Systematic Review"
+      ],
+      "doi": "10.1002/14651858.cd004143.pub6",
+      "findingText": "Based on this study, combined continuous hormone therapy probably makes little to no difference to the risk of a coronary event (RR 1.17, 95% CI 0.95 to 1.44; moderate-certainty evidence)."
+    },
+    {
+      "pmid": "40952729",
+      "title": "Menopausal Hormone Therapy and Cardiovascular Diseases in Women With Vasomotor Symptoms: A Secondary Analysis of the Women's Health Initiative Randomized Clinical Trials.",
+      "journal": "JAMA Intern Med",
+      "date": 2025.875,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1001/jamainternmed.2025.4510",
+      "findingText": "Both CEE alone and CEE plus MPA appeared to have neutral effects on ASCVD in women with moderate or severe VMS aged 50 to 59 years (CEE alone: hazard ratio [HR], 0.85; 95% CI, 0.53-1.35; CEE plus MPA: HR, 0.84; 95% CI, 0.44-1.57)."
+    },
+    {
+      "pmid": "18854702",
+      "title": "Observational studies analyzed like randomized experiments: an application to postmenopausal hormone therapy and coronary heart disease.",
+      "journal": "Epidemiology",
+      "date": 2008.875,
+      "pubTypes": [],
+      "doi": "10.1097/ede.0b013e3181875e61",
+      "findingText": "RESULTS: The ITT hazard ratios (HRs) (95% confidence intervals) of CHD for initiators versus noninitiators were 1.42 (0.92-2.20) for the first 2 years, and 0.96 (0.78-1.18) for the entire follow-up."
+    },
+    {
+      "pmid": "27028912",
+      "title": "Vascular Effects of Early versus Late Postmenopausal Treatment with Estradiol.",
+      "journal": "N Engl J Med",
+      "date": 2016.208,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1056/nejmoa1505241",
+      "findingText": "Estradiol had no significant effect on cardiac CT measures of atherosclerosis in either postmenopause stratum."
+    },
+    {
+      "pmid": "9187066",
+      "title": "Postmenopausal hormone therapy and mortality.",
+      "journal": "N Engl J Med",
+      "date": 1997.458,
+      "pubTypes": [],
+      "doi": "10.1056/nejm199706193362501",
+      "findingText": "Current hormone users with coronary risk factors (69 percent of the women) had the largest reduction in mortality (relative risk, 0.51; 95 percent confidence interval, 0.45 to 0.57), with substantially less benefit for those at low risk (13 percent of the women; relative risk, 0.89; 95 percent confidence interval, 0.62 to 1.28)."
+    },
+    {
+      "pmid": "30508190",
+      "title": "The route of administration, timing, duration and dose of postmenopausal hormone therapy and cardiovascular outcomes in women: a systematic review.",
+      "journal": "Hum Reprod Update",
+      "date": 2019.208,
+      "pubTypes": [
+        "Systematic Review"
+      ],
+      "doi": "10.1093/humupd/dmy039",
+      "findingText": "Contrary, observational data showed that a beneficial cardioprotective effect can be observed even with use of low doses of oral HT (effect of 0.3 mg/day of oral conjugated equine estrogen was similar to that seen with the standard dose of 0.625 mg/day), but clinical trials to support a cardioprotective benefit of HT in primary prevention have not been identified."
+    },
+    {
+      "pmid": "8900338",
+      "title": "Estrogen replacement therapy.",
+      "journal": "Am J Med",
+      "date": 1996.792,
+      "pubTypes": [],
+      "doi": "10.1016/s0002-9343(96)00321-x",
+      "findingText": "Although still somewhat controversial, estrogen replacement therapy appears to offer significant cardioprotective benefits to postmenopausal women."
+    },
+    {
+      "pmid": "38111280",
+      "title": "Hormone Replacement Therapy and Psoriasis Risk: A Nationwide Population-Based Cohort Study.",
+      "journal": "J Korean Med Sci",
+      "date": 2023.958,
+      "pubTypes": [],
+      "doi": "10.3346/jkms.2023.38.e377",
+      "findingText": "BACKGROUND: Hormone replacement therapy (HRT) is used to relieve menopause symptoms, but has been reported to be associated with coronary heart disease and cancers in women."
+    },
+    {
+      "pmid": "17582069",
+      "title": "Estrogen therapy and coronary-artery calcification.",
+      "journal": "N Engl J Med",
+      "date": 2007.458,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1056/nejmoa071513",
+      "findingText": "CONCLUSIONS: Among women 50 to 59 years old at enrollment, the calcified-plaque burden in the coronary arteries after trial completion was lower in women assigned to estrogen than in those assigned to placebo."
+    },
+    {
+      "pmid": "14720104",
+      "title": "Clinical monograph: hormone replacement therapy.",
+      "journal": "J Manag Care Pharm",
+      "date": 2004.5,
+      "pubTypes": [],
+      "doi": "10.18553/jmcp.2004.10.1.33",
+      "findingText": "Data from the WHI study concluded that HRT promotes CHD and breast cancer in this age group."
+    },
+    {
+      "pmid": "28805475",
+      "title": "Menopausal hormone therapy for primary prevention: why the USPSTF is wrong.",
+      "journal": "Climacteric",
+      "date": 2017.792,
+      "pubTypes": [],
+      "doi": "10.1080/13697137.2017.1362156",
+      "findingText": "Furthermore, major elements of the evidence relied upon have been misinterpreted or misstated, particularly in regard to coronary heart disease and breast cancer, for which there is no statistically significant evidence of harm."
+    },
+    {
+      "pmid": "20031345",
+      "title": "Menopause and modifiable coronary heart disease risk factors: a population based study.",
+      "journal": "Maturitas",
+      "date": 2010.208,
+      "pubTypes": [],
+      "doi": "10.1016/j.maturitas.2009.11.023",
+      "findingText": "Further adjustment on body mass index and hormonal treatments did not modify the results."
+    },
+    {
+      "pmid": "38990048",
+      "title": "Hormone replacement therapy and myocardial infarction and stroke in postmenopausal Korean women.",
+      "journal": "Climacteric",
+      "date": 2024.625,
+      "pubTypes": [],
+      "doi": "10.1080/13697137.2024.2354728",
+      "findingText": "MI risk was lower among women who used tibolone - regardless of duration - or EPT or ET for 1-3 years than among controls."
+    },
+    {
+      "pmid": "31588031",
+      "title": "Age at natural menopause and risk of incident cardiovascular disease: a pooled analysis of individual patient data.",
+      "journal": "Lancet Public Health",
+      "date": 2019.875,
+      "pubTypes": [],
+      "doi": "10.1016/s2468-2667(19)30155-0",
+      "findingText": "We also adjusted the model to account for smoking status, menopausal hormone therapy status, body-mass index, and education levels."
+    },
+    {
+      "pmid": "15082697",
+      "title": "Effects of conjugated equine estrogen in postmenopausal women with hysterectomy: the Women's Health Initiative randomized controlled trial.",
+      "journal": "JAMA",
+      "date": 2004.292,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1001/jama.291.14.1701",
+      "findingText": "CONCLUSIONS: The use of CEE increases the risk of stroke, decreases the risk of hip fracture, and does not affect CHD incidence in postmenopausal women with prior hysterectomy over an average of 6.8 years."
+    },
+    {
+      "pmid": "9492970",
+      "title": "Design of the Women's Health Initiative clinical trial and observational study. The Women's Health Initiative Study Group.",
+      "journal": "Control Clin Trials",
+      "date": 1998.125,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0197-2456(97)00078-0",
+      "findingText": "The CT is designed to allow randomized controlled evaluation of three distinct interventions: a low-fat eating pattern, hypothesized to prevent breast cancer and colorectal cancer and, secondarily, coronary heart disease; hormone replacement therapy, hypothesized to reduce the risk of coronary heart disease and other cardiovascular diseases and, secondarily, to reduce the risk of hip and other fractures, with increased breast cancer risk as a possible adverse outcome; and calcium and vitamin D supplementation, hypothesized to prevent hip fractures and, secondarily, other fractures and colorectal cancer."
+    },
+    {
+      "pmid": "9718051",
+      "title": "Randomized trial of estrogen plus progestin for secondary prevention of coronary heart disease in postmenopausal women. Heart and Estrogen/progestin Replacement Study (HERS) Research Group.",
+      "journal": "JAMA",
+      "date": 1998.625,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1001/jama.280.7.605",
+      "findingText": "CONCLUSIONS: During an average follow-up of 4.1 years, treatment with oral conjugated equine estrogen plus medroxyprogesterone acetate did not reduce the overall rate of CHD events in postmenopausal women with established coronary disease."
+    },
+    {
+      "pmid": "30358724",
+      "title": "Hot flushes, coronary heart disease, and hormone therapy in postmenopausal women.",
+      "journal": "Menopause",
+      "date": 2018.875,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1097/gme.0000000000001230",
+      "findingText": "Among women with baseline flushing, EPT increased risk of CHD events nine-fold in the first year compared with placebo (hazard ratio = 9.01; 95% CI, 1.15-70.35); among women without baseline flushing, treatment did not significantly affect CHD event risk in the first year (hazard ratio = 1.32; 95% CI, 0.86-2.03; P = 0.07 for interaction of hot flushes with treatment)."
+    },
+    {
+      "pmid": "19276299",
+      "title": "Hormone replacement therapy in women with systemic lupus erythematosus and risk of cardiovascular disease.",
+      "journal": "Lupus",
+      "date": 2009.292,
+      "pubTypes": [],
+      "doi": "10.1177/0961203308097475",
+      "findingText": "A similar percentage of patients developed CAD in the control (13.7%) and HRT (11.4%) groups."
+    },
+    {
+      "pmid": "16607110",
+      "title": "Postmenopausal hormone therapy: new questions and the case for new clinical trials.",
+      "journal": "Menopause",
+      "date": 2006.5,
+      "pubTypes": [],
+      "doi": "10.1097/01.gme.0000177906.94515.ff",
+      "findingText": "Observational studies suggest that postmenopausal hormone therapy (HT) prevents coronary heart disease, whereas randomized clinical trials have not confirmed a cardioprotective effect."
+    },
+    {
+      "pmid": "32345788",
+      "title": "The Women's Health Initiative trials of menopausal hormone therapy: lessons learned.",
+      "journal": "Menopause",
+      "date": 2020.625,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1097/gme.0000000000001553",
+      "findingText": "RESULTS: In the overall study population (mean age, 63 y), neither estrogen-progestin therapy (EPT) nor estrogen-only therapy prevented coronary heart disease or led to a favorable balance of chronic-disease benefits and risks."
+    },
+    {
+      "pmid": "14757269",
+      "title": "Effect of postmenopausal hormone replacement therapy on cardiovascular performance.",
+      "journal": "Maturitas",
+      "date": 2004.125,
+      "pubTypes": [],
+      "doi": "10.1016/s0378-5122(03)00248-2",
+      "findingText": "In conclusion, postmenopausal HRT leads to a progressive improvement on left ventricular function parameters, and in parallel, in exercise performance."
+    },
+    {
+      "pmid": "10608035",
+      "title": "Who Should Receive Hormone Replacement Therapy?",
+      "journal": "J Thromb Thrombolysis",
+      "date": 1996.5,
+      "pubTypes": [],
+      "doi": "10.1007/bf00226405",
+      "findingText": "A meta-analysis of 31 studies yielded a 44% reduction in the risk of coronary heart disease in women taking estrogen alone."
+    },
+    {
+      "pmid": "25803671",
+      "title": "Estradiol-based postmenopausal hormone therapy and risk of cardiovascular and all-cause mortality.",
+      "journal": "Menopause",
+      "date": 2015.708,
+      "pubTypes": [],
+      "doi": "10.1097/gme.0000000000000450",
+      "findingText": "RESULTS: Risk of CHD death was significantly reduced by 18% to 54% in HT users and was positively related to HT exposure time."
+    },
+    {
+      "pmid": "15775733",
+      "title": "The effect of hormone replacement therapy and simvastatin on plasma homocysteine.",
+      "journal": "J Womens Health (Larchmt)",
+      "date": 2005.208,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1089/jwh.2005.14.154",
+      "findingText": "RESULTS: Only HRT, alone and in combination with simvastatin, significantly reduced homocysteine levels compared with placebo (11.82 +/- 0.74 and 12.22 +/- 0.71 vs 13.58 +/- 0.83 micromol/L, respectively, p < 0.05)."
+    },
+    {
+      "pmid": "15356071",
+      "title": "Hormone therapy impairs endothelial function in postmenopausal women with type 2 diabetes mellitus treated with rosiglitazone.",
+      "journal": "J Clin Endocrinol Metab",
+      "date": 2004.708,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1210/jc.2003-031414",
+      "findingText": "As a result, flow-mediated dilation was significantly reduced (15.3 +/- 3.8 to 6.6 +/- 1.6%, P = 0.02) with HT, whereas lipids, blood pressure, and distensibility index were unchanged."
+    },
+    {
+      "pmid": "2488072",
+      "title": "Menopause and risk factors for coronary heart disease.",
+      "journal": "N Engl J Med",
+      "date": 1989.708,
+      "pubTypes": [],
+      "doi": "10.1056/nejm198909073211004",
+      "findingText": "In menopausal women who received hormone-replacement therapy, HDL and LDL cholesterol levels did not change, but the levels of triglycerides (+0.42 vs. -0.04 mmol per liter; P less than 0.001), apolipoprotein A-I (+0.18 vs. +0.03 g per liter; P less than 0.01), and apolipoprotein A-II (+0.05 vs. -0.03 g per liter; P less than 0.05) increased as compared with premenopausal controls."
+    },
+    {
+      "pmid": "14671142",
+      "title": "Hormone replacement therapy is associated with less coronary atherosclerosis in postmenopausal women.",
+      "journal": "J Clin Endocrinol Metab",
+      "date": 2003.958,
+      "pubTypes": [],
+      "doi": "10.1210/jc.2003-031008",
+      "findingText": "After adjustment for cardiac risk factors, current use of HRT was associated with a significant reduction of coronary artery calcium score (-28; 95% confidence interval, -48 to -10)."
+    },
+    {
+      "pmid": "19863467",
+      "title": "Long-term prevention with hormone-replacement therapy after the menopause: which women should be targeted?",
+      "journal": "Womens Health (Lond)",
+      "date": 2009.875,
+      "pubTypes": [],
+      "doi": "10.2217/whe.09.52",
+      "findingText": "A critical mass of data points toward a protective influence of HRT on cardiovascular disease end points in early postmenopausal women, but increased harm in elderly women, especially those with abdominal adiposity or metabolic syndrome."
+    },
+    {
+      "pmid": "8672166",
+      "title": "Postmenopausal estrogen and progestin use and the risk of cardiovascular disease.",
+      "journal": "N Engl J Med",
+      "date": 1996.625,
+      "pubTypes": [],
+      "doi": "10.1056/nejm199608153350701",
+      "findingText": "RESULTS: We observed a marked decrease in the risk of major coronary heart disease among women who took estrogen with progestin (multivariate adjusted relative risk, 0.39; 95 percent confidence interval, 0.19 to 0.78) or estrogen alone (relative risk, 0.60; 95 percent confidence interval, 0.43 to 0.83), as compared with women who did not use hormones [corrected]."
+    },
+    {
+      "pmid": "19172539",
+      "title": "Coronary heart disease and HRT in France: MISSION study prospective phase results.",
+      "journal": "Gynecol Endocrinol",
+      "date": 2008.958,
+      "pubTypes": [],
+      "doi": "10.1080/09513590802454935",
+      "findingText": "The incidence during follow-up no. 1 of postmenopausal CHD was not significantly different in the Exposed group (0.11%) compared with the Unexposed group (0.13%)."
+    },
+    {
+      "pmid": "12674130",
+      "title": "Postmenopausal hormone therapy: cardiovascular risks.",
+      "journal": "Prescrire Int",
+      "date": 2003.292,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "(6) The estrogen-progestin combination used in these trials did not reduce the risk of coronary heart disease (in primary or secondary prophylaxis) or the risk of stroke."
+    },
+    {
+      "pmid": "15968396",
+      "title": "Baseline associations between postmenopausal hormone therapy and inflammatory, haemostatic, and lipid biomarkers of coronary heart disease. The Women's Health Initiative Observational Study.",
+      "journal": "Thromb Haemost",
+      "date": 2005.458,
+      "pubTypes": [],
+      "doi": "10.1160/th04-09-0608",
+      "findingText": "PHT was associated with higher CRP, HDL and triglycerides, and lower tPA-antigen and homocysteine."
+    },
+    {
+      "pmid": "15233153",
+      "title": "Post-menopausal hormone replacement therapy (cont'd): risk-benefit balance in the hot seat.",
+      "journal": "Prescrire Int",
+      "date": 2004.458,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "(1) The results of a randomised placebo-controlled double-blind trial in 16 000 women (the WHI trial), published in 2002, showed that post-menopausal hormone replacement therapy based on sulphoconjugated equine oestrogen and medroxyprogesterone led to an excess risk of serious adverse events (pulmonary embolism, coronary events, stroke, and invasive breast cancer)."
+    },
+    {
+      "pmid": "15186661",
+      "title": "After the Women's Health Initiative: Postmenopausal women's experiences with discontinuing estrogen replacement therapy.",
+      "journal": "J Womens Health (Larchmt)",
+      "date": 2004.375,
+      "pubTypes": [],
+      "doi": "10.1089/154099904323087132",
+      "findingText": "Tapering HRT, rather than stopping abruptly, did not reduce the recurrence of menopausal symptoms in our patient population."
+    },
+    {
+      "pmid": "2244772",
+      "title": "Estrogen replacement and coronary artery disease. Effect on survival in postmenopausal women.",
+      "journal": "Arch Intern Med",
+      "date": 1990.958,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "Among patients with mild to moderate coronary stenosis, 10-year survival of those who had never used estrogens was 85.0% and it was 95.6% among 99 \"ever users.\" Survival was 60.0% among those with more than 70% coronary stenosis who had never used estrogen and it was 97.0% among 70 ever users."
+    },
+    {
+      "pmid": "19468079",
+      "title": "Benefits and risks of postmenopausal hormone therapy when it is initiated soon after menopause.",
+      "journal": "Am J Epidemiol",
+      "date": 2009.542,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1093/aje/kwp115",
+      "findingText": "These analyses provide little support for the hypothesis of favorable effects among women who initiate postmenopausal estrogen use soon after menopause, either for coronary heart disease or for health benefits versus risk indices considered."
+    },
+    {
+      "pmid": "9683309",
+      "title": "Heart and Estrogen/progestin Replacement Study (HERS): design, methods, and baseline characteristics.",
+      "journal": "Control Clin Trials",
+      "date": 1998.625,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0197-2456(98)00010-5",
+      "findingText": "The primary analysis will compare the rate of CHD events in women assigned to active treatment with the rate in those assigned to placebo."
+    },
+    {
+      "pmid": "9170479",
+      "title": "Does hormone replacement therapy inhibit coronary artery calcification?",
+      "journal": "Obstet Gynecol",
+      "date": 1997.458,
+      "pubTypes": [],
+      "doi": "10.1016/s0029-7844(97)00143-9",
+      "findingText": "The prevalence of coronary calcium was significantly lower among HRT users: six of the 47 (14.6%), compared with 16 of the 37 nonusers (43.2%) (P < .01)."
+    },
+    {
+      "pmid": "1617306",
+      "title": "Lipids and cardiovascular disease: do the findings and therapy apply equally to men and women?",
+      "journal": "Womens Health Issues",
+      "date": 1992.5,
+      "pubTypes": [],
+      "doi": "10.1016/s1049-3867(05)80278-6",
+      "findingText": "However, HRT has a strong favorable effect on CAD risk when unopposed estrogen is used, probably due to increases in HDL-C levels.(ABSTRACT TRUNCATED AT 400 WORDS)"
+    },
+    {
+      "pmid": "10484063",
+      "title": "Hormone replacement therapy enhances postprandial lipid metabolism in postmenopausal women.",
+      "journal": "Metabolism",
+      "date": 1999.708,
+      "pubTypes": [],
+      "doi": "10.1016/s0026-0495(99)90137-3",
+      "findingText": "Enhanced clearance of chylomicrons and chylomicron remnants by HRT may contribute to the protective effect of estrogens against cardiovascular disease in normolipemic postmenopausal women."
+    },
+    {
+      "pmid": "12935826",
+      "title": "Fracture and the risk of coronary events in women with heart disease.",
+      "journal": "Am J Med",
+      "date": 2003.625,
+      "pubTypes": [],
+      "doi": "10.1016/s0002-9343(03)00330-9",
+      "findingText": "The risk of these events was 25% lower in women who sustained fractures than in those without fractures (hazard ratio [HR] = 0.74; 95% confidence interval [CI]: 0.57 to 0.96; P = 0.02)."
+    },
+    {
+      "pmid": "33141616",
+      "title": "Metabolomic Effects of Hormone Therapy and Associations With Coronary Heart Disease Among Postmenopausal Women.",
+      "journal": "Circ Genom Precis Med",
+      "date": 2020.958,
+      "pubTypes": [
+        "Observational Study"
+      ],
+      "doi": "10.1161/circgen.119.002977",
+      "findingText": "CONCLUSIONS: Randomized treatment with oral HT resulted in large metabolome shifts that generally favored CEE alone over CEE+MPA in term of CHD risk."
+    },
+    {
+      "pmid": "11696469",
+      "title": "Hormone therapy and in-hospital survival after myocardial infarction in postmenopausal women.",
+      "journal": "Circulation",
+      "date": 2001.875,
+      "pubTypes": [],
+      "doi": "10.1161/hc4401.98414",
+      "findingText": "After adjustments were made for prior medical history, clinical characteristics, treatments received in-hospital, and likelihood of receiving HRT, HRT remained associated with an improved rate of survival (odds ratio 0.65, 95% confidence interval 0.59 to 0.72)."
+    },
+    {
+      "pmid": "20647959",
+      "title": "Oral postmenopausal hormone therapy, C-reactive protein, and cardiovascular outcomes.",
+      "journal": "Menopause",
+      "date": 2011.042,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1097/gme.0b013e3181e750dd",
+      "findingText": "After adjusting for other risk factors including lipids, HT users with a CRP level of 3 mg/L or higher had an RR of 1.93 (1.38-2.69), whereas nonusers had an RR of 1.92 (1.35-2.72)."
+    },
+    {
+      "pmid": "10365734",
+      "title": "Hormone replacement therapy and circulating ICAM-1 in postmenopausal women--a randomised controlled trial.",
+      "journal": "Thromb Haemost",
+      "date": 1999.375,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": null,
+      "findingText": "Our results show a favorable effect of oral estrogen plus progesterone on a soluble marker of vascular inflammation and may provide plausible explanation for a cardioprotective effect of hormone replacement therapy among healthy postmenopausal women."
+    },
+    {
+      "pmid": "10449692",
+      "title": "Hormone replacement therapy and increased plasma concentration of C-reactive protein.",
+      "journal": "Circulation",
+      "date": 1999.625,
+      "pubTypes": [],
+      "doi": "10.1161/01.cir.100.7.713",
+      "findingText": "Overall, median CRP levels were 2 times higher among women taking HRT than among women not taking HRT (0.27 versus 0.14 mg/dL; P=0.001)."
+    },
+    {
+      "pmid": "10795729",
+      "title": "Postmenopausal hormone replacement therapy and cardiovascular mortality in Central-Eastern Europe.",
+      "journal": "J Gerontol A Biol Sci Med Sci",
+      "date": 2000.208,
+      "pubTypes": [],
+      "doi": "10.1093/gerona/55.3.m160",
+      "findingText": "The cardiovascular mortality rate per 100,000 women older than 45 years in Eastern Europe was higher (1766 +/- 158.3) than in the Western countries (1155 +/- 164.1, p < .001)."
+    },
+    {
+      "pmid": "29079563",
+      "title": "Coronary Artery Calcification (CAC) and Post-Trial Cardiovascular Events and Mortality Within the Women's Health Initiative (WHI) Estrogen-Alone Trial.",
+      "journal": "J Am Heart Assoc",
+      "date": 2017.792,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1161/jaha.117.006887",
+      "findingText": "BACKGROUND: Among women aged 50 to 59 years at baseline in the Women's Health Initiative (WHI) Estrogen-Alone (E-Alone) trial, randomization to conjugated equine estrogen-alone versus placebo was associated with lower risk of myocardial infarction and mortality, and, in an ancillary study, the WHI-CACS (WHI Coronary Artery Calcification Study) with lower CAC, measured by cardiac computed tomography \u22488.7 years after baseline randomization."
+    },
+    {
+      "pmid": "12904518",
+      "title": "Hormone therapy and the progression of coronary-artery atherosclerosis in postmenopausal women.",
+      "journal": "N Engl J Med",
+      "date": 2003.625,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1056/nejmoa030830",
+      "findingText": "CONCLUSIONS: In older postmenopausal women with established coronary-artery atherosclerosis, 17beta-estradiol either alone or with sequentially administered medroxyprogesterone acetate had no significant effect on the progression of atherosclerosis."
+    },
+    {
+      "pmid": "16380775",
+      "title": "Effect of hormone replacement therapy on hemostatic variables in post-menopausal women.",
+      "journal": "Saudi Med J",
+      "date": 2005.958,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "CONCLUSION: Hormone replacement therapy treatment did not change fibrinogen mean levels, but it caused a decrease in AT III and protein C mean levels."
+    },
+    {
+      "pmid": "10024087",
+      "title": "Effect of gender differences and estrogen replacement therapy on vascular reactivity.",
+      "journal": "Metabolism",
+      "date": 1999.125,
+      "pubTypes": [],
+      "doi": "10.1016/s0026-0495(99)90039-2",
+      "findingText": "For women on ERT, the postischemic median dilatation was 8.11% (interquartile range, 6.01% to 11.60%), as compared with 2.82% (interquartile range, 1.32% to 3.28%) for women without ERT (P < .01)."
+    },
+    {
+      "pmid": "9247504",
+      "title": "Hormonal therapy increases arterial compliance in postmenopausal women.",
+      "journal": "J Am Coll Cardiol",
+      "date": 1997.625,
+      "pubTypes": [],
+      "doi": "10.1016/s0735-1097(97)00191-5",
+      "findingText": "CONCLUSIONS: The increased SAC and decreased PWV in women receiving hormonal therapy suggest that such therapy may decrease stiffness of the aorta and large arteries in postmenopausal women, with potential benefit for age-related cardiovascular disorders."
+    },
+    {
+      "pmid": "25437723",
+      "title": "Coronary heart disease mortality and hormone therapy before and after the Women's Health Initiative.",
+      "journal": "Obstet Gynecol",
+      "date": 2014.875,
+      "pubTypes": [],
+      "doi": "10.1097/aog.0000000000000461",
+      "findingText": "RESULTS: Exposure to HT for 1 year or less was accompanied by a 29% reduction (0.71; 0.63-0.80; three per 10,000 fewer deaths) and an exposure of 1-8 years with a 43% reduction (0.57; 0.48-0.66; three per 10,000 fewer deaths) in the risk of coronary heart disease death in the pre-Women's Health Initiative era."
+    },
+    {
+      "pmid": "17849510",
+      "title": "Hormones and heart disease in women: the timing hypothesis.",
+      "journal": "Am J Epidemiol",
+      "date": 2007.708,
+      "pubTypes": [],
+      "doi": "10.1093/aje/kwm214",
+      "findingText": "The timing hypothesis is plausible, but the prespecified subgroup analyses in both Women's Health Initiative trials showed no significant interaction with age or years since menopause."
+    },
+    {
+      "pmid": "19325499",
+      "title": "Hot flushes, coronary heart disease, and hormone therapy in postmenopausal women.",
+      "journal": "Menopause",
+      "date": 2009.5,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1097/gme.0b013e31819c11e4",
+      "findingText": "Among women with baseline flushing, EPT increased risk of CHD events nine-fold in the first year compared with placebo (hazard ratio = 9.01; 95% CI, 1.15-70.35); among women without baseline flushing, treatment did not significantly affect CHD event risk in the first year (hazard ratio = 1.32; 95% CI, 0.86-2.03; P = 0.07 for interaction of hot flushes with treatment)."
+    },
+    {
+      "pmid": "9104892",
+      "title": "Effect on survival of estrogen replacement therapy after coronary artery bypass grafting.",
+      "journal": "Am J Cardiol",
+      "date": 1997.292,
+      "pubTypes": [],
+      "doi": "10.1016/s0002-9149(97)00001-5",
+      "findingText": "These data suggest that ERT improves survival significantly after CABG in postmenopausal women with coronary artery disease."
+    },
+    {
+      "pmid": "16476878",
+      "title": "Conjugated equine estrogens and coronary heart disease: the Women's Health Initiative.",
+      "journal": "Arch Intern Med",
+      "date": 2006.125,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1001/archinte.166.3.357",
+      "findingText": "CONCLUSIONS: Conjugated equine estrogens provided no overall protection against myocardial infarction or coronary death in generally healthy postmenopausal women during a 7-year period of use."
+    },
+    {
+      "pmid": "15668599",
+      "title": "Hormone therapy and coronary artery calcification in asymptomatic postmenopausal women: the Rancho Bernardo Study.",
+      "journal": "Menopause",
+      "date": 2005.5,
+      "pubTypes": [],
+      "doi": "10.1097/00042192-200512010-00009",
+      "findingText": "RESULTS: The odds of severe CACS in current estrogen users (n = 127) was 0.40 (95% CI 0.19, 0.82), controlling for all covariates."
+    },
+    {
+      "pmid": "17518513",
+      "title": "Traditional nonsteroidal anti-inflammatory drugs and postmenopausal hormone therapy: a drug-drug interaction?",
+      "journal": "PLoS Med",
+      "date": 2007.375,
+      "pubTypes": [],
+      "doi": "10.1371/journal.pmed.0040157",
+      "findingText": "The odds ratio (OR) of MI in 1,673 individuals and 7,005 controls was increased from 0.66 (95% confidence interval [CI] 0.50-0.88) when taking HT in the absence of traditional (t)NSAIDs to 1.50 (95% CI 0.85-2.64) when taking the combination of HT and tNSAIDs, resulting in a significant (p < 0.002) interaction."
+    },
+    {
+      "pmid": "17405972",
+      "title": "Postmenopausal hormone therapy and risk of cardiovascular disease by age and years since menopause.",
+      "journal": "JAMA",
+      "date": 2007.292,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1001/jama.297.13.1465",
+      "findingText": "For women with less than 10 years since menopause began, the hazard ratio (HR) for CHD was 0.76 (95% confidence interval [CI], 0.50-1.16); 10 to 19 years, 1.10 (95% CI, 0.84-1.45); and 20 or more years, 1.28 (95% CI, 1.03-1.58) (P for trend = .02)."
+    },
+    {
+      "pmid": "16169320",
+      "title": "Long-term hormone replacement therapy does not cause increased platelet activation.",
+      "journal": "Am Heart J",
+      "date": 2005.708,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/j.ahj.2004.10.028",
+      "findingText": "CONCLUSION: We conclude that long-term HRT does not appear to cause increased platelet activation and aggregation in women with coronary artery disease."
+    },
+    {
+      "pmid": "27075839",
+      "title": "Withdrawal of hormone therapy and increased risk of cardiovascular disease.",
+      "journal": "Climacteric",
+      "date": 2016.458,
+      "pubTypes": [],
+      "doi": "10.1080/13697137.2016.1175237",
+      "findingText": "Based on several large studies, it seems, however, that withdrawal of HT may be associated with immediate, though small increased risk of coronary heart disease and stroke."
+    },
+    {
+      "pmid": "24164272",
+      "title": "Effect of ultra-low-dose estradiol and dydrogesterone on arterial stiffness in postmenopausal women.",
+      "journal": "Climacteric",
+      "date": 2014.292,
+      "pubTypes": [],
+      "doi": "10.3109/13697137.2013.856399",
+      "findingText": "Results The baPWV level significantly decreased in the ultra-low-dose group (p = 0.037), while the baPWV level did not significantly change in the control group."
+    },
+    {
+      "pmid": "18359175",
+      "title": "Effects of estradiol and norethisterone on lipids, insulin resistance and carotid flow.",
+      "journal": "Maturitas",
+      "date": 2008.208,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/j.maturitas.2008.02.001",
+      "findingText": "CONCLUSIONS: Oral estrogen therapy led to an improvement in lipid profile, insulin resistance and carotid blood flow, which was cancelled when NETA was associated."
+    },
+    {
+      "pmid": "9795487",
+      "title": "Addressing coronary heart disease risk in women.",
+      "journal": "Cleve Clin J Med",
+      "date": 1998.792,
+      "pubTypes": [],
+      "doi": "10.3949/ccjm.65.9.464",
+      "findingText": "Contrary to popular perceptions, coronary heart disease (CHD) is a serious and widespread problem in US women."
+    },
+    {
+      "pmid": "22453198",
+      "title": "Risks and benefits of menopausal hormone therapy in postmenopausal Chinese women.",
+      "journal": "Menopause",
+      "date": 2012.625,
+      "pubTypes": [],
+      "doi": "10.1097/gme.0b013e31824362ff",
+      "findingText": "CONCLUSIONS: In postmenopausal Chinese women, CEE with or without MPA was not associated with increased rates of CHD, but CEE with MPA may be associated with a higher breast cancer rate."
+    },
+    {
+      "pmid": "20651617",
+      "title": "Vasomotor symptoms and coronary artery calcium in postmenopausal women.",
+      "journal": "Menopause",
+      "date": 2010.5,
+      "pubTypes": [],
+      "doi": "10.1097/gme.0b013e3181e664dc",
+      "findingText": "Moreover, as duration of HT increased, the inverse association between any VMS and CAC moved toward the null."
+    },
+    {
+      "pmid": "8287400",
+      "title": "Endothelium independent relaxation of human coronary arteries by 17 beta-oestradiol in vitro.",
+      "journal": "Cardiovasc Res",
+      "date": 1993.875,
+      "pubTypes": [],
+      "doi": "10.1093/cvr/27.11.1939",
+      "findingText": "RESULTS: 17 beta-Oestradiol induced a significant relaxation [maximum effect: 84(SD 18)%]."
+    },
+    {
+      "pmid": "2170887",
+      "title": "Hormone replacement therapy and lipoprotein changes during early menopause.",
+      "journal": "Obstet Gynecol",
+      "date": 1990.875,
+      "pubTypes": [],
+      "doi": "10.1097/00006250-199011000-00010",
+      "findingText": "With the exception of the hormone-related increases in triglycerides, the results are consistent with a beneficial effect of hormone replacement therapy on coronary heart disease risk."
+    },
+    {
+      "pmid": "26414962",
+      "title": "Increased Cardiovascular Mortality Risk in Women Discontinuing Postmenopausal Hormone Therapy.",
+      "journal": "J Clin Endocrinol Metab",
+      "date": 2015.958,
+      "pubTypes": [],
+      "doi": "10.1210/jc.2015-1864",
+      "findingText": "The cardiac (2.30; 2.12-2.50) and stroke (2.52; 2.28-2.77) death risk elevations were even higher when compared with HT users."
+    },
+    {
+      "pmid": "10513275",
+      "title": "Hormone replacement therapy: a survey of Ontario physicians' prescribing practices.",
+      "journal": "CMAJ",
+      "date": 1999.708,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "Prevention of osteoporosis was reported by 97.4% as an important or very important reason for prescribing HRT; prevention of coronary artery disease was important or very important for 89.3%."
+    },
+    {
+      "pmid": "8996287",
+      "title": "Estrogen replacement therapy after coronary angioplasty in women.",
+      "journal": "J Am Coll Cardiol",
+      "date": 1997.042,
+      "pubTypes": [],
+      "doi": "10.1016/s0735-1097(96)00443-3",
+      "findingText": "The cardiovascular event rate (death, nonfatal myocardial infarction or nonfatal stroke) was significantly lower in the estrogen group at 7 years (12% vs. 35% in the control group, p = 0.001)."
+    },
+    {
+      "pmid": "10030394",
+      "title": "Coronary heart disease risk factors and menopause: a study in 1684 French women.",
+      "journal": "Atherosclerosis",
+      "date": 1999.125,
+      "pubTypes": [],
+      "doi": "10.1016/s0021-9150(98)00252-4",
+      "findingText": "This study shows that menopause was associated with a higher prevalence of risk factors for CHD."
+    },
+    {
+      "pmid": "17762545",
+      "title": "Lessons from hormone replacement therapy trials for primary prevention of cardiovascular disease.",
+      "journal": "Curr Opin Cardiol",
+      "date": 2007.708,
+      "pubTypes": [],
+      "doi": "10.1097/hco.0b013e328201cb7a",
+      "findingText": "These studies showed no significant reduction in coronary heart disease events."
+    },
+    {
+      "pmid": "11875332",
+      "title": "Hormone replacement in postmenopausal women: impact of progestogens on autonomic tone and blood pressure regulation.",
+      "journal": "Menopause",
+      "date": 2002.5,
+      "pubTypes": [],
+      "doi": "10.1097/00042192-200203000-00008",
+      "findingText": "ERT use was associated with reduced systolic and diastolic daytime BP, whereas no significant differences were evident PERT users compared with controls."
+    },
+    {
+      "pmid": "1870648",
+      "title": "Postmenopausal estrogen therapy and cardiovascular disease. Ten-year follow-up from the nurses' health study.",
+      "journal": "N Engl J Med",
+      "date": 1991.708,
+      "pubTypes": [],
+      "doi": "10.1056/nejm199109123251102",
+      "findingText": "RESULTS: After adjustment for age and other risk factors, the overall relative risk of major coronary disease in women currently taking estrogen was 0.56 (95 percent confidence interval, 0.40 to 0.80); the risk was significantly reduced among women with either natural or surgical menopause."
+    },
+    {
+      "pmid": "16947090",
+      "title": "Antioxidant effects of hormone replacement therapy in postmenopausal women.",
+      "journal": "Swiss Med Wkly",
+      "date": 2006.625,
+      "pubTypes": [],
+      "doi": "10.4414/smw.2006.11390",
+      "findingText": "RESULTS: Levels of plasma TG and total antioxidant capacity were significantly increased in the study group."
+    },
+    {
+      "pmid": "10955415",
+      "title": "Hormone replacement therapy and the risk of myocardial infarction in women with coronary risk factors.",
+      "journal": "Epidemiology",
+      "date": 2000.708,
+      "pubTypes": [],
+      "doi": "10.1097/00001648-200009000-00018",
+      "findingText": "After adjustment for age, ethnicity, and education, the odds ratio for myocardial infarction in current users of hormone replacement therapy was 0.9 (95% confidence interval (CI) = 0.5-1.6) in women with no major coronary risk factors, 0.8 (95% CI = 0.5-1.8) in women with one risk factor, and 1.1 (95% CI = 0.5-2.2) in women with two risk factors."
+    },
+    {
+      "pmid": "10725771",
+      "title": "Low-density lipoprotein size in primary hypothyroidism. Effects of hormone replacement therapy.",
+      "journal": "Ann Nutr Metab",
+      "date": 1999.5,
+      "pubTypes": [],
+      "doi": "10.1159/000012806",
+      "findingText": "In conclusion, the increased risk of coronary heart disease assumed to be associated with hypothyroidism is not linked with the presence of pattern B LDL, but rather with concomitant metabolic abnormalities."
+    },
+    {
+      "pmid": "18027116",
+      "title": "Impact of recent studies on attitudes and use of hormone therapy among Scandinavian gynaecologists.",
+      "journal": "Acta Obstet Gynecol Scand",
+      "date": 2007.5,
+      "pubTypes": [],
+      "doi": "10.1080/00016340701745418",
+      "findingText": "Recent randomised controlled studies have been unable to confirm data from observational studies of primary or secondary preventive effects of HT on coronary heart disease, and other studies have indicated an increased risk of breast cancer, stroke and venous thromboembolism among HT users."
+    },
+    {
+      "pmid": "11152919",
+      "title": "Postmenopausal hormones and incontinence: the Heart and Estrogen/Progestin Replacement Study.",
+      "journal": "Obstet Gynecol",
+      "date": 2001.042,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0029-7844(00)01115-7",
+      "findingText": "RESULTS: Incontinence improved in 26% of the women assigned to placebo compared with 21% assigned to hormones, while 27% of the placebo group worsened compared with 39% of the hormone group (P =.001)."
+    },
+    {
+      "pmid": "11174874",
+      "title": "Hormone replacement therapy in clinical cardiology.",
+      "journal": "Cardiol Rev",
+      "date": 2000.5,
+      "pubTypes": [],
+      "doi": "10.1097/00045415-200008010-00010",
+      "findingText": "In contrast, the Heart and Estrogen/progestin Replacement Study (HERS) did not show any overall benefit of estrogen/progestin therapy over 4.1 years of follow-up in a sample of women with established CHD, despite the expected favorable changes in the participants' lipid profiles."
+    },
+    {
+      "pmid": "12201226",
+      "title": "Hormone replacement therapy. An analysis of efficacy based on evidence.",
+      "journal": "Geriatrics",
+      "date": 2002.625,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "Findings from these investigations, including new results from two very large trials, show that beyond managing traditional menopause symptoms, HRT has little or no role in protection against certain diseases or conditions associated with aging."
+    },
+    {
+      "pmid": "17113831",
+      "title": "The clinical trial of Women On the Move through Activity and Nutrition (WOMAN) study.",
+      "journal": "Contemp Clin Trials",
+      "date": 2007.542,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/j.cct.2006.10.009",
+      "findingText": "The primary endpoints are change in extent of carotid intima-media wall thickness as measured by carotid ultrasound, pulse wave velocity as a measure of vascular stiffness and coronary artery calcium using electron beam computed tomography."
+    },
+    {
+      "pmid": "9087469",
+      "title": "Patient-specific decisions about hormone replacement therapy in postmenopausal women.",
+      "journal": "JAMA",
+      "date": 1997.292,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "CONCLUSIONS: The benefit of hormone replacement therapy in reducing the likelihood of developing CHD appears to outweigh the risk of breast cancer for nearly all women in whom this treatment might be considered."
+    },
+    {
+      "pmid": "9399737",
+      "title": "Effects of hormone therapy on inflammatory cell adhesion molecules in postmenopausal healthy women.",
+      "journal": "Am J Cardiol",
+      "date": 1997.958,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0002-9149(97)00732-7",
+      "findingText": "Hormone therapy significantly lowered intercellular adhesion molecules-1 levels by 8% (p = 0.009) and tended to lower E-selectin levels (by 6%, p = 0.096), and VCAM-1 levels (by 4%, p = 0.084)."
+    },
+    {
+      "pmid": "11153104",
+      "title": "Reasons for use of hormone replacement therapy in women undergoing coronary angiography.",
+      "journal": "J Womens Health Gend Based Med",
+      "date": 2000.958,
+      "pubTypes": [],
+      "doi": "10.1089/152460900445992",
+      "findingText": "Less than 14% of women cited coronary heart disease (CHD) or osteoporosis as their primary reason for using HRT."
+    },
+    {
+      "pmid": "15771927",
+      "title": "Postmenopausal hormone replacement therapy increases plasmatic thromboxane beta 2.",
+      "journal": "Int J Cardiol",
+      "date": 2005.208,
+      "pubTypes": [],
+      "doi": "10.1016/j.ijcard.2004.10.009",
+      "findingText": "CONCLUSIONS: Healthy menopaused women who were administered estradiol in association with norethisterone continuously had an increase of plasmatic thromboxane, possibly determined by platelet activation, which indicates a higher short-term thrombotic risk."
+    },
+    {
+      "pmid": "9504644",
+      "title": "Effects of hormone replacement therapies on fibrinogen and plasma viscosity in postmenopausal women.",
+      "journal": "Br J Haematol",
+      "date": 1998.208,
+      "pubTypes": [],
+      "doi": "10.1046/j.1365-2141.1998.00594.x",
+      "findingText": "Improved rheology offers a mechanism by which HRT lowers the risk of CHD in postmenopausal women."
+    },
+    {
+      "pmid": "30130284",
+      "title": "Hormone therapy in postmenopausal women associated with risk of stroke and venous thromboembolism: a population-based cohort study in Taiwan.",
+      "journal": "Menopause",
+      "date": 2019.125,
+      "pubTypes": [],
+      "doi": "10.1097/gme.0000000000001182",
+      "findingText": "After adjusting for age, statin and anticoagulant use, hyperlipidemia, diabetes, and hypertension, the hazard ratios (95% CIs) for the HT group were increased: ACS, 3.73 (2.01-6.91); IS, 3.51 (2.41-5.11); and VTE, 2.51 (1.15-5.47)."
+    },
+    {
+      "pmid": "15374707",
+      "title": "Effect of hormone therapy and raloxifene on serum VE-cadherin in postmenopausal women.",
+      "journal": "Fertil Steril",
+      "date": 2004.708,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/j.fertnstert.2004.03.030",
+      "findingText": "Although this effect may influence the progress of the atheromatous lesion, its clinical impact on coronary artery disease (CAD) remains uncertain."
+    },
+    {
+      "pmid": "11734668",
+      "title": "Hypercoagulation in surgical postmenopausal women having hormone replacement with overdose estradiol.",
+      "journal": "Blood Coagul Fibrinolysis",
+      "date": 2001.958,
+      "pubTypes": [],
+      "doi": "10.1097/00001721-200112000-00009",
+      "findingText": "Thus, the overdose estradiol replacement may not be beneficial in preventing CHD after menopause, or it may even increase the risk due to the hypercoagulable state induced therefrom."
+    },
+    {
+      "pmid": "11156873",
+      "title": "Postmenopausal hormone therapy and risk of stroke: The Heart and Estrogen-progestin Replacement Study (HERS).",
+      "journal": "Circulation",
+      "date": 2001.125,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1161/01.cir.103.5.638",
+      "findingText": "CONCLUSIONS: Hormone therapy with conjugated equine estrogen and progestin had no significant effect on the risk for stroke among postmenopausal women with coronary disease."
+    },
+    {
+      "pmid": "9848882",
+      "title": "Hormone replacement therapy improves cardiovascular risk by lowering plasma viscosity in postmenopausal women.",
+      "journal": "Arterioscler Thromb Vasc Biol",
+      "date": 1998.958,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1161/01.atv.18.12.1902",
+      "findingText": "Plasma viscosity was significantly reduced with estrogen replacement therapy (P<0.01)."
+    },
+    {
+      "pmid": "20934562",
+      "title": "Hormone replacement therapy among postmenopausal women presenting with acute myocardial infarction: insights from the GUSTO-III trial.",
+      "journal": "Am Heart J",
+      "date": 2010.792,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/j.ahj.2010.06.030",
+      "findingText": "While unadjusted 30-day mortality was substantially lower in HRT patients (6.1% vs 12.7%, P < .001), HRT use was not independently predictive of mortality after correcting for baseline differences (\u03c7(2) = 0.15, P = .70)."
+    },
+    {
+      "pmid": "12468165",
+      "title": "Menopausal symptoms in older women and the effects of treatment with hormone therapy.",
+      "journal": "Obstet Gynecol",
+      "date": 2002.958,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0029-7844(02)02369-4",
+      "findingText": "Postmenopausal hormone therapy reduces hot flashes, trouble sleeping, and vaginal dryness, but at standard doses in elderly women is associated with vaginal discharge, genital irritation, uterine bleeding, and breast symptoms."
+    },
+    {
+      "pmid": "9060801",
+      "title": "Long-term estrogen therapy abolishes acute estrogen-induced coronary flow augmentation in postmenopausal women.",
+      "journal": "Am Heart J",
+      "date": 1997.208,
+      "pubTypes": [],
+      "doi": "10.1016/s0002-8703(97)70227-8",
+      "findingText": "These results demonstrate that long-term ERT significantly attenuates the response of coronary arteries to the acute vasomotor effects of a high dose of estradiol."
+    },
+    {
+      "pmid": "11156863",
+      "title": "Effect of oral postmenopausal hormone replacement on progression of atherosclerosis : a randomized, controlled trial.",
+      "journal": "Arterioscler Thromb Vasc Biol",
+      "date": 2001.125,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1161/01.atv.21.2.262",
+      "findingText": "HRT did not slow IMT progression in carotid arteries."
+    },
+    {
+      "pmid": "9802722",
+      "title": "Association of hormone replacement therapy and carotid wall thickness in women with and without diabetes.",
+      "journal": "Diabetes Care",
+      "date": 1998.875,
+      "pubTypes": [],
+      "doi": "10.2337/diacare.21.11.1790",
+      "findingText": "CONCLUSIONS: This analysis suggests that current and former use of HRT is associated with reduced atherosclerosis and that women with type 2 diabetes may receive the same benefit from HRI as women without diabetes."
+    },
+    {
+      "pmid": "11466136",
+      "title": "Hormone replacement therapy shortens QT dispersion in healthy postmenopausal women.",
+      "journal": "Ann Noninvasive Electrocardiol",
+      "date": 2001.542,
+      "pubTypes": [],
+      "doi": "10.1111/j.1542-474x.2001.tb00107.x",
+      "findingText": "This improvement in myocardial repolarization may be one of the mechanisms of the favorable effects of HRT on cardiovascular system."
+    },
+    {
+      "pmid": "11545684",
+      "title": "Identifying patient preferences for communicating risk estimates: a descriptive pilot study.",
+      "journal": "BMC Med Inform Decis Mak",
+      "date": 2001.5,
+      "pubTypes": [],
+      "doi": "10.1186/1472-6947-1-2",
+      "findingText": "Risk data were based on a hypothetical woman's risk for coronary heart disease, hip fracture, and breast cancer, with and without hormone replacement therapy."
+    },
+    {
+      "pmid": "12459399",
+      "title": "Effect of postmenopausal hormone therapy on cognitive function: the Heart and Estrogen/progestin Replacement Study.",
+      "journal": "Am J Med",
+      "date": 2002.875,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0002-9343(02)01270-6",
+      "findingText": "CONCLUSION: Among older postmenopausal women with coronary disease, 4 years of treatment with postmenopausal hormone therapy did not result in better cognitive function as measured on six standardized tests."
+    },
+    {
+      "pmid": "15671702",
+      "title": "Postmenopausal hormone use in women with acute coronary syndromes.",
+      "journal": "J Womens Health (Larchmt)",
+      "date": 2004.792,
+      "pubTypes": [],
+      "doi": "10.1089/jwh.2004.13.863",
+      "findingText": "CONCLUSIONS: HRT use (predominantly estrogen-only) was low among patients with ACS but varied by region and was not associated with improved intermediate-term outcomes."
+    },
+    {
+      "pmid": "11821303",
+      "title": "Hormone replacement therapy can augment vascular relaxation in post-menopausal women with type 2 diabetes.",
+      "journal": "Hum Reprod",
+      "date": 2002.125,
+      "pubTypes": [],
+      "doi": "10.1093/humrep/17.2.497",
+      "findingText": "After 6 months of HRT, maximal relaxation responses to ACh, BK and SNP in women with diabetes (compared with pre-HRT) were: 88 +/- 4 (P < 0.05), 93 +/- 3 (P < 0.05) and 98 +/- 1% (P < 0.05) respectively."
+    },
+    {
+      "pmid": "17502840",
+      "title": "Hormone therapy and coronary heart disease in young women.",
+      "journal": "Menopause",
+      "date": 2008.5,
+      "pubTypes": [],
+      "doi": "10.1097/gme.0b013e3180413e45",
+      "findingText": "RESULTS: Myocardial infarction was not altered significantly by hormone therapy (adjusted hazard ratio 0.91; 95% CI, 0.69-1.20)."
+    },
+    {
+      "pmid": "22840666",
+      "title": "Placebo adherence and mortality in the Heart and Estrogen/Progestin Replacement Study.",
+      "journal": "Am J Med",
+      "date": 2012.625,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/j.amjmed.2012.02.014",
+      "findingText": "RESULTS: More adherent participants had significantly lower total mortality compared with less adherent participants (hazard ratio, 0.52; 95% confidence interval, 0.29-0.93)."
+    },
+    {
+      "pmid": "14712425",
+      "title": "Creatinine levels and cardiovascular events in women with heart disease: do small changes matter?",
+      "journal": "Am J Kidney Dis",
+      "date": 2004.042,
+      "pubTypes": [],
+      "doi": "10.1053/j.ajkd.2003.08.044",
+      "findingText": "CONCLUSION: Although baseline renal function was among the strongest predictors of CHD events during 7 years of HERS follow-up, we found no significant association of worsened renal function with cardiovascular outcomes after adjustment for cardiovascular risk factors and interim events."
+    },
+    {
+      "pmid": "12396895",
+      "title": "The association of hormone replacement therapy and coronary calcium as determined by electron beam tomography.",
+      "journal": "J Womens Health Gend Based Med",
+      "date": 2002.708,
+      "pubTypes": [],
+      "doi": "10.1089/152460902760360577",
+      "findingText": "CONCLUSIONS: These findings demonstrate no association between HRT use and CCS, CCV, and CCL after adjusting for measurable confounders in postmenopausal women."
+    },
+    {
+      "pmid": "12569202",
+      "title": "Exercise training in women with heart disease: influence of hormone replacement therapy.",
+      "journal": "Med Sci Sports Exerc",
+      "date": 2003.125,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1249/01.mss.0000048670.61339.68",
+      "findingText": "CONCLUSIONS: The cardiovascular responses to training in postmenopausal women with CAD appear to be consistent regardless of HRT status and dominated by peripheral adaptations."
+    },
+    {
+      "pmid": "15906951",
+      "title": "Overweight and effect of hormone replacement therapy on lipid profiles in postmenopausal women.",
+      "journal": "Korean J Intern Med",
+      "date": 2005.208,
+      "pubTypes": [],
+      "doi": "10.3904/kjim.2005.20.1.33",
+      "findingText": "This finding may be partially associated with no cardioprotective effect of HRT in postmenopausal patients at a high risk due to multiple risk factors including obesity."
+    },
+    {
+      "pmid": "16504428",
+      "title": "Results from the Estonian postmenopausal hormone therapy trial [ISRCTN35338757].",
+      "journal": "Maturitas",
+      "date": 2006.708,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/j.maturitas.2006.01.012",
+      "findingText": "RESULTS: After a follow-up period from 2.0 to 5.0 years the combined hazard ratio, stratified by blinding and adjusted for age at recruitment and former oral contraceptive use was 1.12 (95% confidence interval [CI]: 0.90-1.40) for coronary heart disease, 1.24 (95% CI: 0.85-1.82) for cerebrovascular disease, 1.36 (95% CI: 0.73-2.52) for total cancer, and 0.61 (95% CI: 0.42 to 0.89) for bone fractures."
+    },
+    {
+      "pmid": "15989413",
+      "title": "Effects of hormone replacement on progression of coronary calcium as measured by electron beam tomography.",
+      "journal": "J Womens Health (Larchmt)",
+      "date": 2005.458,
+      "pubTypes": [],
+      "doi": "10.1089/jwh.2005.14.410",
+      "findingText": "Relative to the nonuser group, HRT treatment inhibited the progression of atherosclerosis by 35% (p=0.01)."
+    },
+    {
+      "pmid": "32669317",
+      "title": "Molecular Mechanism for Breast Cancer Incidence in the Women's Health Initiative.",
+      "journal": "Cancer Prev Res (Phila)",
+      "date": 2020.792,
+      "pubTypes": [],
+      "doi": "10.1158/1940-6207.capr-20-0082",
+      "findingText": "Women taking estrogen/synthetic progestin or estrogen alone had no benefit from a reduction in CHD."
+    },
+    {
+      "pmid": "8890803",
+      "title": "Relation between estrogen replacement therapy and restenosis after percutaneous coronary interventions.",
+      "journal": "J Am Coll Cardiol",
+      "date": 1996.875,
+      "pubTypes": [],
+      "doi": "10.1016/s0735-1097(96)00306-3",
+      "findingText": "Women undergoing atherectomy who received estrogen had a significantly lower late loss index (0.06 vs. -0.63, p = 0.002), less late loss (0.06 vs. -0.61 mm, p = 0.0006), larger minimal lumen diameter (p = 0.044) and lower restenosis rates (p = 0.038 for > 50% stenosis) than those not using estrogen."
+    },
+    {
+      "pmid": "20222844",
+      "title": "Hormone therapy affects plasma measures of factor VII-activating protease in younger postmenopausal women.",
+      "journal": "Climacteric",
+      "date": 2010.625,
+      "pubTypes": [],
+      "doi": "10.3109/13697131003597027",
+      "findingText": "This increase may contribute to the protective effect on CHD induced by HT in younger postmenopausal women."
+    },
+    {
+      "pmid": "7625511",
+      "title": "Hormonal replacement therapy and morbidity and mortality in a prospective study of postmenopausal women.",
+      "journal": "Am J Public Health",
+      "date": 1995.625,
+      "pubTypes": [],
+      "doi": "10.2105/ajph.85.8_pt_1.1128",
+      "findingText": "Compared with women who never used hormone replacement therapy, current users had multivariate adjusted relative risks (RR) as follows: total mortality (RR = 0.78; 95% confidence interval [CI] = 0.65, 0.94), coronary heart disease mortality (RR = 0.74; 95% CI = 0.48, 1.12), endometrial cancer incidence (RR = 4.3; 95% CI = 2.7, 6.9), breast cancer incidence (RR = 1.23; 95% CI = 0.99, 1.55), colon cancer incidence (RR = 0.72; 95% CI = 0.46, 1.12), and hip fracture incidence (RR = 0.53; 95% CI = 0.31, 0.91)."
+    },
+    {
+      "pmid": "8994414",
+      "title": "Effects of estrogen replacement therapy on the renin-angiotensin system in postmenopausal women.",
+      "journal": "Circulation",
+      "date": 1997.042,
+      "pubTypes": [],
+      "doi": "10.1161/01.cir.95.1.39",
+      "findingText": "Renin levels were lower in women with ERT (n = 107; 12.0 +/- 0.7 mU/L) compared with women without ERT (n = 223; 16.6 +/- 0.9 mU/L; P = .001) or men (n = 342, 20.5 +/- 1.5 mU/L, P < .0001)."
+    },
+    {
+      "pmid": "23818431",
+      "title": "Cross-sectional and longitudinal relationships between perceived stress and C-reactive protein in men and women.",
+      "journal": "Stress Health",
+      "date": 2014.292,
+      "pubTypes": [],
+      "doi": "10.1002/smi.2507",
+      "findingText": "Multiple linear regressions examined the cross-sectional and longitudinal relationships between baseline stress and counter-stress scores with CRP at baseline, 2 years after baseline and 4 years after baseline, while controlling for covariates (age, smoking status, anti-inflammatory use, oral contraceptive use, physical activity, menopausal status, years since onset of menopause, post-menopausal hormone use and body mass index)."
+    },
+    {
+      "pmid": "11788212",
+      "title": "Effects of acute hormone therapy on recurrent ischemia in postmenopausal women with unstable angina.",
+      "journal": "J Am Coll Cardiol",
+      "date": 2002.042,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0735-1097(01)01724-7",
+      "findingText": "CONCLUSIONS: Acute hormone therapy does not reduce ischemia in PMP women with UA when added to standard anti-ischemic therapy."
+    },
+    {
+      "pmid": "12504395",
+      "title": "Oestrogen therapy for prevention of reinfarction in postmenopausal women: a randomised placebo controlled trial.",
+      "journal": "Lancet",
+      "date": 2002.958,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0140-6736(02)12001-0",
+      "findingText": "FINDINGS: Frequency of reinfarction or cardiac death did not differ between treatment groups at 24 months (rate ratio 0.99, 95% CI 0.70-1.41, p=0.97)."
+    },
+    {
+      "pmid": "19465669",
+      "title": "Hormone replacement therapy and cardiovascular disease revisited.",
+      "journal": "Menopause Int",
+      "date": 2009.458,
+      "pubTypes": [],
+      "doi": "10.1258/mi.2009.009018",
+      "findingText": "But subsequent publications of the more complete data from WHI have shown no significant increase in CHD, and a tendency to a reduction in those initiating HRT below age 60 years."
+    },
+    {
+      "pmid": "14694694",
+      "title": "A case-control study on the effect of hormone replacement therapy on ischaemic heart disease.",
+      "journal": "Br J Gen Pract",
+      "date": 2003.208,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "RESULTS: No evidence was found, either from univariate analysis or multivariate analysis, that use of HRT was associated with reduced risk of CHD (odds ratio = 1.32; 95% confidence interval = 0.93 to 1.87)."
+    },
+    {
+      "pmid": "31367516",
+      "title": "The association of age at menopause and all-cause and cause-specific mortality by race, postmenopausal hormone use, and smoking status.",
+      "journal": "Prev Med Rep",
+      "date": 2019.708,
+      "pubTypes": [],
+      "doi": "10.1016/j.pmedr.2019.100955",
+      "findingText": "An association between early age at menopause and all-cause mortality was observed among ever-HRT users (HR = 1.31, 95% CI: 1.10-1.56), but not never-HRT users (HR = 1.01, 95% CI: 0.85-1.20)."
+    },
+    {
+      "pmid": "8044949",
+      "title": "Acute vascular effects of estrogen in postmenopausal women.",
+      "journal": "Circulation",
+      "date": 1994.625,
+      "pubTypes": [],
+      "doi": "10.1161/01.cir.90.2.786",
+      "findingText": "CONCLUSIONS: Physiological levels of 17 beta-estradiol selectively potentiate endothelium-dependent vasodilation in healthy postmenopausal women and potentiate both endothelium-dependent and endothelium-independent vasodilation in post-menopausal women with risk factors for atherosclerosis and evidence of impaired vascular function."
+    },
+    {
+      "pmid": "15545509",
+      "title": "Pulse pressure and coronary atherosclerosis progression in postmenopausal women.",
+      "journal": "Hypertension",
+      "date": 2005.042,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1161/01.hyp.0000149599.99266.44",
+      "findingText": "HRT had no detectable effect on pulse pressure."
+    },
+    {
+      "pmid": "10822123",
+      "title": "The estrogen replacement and atherosclerosis (ERA) study: study design and baseline characteristics of the cohort.",
+      "journal": "Control Clin Trials",
+      "date": 2000.458,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0197-2456(00)00054-4",
+      "findingText": "The primary aim is to test the hypothesis that either form of hormone therapy will slow the progression or induce regression of coronary atherosclerosis compared to placebo."
+    },
+    {
+      "pmid": "11306205",
+      "title": "The effects of hormone replacement therapy on lipid peroxidation and antioxidant status.",
+      "journal": "Maturitas",
+      "date": 2001.292,
+      "pubTypes": [],
+      "doi": "10.1016/s0378-5122(00)00216-4",
+      "findingText": "CONCLUSION: Our results show that HRT is beneficial in the protection against oxidative damage and can prevent atherosclerotic complications."
+    },
+    {
+      "pmid": "17172924",
+      "title": "Endogenous testosterone and endothelial function in postmenopausal women.",
+      "journal": "Coron Artery Dis",
+      "date": 2007.125,
+      "pubTypes": [],
+      "doi": "10.1097/01.mca.0000236290.79306.d1",
+      "findingText": "Estrogen decline, however, is not the only hormonal change during the postmenopausal period and estrogen administration did not protect women from cardiovascular disease."
+    },
+    {
+      "pmid": "14581866",
+      "title": "Statin therapy in the heart and estrogen/progestin replacement study.",
+      "journal": "Minerva Ginecol",
+      "date": 2003.458,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": null,
+      "findingText": "The negative effect of HRT on the primary outcome seen in the 1st year of treatment was much reduced among baseline statin users and was no longer statistically significant (RH=1.34, 95% CI 0.63 to 2.86, p=0.45)."
+    },
+    {
+      "pmid": "18391103",
+      "title": "Kidney dysfunction and sudden cardiac death among women with coronary heart disease.",
+      "journal": "Hypertension",
+      "date": 2008.458,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1161/hypertensionaha.107.103804",
+      "findingText": "The Heart and Estrogen Replacement Study evaluated the effects of hormone treatment on cardiovascular events among 2763 postmenopausal women with coronary heart disease."
+    },
+    {
+      "pmid": "7963125",
+      "title": "Effects of hormone replacement therapy on reactivity of atherosclerotic coronary arteries in cynomolgus monkeys.",
+      "journal": "J Am Coll Cardiol",
+      "date": 1994.958,
+      "pubTypes": [],
+      "doi": "10.1016/0735-1097(94)90184-8",
+      "findingText": "CONCLUSIONS: Treatment with conjugated equine estrogens, but not MPA, augmented endothelium-mediated dilation of atherosclerotic coronary arteries."
+    },
+    {
+      "pmid": "9328541",
+      "title": "Why do women doctors in the UK take hormone replacement therapy?",
+      "journal": "J Epidemiol Community Health",
+      "date": 1997.625,
+      "pubTypes": [],
+      "doi": "10.1136/jech.51.4.373",
+      "findingText": "MAIN RESULTS: While 73.2% of 471 users had started HRT for symptom relief, 60.9% cited prevention of osteoporosis and 32.7 prevention of cardiovascular disease."
+    },
+    {
+      "pmid": "10787361",
+      "title": "Postmenopausal hormone therapy increases risk for venous thromboembolic disease. The Heart and Estrogen/progestin Replacement Study.",
+      "journal": "Ann Intern Med",
+      "date": 2000.375,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.7326/0003-4819-132-9-200005020-00002",
+      "findingText": "CONCLUSIONS: Postmenopausal therapy with estrogen plus progestin increases risk for venous thromboembolism in women with coronary heart disease."
+    },
+    {
+      "pmid": "9723624",
+      "title": "Estrogen replacement therapy and outcome of coronary balloon angioplasty in postmenopausal women.",
+      "journal": "Am J Cardiol",
+      "date": 1998.625,
+      "pubTypes": [],
+      "doi": "10.1016/s0002-9149(98)00351-8",
+      "findingText": "We conclude that estrogen replacement may offer protection against clinical coronary events in postmenopausal women who already have established coronary disease and are undergoing balloon angioplasty."
+    },
+    {
+      "pmid": "8292665",
+      "title": "Postmenopausal hormone replacement therapy with Tibolone decreases serum lipoprotein(a).",
+      "journal": "Eur J Clin Chem Clin Biochem",
+      "date": 1993.792,
+      "pubTypes": [],
+      "doi": "10.1515/cclm.1993.31.10.645",
+      "findingText": "In the present study we found a highly significant decrease (in the order of 26%) of lipoprotein(a) in 28 women treated for 6 months with Tibolone, compared with an age-matched healthy control group."
+    },
+    {
+      "pmid": "21106950",
+      "title": "Estrogen receptor polymorphisms and the vascular effects of hormone therapy.",
+      "journal": "Arterioscler Thromb Vasc Biol",
+      "date": 2011.125,
+      "pubTypes": [],
+      "doi": "10.1161/atvbaha.110.215087",
+      "findingText": "The polymorphisms were not associated with risk of vascular events and did not modify the increased risks of coronary heart disease, stroke, or venous thromboembolism due to hormone therapy."
+    },
+    {
+      "pmid": "15497491",
+      "title": "Comparative vascular effects of hormone replacement therapy and raloxifene in women at increased cardiovascular risk.",
+      "journal": "Gynecol Endocrinol",
+      "date": 2004.458,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1080/09513590410001729888",
+      "findingText": "In conclusion, HRT improved endothelial function and reduced plasma levels of endothelin-1 in postmenopausal women at risk of coronary artery disease."
+    },
+    {
+      "pmid": "41186575",
+      "title": "Association between central adiposity and cognitive domain function in recently postmenopausal women: an analysis from the KEEPS-Cog substudy of the Kronos Early Estrogen Preventive Study.",
+      "journal": "Menopause",
+      "date": 2026.125,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1097/gme.0000000000002666",
+      "findingText": "Participants with diabetes, body mass index >35 kg/m 2 , coronary artery calcium score >50 Agatston Units, and other cardiometabolic disease risk indicators were excluded from enrollment."
+    },
+    {
+      "pmid": "12679771",
+      "title": "Coronary artery calcification in black women and white women.",
+      "journal": "Am Heart J",
+      "date": 2003.292,
+      "pubTypes": [],
+      "doi": "10.1067/mhj.2003.99",
+      "findingText": "Educational level, body mass index, current hormone replacement therapy, hysterectomy, dietary fat consumption, family history of premature coronary disease, hypertension, self-reported high cholesterol, and current smoking were not independently associated with coronary calcium score in black women, white women, or the combined cohort; neither was ethnicity an independent predictor of coronary calcification."
+    },
+    {
+      "pmid": "19421076",
+      "title": "Vasomotor symptoms and mortality: the Rancho Bernardo Study.",
+      "journal": "Menopause",
+      "date": 2009.5,
+      "pubTypes": [],
+      "doi": "10.1097/gme.0b013e3181a4866b",
+      "findingText": "There was a similar lower risk of CVD and CHD mortality in women with night sweats when adjusted for past or current use of estrogen or progestin (HR, 0.62; 95% CI, 0.42-0.92 and HR, 0.51; 95% CI, 0.26-0.99, respectively)."
+    },
+    {
+      "pmid": "10595329",
+      "title": "Plasma homocysteine in women taking hormone replacement therapy: the Postmenopausal Estrogen/Progestin Interventions (PEPI) Trial.",
+      "journal": "J Womens Health Gend Based Med",
+      "date": 1999.875,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1089/jwh.1.1999.8.1167",
+      "findingText": "These data suggest that estrogen therapy has a modest, but transient, impact on plasma homocysteine levels in women with normal homocysteine at baseline."
+    },
+    {
+      "pmid": "17341712",
+      "title": "Major and minor ECG abnormalities in asymptomatic women and risk of cardiovascular events and mortality.",
+      "journal": "JAMA",
+      "date": 2007.208,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1001/jama.297.9.978",
+      "findingText": "There were no significant interactions between hormone treatment assignment and ECG abnormalities for risk prediction of cardiovascular end points."
+    },
+    {
+      "pmid": "10591680",
+      "title": "Both raloxifene and estrogen reduce major cardiovascular risk factors in healthy postmenopausal women: A 2-year, placebo-controlled study.",
+      "journal": "Arterioscler Thromb Vasc Biol",
+      "date": 1999.958,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1161/01.atv.19.12.2993",
+      "findingText": "Compared with placebo, both raloxifene and CEEs lowered the level of low density lipoprotein cholesterol by 0.53 to 0.79 mmol/L (all P<0.04) and lowered, at 24 months, the level of fibrinogen by 0.71 to 0.86 g/L (all P<0.05)."
+    },
+    {
+      "pmid": "19001202",
+      "title": "Inflammatory, lipid, thrombotic, and genetic markers of coronary heart disease risk in the women's health initiative trials of hormone therapy.",
+      "journal": "Arch Intern Med",
+      "date": 2008.875,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1001/archinte.168.20.2245",
+      "findingText": "BACKGROUND: Clinical trials of postmenopausal hormone therapy (HT) have shown increased risk of coronary heart disease (CHD) in the first few years after initiation of therapy and no overall benefit."
+    },
+    {
+      "pmid": "1342318",
+      "title": "A prospective study of postmenopausal estrogen therapy and subsequent incidence of non-insulin-dependent diabetes mellitus.",
+      "journal": "Ann Epidemiol",
+      "date": 1992.708,
+      "pubTypes": [],
+      "doi": "10.1016/1047-2797(92)90011-e",
+      "findingText": "These prospective data indicate that postmenopausal hormone therapy is unlikely to be associated with a material increase in the incidence of NIDDM among women."
+    },
+    {
+      "pmid": "25069991",
+      "title": "Arterial imaging outcomes and cardiovascular risk factors in recently menopausal women: a randomized trial.",
+      "journal": "Ann Intern Med",
+      "date": 2014.625,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.7326/m14-0353",
+      "findingText": "CONCLUSION: Four years of early MHT did not affect progression of atherosclerosis despite improving some markers of CVD risk."
+    },
+    {
+      "pmid": "23135529",
+      "title": "Effects of estrogen and opioid blockade on blood pressure reactivity to stress in postmenopausal women.",
+      "journal": "J Behav Med",
+      "date": 2014.125,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1007/s10865-012-9468-3",
+      "findingText": "Interestingly, there was an estrogen by naltrexone interaction on SBP reactivity scores [F(1,38) = 4.36, p < .05], where women on estrogen with intact opioid receptors showed the largest SBP responses to stress, compared with all other conditions."
+    },
+    {
+      "pmid": "10458226",
+      "title": "Elements of informed consent for hormone replacement therapy in patients with diagnosed breast cancer.",
+      "journal": "J Clin Oncol",
+      "date": 1999.042,
+      "pubTypes": [],
+      "doi": "10.1200/jco.1999.17.1.130",
+      "findingText": "For coronary heart disease prevention, an array of strategies independent of HRT are available, with some (tamoxifen, selective estrogen receptor modifiers [SERMs], diet, and exercise) likely to favorably influence breast cancer risk; for osteoporosis prevention, an array of strategies also are available, with some (bisphosphonates, tamoxifen, SERMs, and exercise) likely to favorably influence breast cancer risk."
+    },
+    {
+      "pmid": "11388817",
+      "title": "The incidence of unrecognized myocardial infarction in women with coronary heart disease.",
+      "journal": "Ann Intern Med",
+      "date": 2001.458,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.7326/0003-4819-134-11-200106050-00010",
+      "findingText": "Seven occurred in women assigned to placebo and 4 occurred in women assigned to hormone therapy (P > 0.2)."
+    },
+    {
+      "pmid": "10981488",
+      "title": "Estrogen replacement therapy is underutilized among postmenopausal women at high risk for coronary heart disease.",
+      "journal": "Am J Med Sci",
+      "date": 2000.625,
+      "pubTypes": [],
+      "doi": "10.1097/00000441-200008000-00011",
+      "findingText": "Observational studies have found that estrogen replacement therapy (ERT) reduces the risk of coronary heart disease (CHD) in postmenopausal women."
+    },
+    {
+      "pmid": "8559552",
+      "title": "The clinical aspects of estrogen and the cardiovascular system.",
+      "journal": "Obstet Gynecol",
+      "date": 1996.125,
+      "pubTypes": [],
+      "doi": "10.1016/0029-7844(95)00432-7",
+      "findingText": "More than 30 observational studies and one small randomized, controlled clinical trial have provided evidence that estrogen replacement reduces cardiovascular risk by approximately 50%."
+    },
+    {
+      "pmid": "15308999",
+      "title": "Remnant-like lipoproteins, hormone therapy, and angiographic and clinical outcomes: the Women's Angiographic Vitamin & Estrogen Trial.",
+      "journal": "Am Heart J",
+      "date": 2004.625,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/j.ahj.2004.01.025",
+      "findingText": "RLP levels at baseline, changes in RLP levels, and on treatment RLP levels did not relate to angiographic changes or clinical outcomes (non-fatal myocardial infarction, stroke, or cardiovascular death)."
+    },
+    {
+      "pmid": "11329233",
+      "title": "Effects of hormone replacement therapy on serum lipids in elderly women. a randomized, placebo-controlled trial.",
+      "journal": "Ann Intern Med",
+      "date": 2001.375,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.7326/0003-4819-134-9_part_1-200105010-00012",
+      "findingText": "RESULTS: After 9 months of treatment, women in the HRT group compared with women in the placebo group had decreased low-density lipoprotein cholesterol levels (mean change [+/-SD], -0.47 +/- 0.69 mmol/L [-18.2 +/- 26.5 mg/dL] vs. -0.06 +/- 0.32 mmol/L [-2.2 +/- 12.2 mg/dL], respectively; between-group difference, 0.41 mmol/L [95% CI, 0.09 to 0.74 mmol/L], 16 mg/dL [95% CI, 3.5 to 28.5 mg/dL]; P = 0.01) and increased HDL cholesterol levels (mean change, 0.21 +/- 0.27 mmol/L [8.1 +/- 10.5 mg/dL] vs. 0.06 +/- 0.11 mmol/L [2.4 +/- 4.3 mg/dL], respectively; between-group difference, 0.15 mmol/L [CI, 0.008 to 0.29 mmol/L], 5.7 mg/dL [CI, 0.8 to 10.6 mg/dL]; P = 0.02)."
+    },
+    {
+      "pmid": "9571599",
+      "title": "Long-term effects of hormone replacement therapy on symptoms of angina pectoris, quality of life and compliance in women with coronary artery disease.",
+      "journal": "Maturitas",
+      "date": 1998.042,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0378-5122(97)00080-7",
+      "findingText": "CONCLUSIONS: HRT does not seem to have negative effects on symptoms of angina pectoris and seems to increase quality of life in older women with coronary heart disease."
+    },
+    {
+      "pmid": "11755552",
+      "title": "Urinary tract infections in postmenopausal women: effect of hormone therapy and risk factors.",
+      "journal": "Obstet Gynecol",
+      "date": 2001.958,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/s0029-7844(01)01630-1",
+      "findingText": "CONCLUSIONS: Oral hormone therapy did not reduce frequency of urinary tract infections."
+    },
+    {
+      "pmid": "11755544",
+      "title": "Cost-effectiveness of raloxifene and hormone replacement therapy in postmenopausal women: impact of breast cancer risk.",
+      "journal": "Obstet Gynecol",
+      "date": 2001.958,
+      "pubTypes": [],
+      "doi": "10.1016/s0029-7844(01)01624-6",
+      "findingText": "Raloxifene is also the more cost-effective alternative if HRT reduces coronary heart disease risk by less than 20%."
+    },
+    {
+      "pmid": "11864918",
+      "title": "Subgroup interactions in the Heart and Estrogen/Progestin Replacement Study: lessons learned.",
+      "journal": "Circulation",
+      "date": 2002.125,
+      "pubTypes": [],
+      "doi": "10.1161/hc0802.104280",
+      "findingText": "CONCLUSIONS: Extensive post hoc analyses did not identify any subgroup of HERS participants in which postmenopausal hormone treatment was clearly beneficial or harmful, but several possibilities emerged for testing in future trials."
+    },
+    {
+      "pmid": "10720088",
+      "title": "Hormone replacement therapy and interrelation between serum interleukin-6 and body mass index in postmenopausal women: a population-based study.",
+      "journal": "J Clin Endocrinol Metab",
+      "date": 2000.208,
+      "pubTypes": [],
+      "doi": "10.1210/jcem.85.3.6355",
+      "findingText": "As IL-6 may be a pathogenetic factor in age-related diseases, HRT-related inhibition of IL-6 secretion could be an important element for the favorable effects of HRT in postmenopausal women."
+    },
+    {
+      "pmid": "12081988",
+      "title": "Statin therapy, cardiovascular events, and total mortality in the Heart and Estrogen/Progestin Replacement Study (HERS).",
+      "journal": "Circulation",
+      "date": 2002.458,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1161/01.cir.0000019406.74017.b2",
+      "findingText": "Adjustment for postrandomization statin use showed no effect of HRT on risk for the primary outcome (RH=0.96, 95% CI 0.77 to 1.29; P=0.72)."
+    },
+    {
+      "pmid": "12505248",
+      "title": "Women's angiographic vitamin and estrogen trial: design and methods.",
+      "journal": "Control Clin Trials",
+      "date": 2002.958,
+      "pubTypes": [],
+      "doi": "10.1016/s0197-2456(02)00237-4",
+      "findingText": "The Women's Angiographic Vitamin and Estrogen trial was a randomized, double-blind, placebo-controlled study designed to test the efficacy of estrogen replacement and antioxidant vitamins for preventing angiographic progression of coronary artery disease."
+    },
+    {
+      "pmid": "10427649",
+      "title": "Predictors of quality of life in women: hormone therapy self-efficacy and health-promoting behaviors.",
+      "journal": "Women Health",
+      "date": 1999.5,
+      "pubTypes": [],
+      "doi": "10.1300/j013v29n02_05",
+      "findingText": "There were significant differences between current users of hormones and non-users of hormones in QOL and in health-promoting behaviors."
+    },
+    {
+      "pmid": "8115983",
+      "title": "Haemostatic variables and menopausal status: influence of hormone replacement therapy.",
+      "journal": "Thromb Haemost",
+      "date": 1993.792,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "Our findings suggest that 17-beta estradiol in combination with progestins may protect against an increased thrombotic tendency in postmenopausal women."
+    },
+    {
+      "pmid": "12700827",
+      "title": "Hormone replacement therapy increases levels of antibodies against heat shock protein 65 and certain species of oxidized low density lipoprotein.",
+      "journal": "Braz J Med Biol Res",
+      "date": 2003.292,
+      "pubTypes": [],
+      "doi": "10.1590/s0100-879x2003000400011",
+      "findingText": "HRT significantly increased antibodies against Hsp 65 (0.316 +/- 0.03 vs 0.558 +/- 0.11) and against LDL with a low degree of oxidative modification (0.100 +/- 0.01 vs 0.217 +/- 0.02) (P<0.05 and P<0.001, respectively, ANOVA)."
+    },
+    {
+      "pmid": "17347166",
+      "title": "Estrogen affects post-menopausal women differently than estrogen plus progestin replacement therapy.",
+      "journal": "Hum Reprod",
+      "date": 2007.458,
+      "pubTypes": [],
+      "doi": "10.1093/humrep/dem031",
+      "findingText": "In the estrogen-only GPRD study, adjusted hazard ratios (HRs) were 0.50 (0.38-0.67) for myocardial infarction (MI), 1.13 (0.91-1.41) for breast cancer, and 1.18 (0.72-1.92) for colorectal cancer."
+    },
+    {
+      "pmid": "20569710",
+      "title": "A randomized controlled trial of low-dose hormone therapy on myocardial ischemia in postmenopausal women with no obstructive coronary artery disease: results from the National Institutes of Health/National Heart, Lung, and Blood Institute-sponsored Women's Ischemia Syndrome Evaluation (WISE).",
+      "journal": "Am Heart J",
+      "date": 2010.458,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/j.ahj.2010.03.024",
+      "findingText": "CONCLUSIONS: These data suggest that low-dose hormone therapy improved chest pain symptoms, menopausal symptoms, and quality of life, but did not improve ischemia or endothelial dysfunction."
+    },
+    {
+      "pmid": "8290175",
+      "title": "Relative risks and benefits of long-term estrogen replacement therapy: a decision analysis.",
+      "journal": "Obstet Gynecol",
+      "date": 1994.125,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "RESULTS: Estrogen use for 25 years would decrease fatal coronary heart disease events by 48% (567 cases), decrease deaths from hip fracture by 49% (75), increase deaths from breast cancer by 21% (39), and increase deaths from endometrial cancer by 207% (29 excess deaths)."
+    },
+    {
+      "pmid": "7722207",
+      "title": "The evolution of the Women's Health Initiative: perspectives from the NIH.",
+      "journal": "J Am Med Womens Assoc (1972)",
+      "date": 1995.5,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "It is designed to test whether long-term preventive measures will decrease the incidence of cardiovascular disease, certain cancers, and fractures, and it seeks to find better predictors of future health and disease in older women."
+    },
+    {
+      "pmid": "15994626",
+      "title": "Sexual activity and function in postmenopausal women with heart disease.",
+      "journal": "Obstet Gynecol",
+      "date": 2005.542,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1097/01.aog.0000165276.85777.fb",
+      "findingText": "METHODS: We included baseline self-reported measures of sexual activity and the sexual problem scale from the Medical Outcomes Study in the Heart and Estrogen/Progestin Replacement Study (HERS), a study of 2,763 postmenopausal women, average age 67 years, with coronary disease and intact uteri."
+    },
+    {
+      "pmid": "17693902",
+      "title": "Hemostatic markers in healthy postmenopausal women during intranasal and oral hormone therapy: a randomized trial.",
+      "journal": "Menopause",
+      "date": 2008.5,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1097/gme.0b013e318093e65a",
+      "findingText": "RESULTS: After 52 weeks of treatment, changes in the intranasal group in markers of coagulation-fibrinogen (-1.3%), factor VII activity (-14.0%), and prothrombin fragment 1 + 2 (+5.8%)-were significantly less (P < 0.05) than the changes in the oral group for these parameters (-6.5%, -20.3%, and +19.0%, respectively)."
+    },
+    {
+      "pmid": "11119394",
+      "title": "A prospective, observational study of postmenopausal hormone therapy and primary prevention of cardiovascular disease.",
+      "journal": "Ann Intern Med",
+      "date": 2000.958,
+      "pubTypes": [],
+      "doi": "10.7326/0003-4819-133-12-200012190-00008",
+      "findingText": "RESULTS: When all cardiovascular risk factors were considered, the risk for major coronary events was lower among current users of hormone therapy, including short-term users, compared with never-users (relative risk, 0.61 [95% CI, 0.52 to 0.71])."
+    },
+    {
+      "pmid": "11742870",
+      "title": "Estrogen replacement and brachial artery flow-mediated vasodilation in older women.",
+      "journal": "Arterioscler Thromb Vasc Biol",
+      "date": 2001.958,
+      "pubTypes": [],
+      "doi": "10.1161/hq1201.100241",
+      "findingText": "There were no statistical differences in brachial flow-mediated vasodilator responses between users and nonusers, even after adjustment for potential confounders."
+    },
+    {
+      "pmid": "15775731",
+      "title": "Insulin sensitivity in women with coronary heart disease during hormone replacement therapy.",
+      "journal": "J Womens Health (Larchmt)",
+      "date": 2005.208,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1089/jwh.2005.14.137",
+      "findingText": "No deleterious effect of HRT on glucose metabolism was found in postmenopausal women with CAD."
+    },
+    {
+      "pmid": "9626834",
+      "title": "Modulation of circulating cellular adhesion molecules in postmenopausal women with coronary artery disease.",
+      "journal": "J Am Coll Cardiol",
+      "date": 1998.458,
+      "pubTypes": [],
+      "doi": "10.1016/s0735-1097(98)00145-4",
+      "findingText": "RESULTS: We observed a statistically significant increase in all cCAMs in men with CAD and postmenopausal women with CAD not receiving ERT compared with postmenopausal women with CAD receiving ERT."
+    },
+    {
+      "pmid": "2332176",
+      "title": "Protecting older women from their growing risk of cardiac disease.",
+      "journal": "Geriatrics",
+      "date": 1990.375,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "Most studies have shown that replacing estrogen in the menopausal woman reduces cardiovascular disease, probably by increasing HDL and decreasing LDL."
+    },
+    {
+      "pmid": "8879436",
+      "title": "Effects of postmenopausal hormone replacement therapy on lipoproteins including lipoprotein(a) and LDL subfractions.",
+      "journal": "Atherosclerosis",
+      "date": 1996.708,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1016/0021-9150(96)05895-9",
+      "findingText": "Addition of norethisterone to the preparation reversed this potentially beneficial change, but favourably influenced triglycerides, VLDL, LDL subfraction profile and lipoprotein(a), which may counteract the adverse effect on HDL."
+    },
+    {
+      "pmid": "10650302",
+      "title": "Correlates of high HDL cholesterol among women with coronary heart disease.",
+      "journal": "Am Heart J",
+      "date": 2000.125,
+      "pubTypes": [],
+      "doi": "10.1067/mhj.2000.101224",
+      "findingText": "Women with high HDL-C were older, better educated, had fewer CHD risk factors, lower triglyceride levels and total cholesterol/HDL-C ratio, and were more likely to report past estrogen and current calcium antagonist, niacin, and statin use. beta-Blocker, diuretic, and fibrate use was less common."
+    },
+    {
+      "pmid": "9491877",
+      "title": "Correlates of postmenopausal female hormone use among black women in the United States.",
+      "journal": "Obstet Gynecol",
+      "date": 1998.208,
+      "pubTypes": [],
+      "doi": "10.1016/s0029-7844(97)00699-6",
+      "findingText": "Women with risk factors for coronary artery disease were not more likely to use supplements than women at lower risk, a pattern that is not in accordance with suggestions that the greatest benefit of supplements may accrue to high-risk women."
+    },
+    {
+      "pmid": "7603219",
+      "title": "Hormone replacement therapy and serum angiotensin-converting-enzyme activity in postmenopausal women.",
+      "journal": "Lancet",
+      "date": 1995.542,
+      "pubTypes": [],
+      "doi": "10.1016/s0140-6736(95)92114-1",
+      "findingText": "After 6 months, ACE activity was reduced by 20% (p < 0.001) on average in 28 treated women but remained unchanged in 16 controls."
+    },
+    {
+      "pmid": "14613344",
+      "title": "Modeling the annual costs of postmenopausal prevention therapy: raloxifene, alendronate, or estrogen-progestin therapy.",
+      "journal": "J Manag Care Pharm",
+      "date": 2003.5,
+      "pubTypes": [],
+      "doi": "10.18553/jmcp.2003.9.2.150",
+      "findingText": "Net events avoided are greater for raloxifene than alendronate, but HRT use results in net harm."
+    },
+    {
+      "pmid": "11180734",
+      "title": "Hormone replacement therapy, prothrombotic mutations, and the risk of incident nonfatal myocardial infarction in postmenopausal women.",
+      "journal": "JAMA",
+      "date": 2001.125,
+      "pubTypes": [],
+      "doi": "10.1001/jama.285.7.906",
+      "findingText": "Compared with nonusers of HRT with wild-type genotype, women who were current users and who had the prothrombin variant (n = 8) had a nearly 11-fold increase in risk of a nonfatal MI (OR, 10.9; 95% CI, 2.15-55.2)."
+    },
+    {
+      "pmid": "11416395",
+      "title": "Hormone Replacement Therapy in Postmenopausal Women: Does It Lessen Coronary Heart Disease Risk?",
+      "journal": "Am J Geriatr Cardiol",
+      "date": 1996.792,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "Information is lacking regarding benefit: risk ratios of transdermal estrogen and estrogen/progestin combinations as coronary preventive therapies."
+    },
+    {
+      "pmid": "11301562",
+      "title": "Lipid and lipoprotein responses to oral combined hormone replacement therapy in normolipemic obese women with controlled type 2 diabetes mellitus.",
+      "journal": "J Clin Pharmacol",
+      "date": 1998.958,
+      "pubTypes": [],
+      "doi": null,
+      "findingText": "After 16 weeks of continuous daily therapy of conjugated estrogens 0.625 mg and medroxyprogesterone 2.5 mg, the mean concentration of high-density lipoprotein (HDL) cholesterol showed a statistically significant increase of 16.7%, predominantly in the HDL2 subfraction."
+    },
+    {
+      "pmid": "10195915",
+      "title": "Hormone replacement therapy, inflammation, and hemostasis in elderly women.",
+      "journal": "Arterioscler Thromb Vasc Biol",
+      "date": 1999.292,
+      "pubTypes": [],
+      "doi": "10.1161/01.atv.19.4.893",
+      "findingText": "The direction and strength of the associations of HRT use with inflammation markers differed depending on the protein, so it is not clear whether HRT confers coronary risk reduction through an inflammation-sensitive mechanism."
+    },
+    {
+      "pmid": "10770146",
+      "title": "Estrogen and progestin, lipoprotein(a), and the risk of recurrent coronary heart disease events after menopause.",
+      "journal": "JAMA",
+      "date": 2000.292,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1001/jama.283.14.1845",
+      "findingText": "In a randomized subgroup comparison, women with low baseline Lp(a) levels had less benefit from estrogen and progestin than women with high Lp(a) levels; the RH for women assigned to estrogen and progestin compared with placebo were 1.49 (95% CI, 0.97-2.26) in the lowest quartile and 1.05 (95% CI, 0.67-1.65), 0.78 (0.52-1.18), and 0.85 (0.58-1.25) in the second, third, and fourth quartiles, respectively (P for interaction trend = .03)."
+    },
+    {
+      "pmid": "21788534",
+      "title": "Risk factor and prediction modeling for sudden cardiac death in women with coronary artery disease.",
+      "journal": "Arch Intern Med",
+      "date": 2011.792,
+      "pubTypes": [],
+      "doi": "10.1001/archinternmed.2011.328",
+      "findingText": "METHODS: The Heart and Estrogen/progestin Replacement Study evaluated the effects of hormone replacement therapy on cardiovascular events among 2763 postmenopausal women with CAD."
+    },
+    {
+      "pmid": "9570192",
+      "title": "Combined hormone replacement therapy does not protect women against the age-related decline in endothelium-dependent vasomotor function.",
+      "journal": "Circulation",
+      "date": 1998.292,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1161/01.cir.97.13.1234",
+      "findingText": "CONCLUSIONS: Long-term combined oral hormone replacement therapy is without beneficial effects on endothelial vasomotor function in healthy postmenopausal women."
+    },
+    {
+      "pmid": "20157135",
+      "title": "Coronary heart disease in postmenopausal recipients of estrogen plus progestin therapy: does the increased risk ever disappear? A randomized trial.",
+      "journal": "Ann Intern Med",
+      "date": 2010.125,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.7326/0003-4819-152-4-201002160-00005",
+      "findingText": "CONCLUSION: No suggestion of a decreased risk for CHD was found within the first 2 years of estrogen plus progestin use, including in women who initiated therapy within 10 years after menopause."
+    },
+    {
+      "pmid": "12468054",
+      "title": "The association of lower testosterone level with coronary artery disease in postmenopausal women.",
+      "journal": "Int J Cardiol",
+      "date": 2003.042,
+      "pubTypes": [],
+      "doi": "10.1016/s0167-5273(02)00203-6",
+      "findingText": "Women with CAD had decreased T level and lower TFI (T: 0.99+/-0.4 vs. 1.41+/-0.7 nmol/l, P=0.005; TFI: 3.2+/-1.4 vs. 4.2+/-2.2, P=0.04, CAD+ vs. CAD-, respectively)."
+    },
+    {
+      "pmid": "10692092",
+      "title": "Increased plasma concentrations of TGF-beta1 after hormone replacement therapy.",
+      "journal": "J Intern Med",
+      "date": 2000.125,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1046/j.1365-2796.2000.00648.x",
+      "findingText": "CONCLUSION: The novel observation that transdermal 17beta-oestradiol in postmenopausal women increases levels of TGF-beta1 and lowers the concentration of Lp(a) lipoprotein suggests yet another possible mechanism for the cardioprotective effect of HRT."
+    },
+    {
+      "pmid": "9424073",
+      "title": "Relation between hormone replacement therapy in women and coronary artery disease estimated by electron beam tomography.",
+      "journal": "Am Heart J",
+      "date": 1997.958,
+      "pubTypes": [],
+      "doi": "10.1016/s0002-8703(97)70033-4",
+      "findingText": "These results suggest that hormone replacement therapy is associated with less coronary artery disease in postmenopausal women as determined by electron beam tomography."
+    },
+    {
+      "pmid": "36256926",
+      "title": "The association of hormone therapy with blood pressure control in postmenopausal women with hypertension: a secondary analysis of the Women's Health Initiative clinical trials.",
+      "journal": "Menopause",
+      "date": 2023.042,
+      "pubTypes": [
+        "Randomized Controlled Trial"
+      ],
+      "doi": "10.1097/gme.0000000000002086",
+      "findingText": "CONCLUSION: There was a small but statistically significant increase in SBP in both CEE-alone and CEE + MPA arms compared with placebo during both the intervention and cumulative follow-up phases among postmenopausal women with hypertension at baseline."
+    },
+    {
+      "pmid": "2164381",
+      "title": "Ischemic heart disease risk in postmenopausal women. Effects of estrogen use on glucose and insulin levels.",
+      "journal": "Arteriosclerosis",
+      "date": 1990.5,
+      "pubTypes": [],
+      "doi": "10.1161/01.atv.10.4.531",
+      "findingText": "Estrogen-treated women had lower levels of insulin than women who were not taking estrogen; these differences were not explained by age, obesity, or differential hormone use by women with known glucose intolerance."
+    },
+    {
+      "pmid": "8518178",
+      "title": "Plasma fibrinogen in women: relationships with oral contraception, the menopause and hormone replacement therapy.",
+      "journal": "Br J Haematol",
+      "date": 1993.292,
+      "pubTypes": [],
+      "doi": "10.1111/j.1365-2141.1993.tb04699.x",
+      "findingText": "In addition, a protective effect with hormone replacement therapy is noted, although this was probably due to selection bias."
+    },
+    {
+      "pmid": "9492349",
+      "title": "The potential of soybean phytoestrogens for postmenopausal hormone replacement therapy.",
+      "journal": "Proc Soc Exp Biol Med",
+      "date": 1998.208,
+      "pubTypes": [],
+      "doi": "10.3181/00379727-217-44246",
+      "findingText": "Hormone replacement therapy for postmenopausal women greatly reduces their risk of coronary heart disease."
+    }
+  ],
+  "dropped": [],
+  "judgments": [
+    {
+      "pmid": "12117397",
+      "onTopic": 0.97,
+      "direct": 0.95,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.93
+      }
+    },
+    {
+      "pmid": "24084921",
+      "onTopic": 0.97,
+      "direct": 0.96,
+      "stance": {
+        "mixed": 0.3,
+        "contradicts": 0.7
+      },
+      "stanceCheck": {
+        "mixed": 0.23,
+        "contradicts": 0.77
+      },
+      "design": {
+        "meta_analysis": 0.04,
+        "rct": 0.95,
+        "review": 0.01
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.69
+      }
+    },
+    {
+      "pmid": "28093732",
+      "onTopic": 0.97,
+      "direct": 0.94,
+      "stance": {
+        "mixed": 0.19,
+        "contradicts": 0.81
+      },
+      "stanceCheck": {
+        "mixed": 0.14,
+        "contradicts": 0.86
+      },
+      "design": {
+        "meta_analysis": 1
+      },
+      "finding": {
+        "index": 13,
+        "confidence": 0.97
+      }
+    },
+    {
+      "pmid": "25754617",
+      "onTopic": 0.97,
+      "direct": 0.92,
+      "stance": {
+        "mixed": 0.92,
+        "contradicts": 0.08
+      },
+      "stanceCheck": {
+        "mixed": 0.75,
+        "contradicts": 0.25
+      },
+      "design": {
+        "meta_analysis": 1
+      },
+      "finding": {
+        "index": 13,
+        "confidence": 0.56
+      }
+    },
+    {
+      "pmid": "31738818",
+      "onTopic": 0.19,
+      "direct": 0.1,
+      "stance": {
+        "supports": 0.04,
+        "mixed": 0.01,
+        "contradicts": 0.12,
+        "no_result": 0.83
+      },
+      "stanceCheck": {
+        "supports": 0.08,
+        "mixed": 0.01,
+        "contradicts": 0.13,
+        "no_result": 0.78
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 13,
+        "confidence": 0.85
+      }
+    },
+    {
+      "pmid": "41307293",
+      "onTopic": 0.97,
+      "direct": 0.93,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "meta_analysis": 1
+      },
+      "finding": {
+        "index": 20,
+        "confidence": 0.78
+      }
+    },
+    {
+      "pmid": "40952729",
+      "onTopic": 0.94,
+      "direct": 0.74,
+      "stance": {
+        "mixed": 0.27,
+        "contradicts": 0.73
+      },
+      "stanceCheck": {
+        "mixed": 0.21,
+        "contradicts": 0.79
+      },
+      "design": {
+        "meta_analysis": 0.01,
+        "rct": 0.85,
+        "observational": 0.12,
+        "other": 0.02
+      },
+      "finding": {
+        "index": 12,
+        "confidence": 0.82
+      }
+    },
+    {
+      "pmid": "18854702",
+      "onTopic": 0.97,
+      "direct": 0.93,
+      "stance": {
+        "mixed": 0.35,
+        "contradicts": 0.65
+      },
+      "stanceCheck": {
+        "mixed": 0.28,
+        "contradicts": 0.72
+      },
+      "design": {
+        "observational": 0.99,
+        "other": 0.01
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.82
+      }
+    },
+    {
+      "pmid": "27028912",
+      "onTopic": 0.82,
+      "direct": 0.18,
+      "stance": {
+        "mixed": 0.96,
+        "contradicts": 0.04
+      },
+      "stanceCheck": {
+        "mixed": 0.96,
+        "contradicts": 0.04
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.35
+      }
+    },
+    {
+      "pmid": "9187066",
+      "onTopic": 0.53,
+      "direct": 0.23,
+      "stance": {
+        "supports": 0.38,
+        "mixed": 0.56,
+        "contradicts": 0.01,
+        "no_result": 0.05
+      },
+      "stanceCheck": {
+        "supports": 0.59,
+        "mixed": 0.38,
+        "contradicts": 0.01,
+        "no_result": 0.02
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.46
+      }
+    },
+    {
+      "pmid": "30508190",
+      "onTopic": 0.97,
+      "direct": 0.88,
+      "stance": {
+        "supports": 0.02,
+        "mixed": 0.95,
+        "contradicts": 0.03
+      },
+      "stanceCheck": {
+        "supports": 0.03,
+        "mixed": 0.95,
+        "contradicts": 0.02
+      },
+      "design": {
+        "meta_analysis": 0.97,
+        "review": 0.03
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.94
+      }
+    },
+    {
+      "pmid": "8900338",
+      "onTopic": 0.95,
+      "direct": 0.39,
+      "stance": {
+        "supports": 0.97,
+        "no_result": 0.03
+      },
+      "stanceCheck": {
+        "supports": 1
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 2,
+        "confidence": 0.97
+      }
+    },
+    {
+      "pmid": "38111280",
+      "onTopic": 0.06,
+      "direct": 0.04,
+      "stance": {
+        "contradicts": 0.11,
+        "no_result": 0.89
+      },
+      "stanceCheck": {
+        "contradicts": 0.25,
+        "no_result": 0.75
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 0,
+        "confidence": 0.46
+      }
+    },
+    {
+      "pmid": "17582069",
+      "onTopic": 0.74,
+      "direct": 0.16,
+      "stance": {
+        "supports": 0.77,
+        "mixed": 0.21,
+        "contradicts": 0.01,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.83,
+        "mixed": 0.16,
+        "contradicts": 0.01
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.55
+      }
+    },
+    {
+      "pmid": "14720104",
+      "onTopic": 0.95,
+      "direct": 0.72,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.89
+      }
+    },
+    {
+      "pmid": "28805475",
+      "onTopic": 0.73,
+      "direct": 0.19,
+      "stance": {
+        "supports": 0.3,
+        "mixed": 0.01,
+        "contradicts": 0.23,
+        "no_result": 0.46
+      },
+      "stanceCheck": {
+        "supports": 0.43,
+        "mixed": 0.02,
+        "contradicts": 0.27,
+        "no_result": 0.28
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "20031345",
+      "onTopic": 0.45,
+      "direct": 0.17,
+      "stance": {
+        "supports": 0.02,
+        "mixed": 0.02,
+        "contradicts": 0.7,
+        "no_result": 0.26
+      },
+      "stanceCheck": {
+        "supports": 0.04,
+        "mixed": 0.02,
+        "contradicts": 0.76,
+        "no_result": 0.18
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.8
+      }
+    },
+    {
+      "pmid": "38990048",
+      "onTopic": 0.94,
+      "direct": 0.73,
+      "stance": {
+        "supports": 0.78,
+        "mixed": 0.22
+      },
+      "stanceCheck": {
+        "supports": 0.84,
+        "mixed": 0.16
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.99
+      }
+    },
+    {
+      "pmid": "31588031",
+      "onTopic": 0.13,
+      "direct": 0.1,
+      "stance": {
+        "supports": 0.01,
+        "contradicts": 0.03,
+        "no_result": 0.96
+      },
+      "stanceCheck": {
+        "supports": 0.02,
+        "mixed": 0.01,
+        "contradicts": 0.04,
+        "no_result": 0.93
+      },
+      "design": {
+        "meta_analysis": 0.84,
+        "observational": 0.16
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.4
+      }
+    },
+    {
+      "pmid": "15082697",
+      "onTopic": 0.96,
+      "direct": 0.81,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 13,
+        "confidence": 0.79
+      }
+    },
+    {
+      "pmid": "9492970",
+      "onTopic": 0.82,
+      "direct": 0.6,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "no_result": 1
+      },
+      "design": {
+        "rct": 0.04,
+        "review": 0.03,
+        "other": 0.93
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 0.98
+      }
+    },
+    {
+      "pmid": "9718051",
+      "onTopic": 0.94,
+      "direct": 0.55,
+      "stance": {
+        "mixed": 0.02,
+        "contradicts": 0.98
+      },
+      "stanceCheck": {
+        "mixed": 0.01,
+        "contradicts": 0.99
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 16,
+        "confidence": 0.66
+      }
+    },
+    {
+      "pmid": "30358724",
+      "onTopic": 0.9,
+      "direct": 0.4,
+      "stance": {
+        "mixed": 0.07,
+        "contradicts": 0.93
+      },
+      "stanceCheck": {
+        "mixed": 0.03,
+        "contradicts": 0.97
+      },
+      "design": {
+        "rct": 0.99,
+        "observational": 0.01
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.93
+      }
+    },
+    {
+      "pmid": "19276299",
+      "onTopic": 0.89,
+      "direct": 0.18,
+      "stance": {
+        "supports": 0.02,
+        "contradicts": 0.97,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.02,
+        "contradicts": 0.97,
+        "no_result": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.58
+      }
+    },
+    {
+      "pmid": "16607110",
+      "onTopic": 0.96,
+      "direct": 0.35,
+      "stance": {
+        "mixed": 0.59,
+        "contradicts": 0.24,
+        "no_result": 0.17
+      },
+      "stanceCheck": {
+        "mixed": 0.82,
+        "contradicts": 0.18
+      },
+      "design": {
+        "review": 0.99,
+        "other": 0.01
+      },
+      "finding": {
+        "index": 0,
+        "confidence": 0.37
+      }
+    },
+    {
+      "pmid": "32345788",
+      "onTopic": 0.97,
+      "direct": 0.93,
+      "stance": {
+        "mixed": 0.64,
+        "contradicts": 0.36
+      },
+      "stanceCheck": {
+        "mixed": 0.6,
+        "contradicts": 0.4
+      },
+      "design": {
+        "meta_analysis": 0.01,
+        "rct": 0.59,
+        "review": 0.4
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "14757269",
+      "onTopic": 0.16,
+      "direct": 0.09,
+      "stance": {
+        "supports": 0.1,
+        "mixed": 0.03,
+        "contradicts": 0.02,
+        "no_result": 0.85
+      },
+      "stanceCheck": {
+        "supports": 0.17,
+        "mixed": 0.04,
+        "contradicts": 0.03,
+        "no_result": 0.76
+      },
+      "design": {
+        "rct": 0.02,
+        "observational": 0.98
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.58
+      }
+    },
+    {
+      "pmid": "10608035",
+      "onTopic": 0.96,
+      "direct": 0.4,
+      "stance": {
+        "supports": 0.85,
+        "mixed": 0.14,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.88,
+        "mixed": 0.12
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.87
+      }
+    },
+    {
+      "pmid": "25803671",
+      "onTopic": 0.96,
+      "direct": 0.78,
+      "stance": {
+        "supports": 0.99,
+        "mixed": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.99,
+        "mixed": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "15775733",
+      "onTopic": 0.29,
+      "direct": 0.08,
+      "stance": {
+        "supports": 0.28,
+        "mixed": 0.06,
+        "contradicts": 0.03,
+        "no_result": 0.63
+      },
+      "stanceCheck": {
+        "supports": 0.59,
+        "mixed": 0.08,
+        "contradicts": 0.02,
+        "no_result": 0.31
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.8
+      }
+    },
+    {
+      "pmid": "15356071",
+      "onTopic": 0.51,
+      "direct": 0.13,
+      "stance": {
+        "contradicts": 0.98,
+        "no_result": 0.02
+      },
+      "stanceCheck": {
+        "contradicts": 0.99,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.68
+      }
+    },
+    {
+      "pmid": "2488072",
+      "onTopic": 0.69,
+      "direct": 0.17,
+      "stance": {
+        "supports": 0.67,
+        "mixed": 0.26,
+        "contradicts": 0.02,
+        "no_result": 0.05
+      },
+      "stanceCheck": {
+        "supports": 0.75,
+        "mixed": 0.23,
+        "contradicts": 0.01,
+        "no_result": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.54
+      }
+    },
+    {
+      "pmid": "14671142",
+      "onTopic": 0.83,
+      "direct": 0.21,
+      "stance": {
+        "supports": 0.49,
+        "mixed": 0.48,
+        "contradicts": 0.03
+      },
+      "stanceCheck": {
+        "supports": 0.15,
+        "mixed": 0.84,
+        "contradicts": 0.01
+      },
+      "design": {
+        "rct": 0.09,
+        "observational": 0.9,
+        "review": 0.01
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.74
+      }
+    },
+    {
+      "pmid": "19863467",
+      "onTopic": 0.96,
+      "direct": 0.6,
+      "stance": {
+        "mixed": 0.99,
+        "contradicts": 0.01
+      },
+      "stanceCheck": {
+        "mixed": 1
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 0.89
+      }
+    },
+    {
+      "pmid": "8672166",
+      "onTopic": 0.97,
+      "direct": 0.91,
+      "stance": {
+        "supports": 0.99,
+        "mixed": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.99,
+        "mixed": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "19172539",
+      "onTopic": 0.95,
+      "direct": 0.93,
+      "stance": {
+        "supports": 0.02,
+        "contradicts": 0.98
+      },
+      "stanceCheck": {
+        "supports": 0.02,
+        "contradicts": 0.98
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.86
+      }
+    },
+    {
+      "pmid": "12674130",
+      "onTopic": 0.97,
+      "direct": 0.95,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "meta_analysis": 0.02,
+        "rct": 0.02,
+        "review": 0.96
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.89
+      }
+    },
+    {
+      "pmid": "15968396",
+      "onTopic": 0.93,
+      "direct": 0.42,
+      "stance": {
+        "mixed": 0.13,
+        "contradicts": 0.87
+      },
+      "stanceCheck": {
+        "mixed": 0.13,
+        "contradicts": 0.87
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 0.29
+      }
+    },
+    {
+      "pmid": "15233153",
+      "onTopic": 0.94,
+      "direct": 0.9,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 0,
+        "confidence": 0.54
+      }
+    },
+    {
+      "pmid": "15186661",
+      "onTopic": 0.04,
+      "direct": 0.03,
+      "stance": {
+        "contradicts": 0.03,
+        "no_result": 0.97
+      },
+      "stanceCheck": {
+        "contradicts": 0.11,
+        "no_result": 0.89
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.4
+      }
+    },
+    {
+      "pmid": "2244772",
+      "onTopic": 0.78,
+      "direct": 0.32,
+      "stance": {
+        "supports": 0.17,
+        "mixed": 0.65,
+        "contradicts": 0.17,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.35,
+        "mixed": 0.53,
+        "contradicts": 0.12
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.28
+      }
+    },
+    {
+      "pmid": "19468079",
+      "onTopic": 0.96,
+      "direct": 0.9,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "meta_analysis": 0.1,
+        "rct": 0.79,
+        "observational": 0.05,
+        "review": 0.06
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "9683309",
+      "onTopic": 0.82,
+      "direct": 0.39,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "contradicts": 0.01,
+        "no_result": 0.99
+      },
+      "design": {
+        "rct": 0.89,
+        "other": 0.11
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.46
+      }
+    },
+    {
+      "pmid": "9170479",
+      "onTopic": 0.71,
+      "direct": 0.19,
+      "stance": {
+        "supports": 0.98,
+        "mixed": 0.01,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 1
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.69
+      }
+    },
+    {
+      "pmid": "1617306",
+      "onTopic": 0.82,
+      "direct": 0.31,
+      "stance": {
+        "supports": 0.75,
+        "mixed": 0.24,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.83,
+        "mixed": 0.17
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 22,
+        "confidence": 0.99
+      }
+    },
+    {
+      "pmid": "10484063",
+      "onTopic": 0.79,
+      "direct": 0.19,
+      "stance": {
+        "supports": 0.93,
+        "mixed": 0.05,
+        "no_result": 0.02
+      },
+      "stanceCheck": {
+        "supports": 0.98,
+        "mixed": 0.02
+      },
+      "design": {
+        "rct": 0.18,
+        "observational": 0.82
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.51
+      }
+    },
+    {
+      "pmid": "12935826",
+      "onTopic": 0.13,
+      "direct": 0.07,
+      "stance": {
+        "contradicts": 0.02,
+        "no_result": 0.98
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "contradicts": 0.03,
+        "no_result": 0.96
+      },
+      "design": {
+        "rct": 0.3,
+        "observational": 0.7
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.45
+      }
+    },
+    {
+      "pmid": "33141616",
+      "onTopic": 0.94,
+      "direct": 0.8,
+      "stance": {
+        "supports": 0.01,
+        "mixed": 0.82,
+        "contradicts": 0.17
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "mixed": 0.78,
+        "contradicts": 0.21
+      },
+      "design": {
+        "rct": 0.78,
+        "observational": 0.2,
+        "other": 0.02
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.34
+      }
+    },
+    {
+      "pmid": "11696469",
+      "onTopic": 0.39,
+      "direct": 0.14,
+      "stance": {
+        "supports": 0.52,
+        "mixed": 0.07,
+        "contradicts": 0.05,
+        "no_result": 0.36
+      },
+      "stanceCheck": {
+        "supports": 0.62,
+        "mixed": 0.12,
+        "contradicts": 0.04,
+        "no_result": 0.22
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.66
+      }
+    },
+    {
+      "pmid": "20647959",
+      "onTopic": 0.62,
+      "direct": 0.3,
+      "stance": {
+        "mixed": 0.01,
+        "contradicts": 0.42,
+        "no_result": 0.57
+      },
+      "stanceCheck": {
+        "mixed": 0.01,
+        "contradicts": 0.6,
+        "no_result": 0.39
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.71
+      }
+    },
+    {
+      "pmid": "10365734",
+      "onTopic": 0.57,
+      "direct": 0.09,
+      "stance": {
+        "supports": 0.66,
+        "mixed": 0.29,
+        "no_result": 0.05
+      },
+      "stanceCheck": {
+        "supports": 0.83,
+        "mixed": 0.16,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.65
+      }
+    },
+    {
+      "pmid": "10449692",
+      "onTopic": 0.35,
+      "direct": 0.09,
+      "stance": {
+        "contradicts": 0.95,
+        "no_result": 0.05
+      },
+      "stanceCheck": {
+        "contradicts": 0.98,
+        "no_result": 0.02
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 0.85
+      }
+    },
+    {
+      "pmid": "10795729",
+      "onTopic": 0.84,
+      "direct": 0.23,
+      "stance": {
+        "supports": 0.94,
+        "mixed": 0.01,
+        "contradicts": 0.01,
+        "no_result": 0.04
+      },
+      "stanceCheck": {
+        "supports": 0.98,
+        "mixed": 0.01,
+        "no_result": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.73
+      }
+    },
+    {
+      "pmid": "29079563",
+      "onTopic": 0.79,
+      "direct": 0.54,
+      "stance": {
+        "supports": 0.34,
+        "mixed": 0.47,
+        "contradicts": 0.18,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.4,
+        "mixed": 0.48,
+        "contradicts": 0.11,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 0.32,
+        "observational": 0.68
+      },
+      "finding": {
+        "index": 0,
+        "confidence": 0.53
+      }
+    },
+    {
+      "pmid": "12904518",
+      "onTopic": 0.7,
+      "direct": 0.2,
+      "stance": {
+        "contradicts": 0.99,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "contradicts": 0.99,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.92
+      }
+    },
+    {
+      "pmid": "16380775",
+      "onTopic": 0.28,
+      "direct": 0.08,
+      "stance": {
+        "mixed": 0.01,
+        "contradicts": 0.65,
+        "no_result": 0.34
+      },
+      "stanceCheck": {
+        "mixed": 0.01,
+        "contradicts": 0.96,
+        "no_result": 0.03
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 12,
+        "confidence": 0.38
+      }
+    },
+    {
+      "pmid": "10024087",
+      "onTopic": 0.52,
+      "direct": 0.1,
+      "stance": {
+        "supports": 0.71,
+        "mixed": 0.08,
+        "contradicts": 0.02,
+        "no_result": 0.19
+      },
+      "stanceCheck": {
+        "supports": 0.83,
+        "mixed": 0.07,
+        "contradicts": 0.01,
+        "no_result": 0.09
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.75
+      }
+    },
+    {
+      "pmid": "9247504",
+      "onTopic": 0.62,
+      "direct": 0.13,
+      "stance": {
+        "supports": 0.8,
+        "mixed": 0.02,
+        "contradicts": 0.01,
+        "no_result": 0.17
+      },
+      "stanceCheck": {
+        "supports": 0.98,
+        "mixed": 0.01,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 0.01,
+        "observational": 0.99
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.48
+      }
+    },
+    {
+      "pmid": "25437723",
+      "onTopic": 0.93,
+      "direct": 0.73,
+      "stance": {
+        "supports": 0.92,
+        "mixed": 0.07,
+        "contradicts": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.94,
+        "mixed": 0.05,
+        "contradicts": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 0.75
+      }
+    },
+    {
+      "pmid": "17849510",
+      "onTopic": 0.95,
+      "direct": 0.4,
+      "stance": {
+        "contradicts": 0.84,
+        "no_result": 0.16
+      },
+      "stanceCheck": {
+        "mixed": 0.01,
+        "contradicts": 0.98,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 0.02,
+        "observational": 0.02,
+        "review": 0.95,
+        "other": 0.01
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.65
+      }
+    },
+    {
+      "pmid": "19325499",
+      "onTopic": 0.9,
+      "direct": 0.37,
+      "stance": {
+        "mixed": 0.06,
+        "contradicts": 0.94
+      },
+      "stanceCheck": {
+        "mixed": 0.05,
+        "contradicts": 0.95
+      },
+      "design": {
+        "rct": 0.98,
+        "observational": 0.02
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.91
+      }
+    },
+    {
+      "pmid": "9104892",
+      "onTopic": 0.55,
+      "direct": 0.15,
+      "stance": {
+        "supports": 0.82,
+        "mixed": 0.05,
+        "contradicts": 0.02,
+        "no_result": 0.11
+      },
+      "stanceCheck": {
+        "supports": 0.92,
+        "mixed": 0.03,
+        "contradicts": 0.01,
+        "no_result": 0.04
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.46
+      }
+    },
+    {
+      "pmid": "16476878",
+      "onTopic": 0.97,
+      "direct": 0.86,
+      "stance": {
+        "mixed": 0.67,
+        "contradicts": 0.33
+      },
+      "stanceCheck": {
+        "mixed": 0.51,
+        "contradicts": 0.49
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.59
+      }
+    },
+    {
+      "pmid": "15668599",
+      "onTopic": 0.82,
+      "direct": 0.21,
+      "stance": {
+        "supports": 0.94,
+        "mixed": 0.06
+      },
+      "stanceCheck": {
+        "supports": 0.97,
+        "mixed": 0.03
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 0.92
+      }
+    },
+    {
+      "pmid": "17518513",
+      "onTopic": 0.78,
+      "direct": 0.58,
+      "stance": {
+        "supports": 0.31,
+        "mixed": 0.66,
+        "contradicts": 0.02,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.17,
+        "mixed": 0.79,
+        "contradicts": 0.03,
+        "no_result": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 0.93
+      }
+    },
+    {
+      "pmid": "17405972",
+      "onTopic": 0.97,
+      "direct": 0.91,
+      "stance": {
+        "mixed": 0.86,
+        "contradicts": 0.14
+      },
+      "stanceCheck": {
+        "mixed": 0.76,
+        "contradicts": 0.24
+      },
+      "design": {
+        "meta_analysis": 0.03,
+        "rct": 0.91,
+        "observational": 0.05,
+        "other": 0.01
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.38
+      }
+    },
+    {
+      "pmid": "16169320",
+      "onTopic": 0.44,
+      "direct": 0.1,
+      "stance": {
+        "supports": 0.03,
+        "mixed": 0.11,
+        "contradicts": 0.14,
+        "no_result": 0.72
+      },
+      "stanceCheck": {
+        "supports": 0.02,
+        "mixed": 0.43,
+        "contradicts": 0.23,
+        "no_result": 0.32
+      },
+      "design": {
+        "rct": 0.93,
+        "observational": 0.07
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.44
+      }
+    },
+    {
+      "pmid": "27075839",
+      "onTopic": 0.73,
+      "direct": 0.33,
+      "stance": {
+        "supports": 0.54,
+        "mixed": 0.16,
+        "contradicts": 0.23,
+        "no_result": 0.07
+      },
+      "stanceCheck": {
+        "supports": 0.62,
+        "mixed": 0.14,
+        "contradicts": 0.2,
+        "no_result": 0.04
+      },
+      "design": {
+        "meta_analysis": 0.01,
+        "observational": 0.02,
+        "review": 0.97
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 0.99
+      }
+    },
+    {
+      "pmid": "24164272",
+      "onTopic": 0.42,
+      "direct": 0.11,
+      "stance": {
+        "supports": 0.62,
+        "mixed": 0.15,
+        "contradicts": 0.01,
+        "no_result": 0.22
+      },
+      "stanceCheck": {
+        "supports": 0.77,
+        "mixed": 0.12,
+        "contradicts": 0.01,
+        "no_result": 0.1
+      },
+      "design": {
+        "rct": 0.26,
+        "observational": 0.74
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.94
+      }
+    },
+    {
+      "pmid": "18359175",
+      "onTopic": 0.36,
+      "direct": 0.1,
+      "stance": {
+        "supports": 0.32,
+        "mixed": 0.57,
+        "contradicts": 0.01,
+        "no_result": 0.1
+      },
+      "stanceCheck": {
+        "supports": 0.46,
+        "mixed": 0.45,
+        "contradicts": 0.01,
+        "no_result": 0.08
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.66
+      }
+    },
+    {
+      "pmid": "9795487",
+      "onTopic": 0.14,
+      "direct": 0.06,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "no_result": 1
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 0,
+        "confidence": 0.01
+      }
+    },
+    {
+      "pmid": "22453198",
+      "onTopic": 0.97,
+      "direct": 0.87,
+      "stance": {
+        "supports": 0.1,
+        "mixed": 0.18,
+        "contradicts": 0.72
+      },
+      "stanceCheck": {
+        "supports": 0.18,
+        "mixed": 0.21,
+        "contradicts": 0.61
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 13,
+        "confidence": 0.82
+      }
+    },
+    {
+      "pmid": "20651617",
+      "onTopic": 0.47,
+      "direct": 0.15,
+      "stance": {
+        "supports": 0.03,
+        "mixed": 0.22,
+        "contradicts": 0.35,
+        "no_result": 0.4
+      },
+      "stanceCheck": {
+        "supports": 0.03,
+        "mixed": 0.23,
+        "contradicts": 0.47,
+        "no_result": 0.27
+      },
+      "design": {
+        "rct": 0.6,
+        "observational": 0.4
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.66
+      }
+    },
+    {
+      "pmid": "8287400",
+      "onTopic": 0.57,
+      "direct": 0.05,
+      "stance": {
+        "supports": 0.86,
+        "no_result": 0.14
+      },
+      "stanceCheck": {
+        "supports": 0.97,
+        "no_result": 0.03
+      },
+      "design": {
+        "in_vitro": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.5
+      }
+    },
+    {
+      "pmid": "2170887",
+      "onTopic": 0.76,
+      "direct": 0.13,
+      "stance": {
+        "supports": 0.92,
+        "mixed": 0.08
+      },
+      "stanceCheck": {
+        "supports": 0.97,
+        "mixed": 0.03
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.66
+      }
+    },
+    {
+      "pmid": "26414962",
+      "onTopic": 0.58,
+      "direct": 0.25,
+      "stance": {
+        "supports": 0.42,
+        "mixed": 0.37,
+        "contradicts": 0.18,
+        "no_result": 0.03
+      },
+      "stanceCheck": {
+        "supports": 0.5,
+        "mixed": 0.32,
+        "contradicts": 0.16,
+        "no_result": 0.02
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.67
+      }
+    },
+    {
+      "pmid": "10513275",
+      "onTopic": 0.14,
+      "direct": 0.04,
+      "stance": {
+        "supports": 0.13,
+        "no_result": 0.87
+      },
+      "stanceCheck": {
+        "supports": 0.12,
+        "no_result": 0.88
+      },
+      "design": {
+        "observational": 0.98,
+        "other": 0.02
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.98
+      }
+    },
+    {
+      "pmid": "8996287",
+      "onTopic": 0.84,
+      "direct": 0.34,
+      "stance": {
+        "supports": 0.96,
+        "mixed": 0.04
+      },
+      "stanceCheck": {
+        "supports": 0.98,
+        "mixed": 0.02
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.85
+      }
+    },
+    {
+      "pmid": "10030394",
+      "onTopic": 0.13,
+      "direct": 0.09,
+      "stance": {
+        "supports": 0.01,
+        "contradicts": 0.06,
+        "no_result": 0.93
+      },
+      "stanceCheck": {
+        "supports": 0.04,
+        "contradicts": 0.11,
+        "no_result": 0.85
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 13,
+        "confidence": 0.41
+      }
+    },
+    {
+      "pmid": "17762545",
+      "onTopic": 0.97,
+      "direct": 0.92,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.78
+      }
+    },
+    {
+      "pmid": "11875332",
+      "onTopic": 0.48,
+      "direct": 0.11,
+      "stance": {
+        "supports": 0.01,
+        "mixed": 0.8,
+        "contradicts": 0.16,
+        "no_result": 0.03
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "mixed": 0.81,
+        "contradicts": 0.17,
+        "no_result": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.46
+      }
+    },
+    {
+      "pmid": "1870648",
+      "onTopic": 0.98,
+      "direct": 0.95,
+      "stance": {
+        "supports": 0.99,
+        "mixed": 0.01
+      },
+      "stanceCheck": {
+        "supports": 1
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.95
+      }
+    },
+    {
+      "pmid": "16947090",
+      "onTopic": 0.23,
+      "direct": 0.08,
+      "stance": {
+        "supports": 0.07,
+        "mixed": 0.16,
+        "contradicts": 0.04,
+        "no_result": 0.73
+      },
+      "stanceCheck": {
+        "supports": 0.16,
+        "mixed": 0.26,
+        "contradicts": 0.03,
+        "no_result": 0.55
+      },
+      "design": {
+        "rct": 0.2,
+        "observational": 0.8
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.36
+      }
+    },
+    {
+      "pmid": "10955415",
+      "onTopic": 0.93,
+      "direct": 0.66,
+      "stance": {
+        "supports": 0.09,
+        "mixed": 0.28,
+        "contradicts": 0.62,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.11,
+        "mixed": 0.23,
+        "contradicts": 0.65,
+        "no_result": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "10725771",
+      "onTopic": 0.23,
+      "direct": 0.07,
+      "stance": {
+        "supports": 0.03,
+        "mixed": 0.02,
+        "contradicts": 0.12,
+        "no_result": 0.83
+      },
+      "stanceCheck": {
+        "supports": 0.04,
+        "mixed": 0.02,
+        "contradicts": 0.14,
+        "no_result": 0.8
+      },
+      "design": {
+        "rct": 0.01,
+        "observational": 0.99
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.4
+      }
+    },
+    {
+      "pmid": "18027116",
+      "onTopic": 0.31,
+      "direct": 0.07,
+      "stance": {
+        "contradicts": 0.86,
+        "no_result": 0.14
+      },
+      "stanceCheck": {
+        "contradicts": 0.98,
+        "no_result": 0.02
+      },
+      "design": {
+        "observational": 0.98,
+        "review": 0.01,
+        "other": 0.01
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 0.72
+      }
+    },
+    {
+      "pmid": "11152919",
+      "onTopic": 0.12,
+      "direct": 0.08,
+      "stance": {
+        "contradicts": 0.05,
+        "no_result": 0.95
+      },
+      "stanceCheck": {
+        "contradicts": 0.1,
+        "no_result": 0.9
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.33
+      }
+    },
+    {
+      "pmid": "11174874",
+      "onTopic": 0.96,
+      "direct": 0.65,
+      "stance": {
+        "mixed": 1
+      },
+      "stanceCheck": {
+        "mixed": 1
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 0.54
+      }
+    },
+    {
+      "pmid": "12201226",
+      "onTopic": 0.92,
+      "direct": 0.72,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "17113831",
+      "onTopic": 0.24,
+      "direct": 0.09,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "contradicts": 0.01,
+        "no_result": 0.99
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.32
+      }
+    },
+    {
+      "pmid": "9087469",
+      "onTopic": 0.94,
+      "direct": 0.61,
+      "stance": {
+        "supports": 0.97,
+        "mixed": 0.03
+      },
+      "stanceCheck": {
+        "supports": 0.99,
+        "mixed": 0.01
+      },
+      "design": {
+        "other": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.95
+      }
+    },
+    {
+      "pmid": "9399737",
+      "onTopic": 0.21,
+      "direct": 0.06,
+      "stance": {
+        "supports": 0.49,
+        "mixed": 0.04,
+        "contradicts": 0.01,
+        "no_result": 0.46
+      },
+      "stanceCheck": {
+        "supports": 0.68,
+        "mixed": 0.04,
+        "contradicts": 0.01,
+        "no_result": 0.27
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 0.99
+      }
+    },
+    {
+      "pmid": "11153104",
+      "onTopic": 0.11,
+      "direct": 0.06,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "no_result": 1
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.43
+      }
+    },
+    {
+      "pmid": "15771927",
+      "onTopic": 0.76,
+      "direct": 0.18,
+      "stance": {
+        "mixed": 0.04,
+        "contradicts": 0.96
+      },
+      "stanceCheck": {
+        "mixed": 0.02,
+        "contradicts": 0.98
+      },
+      "design": {
+        "rct": 0.97,
+        "observational": 0.03
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.93
+      }
+    },
+    {
+      "pmid": "9504644",
+      "onTopic": 0.6,
+      "direct": 0.12,
+      "stance": {
+        "supports": 0.89,
+        "mixed": 0.01,
+        "no_result": 0.1
+      },
+      "stanceCheck": {
+        "supports": 0.99,
+        "no_result": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.47
+      }
+    },
+    {
+      "pmid": "30130284",
+      "onTopic": 0.94,
+      "direct": 0.81,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.87
+      }
+    },
+    {
+      "pmid": "15374707",
+      "onTopic": 0.23,
+      "direct": 0.06,
+      "stance": {
+        "supports": 0.05,
+        "mixed": 0.03,
+        "contradicts": 0.05,
+        "no_result": 0.87
+      },
+      "stanceCheck": {
+        "supports": 0.09,
+        "mixed": 0.05,
+        "contradicts": 0.02,
+        "no_result": 0.84
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.63
+      }
+    },
+    {
+      "pmid": "11734668",
+      "onTopic": 0.67,
+      "direct": 0.14,
+      "stance": {
+        "supports": 0.1,
+        "mixed": 0.45,
+        "contradicts": 0.32,
+        "no_result": 0.13
+      },
+      "stanceCheck": {
+        "supports": 0.32,
+        "mixed": 0.49,
+        "contradicts": 0.17,
+        "no_result": 0.02
+      },
+      "design": {
+        "observational": 0.31,
+        "case_report": 0.69
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.8
+      }
+    },
+    {
+      "pmid": "11156873",
+      "onTopic": 0.12,
+      "direct": 0.09,
+      "stance": {
+        "contradicts": 0.16,
+        "no_result": 0.84
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "contradicts": 0.3,
+        "no_result": 0.69
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.64
+      }
+    },
+    {
+      "pmid": "9848882",
+      "onTopic": 0.6,
+      "direct": 0.11,
+      "stance": {
+        "supports": 0.82,
+        "mixed": 0.01,
+        "contradicts": 0.01,
+        "no_result": 0.16
+      },
+      "stanceCheck": {
+        "supports": 0.96,
+        "mixed": 0.01,
+        "no_result": 0.03
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.42
+      }
+    },
+    {
+      "pmid": "20934562",
+      "onTopic": 0.79,
+      "direct": 0.27,
+      "stance": {
+        "mixed": 0.02,
+        "contradicts": 0.97,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "mixed": 0.01,
+        "contradicts": 0.99
+      },
+      "design": {
+        "rct": 0.33,
+        "observational": 0.67
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.7
+      }
+    },
+    {
+      "pmid": "12468165",
+      "onTopic": 0.31,
+      "direct": 0.15,
+      "stance": {
+        "contradicts": 0.06,
+        "no_result": 0.94
+      },
+      "stanceCheck": {
+        "contradicts": 0.13,
+        "no_result": 0.87
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 11,
+        "confidence": 0.42
+      }
+    },
+    {
+      "pmid": "9060801",
+      "onTopic": 0.36,
+      "direct": 0.09,
+      "stance": {
+        "supports": 0.09,
+        "mixed": 0.04,
+        "contradicts": 0.2,
+        "no_result": 0.67
+      },
+      "stanceCheck": {
+        "supports": 0.19,
+        "mixed": 0.1,
+        "contradicts": 0.2,
+        "no_result": 0.51
+      },
+      "design": {
+        "rct": 0.01,
+        "observational": 0.99
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.63
+      }
+    },
+    {
+      "pmid": "11156863",
+      "onTopic": 0.86,
+      "direct": 0.24,
+      "stance": {
+        "mixed": 0.01,
+        "contradicts": 0.99
+      },
+      "stanceCheck": {
+        "mixed": 0.01,
+        "contradicts": 0.99
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.91
+      }
+    },
+    {
+      "pmid": "9802722",
+      "onTopic": 0.74,
+      "direct": 0.18,
+      "stance": {
+        "supports": 0.74,
+        "mixed": 0.25,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.84,
+        "mixed": 0.16
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 12,
+        "confidence": 0.64
+      }
+    },
+    {
+      "pmid": "11466136",
+      "onTopic": 0.22,
+      "direct": 0.07,
+      "stance": {
+        "supports": 0.3,
+        "mixed": 0.03,
+        "contradicts": 0.01,
+        "no_result": 0.66
+      },
+      "stanceCheck": {
+        "supports": 0.62,
+        "mixed": 0.05,
+        "contradicts": 0.01,
+        "no_result": 0.32
+      },
+      "design": {
+        "rct": 0.17,
+        "observational": 0.83
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.62
+      }
+    },
+    {
+      "pmid": "11545684",
+      "onTopic": 0.17,
+      "direct": 0.07,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "no_result": 1
+      },
+      "design": {
+        "observational": 0.63,
+        "other": 0.37
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 0.81
+      }
+    },
+    {
+      "pmid": "12459399",
+      "onTopic": 0.13,
+      "direct": 0.09,
+      "stance": {
+        "contradicts": 0.05,
+        "no_result": 0.95
+      },
+      "stanceCheck": {
+        "contradicts": 0.15,
+        "no_result": 0.85
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.54
+      }
+    },
+    {
+      "pmid": "15671702",
+      "onTopic": 0.85,
+      "direct": 0.33,
+      "stance": {
+        "mixed": 0.01,
+        "contradicts": 0.99
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "rct": 0.22,
+        "observational": 0.78
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.55
+      }
+    },
+    {
+      "pmid": "11821303",
+      "onTopic": 0.42,
+      "direct": 0.09,
+      "stance": {
+        "supports": 0.65,
+        "mixed": 0.04,
+        "no_result": 0.31
+      },
+      "stanceCheck": {
+        "supports": 0.78,
+        "mixed": 0.05,
+        "no_result": 0.17
+      },
+      "design": {
+        "rct": 0.01,
+        "observational": 0.97,
+        "in_vitro": 0.02
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.49
+      }
+    },
+    {
+      "pmid": "17502840",
+      "onTopic": 0.96,
+      "direct": 0.7,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.94
+      }
+    },
+    {
+      "pmid": "22840666",
+      "onTopic": 0.39,
+      "direct": 0.19,
+      "stance": {
+        "contradicts": 0.04,
+        "no_result": 0.96
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "contradicts": 0.09,
+        "no_result": 0.9
+      },
+      "design": {
+        "rct": 0.45,
+        "observational": 0.55
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.84
+      }
+    },
+    {
+      "pmid": "14712425",
+      "onTopic": 0.21,
+      "direct": 0.12,
+      "stance": {
+        "contradicts": 0.05,
+        "no_result": 0.95
+      },
+      "stanceCheck": {
+        "contradicts": 0.12,
+        "no_result": 0.88
+      },
+      "design": {
+        "rct": 0.02,
+        "observational": 0.98
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.31
+      }
+    },
+    {
+      "pmid": "12396895",
+      "onTopic": 0.91,
+      "direct": 0.26,
+      "stance": {
+        "mixed": 0.09,
+        "contradicts": 0.91
+      },
+      "stanceCheck": {
+        "mixed": 0.05,
+        "contradicts": 0.95
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 12,
+        "confidence": 0.46
+      }
+    },
+    {
+      "pmid": "12569202",
+      "onTopic": 0.11,
+      "direct": 0.07,
+      "stance": {
+        "supports": 0.01,
+        "mixed": 0.01,
+        "contradicts": 0.24,
+        "no_result": 0.74
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "mixed": 0.01,
+        "contradicts": 0.35,
+        "no_result": 0.63
+      },
+      "design": {
+        "rct": 0.05,
+        "observational": 0.95
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.46
+      }
+    },
+    {
+      "pmid": "15906951",
+      "onTopic": 0.54,
+      "direct": 0.14,
+      "stance": {
+        "supports": 0.03,
+        "mixed": 0.87,
+        "contradicts": 0.08,
+        "no_result": 0.02
+      },
+      "stanceCheck": {
+        "supports": 0.03,
+        "mixed": 0.8,
+        "contradicts": 0.16,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 0.71,
+        "observational": 0.29
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.74
+      }
+    },
+    {
+      "pmid": "16504428",
+      "onTopic": 0.97,
+      "direct": 0.95,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "15989413",
+      "onTopic": 0.8,
+      "direct": 0.23,
+      "stance": {
+        "supports": 0.02,
+        "mixed": 0.93,
+        "contradicts": 0.05
+      },
+      "stanceCheck": {
+        "supports": 0.02,
+        "mixed": 0.91,
+        "contradicts": 0.07
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.96
+      }
+    },
+    {
+      "pmid": "32669317",
+      "onTopic": 0.88,
+      "direct": 0.91,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "rct": 0.41,
+        "observational": 0.02,
+        "in_vitro": 0.01,
+        "review": 0.54,
+        "other": 0.02
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "8890803",
+      "onTopic": 0.42,
+      "direct": 0.11,
+      "stance": {
+        "supports": 0.3,
+        "mixed": 0.54,
+        "contradicts": 0.01,
+        "no_result": 0.15
+      },
+      "stanceCheck": {
+        "supports": 0.54,
+        "mixed": 0.41,
+        "no_result": 0.05
+      },
+      "design": {
+        "rct": 0.01,
+        "observational": 0.99
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.51
+      }
+    },
+    {
+      "pmid": "20222844",
+      "onTopic": 0.72,
+      "direct": 0.1,
+      "stance": {
+        "supports": 0.64,
+        "mixed": 0.17,
+        "contradicts": 0.01,
+        "no_result": 0.18
+      },
+      "stanceCheck": {
+        "supports": 0.74,
+        "mixed": 0.25,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 0.79,
+        "observational": 0.21
+      },
+      "finding": {
+        "index": 12,
+        "confidence": 0.63
+      }
+    },
+    {
+      "pmid": "7625511",
+      "onTopic": 0.87,
+      "direct": 0.57,
+      "stance": {
+        "supports": 0.34,
+        "mixed": 0.36,
+        "contradicts": 0.26,
+        "no_result": 0.04
+      },
+      "stanceCheck": {
+        "supports": 0.44,
+        "mixed": 0.39,
+        "contradicts": 0.14,
+        "no_result": 0.03
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "8994414",
+      "onTopic": 0.1,
+      "direct": 0.05,
+      "stance": {
+        "mixed": 0.09,
+        "contradicts": 0.03,
+        "no_result": 0.88
+      },
+      "stanceCheck": {
+        "mixed": 0.12,
+        "contradicts": 0.07,
+        "no_result": 0.81
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.42
+      }
+    },
+    {
+      "pmid": "23818431",
+      "onTopic": 0.04,
+      "direct": 0.03,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "no_result": 1
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 2,
+        "confidence": 0.32
+      }
+    },
+    {
+      "pmid": "11788212",
+      "onTopic": 0.58,
+      "direct": 0.18,
+      "stance": {
+        "contradicts": 0.97,
+        "no_result": 0.03
+      },
+      "stanceCheck": {
+        "contradicts": 0.97,
+        "no_result": 0.03
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 11,
+        "confidence": 0.64
+      }
+    },
+    {
+      "pmid": "12504395",
+      "onTopic": 0.93,
+      "direct": 0.43,
+      "stance": {
+        "mixed": 0.01,
+        "contradicts": 0.99
+      },
+      "stanceCheck": {
+        "mixed": 0.01,
+        "contradicts": 0.99
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.55
+      }
+    },
+    {
+      "pmid": "19465669",
+      "onTopic": 0.97,
+      "direct": 0.84,
+      "stance": {
+        "supports": 0.31,
+        "mixed": 0.68,
+        "contradicts": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.61,
+        "mixed": 0.39
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.91
+      }
+    },
+    {
+      "pmid": "14694694",
+      "onTopic": 0.98,
+      "direct": 0.95,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "31367516",
+      "onTopic": 0.55,
+      "direct": 0.25,
+      "stance": {
+        "supports": 0.02,
+        "mixed": 0.13,
+        "contradicts": 0.68,
+        "no_result": 0.17
+      },
+      "stanceCheck": {
+        "supports": 0.02,
+        "mixed": 0.12,
+        "contradicts": 0.75,
+        "no_result": 0.11
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.44
+      }
+    },
+    {
+      "pmid": "8044949",
+      "onTopic": 0.59,
+      "direct": 0.09,
+      "stance": {
+        "supports": 0.81,
+        "mixed": 0.08,
+        "contradicts": 0.01,
+        "no_result": 0.1
+      },
+      "stanceCheck": {
+        "supports": 0.97,
+        "mixed": 0.02,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 0.12,
+        "observational": 0.86,
+        "other": 0.02
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.45
+      }
+    },
+    {
+      "pmid": "15545509",
+      "onTopic": 0.55,
+      "direct": 0.19,
+      "stance": {
+        "contradicts": 0.53,
+        "no_result": 0.47
+      },
+      "stanceCheck": {
+        "contradicts": 0.79,
+        "no_result": 0.21
+      },
+      "design": {
+        "rct": 0.96,
+        "observational": 0.04
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.95
+      }
+    },
+    {
+      "pmid": "10822123",
+      "onTopic": 0.89,
+      "direct": 0.47,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "no_result": 1
+      },
+      "design": {
+        "rct": 0.89,
+        "observational": 0.01,
+        "other": 0.1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.72
+      }
+    },
+    {
+      "pmid": "11306205",
+      "onTopic": 0.59,
+      "direct": 0.11,
+      "stance": {
+        "supports": 0.95,
+        "no_result": 0.05
+      },
+      "stanceCheck": {
+        "supports": 1
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.94
+      }
+    },
+    {
+      "pmid": "17172924",
+      "onTopic": 0.27,
+      "direct": 0.08,
+      "stance": {
+        "mixed": 0.02,
+        "contradicts": 0.95,
+        "no_result": 0.03
+      },
+      "stanceCheck": {
+        "mixed": 0.01,
+        "contradicts": 0.99
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 2,
+        "confidence": 0.58
+      }
+    },
+    {
+      "pmid": "14581866",
+      "onTopic": 0.64,
+      "direct": 0.2,
+      "stance": {
+        "mixed": 0.01,
+        "contradicts": 0.99
+      },
+      "stanceCheck": {
+        "mixed": 0.01,
+        "contradicts": 0.99
+      },
+      "design": {
+        "rct": 0.5,
+        "observational": 0.5
+      },
+      "finding": {
+        "index": 12,
+        "confidence": 0.95
+      }
+    },
+    {
+      "pmid": "18391103",
+      "onTopic": 0.17,
+      "direct": 0.12,
+      "stance": {
+        "contradicts": 0.02,
+        "no_result": 0.98
+      },
+      "stanceCheck": {
+        "contradicts": 0.05,
+        "no_result": 0.95
+      },
+      "design": {
+        "rct": 0.28,
+        "observational": 0.72
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 0.49
+      }
+    },
+    {
+      "pmid": "7963125",
+      "onTopic": 0.56,
+      "direct": 0.05,
+      "stance": {
+        "supports": 0.13,
+        "mixed": 0.63,
+        "contradicts": 0.09,
+        "no_result": 0.15
+      },
+      "stanceCheck": {
+        "supports": 0.24,
+        "mixed": 0.6,
+        "contradicts": 0.08,
+        "no_result": 0.08
+      },
+      "design": {
+        "animal": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.42
+      }
+    },
+    {
+      "pmid": "9328541",
+      "onTopic": 0.13,
+      "direct": 0.05,
+      "stance": {
+        "supports": 0.02,
+        "no_result": 0.98
+      },
+      "stanceCheck": {
+        "supports": 0.03,
+        "no_result": 0.97
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.8
+      }
+    },
+    {
+      "pmid": "10787361",
+      "onTopic": 0.13,
+      "direct": 0.09,
+      "stance": {
+        "contradicts": 0.21,
+        "no_result": 0.79
+      },
+      "stanceCheck": {
+        "contradicts": 0.35,
+        "no_result": 0.65
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.67
+      }
+    },
+    {
+      "pmid": "9723624",
+      "onTopic": 0.8,
+      "direct": 0.28,
+      "stance": {
+        "supports": 0.81,
+        "mixed": 0.17,
+        "contradicts": 0.01,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.91,
+        "mixed": 0.09
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 11,
+        "confidence": 0.61
+      }
+    },
+    {
+      "pmid": "8292665",
+      "onTopic": 0.39,
+      "direct": 0.08,
+      "stance": {
+        "supports": 0.01,
+        "mixed": 0.9,
+        "contradicts": 0.02,
+        "no_result": 0.07
+      },
+      "stanceCheck": {
+        "supports": 0.03,
+        "mixed": 0.91,
+        "contradicts": 0.01,
+        "no_result": 0.05
+      },
+      "design": {
+        "rct": 0.07,
+        "observational": 0.93
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.88
+      }
+    },
+    {
+      "pmid": "21106950",
+      "onTopic": 0.92,
+      "direct": 0.82,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "rct": 0.14,
+        "observational": 0.86
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "15497491",
+      "onTopic": 0.53,
+      "direct": 0.12,
+      "stance": {
+        "supports": 0.68,
+        "mixed": 0.06,
+        "contradicts": 0.02,
+        "no_result": 0.23
+      },
+      "stanceCheck": {
+        "supports": 0.78,
+        "mixed": 0.08,
+        "contradicts": 0.02,
+        "no_result": 0.12
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.79
+      }
+    },
+    {
+      "pmid": "41186575",
+      "onTopic": 0.04,
+      "direct": 0.04,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "contradicts": 0.01,
+        "no_result": 0.99
+      },
+      "design": {
+        "rct": 0.94,
+        "observational": 0.06
+      },
+      "finding": {
+        "index": 2,
+        "confidence": 0.17
+      }
+    },
+    {
+      "pmid": "12679771",
+      "onTopic": 0.53,
+      "direct": 0.22,
+      "stance": {
+        "contradicts": 0.99,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "contradicts": 0.98,
+        "no_result": 0.02
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "19421076",
+      "onTopic": 0.18,
+      "direct": 0.11,
+      "stance": {
+        "supports": 0.01,
+        "mixed": 0.01,
+        "contradicts": 0.22,
+        "no_result": 0.76
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "mixed": 0.01,
+        "contradicts": 0.21,
+        "no_result": 0.77
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.56
+      }
+    },
+    {
+      "pmid": "10595329",
+      "onTopic": 0.27,
+      "direct": 0.07,
+      "stance": {
+        "supports": 0.05,
+        "mixed": 0.28,
+        "contradicts": 0.04,
+        "no_result": 0.63
+      },
+      "stanceCheck": {
+        "supports": 0.09,
+        "mixed": 0.33,
+        "contradicts": 0.06,
+        "no_result": 0.52
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.38
+      }
+    },
+    {
+      "pmid": "17341712",
+      "onTopic": 0.48,
+      "direct": 0.45,
+      "stance": {
+        "contradicts": 0.18,
+        "no_result": 0.82
+      },
+      "stanceCheck": {
+        "contradicts": 0.28,
+        "no_result": 0.72
+      },
+      "design": {
+        "rct": 0.51,
+        "observational": 0.49
+      },
+      "finding": {
+        "index": 11,
+        "confidence": 0.96
+      }
+    },
+    {
+      "pmid": "10591680",
+      "onTopic": 0.57,
+      "direct": 0.12,
+      "stance": {
+        "supports": 0.11,
+        "mixed": 0.7,
+        "contradicts": 0.01,
+        "no_result": 0.18
+      },
+      "stanceCheck": {
+        "supports": 0.23,
+        "mixed": 0.67,
+        "contradicts": 0.01,
+        "no_result": 0.09
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.56
+      }
+    },
+    {
+      "pmid": "19001202",
+      "onTopic": 0.95,
+      "direct": 0.91,
+      "stance": {
+        "contradicts": 1
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "rct": 0.27,
+        "observational": 0.73
+      },
+      "finding": {
+        "index": 0,
+        "confidence": 0.83
+      }
+    },
+    {
+      "pmid": "1342318",
+      "onTopic": 0.03,
+      "direct": 0.03,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "no_result": 1
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.34
+      }
+    },
+    {
+      "pmid": "25069991",
+      "onTopic": 0.85,
+      "direct": 0.23,
+      "stance": {
+        "mixed": 0.06,
+        "contradicts": 0.93,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "mixed": 0.05,
+        "contradicts": 0.95
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 17,
+        "confidence": 0.76
+      }
+    },
+    {
+      "pmid": "23135529",
+      "onTopic": 0.21,
+      "direct": 0.06,
+      "stance": {
+        "contradicts": 0.11,
+        "no_result": 0.89
+      },
+      "stanceCheck": {
+        "contradicts": 0.1,
+        "no_result": 0.9
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.79
+      }
+    },
+    {
+      "pmid": "10458226",
+      "onTopic": 0.34,
+      "direct": 0.07,
+      "stance": {
+        "mixed": 0.02,
+        "contradicts": 0.19,
+        "no_result": 0.79
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "mixed": 0.04,
+        "contradicts": 0.32,
+        "no_result": 0.63
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.56
+      }
+    },
+    {
+      "pmid": "11388817",
+      "onTopic": 0.5,
+      "direct": 0.2,
+      "stance": {
+        "supports": 0.04,
+        "contradicts": 0.52,
+        "no_result": 0.44
+      },
+      "stanceCheck": {
+        "supports": 0.03,
+        "mixed": 0.01,
+        "contradicts": 0.64,
+        "no_result": 0.32
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.98
+      }
+    },
+    {
+      "pmid": "10981488",
+      "onTopic": 0.34,
+      "direct": 0.13,
+      "stance": {
+        "supports": 0.31,
+        "mixed": 0.01,
+        "no_result": 0.68
+      },
+      "stanceCheck": {
+        "supports": 0.81,
+        "mixed": 0.01,
+        "no_result": 0.18
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 0,
+        "confidence": 0.68
+      }
+    },
+    {
+      "pmid": "8559552",
+      "onTopic": 0.96,
+      "direct": 0.73,
+      "stance": {
+        "supports": 0.98,
+        "mixed": 0.02
+      },
+      "stanceCheck": {
+        "supports": 1
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 2,
+        "confidence": 0.75
+      }
+    },
+    {
+      "pmid": "15308999",
+      "onTopic": 0.85,
+      "direct": 0.67,
+      "stance": {
+        "supports": 0.01,
+        "contradicts": 0.45,
+        "no_result": 0.54
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "contradicts": 0.68,
+        "no_result": 0.31
+      },
+      "design": {
+        "rct": 0.99,
+        "observational": 0.01
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.75
+      }
+    },
+    {
+      "pmid": "11329233",
+      "onTopic": 0.52,
+      "direct": 0.09,
+      "stance": {
+        "supports": 0.33,
+        "mixed": 0.1,
+        "contradicts": 0.02,
+        "no_result": 0.54
+      },
+      "stanceCheck": {
+        "supports": 0.49,
+        "mixed": 0.16,
+        "contradicts": 0.01,
+        "no_result": 0.34
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.82
+      }
+    },
+    {
+      "pmid": "9571599",
+      "onTopic": 0.62,
+      "direct": 0.22,
+      "stance": {
+        "supports": 0.31,
+        "mixed": 0.16,
+        "contradicts": 0.31,
+        "no_result": 0.22
+      },
+      "stanceCheck": {
+        "supports": 0.38,
+        "mixed": 0.17,
+        "contradicts": 0.29,
+        "no_result": 0.16
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.4
+      }
+    },
+    {
+      "pmid": "11755552",
+      "onTopic": 0.33,
+      "direct": 0.32,
+      "stance": {
+        "contradicts": 0.08,
+        "no_result": 0.92
+      },
+      "stanceCheck": {
+        "contradicts": 0.14,
+        "no_result": 0.86
+      },
+      "design": {
+        "rct": 0.96,
+        "observational": 0.04
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.4
+      }
+    },
+    {
+      "pmid": "11755544",
+      "onTopic": 0.79,
+      "direct": 0.2,
+      "stance": {
+        "supports": 0.73,
+        "mixed": 0.15,
+        "contradicts": 0.01,
+        "no_result": 0.11
+      },
+      "stanceCheck": {
+        "supports": 0.82,
+        "mixed": 0.11,
+        "contradicts": 0.01,
+        "no_result": 0.06
+      },
+      "design": {
+        "other": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.33
+      }
+    },
+    {
+      "pmid": "11864918",
+      "onTopic": 0.86,
+      "direct": 0.38,
+      "stance": {
+        "contradicts": 0.99,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "contradicts": 0.99,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 0.75,
+        "observational": 0.13,
+        "review": 0.07,
+        "other": 0.05
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.57
+      }
+    },
+    {
+      "pmid": "10720088",
+      "onTopic": 0.22,
+      "direct": 0.08,
+      "stance": {
+        "supports": 0.47,
+        "mixed": 0.02,
+        "contradicts": 0.01,
+        "no_result": 0.5
+      },
+      "stanceCheck": {
+        "supports": 0.71,
+        "mixed": 0.02,
+        "contradicts": 0.01,
+        "no_result": 0.26
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 11,
+        "confidence": 0.53
+      }
+    },
+    {
+      "pmid": "12081988",
+      "onTopic": 0.89,
+      "direct": 0.55,
+      "stance": {
+        "mixed": 0.05,
+        "contradicts": 0.95
+      },
+      "stanceCheck": {
+        "mixed": 0.03,
+        "contradicts": 0.97
+      },
+      "design": {
+        "rct": 0.88,
+        "observational": 0.12
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.58
+      }
+    },
+    {
+      "pmid": "12505248",
+      "onTopic": 0.81,
+      "direct": 0.36,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "contradicts": 0.01,
+        "no_result": 0.99
+      },
+      "design": {
+        "rct": 0.89,
+        "other": 0.11
+      },
+      "finding": {
+        "index": 0,
+        "confidence": 0.64
+      }
+    },
+    {
+      "pmid": "10427649",
+      "onTopic": 0.12,
+      "direct": 0.06,
+      "stance": {
+        "supports": 0.01,
+        "no_result": 0.99
+      },
+      "stanceCheck": {
+        "supports": 0.1,
+        "no_result": 0.9
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.47
+      }
+    },
+    {
+      "pmid": "8115983",
+      "onTopic": 0.57,
+      "direct": 0.16,
+      "stance": {
+        "supports": 0.63,
+        "mixed": 0.07,
+        "contradicts": 0.02,
+        "no_result": 0.28
+      },
+      "stanceCheck": {
+        "supports": 0.95,
+        "mixed": 0.03,
+        "no_result": 0.02
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.66
+      }
+    },
+    {
+      "pmid": "12700827",
+      "onTopic": 0.49,
+      "direct": 0.12,
+      "stance": {
+        "supports": 0.09,
+        "mixed": 0.45,
+        "contradicts": 0.42,
+        "no_result": 0.04
+      },
+      "stanceCheck": {
+        "supports": 0.12,
+        "mixed": 0.62,
+        "contradicts": 0.26
+      },
+      "design": {
+        "rct": 0.05,
+        "observational": 0.95
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 0.37
+      }
+    },
+    {
+      "pmid": "17347166",
+      "onTopic": 0.91,
+      "direct": 0.61,
+      "stance": {
+        "supports": 0.38,
+        "mixed": 0.61,
+        "contradicts": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.36,
+        "mixed": 0.62,
+        "contradicts": 0.02
+      },
+      "design": {
+        "observational": 0.98,
+        "other": 0.02
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.99
+      }
+    },
+    {
+      "pmid": "20569710",
+      "onTopic": 0.65,
+      "direct": 0.2,
+      "stance": {
+        "supports": 0.01,
+        "mixed": 0.06,
+        "contradicts": 0.89,
+        "no_result": 0.04
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "mixed": 0.06,
+        "contradicts": 0.89,
+        "no_result": 0.04
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.84
+      }
+    },
+    {
+      "pmid": "8290175",
+      "onTopic": 0.96,
+      "direct": 0.61,
+      "stance": {
+        "supports": 0.99,
+        "mixed": 0.01
+      },
+      "stanceCheck": {
+        "supports": 0.99,
+        "mixed": 0.01
+      },
+      "design": {
+        "other": 1
+      },
+      "finding": {
+        "index": 3,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "7722207",
+      "onTopic": 0.57,
+      "direct": 0.29,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "no_result": 1
+      },
+      "design": {
+        "review": 0.94,
+        "other": 0.06
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 0.44
+      }
+    },
+    {
+      "pmid": "15994626",
+      "onTopic": 0.08,
+      "direct": 0.06,
+      "stance": {
+        "contradicts": 0.01,
+        "no_result": 0.99
+      },
+      "stanceCheck": {
+        "contradicts": 0.03,
+        "no_result": 0.97
+      },
+      "design": {
+        "rct": 0.21,
+        "observational": 0.79
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 0.31
+      }
+    },
+    {
+      "pmid": "17693902",
+      "onTopic": 0.2,
+      "direct": 0.07,
+      "stance": {
+        "supports": 0.03,
+        "mixed": 0.18,
+        "contradicts": 0.04,
+        "no_result": 0.75
+      },
+      "stanceCheck": {
+        "supports": 0.03,
+        "mixed": 0.17,
+        "contradicts": 0.05,
+        "no_result": 0.75
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.73
+      }
+    },
+    {
+      "pmid": "11119394",
+      "onTopic": 0.98,
+      "direct": 0.94,
+      "stance": {
+        "supports": 0.84,
+        "mixed": 0.16
+      },
+      "stanceCheck": {
+        "supports": 0.86,
+        "mixed": 0.14
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.63
+      }
+    },
+    {
+      "pmid": "11742870",
+      "onTopic": 0.72,
+      "direct": 0.16,
+      "stance": {
+        "mixed": 0.84,
+        "contradicts": 0.16
+      },
+      "stanceCheck": {
+        "mixed": 0.83,
+        "contradicts": 0.17
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 5,
+        "confidence": 0.59
+      }
+    },
+    {
+      "pmid": "15775731",
+      "onTopic": 0.16,
+      "direct": 0.09,
+      "stance": {
+        "mixed": 0.03,
+        "contradicts": 0.02,
+        "no_result": 0.95
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "mixed": 0.05,
+        "contradicts": 0.03,
+        "no_result": 0.91
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.77
+      }
+    },
+    {
+      "pmid": "9626834",
+      "onTopic": 0.66,
+      "direct": 0.16,
+      "stance": {
+        "supports": 0.85,
+        "mixed": 0.03,
+        "contradicts": 0.01,
+        "no_result": 0.11
+      },
+      "stanceCheck": {
+        "supports": 0.93,
+        "mixed": 0.02,
+        "contradicts": 0.01,
+        "no_result": 0.04
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 10,
+        "confidence": 0.92
+      }
+    },
+    {
+      "pmid": "2332176",
+      "onTopic": 0.87,
+      "direct": 0.3,
+      "stance": {
+        "supports": 0.92,
+        "no_result": 0.08
+      },
+      "stanceCheck": {
+        "supports": 1
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "8879436",
+      "onTopic": 0.49,
+      "direct": 0.11,
+      "stance": {
+        "supports": 0.02,
+        "mixed": 0.76,
+        "contradicts": 0.01,
+        "no_result": 0.21
+      },
+      "stanceCheck": {
+        "supports": 0.05,
+        "mixed": 0.79,
+        "contradicts": 0.02,
+        "no_result": 0.14
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 13,
+        "confidence": 0.55
+      }
+    },
+    {
+      "pmid": "10650302",
+      "onTopic": 0.35,
+      "direct": 0.16,
+      "stance": {
+        "supports": 0.01,
+        "mixed": 0.01,
+        "contradicts": 0.1,
+        "no_result": 0.88
+      },
+      "stanceCheck": {
+        "supports": 0.01,
+        "mixed": 0.01,
+        "contradicts": 0.16,
+        "no_result": 0.82
+      },
+      "design": {
+        "rct": 0.66,
+        "observational": 0.34
+      },
+      "finding": {
+        "index": 6,
+        "confidence": 0.28
+      }
+    },
+    {
+      "pmid": "9491877",
+      "onTopic": 0.16,
+      "direct": 0.06,
+      "stance": {
+        "contradicts": 0.05,
+        "no_result": 0.95
+      },
+      "stanceCheck": {
+        "contradicts": 0.05,
+        "no_result": 0.95
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 12,
+        "confidence": 0.78
+      }
+    },
+    {
+      "pmid": "7603219",
+      "onTopic": 0.51,
+      "direct": 0.1,
+      "stance": {
+        "supports": 0.82,
+        "no_result": 0.18
+      },
+      "stanceCheck": {
+        "supports": 0.97,
+        "no_result": 0.03
+      },
+      "design": {
+        "rct": 0.52,
+        "observational": 0.48
+      },
+      "finding": {
+        "index": 2,
+        "confidence": 0.5
+      }
+    },
+    {
+      "pmid": "14613344",
+      "onTopic": 0.83,
+      "direct": 0.57,
+      "stance": {
+        "contradicts": 0.99,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "contradicts": 1
+      },
+      "design": {
+        "other": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 1
+      }
+    },
+    {
+      "pmid": "11180734",
+      "onTopic": 0.84,
+      "direct": 0.63,
+      "stance": {
+        "mixed": 0.18,
+        "contradicts": 0.8,
+        "no_result": 0.02
+      },
+      "stanceCheck": {
+        "mixed": 0.14,
+        "contradicts": 0.85,
+        "no_result": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.65
+      }
+    },
+    {
+      "pmid": "11416395",
+      "onTopic": 0.95,
+      "direct": 0.27,
+      "stance": {
+        "no_result": 1
+      },
+      "stanceCheck": {
+        "supports": 0.05,
+        "mixed": 0.05,
+        "no_result": 0.9
+      },
+      "design": {
+        "review": 1
+      },
+      "finding": {
+        "index": 4,
+        "confidence": 0.46
+      }
+    },
+    {
+      "pmid": "11301562",
+      "onTopic": 0.57,
+      "direct": 0.09,
+      "stance": {
+        "supports": 0.76,
+        "mixed": 0.18,
+        "contradicts": 0.01,
+        "no_result": 0.05
+      },
+      "stanceCheck": {
+        "supports": 0.9,
+        "mixed": 0.08,
+        "contradicts": 0.01,
+        "no_result": 0.01
+      },
+      "design": {
+        "rct": 0.04,
+        "observational": 0.93,
+        "case_report": 0.02
+      },
+      "finding": {
+        "index": 1,
+        "confidence": 0.49
+      }
+    },
+    {
+      "pmid": "10195915",
+      "onTopic": 0.7,
+      "direct": 0.12,
+      "stance": {
+        "supports": 0.01,
+        "mixed": 0.81,
+        "contradicts": 0.06,
+        "no_result": 0.12
+      },
+      "stanceCheck": {
+        "supports": 0.02,
+        "mixed": 0.89,
+        "contradicts": 0.05,
+        "no_result": 0.04
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.58
+      }
+    },
+    {
+      "pmid": "10770146",
+      "onTopic": 0.89,
+      "direct": 0.44,
+      "stance": {
+        "supports": 0.03,
+        "mixed": 0.63,
+        "contradicts": 0.32,
+        "no_result": 0.02
+      },
+      "stanceCheck": {
+        "supports": 0.03,
+        "mixed": 0.6,
+        "contradicts": 0.35,
+        "no_result": 0.02
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 12,
+        "confidence": 0.95
+      }
+    },
+    {
+      "pmid": "21788534",
+      "onTopic": 0.36,
+      "direct": 0.18,
+      "stance": {
+        "contradicts": 0.05,
+        "no_result": 0.95
+      },
+      "stanceCheck": {
+        "contradicts": 0.12,
+        "no_result": 0.88
+      },
+      "design": {
+        "rct": 0.4,
+        "observational": 0.59,
+        "other": 0.01
+      },
+      "finding": {
+        "index": 2,
+        "confidence": 0.49
+      }
+    },
+    {
+      "pmid": "9570192",
+      "onTopic": 0.58,
+      "direct": 0.13,
+      "stance": {
+        "mixed": 0.07,
+        "contradicts": 0.92,
+        "no_result": 0.01
+      },
+      "stanceCheck": {
+        "mixed": 0.06,
+        "contradicts": 0.94
+      },
+      "design": {
+        "rct": 0.98,
+        "observational": 0.02
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.79
+      }
+    },
+    {
+      "pmid": "20157135",
+      "onTopic": 0.96,
+      "direct": 0.94,
+      "stance": {
+        "mixed": 0.32,
+        "contradicts": 0.68
+      },
+      "stanceCheck": {
+        "mixed": 0.26,
+        "contradicts": 0.74
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 13,
+        "confidence": 0.32
+      }
+    },
+    {
+      "pmid": "12468054",
+      "onTopic": 0.73,
+      "direct": 0.32,
+      "stance": {
+        "supports": 0.84,
+        "mixed": 0.08,
+        "contradicts": 0.02,
+        "no_result": 0.06
+      },
+      "stanceCheck": {
+        "supports": 0.93,
+        "mixed": 0.04,
+        "contradicts": 0.01,
+        "no_result": 0.01
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 7,
+        "confidence": 0.35
+      }
+    },
+    {
+      "pmid": "10692092",
+      "onTopic": 0.49,
+      "direct": 0.12,
+      "stance": {
+        "supports": 0.4,
+        "mixed": 0.14,
+        "contradicts": 0.01,
+        "no_result": 0.45
+      },
+      "stanceCheck": {
+        "supports": 0.71,
+        "mixed": 0.12,
+        "contradicts": 0.01,
+        "no_result": 0.16
+      },
+      "design": {
+        "rct": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.43
+      }
+    },
+    {
+      "pmid": "9424073",
+      "onTopic": 0.96,
+      "direct": 0.64,
+      "stance": {
+        "supports": 0.84,
+        "mixed": 0.12,
+        "contradicts": 0.04
+      },
+      "stanceCheck": {
+        "supports": 0.85,
+        "mixed": 0.11,
+        "contradicts": 0.04
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 9,
+        "confidence": 0.71
+      }
+    },
+    {
+      "pmid": "36256926",
+      "onTopic": 0.31,
+      "direct": 0.25,
+      "stance": {
+        "contradicts": 0.25,
+        "no_result": 0.75
+      },
+      "stanceCheck": {
+        "mixed": 0.01,
+        "contradicts": 0.43,
+        "no_result": 0.56
+      },
+      "design": {
+        "rct": 0.96,
+        "observational": 0.04
+      },
+      "finding": {
+        "index": 12,
+        "confidence": 0.61
+      }
+    },
+    {
+      "pmid": "2164381",
+      "onTopic": 0.33,
+      "direct": 0.11,
+      "stance": {
+        "supports": 0.07,
+        "mixed": 0.01,
+        "contradicts": 0.02,
+        "no_result": 0.9
+      },
+      "stanceCheck": {
+        "supports": 0.14,
+        "mixed": 0.01,
+        "contradicts": 0.03,
+        "no_result": 0.82
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 2,
+        "confidence": 0.68
+      }
+    },
+    {
+      "pmid": "8518178",
+      "onTopic": 0.55,
+      "direct": 0.13,
+      "stance": {
+        "supports": 0.19,
+        "mixed": 0.47,
+        "contradicts": 0.31,
+        "no_result": 0.03
+      },
+      "stanceCheck": {
+        "supports": 0.23,
+        "mixed": 0.42,
+        "contradicts": 0.32,
+        "no_result": 0.03
+      },
+      "design": {
+        "observational": 1
+      },
+      "finding": {
+        "index": 8,
+        "confidence": 0.83
+      }
+    },
+    {
+      "pmid": "9492349",
+      "onTopic": 0.7,
+      "direct": 0.09,
+      "stance": {
+        "supports": 0.41,
+        "no_result": 0.59
+      },
+      "stanceCheck": {
+        "supports": 0.91,
+        "no_result": 0.09
+      },
+      "design": {
+        "animal": 0.12,
+        "review": 0.88
+      },
+      "finding": {
+        "index": 0,
+        "confidence": 0.42
+      }
+    }
+  ]
+}
