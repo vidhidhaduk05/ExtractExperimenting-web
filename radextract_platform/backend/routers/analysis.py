@@ -79,6 +79,7 @@ async def get_descriptive_synthesis(project_id: str, user: Optional[dict] = Depe
 async def get_analysis_profile(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
     """Full data profiling report: distributions, missing values, outliers, correlations."""
+    check_project_access(conn, project_id, user)
     _verify_project(project_id, conn)
     try:
         return analysis_service.profile_extraction_data(project_id)
@@ -107,9 +108,11 @@ async def get_variable_stats(project_id: str, variable_id: str, user: Optional[d
 async def get_heterogeneity(
     project_id: str,
     outcome: str = Query(..., description="Outcome label (meta-analysis outcome_label)"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Heterogeneity diagnostics: I², Q-statistic, tau², H-statistic."""
+    check_project_access(conn, project_id, user)
     _verify_project(project_id, conn)
     try:
         result = analysis_service.compute_heterogeneity(project_id, outcome)
@@ -126,9 +129,11 @@ async def get_heterogeneity(
 async def get_forest_data(
     project_id: str,
     outcome: str = Query(..., description="Outcome label"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Forest plot data: per-study effect sizes, CIs, weights, pooled estimate."""
+    check_project_access(conn, project_id, user)
     _verify_project(project_id, conn)
     try:
         result = analysis_service.prepare_forest_plot_data(project_id, outcome)
@@ -145,9 +150,11 @@ async def get_forest_data(
 async def get_funnel_data(
     project_id: str,
     outcome: str = Query(..., description="Outcome label"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Funnel plot data: effect size vs SE, Egger's test for asymmetry."""
+    check_project_access(conn, project_id, user)
     _verify_project(project_id, conn)
     try:
         result = analysis_service.prepare_funnel_plot_data(project_id, outcome)
@@ -164,9 +171,11 @@ async def get_funnel_data(
 async def get_sensitivity(
     project_id: str,
     outcome: str = Query(..., description="Outcome label"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Leave-one-out sensitivity analysis."""
+    check_project_access(conn, project_id, user)
     _verify_project(project_id, conn)
     try:
         result = analysis_service.compute_sensitivity_analysis(project_id, outcome)
@@ -183,6 +192,7 @@ async def get_sensitivity(
 async def list_outcomes(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
     """List available meta-analysis outcome labels for this project."""
+    check_project_access(conn, project_id, user)
     _verify_project(project_id, conn)
     rows = conn.execute(
         "SELECT outcome_label, meta_id, effect_measure, n_studies "
@@ -209,6 +219,7 @@ async def get_full_report(project_id: str, user: Optional[dict] = Depends(get_cu
 async def download_full_report(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
     """Download the full analysis report as a JSON file."""
+    check_project_access(conn, project_id, user)
     _verify_project(project_id, conn)
     try:
         report = analysis_service.generate_full_report(project_id)
@@ -222,4 +233,3 @@ async def download_full_report(project_id: str, user: Optional[dict] = Depends(g
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Report generation failed: {str(e)}")
-    check_project_access(conn, project_id, user)
