@@ -1,6 +1,5 @@
-# Sentinel's Journal - Security Learnings
+## 2026-03-02 - Unreachable Authorization Checks Placed After Unconditional Statements
 
-## 2026-10-10 - Project Authorization Enforcement on Graph Endpoints
-**Vulnerability:** Missing `check_project_access(conn, project_id, user)` check in `GET /api/projects/{project_id}/graphify/review/graph`.
-**Learning:** When adding new analytical or visualization endpoints (such as graphify review data endpoints), endpoint parameters like `project_id` must explicitly enforce project membership authorization via `check_project_access`. Omission allows authenticated non-members to exfiltrate project study details.
-**Prevention:** Ensure all FastAPI routes receiving `project_id` call `check_project_access(conn, project_id, user)` prior to database query execution and data retrieval.
+**Vulnerability:** In `list_project_highlights` (`/api/projects/{project_id}/pdf-highlights`), `check_project_access` was placed after an unconditional `raise HTTPException(status_code=404, detail="Project not found")` statement.
+**Learning:** Authorization function calls placed after unconditional control flow jumps (`raise`, `return`) become unreachable dead code, causing authorization checks to be silently skipped or bypassed.
+**Prevention:** Always place access control checks (`check_project_access`) prior to output/query execution, or ensure authorization functions are invoked before conditional jumps or returns.

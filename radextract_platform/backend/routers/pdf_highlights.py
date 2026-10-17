@@ -52,12 +52,15 @@ class HighlightUpdate(BaseModel):
 async def list_study_highlights(study_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
     """List all PDF highlights for a study."""
-    # Verify study exists
+    # Verify study exists and enforce access control
     study = conn.execute(
         "SELECT study_id, project_id FROM studies WHERE study_id = ?", (study_id,)
     ).fetchone()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
+
+    # Security check: Ensure requesting user has access to project
+    check_project_access(conn, study["project_id"], user)
 
     rows = conn.execute(
         "SELECT * FROM pdf_highlights WHERE study_id = ? ORDER BY page_number, created_at",
@@ -185,12 +188,14 @@ async def delete_highlight(highlight_id: str, user: Optional[dict] = Depends(get
 async def list_project_highlights(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
     """List all PDF highlights for a project (across all studies)."""
+    # Security check: Ensure requesting user has access to project
+    check_project_access(conn, project_id, user)
+
     proj = conn.execute(
         "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
     ).fetchone()
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
-    check_project_access(conn, project_id, user)
 
     rows = conn.execute(
         """SELECT h.*, s.title as study_title
