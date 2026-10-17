@@ -15,8 +15,6 @@ import {
   AlertTriangle,
   Loader2,
   Square,
-  Play,
-  RotateCcw,
 } from "lucide-react";
 import { judgmentLabel, judgmentDotColor, cn, sanitizeSvg } from "../lib/utils";
 import {
@@ -345,14 +343,15 @@ function TrafficLightChart({
   summary: RobSummary;
   filterNeedsReview?: boolean;
 }) {
-  const rawAssessments = Array.isArray(summary?.assessments) ? summary.assessments : [];
+  const rawAssessments = summary?.assessments;
   const assessments = useMemo(() => {
-    if (!filterNeedsReview) return rawAssessments;
-    return rawAssessments.filter((a) => (a.needs_human_review_count ?? 0) > 0);
+    const list = Array.isArray(rawAssessments) ? rawAssessments : [];
+    if (!filterNeedsReview) return list;
+    return list.filter((a) => (a.needs_human_review_count ?? 0) > 0);
   }, [rawAssessments, filterNeedsReview]);
 
-  const domainKeys = rawAssessments[0]?.domains?.map((d) => d.domain_key) || [];
-  const domainLabels = rawAssessments[0]?.domains?.map((d) => d.domain_label) || [];
+  const domainKeys = (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_key) || [];
+  const domainLabels = (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_label) || [];
 
   return (
     <div className="card p-5 overflow-x-auto">
@@ -481,10 +480,11 @@ function AssessmentList({
   summary: RobSummary;
   filterNeedsReview?: boolean;
 }) {
-  const rawAssessments = Array.isArray(summary?.assessments) ? summary.assessments : [];
+  const rawAssessments = summary?.assessments;
   const assessments = useMemo(() => {
-    if (!filterNeedsReview) return rawAssessments;
-    return rawAssessments.filter((a) => (a.needs_human_review_count ?? 0) > 0);
+    const list = Array.isArray(rawAssessments) ? rawAssessments : [];
+    if (!filterNeedsReview) return list;
+    return list.filter((a) => (a.needs_human_review_count ?? 0) > 0);
   }, [rawAssessments, filterNeedsReview]);
 
   // Group assessments by study
