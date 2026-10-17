@@ -322,3 +322,40 @@ class TestReportEndpoints:
         assert response.headers["content-type"] == "application/json"
         data = json.loads(response.text)
         assert data == mock_report
+
+
+class TestAnalysisAuthorization:
+
+    def test_analysis_endpoints_authorization(self, client):
+        # Register owner and create project
+        client.post("/api/auth/register", json={"username": "owner_user", "password": "password123"})
+        owner_token = client.post("/api/auth/login", json={"username": "owner_user", "password": "password123"}).json()["access_token"]
+        owner_headers = {"Authorization": f"Bearer {owner_token}"}
+
+        p_res = client.post("/api/projects", json={"name": "Secure Analysis Project"}, headers=owner_headers)
+        assert p_res.status_code == 200
+        project_id = p_res.json()["project_id"]
+
+        # Register unauthorized user
+        client.post("/api/auth/register", json={"username": "unauthorized_user", "password": "password123"})
+        unauthorized_token = client.post("/api/auth/login", json={"username": "unauthorized_user", "password": "password123"}).json()["access_token"]
+        unauthorized_headers = {"Authorization": f"Bearer {unauthorized_token}"}
+
+        # Verify 403 Forbidden for unauthorized user on all analysis endpoints
+        endpoints = [
+            f"/api/projects/{project_id}/analysis/descriptive",
+            f"/api/projects/{project_id}/analysis/profile",
+            f"/api/projects/{project_id}/analysis/stats/v1",
+            f"/api/projects/{project_id}/analysis/heterogeneity?outcome=Overall",
+            f"/api/projects/{project_id}/analysis/forest-data?outcome=Overall",
+            f"/api/projects/{project_id}/analysis/funnel-data?outcome=Overall",
+            f"/api/projects/{project_id}/analysis/sensitivity?outcome=Overall",
+            f"/api/projects/{project_id}/analysis/outcomes",
+            f"/api/projects/{project_id}/analysis/report",
+            f"/api/projects/{project_id}/analysis/report/download",
+        ]
+
+        for url in endpoints:
+            r = client.get(url, headers=unauthorized_headers)
+            assert r.status_code == 403, f"Endpoint {url} did not return 403 for unauthorized user"
+            assert "Insufficient permissions" in r.json()["detail"]
