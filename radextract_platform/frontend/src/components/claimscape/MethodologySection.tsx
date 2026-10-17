@@ -21,8 +21,8 @@ export const MethodologySection: React.FC = () => {
       {/* Top Header & Copy Button */}
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div>
-          <p className="cs-eyebrow">Method v0.1 · Published Transparent Protocol</p>
-          <h2 id="cs-method-title" className="mt-1.5 text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--cs-ink)]">
+          <p className="cs-eyebrow text-[#7C4B73] dark:text-[#F9D14A] font-bold">Method v0.1 · Published Transparent Protocol</p>
+          <h2 id="cs-method-title" className="mt-1.5 text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#381A61] dark:text-[#F9D14A]">
             How the map is made
           </h2>
           <p className="mt-1.5 max-w-[76ch] text-[14.5px] cs-soft leading-relaxed">
@@ -33,16 +33,16 @@ export const MethodologySection: React.FC = () => {
         <button
           type="button"
           onClick={handleCopyJson}
-          className="inline-flex items-center gap-2 rounded-xl border border-[var(--cs-line)] bg-[var(--cs-card)] px-4 py-2.5 text-[13px] font-semibold text-[var(--cs-ink)] hover:border-[var(--cs-ink-3)] transition-colors shadow-2xs active:scale-[0.98]"
+          className="btn-palette-accept-all px-4 py-2 text-xs"
         >
           {copied ? (
             <>
-              <Check className="w-4 h-4 text-emerald-600" />
+              <Check className="w-4 h-4 text-emerald-700" />
               <span>Copied method JSON</span>
             </>
           ) : (
             <>
-              <Code className="w-4 h-4 text-[var(--cs-accent-ink)]" />
+              <Code className="w-4 h-4 text-[#381A61]" />
               <span>Copy method as JSON</span>
             </>
           )}
@@ -52,10 +52,10 @@ export const MethodologySection: React.FC = () => {
       {/* Grid of Method Breakdown Cards */}
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         {/* Left Column: Questions asked */}
-        <div className="cs-card grid gap-5 p-5 sm:p-6 text-sm cs-soft">
-          <div className="flex items-center gap-2 pb-2 border-b border-[var(--cs-line)]">
-            <BookOpen className="w-4 h-4 text-[var(--cs-accent-ink)]" />
-            <h3 className="text-[16px] font-bold text-[var(--cs-ink)]">
+        <div className="cs-card grid gap-5 p-5 sm:p-6 text-sm cs-soft border border-[#381A61]/10 dark:border-white/10 bg-white dark:bg-[#221D2C]">
+          <div className="flex items-center gap-2 pb-2 border-b border-[#381A61]/10 dark:border-white/10">
+            <BookOpen className="w-4 h-4 text-[#381A61] dark:text-[#F9D14A]" />
+            <h3 className="text-[17px] font-serif font-bold text-[#381A61] dark:text-[#F9D14A]">
               The questions asked of every abstract
             </h3>
           </div>
@@ -156,17 +156,17 @@ export const MethodologySection: React.FC = () => {
         {/* Right Column: Search, Wilson interval, and rules */}
         <div className="grid gap-5">
           {/* Search Strategy */}
-          <div className="cs-card grid gap-3 p-5 sm:p-6 text-sm cs-soft">
-            <div className="flex items-center gap-2 pb-1 border-b border-[var(--cs-line)]">
-              <Database className="w-4 h-4 text-[var(--cs-accent-ink)]" />
-              <h3 className="text-[15.5px] font-bold text-[var(--cs-ink)]">
+          <div className="cs-card grid gap-3 p-5 sm:p-6 text-sm cs-soft border border-[#381A61]/10 dark:border-white/10 bg-white dark:bg-[#221D2C]">
+            <div className="flex items-center gap-2 pb-1 border-b border-[#381A61]/10 dark:border-white/10">
+              <Database className="w-4 h-4 text-[#381A61] dark:text-[#F9D14A]" />
+              <h3 className="text-[16px] font-serif font-bold text-[#381A61] dark:text-[#F9D14A]">
                 Search & PubMed Ingestion
               </h3>
             </div>
             <p className="leading-relaxed text-[13px]">
               The clinical claim is transformed into optimized PubMed terms by stripping directional verbs (e.g. “reduces”, “increases”) to prevent confirmation bias.
             </p>
-            <div className="p-3 rounded-lg bg-[var(--cs-panel)] text-[12px] cs-mono border border-[var(--cs-line)]">
+            <div className="p-3 rounded-lg bg-[#FAF9F3] dark:bg-[#1A1622] text-[12px] cs-mono border border-[#381A61]/10 dark:border-white/10">
               hasabstract AND english[la] NOT ((review[pt] NOT systematic[sb]) OR editorial[pt] OR comment[pt] OR letter[pt] OR news[pt])
             </div>
             <ul className="list-disc list-inside space-y-1 text-[12.5px] text-[var(--cs-ink-2)]">
@@ -176,10 +176,10 @@ export const MethodologySection: React.FC = () => {
           </div>
 
           {/* Wilson 95% Confidence Intervals */}
-          <div className="cs-card grid gap-3 p-5 sm:p-6 text-sm cs-soft">
-            <div className="flex items-center gap-2 pb-1 border-b border-[var(--cs-line)]">
-              <Scale className="w-4 h-4 text-[var(--cs-accent-ink)]" />
-              <h3 className="text-[15.5px] font-bold text-[var(--cs-ink)]">
+          <div className="cs-card grid gap-3 p-5 sm:p-6 text-sm cs-soft border border-[#381A61]/10 dark:border-white/10 bg-white dark:bg-[#221D2C]">
+            <div className="flex items-center gap-2 pb-1 border-b border-[#381A61]/10 dark:border-white/10">
+              <Scale className="w-4 h-4 text-[#381A61] dark:text-[#F9D14A]" />
+              <h3 className="text-[16px] font-serif font-bold text-[#381A61] dark:text-[#F9D14A]">
                 Verdicts & 95% Wilson Score Intervals
               </h3>
             </div>
@@ -189,7 +189,7 @@ export const MethodologySection: React.FC = () => {
               <strong>{THRESHOLDS.stance * 100}%</strong>.
             </p>
 
-            <div className="p-3 rounded-lg bg-[var(--cs-panel)] text-[12px] cs-mono border border-[var(--cs-line)] space-y-1">
+            <div className="p-3 rounded-lg bg-[#FAF9F3] dark:bg-[#1A1622] text-[12px] cs-mono border border-[#381A61]/10 dark:border-white/10 space-y-1">
               <div>share for = (for + mixed / 2) / (for + mixed + against)</div>
               <div>interval = Wilson score interval (95%, z = 1.96)</div>
             </div>
@@ -207,10 +207,10 @@ export const MethodologySection: React.FC = () => {
           </div>
 
           {/* Methodological Limits */}
-          <div className="cs-card grid gap-3 p-5 sm:p-6 text-sm cs-soft">
-            <div className="flex items-center gap-2 pb-1 border-b border-[var(--cs-line)]">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <h3 className="text-[15.5px] font-bold text-[var(--cs-ink)]">
+          <div className="cs-card grid gap-3 p-5 sm:p-6 text-sm cs-soft border border-amber-500/20 bg-amber-500/[0.04] dark:bg-amber-500/[0.06]">
+            <div className="flex items-center gap-2 pb-1 border-b border-amber-500/20">
+              <AlertTriangle className="w-4 h-4 text-[#E78429]" />
+              <h3 className="text-[16px] font-serif font-bold text-[#381A61] dark:text-[#F9D14A]">
                 Methodological Limits & Guardrails
               </h3>
             </div>

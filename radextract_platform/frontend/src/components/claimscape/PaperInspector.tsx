@@ -42,11 +42,11 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
   const onTopicPct = Math.round((paper.judgment.onTopic ?? 1) * 100);
 
   return (
-    <article className="cs-card p-5 sm:p-6 grid gap-5" aria-live="polite">
+    <article className="cs-card p-5 sm:p-6 grid gap-5 border border-[#381A61]/10 dark:border-white/10 bg-white dark:bg-[#221D2C] shadow-sm" aria-live="polite">
       {/* Header Metadata */}
-      <header className="grid gap-2 border-b border-[var(--cs-line)] pb-4">
+      <header className="grid gap-2 border-b border-[#381A61]/10 dark:border-white/10 pb-4">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 cs-mono text-[12px] cs-muted">
-          <span className="font-bold text-[var(--cs-ink)]">{yearStr}</span>
+          <span className="font-serif font-bold text-[14px] text-[#381A61] dark:text-[#F9D14A]">{yearStr}</span>
           <span>·</span>
           <span>{paper.paper.journal || "PubMed publication"}</span>
           <span>·</span>
@@ -75,7 +75,7 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
           )}
         </div>
 
-        <h3 className="text-[18px] font-semibold leading-snug text-wrap-pretty text-[var(--cs-ink)]">
+        <h3 className="text-[19px] font-serif font-bold leading-snug text-wrap-pretty text-[#381A61] dark:text-[#FAF9F3]">
           {paper.paper.title}
         </h3>
       </header>
@@ -83,9 +83,9 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
       {/* Main Verdict & Study Attributes Grid */}
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Stance Breakdown Box */}
-        <div className="grid content-start gap-3 rounded-xl border border-[var(--cs-line)] bg-[var(--cs-panel)] p-4">
+        <div className="grid content-start gap-3 rounded-xl border border-[#381A61]/10 dark:border-white/10 bg-[#F2F1EB] dark:bg-[#1A1622] p-4">
           <div className="flex items-center justify-between">
-            <p className="flex items-center gap-2 text-[14px] font-bold text-[var(--cs-ink)]">
+            <p className="flex items-center gap-2 text-[14px] font-bold text-[#381A61] dark:text-[#FAF9F3]">
               <span
                 className="w-3.5 h-3.5 rounded-full inline-block flex-none"
                 style={{ background: stanceColorVar }}
@@ -141,8 +141,8 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
         </div>
 
         {/* Study Details DL */}
-        <dl className="grid content-start gap-2.5 rounded-xl border border-[var(--cs-line)] bg-[var(--cs-panel)] p-4 text-[13px]">
-          <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 pb-2 border-b border-[var(--cs-line)]">
+        <dl className="grid content-start gap-2.5 rounded-xl border border-[#381A61]/10 dark:border-white/10 bg-[#F2F1EB] dark:bg-[#1A1622] p-4 text-[13px]">
+          <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 pb-2 border-b border-[#381A61]/10 dark:border-white/10">
             <dt className="cs-muted font-medium">Study type</dt>
             <dd className="font-semibold text-[var(--cs-ink)]">
               {tier?.label || "Unclassified"}
@@ -154,7 +154,7 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
             </dd>
           </div>
 
-          <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 pb-2 border-b border-[var(--cs-line)]">
+          <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 pb-2 border-b border-[#381A61]/10 dark:border-white/10">
             <dt className="cs-muted font-medium">Evidence</dt>
             <dd className="text-[var(--cs-ink)]">
               <span className="font-semibold">
@@ -181,7 +181,7 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
       {/* Abstract & Extracted Key Finding Sentence */}
       <section className="grid gap-2.5 pt-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-[12px] font-bold uppercase tracking-[0.06em] cs-muted flex items-center gap-1.5">
+          <h4 className="text-[12px] font-serif font-bold uppercase tracking-[0.06em] text-[#381A61] dark:text-[#F9D14A] flex items-center gap-1.5">
             Key Extracted Finding & Abstract
           </h4>
           <span className="text-[11.5px] cs-muted cs-mono">
@@ -191,7 +191,7 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
 
         {paper.finding ? (
           <div
-            className="cs-abstract rounded-xl border border-[var(--cs-line)] bg-white dark:bg-black/30 p-4 text-[14px] leading-relaxed text-[var(--cs-ink)] shadow-2xs"
+            className="cs-abstract rounded-xl border border-[#381A61]/10 dark:border-white/10 bg-[#FAF9F3] dark:bg-black/30 p-4 text-[14px] leading-relaxed text-[var(--cs-ink)] shadow-2xs"
             // @ts-expect-error CSS variable for highlight color
             style={{ "--c": stanceColorVar }}
           >

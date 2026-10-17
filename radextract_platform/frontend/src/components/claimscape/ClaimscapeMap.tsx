@@ -144,7 +144,7 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
             >
               {/* Left Label */}
               <div className="lab">
-                <span className="text-[13.5px] font-semibold text-[var(--cs-ink)] leading-snug">
+                <span className="text-[13.5px] font-semibold text-[#381A61] dark:text-[#FAF9F3] leading-snug">
                   {tier?.label || summary.label}
                 </span>
                 <span className="cs-mono text-[11.5px] cs-muted">
@@ -545,14 +545,14 @@ const Tooltip: React.FC<TooltipProps> = ({ paper, left, top, width }) => {
       </p>
 
       {paper.finding && (
-        <p className="mt-1.5 text-[12px] cs-soft italic line-clamp-2 border-l-2 border-[var(--cs-accent)] pl-2">
+        <p className="mt-1.5 text-[12px] cs-soft italic line-clamp-2 border-l-2 border-[#381A61] dark:border-[#F9D14A] pl-2">
           "{paper.finding}"
         </p>
       )}
 
       <div className="mt-2 text-[11px] cs-muted flex items-center justify-between">
         <span>{paper.direct ? "Direct evidence" : "Indirect model/proxy"}</span>
-        <span className="text-[var(--cs-accent-ink)] font-semibold">Click to inspect</span>
+        <span className="text-[#381A61] dark:text-[#F9D14A] font-bold">Click to inspect</span>
       </div>
     </div>
   );

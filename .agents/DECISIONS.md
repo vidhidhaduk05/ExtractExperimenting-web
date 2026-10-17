@@ -341,3 +341,20 @@ un_full_pipeline) verify pause and cancellation cleanly between individual studi
   - The UI uses RadExtract platform branding (`RadExtract ClaimScape`) with no external company branding in the product interface, per user directive.
   - Formally included the academic credit statement in the published methodology section (`#method`), acknowledging K-Dense AI's foundational Claimscape framework.
   - Added full interactive "Copy method as JSON" functionality exporting the complete machine-readable specification.
+
+## 2026-10-17 — ClaimScape Visual Theme & Editorial 7-Color Palette Harmonization
+
+- **Harmonization Objective**: Align the newly implemented ClaimScape evidence mapping page (`ClaimscapePage`, `ClaimscapeMap`, `PaperInspector`, `MethodologySection`) with the platform's core Editorial 7-Color Palette (`tailwind.config.js` and `src/index.css`).
+- **Applied Palette Mappings**:
+  - **Amethyst (`#381A61`)**: Set as the primary brand color for page titles, section headlines, `btn-palette-primary` buttons ("Map the evidence", "Launch in Review Workspace"), primary links, table headers, and active filter pill backgrounds.
+  - **Gold (`#F9D14A`)**: Used as high-visibility accent and contrast tone: active example chips (`tag-palette-gold` styling), table selection highlights, KPI stat numbers in dark mode, and `btn-palette-accept-all` buttons ("Copy method as JSON").
+  - **Crimson (`#AB3329`)**: Set as the definitive color for studies contradicting the clinical claim, high risk of bias, and refutation badges (`--cs-against: #AB3329`).
+  - **Indigo / Periwinkle (`#3B64B8` / `#88A0DC`)**: Set as the supporting evidence color (`--cs-for`), harmonized directly with `palette-periwinkle` for high AAA contrast on paper/sandstone backgrounds.
+  - **Plum (`#7C4B73`)**: Set for secondary neutral stances, section eyebrows, and subtle badges (`--cs-neutral: #7C4B73`).
+  - **Amber (`#E78429`)**: Set for mixed evidence findings and warning callouts (`--cs-amber: #E78429`).
+  - **Paper & Sandstone Surface (`#FAF9F3` / `#F2F1EB`)**: Base container and panel backgrounds in light mode, with deep amethyst night (`#14111A` / `#221D2C`) in dark mode.
+- **Component Polish**:
+  - Replaced generic styles with bespoke palette classes (`btn-palette-primary`, `btn-palette-accept-all`, `cs-card`, `cs-chip`).
+  - Replaced SVG selection rings with Amethyst `#381A61` / Gold `#F9D14A`.
+  - Upgraded typography to serif (`font-serif font-bold text-[#381A61]`) across all headline banners, inspector titles, and table headers.
+

@@ -161,33 +161,33 @@ export const ClaimscapePage: React.FC = () => {
   };
 
   return (
-    <div className="cs min-h-screen bg-[var(--cs-panel)] text-[var(--cs-ink)] transition-colors duration-200">
+    <div className="cs min-h-screen bg-[#FAF9F3] dark:bg-[#14111A] text-[#141413] dark:text-[#FAF9F3] transition-colors duration-200">
       {/* Top Universal Platform Header */}
       <nav
-        className="flex items-center justify-between border-b border-[var(--cs-line)] bg-[var(--cs-card)] px-5 py-3 lg:px-8 shadow-2xs sticky top-0 z-40"
+        className="flex items-center justify-between border-b border-[#381A61]/10 bg-[#FAF9F3]/95 dark:bg-[#14111A]/95 backdrop-blur px-5 py-3 lg:px-8 shadow-2xs sticky top-0 z-40"
         aria-label="Navigation"
       >
         <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2.5 font-bold text-[17px] tracking-tight text-[var(--cs-ink)]">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-sm">
+          <Link to="/" className="flex items-center gap-2.5 font-bold text-[17px] tracking-tight text-[#381A61] dark:text-[#F9D14A]">
+            <div className="w-8 h-8 rounded-lg bg-[#381A61] flex items-center justify-center text-[#F9D14A] shadow-sm">
               <Layers className="w-4 h-4 stroke-[2.2]" />
             </div>
-            <span>RadExtract <span className="text-[var(--cs-accent-ink)] font-extrabold">ClaimScape</span></span>
+            <span>RadExtract <span className="text-[#381A61] dark:text-[#F9D14A] font-extrabold font-serif">ClaimScape</span></span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-1 text-[13.5px] font-medium text-[var(--cs-ink-2)]">
-            <span className="px-3 py-1.5 rounded-lg bg-[var(--cs-panel)] text-[var(--cs-ink)] font-semibold border border-[var(--cs-line)]">
+          <div className="hidden md:flex items-center gap-1 text-[13.5px] font-medium text-[#4A453E] dark:text-[#C8C2BA]">
+            <span className="px-3 py-1.5 rounded-lg bg-[#381A61] text-white font-semibold text-xs shadow-2xs">
               Evidence Map
             </span>
             <Link
               to="/projects"
-              className="px-3 py-1.5 rounded-lg hover:bg-[var(--cs-panel)] hover:text-[var(--cs-ink)] transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors flex items-center gap-1.5"
             >
               Systematic Reviews
             </Link>
             <a
               href="#method"
-              className="px-3 py-1.5 rounded-lg hover:bg-[var(--cs-panel)] hover:text-[var(--cs-ink)] transition-colors"
+              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors"
             >
               Methodology
             </a>
@@ -198,16 +198,16 @@ export const ClaimscapePage: React.FC = () => {
           <button
             type="button"
             onClick={toggleTheme}
-            className="p-2 rounded-lg border border-[var(--cs-line)] bg-[var(--cs-card)] text-[var(--cs-ink-2)] hover:text-[var(--cs-ink)] hover:border-[var(--cs-ink-3)] transition-colors"
+            className="p-2 rounded-lg border border-[#381A61]/15 bg-white dark:bg-[#221D2C] text-[#4A453E] dark:text-[#C8C2BA] hover:text-[#381A61] dark:hover:text-[#F9D14A] hover:border-[#381A61] transition-colors shadow-2xs"
             title="Toggle color theme"
             aria-label="Toggle color theme"
           >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {isDark ? <Sun className="w-4 h-4 text-[#F9D14A]" /> : <Moon className="w-4 h-4 text-[#381A61]" />}
           </button>
 
           <Link
             to="/projects"
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--cs-accent)] px-4 py-2 text-xs font-semibold text-white hover:opacity-90 transition-all shadow-sm active:scale-[0.98]"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#381A61] hover:bg-[#4E2487] px-4 py-2 text-xs font-bold text-white transition-all shadow-sm active:scale-[0.98]"
           >
             <span>Review Workspace</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -220,15 +220,15 @@ export const ClaimscapePage: React.FC = () => {
         {/* Section 1: Hero & Search Form */}
         <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10">
           <div className="max-w-[760px] xl:pt-2">
-            <p className="cs-eyebrow mb-2">Evidence map for any research claim</p>
-            <h1 className="text-[clamp(36px,4.8vw,56px)] font-bold leading-none tracking-[-0.035em] text-[var(--cs-ink)]">
+            <p className="cs-eyebrow text-[#7C4B73] dark:text-[#88A0DC] font-bold mb-2">Evidence map for any research claim</p>
+            <h1 className="text-[clamp(38px,5vw,60px)] font-serif font-bold leading-tight tracking-tight text-[#381A61] dark:text-[#F9D14A]">
               ClaimScape
             </h1>
-            <p className="mt-3.5 text-[16.5px] cs-soft leading-relaxed text-wrap-pretty">
+            <p className="mt-3.5 text-[16.5px] text-[#4A453E] dark:text-[#C8C2BA] leading-relaxed text-wrap-pretty font-sans">
               Type a claim and see where the literature stands on it. Up to 300 of the most relevant PubMed abstracts are read, sorted by study design and plotted by year, so you can see which kinds of evidence agree and how consensus shifted over time.
             </p>
 
-            <ul className="mt-5 grid gap-2.5 text-[13.5px] cs-soft">
+            <ul className="mt-5 grid gap-2.5 text-[13.5px] text-[#4A453E] dark:text-[#C8C2BA]">
               <li className="flex items-center gap-2.5">
                 <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
                   <circle r="6" fill="var(--cs-for)" stroke="var(--cs-surface)" strokeWidth="1.5" />
@@ -251,6 +251,7 @@ export const ClaimscapePage: React.FC = () => {
               </li>
             </ul>
           </div>
+
 
           {/* Form Card */}
           <form onSubmit={handleSimulateScan} className="cs-card grid gap-4 p-5 sm:p-6 shadow-sm">
@@ -302,7 +303,7 @@ export const ClaimscapePage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isScanning}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--cs-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60 shadow-sm transition-all"
+                className="btn-palette-primary py-2.5 px-6 text-sm"
               >
                 {isScanning ? (
                   <>
@@ -311,7 +312,7 @@ export const ClaimscapePage: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-4 h-4 text-[#F9D14A]" />
                     <span>Map the evidence</span>
                   </>
                 )}
@@ -350,8 +351,8 @@ export const ClaimscapePage: React.FC = () => {
         <section className="grid gap-4" aria-live="polite">
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
             <div className="grid max-w-[900px] gap-1.5">
-              <p className="cs-eyebrow">Synthesized Map Headline</p>
-              <h2 className="text-[clamp(22px,2.6vw,30px)] font-bold leading-tight tracking-[-0.02em] text-[var(--cs-ink)]">
+              <p className="cs-eyebrow text-[#7C4B73] dark:text-[#F9D14A] font-bold">Synthesized Map Headline</p>
+              <h2 className="text-[clamp(24px,2.8vw,34px)] font-serif font-bold leading-tight tracking-tight text-[#381A61] dark:text-[#F9D14A]">
                 {headlineData.text}
               </h2>
               {headlineData.detail && (
@@ -367,7 +368,7 @@ export const ClaimscapePage: React.FC = () => {
             <button
               type="button"
               onClick={handleCopyLink}
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--cs-line)] bg-[var(--cs-card)] px-3.5 py-2 text-sm font-semibold hover:border-[var(--cs-ink-3)] transition-colors shadow-2xs"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#381A61]/15 dark:border-white/15 bg-white dark:bg-[#221D2C] px-3.5 py-2 text-xs font-semibold text-[#381A61] dark:text-[#F9D14A] hover:border-[#381A61] hover:bg-[#381A61]/5 transition-colors shadow-2xs"
             >
               {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
               <span>{copiedLink ? "Link copied" : "Copy link"}</span>
@@ -375,31 +376,31 @@ export const ClaimscapePage: React.FC = () => {
           </div>
 
           {/* KPI Count Cards */}
-          <dl className="grid grid-cols-2 overflow-hidden rounded-2xl border border-[var(--cs-line)] bg-[var(--cs-card)] sm:grid-cols-5 shadow-2xs">
-            <div className="grid gap-0.5 px-4 py-3">
-              <dt className="text-[12px] cs-muted font-medium">PubMed matches</dt>
-              <dd className="text-[24px] font-bold tracking-tight text-[var(--cs-ink)]">{stats.totalMatches}</dd>
-              <dd className="text-[11.5px] cs-muted">before reading</dd>
+          <dl className="grid grid-cols-2 overflow-hidden rounded-2xl border border-[#381A61]/10 dark:border-white/10 bg-white dark:bg-[#221D2C] sm:grid-cols-5 shadow-2xs">
+            <div className="grid gap-0.5 px-4 py-3.5">
+              <dt className="text-[11.5px] uppercase tracking-wider text-[#6B665E] dark:text-[#968F84] font-bold">PubMed matches</dt>
+              <dd className="text-[26px] font-serif font-bold tracking-tight text-[#381A61] dark:text-[#F9D14A]">{stats.totalMatches}</dd>
+              <dd className="text-[11px] text-[#6B665E] dark:text-[#968F84]">before reading</dd>
             </div>
-            <div className="grid gap-0.5 px-4 py-3 border-l border-[var(--cs-line-soft)]">
-              <dt className="text-[12px] cs-muted font-medium">Read</dt>
-              <dd className="text-[24px] font-bold tracking-tight text-[var(--cs-ink)]">{stats.read}</dd>
-              <dd className="text-[11.5px] cs-muted">top {paperCount} by Best Match</dd>
+            <div className="grid gap-0.5 px-4 py-3.5 border-l border-[#381A61]/10 dark:border-white/10">
+              <dt className="text-[11.5px] uppercase tracking-wider text-[#6B665E] dark:text-[#968F84] font-bold">Read</dt>
+              <dd className="text-[26px] font-serif font-bold tracking-tight text-[#381A61] dark:text-[#F9D14A]">{stats.read}</dd>
+              <dd className="text-[11px] text-[#6B665E] dark:text-[#968F84]">top {paperCount} by Best Match</dd>
             </div>
-            <div className="grid gap-0.5 px-4 py-3 border-l border-[var(--cs-line-soft)]">
-              <dt className="text-[12px] cs-muted font-medium">On topic</dt>
-              <dd className="text-[24px] font-bold tracking-tight text-[var(--cs-ink)]">{stats.onTopic}</dd>
-              <dd className="text-[11.5px] cs-muted">study the claim</dd>
+            <div className="grid gap-0.5 px-4 py-3.5 border-l border-[#381A61]/10 dark:border-white/10">
+              <dt className="text-[11.5px] uppercase tracking-wider text-[#6B665E] dark:text-[#968F84] font-bold">On topic</dt>
+              <dd className="text-[26px] font-serif font-bold tracking-tight text-[#381A61] dark:text-[#F9D14A]">{stats.onTopic}</dd>
+              <dd className="text-[11px] text-[#6B665E] dark:text-[#968F84]">study the claim</dd>
             </div>
-            <div className="grid gap-0.5 px-4 py-3 border-l border-[var(--cs-line-soft)]">
-              <dt className="text-[12px] cs-muted font-medium">On the map</dt>
-              <dd className="text-[24px] font-bold tracking-tight text-[var(--cs-ink)]">{stats.onMap}</dd>
-              <dd className="text-[11.5px] cs-muted">sorted by study type</dd>
+            <div className="grid gap-0.5 px-4 py-3.5 border-l border-[#381A61]/10 dark:border-white/10">
+              <dt className="text-[11.5px] uppercase tracking-wider text-[#6B665E] dark:text-[#968F84] font-bold">On the map</dt>
+              <dd className="text-[26px] font-serif font-bold tracking-tight text-[#381A61] dark:text-[#F9D14A]">{stats.onMap}</dd>
+              <dd className="text-[11px] text-[#6B665E] dark:text-[#968F84]">sorted by study type</dd>
             </div>
-            <div className="grid gap-0.5 px-4 py-3 border-l border-[var(--cs-line-soft)]">
-              <dt className="text-[12px] cs-muted font-medium">With a verdict</dt>
-              <dd className="text-[24px] font-bold tracking-tight text-[var(--cs-ink)]">{stats.withVerdict}</dd>
-              <dd className="text-[11.5px] cs-muted">counted in Wilson CI</dd>
+            <div className="grid gap-0.5 px-4 py-3.5 border-l border-[#381A61]/10 dark:border-white/10">
+              <dt className="text-[11.5px] uppercase tracking-wider text-[#6B665E] dark:text-[#968F84] font-bold">With a verdict</dt>
+              <dd className="text-[26px] font-serif font-bold tracking-tight text-[#381A61] dark:text-[#F9D14A]">{stats.withVerdict}</dd>
+              <dd className="text-[11px] text-[#6B665E] dark:text-[#968F84]">counted in Wilson CI</dd>
             </div>
           </dl>
 
@@ -491,8 +492,8 @@ export const ClaimscapePage: React.FC = () => {
 
           {/* Right Guide & Workspace Actions */}
           <div className="grid content-start gap-5">
-            <div className="cs-card grid content-start gap-3 p-5 sm:p-6 text-[13.5px] cs-soft shadow-2xs">
-              <h2 className="text-[15.5px] font-bold text-[var(--cs-ink)]">
+            <div className="cs-card grid content-start gap-3 p-5 sm:p-6 text-[13.5px] cs-soft shadow-2xs border border-[#381A61]/10 dark:border-white/10">
+              <h2 className="text-[17px] font-serif font-bold text-[#381A61] dark:text-[#F9D14A]">
                 Reading the map
               </h2>
               <ul className="grid list-disc gap-2 pl-5 text-[13px] leading-relaxed">
@@ -503,7 +504,7 @@ export const ClaimscapePage: React.FC = () => {
                   <strong>Dot Placement:</strong> Each dot corresponds to one published paper, placed at its exact calendar publication date on the horizontal axis.
                 </li>
                 <li>
-                  <strong>Color & Opacity:</strong> Solid blue indicates agreement with the claim, solid orange indicates disagreement, and split circles indicate mixed findings. Darker saturation denotes higher model confidence.
+                  <strong>Color & Saturation:</strong> Indigo-blue denotes support for the claim, crimson denotes refutation, and split circles indicate mixed findings. Darker saturation denotes higher model confidence.
                 </li>
                 <li>
                   <strong>Wilson Interval:</strong> The right column displays the proportion of supporting evidence and its 95% Wilson score interval (minimum 3 papers required for a verdict).
@@ -512,23 +513,23 @@ export const ClaimscapePage: React.FC = () => {
             </div>
 
             {/* Quick Workspace Integration Card */}
-            <div className="cs-card p-5 sm:p-6 grid gap-3 bg-[var(--cs-panel)] border border-[var(--cs-line)]">
+            <div className="cs-card p-5 sm:p-6 grid gap-3 bg-[#F2F1EB] dark:bg-[#1A1622] border border-[#381A61]/10 dark:border-white/10">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[var(--cs-accent-ink)]" />
-                <h3 className="font-bold text-[14.5px] text-[var(--cs-ink)]">
+                <FileText className="w-4 h-4 text-[#381A61] dark:text-[#F9D14A]" />
+                <h3 className="font-serif font-bold text-[16px] text-[#381A61] dark:text-[#F9D14A]">
                   Take these studies into Systematic Review
                 </h3>
               </div>
-              <p className="text-[12.5px] cs-soft leading-relaxed">
+              <p className="text-[12.5px] text-[#4A453E] dark:text-[#C8C2BA] leading-relaxed">
                 Import these {stats.onMap} mapped PubMed papers directly into your project's PICO screening queue, full-text PDF viewer, and Risk of Bias appraisal matrix.
               </p>
               <div className="pt-1 flex flex-wrap gap-2">
                 <Link
                   to="/projects"
-                  className="btn-palette-primary text-xs py-2 px-3.5 inline-flex items-center gap-1.5"
+                  className="btn-palette-primary text-xs py-2 px-4 inline-flex items-center gap-1.5"
                 >
                   <span>Launch in Review Workspace</span>
-                  <ArrowRight className="w-3 h-3" />
+                  <ArrowRight className="w-3.5 h-3.5 text-[#F9D14A]" />
                 </Link>
               </div>
             </div>
@@ -536,26 +537,26 @@ export const ClaimscapePage: React.FC = () => {
         </section>
 
         {/* Section 5: Filterable Evidence Table */}
-        <section className="cs-card overflow-hidden shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--cs-line)] p-4 sm:p-5">
+        <section className="cs-card overflow-hidden shadow-sm border border-[#381A61]/10 dark:border-white/10">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#381A61]/10 dark:border-white/10 p-4 sm:p-5 bg-white dark:bg-[#221D2C]">
             <div>
-              <h3 className="text-[16px] font-bold text-[var(--cs-ink)]">
+              <h3 className="text-[17px] font-serif font-bold text-[#381A61] dark:text-[#F9D14A]">
                 Literature Inventory ({filteredTablePapers.length} papers)
               </h3>
-              <p className="text-[12px] cs-muted mt-0.5">
+              <p className="text-[12px] text-[#6B665E] dark:text-[#968F84] mt-0.5">
                 Click any citation row to highlight on the swarm and inspect sentence-level findings.
               </p>
             </div>
 
             <div className="w-full sm:w-72">
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-2.5 text-[var(--cs-ink-3)]" />
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#6B665E] dark:text-[#968F84]" />
                 <input
                   type="text"
                   placeholder="Filter by title, journal, or PMID..."
                   value={tableSearch}
                   onChange={(e) => setTableSearch(e.target.value)}
-                  className="cs-input pl-9 pr-3 py-1.5 text-xs"
+                  className="cs-input pl-9 pr-3 py-1.5 text-xs focus:border-[#381A61]"
                 />
               </div>
             </div>

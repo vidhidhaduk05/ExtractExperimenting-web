@@ -118,67 +118,78 @@
 
 /* =========================================================================
    ClaimScape Evidence Map System & Design Tokens
+   Harmonized with Editorial 7-Color Palette (Amethyst, Crimson, Gold, Sandstone)
    ========================================================================= */
 
 .cs {
-  --cs-panel: #f8f9fb;
-  --cs-card: #fff;
-  --cs-surface: #fff;
-  --cs-line: #e5e7eb;
-  --cs-line-soft: #eef0f3;
-  --cs-grid: #eceef1;
-  --cs-track: #edf0f4;
-  --cs-ink: #111827;
-  --cs-ink-2: #4b5563;
-  --cs-ink-3: #6b7280;
-  --cs-accent: #2563eb;
-  --cs-accent-ink: #1d4ed8;
-  --cs-accent-soft: rgba(37, 99, 235, 0.09);
-  --cs-for: #2a78d6;
-  --cs-against: #eb6834;
-  --cs-neutral: #898781;
-  --cs-for-soft: rgba(42, 120, 214, 0.12);
-  --cs-against-soft: rgba(235, 104, 52, 0.12);
-  --cs-shadow: 0 1px 2px rgba(17, 24, 39, 0.06), 0 0 0 1px rgba(17, 24, 39, 0.06);
-  --cs-tip: 0 10px 30px -8px rgba(17, 24, 39, 0.25), 0 0 0 1px rgba(17, 24, 39, 0.08);
+  --cs-panel: #F2F1EB;
+  --cs-card: #FFFFFF;
+  --cs-surface: #FFFFFF;
+  --cs-background: #FAF9F3;
+  --cs-line: rgba(56, 26, 97, 0.10);
+  --cs-line-soft: rgba(56, 26, 97, 0.05);
+  --cs-grid: #E5E1D5;
+  --cs-track: #E8E4D8;
+  --cs-ink: #141413;
+  --cs-ink-2: #4A453E;
+  --cs-ink-3: #6B665E;
+  --cs-accent: #381A61;
+  --cs-accent-ink: #381A61;
+  --cs-accent-soft: rgba(249, 209, 74, 0.22);
+  --cs-for: #3B64B8;
+  --cs-against: #AB3329;
+  --cs-neutral: #7C4B73;
+  --cs-amber: #E78429;
+  --cs-gold: #F9D14A;
+  --cs-for-soft: rgba(59, 100, 184, 0.12);
+  --cs-against-soft: rgba(171, 51, 41, 0.12);
+  --cs-shadow: 0 1px 3px rgba(56, 26, 97, 0.06), 0 0 0 1px rgba(56, 26, 97, 0.06);
+  --cs-tip: 0 12px 32px -8px rgba(56, 26, 97, 0.25), 0 0 0 1px rgba(56, 26, 97, 0.10);
 }
 
 .dark .cs,
 [data-theme="dark"] .cs {
-  --cs-panel: #111114;
-  --cs-card: #16161a;
-  --cs-surface: #16161a;
-  --cs-line: #27272a;
-  --cs-line-soft: #1f1f24;
-  --cs-grid: #222228;
-  --cs-track: #24242a;
-  --cs-ink: #f4f4f5;
-  --cs-ink-2: #b4b4bc;
-  --cs-ink-3: #8b8b95;
-  --cs-accent: #60a5fa;
-  --cs-accent-ink: #93c5fd;
-  --cs-accent-soft: rgba(96, 165, 250, 0.13);
-  --cs-for: #3987e5;
-  --cs-against: #d95926;
-  --cs-neutral: #77766f;
-  --cs-for-soft: rgba(57, 135, 229, 0.16);
-  --cs-against-soft: rgba(217, 89, 38, 0.16);
-  --cs-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
-  --cs-tip: 0 10px 30px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --cs-panel: #1A1622;
+  --cs-card: #221D2C;
+  --cs-surface: #221D2C;
+  --cs-background: #14111A;
+  --cs-line: rgba(237, 150, 140, 0.14);
+  --cs-line-soft: rgba(237, 150, 140, 0.07);
+  --cs-grid: #2A2436;
+  --cs-track: #2D273A;
+  --cs-ink: #FAF9F3;
+  --cs-ink-2: #C8C2BA;
+  --cs-ink-3: #968F84;
+  --cs-accent: #F9D14A;
+  --cs-accent-ink: #F9D14A;
+  --cs-accent-soft: rgba(249, 209, 74, 0.18);
+  --cs-for: #88A0DC;
+  --cs-against: #ED968C;
+  --cs-neutral: #7C4B73;
+  --cs-amber: #E78429;
+  --cs-gold: #F9D14A;
+  --cs-for-soft: rgba(136, 160, 220, 0.18);
+  --cs-against-soft: rgba(237, 150, 140, 0.18);
+  --cs-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --cs-tip: 0 12px 32px -8px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .cs .cs-mono {
-  font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
 
 .cs .cs-eyebrow {
-  font-family: ui-monospace, Menlo, monospace;
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--cs-accent-ink);
-  font-size: 12px;
-  font-weight: 600;
+  color: #7C4B73;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dark .cs .cs-eyebrow {
+  color: #F9D14A;
 }
 
 .cs .cs-card {
@@ -200,10 +211,16 @@
 }
 
 .cs .cs-link {
-  color: var(--cs-accent-ink);
+  color: #381A61;
   text-underline-offset: 2px;
   text-decoration: underline;
-  text-decoration-color: rgba(37, 99, 235, 0.4);
+  text-decoration-color: rgba(56, 26, 97, 0.3);
+  font-weight: 600;
+}
+
+.dark .cs .cs-link {
+  color: #F9D14A;
+  text-decoration-color: rgba(249, 209, 74, 0.4);
 }
 
 .cs .cs-chip {
@@ -213,20 +230,36 @@
   border-radius: 999px;
   align-items: center;
   gap: 6px;
-  padding: 5px 12px;
-  font-size: 13px;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  padding: 5px 13px;
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: all 0.15s ease;
   display: inline-flex;
 }
 
 .cs .cs-chip:hover {
-  border-color: var(--cs-ink-3);
+  border-color: #381A61;
+  color: #381A61;
+}
+
+.dark .cs .cs-chip:hover {
+  border-color: #F9D14A;
+  color: #F9D14A;
 }
 
 .cs .cs-chip[aria-pressed="true"] {
-  background: var(--cs-ink);
-  color: var(--cs-card);
-  border-color: var(--cs-ink);
+  background: #381A61;
+  color: #FAF9F3;
+  border-color: #381A61;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(56, 26, 97, 0.18);
+}
+
+.dark .cs .cs-chip[aria-pressed="true"] {
+  background: #F9D14A;
+  color: #381A61;
+  border-color: #F9D14A;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .cs .cs-input {
@@ -234,14 +267,19 @@
   border: 1px solid var(--cs-line);
   width: 100%;
   color: var(--cs-ink);
-  border-radius: 10px;
+  border-radius: 12px;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .cs .cs-input:focus {
-  border-color: var(--cs-accent);
-  box-shadow: 0 0 0 3px var(--cs-accent-soft);
+  border-color: #381A61;
+  box-shadow: 0 0 0 3px rgba(56, 26, 97, 0.12);
+}
+
+.dark .cs .cs-input:focus {
+  border-color: #F9D14A;
+  box-shadow: 0 0 0 3px rgba(249, 209, 74, 0.18);
 }
 
 .cs .cs-seg {
@@ -254,8 +292,9 @@
 
 .cs .cs-seg button {
   color: var(--cs-ink-2);
-  padding: 7px 12px;
-  font-size: 13px;
+  padding: 7px 13px;
+  font-size: 12.5px;
+  font-weight: 500;
   transition: background 0.15s, color 0.15s;
 }
 
@@ -264,9 +303,15 @@
 }
 
 .cs .cs-seg button[aria-pressed="true"] {
-  background: var(--cs-ink);
-  color: var(--cs-card);
-  font-weight: 600;
+  background: #381A61;
+  color: #FAF9F3;
+  font-weight: 700;
+}
+
+.dark .cs .cs-seg button[aria-pressed="true"] {
+  background: #F9D14A;
+  color: #381A61;
+  font-weight: 700;
 }
 
 .cs .cs-toggle {
@@ -305,16 +350,20 @@
 }
 
 .cs .cs-toggle input:checked {
-  background: var(--cs-accent);
+  background: #381A61;
 }
 
-.cs .cs-toggle input:checked:after {
-  transform: translate(14px);
+.dark .cs .cs-toggle input:checked {
+  background: #F9D14A;
 }
 
 .cs .cs-toggle input:focus-visible {
-  outline: 2px solid var(--cs-accent);
+  outline: 2px solid #381A61;
   outline-offset: 2px;
+}
+
+.dark .cs .cs-toggle input:focus-visible {
+  outline-color: #F9D14A;
 }
 
 .cs .cs-map {
@@ -385,17 +434,25 @@
 
 .cs .cs-sel {
   fill: none;
-  stroke: var(--cs-ink);
-  stroke-width: 2px;
+  stroke: #381A61;
+  stroke-width: 2.5px;
   pointer-events: none;
   animation: 0.25s ease-out cs-pop;
 }
 
+.dark .cs .cs-sel {
+  stroke: #F9D14A;
+}
+
 .cs .cs-hov {
   fill: none;
-  stroke: var(--cs-ink-3);
+  stroke: #7C4B73;
   stroke-width: 1.5px;
   pointer-events: none;
+}
+
+.dark .cs .cs-hov {
+  stroke: #88A0DC;
 }
 
 .cs .cs-axis text {
@@ -430,15 +487,19 @@
 }
 
 .cs .cs-ci > i {
-  background: var(--cs-ink-3);
+  background: #381A61;
   border-radius: 2px;
   height: 2px;
   position: absolute;
   top: 4px;
 }
 
+.dark .cs .cs-ci > i {
+  background: #F9D14A;
+}
+
 .cs .cs-ci > b {
-  background: var(--cs-ink);
+  background: #381A61;
   width: 8px;
   height: 8px;
   box-shadow: 0 0 0 2px var(--cs-card);
@@ -446,6 +507,10 @@
   margin-left: -4px;
   position: absolute;
   top: 1px;
+}
+
+.dark .cs .cs-ci > b {
+  background: #F9D14A;
 }
 
 .cs .cs-ci > s {
@@ -494,10 +559,10 @@
 .cs .cs-abstract mark {
   background: color-mix(in srgb, var(--c) 16%, transparent);
   color: inherit;
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--c) 70%, transparent);
+  box-shadow: inset 0 -2.5px 0 color-mix(in srgb, var(--c) 80%, transparent);
   border-radius: 3px;
-  padding: 1px 4px;
-  font-weight: 500;
+  padding: 2px 5px;
+  font-weight: 600;
 }
 
 .cs .cs-probs {
@@ -530,15 +595,20 @@
 
 .cs .cs-table th {
   text-align: left;
-  color: var(--cs-ink-3);
+  color: #381A61;
   border-bottom: 1px solid var(--cs-line);
-  background: var(--cs-card);
+  background: var(--cs-panel);
   z-index: 1;
   padding: 10px 14px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   position: sticky;
   top: 0;
+}
+
+.dark .cs .cs-table th {
+  color: #F9D14A;
+  background: var(--cs-panel);
 }
 
 .cs .cs-table td {
@@ -548,7 +618,19 @@
 }
 
 .cs .cs-table tr[data-sel="true"] td {
-  background: var(--cs-accent-soft);
+  background: rgba(249, 209, 74, 0.22);
+}
+
+.cs .cs-table tr[data-sel="true"] td:first-child {
+  box-shadow: inset 3px 0 0 #381A61;
+}
+
+.dark .cs .cs-table tr[data-sel="true"] td {
+  background: rgba(249, 209, 74, 0.12);
+}
+
+.dark .cs .cs-table tr[data-sel="true"] td:first-child {
+  box-shadow: inset 3px 0 0 #F9D14A;
 }
 
 .cs .cs-table tbody tr {
