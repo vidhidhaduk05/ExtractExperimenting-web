@@ -44,6 +44,7 @@ dependencies = [
     # PDF processing
     "pypdfium2>=4.0.0",
     "pdfplumber>=0.10.0",
+    "pymupdf>=1.23.0",
 
     # Data analysis (Phase 4)
     "numpy>=1.24.0",
