@@ -33,6 +33,7 @@ def client():
     app.dependency_overrides[get_current_user_optional] = lambda: {"user_id": "viewer"}
     with TestClient(app) as test_client:
         yield test_client
+    app.dependency_overrides.clear()
     conn.close()
 
 
