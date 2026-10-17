@@ -310,3 +310,12 @@ un_full_pipeline) verify pause and cancellation cleanly between individual studi
   - Updated `config.py` defaults to point directly to Biomni-R0.
   - Updated `dev-start.py` to auto-detect active Biomni server on port 18000 and export correct environment variables.
   - Verified `radextract_platform/backend/tests/test_settings.py` passes 14/14 tests.
+
+## 2026-10-17 — Screening Clarification UX: Universal Inline Workspace & Scoped Toast Alerts
+
+- **Problem**: Bottom-right toast popups for AI screening clarifications were interrupting reviewer navigation across all screens and obscuring screening workflows.
+- **Decision & Solution**:
+  1. **Scoped Alerts on Non-Screening Pages**: Bottom-right notification toasts and pills are now strictly suppressed on screening routes (`/projects/:id/screening*`). If the reviewer navigates to other screens (e.g., PICO, Protocol, Meta-analysis), toasts trigger as non-intrusive notifications with a direct shortcut link (`Open in Screening Workspace`).
+  2. **Universal Inline Clarification Workspace**: When viewing the screening interface (`ScreeningPage`), clarification questions are displayed directly *then-and-there* in a dedicated, high-contrast reviewer banner right above the study queue.
+  3. **One-Click Study Inspection & Multi-Question Carousel**: Reviewers can cycle through pending clarification questions (`< Prev`, `Next >`), immediately jump to and highlight the corresponding study in the split document viewer (`Inspect study details in viewer ↓`), and select decisions (with custom freetext support) with instant re-evaluation (`Submit & Re-Screen`).
+  4. **Interactive Status Filtering**: Clicking the "Questions" stat card in the screening header toggles filter mode to `awaiting_clarification` to immediately isolate studies pending clarification.
