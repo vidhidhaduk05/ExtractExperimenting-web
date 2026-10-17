@@ -505,6 +505,8 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
     """Auto-assess Risk of Bias for a study using RCT-Reviewer Cochrane domain engine."""
     from services.rct_rob_engine import assess_study_risk_of_bias
 
+    check_project_access(conn, project_id, user)
+
     try:
         doc = conn.execute(
             "SELECT title, abstract FROM studies WHERE study_id = ?", (study_id,)
@@ -541,8 +543,7 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
 
         if existing:
             conn.execute(
-                """UPDATE rob_assessments SET 
-    check_project_access(conn, project_id, user)
+                """UPDATE rob_assessments SET
                    overall_judgment = ?,
                    overall_risk = ?,
                    ai_prefilled = 1,

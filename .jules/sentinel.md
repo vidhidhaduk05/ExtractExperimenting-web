@@ -1,4 +1,4 @@
-## 2026-10-15 - DOMParser SVG Sanitization for dangerouslySetInnerHTML
-**Vulnerability:** Cross-Site Scripting (XSS) risk when rendering SVG strings returned from API endpoints (such as robvis figures or R plot diagrams) using `dangerouslySetInnerHTML`. Malicious SVGs could include embedded `<script>` tags, inline event handler attributes (`onload`, `onclick`), or `javascript:` URIs.
-**Learning:** Browser native `DOMParser` provides a safe, dependency-free way to parse and clean SVG strings. However, if XML parsing fails due to non-strict SVG markup, parsing as `text/html` fallback is necessary.
-**Prevention:** Always pass dynamic or third-party SVG strings through `sanitizeSvg` before supplying them to React's `dangerouslySetInnerHTML`.
+## 2025-05-18 - Missing Project Authorization in Auto-Assess Endpoint
+**Vulnerability:** The `/api/projects/{project_id}/studies/{study_id}/auto-assess` endpoint in `routers/rob.py` was missing `check_project_access(conn, project_id, user)`, allowing unauthorized users to execute AI Risk of Bias auto-assessments. In addition, the python authorization call had been mistakenly copy-pasted directly into a multi-line SQL `UPDATE` string.
+**Learning:** Python route parameters must always be explicitly validated via `check_project_access(conn, project_id, user)` at the top of route handler functions before executing SQL statements. Multi-line SQL strings should be checked for accidentally copy-pasted code.
+**Prevention:** Ensure every project-level and study-level route handler calls `check_project_access(conn, project_id, user)` before interacting with the database or triggering background tasks.
