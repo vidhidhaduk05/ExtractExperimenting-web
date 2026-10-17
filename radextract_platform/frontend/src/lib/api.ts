@@ -2790,31 +2790,31 @@ export const api = {
 
       const patterns: Record<keyof Omit<PicoExtractionResponse, "extraction_confidence">, RegExp[]> = {
         population: [
-          /(?:population|participants|patients|eligibility\s+criteria|inclusion\s+criteria|target\s+population)\s*[:-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:we\s+(?:will\s+)?include|patients\s+with|participants\s+with|study\s+population\s+(?:was|is|consisted\s+of|comprised))\s*[:-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
+          /(?:population|participants|patients|eligibility\s+criteria|inclusion\s+criteria|target\s+population)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
+          /(?:we\s+(?:will\s+)?include|patients\s+with|participants\s+with|study\s+population\s+(?:was|is|consisted\s+of|comprised))\s*[:\-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
         index_test: [
-          /(?:index\s+test[s]?|test\s+under\s+evaluation|intervention[s]?|imaging\s+protocol|imaging\s+technique)\s*[:-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:index\s+test\s+(?:was|is|used)|intervention\s+(?:was|is))\s*[:-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
+          /(?:index\s+test[s]?|test\s+under\s+evaluation|intervention[s]?|imaging\s+protocol|imaging\s+technique)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
+          /(?:index\s+test\s+(?:was|is|used)|intervention\s+(?:was|is))\s*[:\-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
         comparator: [
-          /(?:comparator[s]?|reference\s+standard|reference\s+test|comparison|control|gold\s+standard)\s*[:-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:reference\s+standard\s+(?:was|is)|comparator\s+(?:was|is))\s*[:-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
+          /(?:comparator[s]?|reference\s+standard|reference\s+test|comparison|control|gold\s+standard)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
+          /(?:reference\s+standard\s+(?:was|is)|comparator\s+(?:was|is))\s*[:\-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
         outcome: [
-          /(?:primary\s+outcome[s]?|secondary\s+outcome[s]?|outcome[s]?|endpoint[s]?|target\s+condition)\s*[:-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:primary\s+outcome\s+(?:was|is)|we\s+(?:assessed|measured|evaluated))\s*[:-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
+          /(?:primary\s+outcome[s]?|secondary\s+outcome[s]?|outcome[s]?|endpoint[s]?|target\s+condition)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
+          /(?:primary\s+outcome\s+(?:was|is)|we\s+(?:assessed|measured|evaluated))\s*[:\-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
         study_design: [
-          /(?:study\s+design|methodology|methods|trial\s+design|design)\s*[:-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
+          /(?:study\s+design|methodology|methods|trial\s+design|design)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
           /(?:this\s+(?:is|was)\s+(?:a|an)\s+)([^.\n]+(?:study|trial|review|cohort|series))/i,
         ],
         research_question: [
-          /(?:research\s+question|objective[s]?|aim[s]?|purpose|goal[s]?)\s*[:-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
+          /(?:research\s+question|objective[s]?|aim[s]?|purpose|goal[s]?)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
           /(?:the\s+(?:objective|aim|purpose)\s+(?:of\s+this\s+study|was\s+to|is\s+to)\s*)([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
         hypothesis: [
-          /(?:hypothesis|hypotheses|primary\s+hypothesis|null\s+hypothesis|alternative\s+hypothesis)\s*[:-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
+          /(?:hypothesis|hypotheses|primary\s+hypothesis|null\s+hypothesis|alternative\s+hypothesis)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
           /(?:we\s+hypothes(?:ize|ized)\s+(?:that\s+)?)([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
       };
