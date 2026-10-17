@@ -19,6 +19,7 @@ bcrypt>=4.0.0,<4.1
 # Document parsing & PDF processing
 pypdfium2>=4.0.0
 pdfplumber>=0.10.0
+pymupdf>=1.23.0
 
 # Statistical analysis & metadata
 numpy>=1.24.0

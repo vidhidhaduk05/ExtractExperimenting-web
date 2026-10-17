@@ -1,0 +1,4 @@
+## 2026-09-01 - DOM XSS Prevention in Dynamic SVG Rendering
+**Vulnerability:** Dynamic SVG strings returned from backend endpoints (such as R `robvis` and `PRISMA2020` plot generators) were injected directly into React DOM using `dangerouslySetInnerHTML`, exposing the frontend to DOM-based XSS if malicious tags (`<script>`, `<iframe>`, `foreignObject`) or inline event handlers (`onload`, `onclick`) were embedded in the SVG markup.
+**Learning:** React does not automatically sanitize raw SVG/HTML strings passed to `dangerouslySetInnerHTML`. Browsers parse and execute embedded `<script>` elements and event handlers (`onload=...`, `javascript:`) inside SVG contexts if inserted raw into the document.
+**Prevention:** Always pass dynamic raw SVG markup through DOMParser-based sanitization (`sanitizeSvg` in `src/lib/sanitize.ts`) before rendering with `dangerouslySetInnerHTML`.
