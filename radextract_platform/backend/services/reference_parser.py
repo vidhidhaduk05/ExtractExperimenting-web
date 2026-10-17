@@ -44,6 +44,20 @@ _AND_SPLIT_RE = re.compile(r"\s+and\s+")
 _CSV_AUTHOR_SPLIT_RE = re.compile(r";\s*|\s+and\s+")
 _FILE_EXT_RE = re.compile(r"\.([^.]+)$")
 
+# Additional pre-compiled regex patterns for format detection & EndNote/WoS parsing
+_ENDNOTE_TAG_LINE_RE = re.compile(r"^(%[A-Za-z0-9])\s*(.*)$")
+_WOS_TAG_LINE_RE = re.compile(r"^([A-Z0-9]{2})\s+(.*)$")
+_ENDNOTE_TAG_START_RE = re.compile(r"^\s*%0\s+", re.MULTILINE)
+_ENDNOTE_AUTHOR_TAG_RE = re.compile(r"^\s*%A\s+", re.MULTILINE)
+_ENDNOTE_TITLE_TAG_RE = re.compile(r"^\s*%T\s+", re.MULTILINE)
+_WOS_PT_RE = re.compile(r"^PT\s+[A-Za-z]+", re.MULTILINE)
+_WOS_TI_RE = re.compile(r"^TI\s+", re.MULTILINE)
+_NBIB_PMID_RE = re.compile(r"^PMID\s*-\s", re.MULTILINE)
+_RIS_TY_RE = re.compile(r"^TY\s{2,}-\s", re.MULTILINE)
+_BIBTEX_ENTRY_RE = re.compile(r"^@\w+\s*\{", re.MULTILINE)
+_BIBTEX_ENTRY_ALT_RE = re.compile(r"^@\w+\{", re.MULTILINE)
+_OVID_AUTHOR_RE = re.compile(r"^\s*1\.\s+Author", re.MULTILINE)
+
 
 # ── RIS field tag mapping ──
 
@@ -1009,7 +1023,7 @@ def parse_endnote_tagged(content: str) -> list[dict]:
 
     lines = content.split("\n")
     for line in lines:
-        match = re.match(r"^(%[A-Za-z0-9])\s*(.*)$", line)
+        match = _ENDNOTE_TAG_LINE_RE.match(line)
         if match:
             tag = match.group(1)
             val = match.group(2).strip()
@@ -1055,13 +1069,13 @@ def _add_endnote_tagged_field(record: dict, tag: str, value: str) -> None:
             record["authors"] = []
         record["authors"].append(value)
     elif field_name == "publication_year":
-        year_match = re.search(r"(\d{4})", value)
+        year_match = _YEAR_RE.search(value)
         if year_match:
             record["publication_year"] = int(year_match.group(1))
     elif field_name == "doi":
-        record["doi"] = re.sub(r"^https?://(dx\.)?doi\.org/", "", value, flags=re.IGNORECASE).strip().rstrip(".")
+        record["doi"] = _DOI_PREFIX_RE.sub("", value).strip().rstrip(".")
     elif field_name == "pmid":
-        pmid_clean = re.sub(r"[^\d]", "", value)
+        pmid_clean = _NON_DIGIT_RE.sub("", value)
         if pmid_clean:
             record["pmid"] = pmid_clean
     else:
@@ -1113,7 +1127,7 @@ def parse_wos_ciw(content: str) -> list[dict]:
     lines = content.split("\n")
     for line in lines:
         # Check for 2-letter tag at start of line followed by space (WoS standard: "TI ", "AU ", "ER")
-        tag_match = re.match(r"^([A-Z0-9]{2})\s+(.*)$", line)
+        tag_match = _WOS_TAG_LINE_RE.match(line)
         if tag_match:
             tag = tag_match.group(1)
             val = tag_match.group(2).strip()
@@ -1171,13 +1185,13 @@ def _add_wos_field(record: dict, tag: str, value: str) -> None:
         author_lines = [a.strip() for a in value.split("\n") if a.strip()]
         record["authors_full"].extend(author_lines)
     elif field_name == "publication_year":
-        year_match = re.search(r"(\d{4})", value)
+        year_match = _YEAR_RE.search(value)
         if year_match:
             record["publication_year"] = int(year_match.group(1))
     elif field_name == "doi":
-        record["doi"] = re.sub(r"^https?://(dx\.)?doi\.org/", "", value, flags=re.IGNORECASE).strip().rstrip(".")
+        record["doi"] = _DOI_PREFIX_RE.sub("", value).strip().rstrip(".")
     elif field_name == "pmid":
-        pmid_clean = re.sub(r"[^\d]", "", value)
+        pmid_clean = _NON_DIGIT_RE.sub("", value)
         if pmid_clean:
             record["pmid"] = pmid_clean
     elif field_name == "abstract":
@@ -1209,7 +1223,7 @@ def detect_reference_format(content: str, filename: str = "") -> str:
 
     ext = ""
     if filename:
-        ext_match = re.search(r"\.([^.]+)$", filename)
+        ext_match = _FILE_EXT_RE.search(filename)
         ext = ext_match.group(1).lower() if ext_match else ""
 
     sample = content[:3000]
@@ -1231,17 +1245,17 @@ def detect_reference_format(content: str, filename: str = "") -> str:
         return "EndNote XML"
 
     # Content-based detection
-    if re.search(r"^\s*%0\s+", sample, re.MULTILINE) or (re.search(r"^\s*%A\s+", sample, re.MULTILINE) and re.search(r"^\s*%T\s+", sample, re.MULTILINE)):
+    if _ENDNOTE_TAG_START_RE.search(sample) or (_ENDNOTE_AUTHOR_TAG_RE.search(sample) and _ENDNOTE_TITLE_TAG_RE.search(sample)):
         return "EndNote Tagged Export"
-    if re.search(r"^PT\s+[A-Za-z]+", sample, re.MULTILINE) and re.search(r"^TI\s+", sample, re.MULTILINE):
+    if _WOS_PT_RE.search(sample) and _WOS_TI_RE.search(sample):
         return "Web of Science CIW"
-    if re.search(r"^PMID\s*-\s", sample, re.MULTILINE):
+    if _NBIB_PMID_RE.search(sample):
         return "PubMed/NBIB"
-    if re.search(r"^TY\s{2,}-\s", sample, re.MULTILINE):
+    if _RIS_TY_RE.search(sample):
         return "RIS"
-    if re.search(r"^@\w+\s*\{", sample, re.MULTILINE):
+    if _BIBTEX_ENTRY_RE.search(sample):
         return "BibTeX"
-    if re.search(r"^\s*1\.\s+Author", sample, re.MULTILINE):
+    if _OVID_AUTHOR_RE.search(sample):
         return "OVID/MEDLINE"
 
     first_line = content.split("\n")[0] if "\n" in content else ""
@@ -1322,7 +1336,7 @@ def parse_references_detailed(
 
         # Clean DOI if present
         if r.get("doi"):
-            r["doi"] = re.sub(r"^https?://(dx\.)?doi\.org/", "", r["doi"], flags=re.IGNORECASE).strip().rstrip(".")
+            r["doi"] = _DOI_PREFIX_RE.sub("", r["doi"]).strip().rstrip(".")
 
         valid_records.append(r)
 
@@ -1353,7 +1367,7 @@ def parse_csv_mapped(content: str, custom_mapping: dict[str, str]) -> list[dict]
                     record[target_field] = val
 
         if record.get("publication_year"):
-            m = re.search(r"(\d{4})", str(record["publication_year"]))
+            m = _YEAR_RE.search(str(record["publication_year"]))
             if m:
                 record["publication_year"] = int(m.group(1))
 
@@ -1405,19 +1419,19 @@ def parse_file(content: str, filename: str = "") -> list[dict]:
         return parse_endnote_xml(content)
     elif ext == "txt":
         # Check specific formats
-        if "FN Clarivate" in content[:1000] or "FN Thomson" in content[:1000] or (re.search(r"^PT\s+[A-Za-z]+", content[:1000], re.MULTILINE) and re.search(r"^TI\s+", content[:1000], re.MULTILINE)):
+        if "FN Clarivate" in content[:1000] or "FN Thomson" in content[:1000] or (_WOS_PT_RE.search(content[:1000]) and _WOS_TI_RE.search(content[:1000])):
             return parse_wos_ciw(content)
-        if re.search(r"^\s*%0\s+", content[:1000], re.MULTILINE):
+        if _ENDNOTE_TAG_START_RE.search(content[:1000]):
             return parse_endnote_tagged(content)
         if "<PubmedArticle" in content or "<PubmedArticleSet" in content:
             return parse_pubmed_xml(content)
-        if re.search(r"^\s*1\.\s+Author", content, re.MULTILINE):
+        if _OVID_AUTHOR_RE.search(content):
             return parse_ovid(content)
-        if re.search(r"^PMID\s*-\s", content, re.MULTILINE):
+        if _NBIB_PMID_RE.search(content):
             return parse_nbib(content)
-        if re.search(r"^TY\s{2,}-\s", content, re.MULTILINE):
+        if _RIS_TY_RE.search(content):
             return parse_ris(content)
-        if re.search(r"^@\w+\{", content, re.MULTILINE):
+        if _BIBTEX_ENTRY_ALT_RE.search(content):
             return parse_bibtex(content)
         if "," in content.split("\n")[0] or "\t" in content.split("\n")[0]:
             return parse_csv(content)
