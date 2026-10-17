@@ -29,6 +29,7 @@ import {
 import { ClaimscapeMap } from "../components/claimscape/ClaimscapeMap";
 import { PaperInspector } from "../components/claimscape/PaperInspector";
 import { MethodologySection } from "../components/claimscape/MethodologySection";
+import { api } from "../lib/api";
 
 export const ClaimscapePage: React.FC = () => {
   // Theme state
@@ -48,6 +49,21 @@ export const ClaimscapePage: React.FC = () => {
     }
   };
 
+  // Active dataset state (live backend or cached preset)
+  const [dataset, setDataset] = useState<{
+    claim: string;
+    query: string;
+    total: number;
+    papers: Paper[];
+    judgments: Judgment[];
+  }>({
+    claim: hrtDataRaw.claim,
+    query: hrtDataRaw.query,
+    total: hrtDataRaw.total || 593,
+    papers: hrtDataRaw.papers as unknown as Paper[],
+    judgments: hrtDataRaw.judgments as unknown as Judgment[],
+  });
+
   // Form states
   const [claim, setClaim] = useState<string>(hrtDataRaw.claim);
   const [query, setQuery] = useState<string>(hrtDataRaw.query);
@@ -58,6 +74,7 @@ export const ClaimscapePage: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState<string>("hrt");
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [evalSpeed, setEvalSpeed] = useState<number | null>(null);
 
   // Table filter search
   const [tableSearch, setTableSearch] = useState<string>("");
@@ -65,22 +82,18 @@ export const ClaimscapePage: React.FC = () => {
   // Selected paper in inspector (default to the landmark WHI trial or Cochrane review)
   const [selectedPmid, setSelectedPmid] = useState<string>("41307293");
 
-  // Parse raw JSON papers & judgments
-  const rawPapers = hrtDataRaw.papers as unknown as Paper[];
-  const rawJudgments = hrtDataRaw.judgments as unknown as Judgment[];
-
   // Map judgments by PMID
   const judgmentMap = useMemo(() => {
     const map = new Map<string, Judgment>();
-    for (const j of rawJudgments) {
+    for (const j of dataset.judgments) {
       map.set(j.pmid, j);
     }
     return map;
-  }, [rawJudgments]);
+  }, [dataset.judgments]);
 
   // Classify all papers
   const processedPapers = useMemo(() => {
-    return rawPapers.map((paper) => {
+    return dataset.papers.map((paper) => {
       const judgment = judgmentMap.get(paper.pmid) || {
         pmid: paper.pmid,
         onTopic: 1,
@@ -90,7 +103,7 @@ export const ClaimscapePage: React.FC = () => {
       };
       return classifyPaper(paper, judgment);
     });
-  }, [rawPapers, judgmentMap]);
+  }, [dataset.papers, judgmentMap]);
 
   // Compute tier summaries and metrics
   const summaries = useMemo(() => {
@@ -116,13 +129,13 @@ export const ClaimscapePage: React.FC = () => {
     );
 
     return {
-      totalMatches: hrtDataRaw.total || 593,
+      totalMatches: dataset.total || 593,
       read: Math.min(paperCount, processedPapers.length),
       onTopic: onTopicList.length,
       onMap: mappedList.length,
       withVerdict: withVerdictList.length
     };
-  }, [processedPapers, paperCount, directOnly]);
+  }, [processedPapers, paperCount, directOnly, dataset.total]);
 
   // Filtered papers for bottom data table
   const filteredTablePapers = useMemo(() => {
@@ -140,18 +153,69 @@ export const ClaimscapePage: React.FC = () => {
       });
   }, [processedPapers, directOnly, tableSearch]);
 
-  const handleSelectExample = (ex: typeof PRESET_EXAMPLES[0]) => {
+  const handleSelectExample = async (ex: typeof PRESET_EXAMPLES[0]) => {
     setSelectedExample(ex.id);
     setClaim(ex.claim);
     setQuery(ex.query);
+
+    setIsScanning(true);
+    try {
+      const res = await api.evaluateClaimscape(ex.claim, ex.query, paperCount);
+      if (res && res.papers && res.papers.length > 0) {
+        setDataset({
+          claim: res.claim,
+          query: res.query,
+          total: res.total || res.papers.length,
+          papers: res.papers as Paper[],
+          judgments: res.judgments as Judgment[],
+        });
+        if (res.papers[0]?.pmid) {
+          setSelectedPmid(res.papers[0].pmid);
+        }
+        if (res.elapsed_ms) {
+          setEvalSpeed(res.elapsed_ms);
+        }
+      }
+    } catch {
+      // Fallback to local embedded dataset
+      setDataset({
+        claim: ex.claim,
+        query: ex.query,
+        total: hrtDataRaw.total || 593,
+        papers: hrtDataRaw.papers as unknown as Paper[],
+        judgments: hrtDataRaw.judgments as unknown as Judgment[],
+      });
+    } finally {
+      setIsScanning(false);
+    }
   };
 
-  const handleSimulateScan = (e: React.FormEvent) => {
+  const handleMapEvidence = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsScanning(true);
-    setTimeout(() => {
+    setEvalSpeed(null);
+    try {
+      const res = await api.evaluateClaimscape(claim, query, paperCount);
+      if (res && res.papers && res.papers.length > 0) {
+        setDataset({
+          claim: res.claim || claim,
+          query: res.query || query,
+          total: res.total || res.papers.length,
+          papers: res.papers as Paper[],
+          judgments: res.judgments as Judgment[],
+        });
+        if (res.papers[0]?.pmid) {
+          setSelectedPmid(res.papers[0].pmid);
+        }
+        if (res.elapsed_ms) {
+          setEvalSpeed(res.elapsed_ms);
+        }
+      }
+    } catch (err) {
+      console.warn("Live evaluate fallback to active dataset:", err);
+    } finally {
       setIsScanning(false);
-    }, 900);
+    }
   };
 
   const handleCopyLink = () => {
@@ -254,7 +318,7 @@ export const ClaimscapePage: React.FC = () => {
 
 
           {/* Form Card */}
-          <form onSubmit={handleSimulateScan} className="cs-card grid gap-4 p-5 sm:p-6 shadow-sm">
+          <form onSubmit={handleMapEvidence} className="cs-card grid gap-4 p-5 sm:p-6 shadow-sm">
             <label className="grid gap-2">
               <span className="text-[13px] font-semibold cs-soft">Claim statement</span>
               <textarea
@@ -308,7 +372,7 @@ export const ClaimscapePage: React.FC = () => {
                 {isScanning ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Evaluating...</span>
+                    <span>Evaluating with Laya...</span>
                   </>
                 ) : (
                   <>
@@ -351,7 +415,15 @@ export const ClaimscapePage: React.FC = () => {
         <section className="grid gap-4" aria-live="polite">
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
             <div className="grid max-w-[900px] gap-1.5">
-              <p className="cs-eyebrow text-[#7C4B73] dark:text-[#F9D14A] font-bold">Synthesized Map Headline</p>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <p className="cs-eyebrow text-[#7C4B73] dark:text-[#F9D14A] font-bold">Synthesized Map Headline</p>
+                {evalSpeed !== null && (
+                  <span className="tag-palette-gold text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 shadow-2xs">
+                    <span>⚡ Laya Fast Pipeline:</span>
+                    <span>{evalSpeed < 10 ? `${evalSpeed.toFixed(1)}ms (Cached)` : `${(evalSpeed / 1000).toFixed(2)}s`}</span>
+                  </span>
+                )}
+              </div>
               <h2 className="text-[clamp(24px,2.8vw,34px)] font-serif font-bold leading-tight tracking-tight text-[#381A61] dark:text-[#F9D14A]">
                 {headlineData.text}
               </h2>

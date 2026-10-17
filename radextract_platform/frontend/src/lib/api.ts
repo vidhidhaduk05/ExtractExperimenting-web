@@ -2450,6 +2450,27 @@ export const api = {
   // Health
   health: () => request<{ status: string }>("/health"),
 
+  // ClaimScape Fast Pipeline
+  evaluateClaimscape: (claim: string, query?: string, count: number = 100) =>
+    request<{
+      claim: string;
+      query: string;
+      total: number;
+      papers: any[];
+      judgments: any[];
+      elapsed_ms: number;
+    }>("/claimscape/evaluate", {
+      method: "POST",
+      body: JSON.stringify({ claim, query, count }),
+    }),
+  getClaimscapeStatus: () =>
+    request<{
+      status: string;
+      engine: string;
+      model: string;
+      max_papers_per_batch: number;
+    }>("/claimscape/status"),
+
   // Projects
   listProjects: () => request<Project[]>("/projects"),
   getProject: (id: string) => request<Project>(`/projects/${id}`),

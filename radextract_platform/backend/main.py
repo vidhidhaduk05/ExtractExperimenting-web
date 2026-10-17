@@ -39,6 +39,7 @@ from routers import (
     agent,
     fulltext,
     rob_run,
+    claimscape,
     settings as system_settings,
 )
 
@@ -147,6 +148,7 @@ def create_app() -> FastAPI:
     app.include_router(agent.router)
     app.include_router(fulltext.router)
     app.include_router(rob_run.router)
+    app.include_router(claimscape.router)
     app.include_router(system_settings.router)
 
     # Health check
