@@ -33,6 +33,7 @@ def client():
     with TestClient(app) as result:
         result.store = store
         yield result
+    app.dependency_overrides.clear()
     connection.close()
 
 

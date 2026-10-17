@@ -121,6 +121,11 @@ export function ScreeningPage() {
   const [freetextAnswer, setFreetextAnswer] = useState<string>("");
   const [resolutionFeedback, setResolutionFeedback] = useState<Record<string, ClarificationAnswerResponse>>({});
 
+  // Universal Inline Clarification Workspace state
+  const [universalClarificationIdx, setUniversalClarificationIdx] = useState(0);
+  const [universalSelectedOption, setUniversalSelectedOption] = useState<string>("");
+  const [universalFreetext, setUniversalFreetext] = useState<string>("");
+
   // Exclude reason code for selected study
   const [excludeReasonCode, setExcludeReasonCode] = useState<string>("");
   const [excludeReasonText, setExcludeReasonText] = useState<string>("");
@@ -207,6 +212,14 @@ export function ScreeningPage() {
     queryKey: ["study-clarifications", selectedStudyId],
     queryFn: () => api.getStudyClarifications(selectedStudyId!),
     enabled: !!selectedStudyId,
+  });
+
+  // Universal pending clarifications for the entire project during screening
+  const { data: pendingProjectClarifications = [] } = useQuery<ClarificationQuestion[]>({
+    queryKey: ["pending-clarifications", projectId],
+    queryFn: () => (projectId ? api.listClarifications(projectId, "pending") : Promise.resolve([])),
+    enabled: !!projectId,
+    refetchInterval: isRunning ? 3000 : 8000,
   });
 
   const { data: robSummary } = useQuery({
@@ -630,6 +643,19 @@ export function ScreeningPage() {
     },
   });
 
+  // Cache compiled RegExp instances to eliminate repeated regex allocations in render loops
+  const keywordRegexCache = useRef<Map<string, RegExp>>(new Map());
+  const getCompiledKeywordRegex = (word: string): RegExp => {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    let cached = keywordRegexCache.current.get(escaped);
+    if (!cached) {
+      cached = new RegExp(`\\b${escaped}\\b`, "gi");
+      keywordRegexCache.current.set(escaped, cached);
+    }
+    cached.lastIndex = 0;
+    return cached;
+  };
+
   // Render Highlighted Text (Abstract or Title) with Priority Resolution & Instant Fallback
   const renderHighlightedText = (
     rawText: string,
@@ -649,14 +675,16 @@ export function ScreeningPage() {
     }
 
     // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-    let activeSpans = [...spans];
+    const activeSpans = [...spans];
     if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
+      const rawTextLower = rawText.toLowerCase();
       fallbackKeywordsList.forEach((kw) => {
         const word = kw.keyword.trim();
         if (!word) return;
+        // Fast substring pre-check: skip regex searching if keyword substring is not present
+        if (!rawTextLower.includes(word.toLowerCase())) return;
         try {
-          const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+          const regex = getCompiledKeywordRegex(word);
           let match;
           while ((match = regex.exec(rawText)) !== null) {
             activeSpans.push({
@@ -974,9 +1002,23 @@ export function ScreeningPage() {
               </div>
             )}
 
-            <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5">
-              <span className="text-[10px] font-semibold text-purple-700 uppercase tracking-wider block">Questions</span>
-              <span className="text-sm font-bold text-purple-800">{summary.awaiting_clarification ?? 0}</span>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setStatusFilter(statusFilter === "awaiting_clarification" ? "all" : "awaiting_clarification")}
+              className={`border rounded-lg px-3 py-1.5 cursor-pointer transition-all ${
+                statusFilter === "awaiting_clarification"
+                  ? "bg-purple-600 border-purple-700 text-white shadow-sm ring-2 ring-purple-400"
+                  : "bg-purple-50 border-purple-200 hover:bg-purple-100/90"
+              }`}
+              title="Click to filter studies awaiting reviewer clarification"
+            >
+              <span className={`text-[10px] font-semibold uppercase tracking-wider block ${
+                statusFilter === "awaiting_clarification" ? "text-purple-100" : "text-purple-700"
+              }`}>Questions</span>
+              <span className={`text-sm font-bold ${
+                statusFilter === "awaiting_clarification" ? "text-white" : "text-purple-800"
+              }`}>{summary.awaiting_clarification ?? 0}</span>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
               <span className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider block">Need PDF</span>
@@ -1063,6 +1105,189 @@ export function ScreeningPage() {
       {!currentReviewer && <div role="alert" className="px-6 py-3 text-sm text-amber-800 bg-amber-50">
         {reviewerError?.message || (authToken ? "Checking your sign-in…" : "Sign in to record screening decisions under your account.")}
       </div>}
+
+      {/* Universal Screening Clarification Workspace (Inline, displayed then-and-there) */}
+      {pendingProjectClarifications.length > 0 && (() => {
+        const safeIdx = Math.min(universalClarificationIdx, pendingProjectClarifications.length - 1);
+        const curQ = pendingProjectClarifications[safeIdx];
+        if (!curQ) return null;
+        const curOptions = curQ.options || [];
+
+        return (
+          <aside
+            aria-label="Universal AI Clarification Workspace"
+            className="bg-purple-950 text-purple-50 border-b border-purple-900 px-6 py-4 shadow-md transition-all"
+          >
+            <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-5 items-start justify-between">
+              {/* Question Details Left Pane */}
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold bg-purple-700 text-purple-100 border border-purple-500/50 shadow-xs">
+                    <HelpCircle className="w-3.5 h-3.5 text-purple-300" />
+                    Reviewer Clarification Required
+                  </span>
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-purple-900 text-purple-200 border border-purple-800">
+                    Question {safeIdx + 1} of {pendingProjectClarifications.length}
+                  </span>
+                  {curQ.pico_aspect && (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-400 text-amber-950">
+                      PICO Aspect: {curQ.pico_aspect}
+                    </span>
+                  )}
+                  {curQ.stage && (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono uppercase bg-purple-900 text-purple-300 border border-purple-800">
+                      {curQ.stage} stage
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-sm font-semibold text-white leading-snug">
+                  {curQ.question_text}
+                </div>
+
+                {curQ.context_excerpt && (
+                  <div className="text-xs bg-purple-900/60 border border-purple-800/80 rounded-md p-2.5 text-purple-200 italic max-h-24 overflow-y-auto font-serif">
+                    &ldquo;{curQ.context_excerpt}&rdquo;
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 text-xs text-purple-300 pt-1 flex-wrap">
+                  <span>
+                    Study ID: <strong className="text-white font-mono">{curQ.study_id}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedStudyId(curQ.study_id);
+                      setStageFilter("all");
+                      setStatusFilter("all");
+                    }}
+                    className="underline text-purple-200 hover:text-white flex items-center gap-1"
+                    title="Select and display this study in the inspector panel below"
+                  >
+                    <span>Inspect study details in viewer &darr;</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Answering Controls Right Pane */}
+              <div className="w-full lg:w-96 bg-purple-900/50 border border-purple-800 rounded-xl p-3.5 space-y-3 shrink-0">
+                <div className="text-xs font-bold uppercase tracking-wider text-purple-200">
+                  Select Decision
+                </div>
+
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {curOptions.map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`flex items-center gap-2 p-2 rounded-lg text-xs cursor-pointer border transition-all ${
+                        universalSelectedOption === opt.value
+                          ? "bg-purple-600 border-purple-400 text-white font-semibold shadow-xs"
+                          : "bg-purple-950/70 border-purple-800/80 text-purple-100 hover:bg-purple-900/80"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`universal-opt-${curQ.question_id}`}
+                        value={opt.value}
+                        checked={universalSelectedOption === opt.value}
+                        onChange={() => setUniversalSelectedOption(opt.value)}
+                        className="text-purple-400 focus:ring-purple-300"
+                      />
+                      <span className="flex-1 leading-tight">{opt.label}</span>
+                    </label>
+                  ))}
+
+                  <label
+                    className={`flex items-center gap-2 p-2 rounded-lg text-xs cursor-pointer border transition-all ${
+                      universalSelectedOption === "other"
+                        ? "bg-purple-600 border-purple-400 text-white font-semibold shadow-xs"
+                        : "bg-purple-950/70 border-purple-800/80 text-purple-100 hover:bg-purple-900/80"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`universal-opt-${curQ.question_id}`}
+                      value="other"
+                      checked={universalSelectedOption === "other"}
+                      onChange={() => setUniversalSelectedOption("other")}
+                      className="text-purple-400 focus:ring-purple-300"
+                    />
+                    <span className="flex-1 leading-tight">Other (custom answer)</span>
+                  </label>
+                </div>
+
+                {universalSelectedOption === "other" && (
+                  <input
+                    type="text"
+                    placeholder="Type custom clarification answer..."
+                    value={universalFreetext}
+                    onChange={(e) => setUniversalFreetext(e.target.value)}
+                    className="w-full text-xs px-2.5 py-1.5 bg-purple-950 border border-purple-700 rounded text-white placeholder-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                  />
+                )}
+
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-purple-800">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={safeIdx <= 0}
+                      onClick={() => {
+                        setUniversalClarificationIdx((prev) => Math.max(0, prev - 1));
+                        setUniversalSelectedOption("");
+                        setUniversalFreetext("");
+                      }}
+                      className="px-2 py-1 text-[11px] rounded bg-purple-900 hover:bg-purple-800 text-purple-200 disabled:opacity-40"
+                    >
+                      &larr; Prev
+                    </button>
+                    <button
+                      type="button"
+                      disabled={safeIdx >= pendingProjectClarifications.length - 1}
+                      onClick={() => {
+                        setUniversalClarificationIdx((prev) => Math.min(pendingProjectClarifications.length - 1, prev + 1));
+                        setUniversalSelectedOption("");
+                        setUniversalFreetext("");
+                      }}
+                      className="px-2 py-1 text-[11px] rounded bg-purple-900 hover:bg-purple-800 text-purple-200 disabled:opacity-40"
+                    >
+                      Next &rarr;
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!universalSelectedOption || answerClarificationMutation.isPending}
+                    onClick={() => {
+                      const selectedLabel = curOptions.find((o) => o.value === universalSelectedOption)?.label || universalSelectedOption;
+                      answerClarificationMutation.mutate({
+                        questionId: curQ.question_id,
+                        answer: universalSelectedOption,
+                        label: selectedLabel,
+                        freetext: universalSelectedOption === "other" ? universalFreetext : undefined,
+                      }, {
+                        onSuccess: () => {
+                          setUniversalSelectedOption("");
+                          setUniversalFreetext("");
+                          setUniversalClarificationIdx(0);
+                        }
+                      });
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                  >
+                    {answerClarificationMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                    <span>Submit & Re-Screen</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </aside>
+        );
+      })()}
 
       {/* Filter and Search Bar */}
       <div className="bg-white border-b border-slate-200 px-6 py-2"><div className="max-w-7xl mx-auto">

@@ -8,8 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from config import settings
-from database import init_db, reset_db
+from database import init_db, reset_db, get_connection
 from main import app
+from dependencies import create_access_token
 from services.clarification_generator import screen_with_clarification
 from services.clarification_resolver import resolve_clarification
 
@@ -21,12 +22,20 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES ('human_reviewer1', 'Human Reviewer 1', 'test', 'owner')")
+    conn.commit()
     yield
 
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    from dependencies import create_access_token, create_user
+    u = create_user("reviewer_one", "pass", role="owner")
+    token = create_access_token(u["user_id"], u["username"], u["role"])
+    c = TestClient(app)
+    c.headers.update({"Authorization": f"Bearer {token}"})
+    return c
 
 
 @pytest.fixture
@@ -739,6 +748,12 @@ def test_clarification_answer_conflicts_with_human(client, project):
     r_s = client.post(f"/api/projects/{project}/studies", json={"project_id": project, "title": "Conflict Study", "abstract": "Abs"})
     sid = r_s.json()["study_id"]
 
+    db = get_connection()
+    db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", ("human_reviewer1", "human_reviewer1", "test"))
+    db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{project}-human_reviewer1", project, "human_reviewer1", "reviewer"))
+    db.commit()
+    client.headers["Authorization"] = f"Bearer {create_access_token('human_reviewer1', 'human_reviewer1', 'reviewer')}"
+
     # Human screens "included"
     client.post(f"/api/studies/{sid}/screening-decision", json={
         "study_id": sid,
@@ -768,6 +783,12 @@ def test_clarification_answer_conflicts_with_human(client, project):
 def test_clarification_answer_agrees_with_human(client, project):
     r_s = client.post(f"/api/projects/{project}/studies", json={"project_id": project, "title": "Agreement Study", "abstract": "Abs"})
     sid = r_s.json()["study_id"]
+
+    db = get_connection()
+    db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", ("human_reviewer1", "human_reviewer1", "test"))
+    db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{project}-human_reviewer1", project, "human_reviewer1", "reviewer"))
+    db.commit()
+    client.headers["Authorization"] = f"Bearer {create_access_token('human_reviewer1', 'human_reviewer1', 'reviewer')}"
 
     # Human screens "included"
     client.post(f"/api/studies/{sid}/screening-decision", json={

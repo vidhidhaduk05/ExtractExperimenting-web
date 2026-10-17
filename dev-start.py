@@ -36,7 +36,7 @@ def start_localstack():
 
 
 def start_llm_gateway():
-    """Start gemini-web2api LLM gateway."""
+    """Check for local Biomni or gemini-web2api LLM gateway."""
     gateway_dir = os.path.join(ROOT_DIR, "gemini-web2api-main")
     if os.path.exists(os.path.join(gateway_dir, "gemini_web2api.py")):
         print("[Dev] Starting gemini-web2api gateway...")
@@ -46,7 +46,14 @@ def start_llm_gateway():
         )
         PROCESSES.append(("llm-gateway", p))
     else:
-        print("[Dev] gemini-web2api.py not found, skipping gateway launch.")
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex(('127.0.0.1', 18000))
+        sock.close()
+        if result == 0:
+            print("[Dev] Detected active Biomni-R0 model server on http://127.0.0.1:18000 (using key sk-biomni-...)")
+        else:
+            print("[Dev] Note: Biomni model server not detected on port 18000.")
 
 
 def start_backend():
@@ -60,8 +67,10 @@ def start_backend():
         "RADEXTRACT_AWS_REGION": "us-east-1",
         "RADEXTRACT_AWS_ACCESS_KEY_ID": "test",
         "RADEXTRACT_AWS_SECRET_ACCESS_KEY": "test",
-        "RADEXTRACT_LLM_API_URL": "http://127.0.0.1:8081/v1/chat/completions",
-        "RADEXTRACT_LLM_MODELS_URL": "http://127.0.0.1:8081/v1/models",
+        "RADEXTRACT_LLM_API_URL": os.getenv("RADEXTRACT_LLM_API_URL", "http://127.0.0.1:18000/v1/chat/completions"),
+        "RADEXTRACT_LLM_MODELS_URL": os.getenv("RADEXTRACT_LLM_MODELS_URL", "http://127.0.0.1:18000/v1/models"),
+        "RADEXTRACT_LLM_API_KEY": os.getenv("RADEXTRACT_LLM_API_KEY", "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"),
+        "RADEXTRACT_LLM_MODEL": os.getenv("RADEXTRACT_LLM_MODEL", "biomni-r0"),
     })
     backend_dir = os.path.join(ROOT_DIR, "radextract_platform", "backend")
     print("[Dev] Starting FastAPI backend on http://localhost:8000 ...")
@@ -130,7 +139,7 @@ if __name__ == "__main__":
     print("Services status:")
     print("  - Backend API: http://localhost:8000/docs")
     print("  - Health Check: http://localhost:8000/api/health")
-    print("  - LLM Gateway: http://localhost:8081")
+    print("  - LLM Server (Biomni-R0): http://127.0.0.1:18000/v1 (model: biomni-r0)")
     print("  - Frontend UI: http://localhost:5173")
     print("=" * 60)
     print("Press Ctrl+C to stop all services.\n")

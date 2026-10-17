@@ -36,6 +36,7 @@ def workspace():
     app.dependency_overrides[get_db] = lambda: db
     with TestClient(app) as client:
         yield app, client, db
+    app.dependency_overrides.clear()
     connection.close()
 
 

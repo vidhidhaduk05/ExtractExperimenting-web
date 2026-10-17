@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 from services.db_backend import SQLiteBackend
 
 
@@ -26,12 +27,21 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES ('rev1', 'Reviewer One', 'test', 'owner')")
+    conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES ('rev2', 'Reviewer Two', 'test', 'owner')")
+    conn.commit()
     yield
 
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    from dependencies import create_access_token, create_user
+    u = create_user("testuser", "pass", role="owner")
+    token = create_access_token(u["user_id"], u["username"], u["role"])
+    c = TestClient(app)
+    c.headers.update({"Authorization": f"Bearer {token}"})
+    return c
 
 
 def _db():
@@ -46,6 +56,15 @@ def _make_project_and_study(client, title="RCT of Drug X", design="randomized co
         "abstract": "A randomized trial of Drug X versus placebo in 200 adults.",
     })
     sid = r.json()["study_id"]
+    reviewer_id = "rev1"
+    reviewer_name = "Reviewer 1"
+    db = get_connection()
+    db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", (reviewer_id, reviewer_name, "test"))
+    db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", ("rev2", "Reviewer 2", "test"))
+    db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{pid}-{reviewer_id}", pid, reviewer_id, "reviewer"))
+    db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{pid}-rev2", pid, "rev2", "reviewer"))
+    db.commit()
+    client.headers["Authorization"] = f"Bearer {create_access_token(reviewer_id, reviewer_name, 'reviewer')}"
     return pid, sid
 
 
@@ -104,6 +123,9 @@ class TestPipelineAutoTrigger:
 class TestManualIncludeTrigger:
     def test_manual_ft_include_triggers_rob(self, client):
         pid, sid = _make_project_and_study(client)
+        db = get_connection()
+        db.execute("UPDATE studies SET screening_stage = 'ft' WHERE study_id = ?", (sid,))
+        db.commit()
         r = client.put(f"/api/studies/{sid}/screening", json={
             "status": "included", "stage": "ft", "reason": "meets criteria",
         })
@@ -122,6 +144,9 @@ class TestManualIncludeTrigger:
 
     def test_exclude_does_not_trigger_rob(self, client):
         pid, sid = _make_project_and_study(client)
+        db = get_connection()
+        db.execute("UPDATE studies SET screening_stage = 'ft' WHERE study_id = ?", (sid,))
+        db.commit()
         client.put(f"/api/studies/{sid}/screening", json={
             "status": "excluded", "stage": "ft", "reason": "wrong population",
         })
@@ -129,7 +154,15 @@ class TestManualIncludeTrigger:
 
     def test_multi_reviewer_agree_include_triggers_rob(self, client):
         pid, sid = _make_project_and_study(client)
+        client.put(f"/api/studies/{sid}/screening", json={"status": "pending", "stage": "ft", "reason": ""})
+        conn = get_connection()
         for reviewer in ("rev1", "rev2"):
+            conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES (?, ?, 'test', 'owner')", (reviewer, reviewer))
+            conn.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, 'owner')", (f"{pid}-{reviewer}", pid, reviewer))
+        conn.commit()
+
+        for reviewer in ("rev1", "rev2"):
+            client.headers["Authorization"] = f"Bearer {create_access_token(reviewer, reviewer, 'owner')}"
             r = client.post(f"/api/studies/{sid}/screening-decision", json={
                 "study_id": sid, "project_id": pid, "reviewer_id": reviewer,
                 "decision": "included", "stage": "ft",
@@ -141,11 +174,17 @@ class TestManualIncludeTrigger:
 class TestAutoSelectTool:
     def test_auto_select_tool_rct(self, client):
         pid, sid = _make_project_and_study(client, design="randomized controlled trial")
+        db = get_connection()
+        db.execute("UPDATE studies SET screening_stage = 'ft' WHERE study_id = ?", (sid,))
+        db.commit()
         client.put(f"/api/studies/{sid}/screening", json={"status": "included", "stage": "ft", "reason": ""})
         assert _assessments_for(sid)[0]["tool"] == "rob2"
 
     def test_auto_select_tool_quadas(self, client):
         pid, sid = _make_project_and_study(client, title="CT vs MRI", design="diagnostic accuracy")
+        db = get_connection()
+        db.execute("UPDATE studies SET screening_stage = 'ft' WHERE study_id = ?", (sid,))
+        db.commit()
         client.put(f"/api/studies/{sid}/screening", json={"status": "included", "stage": "ft", "reason": ""})
         assert _assessments_for(sid)[0]["tool"] == "quadas2"
 

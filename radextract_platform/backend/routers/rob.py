@@ -405,8 +405,8 @@ async def cancel_batch_rob(
 ):
     """Cancel an active batch risk-of-bias run."""
     check_project_access(conn, project_id, user)
-    success = rob_service.cancel_batch_rob_run(project_id, db=conn)
-    return {"cancelled": success}
+    res = rob_service.cancel_batch_rob_run(project_id, db=conn)
+    return {"cancelled": True if res.get("status") == "cancelled" else False}
 
 
 # ── Export ──
@@ -505,6 +505,8 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
     """Auto-assess Risk of Bias for a study using RCT-Reviewer Cochrane domain engine."""
     from services.rct_rob_engine import assess_study_risk_of_bias
 
+    check_project_access(conn, project_id, user)
+
     try:
         doc = conn.execute(
             "SELECT title, abstract FROM studies WHERE study_id = ?", (study_id,)
@@ -541,8 +543,7 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
 
         if existing:
             conn.execute(
-                """UPDATE rob_assessments SET 
-    check_project_access(conn, project_id, user)
+                """UPDATE rob_assessments SET
                    overall_judgment = ?,
                    overall_risk = ?,
                    ai_prefilled = 1,

@@ -15,10 +15,8 @@ import {
   AlertTriangle,
   Loader2,
   Square,
-  Play,
-  RotateCcw,
 } from "lucide-react";
-import { judgmentLabel, judgmentDotColor, cn } from "../lib/utils";
+import { judgmentLabel, judgmentDotColor, cn, sanitizeSvg } from "../lib/utils";
 import {
   BarChart,
   Bar,
@@ -297,7 +295,7 @@ function RobvisPanel({
       {loading ? (
         <p className="text-sm text-gray-400">Drawing figure...</p>
       ) : figure?.svg ? (
-        <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: figure.svg }} />
+        <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: sanitizeSvg(figure.svg) }} />
       ) : (
         <p className="text-sm text-gray-500">{figure?.message || "Figure unavailable."}</p>
       )}
@@ -345,14 +343,27 @@ function TrafficLightChart({
   summary: RobSummary;
   filterNeedsReview?: boolean;
 }) {
-  const rawAssessments = Array.isArray(summary?.assessments) ? summary.assessments : [];
+  const rawAssessments = summary?.assessments;
   const assessments = useMemo(() => {
-    if (!filterNeedsReview) return rawAssessments;
-    return rawAssessments.filter((a) => (a.needs_human_review_count ?? 0) > 0);
+    const list = Array.isArray(rawAssessments) ? rawAssessments : [];
+    if (!filterNeedsReview) return list;
+    return list.filter((a) => (a.needs_human_review_count ?? 0) > 0);
   }, [rawAssessments, filterNeedsReview]);
 
-  const domainKeys = rawAssessments[0]?.domains?.map((d) => d.domain_key) || [];
-  const domainLabels = rawAssessments[0]?.domains?.map((d) => d.domain_label) || [];
+  const domainKeys = (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_key) || [];
+  const domainLabels = (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_label) || [];
+
+  const domainMapByAssessment = useMemo(() => {
+    const map = new Map<string, Map<string, any>>();
+    assessments.forEach((a) => {
+      const dMap = new Map<string, any>();
+      (a.domains || []).forEach((d) => {
+        if (d.domain_key) dMap.set(d.domain_key, d);
+      });
+      map.set(a.assessment_id, dMap);
+    });
+    return map;
+  }, [assessments]);
 
   return (
     <div className="card p-5 overflow-x-auto">
@@ -419,7 +430,7 @@ function TrafficLightChart({
                   </div>
                 </td>
                 {domainKeys.map((dKey, i) => {
-                  const domain = a.domains.find((d) => d.domain_key === dKey);
+                  const domain = domainMapByAssessment.get(a.assessment_id)?.get(dKey);
                   const judgment = domain?.risk_judgment || "pending";
                   return (
                     <td key={i} className="px-2 py-2 border-b border-gray-100 text-center">
@@ -481,10 +492,11 @@ function AssessmentList({
   summary: RobSummary;
   filterNeedsReview?: boolean;
 }) {
-  const rawAssessments = Array.isArray(summary?.assessments) ? summary.assessments : [];
+  const rawAssessments = summary?.assessments;
   const assessments = useMemo(() => {
-    if (!filterNeedsReview) return rawAssessments;
-    return rawAssessments.filter((a) => (a.needs_human_review_count ?? 0) > 0);
+    const list = Array.isArray(rawAssessments) ? rawAssessments : [];
+    if (!filterNeedsReview) return list;
+    return list.filter((a) => (a.needs_human_review_count ?? 0) > 0);
   }, [rawAssessments, filterNeedsReview]);
 
   // Group assessments by study

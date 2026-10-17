@@ -209,8 +209,19 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
             </div>
 
             {/* Presets */}
-            <div className="flex items-center gap-2 text-[11px] text-[#8A817A]">
+            <div className="flex items-center gap-2 text-[11px] text-[#8A817A] flex-wrap">
               <span>Quick Presets:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setApiUrl("https://girlfriend-instrument-cultural-russia.trycloudflare.com/api");
+                  setIsDemo(false);
+                }}
+                className="px-2 py-0.5 rounded bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold border border-purple-300 flex items-center gap-1 shadow-2xs transition-colors"
+                title="Connect directly to the HPC Tesla V100S GPU running Biomni-R0 32B and Laya"
+              >
+                <span>⚡ RadExtract Live GPU (HPC)</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setApiUrl("http://localhost:8000/api")}

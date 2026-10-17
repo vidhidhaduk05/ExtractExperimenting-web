@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 import uuid
 
 
@@ -14,12 +15,20 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES ('test_user', 'Test User', 'test', 'owner')")
+    conn.commit()
     yield
 
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    from dependencies import create_access_token, create_user
+    u = create_user("reviewer_one", "pass", role="owner")
+    token = create_access_token(u["user_id"], u["username"], u["role"])
+    c = TestClient(app)
+    c.headers.update({"Authorization": f"Bearer {token}"})
+    return c
 
 
 @pytest.fixture
@@ -177,6 +186,11 @@ class TestPrismaFlow:
     def test_prisma_with_studies(self, client):
         r = client.post("/api/projects", json={"name": "Test"})
         pid = r.json()["project_id"]
+        db = get_connection()
+        db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", ("rev1", "Reviewer 1", "test"))
+        db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{pid}-rev1", pid, "rev1", "reviewer"))
+        db.commit()
+        client.headers["Authorization"] = f"Bearer {create_access_token('rev1', 'Reviewer 1', 'reviewer')}"
         # Add 5 studies
         for i in range(5):
             r = client.post(f"/api/projects/{pid}/studies", json={

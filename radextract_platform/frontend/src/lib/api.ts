@@ -622,6 +622,24 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     if (path.includes("/upload-references")) {
       return { imported_count: 5, skipped_duplicates: 1, errors: [] } as unknown as T;
     }
+    if ((path === "/projects" || path.startsWith("/projects?")) && method === "POST") {
+      const newProj = {
+        project_id: `proj_${Date.now()}`,
+        name: body.name || "New Systematic Review",
+        description: body.description || "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        status: "active",
+        auto_rob_enabled: true,
+        rob_confidence_threshold: 0.7,
+      };
+      try {
+        const stored = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
+        stored.push(newProj);
+        localStorage.setItem("radextract_custom_projects", JSON.stringify(stored));
+      } catch (e) {}
+      return newProj as unknown as T;
+    }
     return { status: "success" } as unknown as T;
   }
 
@@ -960,10 +978,21 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     return DEMO_MULTI_DATABASE_SEARCH as unknown as T;
   }
   if (path === "/projects" || path.startsWith("/projects?")) {
-    return [DEMO_PROJECT] as unknown as T;
+    let custom: any[] = [];
+    try {
+      custom = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
+    } catch (e) {}
+    return [DEMO_PROJECT, ...custom] as unknown as T;
   }
   if (path.match(/\/projects\/[^/]+$/)) {
-    return DEMO_PROJECT as unknown as T;
+    const pId = path.split("/").pop();
+    if (pId === DEMO_PROJECT.project_id) return DEMO_PROJECT as unknown as T;
+    try {
+      const custom = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
+      const found = custom.find((p: any) => p.project_id === pId);
+      if (found) return found as unknown as T;
+    } catch (e) {}
+    return { ...DEMO_PROJECT, project_id: pId || "proj_new", name: "Custom Project" } as unknown as T;
   }
   if (path.includes("/auth/login")) {
     return {
@@ -2421,6 +2450,27 @@ export const api = {
   // Health
   health: () => request<{ status: string }>("/health"),
 
+  // ClaimScape Fast Pipeline
+  evaluateClaimscape: (claim: string, query?: string, count: number = 100) =>
+    request<{
+      claim: string;
+      query: string;
+      total: number;
+      papers: any[];
+      judgments: any[];
+      elapsed_ms: number;
+    }>("/claimscape/evaluate", {
+      method: "POST",
+      body: JSON.stringify({ claim, query, count }),
+    }),
+  getClaimscapeStatus: () =>
+    request<{
+      status: string;
+      engine: string;
+      model: string;
+      max_papers_per_batch: number;
+    }>("/claimscape/status"),
+
   // Projects
   listProjects: () => request<Project[]>("/projects"),
   getProject: (id: string) => request<Project>(`/projects/${id}`),
@@ -2791,31 +2841,31 @@ export const api = {
       const patterns: Record<keyof Omit<PicoExtractionResponse, "extraction_confidence">, RegExp[]> = {
         population: [
           /(?:population|participants|patients|eligibility\s+criteria|inclusion\s+criteria|target\s+population)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:we\s+(?:will\s+)?include|patients\s+with|participants\s+with|study\s+population\s+(?:was|is|consisted\s+of|comprised))\s*[:\-–]?\s*([^\.\n]+(?:\.[^\.\n]+)?)/i,
+          /(?:we\s+(?:will\s+)?include|patients\s+with|participants\s+with|study\s+population\s+(?:was|is|consisted\s+of|comprised))\s*[:\-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
         index_test: [
           /(?:index\s+test[s]?|test\s+under\s+evaluation|intervention[s]?|imaging\s+protocol|imaging\s+technique)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:index\s+test\s+(?:was|is|used)|intervention\s+(?:was|is))\s*[:\-–]?\s*([^\.\n]+(?:\.[^\.\n]+)?)/i,
+          /(?:index\s+test\s+(?:was|is|used)|intervention\s+(?:was|is))\s*[:\-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
         comparator: [
           /(?:comparator[s]?|reference\s+standard|reference\s+test|comparison|control|gold\s+standard)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:reference\s+standard\s+(?:was|is)|comparator\s+(?:was|is))\s*[:\-–]?\s*([^\.\n]+(?:\.[^\.\n]+)?)/i,
+          /(?:reference\s+standard\s+(?:was|is)|comparator\s+(?:was|is))\s*[:\-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
         outcome: [
           /(?:primary\s+outcome[s]?|secondary\s+outcome[s]?|outcome[s]?|endpoint[s]?|target\s+condition)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:primary\s+outcome\s+(?:was|is)|we\s+(?:assessed|measured|evaluated))\s*[:\-–]?\s*([^\.\n]+(?:\.[^\.\n]+)?)/i,
+          /(?:primary\s+outcome\s+(?:was|is)|we\s+(?:assessed|measured|evaluated))\s*[:\-–]?\s*([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
         study_design: [
           /(?:study\s+design|methodology|methods|trial\s+design|design)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:this\s+(?:is|was)\s+(?:a|an)\s+)([^\.\n]+(?:study|trial|review|cohort|series))/i,
+          /(?:this\s+(?:is|was)\s+(?:a|an)\s+)([^.\n]+(?:study|trial|review|cohort|series))/i,
         ],
         research_question: [
           /(?:research\s+question|objective[s]?|aim[s]?|purpose|goal[s]?)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:the\s+(?:objective|aim|purpose)\s+(?:of\s+this\s+study|was\s+to|is\s+to)\s*)([^\.\n]+(?:\.[^\.\n]+)?)/i,
+          /(?:the\s+(?:objective|aim|purpose)\s+(?:of\s+this\s+study|was\s+to|is\s+to)\s*)([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
         hypothesis: [
           /(?:hypothesis|hypotheses|primary\s+hypothesis|null\s+hypothesis|alternative\s+hypothesis)\s*[:\-–]\s*([^\n\r]+(?:\n[^\n\r#]+)*)/i,
-          /(?:we\s+hypothes(?:ize|ized)\s+(?:that\s+)?)([^\.\n]+(?:\.[^\.\n]+)?)/i,
+          /(?:we\s+hypothes(?:ize|ized)\s+(?:that\s+)?)([^.\n]+(?:\.[^.\n]+)?)/i,
         ],
       };
 
@@ -2826,7 +2876,7 @@ export const api = {
           for (const regex of regexList) {
             const match = fileText.match(regex);
             if (match && match[1]) {
-              const val = match[1].replace(/^[#\*\s\-–:]+/, "").replace(/[\r\n]+/g, " ").trim();
+              const val = match[1].replace(/^[#*\s\-–:]+/, "").replace(/[\r\n]+/g, " ").trim();
               if (val.length > 5 && val.length < 500) {
                 extracted[key] = val;
                 break;

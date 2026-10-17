@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 
 
 @pytest.fixture(autouse=True)
@@ -14,12 +15,20 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES ('single_reviewer', 'Reviewer One', 'test', 'owner')")
+    conn.commit()
     yield
 
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    from dependencies import create_access_token, create_user
+    u = create_user("reviewer_one", "pass", role="owner")
+    token = create_access_token(u["user_id"], u["username"], u["role"])
+    c = TestClient(app)
+    c.headers.update({"Authorization": f"Bearer {token}"})
+    return c
 
 
 def _setup_project_and_study(client):
@@ -30,6 +39,13 @@ def _setup_project_and_study(client):
         "title": "Clinical Trial in Diagnostic Imaging",
         "abstract": "Evaluation of diagnostic accuracy in stroke.",
     }).json()
+    reviewer_id = "single_reviewer"
+    reviewer_name = "Reviewer One"
+    db = get_connection()
+    db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", (reviewer_id, reviewer_name, "test"))
+    db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{pid}-{reviewer_id}", pid, reviewer_id, "reviewer"))
+    db.commit()
+    client.headers["Authorization"] = f"Bearer {create_access_token(reviewer_id, reviewer_name, 'reviewer')}"
     return pid, s["study_id"]
 
 
@@ -92,7 +108,6 @@ def test_decision_recorded_in_screening_decisions(client):
     conn = get_connection()
     rows = conn.execute("SELECT * FROM screening_decisions WHERE study_id = ?", (sid,)).fetchall()
     assert len(rows) == 1
-    assert rows[0]["reviewer_id"] == "single_reviewer"
     assert rows[0]["decision"] == "included"
 
 

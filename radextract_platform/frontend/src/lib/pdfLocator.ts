@@ -179,7 +179,8 @@ function buildNormalizedIndex(orderedLines: TextItem[][]): { normText: string; n
   let lastWasSpace = false;
 
   for (let i = 0; i < rawChars.length; i++) {
-    let { ch, item } = rawChars[i];
+    let { ch } = rawChars[i];
+    const { item } = rawChars[i];
 
     // Strip soft-hyphens, PDF ligature break artifacts (\ufffe, \u00ad)
     if (ch === "\ufffe" || ch === "\u00ad") {

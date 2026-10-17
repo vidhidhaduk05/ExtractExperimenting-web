@@ -49,3 +49,47 @@ export function judgmentDotColor(judgment: string): string {
   };
   return colors[judgment] || "#CCCCCC";
 }
+
+/**
+ * Sanitizes an SVG / HTML string to prevent XSS attacks (e.g. <script> tags, inline event handlers, javascript: URLs).
+ */
+export function sanitizeSvg(svgString: string): string {
+  if (!svgString) return "";
+  if (typeof DOMParser === "undefined") return svgString;
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgString, "image/svg+xml");
+    if (doc.querySelector("parsererror")) {
+      const htmlDoc = parser.parseFromString(svgString, "text/html");
+      cleanElement(htmlDoc.body);
+      return htmlDoc.body.innerHTML;
+    }
+    cleanElement(doc.documentElement);
+    return new XMLSerializer().serializeToString(doc.documentElement);
+  } catch {
+    return svgString;
+  }
+}
+
+function cleanElement(element: Element) {
+  const allElements = [element, ...Array.from(element.querySelectorAll("*"))];
+  for (const el of allElements) {
+    const tagName = el.tagName.toLowerCase();
+    if (tagName === "script" || tagName === "foreignobject") {
+      el.remove();
+      continue;
+    }
+    for (const attr of Array.from(el.attributes)) {
+      const name = attr.name.toLowerCase();
+      const val = attr.value.trim().toLowerCase();
+      if (
+        name.startsWith("on") ||
+        ((name === "href" || name === "xlink:href" || name === "src") &&
+          (val.startsWith("javascript:") || val.startsWith("data:")))
+      ) {
+        el.removeAttribute(attr.name);
+      }
+    }
+  }
+}
