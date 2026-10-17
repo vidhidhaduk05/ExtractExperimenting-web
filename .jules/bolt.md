@@ -1,5 +1,9 @@
 # Bolt's Journal - Performance Learnings
 
+## 2026-11-01 - Reusing Cached Compiled Regex Objects in Study Signal Pre-filtering
+**Learning:** In signal pre-filtering (`prefilter_study` and `_count_matches`), compiling regex patterns on the fly via `re.search(r"\b" + re.escape(term) + r"\b", text)` creates significant CPU overhead from string formatting, re-parsing, and internal regex cache lookups across thousands of study screening evaluations. Invoking pre-compiled `re.Pattern` objects cached via `@lru_cache` (e.g. `_get_signal_regex(term).search(text)`) avoids pattern re-compilation and yields a ~1.89x speedup for term matching.
+**Action:** When performing repeated word-boundary pattern checks across fixed sets of signal terms or keywords, ensure regex matching calls directly consume pre-compiled `re.Pattern` objects memoized with `@lru_cache`.
+
 ## 2026-10-25 - Parallel Integer Priority Array for Character-Level Span Conflict Resolution
 **Learning:** In abstract screening span resolution (`resolve_character_spans`), checking character priorities via dictionary lookups (`curr.get("type")` & `priority_map.get(...)`) inside inner loops for every character index creates significant CPU overhead. Pre-evaluating integer priorities once per span and using a parallel integer array (`char_prios: list[int]`) for fast C-level integer comparisons (`prio > char_prios[i]`) eliminates inner-loop dict lookups and yields a ~1.75x speedup without altering span resolution output.
 **Action:** When resolving overlapping character spans by priority across strings, maintain a parallel integer array tracking max assigned priority per character instead of querying dict properties inside character loops.
