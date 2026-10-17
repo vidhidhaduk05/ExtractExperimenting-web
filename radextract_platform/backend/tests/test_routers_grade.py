@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 import uuid
 
 
@@ -27,13 +28,19 @@ def project_with_study(client):
     """Create a project with an included RCT study and a RoB assessment."""
     r = client.post("/api/projects", json={"name": "Test"})
     pid = r.json()["project_id"]
+    db = get_connection()
+    db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES ('rev1', 'rev1', 'test')")
+    db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, 'rev1', 'reviewer')", (f"{pid}-rev1", pid))
+    db.commit()
+    db.close()
+    client.headers["Authorization"] = f"Bearer {create_access_token('rev1', 'rev1', 'reviewer')}"
     r = client.post(f"/api/projects/{pid}/studies", json={
         "project_id": pid, "title": "RCT Study",
         "study_design": "randomized controlled trial",
     })
     sid = r.json()["study_id"]
     # Update screening to included
-    client.put(f"/api/studies/{sid}/screening", json={"status": "included", "stage": "ft", "reason": ""})
+    client.put(f"/api/studies/{sid}/screening", json={"status": "included", "stage": "ta", "reason": ""})
     # Create RoB assessment
     r = client.post(f"/api/rob/studies/{sid}/rob/auto?project_id={pid}&study_design=randomized+controlled+trial&outcome_label=primary")
     aid = r.json()["assessment_id"]
@@ -62,12 +69,18 @@ class TestGradeCRUD:
         # Create project with observational study
         r = client.post("/api/projects", json={"name": "Obs"})
         pid = r.json()["project_id"]
+        db = get_connection()
+        db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES ('rev1', 'rev1', 'test')")
+        db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, 'rev1', 'reviewer')", (f"{pid}-rev1", pid))
+        db.commit()
+        db.close()
+        client.headers["Authorization"] = f"Bearer {create_access_token('rev1', 'rev1', 'reviewer')}"
         r = client.post(f"/api/projects/{pid}/studies", json={
             "project_id": pid, "title": "Cohort",
             "study_design": "retrospective cohort",
         })
         sid = r.json()["study_id"]
-        client.put(f"/api/studies/{sid}/screening", json={"status": "included", "stage": "ft", "reason": ""})
+        client.put(f"/api/studies/{sid}/screening", json={"status": "included", "stage": "ta", "reason": ""})
 
         r = client.post(f"/api/projects/{pid}/grade", json={"outcome_label": "O"})
         assert r.status_code == 200

@@ -24,6 +24,21 @@ def client():
     return TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def mock_ai_search_strings(monkeypatch):
+    from services import search_string_generator
+    def mock_gen(pico, research_question=""):
+        return {
+            "pubmed": "((patients with colorectal cancer[MeSH Terms]) AND (MRI[tiab]) AND (diagnostic accuracy[tiab]))",
+            "embase": "'colorectal cancer'/exp AND 'MRI':ab,ti",
+            "cochrane": '"colorectal cancer":ti,ab,kw',
+            "web_of_science": 'TS=("colorectal cancer")',
+            "scopus": 'TITLE-ABS-KEY("colorectal cancer")',
+            "cinahl": 'MH "colorectal cancer+"',
+        }
+    monkeypatch.setattr(search_string_generator, "generate_ai_search_strings", mock_gen)
+
+
 @pytest.fixture
 def project(client):
     """Create a project and return its ID."""
