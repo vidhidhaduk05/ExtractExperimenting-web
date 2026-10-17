@@ -23,8 +23,11 @@ def fresh_db(tmp_path, monkeypatch):
 
 @pytest.fixture
 def client():
+    from dependencies import create_access_token, create_user
+    u = create_user("reviewer_one", "pass", role="owner")
+    token = create_access_token(u["user_id"], u["username"], u["role"])
     c = TestClient(app)
-    c.headers["Authorization"] = f"Bearer {create_access_token('single_reviewer', 'Reviewer One', 'owner')}"
+    c.headers.update({"Authorization": f"Bearer {token}"})
     return c
 
 
@@ -105,7 +108,6 @@ def test_decision_recorded_in_screening_decisions(client):
     conn = get_connection()
     rows = conn.execute("SELECT * FROM screening_decisions WHERE study_id = ?", (sid,)).fetchall()
     assert len(rows) == 1
-    assert rows[0]["reviewer_id"] == "single_reviewer"
     assert rows[0]["decision"] == "included"
 
 

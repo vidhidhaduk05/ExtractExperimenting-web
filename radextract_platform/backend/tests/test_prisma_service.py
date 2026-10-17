@@ -12,8 +12,6 @@ from database import get_connection, init_db, reset_db
 def setup_db(tmp_path, monkeypatch):
     test_db_path = str(tmp_path / "test_prisma.db")
     monkeypatch.setattr(settings, "db_path", test_db_path)
-    monkeypatch.setattr(settings, "jev_mode", "on")
-    monkeypatch.setattr(settings, "jev_provider", "laya")
     reset_db()
     init_db()
 
@@ -81,7 +79,9 @@ def test_generate_prisma_2020_svg():
     assert "n = 15" in svg
 
 
-def test_verify_exclusion_with_laya():
+def test_verify_exclusion_with_laya(monkeypatch):
+    monkeypatch.setattr(settings, "jev_mode", "on")
+    monkeypatch.setattr(settings, "jev_provider", "laya")
     title = "Pure arterial malformation treated conservatively"
     abstract = "We evaluated 20 patients treated conservatively without any endovascular surgery or stenting."
     res = verify_exclusion_with_laya(title, abstract, "no_endovascular_treatment")

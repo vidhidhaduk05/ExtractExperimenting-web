@@ -113,6 +113,20 @@ export function ExtractionSheetPage() {
     return map;
   }, [extractions]);
 
+  // Pre-build O(1) map for multi-study matrix extraction lookups
+  const paperVariableExtMap = useMemo(() => {
+    const map = new Map<string, any>();
+    availablePapers.forEach((paper) => {
+      const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+      paperExts.forEach((e: any) => {
+        if (e.variable_id) {
+          map.set(`${paper.id}:${e.variable_id}`, e);
+        }
+      });
+    });
+    return map;
+  }, [availablePapers]);
+
   // Overall metrics across all papers
   const allBenchmarkStats = useMemo(() => {
     let totalVars = 0;
@@ -859,8 +873,7 @@ export function ExtractionSheetPage() {
 
                       {/* Columns for Each Study */}
                       {availablePapers.map((paper) => {
-                        const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
-                        const foundExt = paperExts.find((e: any) => e.variable_id === v.variable_id);
+                        const foundExt = paperVariableExtMap.get(`${paper.id}:${v.variable_id}`);
                         const isVerified = !!foundExt?.is_verified;
                         const value = foundExt?.value || "Not Reported";
 

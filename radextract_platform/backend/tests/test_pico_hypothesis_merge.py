@@ -127,9 +127,15 @@ MOCK_SEARCH_STRINGS = {
 class TestSearchStrings:
     """Tests for search string generation endpoints."""
 
-    def test_generate_search_strings(self, client, project_with_pico, monkeypatch):
-        from services import search_string_generator
-        monkeypatch.setattr(search_string_generator, "generate_ai_search_strings", lambda pico, research_question="": MOCK_SEARCH_STRINGS["strings"])
+    @pytest.fixture(autouse=True)
+    def mock_ai_search(self, monkeypatch):
+        from services.search_string_generator import generate_search_strings
+        monkeypatch.setattr(
+            "services.search_string_generator.generate_ai_search_strings",
+            lambda pico, research_question="": generate_search_strings(pico),
+        )
+
+    def test_generate_search_strings(self, client, project_with_pico):
         r = client.post(f"/api/projects/{project_with_pico}/search-strings/generate")
         assert r.status_code == 200
         data = r.json()
@@ -242,8 +248,11 @@ class TestPubMedFetch:
     @pytest.fixture
     def project_with_search_string(self, client, project_with_pico, monkeypatch):
         """Generate search strings so PubMed string is saved."""
-        from services import search_string_generator
-        monkeypatch.setattr(search_string_generator, "generate_ai_search_strings", lambda pico, research_question="": MOCK_SEARCH_STRINGS["strings"])
+        from services.search_string_generator import generate_search_strings
+        monkeypatch.setattr(
+            "services.search_string_generator.generate_ai_search_strings",
+            lambda pico, research_question="": generate_search_strings(pico),
+        )
         client.post(f"/api/projects/{project_with_pico}/search-strings/generate")
         return project_with_pico
 

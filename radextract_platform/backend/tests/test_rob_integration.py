@@ -36,8 +36,11 @@ def fresh_db(tmp_path, monkeypatch):
 
 @pytest.fixture
 def client():
+    from dependencies import create_access_token, create_user
+    u = create_user("testuser", "pass", role="owner")
+    token = create_access_token(u["user_id"], u["username"], u["role"])
     c = TestClient(app)
-    c.headers["Authorization"] = f"Bearer {create_access_token('rev1', 'Reviewer One', 'owner')}"
+    c.headers.update({"Authorization": f"Bearer {token}"})
     return c
 
 
@@ -151,10 +154,7 @@ class TestManualIncludeTrigger:
 
     def test_multi_reviewer_agree_include_triggers_rob(self, client):
         pid, sid = _make_project_and_study(client)
-        db_inst = _db()
-        db_inst.update("studies", sid, {"screening_stage": "ft"})
-        db_inst.commit()
-        conn = get_connection()
+        client.put(f"/api/studies/{sid}/screening", json={"status": "pending", "stage": "ft", "reason": ""})
         for reviewer in ("rev1", "rev2"):
             conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash, role) VALUES (?, ?, 'test', 'owner')", (reviewer, reviewer))
             conn.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, 'owner')", (f"{pid}-{reviewer}", pid, reviewer))

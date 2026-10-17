@@ -108,8 +108,7 @@ jobs:
         ports:
           - 4566:4566
         env:
-          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
-          SERVICES: s3,dynamodb,iam,sts,logs
+          SERVICES: s3,dynamodb
           DEFAULT_REGION: us-east-1
     steps:
       - name: Checkout Code

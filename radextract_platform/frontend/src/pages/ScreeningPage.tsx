@@ -630,6 +630,19 @@ export function ScreeningPage() {
     },
   });
 
+  // Cache compiled RegExp instances to eliminate repeated regex allocations in render loops
+  const keywordRegexCache = useRef<Map<string, RegExp>>(new Map());
+  const getCompiledKeywordRegex = (word: string): RegExp => {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    let cached = keywordRegexCache.current.get(escaped);
+    if (!cached) {
+      cached = new RegExp(`\\b${escaped}\\b`, "gi");
+      keywordRegexCache.current.set(escaped, cached);
+    }
+    cached.lastIndex = 0;
+    return cached;
+  };
+
   // Render Highlighted Text (Abstract or Title) with Priority Resolution & Instant Fallback
   const renderHighlightedText = (
     rawText: string,
@@ -651,12 +664,14 @@ export function ScreeningPage() {
     // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
     const activeSpans = [...spans];
     if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
+      const rawTextLower = rawText.toLowerCase();
       fallbackKeywordsList.forEach((kw) => {
         const word = kw.keyword.trim();
         if (!word) return;
+        // Fast substring pre-check: skip regex searching if keyword substring is not present
+        if (!rawTextLower.includes(word.toLowerCase())) return;
         try {
-          const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+          const regex = getCompiledKeywordRegex(word);
           let match;
           while ((match = regex.exec(rawText)) !== null) {
             activeSpans.push({
