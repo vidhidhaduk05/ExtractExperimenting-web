@@ -38,6 +38,19 @@ export JEV_MODE="on"
 export JEV_PROVIDER="laya"
 export LAYA_MODEL_DIR="${REPO_DIR}/laya/models"
 
+# Biomni-R0 32B Local LLM Configuration (fallback & extraction)
+if curl -s http://127.0.0.1:18000/v1/models >/dev/null 2>&1; then
+    echo "Detected local Biomni-R0 model server on port 18000."
+    export LLM_BASE_URL="http://127.0.0.1:18000/v1/chat/completions"
+    export LLM_MODELS_URL="http://127.0.0.1:18000/v1/models"
+    export LLM_API_KEY="sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
+    export LLM_MODEL="biomni-r0"
+    export RADEXTRACT_LLM_API_URL="http://127.0.0.1:18000/v1/chat/completions"
+    export RADEXTRACT_LLM_MODELS_URL="http://127.0.0.1:18000/v1/models"
+    export RADEXTRACT_LLM_API_KEY="sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
+    export RADEXTRACT_LLM_MODEL="biomni-r0"
+fi
+
 # Stage database in local scratch for fast I/O
 SCRATCH_DIR="${TMPDIR:-/tmp}/radextract_screening_${SLURM_JOB_ID}"
 mkdir -p "${SCRATCH_DIR}"

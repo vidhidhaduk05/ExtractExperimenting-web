@@ -49,6 +49,19 @@ export RADEXTRACT_STORAGE_BACKEND="local"
 export JEV_MODE="on"
 export JEV_PROVIDER="laya"
 
+# Biomni-R0 32B Local LLM Configuration
+if curl -s http://127.0.0.1:18000/v1/models >/dev/null 2>&1; then
+    echo "Detected local Biomni-R0 model server on port 18000."
+    export LLM_BASE_URL="http://127.0.0.1:18000/v1/chat/completions"
+    export LLM_MODELS_URL="http://127.0.0.1:18000/v1/models"
+    export LLM_API_KEY="sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
+    export LLM_MODEL="biomni-r0"
+    export RADEXTRACT_LLM_API_URL="http://127.0.0.1:18000/v1/chat/completions"
+    export RADEXTRACT_LLM_MODELS_URL="http://127.0.0.1:18000/v1/models"
+    export RADEXTRACT_LLM_API_KEY="sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
+    export RADEXTRACT_LLM_MODEL="biomni-r0"
+fi
+
 # Start FastAPI Backend in background
 echo "[1/2] Starting FastAPI Backend on port ${BACKEND_PORT}..."
 cd "${REPO_DIR}/radextract_platform/backend"
