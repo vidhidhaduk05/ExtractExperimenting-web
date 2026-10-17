@@ -18,8 +18,7 @@ import {
   Play,
   RotateCcw,
 } from "lucide-react";
-import { judgmentLabel, judgmentDotColor, cn } from "../lib/utils";
-import { sanitizeSvg } from "../lib/sanitize";
+import { judgmentLabel, judgmentDotColor, cn, sanitizeSvg } from "../lib/utils";
 import {
   BarChart,
   Bar,

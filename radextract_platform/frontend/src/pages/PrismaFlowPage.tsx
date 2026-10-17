@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Prisma2020Sync, type PrismaFlow } from "../lib/api";
 import { ArrowLeft, GitBranch, Loader2, Download, FileText, Code2, Copy, ExternalLink, RefreshCw } from "lucide-react";
-import { sanitizeSvg } from "../lib/sanitize";
+import { sanitizeSvg } from "../lib/utils";
 
 /** Fetch a URL as a blob and trigger a browser download. */
 async function downloadFile(url: string, filename: string) {
