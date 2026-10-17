@@ -33,11 +33,11 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "provider": "antigravity",
     "antigravity_model": "",          # empty = use settings.llm_model
     "antigravity_api_key": "",        # optional Gemini key (connection test only)
-    "local_endpoint_url": "http://localhost:11434/v1",
-    "local_model_name": "llama3.3",
-    "custom_api_key": "",
+    "local_endpoint_url": "http://127.0.0.1:18000/v1",
+    "local_model_name": "biomni-r0",
+    "custom_api_key": "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e",
     "temperature": 0.1,
-    "timeout_seconds": 60,
+    "timeout_seconds": 90,
 }
 
 _lock = threading.RLock()

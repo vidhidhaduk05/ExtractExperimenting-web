@@ -47,11 +47,11 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
   const [error, setError] = useState("");
 
   // AI Model Configuration State
-  const [provider, setProvider] = useState<"antigravity" | "local">("antigravity");
-  const [localEndpoint, setLocalEndpoint] = useState<string>("http://localhost:11434/v1");
-  const [localModelName, setLocalModelName] = useState<string>("llama3.3");
-  const [antigravityModel, setAntigravityModel] = useState<string>("gemini-2.5-flash");
-  const [customKey, setCustomKey] = useState<string>("");
+  const [provider, setProvider] = useState<"antigravity" | "local">("local");
+  const [localEndpoint, setLocalEndpoint] = useState<string>("http://127.0.0.1:18000/v1");
+  const [localModelName, setLocalModelName] = useState<string>("biomni-r0");
+  const [antigravityModel, setAntigravityModel] = useState<string>("biomni-r0");
+  const [customKey, setCustomKey] = useState<string>("sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e");
   const [testResult, setTestResult] = useState<{ success?: boolean; message?: string } | null>(null);
   const [testing, setTesting] = useState(false);
 
@@ -60,9 +60,9 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
       // Load current AI configuration
       api.getLlmConfig?.().then((res: any) => {
         if (res?.config) {
-          setProvider(res.config.provider || "antigravity");
-          setLocalEndpoint(res.config.local_endpoint_url || "http://localhost:11434/v1");
-          setLocalModelName(res.config.local_model_name || "llama3.3");
+          setProvider(res.config.provider || "local");
+          setLocalEndpoint(res.config.local_endpoint_url || "http://127.0.0.1:18000/v1");
+          setLocalModelName(res.config.local_model_name || "biomni-r0");
           setAntigravityModel(res.config.antigravity_model || "gemini-2.5-flash");
         }
       }).catch(() => {});
@@ -280,7 +280,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
                           type="text"
                           value={localEndpoint}
                           onChange={(e) => setLocalEndpoint(e.target.value)}
-                          placeholder="http://localhost:11434/v1"
+                          placeholder="http://127.0.0.1:18000/v1"
                           className="w-full text-xs p-1.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md font-mono"
                         />
                       </div>
