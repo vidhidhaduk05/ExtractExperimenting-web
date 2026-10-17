@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   api,
@@ -36,6 +36,8 @@ export function ClarificationNotificationCenter({
   isDrawerOpen: externalDrawerOpen,
   onToggleDrawer,
 }: ClarificationNotificationCenterProps) {
+  const location = useLocation();
+  const isScreeningPage = location.pathname.includes("/screening");
   const queryClient = useQueryClient();
   const [internalDrawerOpen, setInternalDrawerOpen] = useState(false);
   const isDrawerOpen = externalDrawerOpen ?? internalDrawerOpen;
@@ -180,11 +182,12 @@ export function ClarificationNotificationCenter({
   return (
     <>
       {/* ─────────────────────────────────────────────────────────────
-          1. BOTTOM-RIGHT TOAST STACK (Screening Clarification Alerts)
+          1. BOTTOM-RIGHT TOAST STACK (Only alert when on ANOTHER screen)
           ───────────────────────────────────────────────────────────── */}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 max-w-md w-full pointer-events-none px-4 sm:px-0">
-        {/* Floating counter pill if there are pending questions */}
-        {pendingQuestions.length > 0 && !isDrawerOpen && (
+      {!isScreeningPage && (
+        <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 max-w-md w-full pointer-events-none px-4 sm:px-0">
+          {/* Floating counter pill if there are pending questions */}
+          {pendingQuestions.length > 0 && !isDrawerOpen && (
           <button
             onClick={() => setDrawerOpen(true)}
             className="pointer-events-auto flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#141413] text-[#FAF9F3] text-xs font-medium shadow-lg hover:bg-black/85 transition-all transform hover:-translate-y-0.5 border border-purple-500/30"
@@ -345,12 +348,22 @@ export function ClarificationNotificationCenter({
                       )}
                     </button>
                   </div>
+                  <div className="mt-2 text-right">
+                    <Link
+                      to={`/projects/${projectId}/screening`}
+                      className="text-[10px] text-purple-700 hover:text-purple-900 font-semibold inline-flex items-center gap-1"
+                    >
+                      <span>Open in Screening Workspace</span>
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </Link>
+                  </div>
                 </>
               )}
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────
           2. SLIDE-IN INBOX DRAWER (Full Project Clarification Review)
