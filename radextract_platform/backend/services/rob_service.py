@@ -370,21 +370,32 @@ def apply_ai_prefill(
             q_conf = float(q_data.get("ai_confidence", 0.0) or 0.0)
             needs_review = 1 if (q_conf < threshold) else 0
 
-            db.update("rob_signaling_answers", a_row2["answer_id"], {
-                "ai_answer": q_data.get("ai_answer", ""),
+            # Auto-record AI answer into the recorded answer field so it is captured immediately,
+            # while keeping needs_human_review for transparent human verification
+            ai_ans_val = q_data.get("ai_answer", "")
+            update_payload = {
+                "ai_answer": ai_ans_val,
                 "ai_quote": q_data.get("ai_quote", ""),
                 "ai_page": q_data.get("ai_page"),
                 "ai_confidence": q_conf,
                 "needs_human_review": needs_review,
-            })
+            }
+            if ai_ans_val and not a_row2.get("answer"):
+                update_payload["answer"] = ai_ans_val
+                # human_verified remains 0 until human confirms/modifies
+
+            db.update("rob_signaling_answers", a_row2["answer_id"], update_payload)
             questions_prefilled += 1
             if q_conf > 0:
                 confidences.append(q_conf)
+
+        _recompute_domain_judgment(db, judgment_id)
 
     db.update("rob_assessments", assessment_id, {
         "ai_prefilled": 1,
         "ai_prefilled_at": _now(),
     })
+    _recompute_overall_judgment(db, assessment_id)
     db.commit()
 
     avg_conf = sum(confidences) / len(confidences) if confidences else 0.0

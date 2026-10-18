@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rayyan — Systematic Literature Review Workbench</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --rayyan-purple: #2b2969;
+      --rayyan-purple-dark: #1f1d4f;
+      --rayyan-purple-light: #3d3b85;
+      --rayyan-purple-bg: #f4f3fa;
+      
+      --rayyan-include: #108a43;
+      --rayyan-include-bg: #e6f6ec;
+      --rayyan-include-hover: #0c6b34;
+
+      --rayyan-maybe: #d97706;
+      --rayyan-maybe-bg: #fef3c7;
+      --rayyan-maybe-hover: #b45309;
+
+      --rayyan-exclude: #cf222e;
+      --rayyan-exclude-bg: #ffebe9;
+      --rayyan-exclude-hover: #a40e26;
+
+      --bg-canvas: #f8fafc;
+      --bg-surface: #ffffff;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-subtle: #64748b;
+      --text-disabled: #94a3b8;
+
+      --font-stack: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-canvas);
+      color: var(--text-main);
+      font-family: var(--font-stack);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ==============================================================
+       1. TOP PERSISTENT NAVBAR (Rayyan Header)
+       ============================================================== */
+    .top-header {
+      background: var(--rayyan-purple);
+      color: #ffffff;
+      height: 52px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      z-index: 100;
+      flex-shrink: 0;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .rayyan-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 19px;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      text-decoration: none;
+    }
+    .logo-mark {
+      width: 26px;
+      height: 26px;
+      background: #ffffff;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--rayyan-purple);
+      font-weight: 800;
+      font-size: 16px;
+    }
+
+    .review-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+    }
+    .review-tab {
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .review-tab:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+    .review-tab.active {
+      background: rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .header-center {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .review-title-badge {
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.12);
+      padding: 4px 10px;
+      border-radius: 999px;
+      color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .review-title-badge b { color: #ffffff; }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .head-icon-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+    .head-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+    .head-icon-btn.active {
+      background: #ffffff;
+      color: var(--rayyan-purple);
+      font-weight: 600;
+      border-color: #ffffff;
+    }
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: var(--rayyan-purple);
+      font-weight: 700;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+      cursor: pointer;
+    }
+
+    /* ==============================================================
+       2. WORKBENCH SUB-HEADER (Triage Bar & Progress)
+       ============================================================== */
+    .sub-bar {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      flex-shrink: 0;
+    }
+    .sub-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .stat-pill b { color: var(--text-main); }
+    .stat-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .stat-include { background: var(--rayyan-include); }
+    .stat-maybe { background: var(--rayyan-maybe); }
+    .stat-exclude { background: var(--rayyan-exclude); }
+    .stat-undecided { background: var(--border-dark); }
+
+    .sub-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .blind-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    /* ==============================================================
+       3. THREE-PANEL CORE WORKBENCH
+       ============================================================== */
+    .workbench-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr 280px;
+      flex: 1;
+      height: calc(100vh - 90px);
+      overflow: hidden;
+      background: #ffffff;
+    }
+    .workbench-layout.filters-closed {
+      grid-template-columns: 380px 1fr 0px;
+    }
+
+    /* --------------------------------------------------------------
+       PANEL 1: ARTICLE / REFERENCE LIST (Left)
+       -------------------------------------------------------------- */
+    .panel-articles {
+      background: #ffffff;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .article-list-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: #fafbfc;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .list-filter-row {
+      display: flex;
+      gap: 6px;
+    }
+    .inclusion-select {
+      flex: 1;
+      font-size: 12px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: #ffffff;
+      font-weight: 500;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+    .search-articles-input {
+      width: 100%;
+      font-size: 12px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: #ffffff;
+      outline: none;
+    }
+    .search-articles-input:focus {
+      border-color: var(--rayyan-purple);
+    }
+
+    .article-scroll-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .article-item {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      position: relative;
+      transition: background 0.15s ease;
+    }
+    .article-item:hover {
+      background: #f8fafc;
+    }
+    .article-item.selected {
+      background: var(--rayyan-purple-bg);
+      border-left: 3px solid var(--rayyan-purple);
+    }
+
+    .article-item-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .article-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .decision-chip {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 1px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.02em;
+    }
+    .chip-include { background: var(--rayyan-include-bg); color: var(--rayyan-include); }
+    .chip-maybe { background: var(--rayyan-maybe-bg); color: var(--rayyan-maybe); }
+    .chip-exclude { background: var(--rayyan-exclude-bg); color: var(--rayyan-exclude); }
+    .chip-undecided { background: var(--surface-subtle); color: var(--text-muted); }
+
+    .ai-rating-stars {
+      font-size: 10px;
+      color: #eab308;
+      letter-spacing: 1px;
+    }
+
+    .article-item-title {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.35;
+      color: var(--text-main);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .article-item-authors {
+      font-size: 11px;
+      color: var(--text-subtle);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* --------------------------------------------------------------
+       PANEL 2: ARTICLE DETAILS & DECISION BAR (Middle)
+       -------------------------------------------------------------- */
+    .panel-detail {
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .article-detail-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 36px 120px; /* room for bottom decision bar */
+    }
+
+    .detail-top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: var(--text-subtle);
+    }
+    .pagination-btns {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .pg-btn {
+      background: var(--bg-canvas);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .pg-btn:hover { background: #ffffff; color: var(--text-main); }
+
+    .detail-title {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+    .detail-meta-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-meta-block span b { color: var(--text-main); font-weight: 600; }
+    .doi-link { color: var(--rayyan-purple); text-decoration: none; }
+    .doi-link:hover { text-decoration: underline; }
+
+    .abstract-heading {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-subtle);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .abstract-body-text {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #1e293b;
+      margin-bottom: 24px;
+    }
+    .highlight-include {
+      background: #cbf5d9;
+      color: #0b6833;
+      font-weight: 600;
+      padding: 1px 3px;
+      border-radius: 2px;
+    }
+    .highlight-exclude {
+      background: #ffd6d9;
+      color: #9f1239;
+      font-weight: 600;
+      padding: 1px 3px;
+      border-radius: 2px;
+    }
+
+    /* Attached Labels & Reasons Chips */
+    .article-assigned-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .reason-chip {
+      background: var(--rayyan-exclude-bg);
+      border: 1px solid rgba(207, 34, 46, 0.3);
+      color: var(--rayyan-exclude);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .label-chip {
+      background: var(--rayyan-purple-bg);
+      border: 1px solid rgba(43, 41, 105, 0.25);
+      color: var(--rayyan-purple);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+
+    /* --------------------------------------------------------------
+       BOTTOM FLOATING DECISION BAR (Exact Rayyan Signature)
+       -------------------------------------------------------------- */
+    .decision-dock-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+      z-index: 40;
+    }
+    .decision-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-action {
+      padding: 9px 20px;
+      border-radius: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1.5px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .btn-include {
+      background: var(--rayyan-include-bg);
+      color: var(--rayyan-include);
+      border-color: var(--rayyan-include);
+    }
+    .btn-include:hover, .btn-include.active-decision {
+      background: var(--rayyan-include);
+      color: #ffffff;
+    }
+    .btn-maybe {
+      background: var(--rayyan-maybe-bg);
+      color: var(--rayyan-maybe);
+      border-color: var(--rayyan-maybe);
+    }
+    .btn-maybe:hover, .btn-maybe.active-decision {
+      background: var(--rayyan-maybe);
+      color: #ffffff;
+    }
+    .btn-exclude {
+      background: var(--rayyan-exclude-bg);
+      color: var(--rayyan-exclude);
+      border-color: var(--rayyan-exclude);
+    }
+    .btn-exclude:hover, .btn-exclude.active-decision {
+      background: var(--rayyan-exclude);
+      color: #ffffff;
+    }
+
+    .meta-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-meta {
+      background: #ffffff;
+      border: 1px solid var(--border-dark);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-meta:hover {
+      background: var(--surface-subtle);
+      color: var(--text-main);
+    }
+    .hotkey-hint {
+      font-size: 10px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: rgba(0,0,0,0.06);
+    }
+
+    /* --------------------------------------------------------------
+       PANEL 3: RIGHT FILTERS & FACETS PANEL (Rayyan Sidebar)
+       -------------------------------------------------------------- */
+    .panel-filters {
+      background: #fafbfc;
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      transition: width 0.2s ease;
+    }
+    .filters-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #ffffff;
+    }
+    .filters-heading {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .close-filters-btn {
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .facets-container {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .facet-block {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .facet-title-bar {
+      padding: 8px 12px;
+      background: #f8fafc;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .facet-body {
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 11.5px;
+    }
+    .facet-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .facet-item:hover { color: var(--text-main); }
+    .facet-item input { margin-right: 6px; }
+    .facet-count {
+      font-size: 10px;
+      background: var(--surface-subtle);
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: var(--text-subtle);
+    }
+
+    /* Modal Dialogs (Keyboard Shortcuts & Exclusion Reasons) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-card {
+      background: #ffffff;
+      border-radius: 8px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fafbfc;
+    }
+    .modal-header h3 { font-size: 14px; font-weight: 700; color: var(--text-main); }
+    .modal-body {
+      padding: 18px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      background: #fafbfc;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .reason-option-btn {
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: #ffffff;
+      font-size: 12px;
+      cursor: pointer;
+      margin-bottom: 6px;
+      transition: all 0.15s ease;
+    }
+    .reason-option-btn:hover {
+      border-color: var(--rayyan-exclude);
+      background: var(--rayyan-exclude-bg);
+      color: var(--rayyan-exclude);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==============================================================
+       1. TOP PERSISTENT NAVBAR (Rayyan Header)
+       ============================================================== -->
+  <header class="top-header">
+    <div class="header-left">
+      <a href="rayyan_user_dashboard.html" class="rayyan-logo" title="Back to Rayyan Dashboard">
+        <span class="logo-mark">R</span>
+        <span>rayyan</span>
+      </a>
+
+      <nav class="review-tabs">
+        <a href="rayyan_user_dashboard.html" class="review-tab">Reviews</a>
+        <a href="rayyan_workbench.html" class="review-tab active">Workbench</a>
+        <a href="rayyan_review_overview.html" class="review-tab">Review Overview</a>
+        <a href="rayyan_review_overview.html#prisma-section" class="review-tab">PRISMA Flow</a>
+        <a href="version_2_untitled_blend.html" class="review-tab">Platform Home</a>
+      </nav>
+    </div>
+
+    <div class="header-center">
+      <div class="review-title-badge">
+        <span>Review:</span>
+        <b>Pure Arterial Malformations (PAM) Review</b>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="head-icon-btn active" id="btnToggleFilters" title="Toggle Filters Sidebar">
+        <span>◫</span> Filters
+      </button>
+      <button class="head-icon-btn" id="btnShortcutsModal" title="Keyboard Shortcuts (Press V)">
+        <span>⌨</span> Shortcuts [V]
+      </button>
+      <button class="head-icon-btn" id="btnAutoAdvance" title="Auto-advance after decision">
+        <span>⚡</span> Auto-Scroll: On
+      </button>
+      <div class="user-avatar" title="Dr. V. Dhaduk (Lead Reviewer)">VD</div>
+    </div>
+  </header>
+
+  <!-- ==============================================================
+       2. WORKBENCH SUB-HEADER (Triage Bar & Progress)
+       ============================================================== -->
+  <div class="sub-bar">
+    <div class="sub-bar-left">
+      <span class="stat-pill">
+        <span class="stat-indicator stat-undecided"></span>
+        <span>Undecided: <b id="cntUndecided">5</b></span>
+      </span>
+      <span class="stat-pill">
+        <span class="stat-indicator stat-include"></span>
+        <span>Included: <b id="cntIncluded">0</b></span>
+      </span>
+      <span class="stat-pill">
+        <span class="stat-indicator stat-maybe"></span>
+        <span>Maybe: <b id="cntMaybe">0</b></span>
+      </span>
+      <span class="stat-pill">
+        <span class="stat-indicator stat-exclude"></span>
+        <span>Excluded: <b id="cntExcluded">0</b></span>
+      </span>
+    </div>
+
+    <div class="sub-bar-right">
+      <label class="blind-toggle">
+        <input type="checkbox" checked id="blindModeCheckbox">
+        <span>Blind Mode (Active)</span>
+      </label>
+      <span style="font-size: 11px; color: var(--text-subtle);">|</span>
+      <span style="font-size: 11.5px; color: var(--text-muted);" id="progressStatusText">
+        Screened: <b>0 / 5 (0%)</b>
+      </span>
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       3. THREE-PANEL CORE WORKBENCH
+       ============================================================== -->
+  <div class="workbench-layout" id="workbenchLayout">
+
+    <!-- ------------------------------------------------------------
+         PANEL 1: ARTICLE LIST (Left Column)
+         ------------------------------------------------------------ -->
+    <aside class="panel-articles">
+      <div class="article-list-header">
+        <div class="list-filter-row">
+          <select class="inclusion-select" id="filterStatusSelect">
+            <option value="all">All Articles (5)</option>
+            <option value="undecided">Undecided</option>
+            <option value="include">Included</option>
+            <option value="maybe">Maybe</option>
+            <option value="exclude">Excluded</option>
+          </select>
+        </div>
+        <input type="search" class="search-articles-input" id="searchArticlesInput" placeholder="Search references by title, author...">
+      </div>
+
+      <div class="article-scroll-list" id="articleListContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </aside>
+
+    <!-- ------------------------------------------------------------
+         PANEL 2: ARTICLE DETAIL & BOTTOM DECISION BAR (Middle Column)
+         ------------------------------------------------------------ -->
+    <main class="panel-detail">
+      <div class="article-detail-scroll" id="articleDetailScroll">
+        
+        <div class="detail-top-nav">
+          <span id="detailIndexIndicator">Article 1 of 5</span>
+          <div class="pagination-btns">
+            <button class="pg-btn" id="btnPrevArticle" title="Previous Article">&larr; Prev</button>
+            <button class="pg-btn" id="btnNextArticle" title="Next Article">Next &rarr;</button>
+          </div>
+        </div>
+
+        <h1 class="detail-title" id="detailTitle">Multiparametric MRI vs Dual-Energy CT for Pancreatic Ductal Adenocarcinoma Margin Assessment</h1>
+
+        <div class="detail-meta-block">
+          <span><b>Authors:</b> <span id="detailAuthors">K. Lindqvist, J. Zhang, H. Mercer et al.</span></span>
+          <span><b>Journal / Publication:</b> <span id="detailJournal">Radiology 2024; 312(2)</span></span>
+          <span><b>DOI:</b> <a href="#" class="doi-link" id="detailDoi">10.1016/j.ajr.2024.08.012</a></span>
+        </div>
+
+        <!-- Assigned Reasons or Labels Display -->
+        <div class="article-assigned-meta" id="assignedMetaContainer">
+          <!-- Chips render here if excluded with reason or labeled -->
+        </div>
+
+        <div class="abstract-heading">
+          <span>Abstract</span>
+          <span style="font-size: 11px; color: var(--rayyan-purple); font-weight: 600;">Keywords Highlighted</span>
+        </div>
+
+        <div class="abstract-body-text" id="detailAbstract">
+          <!-- Text rendered with green/red highlight spans -->
+        </div>
+
+      </div>
+
+      <!-- BOTTOM DECISION DOCK (Exact Rayyan Signature Buttons) -->
+      <div class="decision-dock-bar">
+        <div class="decision-btn-group">
+          <button class="btn-action btn-include" id="btnInclude" title="Include study (Press 1 or I)">
+            <span>✓ Include</span>
+            <span class="hotkey-hint">I / 1</span>
+          </button>
+          <button class="btn-action btn-maybe" id="btnMaybe" title="Mark study as maybe (Press 3 or U)">
+            <span>? Maybe</span>
+            <span class="hotkey-hint">U / 3</span>
+          </button>
+          <button class="btn-action btn-exclude" id="btnExclude" title="Exclude study (Press 2 or E)">
+            <span>✕ Exclude</span>
+            <span class="hotkey-hint">E / 2</span>
+          </button>
+        </div>
+
+        <div class="meta-btn-group">
+          <button class="btn-meta" id="btnReasonModal">
+            <span>Reason</span>
+            <span class="hotkey-hint">R</span>
+          </button>
+          <button class="btn-meta" id="btnLabelModal">
+            <span>Label</span>
+            <span class="hotkey-hint">L</span>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ------------------------------------------------------------
+         PANEL 3: RIGHT FILTERS & FACETS (Rayyan Sidebar)
+         ------------------------------------------------------------ -->
+    <aside class="panel-filters" id="panelFilters">
+      <div class="filters-header">
+        <span class="filters-heading">Filters & Facets</span>
+        <button class="close-filters-btn" id="btnCloseFilters" title="Close filter panel">×</button>
+      </div>
+
+      <div class="facets-container">
+        
+        <!-- Facet: Inclusion Decisions -->
+        <div class="facet-block">
+          <div class="facet-title-bar">
+            <span>Inclusion Decisions</span>
+            <span>▾</span>
+          </div>
+          <div class="facet-body">
+            <label class="facet-item">
+              <span><input type="checkbox" checked data-facet-val="all"> Undecided</span>
+              <span class="facet-count" id="facetCountUndecided">5</span>
+            </label>
+            <label class="facet-item">
+              <span><input type="checkbox" data-facet-val="include"> Included</span>
+              <span class="facet-count" id="facetCountIncluded">0</span>
+            </label>
+            <label class="facet-item">
+              <span><input type="checkbox" data-facet-val="maybe"> Maybe</span>
+              <span class="facet-count" id="facetCountMaybe">0</span>
+            </label>
+            <label class="facet-item">
+              <span><input type="checkbox" data-facet-val="exclude"> Excluded</span>
+              <span class="facet-count" id="facetCountExcluded">0</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Facet: Keywords for Include (Green) -->
+        <div class="facet-block">
+          <div class="facet-title-bar">
+            <span>Keywords (Inclusion)</span>
+            <span>▾</span>
+          </div>
+          <div class="facet-body">
+            <label class="facet-item">
+              <span><input type="checkbox"> Pure Arterial Malformation</span>
+              <span class="facet-count">3</span>
+            </label>
+            <label class="facet-item">
+              <span><input type="checkbox"> Microcatheter Coiling</span>
+              <span class="facet-count">2</span>
+            </label>
+            <label class="facet-item">
+              <span><input type="checkbox"> Surgical Resection</span>
+              <span class="facet-count">4</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Facet: Exclusion Reasons -->
+        <div class="facet-block">
+          <div class="facet-title-bar">
+            <span>Exclusion Reasons</span>
+            <span>▾</span>
+          </div>
+          <div class="facet-body">
+            <label class="facet-item">
+              <span><input type="checkbox"> Wrong Population</span>
+              <span class="facet-count">0</span>
+            </label>
+            <label class="facet-item">
+              <span><input type="checkbox"> Wrong Intervention</span>
+              <span class="facet-count">0</span>
+            </label>
+            <label class="facet-item">
+              <span><input type="checkbox"> Ineligible Study Design</span>
+              <span class="facet-count">0</span>
+            </label>
+            <label class="facet-item">
+              <span><input type="checkbox"> Animal / In Vitro Study</span>
+              <span class="facet-count">0</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Facet: Publication Years -->
+        <div class="facet-block">
+          <div class="facet-title-bar">
+            <span>Publication Years</span>
+            <span>▾</span>
+          </div>
+          <div class="facet-body">
+            <label class="facet-item">
+              <span><input type="checkbox"> 2024</span>
+              <span class="facet-count">3</span>
+            </label>
+            <label class="facet-item">
+              <span><input type="checkbox"> 2023</span>
+              <span class="facet-count">2</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ==============================================================
+       MODALS: KEYBOARD SHORTCUTS & EXCLUSION REASONS
+       ============================================================== -->
+
+  <!-- Modal: Keyboard Shortcuts (Press V) -->
+  <div class="modal-overlay" id="shortcutsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Rayyan Keyboard Shortcuts</h3>
+        <button class="close-filters-btn" onclick="closeModal('shortcutsModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 0; font-weight: 600;">Include Article</td>
+            <td style="padding: 8px 0; text-align: right;"><kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">I</kbd> or <kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">1</kbd></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 0; font-weight: 600;">Exclude Article</td>
+            <td style="padding: 8px 0; text-align: right;"><kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">E</kbd> or <kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">2</kbd></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 0; font-weight: 600;">Maybe / Uncertain</td>
+            <td style="padding: 8px 0; text-align: right;"><kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">U</kbd> or <kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">3</kbd></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 0; font-weight: 600;">Next Reference</td>
+            <td style="padding: 8px 0; text-align: right;"><kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">&rarr;</kbd> or <kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">K</kbd></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 0; font-weight: 600;">Previous Reference</td>
+            <td style="padding: 8px 0; text-align: right;"><kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">&larr;</kbd> or <kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">J</kbd></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 0; font-weight: 600;">Open Exclusion Reasons</td>
+            <td style="padding: 8px 0; text-align: right;"><kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">R</kbd></td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-weight: 600;">Open Shortcuts Panel</td>
+            <td style="padding: 8px 0; text-align: right;"><kbd style="background:var(--bg-canvas); padding:2px 6px; border-radius:3px; border:1px solid var(--border);">V</kbd></td>
+          </tr>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-meta" onclick="closeModal('shortcutsModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Assign Exclusion Reason -->
+  <div class="modal-overlay" id="reasonModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Assign Exclusion Reason</h3>
+        <button class="close-filters-btn" onclick="closeModal('reasonModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;">
+          Select a standard exclusion reason to document in the PRISMA log:
+        </p>
+        <button class="reason-option-btn" onclick="applyReason('Wrong Population')">Wrong Population (No PAM diagnosed)</button>
+        <button class="reason-option-btn" onclick="applyReason('Wrong Intervention')">Wrong Intervention (Conservative / Medical only)</button>
+        <button class="reason-option-btn" onclick="applyReason('Ineligible Study Design')">Ineligible Study Design (Editorial / Letter / Case Report)</button>
+        <button class="reason-option-btn" onclick="applyReason('Animal / In Vitro Study')">Animal / In Vitro Hydrodynamic Model</button>
+        <button class="reason-option-btn" onclick="applyReason('Insufficient Outcome Data')">Insufficient Outcome Data (No follow-up reported)</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-meta" onclick="closeModal('reasonModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       JAVASCRIPT: APPLICATION LOGIC & STATE ENGINE
+       ============================================================== -->
+  <script>
+    const INITIAL_ARTICLES = [
+      {
+        id: "art_1",
+        doi: "10.1016/j.ajr.2024.08.012",
+        title: "Multiparametric MRI vs Dual-Energy CT for Pancreatic Ductal Adenocarcinoma Margin Assessment",
+        authors: "K. Lindqvist, J. Zhang, H. Mercer et al.",
+        journal: "Radiology 2024; 312(2)",
+        abstract: "Prospective cohort of N=142 patients assessing microscopic resection margin involvement (R0 vs R1). Contrast-enhanced MRI demonstrated superior sensitivity (91.4% vs 78.2%) with verified histopathologic correlation. Complete Kaplan-Meier survival curves and diagnostic contingency tables provided.",
+        decision: "undecided",
+        reason: null,
+        stars: 5
+      },
+      {
+        id: "art_2",
+        doi: "10.1148/radiol.231940",
+        title: "Deep Learning Segmentation of Hepatic Steatosis in Routine Non-Contrast Screening CT",
+        authors: "T. Vance, M. Sterling, E. Chen et al.",
+        journal: "IEEE Trans Med Imaging 2023; 42(5)",
+        abstract: "Retrospective validation of a 3D U-Net algorithm across 2,400 non-contrast CT scans. Primary endpoint focused purely on volumetric fat fraction segmentation without clinical outcome, surgical margins, or comparative patient survival endpoints.",
+        decision: "undecided",
+        reason: null,
+        stars: 1
+      },
+      {
+        id: "art_3",
+        doi: "10.1007/s00330-024-10651",
+        title: "Prognostic Utility of Diffusion-Weighted MRI in High-Grade Glioblastoma: Systematic Review Protocol",
+        authors: "A. Rossi, P. Bauer, G. Dupont et al.",
+        journal: "Eur Radiol 2024; 34(8)",
+        abstract: "Protocol detailing search strategy and extraction matrices for evaluating ADC values in predicting progression-free survival in IDH-wildtype GBM patients. Pilot cohort results awaiting final peer review.",
+        decision: "undecided",
+        reason: null,
+        stars: 3
+      },
+      {
+        id: "art_4",
+        doi: "10.1038/s41591-024-03120-x",
+        title: "Low-Dose CT Screening for Early Lung Cancer Detection in High-Risk Non-Smokers: A Multi-Center RCT",
+        authors: "S. Tanaka, E. Gomez, R. Patel et al.",
+        journal: "Nature Medicine 2024; 30(3)",
+        abstract: "Phase 3 randomized controlled trial across 18 centers (N=6,840). 5-year follow-up demonstrating a 26% reduction in disease-specific mortality with annual low-dose volumetric screening compared with standard diagnostic radiographs.",
+        decision: "undecided",
+        reason: null,
+        stars: 5
+      },
+      {
+        id: "art_5",
+        doi: "10.1053/j.gastro.2024.03.018",
+        title: "Pediatric Crohn's Disease Stricture Evaluation: Ultrasound Elastography vs MR Enterography",
+        authors: "D. O'Connor, L. Wang, F. Al-Hassan et al.",
+        journal: "Gastroenterology 2024; 166(4)",
+        abstract: "Cross-sectional cohort (N=86) assessing mural stiffness index against surgical specimen fibrosis scores. High correlation reported for severe fibrotic lesions with clear histologic validation.",
+        decision: "undecided",
+        reason: null,
+        stars: 4
+      }
+    ];
+
+    let articles = JSON.parse(JSON.stringify(INITIAL_ARTICLES));
+    let selectedId = "art_1";
+    let autoAdvance = true;
+
+    // DOM Elements
+    const articleListContainer = document.getElementById('articleListContainer');
+    const searchArticlesInput = document.getElementById('searchArticlesInput');
+    const filterStatusSelect = document.getElementById('filterStatusSelect');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailAuthors = document.getElementById('detailAuthors');
+    const detailJournal = document.getElementById('detailJournal');
+    const detailDoi = document.getElementById('detailDoi');
+    const detailAbstract = document.getElementById('detailAbstract');
+    const detailIndexIndicator = document.getElementById('detailIndexIndicator');
+    const assignedMetaContainer = document.getElementById('assignedMetaContainer');
+
+    const btnInclude = document.getElementById('btnInclude');
+    const btnMaybe = document.getElementById('btnMaybe');
+    const btnExclude = document.getElementById('btnExclude');
+
+    const cntUndecided = document.getElementById('cntUndecided');
+    const cntIncluded = document.getElementById('cntIncluded');
+    const cntMaybe = document.getElementById('cntMaybe');
+    const cntExcluded = document.getElementById('cntExcluded');
+    const progressStatusText = document.getElementById('progressStatusText');
+
+    const facetCountUndecided = document.getElementById('facetCountUndecided');
+    const facetCountIncluded = document.getElementById('facetCountIncluded');
+    const facetCountMaybe = document.getElementById('facetCountMaybe');
+    const facetCountExcluded = document.getElementById('facetCountExcluded');
+
+    const panelFilters = document.getElementById('panelFilters');
+    const workbenchLayout = document.getElementById('workbenchLayout');
+    const btnToggleFilters = document.getElementById('btnToggleFilters');
+    const btnCloseFilters = document.getElementById('btnCloseFilters');
+    const btnAutoAdvance = document.getElementById('btnAutoAdvance');
+
+    function renderArticlesList() {
+      articleListContainer.innerHTML = '';
+      const filterVal = filterStatusSelect.value;
+      const searchVal = searchArticlesInput.value.toLowerCase().trim();
+
+      const visible = articles.filter(a => {
+        if (filterVal !== 'all' && a.decision !== filterVal) return false;
+        if (searchVal) {
+          return a.title.toLowerCase().includes(searchVal) || a.authors.toLowerCase().includes(searchVal);
+        }
+        return true;
+      });
+
+      visible.forEach(art => {
+        const item = document.createElement('div');
+        item.className = `article-item ${art.id === selectedId ? 'selected' : ''}`;
+        
+        let chipClass = 'chip-undecided';
+        let chipText = 'Undecided';
+        if (art.decision === 'include') { chipClass = 'chip-include'; chipText = 'Included'; }
+        else if (art.decision === 'maybe') { chipClass = 'chip-maybe'; chipText = 'Maybe'; }
+        else if (art.decision === 'exclude') { chipClass = 'chip-exclude'; chipText = 'Excluded'; }
+
+        item.innerHTML = `
+          <div class="article-item-head">
+            <div class="article-chips-row">
+              <span class="decision-chip ${chipClass}">${chipText}</span>
+              ${art.reason ? `<span class="decision-chip chip-exclude">${art.reason}</span>` : ''}
+            </div>
+            <div class="ai-rating-stars">${'★'.repeat(art.stars)}${'☆'.repeat(5 - art.stars)}</div>
+          </div>
+          <h4 class="article-item-title">${art.title}</h4>
+          <div class="article-item-authors">${art.authors} &bull; ${art.journal}</div>
+        `;
+
+        item.addEventListener('click', () => selectArticle(art.id));
+        articleListContainer.appendChild(item);
+      });
+    }
+
+    function renderDetail() {
+      const art = articles.find(a => a.id === selectedId) || articles[0];
+      if (!art) return;
+
+      const idx = articles.findIndex(a => a.id === art.id) + 1;
+      detailIndexIndicator.textContent = `Article ${idx} of ${articles.length}`;
+
+      detailTitle.textContent = art.title;
+      detailAuthors.textContent = art.authors;
+      detailJournal.textContent = art.journal;
+      detailDoi.textContent = art.doi;
+      detailDoi.href = `https://doi.org/${art.doi}`;
+
+      // Highlight keywords
+      detailAbstract.innerHTML = art.abstract
+        .replace(/resection margin|MRI|survival curves|Low-Dose CT|Ultrasound Elastography/gi, match => `<span class="highlight-include">${match}</span>`)
+        .replace(/without clinical outcome|lacking surgical/gi, match => `<span class="highlight-exclude">${match}</span>`);
+
+      // Assigned Reasons / Labels
+      assignedMetaContainer.innerHTML = '';
+      if (art.reason) {
+        assignedMetaContainer.innerHTML += `<span class="reason-chip">Exclusion Reason: ${art.reason}</span>`;
+      }
+      if (art.decision === 'include') {
+        assignedMetaContainer.innerHTML += `<span class="label-chip">Decision: Included</span>`;
+      }
+
+      // Update button active state
+      btnInclude.classList.toggle('active-decision', art.decision === 'include');
+      btnMaybe.classList.toggle('active-decision', art.decision === 'maybe');
+      btnExclude.classList.toggle('active-decision', art.decision === 'exclude');
+    }
+
+    function selectArticle(id) {
+      selectedId = id;
+      renderArticlesList();
+      renderDetail();
+    }
+
+    function setDecision(decision) {
+      const art = articles.find(a => a.id === selectedId);
+      if (!art) return;
+
+      art.decision = decision;
+      if (decision === 'exclude' && !art.reason) {
+        // Open reason modal
+        openModal('reasonModal');
+      }
+
+      updateCounts();
+      renderArticlesList();
+      renderDetail();
+
+      if (autoAdvance) {
+        advanceNext();
+      }
+    }
+
+    function advanceNext() {
+      const curIndex = articles.findIndex(a => a.id === selectedId);
+      if (curIndex < articles.length - 1) {
+        selectArticle(articles[curIndex + 1].id);
+      }
+    }
+
+    function advancePrev() {
+      const curIndex = articles.findIndex(a => a.id === selectedId);
+      if (curIndex > 0) {
+        selectArticle(articles[curIndex - 1].id);
+      }
+    }
+
+    function applyReason(reasonText) {
+      const art = articles.find(a => a.id === selectedId);
+      if (art) {
+        art.reason = reasonText;
+        art.decision = 'exclude';
+      }
+      closeModal('reasonModal');
+      updateCounts();
+      renderArticlesList();
+      renderDetail();
+    }
+
+    function updateCounts() {
+      const inc = articles.filter(a => a.decision === 'include').length;
+      const may = articles.filter(a => a.decision === 'maybe').length;
+      const exc = articles.filter(a => a.decision === 'exclude').length;
+      const und = articles.filter(a => a.decision === 'undecided').length;
+
+      cntIncluded.textContent = inc;
+      cntMaybe.textContent = may;
+      cntExcluded.textContent = exc;
+      cntUndecided.textContent = und;
+
+      facetCountIncluded.textContent = inc;
+      facetCountMaybe.textContent = may;
+      facetCountExcluded.textContent = exc;
+      facetCountUndecided.textContent = und;
+
+      const screened = inc + may + exc;
+      const pct = Math.round((screened / articles.length) * 100);
+      progressStatusText.innerHTML = `Screened: <b>${screened} / ${articles.length} (${pct}%)</b>`;
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    // Toggle Filters Sidebar
+    function toggleFilters() {
+      workbenchLayout.classList.toggle('filters-closed');
+      const isOpen = !workbenchLayout.classList.contains('filters-closed');
+      btnToggleFilters.classList.toggle('active', isOpen);
+    }
+
+    // Event Listeners
+    btnInclude.addEventListener('click', () => setDecision('include'));
+    btnMaybe.addEventListener('click', () => setDecision('maybe'));
+    btnExclude.addEventListener('click', () => setDecision('exclude'));
+
+    document.getElementById('btnPrevArticle').addEventListener('click', advancePrev);
+    document.getElementById('btnNextArticle').addEventListener('click', advanceNext);
+
+    btnToggleFilters.addEventListener('click', toggleFilters);
+    btnCloseFilters.addEventListener('click', toggleFilters);
+
+    document.getElementById('btnShortcutsModal').addEventListener('click', () => openModal('shortcutsModal'));
+    document.getElementById('btnReasonModal').addEventListener('click', () => openModal('reasonModal'));
+
+    btnAutoAdvance.addEventListener('click', () => {
+      autoAdvance = !autoAdvance;
+      btnAutoAdvance.innerHTML = autoAdvance ? `<span>⚡</span> Auto-Scroll: On` : `<span>⚡</span> Auto-Scroll: Off`;
+    });
+
+    searchArticlesInput.addEventListener('input', renderArticlesList);
+    filterStatusSelect.addEventListener('change', renderArticlesList);
+
+    // Global Hotkeys (Rayyan Key Mappings)
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      const key = e.key.toLowerCase();
+      
+      if (key === '1' || key === 'i') {
+        e.preventDefault();
+        setDecision('include');
+      } else if (key === '2' || key === 'e') {
+        e.preventDefault();
+        setDecision('exclude');
+      } else if (key === '3' || key === 'u') {
+        e.preventDefault();
+        setDecision('maybe');
+      } else if (key === 'r') {
+        e.preventDefault();
+        openModal('reasonModal');
+      } else if (key === 'v') {
+        e.preventDefault();
+        openModal('shortcutsModal');
+      } else if (key === 'arrowright' || key === 'k') {
+        e.preventDefault();
+        advanceNext();
+      } else if (key === 'arrowleft' || key === 'j') {
+        e.preventDefault();
+        advancePrev();
+      } else if (key === 'escape') {
+        closeModal('shortcutsModal');
+        closeModal('reasonModal');
+      }
+    });
+
+    // Initial render
+    renderArticlesList();
+    renderDetail();
+    updateCounts();
+  </script>
+</body>
+</html>

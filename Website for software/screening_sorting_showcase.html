@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screening & Eligibility Triage — RadExtract Curie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-subtle: #f1f5f9;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+      --ink: #0f172a;
+      --ink-muted: #475569;
+      --ink-subtle: #64748b;
+      
+      --indigo: #4f46e5;
+      --indigo-subtle: #eef2ff;
+      --indigo-border: #c7d2fe;
+
+      --emerald: #059669;
+      --emerald-subtle: #ecfdf5;
+      --emerald-border: #a7f3d0;
+      
+      --rose: #e11d48;
+      --rose-subtle: #fff1f2;
+      --rose-border: #fecdd3;
+      
+      --amber: #d97706;
+      --amber-subtle: #fffbeb;
+      --amber-border: #fde68a;
+
+      --purple: #7e22ce;
+      --purple-subtle: #faf5ff;
+      --purple-border: #e9d5ff;
+
+      --font-ui: 'Inter', -apple-system, sans-serif;
+      --font-body: 'Source Serif 4', Georgia, serif;
+      --font-mono: 'Space Mono', monospace;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 1. TOP HEADER & METRIC SUMMARY RIBBON */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-top {
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--surface-subtle);
+    }
+    .project-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .back-btn {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--indigo);
+      background: var(--indigo-subtle);
+      border: 1px solid var(--indigo-border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+    .title-group h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 0 3px var(--emerald-subtle);
+    }
+    .header-ctrls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      font-size: 12px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--ink-muted);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      font-weight: 500;
+    }
+    .btn-secondary:hover { background: var(--surface-subtle); color: var(--ink); }
+    .btn-primary {
+      background: var(--indigo);
+      color: #ffffff;
+      padding: 7px 16px;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .btn-primary:hover { background: #4338ca; }
+
+    /* Exact Platform 7-Metric Summary Ribbon */
+    .metric-ribbon {
+      padding: 8px 28px;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      background: #ffffff;
+    }
+    .metric-badge {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      background: #ffffff;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .metric-badge:hover { border-color: var(--border-dark); }
+    .metric-badge.active {
+      border-color: var(--indigo);
+      background: var(--indigo-subtle);
+    }
+    .metric-badge .lbl {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ink-subtle);
+      display: block;
+    }
+    .metric-badge .val {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+    .metric-ta-inc .lbl { color: var(--emerald); }
+    .metric-ta-inc .val { color: var(--emerald); }
+    .metric-ft-inc .lbl { color: #047857; }
+    .metric-ft-inc .val { color: #047857; }
+    .metric-exc .lbl { color: var(--rose); }
+    .metric-exc .val { color: var(--rose); }
+    .metric-unc .lbl { color: var(--amber); }
+    .metric-unc .val { color: var(--amber); }
+    .metric-questions .lbl { color: var(--purple); }
+    .metric-questions .val { color: var(--purple); }
+
+    /* 2. COLLAPSIBLE PROTOCOL SCREENING RULES & PICO CRITERIA PANEL */
+    .protocol-accordion {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .protocol-toggle-bar {
+      padding: 8px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 11.5px;
+      background: #fafbfc;
+      user-select: none;
+    }
+    .protocol-summary-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      color: var(--ink-muted);
+    }
+    .protocol-tag-chip {
+      font-size: 10px;
+      font-weight: 700;
+      background: var(--indigo-subtle);
+      color: var(--indigo);
+      border: 1px solid var(--indigo-border);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .protocol-content {
+      padding: 14px 28px 18px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      background: var(--surface);
+    }
+    .pico-card {
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #fcfcfd;
+    }
+    .pico-card-p { border-color: var(--indigo-border); background: var(--indigo-subtle); }
+    .pico-card-i { border-color: #bae6fd; background: #f0f9ff; }
+    .pico-card-c { border-color: var(--purple-border); background: var(--purple-subtle); }
+    .pico-card-o { border-color: var(--emerald-border); background: var(--emerald-subtle); }
+
+    .pico-card-head {
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pico-card-p .pico-card-head { color: var(--indigo); }
+    .pico-card-i .pico-card-head { color: #0284c7; }
+    .pico-card-c .pico-card-head { color: var(--purple); }
+    .pico-card-o .pico-card-head { color: var(--emerald); }
+
+    .pico-card p {
+      font-size: 11px;
+      color: var(--ink-muted);
+      line-height: 1.45;
+    }
+
+    /* 3. CORE 3-COLUMN WORKSPACE */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr 280px;
+      height: calc(100vh - 150px);
+      background: var(--bg);
+    }
+
+    /* Column 1: Studies Master List & Queue */
+    .col-list {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .list-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #fafbfc;
+    }
+    .search-input {
+      width: 100%;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .stage-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface-subtle);
+      padding: 2px;
+      border-radius: 6px;
+    }
+    .stage-tab {
+      flex: 1;
+      padding: 4px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      text-align: center;
+      border-radius: 4px;
+    }
+    .stage-tab.active {
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .studies-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .study-row {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: var(--surface);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .study-row:hover {
+      background: var(--surface-subtle);
+      border-color: var(--border);
+    }
+    .study-row.selected {
+      background: var(--indigo-subtle);
+      border-color: var(--indigo-border);
+    }
+    .study-row.active-sorting {
+      animation: pulse-study 1s infinite alternate;
+    }
+    @keyframes pulse-study {
+      from { border-color: var(--indigo); box-shadow: 0 0 0 2px var(--indigo-subtle); }
+      to { border-color: var(--indigo); box-shadow: 0 0 0 4px var(--indigo-border); }
+    }
+    .study-row-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .study-row-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .conf-badge {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .conf-high { background: var(--emerald-subtle); color: var(--emerald); border: 1px solid var(--emerald-border); }
+    .conf-mid { background: var(--amber-subtle); color: var(--amber); border: 1px solid var(--amber-border); }
+    .conf-low { background: var(--rose-subtle); color: var(--rose); border: 1px solid var(--rose-border); }
+
+    .study-row-meta {
+      font-size: 10.5px;
+      color: var(--ink-subtle);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-tag {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .status-tag.included { background: var(--emerald-subtle); color: var(--emerald); }
+    .status-tag.excluded { background: var(--rose-subtle); color: var(--rose); }
+    .status-tag.uncertain { background: var(--amber-subtle); color: var(--amber); }
+    .status-tag.pending { background: var(--surface-subtle); color: var(--ink-muted); }
+
+    /* Column 2: Detailed Clinical Reader Workspace */
+    .col-reader {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 24px 32px;
+    }
+    .reader-citation {
+      font-size: 12px;
+      color: var(--ink-subtle);
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-family: var(--font-mono);
+    }
+    .reader-title {
+      font-family: var(--font-body);
+      font-size: 22px;
+      line-height: 1.3;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+    .reader-authors {
+      font-size: 12.5px;
+      color: var(--ink-muted);
+      margin-bottom: 18px;
+    }
+
+    /* AI Recommendation Card */
+    .ai-verdict-card {
+      background: #fafbfc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+    .ai-verdict-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .conf-meter {
+      height: 5px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .conf-meter-bar {
+      height: 100%;
+      background: var(--emerald);
+      border-radius: 999px;
+      transition: width 0.4s ease;
+    }
+    .ai-rationale-quote {
+      font-size: 12.5px;
+      color: var(--ink-muted);
+      font-style: italic;
+      line-height: 1.45;
+      background: var(--surface);
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    /* Abstract Text Body */
+    .abstract-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ink-subtle);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .abstract-body {
+      font-family: var(--font-body);
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: #1e293b;
+      background: #fafbfc;
+      padding: 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .hl-p { background: #f3e8ff; color: #6b21a8; padding: 1px 3px; border-radius: 3px; font-weight: 500; }
+    .hl-i { background: #e0f2fe; color: #0369a1; padding: 1px 3px; border-radius: 3px; font-weight: 500; }
+    .hl-o { background: #fef3c7; color: #92400e; padding: 1px 3px; border-radius: 3px; font-weight: 500; }
+
+    /* Reviewer Decision Dock */
+    .reviewer-dock {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-top: auto;
+    }
+    .dock-head {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--ink-muted);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .dock-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .action-btn {
+      padding: 9px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid var(--border);
+    }
+    .action-btn.include {
+      background: var(--emerald-subtle);
+      color: var(--emerald);
+      border-color: var(--emerald-border);
+    }
+    .action-btn.include:hover { background: var(--emerald); color: #ffffff; }
+    .action-btn.uncertain {
+      background: var(--amber-subtle);
+      color: var(--amber);
+      border-color: var(--amber-border);
+    }
+    .action-btn.uncertain:hover { background: var(--amber); color: #ffffff; }
+    .action-btn.exclude {
+      background: var(--rose-subtle);
+      color: var(--rose);
+      border-color: var(--rose-border);
+    }
+    .action-btn.exclude:hover { background: var(--rose); color: #ffffff; }
+
+    .exclusion-dropdown {
+      width: 100%;
+      font-size: 11.5px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--ink);
+    }
+
+    /* Column 3: The 3 Decision Piles (Include / Uncertain / Exclude) */
+    .col-piles {
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px 14px;
+      gap: 14px;
+    }
+    .piles-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ink-subtle);
+    }
+    .pile-box {
+      background: var(--surface);
+      border: 1.5px dashed var(--border-dark);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      min-height: 140px;
+      transition: all 0.25s var(--ease);
+    }
+    .pile-box.glow-inc { border-color: var(--emerald); background: var(--emerald-subtle); transform: scale(1.02); }
+    .pile-box.glow-unc { border-color: var(--amber); background: var(--amber-subtle); transform: scale(1.02); }
+    .pile-box.glow-exc { border-color: var(--rose); background: var(--rose-subtle); transform: scale(1.02); }
+
+    .pile-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .pile-name {
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .pile-inc .pile-name { color: var(--emerald); }
+    .pile-unc .pile-name { color: var(--amber); }
+    .pile-exc .pile-name { color: var(--rose); }
+
+    .pile-badge {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: var(--surface-subtle);
+      color: var(--ink-muted);
+      transition: transform 0.2s var(--ease);
+    }
+    .pile-badge.bump { transform: scale(1.35); }
+
+    .pile-items-container {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 130px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .pile-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.15s ease;
+      animation: drop-card 0.25s var(--ease);
+    }
+    @keyframes drop-card {
+      from { transform: translateY(-6px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .pile-card:hover { border-color: var(--ink); }
+    .pile-card-title {
+      font-weight: 600;
+      color: var(--ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    /* Hotkey footer bar */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 6px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--ink-subtle);
+    }
+    .kbd {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: var(--ink);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. TOP HEADER & METRIC SUMMARY RIBBON -->
+  <header>
+    <div class="header-top">
+      <div class="project-brand">
+        <a href="version_2_untitled_blend.html" class="back-btn">&larr; Back to Platform</a>
+        <div class="title-group">
+          <h1>
+            <span>Cochrane Study Screening & Triage</span>
+            <span class="status-dot" title="Laya AI Screener Online"></span>
+          </h1>
+        </div>
+      </div>
+      <div class="header-ctrls">
+        <button class="btn-secondary" id="resetBatchBtn">↺ Reset Bundle</button>
+        <button class="btn-primary" id="autoSortBtn">▶ Run AI Auto-Sort</button>
+      </div>
+    </div>
+
+    <!-- Official 7-Metric Summary Ribbon -->
+    <div class="metric-ribbon">
+      <div class="metric-badge active" id="tabTotal">
+        <span class="lbl">Total Records</span>
+        <span class="val" id="valTotal">5</span>
+      </div>
+      <div class="metric-badge metric-ta-inc" id="tabTaInc">
+        <span class="lbl">T/A Included</span>
+        <span class="val" id="valTaInc">0</span>
+      </div>
+      <div class="metric-badge metric-ft-inc" id="tabFtInc">
+        <span class="lbl">Full-Text Inc</span>
+        <span class="val" id="valFtInc">0</span>
+      </div>
+      <div class="metric-badge metric-exc" id="tabExc">
+        <span class="lbl">Excluded</span>
+        <span class="val" id="valExc">0</span>
+      </div>
+      <div class="metric-badge metric-unc" id="tabUnc">
+        <span class="lbl">Uncertain / Pilot</span>
+        <span class="val" id="valUnc">0</span>
+      </div>
+      <div class="metric-badge metric-questions" id="tabQuestions">
+        <span class="lbl">Clarifications</span>
+        <span class="val" id="valQuestions">1</span>
+      </div>
+      <div class="metric-badge" id="tabNeedPdf">
+        <span class="lbl">Need PDF</span>
+        <span class="val" id="valNeedPdf">0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. COLLAPSIBLE PROTOCOL SCREENING RULES & PICO CRITERIA PANEL -->
+  <div class="protocol-accordion">
+    <div class="protocol-toggle-bar" id="protocolToggleBar">
+      <div class="protocol-summary-left">
+        <span>📖 Protocol Screening Rules & PICO Criteria</span>
+        <span class="protocol-tag-chip">PRISMA 2020 Active</span>
+        <span style="font-weight: normal; color: var(--ink-subtle);">Population: Pure Arterial Malformations &bull; Intervention: Endovascular Coiling/Stenting vs Surgery</span>
+      </div>
+      <div style="color: var(--indigo); font-weight: 600;" id="protocolToggleLabel">Hide Criteria ▴</div>
+    </div>
+    <div class="protocol-content" id="protocolContent">
+      <div class="pico-card pico-card-p">
+        <div class="pico-card-head">
+          <span>P</span>
+          <span>Population Criteria</span>
+        </div>
+        <p>Patients with pure arterial malformations (PAM) or tortuous dilated intracranial arteries without classic nidus.</p>
+      </div>
+      <div class="pico-card pico-card-i">
+        <div class="pico-card-head">
+          <span>I</span>
+          <span>Intervention</span>
+        </div>
+        <p>Endovascular embolization (coiling, onyx, flow diverters), microsurgical clipping, or conservative surveillance.</p>
+      </div>
+      <div class="pico-card pico-card-c">
+        <div class="pico-card-head">
+          <span>C</span>
+          <span>Comparator</span>
+        </div>
+        <p>Angiographic follow-up vs active interventional occlusion or historical lesion cohorts.</p>
+      </div>
+      <div class="pico-card pico-card-o">
+        <div class="pico-card-head">
+          <span>O</span>
+          <span>Outcomes Target</span>
+        </div>
+        <p>Angiographic obliteration, recurrent hemorrhage, ischemic stroke, and modified Rankin Scale (mRS) scores.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. CORE 3-COLUMN WORKSPACE -->
+  <div class="workspace-grid">
+
+    <!-- Column 1: Studies List & Queue -->
+    <aside class="col-list">
+      <div class="list-header">
+        <input type="text" class="search-input" id="searchBox" placeholder="Search studies by title, author, DOI...">
+        <div class="stage-tabs">
+          <button class="stage-tab active" data-filter="all">All (5)</button>
+          <button class="stage-tab" data-filter="include">Include</button>
+          <button class="stage-tab" data-filter="uncertain">Uncertain</button>
+          <button class="stage-tab" data-filter="exclude">Exclude</button>
+        </div>
+      </div>
+      <div class="studies-scroll" id="studiesScroll">
+        <!-- Injected dynamically -->
+      </div>
+    </aside>
+
+    <!-- Column 2: Detailed Clinical Reader -->
+    <main class="col-reader" id="readerCol">
+      <div class="reader-citation">
+        <span id="readDoi">DOI: 10.1016/j.ajr.2024.08.012</span>
+        <span id="readStageTag" style="font-weight: 700; color: var(--indigo);">STAGE 1 // TITLE & ABSTRACT</span>
+      </div>
+      <h2 class="reader-title" id="readTitle">Multiparametric MRI vs Dual-Energy CT for Pancreatic Ductal Adenocarcinoma Margin Assessment</h2>
+      <p class="reader-authors" id="readAuthors">K. Lindqvist, J. Zhang, H. Mercer et al. &bull; Radiology 2024</p>
+
+      <!-- AI Recommendation Card -->
+      <div class="ai-verdict-card">
+        <div class="ai-verdict-head">
+          <span>Laya AI Recommendation: <b id="readVerdictRec" style="color: var(--emerald);">INCLUDE</b></span>
+          <span class="conf-badge conf-high" id="readConfidenceBadge">98% Confidence</span>
+        </div>
+        <div class="conf-meter">
+          <div class="conf-meter-bar" id="readConfBar" style="width: 98%;"></div>
+        </div>
+        <div class="ai-rationale-quote" id="readRationale">
+          &ldquo;Exact prospective comparative cohort study matching PICO criteria; full 2x2 diagnostic contingency tables reported.&rdquo;
+        </div>
+      </div>
+
+      <!-- Abstract Text Body with Semantic Highlights -->
+      <div class="abstract-label">
+        <span>Title & Abstract Text</span>
+        <span style="font-size: 10px; color: var(--indigo); cursor: pointer;">Highlights Enabled</span>
+      </div>
+      <div class="abstract-body" id="readAbstract">
+        <!-- Rendered with PICO spans -->
+      </div>
+
+      <!-- Human Reviewer Decision Dock -->
+      <div class="reviewer-dock">
+        <div class="dock-head">
+          <span>Human Reviewer Final Decision</span>
+          <span>Reviewer: <b>Dr. V. Dhaduk (Lead)</b></span>
+        </div>
+        <div class="dock-actions">
+          <button class="action-btn include" id="btnInclude">✓ Include [1]</button>
+          <button class="action-btn uncertain" id="btnUncertain">? Uncertain [3]</button>
+          <button class="action-btn exclude" id="btnExclude">✕ Exclude [2]</button>
+        </div>
+        <div>
+          <select class="exclusion-dropdown" id="exclusionSelect">
+            <option value="">Select Exclusion Reason (Required if Excluded)</option>
+            <option value="E1">E-1: Wrong Patient Population (No Intracranial PAM)</option>
+            <option value="E2">E-2: Wrong Intervention (Pharmacotherapy Only)</option>
+            <option value="E3">E-3: Ineligible Study Design (Editorial / Case Report / Review)</option>
+            <option value="E4">E-4: Non-Clinical / Algorithm Benchmark Only</option>
+            <option value="E5">E-5: Insufficient Outcome Data / No 30-Day Follow-Up</option>
+          </select>
+        </div>
+      </div>
+    </main>
+
+    <!-- Column 3: The 3 Decision Piles (Include / Uncertain / Exclude) -->
+    <aside class="col-piles">
+      <div class="piles-label">Decision Piles</div>
+
+      <!-- Pile: Included -->
+      <div class="pile-box pile-inc" id="pileInc">
+        <div class="pile-head">
+          <span class="pile-name">✓ Included Pile</span>
+          <span class="pile-badge" id="badgeInc">0</span>
+        </div>
+        <div class="pile-items-container" id="listInc">
+          <!-- Mini cards fly in here -->
+        </div>
+      </div>
+
+      <!-- Pile: Uncertain -->
+      <div class="pile-box pile-unc" id="pileUnc">
+        <div class="pile-head">
+          <span class="pile-name">? Uncertain Pile</span>
+          <span class="pile-badge" id="badgeUnc">0</span>
+        </div>
+        <div class="pile-items-container" id="listUnc">
+          <!-- Mini cards fly in here -->
+        </div>
+      </div>
+
+      <!-- Pile: Excluded -->
+      <div class="pile-box pile-exc" id="pileExc">
+        <div class="pile-head">
+          <span class="pile-name">✕ Excluded Pile</span>
+          <span class="pile-badge" id="badgeExc">0</span>
+        </div>
+        <div class="pile-items-container" id="listExc">
+          <!-- Mini cards fly in here -->
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Footer with Hotkeys and Cochrane Audit Note -->
+  <footer>
+    <div style="display:flex; gap:14px; align-items:center;">
+      <span><b>Hotkeys:</b></span>
+      <span><span class="kbd">1</span> Include</span>
+      <span><span class="kbd">2</span> Exclude</span>
+      <span><span class="kbd">3</span> Uncertain</span>
+      <span><span class="kbd">&larr;</span> Prev Study</span>
+      <span><span class="kbd">&rarr;</span> Next Study</span>
+      <span><span class="kbd">Space</span> Run Auto-Sort</span>
+    </div>
+    <div>Cochrane Dual-Reviewer Compliant &bull; All decisions logged with timestamps</div>
+  </footer>
+
+  <script>
+    const INITIAL_STUDIES = [
+      {
+        id: "s1",
+        doi: "10.1016/j.ajr.2024.08.012",
+        authors: "K. Lindqvist, J. Zhang, H. Mercer et al. — Radiology 2024",
+        title: "Multiparametric MRI vs Dual-Energy CT for Pancreatic Ductal Adenocarcinoma Margin Assessment",
+        abstract: "Prospective cohort of N=142 patients assessing microscopic resection margin involvement (R0 vs R1). Contrast-enhanced MRI demonstrated superior sensitivity (91.4% vs 78.2%) with verified histopathologic correlation. Complete Kaplan-Meier survival curves and diagnostic contingency tables provided.",
+        target: "include",
+        confidence: 0.98,
+        rationale: "Exact prospective comparative cohort study matching PICO criteria; full 2x2 diagnostic contingency tables reported.",
+        status: "pending"
+      },
+      {
+        id: "s2",
+        doi: "10.1148/radiol.231940",
+        authors: "T. Vance, M. Sterling, E. Chen et al. — IEEE Trans Med Imaging 2023",
+        title: "Deep Learning Segmentation of Hepatic Steatosis in Routine Non-Contrast Screening CT",
+        abstract: "Retrospective validation of a 3D U-Net algorithm across 2,400 non-contrast CT scans. Primary endpoint focused purely on volumetric fat fraction segmentation without clinical outcome, surgical margins, or comparative patient survival endpoints.",
+        target: "exclude",
+        confidence: 0.14,
+        rationale: "Excluded under Cochrane Rule E-4: Technical segmentation algorithm validation lacking surgical or clinical endpoints.",
+        reasonCode: "E4",
+        status: "pending"
+      },
+      {
+        id: "s3",
+        doi: "10.1007/s00330-024-10651",
+        authors: "A. Rossi, P. Bauer, G. Dupont et al. — Eur Radiol 2024",
+        title: "Prognostic Utility of Diffusion-Weighted MRI in High-Grade Glioblastoma: Systematic Review Protocol",
+        abstract: "Protocol detailing search strategy and extraction matrices for evaluating ADC values in predicting progression-free survival in IDH-wildtype GBM patients. Pilot cohort results awaiting final peer review.",
+        target: "uncertain",
+        confidence: 0.42,
+        rationale: "Identified as study protocol (non-empirical dataset). Secondary review required to verify if pilot cohort is extractable.",
+        status: "pending"
+      },
+      {
+        id: "s4",
+        doi: "10.1038/s41591-024-03120-x",
+        authors: "S. Tanaka, E. Gomez, R. Patel et al. — Nature Medicine 2024",
+        title: "Low-Dose CT Screening for Early Lung Cancer Detection in High-Risk Non-Smokers: A Multi-Center RCT",
+        abstract: "Phase 3 randomized controlled trial across 18 centers (N=6,840). 5-year follow-up demonstrating a 26% reduction in disease-specific mortality with annual low-dose volumetric screening compared with standard diagnostic radiographs.",
+        target: "include",
+        confidence: 0.99,
+        rationale: "Landmark RCT meeting all primary systematic review criteria; complete survival curves available for IPD reconstruction.",
+        status: "pending"
+      },
+      {
+        id: "s5",
+        doi: "10.1053/j.gastro.2024.03.018",
+        authors: "D. O'Connor, L. Wang, F. Al-Hassan et al. — Gastroenterology 2024",
+        title: "Pediatric Crohn's Disease Stricture Evaluation: Ultrasound Elastography vs MR Enterography",
+        abstract: "Cross-sectional cohort (N=86) assessing mural stiffness index against surgical specimen fibrosis scores. High correlation reported for severe fibrotic lesions with clear histologic validation.",
+        target: "include",
+        confidence: 0.89,
+        rationale: "Meets PICO population and intervention targets; surgical reference standard verified in 74/86 subjects.",
+        status: "pending"
+      }
+    ];
+
+    let allStudies = JSON.parse(JSON.stringify(INITIAL_STUDIES));
+    let selectedStudyId = "s1";
+    let isAutoRunning = false;
+    let autoInterval = null;
+    let currentFilter = "all";
+
+    let piles = {
+      include: [],
+      uncertain: [],
+      exclude: []
+    };
+
+    // DOM References
+    const studiesScroll = document.getElementById('studiesScroll');
+    const searchBox = document.getElementById('searchBox');
+    const autoSortBtn = document.getElementById('autoSortBtn');
+    const resetBatchBtn = document.getElementById('resetBatchBtn');
+
+    const readDoi = document.getElementById('readDoi');
+    const readTitle = document.getElementById('readTitle');
+    const readAuthors = document.getElementById('readAuthors');
+    const readVerdictRec = document.getElementById('readVerdictRec');
+    const readConfidenceBadge = document.getElementById('readConfidenceBadge');
+    const readConfBar = document.getElementById('readConfBar');
+    const readRationale = document.getElementById('readRationale');
+    const readAbstract = document.getElementById('readAbstract');
+    const exclusionSelect = document.getElementById('exclusionSelect');
+
+    const listInc = document.getElementById('listInc');
+    const listUnc = document.getElementById('listUnc');
+    const listExc = document.getElementById('listExc');
+    const badgeInc = document.getElementById('badgeInc');
+    const badgeUnc = document.getElementById('badgeUnc');
+    const badgeExc = document.getElementById('badgeExc');
+    const pileInc = document.getElementById('pileInc');
+    const pileUnc = document.getElementById('pileUnc');
+    const pileExc = document.getElementById('pileExc');
+
+    const valTaInc = document.getElementById('valTaInc');
+    const valFtInc = document.getElementById('valFtInc');
+    const valExc = document.getElementById('valExc');
+    const valUnc = document.getElementById('valUnc');
+
+    const protocolToggleBar = document.getElementById('protocolToggleBar');
+    const protocolContent = document.getElementById('protocolContent');
+    const protocolToggleLabel = document.getElementById('protocolToggleLabel');
+
+    let isProtocolExpanded = true;
+    protocolToggleBar.addEventListener('click', () => {
+      isProtocolExpanded = !isProtocolExpanded;
+      protocolContent.style.display = isProtocolExpanded ? 'grid' : 'none';
+      protocolToggleLabel.textContent = isProtocolExpanded ? 'Hide Criteria ▴' : 'Show Criteria ▾';
+    });
+
+    function renderStudiesList() {
+      studiesScroll.innerHTML = '';
+      const q = searchBox.value.toLowerCase().trim();
+
+      const filtered = allStudies.filter(s => {
+        if (currentFilter !== 'all' && s.status !== currentFilter) return false;
+        if (q) {
+          return s.title.toLowerCase().includes(q) || s.authors.toLowerCase().includes(q) || s.doi.toLowerCase().includes(q);
+        }
+        return true;
+      });
+
+      filtered.forEach(study => {
+        const row = document.createElement('div');
+        row.className = `study-row ${study.id === selectedStudyId ? 'selected' : ''}`;
+        row.id = `row-${study.id}`;
+
+        const confClass = study.confidence >= 0.8 ? 'conf-high' : study.confidence >= 0.5 ? 'conf-mid' : 'conf-low';
+        const statusClass = study.status;
+
+        row.innerHTML = `
+          <div class="study-row-top">
+            <h4 class="study-row-title">${study.title}</h4>
+            <span class="conf-badge ${confClass}">${Math.round(study.confidence * 100)}%</span>
+          </div>
+          <div class="study-row-meta">
+            <span class="status-tag ${statusClass}">${study.status.toUpperCase()}</span>
+            <span>&bull;</span>
+            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${study.doi}</span>
+          </div>
+        `;
+        row.addEventListener('click', () => selectStudy(study.id));
+        studiesScroll.appendChild(row);
+      });
+    }
+
+    function renderReader() {
+      const study = allStudies.find(s => s.id === selectedStudyId) || allStudies[0];
+      if (!study) return;
+
+      readDoi.textContent = `DOI: ${study.doi}`;
+      readTitle.textContent = study.title;
+      readAuthors.textContent = study.authors;
+
+      const isInc = study.target === 'include';
+      const isExc = study.target === 'exclude';
+      readVerdictRec.textContent = study.target.toUpperCase();
+      readVerdictRec.style.color = isInc ? 'var(--emerald)' : isExc ? 'var(--rose)' : 'var(--amber)';
+
+      const pct = Math.round(study.confidence * 100);
+      readConfidenceBadge.textContent = `${pct}% Confidence`;
+      readConfidenceBadge.className = `conf-badge ${pct >= 80 ? 'conf-high' : pct >= 50 ? 'conf-mid' : 'conf-low'}`;
+      readConfBar.style.width = `${pct}%`;
+      readConfBar.style.background = isInc ? 'var(--emerald)' : isExc ? 'var(--rose)' : 'var(--amber)';
+
+      readRationale.textContent = `"${study.rationale}"`;
+
+      readAbstract.innerHTML = study.abstract
+        .replace(/N=142 patients|N=2,400|N=6,840|N=86/g, match => `<span class="hl-p">${match} (Population)</span>`)
+        .replace(/Multiparametric MRI|Contrast-enhanced MRI|3D U-Net|Diffusion-Weighted MRI|Low-Dose CT|Ultrasound Elastography/g, match => `<span class="hl-i">${match} (Intervention)</span>`)
+        .replace(/Dual-Energy CT|Non-Contrast CT|histopathologic correlation|26% reduction in disease-specific mortality|mural stiffness index/g, match => `<span class="hl-o">${match} (Outcome)</span>`);
+
+      exclusionSelect.value = study.reasonCode || "";
+    }
+
+    function selectStudy(id) {
+      selectedStudyId = id;
+      renderStudiesList();
+      renderReader();
+    }
+
+    function sortStudy(studyId, decision) {
+      const study = allStudies.find(s => s.id === studyId);
+      if (!study) return;
+
+      if (decision === 'exclude' && !exclusionSelect.value) {
+        alert("Cochrane Rule: Please select an Exclusion Reason before excluding.");
+        exclusionSelect.focus();
+        return;
+      }
+
+      // Remove from existing piles
+      ['include', 'uncertain', 'exclude'].forEach(p => {
+        piles[p] = piles[p].filter(s => s.id !== study.id);
+      });
+
+      study.status = decision;
+      if (decision === 'exclude') study.reasonCode = exclusionSelect.value;
+      piles[decision].push(study);
+
+      // Flash target pile
+      const targetPile = decision === 'include' ? pileInc : decision === 'exclude' ? pileExc : pileUnc;
+      const glow = decision === 'include' ? 'glow-inc' : decision === 'exclude' ? 'glow-exc' : 'glow-unc';
+      const badge = decision === 'include' ? badgeInc : decision === 'exclude' ? badgeExc : badgeUnc;
+
+      targetPile.classList.add(glow);
+      badge.classList.add('bump');
+      setTimeout(() => {
+        targetPile.classList.remove(glow);
+        badge.classList.remove('bump');
+      }, 300);
+
+      updateMetricsAndPiles();
+      renderStudiesList();
+      renderReader();
+    }
+
+    function updateMetricsAndPiles() {
+      valTaInc.textContent = piles.include.length;
+      valExc.textContent = piles.exclude.length;
+      valUnc.textContent = piles.uncertain.length;
+
+      badgeInc.textContent = piles.include.length;
+      badgeExc.textContent = piles.exclude.length;
+      badgeUnc.textContent = piles.uncertain.length;
+
+      renderPileCards(piles.include, listInc);
+      renderPileCards(piles.uncertain, listUnc);
+      renderPileCards(piles.exclude, listExc);
+    }
+
+    function renderPileCards(array, container) {
+      container.innerHTML = '';
+      if (array.length === 0) {
+        container.innerHTML = `<span style="font-size:10px; color:var(--ink-subtle); text-align:center; display:block; padding:12px 0;">Pile empty</span>`;
+        return;
+      }
+      array.forEach(study => {
+        const item = document.createElement('div');
+        item.className = 'pile-card';
+        item.innerHTML = `<span class="pile-card-title">${study.title}</span>`;
+        item.addEventListener('click', () => selectStudy(study.id));
+        container.appendChild(item);
+      });
+    }
+
+    function stepAutoSort() {
+      const pending = allStudies.find(s => s.status === 'pending');
+      if (!pending) {
+        stopAutoSort();
+        return;
+      }
+      selectStudy(pending.id);
+      sortStudy(pending.id, pending.target);
+    }
+
+    function toggleAutoSort() {
+      if (isAutoRunning) {
+        stopAutoSort();
+      } else {
+        startAutoSort();
+      }
+    }
+
+    function startAutoSort() {
+      const hasPending = allStudies.some(s => s.status === 'pending');
+      if (!hasPending) resetQueue();
+      isAutoRunning = true;
+      autoSortBtn.textContent = '❚❚ Pause Auto-Sort';
+      stepAutoSort();
+      autoInterval = setInterval(stepAutoSort, 1200);
+    }
+
+    function stopAutoSort() {
+      isAutoRunning = false;
+      clearInterval(autoInterval);
+      autoSortBtn.textContent = '▶ Run AI Auto-Sort';
+    }
+
+    function resetQueue() {
+      stopAutoSort();
+      allStudies = JSON.parse(JSON.stringify(INITIAL_STUDIES));
+      piles = { include: [], uncertain: [], exclude: [] };
+      selectedStudyId = "s1";
+      updateMetricsAndPiles();
+      renderStudiesList();
+      renderReader();
+    }
+
+    // Keyboard Hotkeys
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      const key = e.key.toLowerCase();
+      if (key === '1' || key === 'i') {
+        sortStudy(selectedStudyId, 'include');
+      } else if (key === '2' || key === 'e') {
+        sortStudy(selectedStudyId, 'exclude');
+      } else if (key === '3' || key === 'u') {
+        sortStudy(selectedStudyId, 'uncertain');
+      } else if (key === ' ') {
+        e.preventDefault();
+        toggleAutoSort();
+      } else if (key === 'arrowleft') {
+        const idx = allStudies.findIndex(s => s.id === selectedStudyId);
+        if (idx > 0) selectStudy(allStudies[idx - 1].id);
+      } else if (key === 'arrowright') {
+        const idx = allStudies.findIndex(s => s.id === selectedStudyId);
+        if (idx < allStudies.length - 1) selectStudy(allStudies[idx + 1].id);
+      }
+    });
+
+    // Button Listeners
+    document.getElementById('btnInclude').addEventListener('click', () => sortStudy(selectedStudyId, 'include'));
+    document.getElementById('btnExclude').addEventListener('click', () => sortStudy(selectedStudyId, 'exclude'));
+    document.getElementById('btnUncertain').addEventListener('click', () => sortStudy(selectedStudyId, 'uncertain'));
+    autoSortBtn.addEventListener('click', toggleAutoSort);
+    resetBatchBtn.addEventListener('click', resetQueue);
+    searchBox.addEventListener('input', renderStudiesList);
+
+    // Tab Filters
+    document.querySelectorAll('.stage-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.stage-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.filter;
+        renderStudiesList();
+      });
+    });
+
+    // Metric Badges Filters
+    document.getElementById('tabTotal').addEventListener('click', () => { currentFilter = 'all'; renderStudiesList(); });
+    document.getElementById('tabTaInc').addEventListener('click', () => { currentFilter = 'include'; renderStudiesList(); });
+    document.getElementById('tabExc').addEventListener('click', () => { currentFilter = 'exclude'; renderStudiesList(); });
+    document.getElementById('tabUnc').addEventListener('click', () => { currentFilter = 'uncertain'; renderStudiesList(); });
+
+    // Initial render
+    renderStudiesList();
+    renderReader();
+    updateMetricsAndPiles();
+  </script>
+</body>
+</html>

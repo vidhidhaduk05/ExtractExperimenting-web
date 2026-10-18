@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ai in ich — Rayyan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --rayyan-purple: #2b2969;
+      --rayyan-purple-dark: #1b194d;
+      --rayyan-purple-light: #524fd5;
+      --rayyan-purple-btn: #4f46e5;
+      --rayyan-green: #059669;
+      --rayyan-green-bg: #ecfdf5;
+      --rayyan-rose: #e11d48;
+      --rayyan-rose-bg: #fff1f2;
+      --rayyan-amber: #d97706;
+      --rayyan-amber-bg: #fffbeb;
+      
+      --bg-page: #f8fafc;
+      --bg-white: #ffffff;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+      
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-subtle: #64748b;
+      
+      --font-stack: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      scroll-behavior: smooth;
+    }
+    body {
+      background: var(--bg-page);
+      color: var(--text-main);
+      font-family: var(--font-stack);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      overflow-y: scroll;
+    }
+
+    /* ==============================================================
+       1. TOP APP BAR (Logo, Project Title, Utility Controls)
+       ============================================================== */
+    .top-app-header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      height: 52px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .hamburger-btn {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      padding: 4px;
+    }
+    .rayyan-logo-mark {
+      width: 28px;
+      height: 28px;
+      background: var(--rayyan-purple);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 16px;
+      text-decoration: none;
+    }
+    .review-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .crown-icon {
+      color: #6366f1;
+      font-size: 14px;
+    }
+    .edit-title-btn {
+      color: var(--text-subtle);
+      cursor: pointer;
+      font-size: 13px;
+      margin-left: 2px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-need-training {
+      background: #ffffff;
+      border: 1px solid var(--border-dark);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .btn-upgrade {
+      background: var(--rayyan-purple-btn);
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    .util-icon {
+      color: var(--text-subtle);
+      font-size: 15px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .user-avatar-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    /* ==============================================================
+       2. REVIEW STAGES SUB-NAVBAR & BLIND MODE
+       ============================================================== */
+    .stages-subnav {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      position: sticky;
+      top: 52px;
+      z-index: 40;
+    }
+    .stages-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .stage-tab {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .stage-tab:hover {
+      background: var(--bg-page);
+      color: var(--text-main);
+    }
+    .stage-tab.active {
+      background: #f1f5f9;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .stages-controls-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .blind-switch-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .switch-ui {
+      position: relative;
+      display: inline-block;
+      width: 32px;
+      height: 18px;
+    }
+    .switch-ui input { opacity: 0; width: 0; height: 0; }
+    .slider-ui {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #6366f1;
+      border-radius: 18px;
+      transition: .2s;
+    }
+    .slider-ui:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      border-radius: 50%;
+      transform: translateX(14px);
+      transition: .2s;
+    }
+
+    .subnav-btn {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ==============================================================
+       3. MAIN COMPREHENSIVE SCROLLABLE CONTAINER
+       ============================================================== */
+    .overview-scroll-body {
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 24px 140px; /* generous bottom padding to scroll smoothly past popups */
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      position: relative;
+    }
+
+    .notification-banner {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Section 1: Review Info Card */
+    .card-panel {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .card-head-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .info-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .info-badge-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .icon-purple { background: #9333ea; }
+    .icon-teal { background: #0d9488; }
+    .icon-olive { background: #84cc16; }
+    .icon-rose { background: #f43f5e; }
+    .info-label { font-weight: 600; color: var(--text-main); margin-right: 4px; }
+    .info-val { color: var(--text-muted); }
+
+    /* Section 2: Data Summary & Duplicates */
+    .data-summary-intro {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+    .summary-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .summary-metric-box {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      background: #fafbfc;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .metric-title {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .metric-number {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Section 3: PRISMA 2020 Flow Diagram Section */
+    .prisma-flow-diagram {
+      background: #fafbfc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .prisma-stage-box {
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 20px;
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .prisma-box-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 2px;
+    }
+    .prisma-box-count {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--rayyan-purple);
+    }
+    .prisma-arrow {
+      font-size: 16px;
+      color: var(--border-dark);
+      font-weight: 700;
+    }
+    .prisma-split-row {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
+    }
+    .prisma-box-excluded {
+      border-color: #fecdd3;
+      background: #fff1f2;
+    }
+    .prisma-box-excluded .prisma-box-title { color: #9f1239; }
+    .prisma-box-excluded .prisma-box-count { color: #e11d48; }
+
+    /* Section 4: Screening Progress & Decision Distribution */
+    .screening-metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .decision-stat-card {
+      padding: 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .stat-inc-card { background: var(--rayyan-green-bg); border-color: #a7f3d0; }
+    .stat-inc-card .num { color: var(--rayyan-green); }
+    .stat-unc-card { background: var(--rayyan-amber-bg); border-color: #fde68a; }
+    .stat-unc-card .num { color: var(--rayyan-amber); }
+    .stat-exc-card { background: var(--rayyan-rose-bg); border-color: #fecdd3; }
+    .stat-exc-card .num { color: var(--rayyan-rose); }
+    .stat-lbl { font-size: 11.5px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); }
+    .stat-num { font-size: 22px; font-weight: 700; }
+
+    /* Section 5: Review Collaborators Table */
+    .collaborators-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .collaborators-table th {
+      background: #fafbfc;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      text-align: left;
+    }
+    .collaborators-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+    }
+    .role-pill {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #eef2ff;
+      color: #4338ca;
+    }
+
+    /* Section 6: Audit Trail & Recent Activity */
+    .activity-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .activity-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12.5px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .activity-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6366f1;
+    }
+    .activity-time {
+      font-size: 11px;
+      color: var(--text-subtle);
+      margin-left: auto;
+    }
+
+    /* ==============================================================
+       4. EXACT 1ST-TIMER POPUP 1: "Get started with rayyan" (Checklist)
+       ============================================================== */
+    .onboarding-widget {
+      position: fixed;
+      right: 28px;
+      bottom: 24px;
+      width: 330px;
+      background: #18181b; /* sleek charcoal dark */
+      color: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+      padding: 18px 20px;
+      z-index: 1000;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      animation: slide-up 0.35s ease;
+    }
+    @keyframes slide-up {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .onboarding-widget.minimized {
+      height: 48px;
+      overflow: hidden;
+      padding: 12px 18px;
+    }
+    .onboarding-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .onboarding-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .toggle-minimize-btn {
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 4px;
+      color: #ffffff;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .toggle-minimize-btn:hover { background: rgba(255, 255, 255, 0.15); }
+
+    .onboarding-progress-track {
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .onboarding-progress-fill {
+      width: 40%; /* 2 of 5 completed */
+      height: 100%;
+      background: #6366f1;
+    }
+
+    .onboarding-steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 12.5px;
+    }
+    .step-check-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-done .step-check-icon {
+      background: #10b981;
+      color: #ffffff;
+    }
+    .step-done .step-title-text {
+      color: #ffffff;
+      font-weight: 500;
+    }
+    .step-pending .step-check-icon {
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+    }
+    .step-pending .step-title-text {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Active Expanded Step (Invite Members) */
+    .step-active {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .step-active-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .step-active-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .step-skip-link {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .step-active-desc {
+      font-size: 11.5px;
+      color: rgba(255, 255, 255, 0.75);
+      line-height: 1.4;
+      padding-left: 26px;
+    }
+    .step-active-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-left: 26px;
+      margin-top: 4px;
+    }
+    .btn-step-action {
+      background: #ffffff;
+      color: #18181b;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-step-outline {
+      background: transparent;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-step-outline:hover { background: rgba(255, 255, 255, 0.1); }
+
+    .onboarding-badge-count {
+      position: absolute;
+      right: 18px;
+      bottom: 14px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+      font-weight: 600;
+    }
+
+    /* ==============================================================
+       5. EXACT 1ST-TIMER POPUP 2: "Data in? Double trouble out!" (Tooltip Callout)
+       ============================================================== */
+    .callout-tooltip {
+      position: absolute;
+      top: 52px;
+      left: 260px;
+      width: 250px;
+      background: #ffffff;
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      padding: 12px 14px;
+      z-index: 900;
+      animation: pop-in 0.25s ease;
+    }
+    @keyframes pop-in {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .callout-tooltip:before {
+      content: '';
+      position: absolute;
+      bottom: -7px;
+      left: 36px;
+      width: 12px;
+      height: 12px;
+      background: #ffffff;
+      border-right: 1px solid var(--border-dark);
+      border-bottom: 1px solid var(--border-dark);
+      transform: rotate(45deg);
+    }
+    .callout-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .callout-icon {
+      width: 14px;
+      height: 14px;
+      background: #818cf8;
+      border-radius: 50%;
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .callout-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .callout-body {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+    .callout-footer {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-got-it {
+      background: transparent;
+      border: none;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+    .btn-got-it:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. TOP APP BAR -->
+  <header class="top-app-header">
+    <div class="header-left">
+      <button class="hamburger-btn">☰</button>
+      <a href="rayyan_user_dashboard.html" class="rayyan-logo-mark" title="Rayyan Home">r</a>
+      <div class="review-breadcrumb">
+        <span class="crown-icon">👑</span>
+        <span id="breadcrumbTitle">ai in ich</span>
+        <span class="edit-title-btn" title="Rename Review">✎</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="btn-need-training">Need training?</button>
+      <button class="btn-upgrade">Upgrade</button>
+      <span class="util-icon" title="Shortcuts">⌘</span>
+      <span class="util-icon" title="Help">?</span>
+      <span class="util-icon" title="Settings">⚙</span>
+      <div class="user-avatar-circle" title="Dr. V. Dhaduk">VD</div>
+    </div>
+  </header>
+
+  <!-- 2. STAGES SUBNAV & BLIND MODE -->
+  <nav class="stages-subnav">
+    <div class="stages-tabs">
+      <div class="stage-tab active">Overview</div>
+      <a href="rayyan_workbench.html" class="stage-tab">Review data</a>
+      <a href="rayyan_workbench.html" class="stage-tab">Screening</a>
+      <div class="stage-tab">Full text screening</div>
+      <div class="stage-tab">Data extraction</div>
+      <div class="stage-tab">Risk of bias</div>
+    </div>
+
+    <div class="stages-controls-right">
+      <div class="blind-switch-wrap">
+        <span>Blind Mode</span>
+        <label class="switch-ui">
+          <input type="checkbox" checked id="blindSwitch">
+          <span class="slider-ui"></span>
+        </label>
+      </div>
+      <button class="subnav-btn">⚙ Review settings</button>
+      <button class="subnav-btn">📋 Screening criteria</button>
+      <span class="util-icon" title="Messages">💬</span>
+    </div>
+  </nav>
+
+  <!-- 3. COMPREHENSIVE SCROLLABLE OVERVIEW PAGE -->
+  <main class="overview-scroll-body">
+    
+    <div class="notification-banner">
+      Stay caught up with review updates
+    </div>
+
+    <!-- Section 1: Review Info -->
+    <section class="card-panel">
+      <h2 class="card-head-title">Review info</h2>
+      <div class="info-grid">
+        <div class="info-row">
+          <span class="info-badge-icon icon-purple">I</span>
+          <div>
+            <span class="info-label">Review title:</span>
+            <span class="info-val">ai in ich</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <span class="info-badge-icon icon-teal">☵</span>
+          <div>
+            <span class="info-label">Review type:</span>
+            <span class="info-val">Systematic review</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <span class="info-badge-icon icon-olive">👥</span>
+          <div>
+            <span class="info-label">Review domain:</span>
+            <span class="info-val">Biomedical</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <span class="info-badge-icon icon-rose">📄</span>
+          <div>
+            <span class="info-label">Description:</span>
+            <span class="info-val">Artificial Intelligence and Machine Learning in Intracranial Hemorrhage Diagnosis and Outcome Prediction.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Data summary & Duplicate detection with Tooltip Callout -->
+    <section class="card-panel" style="position: relative;">
+      <h2 class="card-head-title">Data summary</h2>
+      <div class="data-summary-intro">
+        Hooray! 🎉 You have successfully imported data. Let's resolve duplicates.
+      </div>
+
+      <div class="summary-metrics-grid">
+        <div class="summary-metric-box">
+          <span class="metric-title">Imported references</span>
+          <span class="metric-number">5</span>
+        </div>
+        <div class="summary-metric-box">
+          <span class="metric-title">Total duplicates</span>
+          <span class="metric-number">0</span>
+        </div>
+        <div class="summary-metric-box">
+          <span class="metric-title">Unresolved</span>
+          <span class="metric-number">0</span>
+        </div>
+        <div class="summary-metric-box">
+          <span class="metric-title">Resolved</span>
+          <span class="metric-number">0</span>
+        </div>
+      </div>
+
+      <!-- EXACT 1ST-TIMER POPUP 2: "Data in? Double trouble out!" -->
+      <div class="callout-tooltip" id="duplicateCallout">
+        <div class="callout-header">
+          <span class="callout-icon">!</span>
+          <span class="callout-title">Data in? Double trouble out!</span>
+        </div>
+        <div class="callout-body">
+          Let Rayyan help you detect duplicates.
+        </div>
+        <div class="callout-footer">
+          <button class="btn-got-it" id="btnDismissCallout">Got it!</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: PRISMA 2020 Automated Flow Diagram (Scroll down) -->
+    <section class="card-panel" id="prisma-section">
+      <div class="card-head-title">
+        <span>PRISMA 2020 Flow Diagram</span>
+        <button class="subnav-btn">📥 Export PRISMA</button>
+      </div>
+
+      <div class="prisma-flow-diagram">
+        <!-- Identification -->
+        <div class="prisma-stage-box">
+          <div class="prisma-box-title">Records identified from databases (PubMed, Embase, Cochrane)</div>
+          <div class="prisma-box-count">N = 5</div>
+        </div>
+
+        <div class="prisma-arrow">↓</div>
+
+        <!-- Duplicate Removal -->
+        <div class="prisma-split-row">
+          <div class="prisma-stage-box">
+            <div class="prisma-box-title">Records screened after deduplication</div>
+            <div class="prisma-box-count">N = 5</div>
+          </div>
+          <div class="prisma-stage-box prisma-box-excluded">
+            <div class="prisma-box-title">Duplicates removed</div>
+            <div class="prisma-box-count">N = 0</div>
+          </div>
+        </div>
+
+        <div class="prisma-arrow">↓</div>
+
+        <!-- Title/Abstract Screening -->
+        <div class="prisma-split-row">
+          <div class="prisma-stage-box">
+            <div class="prisma-box-title">Reports sought for retrieval (Full-Text)</div>
+            <div class="prisma-box-count">N = 3</div>
+          </div>
+          <div class="prisma-stage-box prisma-box-excluded">
+            <div class="prisma-box-title">Records excluded (Title/Abstract)</div>
+            <div class="prisma-box-count">N = 1</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Screening Decisions Distribution -->
+    <section class="card-panel">
+      <h2 class="card-head-title">Screening status & decision distribution</h2>
+      
+      <div class="screening-metrics-row">
+        <div class="decision-stat-card stat-inc-card">
+          <span class="stat-lbl">Included References</span>
+          <span class="stat-num">3</span>
+        </div>
+        <div class="decision-stat-card stat-unc-card">
+          <span class="stat-lbl">Maybe / Uncertain</span>
+          <span class="stat-num">1</span>
+        </div>
+        <div class="decision-stat-card stat-exc-card">
+          <span class="stat-lbl">Excluded References</span>
+          <span class="stat-num">1</span>
+        </div>
+      </div>
+
+      <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+        All primary title and abstract assessments are being tracked under independent blind review. Blind mode will prevent conflicts until two independent reviewer decisions are finalized.
+      </p>
+    </section>
+
+    <!-- Section 5: Review Members & Collaboration -->
+    <section class="card-panel">
+      <div class="card-head-title">
+        <span>Review collaborators</span>
+        <button class="subnav-btn">+ Invite member</button>
+      </div>
+
+      <table class="collaborators-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Screened Count</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Dr. V. Dhaduk</b></td>
+            <td>lead.reviewer@domain.org</td>
+            <td><span class="role-pill">Owner</span></td>
+            <td>5 / 5 (100%)</td>
+            <td><span style="color:var(--rayyan-green); font-weight:600;">Active</span></td>
+          </tr>
+          <tr>
+            <td><b>Laya AI Model</b></td>
+            <td>automated.laya@rayyan.ai</td>
+            <td><span class="role-pill">AI Reviewer</span></td>
+            <td>5 / 5 (100%)</td>
+            <td><span style="color:var(--rayyan-green); font-weight:600;">Active</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 6: Recent Audit Log / Activity Feed -->
+    <section class="card-panel">
+      <h2 class="card-head-title">Recent activities</h2>
+      <div class="activity-feed">
+        <div class="activity-row">
+          <span class="activity-dot"></span>
+          <span><b>Dr. V. Dhaduk</b> marked study <em>"Multiparametric MRI vs Dual-Energy CT"</em> as <b>Included</b>.</span>
+          <span class="activity-time">5 mins ago</span>
+        </div>
+        <div class="activity-row">
+          <span class="activity-dot"></span>
+          <span><b>Laya AI</b> computed eligibility relevance score of <b>98%</b> for reference #1.</span>
+          <span class="activity-time">12 mins ago</span>
+        </div>
+        <div class="activity-row">
+          <span class="activity-dot"></span>
+          <span><b>Batch import</b> completed: 5 bibliographic citations uploaded from PubMed search.</span>
+          <span class="activity-time">25 mins ago</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==============================================================
+       EXACT 1ST-TIMER POPUP 1: "Get started with rayyan" Checklist Widget
+       ============================================================== -->
+  <aside class="onboarding-widget" id="onboardingWidget">
+    <div class="onboarding-head">
+      <span class="onboarding-title">Get started with rayyan</span>
+      <button class="toggle-minimize-btn" id="btnToggleMinimize" title="Minimize / Expand">
+        <span>⊖</span>
+      </button>
+    </div>
+
+    <div class="onboarding-progress-track">
+      <div class="onboarding-progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="onboarding-steps-list">
+      <!-- Step 1: Create your first review (Done) -->
+      <div class="step-item step-done">
+        <span class="step-check-icon">✓</span>
+        <span class="step-title-text">Create your first review</span>
+      </div>
+
+      <!-- Step 2: Add references (Done) -->
+      <div class="step-item step-done">
+        <span class="step-check-icon">✓</span>
+        <span class="step-title-text">Add references</span>
+      </div>
+
+      <!-- Step 3: Invite members (Active Step from your Screenshot!) -->
+      <div class="step-active">
+        <div class="step-active-header">
+          <div class="step-active-title-wrap">
+            <span class="step-check-icon" style="border: 1.5px solid #ffffff; width:16px; height:16px;"></span>
+            <span>Invite members</span>
+          </div>
+          <span class="step-skip-link" id="btnSkipInvite">Skip</span>
+        </div>
+        <p class="step-active-desc">
+          Accelerate your work and invite members to your review.
+        </p>
+        <div class="step-active-buttons">
+          <button class="btn-step-action" id="btnInviteAction">Invite members</button>
+          <button class="btn-step-outline" id="btnWorkAlone">I work alone</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Resolve duplicates (Pending) -->
+      <div class="step-item step-pending">
+        <span class="step-check-icon"></span>
+        <span class="step-title-text">Resolve duplicates</span>
+      </div>
+
+      <!-- Step 5: Define screening criteria (Pending) -->
+      <div class="step-item step-pending">
+        <span class="step-check-icon"></span>
+        <span class="step-title-text">Define screening criteria</span>
+      </div>
+    </div>
+
+    <div class="onboarding-badge-count">
+      <span>📚 2/5</span>
+    </div>
+  </aside>
+
+  <script>
+    // 1st-Timer Popup 1: Dismiss / Got It Callout
+    const duplicateCallout = document.getElementById('duplicateCallout');
+    document.getElementById('btnDismissCallout').addEventListener('click', () => {
+      duplicateCallout.style.display = 'none';
+    });
+
+    // 1st-Timer Popup 2: Minimize / Expand Onboarding Widget
+    const onboardingWidget = document.getElementById('onboardingWidget');
+    const btnToggleMinimize = document.getElementById('btnToggleMinimize');
+    let isMinimized = false;
+
+    btnToggleMinimize.addEventListener('click', () => {
+      isMinimized = !isMinimized;
+      onboardingWidget.classList.toggle('minimized', isMinimized);
+      btnToggleMinimize.innerHTML = isMinimized ? '<span>⊕</span>' : '<span>⊖</span>';
+    });
+
+    // Handle "I work alone" or "Skip"
+    document.getElementById('btnWorkAlone').addEventListener('click', () => {
+      alert("Configured review for solo screening!");
+      document.getElementById('progressFill').style.width = '60%';
+      document.querySelector('.onboarding-badge-count span').textContent = '📚 3/5';
+    });
+
+    document.getElementById('btnSkipInvite').addEventListener('click', () => {
+      document.getElementById('progressFill').style.width = '60%';
+      document.querySelector('.onboarding-badge-count span').textContent = '📚 3/5';
+    });
+
+    document.getElementById('btnInviteAction').addEventListener('click', () => {
+      const email = prompt("Enter collaborator email to invite to 'ai in ich':");
+      if (email) {
+        alert(`Invitation sent to ${email}!`);
+      }
+    });
+  </script>
+</body>
+</html>

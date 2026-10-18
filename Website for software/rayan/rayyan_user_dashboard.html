@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rayyan — User Reviews Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --rayyan-purple: #2b2969;
+      --rayyan-purple-dark: #1b194d;
+      --rayyan-purple-light: #4338ca;
+      --rayyan-purple-bg: #f4f3fa;
+      
+      --rayyan-include: #108a43;
+      --rayyan-include-bg: #e6f6ec;
+
+      --rayyan-maybe: #d97706;
+      --rayyan-maybe-bg: #fef3c7;
+
+      --rayyan-exclude: #cf222e;
+      --rayyan-exclude-bg: #ffebe9;
+
+      --bg-canvas: #f8fafc;
+      --bg-surface: #ffffff;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-subtle: #64748b;
+
+      --font-stack: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      scroll-behavior: smooth;
+    }
+    body {
+      background: var(--bg-canvas);
+      color: var(--text-main);
+      font-family: var(--font-stack);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      overflow-y: scroll;
+    }
+
+    /* ==============================================================
+       1. TOP PERSISTENT NAVBAR (Rayyan Header)
+       ============================================================== */
+    .top-header {
+      background: var(--rayyan-purple);
+      color: #ffffff;
+      height: 54px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .rayyan-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      text-decoration: none;
+    }
+    .logo-mark {
+      width: 28px;
+      height: 28px;
+      background: #ffffff;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--rayyan-purple);
+      font-weight: 800;
+      font-size: 17px;
+    }
+
+    .top-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-item {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13.5px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+    .nav-item.active {
+      background: rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .upgrade-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .upgrade-btn:hover { background: rgba(255, 255, 255, 0.25); }
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: var(--rayyan-purple);
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ==============================================================
+       2. FULL-SCROLL MAIN DASHBOARD CONTAINER
+       ============================================================== */
+    .dashboard-container {
+      max-width: 1320px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* Hero / Header Row */
+    .dashboard-heading-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .heading-title h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.015em;
+    }
+    .heading-title p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .dashboard-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-create-review {
+      background: var(--rayyan-purple);
+      color: #ffffff;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: background 0.15s ease;
+    }
+    .btn-create-review:hover {
+      background: var(--rayyan-purple-light);
+    }
+
+    /* Pending Invitations Banner */
+    .invitations-alert-bar {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .inv-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .inv-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #dbeafe;
+      color: #1e40af;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: bold;
+    }
+    .inv-text h4 {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #1e3a8a;
+    }
+    .inv-text p {
+      font-size: 12.5px;
+      color: #3b82f6;
+      margin-top: 2px;
+    }
+    .inv-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-inv-accept {
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-inv-decline {
+      background: #ffffff;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* SECTION 1: Recently Visited Reviews (Card Deck) */
+    .section-block {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .section-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .recent-cards-deck {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 16px;
+    }
+    .recent-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .recent-card:hover {
+      border-color: var(--rayyan-purple-light);
+      box-shadow: 0 4px 12px rgba(43, 41, 105, 0.08);
+      transform: translateY(-2px);
+    }
+    .card-top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--rayyan-purple);
+      text-decoration: none;
+      line-height: 1.35;
+    }
+    .card-title:hover {
+      text-decoration: underline;
+    }
+    .card-role {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      color: var(--rayyan-purple);
+      white-space: nowrap;
+    }
+    .card-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-bottom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .card-links-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-btn-link {
+      color: var(--rayyan-purple);
+      font-weight: 600;
+      font-size: 12px;
+      text-decoration: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: var(--rayyan-purple-bg);
+      transition: background 0.15s ease;
+    }
+    .card-btn-link:hover {
+      background: #e0dff2;
+    }
+
+    /* SECTION 2: Category Navigation Tabs & Search */
+    .review-category-tabs {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      gap: 28px;
+      overflow-x: auto;
+    }
+    .cat-tab {
+      padding: 10px 2px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .cat-tab:hover {
+      color: var(--text-main);
+    }
+    .cat-tab.active {
+      color: var(--rayyan-purple);
+      border-bottom-color: var(--rayyan-purple);
+    }
+    .tab-badge {
+      font-size: 11px;
+      background: var(--rayyan-purple-bg);
+      color: var(--rayyan-purple);
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+
+    /* Search & Filter Controls Bar */
+    .controls-strip {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 14px;
+      width: 360px;
+    }
+    .search-box input {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 13px;
+      width: 100%;
+      color: var(--text-main);
+    }
+    .search-icon { color: var(--text-subtle); font-size: 13px; }
+
+    /* SECTION 3: Reviews Table Card */
+    .reviews-table-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    thead {
+      background: #fafbfc;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      padding: 13px 18px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s ease;
+    }
+    tbody tr:hover {
+      background: #fcfcfd;
+    }
+    td {
+      padding: 16px 18px;
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    .review-title-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .review-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--rayyan-purple);
+      text-decoration: none;
+    }
+    .review-name:hover {
+      text-decoration: underline;
+    }
+    .review-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .role-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      display: inline-block;
+    }
+    .role-owner {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+      color: var(--rayyan-purple);
+    }
+    .role-collab {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #065f46;
+    }
+
+    /* Progress Mini Meter */
+    .screen-progress-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 160px;
+    }
+    .screen-progress-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .screen-progress-fill {
+      height: 100%;
+      background: var(--rayyan-include);
+      border-radius: 999px;
+    }
+    .screen-progress-stats {
+      font-size: 11px;
+      color: var(--text-subtle);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .table-actions-cell {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .btn-table-action {
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .btn-workbench-primary {
+      background: var(--rayyan-purple);
+      color: #ffffff;
+    }
+    .btn-workbench-primary:hover {
+      background: var(--rayyan-purple-light);
+    }
+    .btn-overview-subtle {
+      background: #ffffff;
+      border-color: var(--border-dark);
+      color: var(--text-muted);
+    }
+    .btn-overview-subtle:hover {
+      background: var(--bg-canvas);
+      color: var(--text-main);
+    }
+    .more-options-btn {
+      background: transparent;
+      border: none;
+      font-size: 16px;
+      color: var(--text-subtle);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+    }
+    .more-options-btn:hover {
+      background: var(--bg-canvas);
+      color: var(--text-main);
+    }
+
+    /* Modal for Creating Review */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: #ffffff;
+      border-radius: 8px;
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .modal-head {
+      padding: 16px 20px;
+      background: #fafbfc;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-head h3 { font-size: 15px; font-weight: 700; color: var(--text-main); }
+    .modal-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .file-upload-dropzone {
+      border: 2px dashed var(--border-dark);
+      border-radius: 6px;
+      padding: 20px;
+      text-align: center;
+      background: #fafbfc;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .file-upload-dropzone:hover {
+      border-color: var(--rayyan-purple);
+      background: var(--rayyan-purple-bg);
+    }
+    .modal-foot {
+      padding: 12px 20px;
+      background: #fafbfc;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .btn-secondary {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="top-header">
+    <div class="header-left">
+      <a href="rayyan_user_dashboard.html" class="rayyan-logo">
+        <span class="logo-mark">R</span>
+        <span>rayyan</span>
+      </a>
+
+      <nav class="top-nav-links">
+        <a href="rayyan_user_dashboard.html" class="nav-item active">Reviews</a>
+        <a href="rayyan_workbench.html" class="nav-item">Workbench</a>
+        <a href="rayyan_review_overview.html" class="nav-item">Review Overview</a>
+        <a href="version_2_untitled_blend.html" class="nav-item">Platform Home</a>
+      </nav>
+    </div>
+
+    <div class="header-right">
+      <button class="upgrade-btn">⭐ Upgrade to Pro</button>
+      <div class="user-profile" title="Dr. V. Dhaduk (Lead Reviewer)">
+        <div class="user-avatar">VD</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Full-Scroll Dashboard Container -->
+  <main class="dashboard-container">
+
+    <!-- Header Row -->
+    <div class="dashboard-heading-row">
+      <div class="heading-title">
+        <h1>Reviews Dashboard</h1>
+        <p>Manage your systematic reviews, track screening progress, and collaborate across research teams.</p>
+      </div>
+
+      <div class="dashboard-actions">
+        <button class="btn-create-review" id="btnOpenCreateModal">
+          <span>+</span> Create Review
+        </button>
+      </div>
+    </div>
+
+    <!-- Collaboration Invitation Alert Banner -->
+    <div class="invitations-alert-bar" id="invitationBar">
+      <div class="inv-content">
+        <div class="inv-icon">📩</div>
+        <div class="inv-text">
+          <h4>New Collaboration Invitation</h4>
+          <p>Prof. Marcus Thorne invited you to collaborate as a blind screener on <b>"Cerebral Amyloid Angiopathy & Microbleeds"</b></p>
+        </div>
+      </div>
+      <div class="inv-actions">
+        <button class="btn-inv-accept" onclick="acceptInvitation()">Accept Invitation</button>
+        <button class="btn-inv-decline" onclick="dismissInvitation()">Decline</button>
+      </div>
+    </div>
+
+    <!-- SECTION 1: Recently Visited Reviews (Card Deck) -->
+    <section class="section-block">
+      <div class="section-title-row">
+        <h2 class="section-title">
+          <span>⏱</span> Recently Visited Reviews
+        </h2>
+      </div>
+
+      <div class="recent-cards-deck">
+        <!-- Card 1 -->
+        <div class="recent-card">
+          <div>
+            <div class="card-top-row">
+              <a href="rayyan_review_overview.html" class="card-title">ai in ich</a>
+              <span class="card-role">Owner</span>
+            </div>
+            <p class="card-desc" style="margin-top: 6px;">
+              Artificial Intelligence and Machine Learning in Intracranial Hemorrhage Diagnosis and Outcome Prediction.
+            </p>
+          </div>
+          <div class="card-bottom-row">
+            <span style="color: var(--text-subtle);">5 references · 100% screened</span>
+            <div class="card-links-row">
+              <a href="rayyan_review_overview.html" class="card-btn-link">Overview</a>
+              <a href="rayyan_workbench.html" class="card-btn-link" style="background:var(--rayyan-purple); color:#ffffff;">Workbench</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="recent-card">
+          <div>
+            <div class="card-top-row">
+              <a href="rayyan_workbench.html" class="card-title">Pure Arterial Malformations (PAM) Review</a>
+              <span class="card-role">Owner</span>
+            </div>
+            <p class="card-desc" style="margin-top: 6px;">
+              PRISMA systematic review assessing endovascular coiling vs surgical clipping in intracranial tortuous malformations.
+            </p>
+          </div>
+          <div class="card-bottom-row">
+            <span style="color: var(--text-subtle);">5 references · 40% screened</span>
+            <div class="card-links-row">
+              <a href="rayyan_review_overview.html" class="card-btn-link">Overview</a>
+              <a href="rayyan_workbench.html" class="card-btn-link" style="background:var(--rayyan-purple); color:#ffffff;">Workbench</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="recent-card">
+          <div>
+            <div class="card-top-row">
+              <a href="rayyan_workbench.html" class="card-title">Dual-Energy CT vs MRI in Pancreatic Margins</a>
+              <span class="card-role">Owner</span>
+            </div>
+            <p class="card-desc" style="margin-top: 6px;">
+              Comparative accuracy review evaluating R0 resection accuracy and 5-year overall survival in ductal adenocarcinoma.
+            </p>
+          </div>
+          <div class="card-bottom-row">
+            <span style="color: var(--text-subtle);">142 references · 83% screened</span>
+            <div class="card-links-row">
+              <a href="rayyan_review_overview.html" class="card-btn-link">Overview</a>
+              <a href="rayyan_workbench.html" class="card-btn-link" style="background:var(--rayyan-purple); color:#ffffff;">Workbench</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: Category Navigation Tabs & Search Filter -->
+    <div class="review-category-tabs" id="categoryTabs">
+      <div class="cat-tab active" data-tab="my">
+        <span>My Reviews</span>
+        <span class="tab-badge" id="tabMyCount">4</span>
+      </div>
+      <div class="cat-tab" data-tab="collab">
+        <span>Collaboration Reviews</span>
+        <span class="tab-badge" id="tabCollabCount">2</span>
+      </div>
+      <div class="cat-tab" data-tab="translation">
+        <span>Translation Reviews</span>
+        <span class="tab-badge">0</span>
+      </div>
+      <div class="cat-tab" data-tab="public">
+        <span>Public Reviews</span>
+        <span class="tab-badge">12</span>
+      </div>
+      <div class="cat-tab" data-tab="archived">
+        <span>Archived</span>
+        <span class="tab-badge">1</span>
+      </div>
+    </div>
+
+    <!-- Filter & Search Controls Strip -->
+    <div class="controls-strip">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="searchReviewsInput" placeholder="Search reviews by title, topic, or keywords...">
+      </div>
+
+      <div style="font-size: 13px; color: var(--text-muted);">
+        Showing <b id="displayedReviewsCount">4</b> reviews in this tab
+      </div>
+    </div>
+
+    <!-- SECTION 3: Reviews Table Card (Scroll down) -->
+    <div class="reviews-table-card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 38%;">Title & Description</th>
+            <th style="width: 12%;">Role</th>
+            <th style="width: 10%;">Articles</th>
+            <th style="width: 20%;">Screening Progress</th>
+            <th style="width: 20%; text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="reviewsTbody">
+          <!-- Injected dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Modal: Create Review -->
+  <div class="modal-overlay" id="createReviewModal">
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <h3>Create New Systematic Review</h3>
+        <button style="border:none; background:none; font-size:18px; cursor:pointer;" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Review Title *</label>
+          <input type="text" id="newReviewTitle" placeholder="e.g. Endovascular vs Surgical Resection in Intracranial PAMs">
+        </div>
+        <div class="form-group">
+          <label>Review Type</label>
+          <select id="newReviewType">
+            <option>Systematic Literature Review</option>
+            <option>Scoping Review</option>
+            <option>Meta-Analysis Protocol</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description & Research Question</label>
+          <textarea id="newReviewDesc" rows="3" placeholder="PICO criteria, objectives, and database sources..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Import Search Results (Optional)</label>
+          <div class="file-upload-dropzone">
+            Drag & drop EndNote XML, RIS, CSV, or PubMed NBIB files here
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-create-review" id="btnSubmitCreateReview">Create Review</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const INITIAL_REVIEWS = [
+      {
+        id: "rev_0",
+        category: "my",
+        title: "ai in ich",
+        desc: "Artificial Intelligence and Machine Learning in Intracranial Hemorrhage Diagnosis and Outcome Prediction.",
+        role: "Owner",
+        articles: 5,
+        screened: 5,
+        created: "Oct 2026",
+        overviewUrl: "rayyan_review_overview.html",
+        workbenchUrl: "rayyan_workbench.html"
+      },
+      {
+        id: "rev_1",
+        category: "my",
+        title: "Pure Arterial Malformations (PAM) Review",
+        desc: "PRISMA systematic review assessing endovascular coiling vs surgical clipping in intracranial tortuous malformations.",
+        role: "Owner",
+        articles: 5,
+        screened: 2,
+        created: "Oct 2026",
+        overviewUrl: "rayyan_review_overview.html",
+        workbenchUrl: "rayyan_workbench.html"
+      },
+      {
+        id: "rev_2",
+        category: "my",
+        title: "Dual-Energy CT vs MRI in Pancreatic Margin Assessment",
+        desc: "Comparative accuracy review evaluating R0 resection accuracy and 5-year overall survival.",
+        role: "Owner",
+        articles: 142,
+        screened: 118,
+        created: "Sep 2026",
+        overviewUrl: "rayyan_review_overview.html",
+        workbenchUrl: "rayyan_workbench.html"
+      },
+      {
+        id: "rev_3",
+        category: "my",
+        title: "Low-Dose Volumetric CT Screening for Lung Neoplasms",
+        desc: "Multi-center randomized trial synthesis across asymptomatic high-risk cohorts.",
+        role: "Owner",
+        articles: 6840,
+        screened: 5210,
+        created: "Aug 2026",
+        overviewUrl: "rayyan_review_overview.html",
+        workbenchUrl: "rayyan_workbench.html"
+      },
+      {
+        id: "rev_collab_1",
+        category: "collab",
+        title: "Endovascular Thrombectomy in Basilar Artery Occlusion",
+        desc: "Meta-analysis of randomized controlled trials for large vessel basilar strokes outside standard window.",
+        role: "Collaborator",
+        articles: 860,
+        screened: 430,
+        created: "Jul 2026",
+        overviewUrl: "rayyan_review_overview.html",
+        workbenchUrl: "rayyan_workbench.html"
+      },
+      {
+        id: "rev_collab_2",
+        category: "collab",
+        title: "Radiation Dose Reduction in Pediatric Spine CT Protocols",
+        desc: "Systematic evaluation of deep-learning reconstruction algorithms in scoliosis radiography.",
+        role: "Collaborator",
+        articles: 320,
+        screened: 310,
+        created: "Jun 2026",
+        overviewUrl: "rayyan_review_overview.html",
+        workbenchUrl: "rayyan_workbench.html"
+      }
+    ];
+
+    let reviews = JSON.parse(JSON.stringify(INITIAL_REVIEWS));
+    let activeCategory = 'my';
+
+    const reviewsTbody = document.getElementById('reviewsTbody');
+    const searchReviewsInput = document.getElementById('searchReviewsInput');
+    const displayedReviewsCount = document.getElementById('displayedReviewsCount');
+    const createReviewModal = document.getElementById('createReviewModal');
+
+    function renderReviews() {
+      reviewsTbody.innerHTML = '';
+      const q = searchReviewsInput.value.toLowerCase().trim();
+
+      const filtered = reviews.filter(r => {
+        const matchesCategory = (activeCategory === 'my' && r.category === 'my') ||
+                                (activeCategory === 'collab' && r.category === 'collab') ||
+                                (activeCategory !== 'my' && activeCategory !== 'collab');
+        if (!matchesCategory) return false;
+
+        if (q) {
+          return r.title.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q);
+        }
+        return true;
+      });
+
+      displayedReviewsCount.textContent = filtered.length;
+
+      if (filtered.length === 0) {
+        reviewsTbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-subtle);">
+              No reviews found matching the current criteria.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach(rev => {
+        const tr = document.createElement('tr');
+        const pct = rev.articles > 0 ? Math.round((rev.screened / rev.articles) * 100) : 0;
+        const roleClass = rev.role === 'Owner' ? 'role-owner' : 'role-collab';
+
+        tr.innerHTML = `
+          <td>
+            <div class="review-title-cell">
+              <a href="${rev.overviewUrl}" class="review-name">${rev.title}</a>
+              <span class="review-desc">${rev.desc}</span>
+            </div>
+          </td>
+          <td>
+            <span class="role-badge ${roleClass}">${rev.role}</span>
+          </td>
+          <td>
+            <b>${rev.articles.toLocaleString()}</b>
+          </td>
+          <td>
+            <div class="screen-progress-wrap">
+              <div class="screen-progress-bar">
+                <div class="screen-progress-fill" style="width: ${pct}%;"></div>
+              </div>
+              <div class="screen-progress-stats">
+                <span>${rev.screened.toLocaleString()} screened</span>
+                <span>${pct}%</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="table-actions-cell">
+              <a href="${rev.overviewUrl}" class="btn-table-action btn-overview-subtle">Overview</a>
+              <a href="${rev.workbenchUrl}" class="btn-table-action btn-workbench-primary">Workbench &rarr;</a>
+              <button class="more-options-btn" title="More Options">⋮</button>
+            </div>
+          </td>
+        `;
+
+        reviewsTbody.appendChild(tr);
+      });
+    }
+
+    // Category Tabs Switching
+    document.querySelectorAll('.cat-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        activeCategory = tab.dataset.tab;
+        renderReviews();
+      });
+    });
+
+    function openModal() { createReviewModal.classList.add('open'); }
+    function closeModal() { createReviewModal.classList.remove('open'); }
+
+    function acceptInvitation() {
+      alert("Invitation accepted! Added 'Cerebral Amyloid Angiopathy & Microbleeds' to Collaboration Reviews.");
+      reviews.push({
+        id: "rev_collab_3",
+        category: "collab",
+        title: "Cerebral Amyloid Angiopathy & Microbleeds",
+        desc: "Automated microbleed identification and risk scoring in cognitive decline.",
+        role: "Collaborator",
+        articles: 412,
+        screened: 0,
+        created: "Just now",
+        overviewUrl: "rayyan_review_overview.html",
+        workbenchUrl: "rayyan_workbench.html"
+      });
+      document.getElementById('tabCollabCount').textContent = "3";
+      dismissInvitation();
+    }
+
+    function dismissInvitation() {
+      document.getElementById('invitationBar').style.display = 'none';
+    }
+
+    document.getElementById('btnOpenCreateModal').addEventListener('click', openModal);
+
+    document.getElementById('btnSubmitCreateReview').addEventListener('click', () => {
+      const title = document.getElementById('newReviewTitle').value.trim();
+      const desc = document.getElementById('newReviewDesc').value.trim();
+
+      if (!title) {
+        alert("Please enter a review title.");
+        return;
+      }
+
+      reviews.unshift({
+        id: `rev_${Date.now()}`,
+        category: "my",
+        title: title,
+        desc: desc || "New systematic review project.",
+        role: "Owner",
+        articles: 0,
+        screened: 0,
+        created: "Just now",
+        overviewUrl: "rayyan_review_overview.html",
+        workbenchUrl: "rayyan_workbench.html"
+      });
+
+      closeModal();
+      document.getElementById('newReviewTitle').value = '';
+      document.getElementById('newReviewDesc').value = '';
+      document.getElementById('tabMyCount').textContent = reviews.filter(r => r.category === 'my').length;
+      renderReviews();
+    });
+
+    searchReviewsInput.addEventListener('input', renderReviews);
+
+    // Initial render
+    renderReviews();
+  </script>
+</body>
+</html>
