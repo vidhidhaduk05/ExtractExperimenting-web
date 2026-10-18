@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Layers,
@@ -359,6 +359,12 @@ export const CitationTelephonePage: React.FC = () => {
               className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
             >
               Evidence Map
+            </Link>
+            <Link
+              to="/rigor-scan"
+              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
+            >
+              Rigor Scan
             </Link>
             <span className="px-3 py-1.5 rounded-lg bg-[#381A61] text-white font-semibold text-xs shadow-2xs">
               Citation Telephone
