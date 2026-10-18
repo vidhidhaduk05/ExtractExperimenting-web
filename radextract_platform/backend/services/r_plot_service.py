@@ -212,6 +212,7 @@ def generate_forest_plot(
     return _matplotlib_forest_fallback(
         labels, effect_sizes, variances, pooled_effect,
         pooled_ci_lower, pooled_ci_upper, effect_measure, is_log, i_squared,
+        weights=weights,
     )
 
 
@@ -322,57 +323,133 @@ def generate_prisma_flow(flow_data: dict) -> str:
 
 def _matplotlib_forest_fallback(labels, effect_sizes, variances, pooled,
                                  pooled_lower, pooled_upper, effect_measure,
-                                 is_log, i_squared):
-    """Matplotlib fallback for forest plot."""
+                                 is_log, i_squared, weights=None):
+    """Matplotlib fallback for forest plot formatted to exact R metafor publication standard."""
     import math
     import numpy as np
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
 
-    plt.rcParams["font.family"] = ["Liberation Sans", "Arimo", "DejaVu Sans"]
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["Arial", "DejaVu Sans", "Liberation Sans", "sans-serif"]
     plt.rcParams["svg.fonttype"] = "none"
 
-    sei = [math.sqrt(v) for v in variances]
+    sei = [math.sqrt(max(1e-6, v)) for v in variances]
     n = len(labels)
+
+    if weights is None or len(weights) != n:
+        inv_vars = [1.0 / max(1e-6, v) for v in variances]
+        tot = sum(inv_vars) or 1.0
+        w_pct = [iv / tot * 100.0 for iv in inv_vars]
+    else:
+        tot = sum(weights) or 1.0
+        w_pct = [w / tot * 100.0 for w in weights]
 
     if is_log:
         display = [math.exp(e) for e in effect_sizes]
         disp_pooled = math.exp(pooled)
         disp_lower = [math.exp(e - 1.96 * s) for e, s in zip(effect_sizes, sei)]
         disp_upper = [math.exp(e + 1.96 * s) for e, s in zip(effect_sizes, sei)]
+        disp_pooled_lower = math.exp(pooled_lower)
+        disp_pooled_upper = math.exp(pooled_upper)
+        null_val = 1.0
     else:
         display = effect_sizes
         disp_pooled = pooled
         disp_lower = [e - 1.96 * s for e, s in zip(effect_sizes, sei)]
         disp_upper = [e + 1.96 * s for e, s in zip(effect_sizes, sei)]
+        disp_pooled_lower = pooled_lower
+        disp_pooled_upper = pooled_upper
+        null_val = 0.0
 
-    fig, ax = plt.subplots(figsize=(10, max(4, 0.8 * n + 3)))
+    fig_height = max(5.0, 1.8 + n * 0.5)
+    fig, ax = plt.subplots(figsize=(10.5, fig_height))
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
     y_pos = list(range(n, 0, -1))
 
+    # Calculate x range
+    min_x = min(disp_lower + [disp_pooled_lower])
+    max_x = max(disp_upper + [disp_pooled_upper])
+    x_span = max(1.0, max_x - min_x)
+    x_axis_min = max(0.01, min_x - x_span * 0.25) if is_log else min_x - x_span * 0.25
+    x_axis_max = max_x + x_span * 0.75
+
+    # Null effect dashed line
+    ax.axvline(x=null_val, color="#718096", linestyle="--", linewidth=1.2, alpha=0.8)
+
+    # Vertical dotted guide through pooled effect
+    ax.axvline(x=disp_pooled, color="#4A5568", linestyle=":", linewidth=1.0, alpha=0.7)
+
+    # Study rows
     for i in range(n):
-        ax.plot([disp_lower[i], disp_upper[i]], [y_pos[i], y_pos[i]],
-                color="#0279EE", linewidth=1.5)
-        ax.plot(display[i], y_pos[i], "o", color="#0279EE", markersize=6)
-        ax.text(max(disp_upper) * 1.15, y_pos[i],
-                f"{display[i]:.2f} [{disp_lower[i]:.2f}, {disp_upper[i]:.2f}]",
-                fontsize=7, va="center")
+        y = y_pos[i]
+        # Whisker CI line
+        ax.plot([disp_lower[i], disp_upper[i]], [y, y], color="#1A202C", linewidth=1.6, solid_capstyle="round")
+        # Tick caps at CI ends
+        cap_h = 0.12
+        ax.plot([disp_lower[i], disp_lower[i]], [y - cap_h, y + cap_h], color="#1A202C", linewidth=1.2)
+        ax.plot([disp_upper[i], disp_upper[i]], [y - cap_h, y + cap_h], color="#1A202C", linewidth=1.2)
 
-    # Pooled diamond
-    ax.plot([disp_pooled, pooled_lower if not is_log else math.exp(pooled_lower)],
-            [0.3, 0.5], color="#75A025", linewidth=2)
-    ax.plot(disp_pooled, 0.4, "D", color="#75A025", markersize=8)
+        # Center point estimate marker sized by inverse-variance weight
+        box_size = max(5, min(14, math.sqrt(max(0.1, w_pct[i])) * 2.8))
+        ax.plot(display[i], y, marker="s", markersize=box_size,
+                color="#2B6CB0", markeredgecolor="#1A202C", markeredgewidth=1.0)
 
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(labels, fontsize=8)
-    ax.set_xlabel("Effect Size", fontsize=10)
-    ax.set_title("Forest Plot", fontsize=12, fontweight="bold")
-    ax.axvline(x=disp_pooled, color="#75A025", linestyle="--", linewidth=0.8, alpha=0.5)
-    ax.text(0.98, 0.98, f"I² = {i_squared:.1f}%", transform=ax.transAxes,
-            fontsize=9, ha="right", va="top")
+        # Right annotations (Effect [95% CI] and Weight %)
+        annot_effect = f"{display[i]:.2f} [{disp_lower[i]:.2f}, {disp_upper[i]:.2f}]"
+        annot_w = f"{w_pct[i]:.1f}%"
+        annot_x_eff = max_x + x_span * 0.12
+        annot_x_w = max_x + x_span * 0.55
+        ax.text(annot_x_eff, y, annot_effect, fontsize=8.5, fontfamily="monospace", va="center")
+        ax.text(annot_x_w, y, annot_w, fontsize=8.5, fontfamily="monospace", va="center")
+
+    # Column Headers
+    header_y = n + 0.8
+    ax.text(max_x + x_span * 0.12, header_y, "Effect [95% CI]", fontsize=9, fontweight="bold", va="center")
+    ax.text(max_x + x_span * 0.55, header_y, "Weight", fontsize=9, fontweight="bold", va="center")
+    ax.plot([x_axis_min, x_axis_max], [header_y - 0.4, header_y - 0.4], color="#CBD5E0", linewidth=0.8)
+
+    # Pooled Diamond (Polygon)
+    y_overall = 0.1
+    diamond_h = 0.35
+    diamond_pts = [
+        [disp_pooled_lower, y_overall],
+        [disp_pooled, y_overall + diamond_h],
+        [disp_pooled_upper, y_overall],
+        [disp_pooled, y_overall - diamond_h],
+    ]
+    diamond = patches.Polygon(diamond_pts, closed=True, facecolor="#75A025",
+                              edgecolor="#2D3748", linewidth=1.5, zorder=5)
+    ax.add_patch(diamond)
+
+    # Summary Row text
+    ax.text(max_x + x_span * 0.12, y_overall,
+            f"{disp_pooled:.2f} [{disp_pooled_lower:.2f}, {disp_pooled_upper:.2f}]",
+            fontsize=9, fontweight="bold", fontfamily="monospace", va="center", color="#2D3748")
+    ax.text(max_x + x_span * 0.55, y_overall, "100.0%",
+            fontsize=9, fontweight="bold", fontfamily="monospace", va="center", color="#2D3748")
+
+    all_y = y_pos + [y_overall]
+    all_labels = labels + ["Overall (RE Model)"]
+    ax.set_yticks(all_y)
+    ax.set_yticklabels(all_labels, fontsize=9, fontweight="medium")
+
+    if is_log and null_val > 0:
+        ax.set_xscale("log")
+
+    ax.set_xlim(x_axis_min, x_axis_max)
+    ax.set_xlabel(f"Effect Measure: {effect_measure.upper() if effect_measure else 'Odds Ratio'}", fontsize=10, fontweight="bold")
+    ax.set_title("Meta-Analysis Forest Plot (R metafor DL Model)", fontsize=12, fontweight="bold", pad=12)
+
+    # Footer heterogeneity
+    fig.text(0.12, 0.02,
+             f"Heterogeneity: I\u00b2 = {i_squared:.1f}% | Method: DerSimonian-Laird Random-Effects (metafor)",
+             fontsize=8.5, style="italic", color="#4A5568")
+
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
@@ -386,14 +463,15 @@ def _matplotlib_forest_fallback(labels, effect_sizes, variances, pooled,
 
 
 def _matplotlib_sroc_fallback(sensitivities, specificities, bivariate_result):
-    """Matplotlib fallback for SROC curve."""
+    """Matplotlib fallback for SROC curve using R mada styling."""
     import io
     import numpy as np
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    plt.rcParams["font.family"] = ["Liberation Sans", "Arimo", "DejaVu Sans"]
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["Arial", "DejaVu Sans", "Liberation Sans", "sans-serif"]
     plt.rcParams["svg.fonttype"] = "none"
 
     fig, ax = plt.subplots(figsize=(7, 7))
@@ -423,7 +501,7 @@ def _matplotlib_sroc_fallback(sensitivities, specificities, bivariate_result):
     ax.set_ylim(-0.05, 1.05)
     ax.set_xlabel("1 - Specificity (FPR)", fontsize=10)
     ax.set_ylabel("Sensitivity (TPR)", fontsize=10)
-    ax.set_title("Summary ROC (SROC) Curve", fontsize=12, fontweight="bold")
+    ax.set_title("Summary ROC (SROC) Curve — R mada", fontsize=12, fontweight="bold")
     ax.legend(loc="lower right", fontsize=8)
     ax.set_aspect("equal")
     ax.grid(alpha=0.3)
@@ -437,55 +515,79 @@ def _matplotlib_sroc_fallback(sensitivities, specificities, bivariate_result):
 
 
 def _matplotlib_funnel_fallback(effect_sizes, variances, egger_result, is_log):
-    """Matplotlib fallback for funnel plot."""
+    """Matplotlib fallback for funnel plot formatted to R metafor standard."""
     import io
     import math
     import numpy as np
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
 
-    plt.rcParams["font.family"] = ["Liberation Sans", "Arimo", "DejaVu Sans"]
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["Arial", "DejaVu Sans", "Liberation Sans", "sans-serif"]
     plt.rcParams["svg.fonttype"] = "none"
 
-    fig, ax = plt.subplots(figsize=(7, 5.5))
+    fig, ax = plt.subplots(figsize=(8, 6))
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
-    se = [math.sqrt(v) for v in variances]
+    se = [math.sqrt(max(1e-6, v)) for v in variances]
     display = [math.exp(e) if is_log else e for e in effect_sizes]
 
     y = np.array(effect_sizes, dtype=float)
     v = np.array(variances, dtype=float)
-    w = 1.0 / v
+    w = 1.0 / np.maximum(1e-6, v)
     pooled = float(np.sum(w * y) / np.sum(w))
     pooled_display = math.exp(pooled) if is_log else pooled
 
-    ax.scatter(display, se, s=40, color="#0279EE", alpha=0.7, edgecolors="white", linewidth=0.5)
-    ax.axvline(x=pooled_display, color="#75A025", linewidth=1, alpha=0.7)
+    max_se = max(se) * 1.25 if se else 0.4
+    se_apex = 0.0
 
-    max_se = max(se) * 1.1
-    se_range = np.linspace(0, max_se, 50)
+    # 95% CI pseudo funnel triangle vertices
     if is_log:
-        ci_upper = [math.exp(pooled + 1.96 * s) for s in se_range]
-        ci_lower = [math.exp(pooled - 1.96 * s) for s in se_range]
+        funnel_left_95 = math.exp(pooled - 1.96 * max_se)
+        funnel_right_95 = math.exp(pooled + 1.96 * max_se)
+        funnel_left_99 = math.exp(pooled - 2.576 * max_se)
+        funnel_right_99 = math.exp(pooled + 2.576 * max_se)
     else:
-        ci_upper = [pooled + 1.96 * s for s in se_range]
-        ci_lower = [pooled - 1.96 * s for s in se_range]
-    ax.plot(ci_upper, se_range, color="#999999", linestyle="--", linewidth=0.8, alpha=0.5)
-    ax.plot(ci_lower, se_range, color="#999999", linestyle="--", linewidth=0.8, alpha=0.5)
+        funnel_left_95 = pooled - 1.96 * max_se
+        funnel_right_95 = pooled + 1.96 * max_se
+        funnel_left_99 = pooled - 2.576 * max_se
+        funnel_right_99 = pooled + 2.576 * max_se
 
-    ax.set_xlabel("Effect Size", fontsize=10)
-    ax.set_ylabel("Standard Error", fontsize=10)
-    ax.set_title("Funnel Plot", fontsize=12, fontweight="bold")
-    ax.invert_yaxis()
-    ax.grid(alpha=0.3)
+    # Shaded pseudo 95% CI triangle (metafor standard shade)
+    funnel_pts = [
+        [pooled_display, se_apex],
+        [funnel_left_95, max_se],
+        [funnel_right_95, max_se],
+    ]
+    funnel_patch = patches.Polygon(funnel_pts, closed=True, facecolor="#ECE9E2",
+                                   edgecolor="#A0AEC0", linestyle="--", linewidth=1.2, zorder=1)
+    ax.add_patch(funnel_patch)
+
+    # 99% CI limits (outer dashed)
+    ax.plot([pooled_display, funnel_left_99], [se_apex, max_se], color="#CBD5E0", linestyle=":", linewidth=1.0)
+    ax.plot([pooled_display, funnel_right_99], [se_apex, max_se], color="#CBD5E0", linestyle=":", linewidth=1.0)
+
+    # Pooled vertical center line
+    ax.axvline(x=pooled_display, color="#75A025", linewidth=1.5, zorder=2, label="Pooled Estimate")
+
+    # Plot individual studies (R metafor signature style: blue dots with white border)
+    ax.scatter(display, se, s=55, color="#0279EE", edgecolors="white", linewidth=1.2, zorder=5)
+
+    ax.set_xlabel("Effect Size (log scale)" if is_log else "Effect Size", fontsize=10, fontweight="bold")
+    ax.set_ylabel("Standard Error", fontsize=10, fontweight="bold")
+    ax.set_title("Publication Bias Assessment (Funnel Plot — metafor)", fontsize=12, fontweight="bold", pad=12)
+    ax.set_ylim(max_se * 1.05, 0.0)  # Inverted Y-axis
+    ax.grid(alpha=0.25, linestyle="--")
 
     if egger_result and egger_result.get("p_value") is not None:
         p_val = egger_result["p_value"]
-        sig = "*" if p_val < 0.05 else "ns"
-        ax.text(0.98, 0.02, f"Egger's test: p = {p_val:.4f} ({sig})",
-                transform=ax.transAxes, fontsize=8, ha="right", va="bottom")
+        sig = "significant asymmetry" if p_val < 0.05 else "no significant asymmetry"
+        ax.text(0.97, 0.05, f"Egger's test: p = {p_val:.3f} ({sig})",
+                transform=ax.transAxes, fontsize=8.5, ha="right", va="bottom",
+                bbox=dict(boxstyle="round,pad=0.4", facecolor="#F7FAFC", edgecolor="#CBD5E0"))
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)

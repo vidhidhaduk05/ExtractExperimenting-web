@@ -72,12 +72,22 @@ svg(output_path, width = 10, height = max(4, 0.8 * n_studies + 3), bg = "white")
 # Columns: study name | effect size + CI | weight
 op <- par(mar = c(4, 1, 2, 1))
 
-# Forest plot
+# Calculate dynamic axis limits ensuring alim is strictly inside xlim
+alim_min <- max(0.01, floor(min(c(display_lower, display_pooled_lower)) * 10) / 10)
+alim_max <- ceiling(max(c(display_upper, display_pooled_upper)) * 10) / 10
+span <- max(1.0, alim_max - alim_min)
+xlim_min <- alim_min - span * 1.5
+xlim_max <- alim_max + span * 1.4
+
+col_effect_x <- alim_max + span * 0.15
+col_weight_x <- alim_max + span * 0.8
+
+# Forest plot using metafor
 forest(res,
-  xlim = c(-2.5, 3.5),
-  alim = c(min(display_lower) * 0.9, max(display_upper) * 1.1),
-  ylim = c(-1.5, n_studies + 2),
-  at = seq(floor(min(display_lower)), ceiling(max(display_upper)), length.out = 5),
+  xlim = c(xlim_min, xlim_max),
+  alim = c(alim_min, alim_max),
+  ylim = c(-1.8, n_studies + 2),
+  at = seq(alim_min, alim_max, length.out = 5),
   psize = 1,
   header = TRUE,
   xlab = xlab,
@@ -89,26 +99,29 @@ forest(res,
 # Add text annotations for effect sizes and weights
 for (i in 1:n_studies) {
   row_pos <- n_studies - i + 1
-  text(x = 3.6, y = row_pos,
+  text(x = col_effect_x, y = row_pos,
        labels = sprintf("%.2f [%.2f, %.2f]", display_yi[i], display_lower[i], display_upper[i]),
-       cex = 0.7, adj = 0)
-  text(x = 4.8, y = row_pos,
+       cex = 0.75, adj = 0)
+  text(x = col_weight_x, y = row_pos,
        labels = sprintf("%.1f%%", dat$w[i]),
-       cex = 0.7, adj = 0)
+       cex = 0.75, adj = 0)
 }
 
 # Add column headers
-text(x = 3.6, y = n_studies + 1.2, labels = "Effect [95% CI]", cex = 0.75, font = 2, adj = 0)
-text(x = 4.8, y = n_studies + 1.2, labels = "Weight", cex = 0.75, font = 2, adj = 0)
+text(x = col_effect_x, y = n_studies + 1.2, labels = "Effect [95% CI]", cex = 0.75, font = 2, adj = 0)
+text(x = col_weight_x, y = n_studies + 1.2, labels = "Weight", cex = 0.75, font = 2, adj = 0)
 
 # Add pooled estimate annotation
-text(x = 3.6, y = -0.5,
+text(x = col_effect_x, y = -0.6,
      labels = sprintf("%.2f [%.2f, %.2f]", display_pooled, display_pooled_lower, display_pooled_upper),
+     cex = 0.8, font = 2, adj = 0, col = "#75A025")
+text(x = col_weight_x, y = -0.6,
+     labels = "100.0%",
      cex = 0.8, font = 2, adj = 0, col = "#75A025")
 
 # Add I-squared annotation
-text(x = -2.5, y = -1.2,
-     labels = sprintf("Heterogeneity: I² = %.1f%%", i_squared),
+text(x = xlim_min, y = -1.4,
+     labels = sprintf("Heterogeneity: I² = %.1f%% | Random-Effects (DerSimonian-Laird)", i_squared),
      cex = 0.75, adj = 0)
 
 par(op)
