@@ -82,7 +82,8 @@ class TestPipelineAutoTrigger:
              patch.object(pipeline_service, "screen_fulltext_with_llm", return_value={
                  "recommendation": recommendation, "reason_text": "r", "rationale": "meets PICO",
              }), \
-             patch.object(pipeline_service.auto_extract_service, "auto_extract", return_value={"extracted_count": 3}):
+             patch.object(pipeline_service.auto_extract_service, "auto_extract", return_value={"extracted_count": 3}), \
+             patch("services.llm_extractor.is_llm_available", return_value=False):
             pipeline_service.run_pdf_screening_pipeline(sid, pid, db=_db())
 
     def test_pipeline_inclusion_triggers_rob(self, client):

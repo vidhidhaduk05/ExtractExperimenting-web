@@ -404,3 +404,35 @@ un_full_pipeline) verify pause and cancellation cleanly between individual studi
   - Fast-forward merged into `main` and pushed to `origin/main`.
   - Deployed latest distribution to `origin/gh-pages`.
   - Verified all remote PRs on GitHub are successfully merged and closed.
+
+## 2026-10-18 — Citation Telephone Verifier & Calibrated Unsureness Matrix (Feature Branch)
+
+- **Dedicated Branch**: `feature/citation-telephone-verifier` (cleanly branched from `main`).
+- **Target Specification**: Reverse-engineered citation telephone methodology based on `k-dense.ai/tools/citation-telephone?paper=PMC11571110&p=P009&s=2&r=ref45`.
+  - Traces cited claims backward hop-by-hop from a root paper to its primary experimental origin.
+  - Evaluates semantic drift and caught the benchmark semantic inversion: Zeng et al. (2024) claimed "immune-dependent" citing ref [9], while the actual cited paper (Wang et al., 2023) and primary origin (Ma et al., 2022) proved it is "immune-independent".
+- **Local Laya System-1 ONNX Inference**:
+  - Zero hallucination / no external API dependency: Integrated local `LayaModel` via `radextract_platform/backend/services/citation_telephone_service.py`.
+  - Executes ModernBERT non-autoregressive classification (`m.system_one(state, questions)`) scoring:
+    1. `stated_anywhere`: Whether the cited topic is stated in source passage (`stated` vs `not_stated`).
+    2. `support_type`: Semantic relationship (`matches`, `goes_further`, `more_cautious`, `changed`, `not_there`).
+    3. `is_own_result`: Provenance distinguishing authors' own experimental data vs citing another paper.
+- **In-Text Citation & Context Extraction**:
+  - Integrated citation extraction regex from user's `biomni-zotero-link-reuseable-skill.zip` (`PAREN_CIT`, `BRACKET_CIT`, `REF_START`, `REF_HEADER`).
+  - Added direct manuscript file upload (`.docx`, `.pdf`, `.txt`) via `POST /api/citation-telephone/upload-manuscript` to audit pre-publication drafts against cited reference passages.
+- **Calibrated Unsureness Matrix**:
+  - Calculates confidence margin ($\Delta = P_{top1} - P_{top2}$) and normalized Shannon entropy ($H(X) = -\sum P(x) \log_2 P(x)$).
+  - Explicitly surfaces genuine textual ambiguity when margin $< 0.20$ or entropy $> 0.65$, preventing false certainty.
+  - Flags potential semantic inversion alerts when divergence probability $> 35\%$.
+- **Unified Brand Design**:
+  - Harmonized with RadExtract 7-color palette (Amethyst `#381A61`, Gold `#F9D14A`, Periwinkle `#88A0DC`, Plum `#7C4B73`, Coral `#ED968C`, Crimson `#AB3329`, Amber `#E78429`).
+  - Navigation integrated into `ClaimscapePage.tsx` header and `AppLayout.tsx` sidebar at route `/citation-telephone`.
+
+## 2026-10-18 — Mandatory Auto-Proceed & Autonomous Execution Policy
+
+- **Context**: Prevent interactive stalls, trivial confirmation modal questions (`ask_question`), or pausing execution mid-task.
+- **Policy Rules Injected**:
+  - Updated `AGENTS.md` and `GEMINI.md` with **Rule 10: Auto-Proceed & Autonomous Execution**.
+  - Created `.agents/rules/auto_proceed.md` (`trigger: always_on`).
+  - Mandates automatic selection of recommended engineering paths, continuous execution across tool sequences, and verification via real test/build evidence before presenting results.
+
