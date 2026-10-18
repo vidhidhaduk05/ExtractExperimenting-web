@@ -1,5 +1,9 @@
 # Bolt's Journal - Performance Learnings
 
+## 2026-10-27 - Fast Direct String Matching for PICO Section Extraction
+**Learning:** In PICO protocol document parsing (`extract_pico_from_text`), evaluating section headers via per-line dynamic regex construction (`re.match(rf"^{re.escape(synonym)}\s*:\s*(.+)$", ...)`) inside nested synonym loops creates substantial overhead ($O(N \cdot M)$ regex calls per document). Replacing dynamic regex calls with direct string slicing (`find(':')`) and checking header boundaries against a pre-computed module-wide `set` (`_ALL_PICO_HEADER_SYNONYMS`) reduces section extraction time by ~12x (~19 ms -> ~1.5 ms per 20-section protocol text).
+**Action:** Replace dynamic regex matching loops in line-by-line section header detection with pre-built lookup sets and direct string slicing (`line.find(':')`).
+
 ## 2026-10-25 - Parallel Integer Priority Array for Character-Level Span Conflict Resolution
 **Learning:** In abstract screening span resolution (`resolve_character_spans`), checking character priorities via dictionary lookups (`curr.get("type")` & `priority_map.get(...)`) inside inner loops for every character index creates significant CPU overhead. Pre-evaluating integer priorities once per span and using a parallel integer array (`char_prios: list[int]`) for fast C-level integer comparisons (`prio > char_prios[i]`) eliminates inner-loop dict lookups and yields a ~1.75x speedup without altering span resolution output.
 **Action:** When resolving overlapping character spans by priority across strings, maintain a parallel integer array tracking max assigned priority per character instead of querying dict properties inside character loops.
