@@ -391,5 +391,16 @@ un_full_pipeline) verify pause and cancellation cleanly between individual studi
   - Enhanced Wilson 95% CI whisker bar (`.cs-ci`) and point-estimate node with high-contrast editorial styling and 50% neutral reference line.
   - Updated default scan size to $n = 300$ papers in `ClaimscapePage.tsx` and pre-loaded the full verified landmark payload in `src/data/hrt_example.json`.
 
+## 2026-10-18 — Jules / Sentinel / Bolt Pull Request Resolution & Auto-Merge to Main
 
-
+- **Resolved PRs**:
+  - **PR #51 & PR #50 (Sentinel)**: Fixed missing authorization checks across analysis (`/api/analysis/projects/{id}/...`) and RoB (`/api/rob/projects/{id}/...`) endpoints by enforcing `await check_project_access(project_id, current_user.id, db)`. Comprehensive test coverage retained in `test_routers_analysis.py` and `test_routers_rob.py`.
+  - **PR #49 (Bolt)**: Optimized MeSH term lookups in `radextract_platform/backend/services/search_string_generator.py` by pre-indexing lookup sets for high-throughput string generation.
+  - **PR #48 & PR #46 (Bolt)**: Added LRU-cached pre-compiled regex pattern compilation (`_get_signal_regex`) in `radextract_platform/backend/services/signal_prefilter.py` avoiding redundant `re.compile` calls per term/study.
+  - **PR #47 (Bolt)**: Optimized character span boundary comparison in `radextract_platform/backend/services/keyword_highlight_service.py` using object identity checks for identical span bounds.
+- **Verification & Deployment**:
+  - Local backend test suite passed: 58/58 tests in `test_routers_analysis.py`, `test_routers_rob.py`, and `test_tool_calling_client.py` + 9/9 tests in `test_signal_prefilter.py`.
+  - Frontend production build (`npm run build`) passed with 0 errors.
+  - Fast-forward merged into `main` and pushed to `origin/main`.
+  - Deployed latest distribution to `origin/gh-pages`.
+  - Verified all remote PRs on GitHub are successfully merged and closed.
