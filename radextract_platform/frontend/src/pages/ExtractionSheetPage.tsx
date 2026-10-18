@@ -96,13 +96,15 @@ export function ExtractionSheetPage() {
     }
   }, [availablePapers, selectedStudyId]);
 
-  // Active study object
-  const currentPaper = availablePapers.find((p) => p.id === selectedStudyId) || availablePapers[0] || {
-    id: selectedStudyId || "none",
-    shortId: "s0",
-    title: "No Study Selected",
-    filename: "",
-  };
+  // Active study object memoized to avoid re-searching availablePapers array on every render frame
+  const currentPaper = useMemo(() => {
+    return availablePapers.find((p) => p.id === selectedStudyId) || availablePapers[0] || {
+      id: selectedStudyId || "none",
+      shortId: "s0",
+      title: "No Study Selected",
+      filename: "",
+    };
+  }, [availablePapers, selectedStudyId]);
 
   // Map extractions for the active study
   const extractionMap = useMemo(() => {
@@ -280,13 +282,13 @@ export function ExtractionSheetPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Export Combined Matrix CSV across all studies
+  // Export Combined Matrix CSV across all studies using O(1) paperVariableExtMap lookups
   const handleExportAllStudiesMatrixCsv = () => {
     const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p) => `"${p.title}"`)];
     const rows = variableList.map((v: any) => {
       const studyValues = availablePapers.map((p) => {
-        const exts = (DEMO_EXTRACTIONS as any)[p.id] || [];
-        const found = exts.find((e: any) => e.variable_id === v.variable_id);
+        // Bolt performance boost: O(1) Map lookup instead of O(N) array .find() per cell
+        const found = paperVariableExtMap.get(`${p.id}:${v.variable_id}`);
         const val = found?.value || "NR";
         const status = found?.is_verified ? " [Verified]" : "";
         return `"${val}${status}"`;
