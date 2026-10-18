@@ -390,7 +390,7 @@ const DotSymbol: React.FC<DotSymbolProps> = React.memo(({ category, direct, stre
       strokeWidth={2}
     />
   );
-};
+});
 
 // Row verdict & Wilson score interval summary
 const RowSummary: React.FC<{ summary: TierSummary }> = React.memo(({ summary }) => {
@@ -497,7 +497,7 @@ const RowSummary: React.FC<{ summary: TierSummary }> = React.memo(({ summary }) 
       </p>
     </>
   );
-};
+});
 
 // Hover tooltip box
 interface TooltipProps {
