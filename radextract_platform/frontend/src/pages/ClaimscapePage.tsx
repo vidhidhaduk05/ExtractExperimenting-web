@@ -30,6 +30,7 @@ import { ClaimscapeMap } from "../components/claimscape/ClaimscapeMap";
 import { PaperInspector } from "../components/claimscape/PaperInspector";
 import { MethodologySection } from "../components/claimscape/MethodologySection";
 import { api } from "../lib/api";
+import { fetchLivePubMedEvidence } from "../lib/pubmedLiveClient";
 
 export const ClaimscapePage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -199,6 +200,7 @@ export const ClaimscapePage: React.FC = () => {
       window.history.replaceState({}, "", newUrl.toString());
     } catch {}
 
+    // Step 1: Try Local Backend API if available
     try {
       const res = await api.evaluateClaimscape(activeClaim, activeQuery, paperCount);
       if (Array.isArray(res?.papers) && res.papers.length > 0 && Array.isArray(res?.judgments)) {
@@ -216,7 +218,27 @@ export const ClaimscapePage: React.FC = () => {
         return;
       }
     } catch {
-      // Backend offline or running in standalone/static mode
+      // Backend not running on this domain/host
+    }
+
+    // Step 2: Query Live PubMed directly via NCBI E-Utilities
+    try {
+      const liveRes = await fetchLivePubMedEvidence(activeClaim, activeQuery, paperCount);
+      if (Array.isArray(liveRes?.papers) && liveRes.papers.length > 0) {
+        setDataset({
+          claim: activeClaim,
+          query: activeQuery,
+          total: liveRes.totalMatches || liveRes.papers.length,
+          papers: liveRes.papers,
+          judgments: liveRes.judgments,
+        });
+        setSelectedPmid(liveRes.papers[0]?.pmid || "");
+        setResultSource(`Live PubMed query: "${activeQuery}" · ${liveRes.papers.length} publications indexed from NCBI`);
+        setIsScanning(false);
+        return;
+      }
+    } catch (e: any) {
+      console.warn("Live PubMed retrieval warning:", e);
     }
 
     // Client-side synthesis fallback: adapt base papers to match claim topic dynamically
