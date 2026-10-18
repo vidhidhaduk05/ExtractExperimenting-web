@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React from "react";
 import { TraceStep, VERDICT_BADGE_STYLES } from "../../lib/citationTelephoneMethod";
 import { ArrowDown, CheckCircle2, AlertTriangle, HelpCircle, BookOpen, ExternalLink, ChevronRight, Share2, Layers } from "lucide-react";
 
@@ -14,22 +14,29 @@ export const TrailViewer: React.FC<TrailViewerProps> = ({
   onSelectStep,
 }) => {
   return (
-    <div className="space-y-4">
+    <ol className="ct-tree">
       {steps.map((step) => {
         const isSelected = step.id === selectedStepId;
         const badge = VERDICT_BADGE_STYLES[step.verdict] || VERDICT_BADGE_STYLES.same;
+        const isOrigin = step.isOrigin || step.verdict === "same";
 
         return (
-          <div key={step.id} className="relative">
-            {/* Edge Connector / Citing Link */}
-            <div className="flex items-center gap-2 mb-2 ml-4">
-              <span className="text-[11.5px] font-mono px-2 py-0.5 rounded bg-[#381A61]/10 dark:bg-white/10 text-[#381A61] dark:text-[#F9D14A] font-bold">
-                cited as {step.citedAs || `[hop ${step.hop}]`}
+          <li key={step.id}>
+            {/* Edge Link */}
+            <div className="ct-edge">
+              <span>
+                cited as <span className="font-mono text-[#381A61] dark:text-[#F9D14A] font-bold">{step.citedAs || `[hop ${step.hop}]`}</span>
               </span>
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${badge.bg} ${badge.text} ${badge.border}`}>
+              <span
+                className="ct-pill"
+                style={{
+                  // @ts-expect-error CSS variable
+                  "--c": step.verdict === "different" ? "var(--ct-different)" : "var(--ct-same)",
+                }}
+              >
                 {badge.label}
               </span>
-              {step.unsureness.isGenuinelyUnsure && (
+              {step.unsureness?.isGenuinelyUnsure && (
                 <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-[#E78429]/15 text-[#E78429] border border-[#E78429]/30">
                   <HelpCircle className="w-3 h-3" />
                   <span>Unsureness Matrix: Ambiguous</span>
@@ -37,75 +44,71 @@ export const TrailViewer: React.FC<TrailViewerProps> = ({
               )}
             </div>
 
-            {/* Step Card Node */}
+            {/* Interactive Step Node */}
             <button
               type="button"
               onClick={() => onSelectStep(step)}
-              className={`w-full text-left rounded-2xl p-4 sm:p-5 transition-all border ${
-                isSelected
-                  ? "bg-white dark:bg-[#221D2C] border-[#381A61] dark:border-[#F9D14A] shadow-md ring-2 ring-[#381A61]/20 dark:ring-[#F9D14A]/20"
-                  : "bg-white/70 dark:bg-[#1A1622] border-[#381A61]/10 dark:border-white/10 hover:border-[#381A61]/30 hover:bg-white dark:hover:bg-[#221D2C] shadow-2xs"
-              }`}
+              className="ct-node"
+              aria-current={isSelected}
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
-                  {step.isOrigin ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#88A0DC]/20 text-[#381A61] dark:text-[#88A0DC] border border-[#88A0DC]/40">
-                      <span className="w-2 h-2 rounded-full bg-[#381A61] dark:bg-[#88A0DC]" />
-                      Primary Origin
-                    </span>
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <span
+                  className="ct-status"
+                  style={{
+                    // @ts-expect-error CSS variable
+                    "--c": isOrigin ? "var(--ct-origin)" : "var(--ct-same)",
+                  }}
+                >
+                  {isOrigin ? (
+                    <>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none">
+                        <circle cx="12" cy="12" r="8"></circle>
+                        <circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"></circle>
+                      </svg>
+                      <span>Origin</span>
+                    </>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#7C4B73]/15 text-[#7C4B73] dark:text-[#C8C2BA]">
-                      <ArrowDown className="w-3 h-3" />
-                      Passes It On (Hop {step.hop})
-                    </span>
+                    <>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none">
+                        <path d="M5 5v6a4 4 0 0 0 4 4h10M15 11l4 4-4 4"></path>
+                      </svg>
+                      <span>Passes it on</span>
+                    </>
                   )}
-                  <span className="text-xs text-[#6B665E] dark:text-[#968F84]">
-                    {step.journal} ┬╖ {step.year}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5 text-xs text-[#381A61] dark:text-[#F9D14A] font-semibold">
-                  <span>Inspect passage</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </div>
+                </span>
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[#6B665E] dark:text-[#968F84]">
+                  <span>{step.journal} · {step.year}</span>
+                </span>
               </div>
 
-              <h4 className="font-serif font-bold text-[15px] sm:text-[16px] text-[#381A61] dark:text-[#FAF9F3] leading-snug line-clamp-2 mb-2">
+              <span className="ct-clamp2 text-[14.5px] font-semibold leading-snug text-[#381A61] dark:text-[#FAF9F3]">
                 {step.title}
-              </h4>
+              </span>
 
-              <div className="space-y-1.5 rounded-xl bg-[#FAF9F3] dark:bg-[#14111A] p-3 border border-[#381A61]/5 dark:border-white/5">
-                <div className="flex items-center justify-between text-[11px] text-[#6B665E] dark:text-[#968F84]">
-                  <span>Matched passage ({step.passageSource}):</span>
-                  {step.paragraphId && <span className="font-mono text-[10.5px]">{step.paragraphId}</span>}
-                </div>
-                <p className="text-[13px] text-[#141413] dark:text-[#C8C2BA] italic leading-relaxed line-clamp-2">
-                  ΓÇ£{step.foundPassage}ΓÇ¥
-                </p>
-              </div>
+              <span className="ct-clamp2 text-[13.5px] leading-snug text-[#4A453E] dark:text-[#C8C2BA] italic">
+                “{step.foundPassage}”
+              </span>
 
               {step.verdictDescription && (
-                <p className="mt-2 text-[12px] text-[#AB3329] dark:text-[#ED968C] font-medium flex items-center gap-1.5">
+                <p className="mt-1 text-[11.5px] text-[#AB3329] dark:text-[#ED968C] font-medium flex items-center gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5 flex-none" />
                   <span>{step.verdictDescription}</span>
                 </p>
               )}
             </button>
 
-            {/* Render nested children steps recursively */}
+            {/* Recursive nested steps */}
             {step.nextSteps && step.nextSteps.length > 0 && (
-              <div className="pl-6 sm:pl-8 mt-3 border-l-2 border-dashed border-[#381A61]/20 dark:border-white/20">
-                <TrailViewer
-                  steps={step.nextSteps}
-                  selectedStepId={selectedStepId}
-                  onSelectStep={onSelectStep}
-                />
-              </div>
+              <TrailViewer
+                steps={step.nextSteps}
+                selectedStepId={selectedStepId}
+                onSelectStep={onSelectStep}
+              />
             )}
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 };
+

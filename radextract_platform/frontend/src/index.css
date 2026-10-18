@@ -718,4 +718,127 @@
   animation: bump 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* =========================================================================
+   Citation Telephone Tree, Nodes, and Edge Connector Styling (.ct-*)
+   Reverse-Engineered directly from reference layout
+   ========================================================================= */
+.ct {
+  --ct-panel: #F2F1EB;
+  --ct-card: #FFFFFF;
+  --ct-line: rgba(56, 26, 97, 0.10);
+  --ct-ink: #141413;
+  --ct-ink-2: #4A453E;
+  --ct-muted: #6B665E;
+  --ct-different: #AB3329;
+  --ct-same: #3B64B8;
+  --ct-origin: #7C4B73;
+}
+
+.dark .ct {
+  --ct-panel: #1A1622;
+  --ct-card: #221D2C;
+  --ct-line: rgba(237, 150, 140, 0.14);
+  --ct-ink: #FAF9F3;
+  --ct-ink-2: #C8C2BA;
+  --ct-muted: #968F84;
+  --ct-different: #ED968C;
+  --ct-same: #88A0DC;
+  --ct-origin: #F9D14A;
+}
+
+.ct-tree {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: relative;
+}
+
+.ct-tree li {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-top: 0.75rem;
+}
+
+.ct-tree li::before {
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--ct-line, rgba(56, 26, 97, 0.15));
+}
+
+.ct-tree li:last-child::before {
+  bottom: 50%;
+}
+
+.ct-edge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  margin-bottom: 0.35rem;
+  color: var(--ct-muted, #6B665E);
+}
+
+.ct-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--c, #AB3329) 14%, transparent);
+  color: var(--c, #AB3329);
+  border: 1px solid color-mix(in srgb, var(--c, #AB3329) 30%, transparent);
+}
+
+.ct-node {
+  width: 100%;
+  text-align: left;
+  border-radius: 0.85rem;
+  border: 1px solid var(--ct-line, rgba(56, 26, 97, 0.1));
+  background: var(--ct-card, #FFFFFF);
+  padding: 0.85rem 1rem;
+  display: grid;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.ct-node:hover {
+  border-color: #381A61;
+  box-shadow: 0 2px 8px rgba(56, 26, 97, 0.08);
+}
+
+.ct-node[aria-current="true"] {
+  border-color: #381A61;
+  box-shadow: 0 0 0 2px rgba(56, 26, 97, 0.2);
+}
+
+.dark .ct-node:hover,
+.dark .ct-node[aria-current="true"] {
+  border-color: #F9D14A;
+  box-shadow: 0 0 0 2px rgba(249, 209, 74, 0.2);
+}
+
+.ct-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c, #7C4B73);
+}
+
+.ct-clamp2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+
 

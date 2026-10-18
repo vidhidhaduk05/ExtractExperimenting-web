@@ -237,14 +237,26 @@ export const CitationTelephonePage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Left Column: Chain of Hops */}
             <div className="lg:col-span-5 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between border-b border-[#381A61]/10 dark:border-white/10 pb-2">
                 <h2 className="font-serif font-bold text-base text-[#381A61] dark:text-[#F9D14A]">
-                  Citation Telephone Trail ({activeExample.data.steps.length} Hops)
+                  The Trail ({activeExample.data.steps.length} Hops)
                 </h2>
                 <span className="text-xs font-mono text-zinc-500">
-                  Origin: {activeExample.data.originsFound} found
+                  {activeExample.data.totalPapersRead} papers · stored example
                 </span>
               </div>
+
+              {/* Root Claim Card */}
+              <div className="rounded-xl border border-[#381A61]/15 dark:border-white/15 bg-white dark:bg-[#1A1622] p-4 shadow-2xs space-y-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B665E] dark:text-[#968F84]">The claim</span>
+                <p className="text-[14px] font-semibold text-[#141413] dark:text-[#FAF9F3] leading-snug">
+                  “{activeExample.data.claim}”
+                </p>
+                <p className="text-[11.5px] text-[#6B665E] dark:text-[#968F84] line-clamp-1">
+                  {activeExample.data.rootPaper.authors} · {activeExample.data.rootPaper.year} · {activeExample.data.rootPaper.title}
+                </p>
+              </div>
+
               <TrailViewer
                 steps={activeExample.data.steps}
                 selectedStepId={selectedStep.id}
