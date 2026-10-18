@@ -1,0 +1,594 @@
+[
+  {
+    "id": "hypothesis",
+    "label": "Hypothesis stated",
+    "domain": "design",
+    "question": "Does the paper state a specific hypothesis or research question that the experiments test?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "primary_outcome",
+    "label": "Primary outcome defined",
+    "domain": "design",
+    "question": "Does the paper name a primary outcome measure for its main experiment?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "control_group",
+    "label": "Control group",
+    "domain": "design",
+    "question": "Does the paper include a control or comparison group for its main experiment?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "n_per_group",
+    "label": "Group sizes reported",
+    "domain": "design",
+    "question": "Does the paper report the number of animals, participants, or samples in each experimental group?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "sample_size_rationale",
+    "label": "Sample size justified",
+    "domain": "design",
+    "question": "Does the paper explain how the sample size was chosen, for example with a power calculation?",
+    "guideline": "ARRIVE 2",
+    "polarity": "good"
+  },
+  {
+    "id": "randomization",
+    "label": "Randomization",
+    "domain": "design",
+    "question": "Does the paper state that subjects or samples were randomly allocated to experimental groups?",
+    "guideline": "ARRIVE 4",
+    "polarity": "good"
+  },
+  {
+    "id": "randomization_method",
+    "label": "Randomization method",
+    "domain": "design",
+    "question": "Does the paper describe the method used to generate the random allocation sequence?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "blinding_allocation",
+    "label": "Blinded allocation",
+    "domain": "design",
+    "question": "Does the paper state that the people who allocated subjects or gave the treatments did not know which group each subject was in?",
+    "guideline": "ARRIVE 5",
+    "polarity": "good"
+  },
+  {
+    "id": "blinding_outcome",
+    "label": "Blinded assessment",
+    "domain": "design",
+    "question": "Does the paper state that outcomes were assessed, or data analyzed, by someone who did not know which group each subject was in?",
+    "guideline": "ARRIVE 5",
+    "polarity": "good"
+  },
+  {
+    "id": "inclusion_criteria",
+    "label": "Inclusion criteria",
+    "domain": "design",
+    "question": "Does the paper state criteria for including or excluding subjects, samples, or data points?",
+    "guideline": "ARRIVE 3",
+    "polarity": "good"
+  },
+  {
+    "id": "exclusions_reported",
+    "label": "Exclusions reported",
+    "domain": "design",
+    "question": "Does the paper report whether any subjects, samples, or data points were excluded from analysis?",
+    "guideline": "ARRIVE 3",
+    "polarity": "good"
+  },
+  {
+    "id": "replication",
+    "label": "Independent replication",
+    "domain": "design",
+    "question": "Does the paper state that key experiments were repeated independently or replicated in more than one model?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "replicate_type",
+    "label": "Replicate type defined",
+    "domain": "design",
+    "question": "Does the paper say whether replicates are biological or technical replicates?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "tests_named",
+    "label": "Tests named",
+    "domain": "stats",
+    "question": "Does the paper name the statistical tests or models used to analyze the data?",
+    "guideline": "ARRIVE 7",
+    "polarity": "good"
+  },
+  {
+    "id": "unit_of_analysis",
+    "label": "Experimental unit",
+    "domain": "stats",
+    "question": "Does the paper state what the experimental unit of analysis is, such as a single animal, cage, or culture?",
+    "guideline": "ARRIVE 1",
+    "polarity": "good"
+  },
+  {
+    "id": "assumptions",
+    "label": "Assumptions checked",
+    "domain": "stats",
+    "question": "Does the paper describe checking the assumptions of its statistical tests, such as normality?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "multiple_comparisons",
+    "label": "Multiplicity handled",
+    "domain": "stats",
+    "question": "Does the paper describe correcting for multiple comparisons or a pooled approach that addresses them?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "uncertainty",
+    "label": "Uncertainty reported",
+    "domain": "stats",
+    "question": "Does the paper report confidence intervals, credible intervals, or standard errors for its main estimates?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "effect_size",
+    "label": "Effect sizes",
+    "domain": "stats",
+    "question": "Does the paper report the size of the effect or difference between groups, not only whether it was significant?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "error_bars",
+    "label": "Error bars defined",
+    "domain": "stats",
+    "question": "Does the paper define what its error bars or dispersion measures represent, such as SD or SEM?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "stats_software",
+    "label": "Analysis software",
+    "domain": "stats",
+    "question": "Does the paper name the software or packages used for statistical analysis?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "significance_only",
+    "label": "p-value only reporting",
+    "domain": "stats",
+    "question": "Does the paper report results only as significant or not significant, without estimates of effect size?",
+    "guideline": null,
+    "polarity": "flag"
+  },
+  {
+    "id": "species_strain",
+    "label": "Species & strain",
+    "domain": "materials",
+    "question": "Does the paper report the species and strain of the animals used?",
+    "guideline": "ARRIVE 8",
+    "polarity": "good"
+  },
+  {
+    "id": "animal_sex",
+    "label": "Sex reported",
+    "domain": "materials",
+    "question": "Does the paper report the sex of the animals used?",
+    "guideline": "ARRIVE 8",
+    "polarity": "good"
+  },
+  {
+    "id": "animal_age",
+    "label": "Age or weight",
+    "domain": "materials",
+    "question": "Does the paper report the age or weight of the animals used?",
+    "guideline": "ARRIVE 8",
+    "polarity": "good"
+  },
+  {
+    "id": "animal_source",
+    "label": "Animal source",
+    "domain": "materials",
+    "question": "Does the paper name the supplier or source of the animals?",
+    "guideline": "ARRIVE 8",
+    "polarity": "good"
+  },
+  {
+    "id": "housing",
+    "label": "Housing & husbandry",
+    "domain": "materials",
+    "question": "Does the paper describe how the animals were housed, such as cage conditions, light cycle, or food and water access?",
+    "guideline": "ARRIVE 15",
+    "polarity": "good"
+  },
+  {
+    "id": "cell_source",
+    "label": "Cell line source",
+    "domain": "materials",
+    "question": "Does the paper name the source of each cell line used?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "cell_authentication",
+    "label": "Cell authentication",
+    "domain": "materials",
+    "question": "Does the paper state that cell lines were authenticated, for example by STR profiling?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "mycoplasma",
+    "label": "Mycoplasma testing",
+    "domain": "materials",
+    "question": "Does the paper state that cell lines were tested for mycoplasma contamination?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "antibody_ids",
+    "label": "Antibody identifiers",
+    "domain": "materials",
+    "question": "Does the paper give clone names, catalog numbers, or RRIDs for the antibodies used?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "reagent_sources",
+    "label": "Reagent sources",
+    "domain": "materials",
+    "question": "Does the paper name the manufacturer or supplier of key reagents?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "doses",
+    "label": "Doses & routes",
+    "domain": "materials",
+    "question": "Does the paper report the doses and routes of administration for treatments given?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "instruments",
+    "label": "Instruments named",
+    "domain": "materials",
+    "question": "Does the paper name the instruments or equipment models used for measurements?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "data_statement",
+    "label": "Data statement",
+    "domain": "openness",
+    "question": "Does the paper include a data availability statement?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "data_repository",
+    "label": "Data in a repository",
+    "domain": "openness",
+    "question": "Does the paper deposit its data in a public repository and give an accession number, DOI, or link?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "data_on_request",
+    "label": "Data only on request",
+    "domain": "openness",
+    "question": "Does the paper say its data are available only on request from the authors?",
+    "guideline": null,
+    "polarity": "flag"
+  },
+  {
+    "id": "code_available",
+    "label": "Code available",
+    "domain": "openness",
+    "question": "Does the paper state that its analysis code is publicly available?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "code_link",
+    "label": "Code link",
+    "domain": "openness",
+    "question": "Does the paper give a link or DOI for its analysis code?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "protocol_shared",
+    "label": "Protocol shared",
+    "domain": "openness",
+    "question": "Does the paper link to a detailed protocol, such as on protocols.io or in the supplement?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "preregistration",
+    "label": "Preregistered",
+    "domain": "openness",
+    "question": "Does the paper state that the study or its analysis plan was preregistered?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "supplement",
+    "label": "Supporting files",
+    "domain": "openness",
+    "question": "Does the paper provide supplementary data, tables, or figures?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "raw_data",
+    "label": "Raw data",
+    "domain": "openness",
+    "question": "Does the paper state that raw or individual-level data are shared, not only summary statistics?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "ethics_approval",
+    "label": "Ethics approval",
+    "domain": "ethics",
+    "question": "Does the paper state that an ethics committee or institutional board approved the study?",
+    "guideline": "ARRIVE 13",
+    "polarity": "good"
+  },
+  {
+    "id": "approval_number",
+    "label": "Approval number",
+    "domain": "ethics",
+    "question": "Does the paper give the protocol or approval number from the ethics committee?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "consent",
+    "label": "Informed consent",
+    "domain": "ethics",
+    "question": "Does the paper state that informed consent was obtained from participants?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "humane_endpoints",
+    "label": "Humane endpoints",
+    "domain": "ethics",
+    "question": "Does the paper define humane endpoints for the animals?",
+    "guideline": "ARRIVE 16",
+    "polarity": "good"
+  },
+  {
+    "id": "analgesia",
+    "label": "Anesthesia & analgesia",
+    "domain": "ethics",
+    "question": "Does the paper describe the anesthesia or pain relief given to the animals?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "euthanasia",
+    "label": "Euthanasia method",
+    "domain": "ethics",
+    "question": "Does the paper describe how the animals were euthanized?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "funding",
+    "label": "Funding statement",
+    "domain": "ethics",
+    "question": "Does the paper state who funded the work?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "funder_role",
+    "label": "Funder role",
+    "domain": "ethics",
+    "question": "Does the paper state what role, if any, the funders had in the study?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "competing_interests",
+    "label": "Competing interests",
+    "domain": "ethics",
+    "question": "Does the paper include a competing interests or conflict of interest statement?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "contributions",
+    "label": "Author contributions",
+    "domain": "ethics",
+    "question": "Does the paper list what each author contributed?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "guideline_named",
+    "label": "Reporting guideline",
+    "domain": "ethics",
+    "question": "Does the paper state that it follows a reporting guideline such as ARRIVE, CONSORT, or STROBE?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "limitations",
+    "label": "Limitations discussed",
+    "domain": "claims",
+    "question": "Does the paper discuss limitations of its own study?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "prior_work",
+    "label": "Compared to prior work",
+    "domain": "claims",
+    "question": "Does the paper compare its findings with results from previous studies?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "alternatives",
+    "label": "Alternative explanations",
+    "domain": "claims",
+    "question": "Does the paper consider alternative explanations for its findings?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "null_results",
+    "label": "Null results reported",
+    "domain": "claims",
+    "question": "Does the paper report experiments that found no effect or no difference?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "translation_caveat",
+    "label": "Translation caveat",
+    "domain": "claims",
+    "question": "Does the paper caution that results in its model system may not carry over to humans?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "causal_overreach",
+    "label": "Causal overreach",
+    "domain": "claims",
+    "question": "Does the paper describe a correlation or association as if it proves causation?",
+    "guideline": null,
+    "polarity": "flag"
+  },
+  {
+    "id": "overgeneralization",
+    "label": "Overgeneralization",
+    "domain": "claims",
+    "question": "Does the paper generalize its conclusions to populations or conditions it did not study?",
+    "guideline": null,
+    "polarity": "flag"
+  },
+  {
+    "id": "future_work",
+    "label": "Next steps stated",
+    "domain": "claims",
+    "question": "Does the paper state what further studies are needed to confirm or extend its findings?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "trial_registration",
+    "label": "Trial registration",
+    "domain": "design",
+    "question": "Does the paper give a clinical trial registration number, such as an NCT number?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "allocation_concealment",
+    "label": "Allocation concealment",
+    "domain": "design",
+    "question": "Does the paper describe how treatment allocation was concealed until assignment?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "adverse_events",
+    "label": "Adverse events",
+    "domain": "claims",
+    "question": "Does the paper report adverse events or harms in each group?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "confounders",
+    "label": "Confounders adjusted",
+    "domain": "stats",
+    "question": "Does the paper adjust its analysis for potential confounding variables?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "missing_data",
+    "label": "Missing data handled",
+    "domain": "stats",
+    "question": "Does the paper describe how missing data were handled?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "holdout",
+    "label": "Held-out evaluation",
+    "domain": "stats",
+    "question": "Does the paper evaluate its model on data that were not used for training?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "leakage",
+    "label": "Leakage prevented",
+    "domain": "stats",
+    "question": "Does the paper describe steps taken to prevent information leaking from test data into training?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "baseline",
+    "label": "Baseline compared",
+    "domain": "stats",
+    "question": "Does the paper compare its model against a simpler baseline method?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "external_validation",
+    "label": "External validation",
+    "domain": "stats",
+    "question": "Does the paper validate its model on an independent external dataset?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "omics_accession",
+    "label": "Omics accession",
+    "domain": "openness",
+    "question": "Does the paper give an accession number for its sequencing or omics data, such as a GEO or SRA ID?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "fdr",
+    "label": "FDR control",
+    "domain": "stats",
+    "question": "Does the paper control the false discovery rate for its high-throughput analyses?",
+    "guideline": null,
+    "polarity": "good"
+  },
+  {
+    "id": "batch_effects",
+    "label": "Batch effects",
+    "domain": "stats",
+    "question": "Does the paper describe how batch effects were assessed or corrected?",
+    "guideline": null,
+    "polarity": "good"
+  }
+]
