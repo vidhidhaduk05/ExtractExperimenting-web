@@ -24,9 +24,9 @@ import { ClaimscapePage } from "./pages/ClaimscapePage";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<ClaimscapePage />} />
       <Route path="/claimscape" element={<ClaimscapePage />} />
       <Route element={<AppLayout />}>
+        <Route path="/" element={<ProjectList />} />
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/projects/new" element={<ProjectCreate />} />
         <Route path="/projects/:projectId" element={<ProjectDetail />} />
