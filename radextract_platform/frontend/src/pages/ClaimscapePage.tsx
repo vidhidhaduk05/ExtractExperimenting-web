@@ -32,23 +32,6 @@ import { MethodologySection } from "../components/claimscape/MethodologySection"
 import { api } from "../lib/api";
 
 export const ClaimscapePage: React.FC = () => {
-  // Theme state
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    return document.documentElement.classList.contains("dark");
-  });
-
-  const toggleTheme = () => {
-    const nextDark = !isDark;
-    setIsDark(nextDark);
-    if (nextDark) {
-      document.documentElement.classList.add("dark");
-      document.documentElement.setAttribute("data-theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.setAttribute("data-theme", "light");
-    }
-  };
-
   // Active dataset state (live backend or cached preset)
   const [dataset, setDataset] = useState<{
     claim: string;
@@ -57,11 +40,11 @@ export const ClaimscapePage: React.FC = () => {
     papers: Paper[];
     judgments: Judgment[];
   }>({
-    claim: hrtDataRaw.claim,
-    query: hrtDataRaw.query,
-    total: hrtDataRaw.total || 593,
-    papers: hrtDataRaw.papers as unknown as Paper[],
-    judgments: hrtDataRaw.judgments as unknown as Judgment[],
+    claim: "",
+    query: "",
+    total: 0,
+    papers: [],
+    judgments: [],
   });
 
   // Form states
@@ -74,6 +57,8 @@ export const ClaimscapePage: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState<string>("hrt");
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [scanError, setScanError] = useState("");
+  const [resultSource, setResultSource] = useState("Enter a claim and run an evidence search.");
   const [evalSpeed, setEvalSpeed] = useState<number | null>(null);
 
   // Table filter search
@@ -153,69 +138,49 @@ export const ClaimscapePage: React.FC = () => {
       });
   }, [processedPapers, directOnly, tableSearch]);
 
-  const handleSelectExample = async (ex: typeof PRESET_EXAMPLES[0]) => {
-    setSelectedExample(ex.id);
-    setClaim(ex.claim);
-    setQuery(ex.query);
-
+  const runEvidenceSearch = async (nextClaim: string, nextQuery: string) => {
     setIsScanning(true);
+    setScanError("");
+    setEvalSpeed(null);
+    setDataset({ claim: nextClaim, query: nextQuery, total: 0, papers: [], judgments: [] });
+    setResultSource("Searching the connected backend…");
     try {
-      const res = await api.evaluateClaimscape(ex.claim, ex.query, paperCount);
-      if (res && res.papers && res.papers.length > 0) {
-        setDataset({
-          claim: res.claim,
-          query: res.query,
-          total: res.total || res.papers.length,
-          papers: res.papers as Paper[],
-          judgments: res.judgments as Judgment[],
-        });
-        if (res.papers[0]?.pmid) {
-          setSelectedPmid(res.papers[0].pmid);
-        }
-        if (res.elapsed_ms) {
-          setEvalSpeed(res.elapsed_ms);
-        }
+      const res = await api.evaluateClaimscape(nextClaim, nextQuery, paperCount);
+      if (!Array.isArray(res?.papers) || !Array.isArray(res?.judgments)) {
+        throw new Error("The backend returned an invalid evidence response.");
       }
-    } catch {
-      // Fallback to local embedded dataset
       setDataset({
-        claim: ex.claim,
-        query: ex.query,
-        total: hrtDataRaw.total || 593,
-        papers: hrtDataRaw.papers as unknown as Paper[],
-        judgments: hrtDataRaw.judgments as unknown as Judgment[],
+        claim: res.claim || nextClaim,
+        query: res.query || nextQuery,
+        total: res.total ?? res.papers.length,
+        papers: res.papers,
+        judgments: res.judgments,
       });
+      setSelectedPmid(res.papers[0]?.pmid || "");
+      setEvalSpeed(res.elapsed_ms);
+      setResultSource(res.papers.length === 0
+        ? "No papers were returned for this search."
+        : `${res.cached ? "Cached backend result" : "Backend result"} · Engine: ${res.engine || "not reported"}`);
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : "Evidence search failed.");
+      setResultSource("No results available for this request.");
     } finally {
       setIsScanning(false);
     }
   };
 
-  const handleMapEvidence = async (e: React.FormEvent) => {
+  const handleSelectExample = (ex: typeof PRESET_EXAMPLES[0]) => {
+    if (isScanning) return;
+    setSelectedExample(ex.id);
+    setClaim(ex.claim);
+    setQuery(ex.query);
+    void runEvidenceSearch(ex.claim, ex.query);
+  };
+
+  const handleMapEvidence = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsScanning(true);
-    setEvalSpeed(null);
-    try {
-      const res = await api.evaluateClaimscape(claim, query, paperCount);
-      if (res && res.papers && res.papers.length > 0) {
-        setDataset({
-          claim: res.claim || claim,
-          query: res.query || query,
-          total: res.total || res.papers.length,
-          papers: res.papers as Paper[],
-          judgments: res.judgments as Judgment[],
-        });
-        if (res.papers[0]?.pmid) {
-          setSelectedPmid(res.papers[0].pmid);
-        }
-        if (res.elapsed_ms) {
-          setEvalSpeed(res.elapsed_ms);
-        }
-      }
-    } catch (err) {
-      console.warn("Live evaluate fallback to active dataset:", err);
-    } finally {
-      setIsScanning(false);
-    }
+    if (isScanning || !claim.trim()) return;
+    void runEvidenceSearch(claim.trim(), query.trim());
   };
 
   const handleCopyLink = () => {
@@ -225,74 +190,24 @@ export const ClaimscapePage: React.FC = () => {
   };
 
   return (
-    <div className="cs min-h-screen bg-[#FAF9F3] dark:bg-[#14111A] text-[#141413] dark:text-[#FAF9F3] transition-colors duration-200">
-      {/* Top Universal Platform Header */}
-      <nav
-        className="flex items-center justify-between border-b border-[#381A61]/10 bg-[#FAF9F3]/95 dark:bg-[#14111A]/95 backdrop-blur px-5 py-3 lg:px-8 shadow-2xs sticky top-0 z-40"
-        aria-label="Navigation"
-      >
-        <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2.5 font-bold text-[17px] tracking-tight text-[#381A61] dark:text-[#F9D14A]">
-            <div className="w-8 h-8 rounded-lg bg-[#381A61] flex items-center justify-center text-[#F9D14A] shadow-sm">
-              <Layers className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <span>RadExtract <span className="text-[#381A61] dark:text-[#F9D14A] font-extrabold font-serif">ClaimScape</span></span>
-          </Link>
-
-          <div className="hidden md:flex items-center gap-1 text-[13.5px] font-medium text-[#4A453E] dark:text-[#C8C2BA]">
-            <span className="px-3 py-1.5 rounded-lg bg-[#381A61] text-white font-semibold text-xs shadow-2xs">
-              Evidence Map
-            </span>
-            <Link
-              to="/rigor-scan"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
-            >
-              Rigor Scan
-            </Link>
-            <Link
-              to="/citation-telephone"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
-            >
-              Citation Telephone
-            </Link>
-            <Link
-              to="/projects"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors flex items-center gap-1.5 text-xs font-semibold"
-            >
-              Systematic Reviews
-            </Link>
-            <a
-              href="#method"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
-            >
-              Methodology
-            </a>
-          </div>
+    <div className="cs min-h-full bg-[#FAF9F3] dark:bg-[#14111A] text-[#141413] dark:text-[#FAF9F3] transition-colors duration-200">
+      {/* Demo Mode Notice */}
+      <div className="mx-4 sm:mx-8 mt-4 rounded-xl border border-purple-500/20 bg-purple-500/5 px-4 py-3 flex items-center justify-between text-xs text-purple-900 dark:text-purple-200">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-purple-600 animate-pulse" />
+          <span>
+            <strong>Interactive Demo:</strong> Evidence Map with 95% Wilson confidence intervals, multi-tier study design sorting, and dual-prompt stance synthesis.
+          </span>
         </div>
+        <span className="font-mono text-[11px] text-purple-700 dark:text-purple-300 hidden sm:inline">
+          K-Dense AI Claimscape Architecture
+        </span>
+      </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="p-2 rounded-lg border border-[#381A61]/15 bg-white dark:bg-[#221D2C] text-[#4A453E] dark:text-[#C8C2BA] hover:text-[#381A61] dark:hover:text-[#F9D14A] hover:border-[#381A61] transition-colors shadow-2xs"
-            title="Toggle color theme"
-            aria-label="Toggle color theme"
-          >
-            {isDark ? <Sun className="w-4 h-4 text-[#F9D14A]" /> : <Moon className="w-4 h-4 text-[#381A61]" />}
-          </button>
-
-          <Link
-            to="/projects"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#381A61] hover:bg-[#4E2487] px-4 py-2 text-xs font-bold text-white transition-all shadow-sm active:scale-[0.98]"
-          >
-            <span>Review Workspace</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </nav>
-
+      <div className="px-6 pt-2" role="status">{resultSource}</div>
+      {scanError && <div role="alert" className="mx-6 mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800">{scanError}</div>}
       {/* Main Container */}
-      <main className="mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-8 px-4 pb-20 pt-6 sm:px-6 lg:px-8">
+      <main className="mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-8 px-4 pb-20 pt-4 sm:px-6 lg:px-8">
         {/* Section 1: Hero & Search Form */}
         <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10">
           <div className="max-w-[760px] xl:pt-2">
@@ -384,7 +299,7 @@ export const ClaimscapePage: React.FC = () => {
                 {isScanning ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Evaluating with Laya...</span>
+                    <span>Searching evidence...</span>
                   </>
                 ) : (
                   <>

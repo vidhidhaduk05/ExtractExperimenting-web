@@ -56,78 +56,47 @@ describe('API Library', () => {
       }));
     });
 
-    it('should fallback to DEMO_PROJECT when fetch fails for /projects', async () => {
-      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
-
-      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const result = await api.listProjects();
-
-      expect(spy).toHaveBeenCalled();
-      expect(result).toEqual([DEMO_PROJECT]);
-
-      spy.mockRestore();
+    it.each([
+      ["projects", () => api.listProjects()],
+      ["studies", () => api.listStudies("proj-123")],
+      ["health", () => api.health()],
+    ])("rejects failed live %s requests instead of returning demo results", async (_name, call) => {
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error"));
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      await expect(call()).rejects.toThrow("Network error");
     });
 
-    it('should fallback to DEMO_STUDIES when fetch fails for /studies', async () => {
-      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
-      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const result = await api.listStudies('proj-123');
-
-      expect(spy).toHaveBeenCalled();
-      expect(result).toEqual(DEMO_STUDIES);
-
-      spy.mockRestore();
-    });
-
-    it('should fallback to demo health response when fetch fails', async () => {
-      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
-
-      const result = await api.health();
-      expect(result).toEqual({ status: 'ok' });
-    });
-
-    it('should handle HTTP error responses correctly', async () => {
+    it("propagates backend validation errors", async () => {
       (global.fetch as Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        statusText: 'Bad Request',
-        json: async () => ({ detail: 'Custom error message' }),
+        ok: false, status: 400, json: async () => ({ detail: "Custom error message" }),
       });
-
-      // It should fallback to demo data if available, even on HTTP error (which rejects in our wrapper)
-      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const result = await api.listProjects();
-      expect(result).toEqual([DEMO_PROJECT]);
-      spy.mockRestore();
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      await expect(api.listProjects()).rejects.toThrow("Custom error message");
     });
 
-    it('should fallback to demo data even when HTTP returns error status', async () => {
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        statusText: 'Bad Request',
-        json: async () => ({ detail: 'Custom error message' }),
-      });
+    it("uses demo results only after explicit opt-in", async () => {
+      localStorage.setItem("demo_mode", "true");
+      expect(shouldUseDemoFallback()).toBe(true);
+      expect(await api.listProjects()).toEqual([DEMO_PROJECT]);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
 
-      const result = await api.health();
-      expect(result).toEqual({ status: 'ok' });
+    it("sends feature uploads to the configured backend without a JSON content type", async () => {
+      localStorage.setItem("custom_api_base", "https://backend.example/api");
+      localStorage.setItem("token", "test-token");
+      (global.fetch as Mock).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ view: {} }) });
+      await api.scanPdfRigor(new File(["pdf"], "paper.pdf"));
+      expect(global.fetch).toHaveBeenCalledWith("https://backend.example/api/rigor-scan/scan-pdf", expect.objectContaining({
+        method: "POST", body: expect.any(FormData), headers: { Authorization: "Bearer test-token" },
+      }));
     });
   });
 
   describe('Additional endpoints fallback handling', () => {
-    it('should fallback properly for /auth/login endpoint', async () => {
-      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
-      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const result = await api.login('admin', 'admin');
-
-      expect(spy).toHaveBeenCalled();
-      // Removed
-      // Removed
-
-      spy.mockRestore();
+    it("rejects failed login requests", async () => {
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error"));
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      await expect(api.login("admin", "admin")).rejects.toThrow("Network error");
     });
 
     it('should fallback to client-side PICO extraction when /pico/extract fetch fails', async () => {

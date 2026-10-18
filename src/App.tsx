@@ -26,12 +26,12 @@ import { RigorScanPage } from "./pages/RigorScanPage";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<ClaimscapePage />} />
-      <Route path="/claimscape" element={<ClaimscapePage />} />
-      <Route path="/evidence-map" element={<ClaimscapePage />} />
-      <Route path="/citation-telephone" element={<CitationTelephonePage />} />
-      <Route path="/rigor-scan" element={<RigorScanPage />} />
       <Route element={<AppLayout />}>
+        <Route path="/" element={<Navigate to="/projects" replace />} />
+        <Route path="/claimscape" element={<ClaimscapePage />} />
+        <Route path="/evidence-map" element={<Navigate to="/claimscape" replace />} />
+        <Route path="/citation-telephone" element={<CitationTelephonePage />} />
+        <Route path="/rigor-scan" element={<RigorScanPage />} />
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/projects/new" element={<ProjectCreate />} />
         <Route path="/projects/:projectId" element={<ProjectDetail />} />

@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useParams, Link } from "react-router-dom";
+import { Outlet, NavLink, useParams, useLocation, Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useState, useEffect } from "react";
@@ -449,6 +449,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
 
 export function AppLayout() {
   const { projectId } = useParams();
+  const { pathname } = useLocation();
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem("theme") === "dark";
   });
@@ -456,6 +457,8 @@ export function AppLayout() {
   const [isClarificationDrawerOpen, setIsClarificationDrawerOpen] = useState(false);
   const [isApiSettingsOpen, setIsApiSettingsOpen] = useState(false);
   const [apiInfo, setApiInfo] = useState<ApiConnectionInfo>(getApiConnectionInfo());
+
+  useEffect(() => { setIsMobileMenuOpen(false); }, [pathname]);
 
   useEffect(() => {
     return subscribeApiConnection((info) => {
@@ -502,6 +505,7 @@ export function AppLayout() {
   }, []);
 
   useEffect(() => {
+    document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
@@ -676,6 +680,8 @@ export function AppLayout() {
                     ? "Live API"
                     : apiInfo.state === "error"
                     ? "API Offline"
+                    : apiInfo.state === "checking"
+                    ? "API not checked"
                     : "Demo Mode"}
                 </span>
               </button>

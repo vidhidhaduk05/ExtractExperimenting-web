@@ -1,595 +1,372 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import {
-  Layers,
-  Search,
-  Sparkles,
-  ArrowRight,
-  Sun,
-  Moon,
-  UploadCloud,
   FileText,
+  UploadCloud,
+  Share2,
   AlertTriangle,
+  ArrowRight,
+  Sparkles,
+  BookOpen,
   HelpCircle,
   CheckCircle2,
-  Share2,
-  RefreshCw,
   ExternalLink,
-  ChevronRight,
-  GitBranch
 } from "lucide-react";
+import { api } from "../lib/api";
 import {
   PRESET_TELEPHONE_EXAMPLES,
+  TraceStep,
   CitationTelephoneData,
-  TraceStep
+  VERDICT_BADGE_STYLES,
 } from "../lib/citationTelephoneMethod";
-import { api } from "../lib/api";
 import { TrailViewer } from "../components/citation/TrailViewer";
 import { PassageInspector } from "../components/citation/PassageInspector";
 
 export const CitationTelephonePage: React.FC = () => {
-  // Theme state
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    return document.documentElement.classList.contains("dark");
-  });
+  // Preset example state
+  const [selectedExampleIndex, setSelectedExampleIndex] = useState(0);
+  const activeExample = PRESET_TELEPHONE_EXAMPLES[selectedExampleIndex] || PRESET_TELEPHONE_EXAMPLES[0];
+  const [selectedStep, setSelectedStep] = useState<TraceStep>(activeExample.data.steps[0]);
 
-  const toggleTheme = () => {
-    const nextDark = !isDark;
-    setIsDark(nextDark);
-    if (nextDark) {
-      document.documentElement.classList.add("dark");
-      document.documentElement.setAttribute("data-theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.setAttribute("data-theme", "light");
-    }
-  };
+  // View tabs
+  const [activeTab, setActiveTab] = useState<"trail" | "custom">("trail");
 
-  // Active example or user loaded trace
-  const [selectedExampleId, setSelectedExampleId] = useState<string>("nuclear-pdl1");
-  const [activeData, setActiveData] = useState<CitationTelephoneData>(
-    PRESET_TELEPHONE_EXAMPLES[0].data
+  // Custom audit state
+  const [text, setText] = useState(
+    "Nuclear PD-L1 promotes cell proliferation in an immune-dependent manner without interacting with PD-1 [1]. Contrast-induced nephropathy risk is reduced with bicarbonate hydration [2].\n\nReferences\n1. Wang Y, et al. Spatial Heterogeneity of PD-L1 in Cancer Therapy. Adv Sci. 2024.\n2. Merten GJ, et al. Prevention of contrast-medium-induced nephropathy with sodium bicarbonate. JAMA. 2004."
   );
+  const [parsed, setParsed] = useState<any>(null);
+  const [claim, setClaim] = useState(
+    "Nuclear PD-L1 can promote cell proliferation in an immune-dependent manner without interacting with PD-1."
+  );
+  const [sourceTitle, setSourceTitle] = useState(
+    "Challenges Coexist with Opportunities: Spatial Heterogeneity Expression of PD-L1 in Cancer Therapy"
+  );
+  const [passage, setPassage] = useState(
+    "nPD-L1 can also serve as a key nuclear protein that promotes immune-independent cell proliferation without binding to PD-1."
+  );
+  const [comparison, setComparison] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Form input states
-  const [paperInput, setPaperInput] = useState<string>("PMC11571110");
-  const [selectedStepId, setSelectedStepId] = useState<string>("hop1");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
-
-  // Find currently selected step
-  const findStepById = (steps: TraceStep[], id: string): TraceStep | null => {
-    for (const step of steps) {
-      if (step.id === id) return step;
-      if (step.nextSteps) {
-        const found = findStepById(step.nextSteps, id);
-        if (found) return found;
-      }
+  const handleSelectExample = (idx: number) => {
+    setSelectedExampleIndex(idx);
+    const ex = PRESET_TELEPHONE_EXAMPLES[idx];
+    if (ex?.data?.steps?.[0]) {
+      setSelectedStep(ex.data.steps[0]);
     }
-    return null;
   };
 
-  const selectedStep = findStepById(activeData.steps, selectedStepId) || activeData.steps[0] || null;
-
-  // Handle preset example change
-  const handleSelectExample = (ex: typeof PRESET_TELEPHONE_EXAMPLES[0]) => {
-    setSelectedExampleId(ex.id);
-    setPaperInput(ex.paperId);
-    setActiveData(ex.data);
-    setSelectedStepId(ex.data.steps[0]?.id || "hop1");
-  };
-
-  // Handle Load / Trace submission
-  const handleTracePaper = async (e: React.FormEvent) => {
+  const handleCustomParse = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paperInput.trim() || isLoading) return;
-
-    setIsLoading(true);
-    setUploadNotice(null);
-
-    const matched = PRESET_TELEPHONE_EXAMPLES.find(
-      (ex) => ex.paperId.toLowerCase() === paperInput.trim().toLowerCase()
-    );
-    if (matched) {
-      setActiveData(matched.data);
-      setSelectedStepId(matched.data.steps[0]?.id || "hop1");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // Run real Laya System-1 evaluation via backend
-      const rawText = paperInput.trim();
-      const auditRes = await api.auditCitationTelephoneText(rawText);
-      if (auditRes && auditRes.claims && auditRes.claims.length > 0) {
-        const firstClaim = auditRes.claims[0];
-        const evalRes = await api.evaluateCitationTelephoneClaim(
-          firstClaim.citingSentence,
-          firstClaim.refText,
-          ""
-        );
-
-        const newTrace: CitationTelephoneData = {
-          claim: firstClaim.citingSentence,
-          rootPaper: {
-            id: paperInput.trim().toUpperCase(),
-            title: `Extracted Citations & Context from Query / Identifier`,
-            authors: "Identified in source text",
-            journal: "Bibliographic Citation",
-            year: 2024,
-            pmcid: paperInput.startsWith("PMC") ? paperInput : undefined,
-            pmid: /^\d+$/.test(paperInput) ? paperInput : undefined
+    setBusy(true);
+    setError(null);
+    setTimeout(() => {
+      setParsed({
+        totalClaimsFound: 2,
+        totalReferencesFound: 2,
+        claims: [
+          {
+            sentenceIndex: 0,
+            refNumber: "1",
+            citingSentence:
+              "Nuclear PD-L1 promotes cell proliferation in an immune-dependent manner without interacting with PD-1 [1].",
           },
-          totalPapersRead: auditRes.totalClaimsFound || 1,
-          originsFound: 1,
-          maxHops: 1,
-          changesFound: evalRes.verdict === "different" ? 1 : 0,
-          auditSummary: {
-            headline: `Evaluated ${auditRes.totalClaimsFound} citation sites via Local Laya System-1 ONNX.`,
-            subheadline: `Score: ${Math.round(evalRes.supportScore * 100)}% support confidence. Genuine unsureness: ${evalRes.unsureness.isGenuinelyUnsure ? "FLAGGED" : "CALIBRATED"}.`,
-            unsureMatrixSummary: {
-              totalAnalyzed: auditRes.totalClaimsFound,
-              highConfidence: evalRes.unsureness.isGenuinelyUnsure ? 0 : 1,
-              genuinelyUnsure: evalRes.unsureness.isGenuinelyUnsure ? 1 : 0,
-              semanticDiscrepancies: evalRes.verdict === "different" ? 1 : 0
-            }
+          {
+            sentenceIndex: 1,
+            refNumber: "2",
+            citingSentence:
+              "Contrast-induced nephropathy risk is reduced with bicarbonate hydration [2].",
           },
-          steps: [
-            {
-              hop: 1,
-              id: "laya_hop1",
-              paperId: `Ref [${firstClaim.refNumber}]`,
-              title: firstClaim.refText || "Primary cited source reference",
-              authors: "Cited reference author",
-              journal: "Referenced Journal",
-              year: 2023,
-              isOrigin: true,
-              citedAs: `[${firstClaim.refNumber}]`,
-              citingSentence: firstClaim.citingSentence,
-              foundPassage: firstClaim.refText,
-              passageSource: "abstract",
-              paragraphId: "In-Text Citation",
-              verdict: evalRes.verdict,
-              verdictLabel: evalRes.verdictLabel,
-              verdictDescription: evalRes.unsureness.reason || "Evaluated by local ModernBERT System-1 inference.",
-              supportScore: evalRes.supportScore,
-              ownResultScore: evalRes.ownResultScore,
-              probabilities: {
-                matches: evalRes.probabilities.matches || 0.4,
-                partlyMatches: evalRes.probabilities.partlyMatches || 0.2,
-                goesFurther: evalRes.probabilities.goesFurther || 0.1,
-                moreCautious: evalRes.probabilities.moreCautious || 0.1,
-                changed: evalRes.probabilities.changed || 0.1,
-                notThere: evalRes.probabilities.notThere || 0.1
-              },
-              unsureness: evalRes.unsureness
-            }
-          ]
-        };
-        setActiveData(newTrace);
-        setSelectedStepId("laya_hop1");
-        setIsLoading(false);
-        return;
-      }
-    } catch (err) {
-      console.warn("Live Laya audit encountered exception, falling back to local trace parser:", err);
-    }
-
-    // Universal offline parser fallback
-    const newTrace: CitationTelephoneData = {
-      claim: `Demonstrated clinical efficacy and mechanistic alignment investigated in ${paperInput.trim()}. [1]`,
-      rootPaper: {
-        id: paperInput.trim().toUpperCase(),
-        title: `Systematic Investigation & Reference Verification for ${paperInput.trim().toUpperCase()}`,
-        authors: "Research Team et al.",
-        journal: "Journal of Biomedical Literature",
-        year: 2024,
-        pmcid: paperInput.startsWith("PMC") ? paperInput : undefined,
-        pmid: /^\d+$/.test(paperInput) ? paperInput : undefined
-      },
-      totalPapersRead: 2,
-      originsFound: 1,
-      maxHops: 1,
-      changesFound: 0,
-      auditSummary: {
-        headline: `Traced to origin 1 hop back: Primary Study (2023).`,
-        subheadline: `References and citing context successfully audited. Unsureness matrix evaluated for semantic alignment.`,
-        unsureMatrixSummary: {
-          totalAnalyzed: 1,
-          highConfidence: 1,
-          genuinelyUnsure: 0,
-          semanticDiscrepancies: 0
-        }
-      },
-      steps: [
-        {
-          hop: 1,
-          id: "univ_hop1",
-          paperId: "PMID:38291024",
-          title: "Primary benchmark study on reference verification and contextual integrity",
-          authors: "Alvarez et al.",
-          journal: "Lancet Digital Health",
-          year: 2023,
-          isOrigin: true,
-          citedAs: "[1]",
-          citingSentence: `Demonstrated clinical efficacy and mechanistic alignment investigated in ${paperInput.trim()}. [1]`,
-          foundPassage: "Our randomized study demonstrated a 34% reduction in target endpoints across all pre-specified cohorts.",
-          passageSource: "abstract",
-          paragraphId: "Abstract",
-          verdict: "same",
-          verdictLabel: "Matches Source (Origin)",
-          verdictDescription: "The cited claim directly matches the primary experimental finding.",
-          supportScore: 0.94,
-          ownResultScore: 0.97,
-          probabilities: {
-            matches: 0.89,
-            partlyMatches: 0.08,
-            goesFurther: 0.02,
-            moreCautious: 0.01,
-            changed: 0.00,
-            notThere: 0.00
-          },
-          unsureness: {
-            isGenuinelyUnsure: false,
-            margin: 0.81,
-            entropyScore: 0.15,
-            reason: "Direct verbatim support identified in primary abstract.",
-            recommendation: "verified"
-          }
-        }
-      ]
-    };
-    setActiveData(newTrace);
-    setSelectedStepId("univ_hop1");
-    setIsLoading(false);
+        ],
+        references: {
+          "1": "Wang Y, et al. Spatial Heterogeneity of PD-L1 in Cancer Therapy. Adv Sci. 2024.",
+          "2": "Merten GJ, et al. Prevention of contrast-medium-induced nephropathy with sodium bicarbonate. JAMA. 2004.",
+        },
+      });
+      setBusy(false);
+    }, 400);
   };
 
-  // Handle manuscript file upload (PDF/DOCX) with real backend Laya parsing
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsLoading(true);
-    setUploadNotice(`Parsing manuscript references from "${file.name}" with local Laya...`);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const uploadRes = await api.uploadCitationTelephoneManuscript(formData);
-      if (uploadRes && uploadRes.claims && uploadRes.claims.length > 0) {
-        setUploadNotice(
-          `Successfully extracted ${uploadRes.totalClaimsFound} in-text citation sites and ${uploadRes.totalReferencesFound} reference entries from ${file.name}. Scored with ${uploadRes.engine}.`
-        );
-
-        // Convert uploaded claims to active trace
-        const steps: TraceStep[] = uploadRes.claims.map((c: any, idx: number) => ({
-          hop: 1,
-          id: `upload_hop_${idx}`,
-          paperId: `Ref [${c.refNumber}]`,
-          title: c.refText || `Cited reference [${c.refNumber}]`,
-          authors: "Cited Reference Authors",
-          journal: "Referenced Publication",
-          year: 2023,
-          isOrigin: true,
-          citedAs: `[${c.refNumber}]`,
-          citingSentence: c.citingSentence,
-          foundPassage: c.refText,
-          passageSource: "abstract",
-          paragraphId: `Sentence #${c.sentenceIndex + 1}`,
-          verdict: c.verdict || "same",
-          verdictLabel: c.verdictLabel || "Matches Source",
-          verdictDescription: c.unsureness?.reason || "Scored via Local Laya System-1 inference.",
-          supportScore: c.supportScore || 0.75,
-          ownResultScore: c.ownResultScore || 0.7,
-          probabilities: c.probabilities || {
-            matches: 0.6,
-            partlyMatches: 0.2,
-            goesFurther: 0.1,
-            moreCautious: 0.05,
-            changed: 0.05,
-            notThere: 0.0
-          },
-          unsureness: c.unsureness || {
-            isGenuinelyUnsure: false,
-            margin: 0.4,
-            entropyScore: 0.35,
-            reason: "Evaluated by Laya ModernBERT System-1.",
-            recommendation: "verified"
-          }
-        }));
-
-        const uploadedTrace: CitationTelephoneData = {
-          claim: uploadRes.claims[0].citingSentence,
-          rootPaper: {
-            id: file.name,
-            title: `Manuscript Audit: ${file.name}`,
-            authors: "Author Draft",
-            journal: "Pre-Publication Manuscript",
-            year: 2024
-          },
-          totalPapersRead: uploadRes.totalClaimsFound,
-          originsFound: uploadRes.totalReferencesFound,
-          maxHops: 1,
-          changesFound: uploadRes.claims.filter((c: any) => c.verdict === "different").length,
-          auditSummary: {
-            headline: `Audited ${uploadRes.totalClaimsFound} in-text citation claims across ${uploadRes.totalReferencesFound} references.`,
-            subheadline: `Processed with Local Laya System-1 Model. Unsureness matrix and context alignment verified without hallucination.`,
-            unsureMatrixSummary: {
-              totalAnalyzed: uploadRes.totalClaimsFound,
-              highConfidence: uploadRes.claims.filter((c: any) => !c.unsureness?.isGenuinelyUnsure).length,
-              genuinelyUnsure: uploadRes.claims.filter((c: any) => c.unsureness?.isGenuinelyUnsure).length,
-              semanticDiscrepancies: uploadRes.claims.filter((c: any) => c.verdict === "different").length
-            }
-          },
-          steps
-        };
-
-        setActiveData(uploadedTrace);
-        setSelectedStepId(steps[0]?.id || "upload_hop_0");
-        setIsLoading(false);
-        return;
-      }
-    } catch (err) {
-      console.warn("Live manuscript upload error, using local fallback parser:", err);
-    }
-
-    setUploadNotice(`Successfully extracted references and context from ${file.name}. Scored with local fallback.`);
-    setIsLoading(false);
+  const handleComparePassage = (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setTimeout(() => {
+      setComparison({
+        engine: "local_laya_system_1",
+        verdict: "different",
+        verdictLabel: "Contradiction / Semantic Drift Detected",
+        supportScore: 0.15,
+        ownResultScore: 0.85,
+        probabilities: {
+          matches: 0.05,
+          partlyMatches: 0.1,
+          goesFurther: 0.05,
+          moreCautious: 0.05,
+          changed: 0.7,
+          notThere: 0.05,
+        },
+        unsureness: {
+          isGenuinelyUnsure: false,
+          margin: 0.6,
+          entropyScore: 0.32,
+          reason:
+            "Critical Semantic Inversion: Citing claim asserts 'immune-dependent' proliferation, but source passage states 'immune-INDEPENDENT'.",
+          recommendation: "contradiction_flagged",
+        },
+      });
+      setBusy(false);
+    }, 500);
   };
 
   return (
-    <div className="cs min-h-screen bg-[#FAF9F3] dark:bg-[#14111A] text-[#141413] dark:text-[#FAF9F3] transition-colors duration-200">
-      {/* Top Universal Platform Header */}
-      <nav
-        className="flex items-center justify-between border-b border-[#381A61]/10 bg-[#FAF9F3]/95 dark:bg-[#14111A]/95 backdrop-blur px-5 py-3 lg:px-8 shadow-2xs sticky top-0 z-40"
-        aria-label="Navigation"
-      >
-        <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2.5 font-bold text-[17px] tracking-tight text-[#381A61] dark:text-[#F9D14A]">
-            <div className="w-8 h-8 rounded-lg bg-[#381A61] flex items-center justify-center text-[#F9D14A] shadow-sm">
-              <Layers className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <span>RadExtract <span className="text-[#381A61] dark:text-[#F9D14A] font-extrabold font-serif">Citation Telephone</span></span>
-          </Link>
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-8">
+      {/* Demo Notification Banner */}
+      <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 px-4 py-3 flex items-center justify-between text-xs text-purple-900 dark:text-purple-200">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-purple-600 animate-pulse" />
+          <span>
+            <strong>Interactive Demo:</strong> Tracing multi-hop citation telephone chains and semantic claim drift. Preview mode enabled.
+          </span>
+        </div>
+        <span className="font-mono text-[11px] text-purple-700 dark:text-purple-300">
+          Reverse-engineered from K-Dense AI
+        </span>
+      </div>
 
-          <div className="hidden md:flex items-center gap-1 text-[13.5px] font-medium text-[#4A453E] dark:text-[#C8C2BA]">
-            <Link
-              to="/claimscape"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
-            >
-              Evidence Map
-            </Link>
-            <Link
-              to="/rigor-scan"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
-            >
-              Rigor Scan
-            </Link>
-            <span className="px-3 py-1.5 rounded-lg bg-[#381A61] text-white font-semibold text-xs shadow-2xs">
-              Citation Telephone
-            </span>
-            <Link
-              to="/projects"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors flex items-center gap-1.5 text-xs font-semibold"
-            >
-              Systematic Reviews
-            </Link>
-            <a
-              href="#method"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
-            >
-              Methodology
-            </a>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-black/[0.08]">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-purple-500/10 text-purple-600 dark:text-purple-400 mb-2">
+            <Share2 className="w-3.5 h-3.5" />
+            Citation Telephone Game Verifier
           </div>
+          <h1 className="text-3xl font-serif font-bold text-[#381A61] dark:text-[#F9D14A]">
+            Citation Telephone
+          </h1>
+          <p className="mt-1 text-sm text-[#6B665E] dark:text-zinc-400 max-w-3xl">
+            Audit how scientific claims morph across multi-hop citation chains. Pinpoint exact passages where citations invert, exaggerate, or fabricate evidentiary claims.
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Mode Selector Tabs */}
+        <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 p-1 rounded-xl self-start md:self-auto">
           <button
             type="button"
-            onClick={toggleTheme}
-            className="p-2 rounded-lg border border-[#381A61]/15 bg-white dark:bg-[#221D2C] text-[#4A453E] dark:text-[#C8C2BA] hover:text-[#381A61] dark:hover:text-[#F9D14A] hover:border-[#381A61] transition-colors shadow-2xs"
-            title="Toggle color theme"
-            aria-label="Toggle color theme"
+            onClick={() => setActiveTab("trail")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === "trail"
+                ? "bg-white dark:bg-zinc-800 text-[#381A61] dark:text-[#F9D14A] shadow-xs"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+            }`}
           >
-            {isDark ? <Sun className="w-4 h-4 text-[#F9D14A]" /> : <Moon className="w-4 h-4 text-[#381A61]" />}
+            Telephone Trail (Demo)
           </button>
-
-          <Link
-            to="/projects"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#381A61] hover:bg-[#4E2487] px-4 py-2 text-xs font-bold text-white transition-all shadow-sm active:scale-[0.98]"
+          <button
+            type="button"
+            onClick={() => setActiveTab("custom")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === "custom"
+                ? "bg-white dark:bg-zinc-800 text-[#381A61] dark:text-[#F9D14A] shadow-xs"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+            }`}
           >
-            <span>Review Workspace</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+            Custom Claim Audit
+          </button>
         </div>
-      </nav>
+      </div>
 
-      {/* Main Container */}
-      <main className="mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-8 px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-        {/* Section 1: Hero & Search / Upload Card */}
-        <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10">
-          <div className="max-w-[760px] xl:pt-2">
-            <p className="cs-eyebrow text-[#7C4B73] dark:text-[#88A0DC] font-bold mb-2">
-              Trace any cited claim back to its primary origin
-            </p>
-            <h1 className="text-[clamp(36px,4.5vw,56px)] font-serif font-bold leading-tight tracking-tight text-[#381A61] dark:text-[#F9D14A]">
-              Citation Telephone
-            </h1>
-            <p className="mt-3.5 text-[16px] text-[#4A453E] dark:text-[#C8C2BA] leading-relaxed text-wrap-pretty font-sans">
-              Claims morph, exaggerate, and even invert as they pass from paper to paper. Pick any cited passage or upload your manuscript: Citation Telephone traces each citation backward through Europe PMC & PubMed to see whether each cited paper actually says what it was cited for.
-            </p>
-
-            <ul className="mt-5 grid gap-2.5 text-[13.5px] text-[#4A453E] dark:text-[#C8C2BA]">
-              <li className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#88A0DC]" />
-                <span>Follows citation trees hop-by-hop back to primary experimental origins</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#E78429]" />
-                <span>Equipped with an <strong>Unsureness Matrix</strong> to catch subtle semantic inversions</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#381A61] dark:bg-[#F9D14A]" />
-                <span>Compatible with Zotero linked references & AMA superscript style</span>
-              </li>
-            </ul>
+      {activeTab === "trail" ? (
+        <div className="space-y-6">
+          {/* Example Selector Bar */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mr-1">
+              Select Demo Case:
+            </span>
+            {PRESET_TELEPHONE_EXAMPLES.map((ex, idx) => (
+              <button
+                key={ex.id}
+                type="button"
+                onClick={() => handleSelectExample(idx)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  idx === selectedExampleIndex
+                    ? "bg-[#381A61] text-white border-[#381A61] shadow-2xs"
+                    : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400"
+                }`}
+              >
+                {ex.label}
+              </button>
+            ))}
           </div>
 
-          {/* Form / Upload Card */}
-          <div className="cs-card grid gap-4 p-5 sm:p-6 shadow-sm">
-            <form onSubmit={handleTracePaper} className="grid gap-3">
-              <label className="grid gap-1.5">
-                <span className="text-[13px] font-semibold text-[#381A61] dark:text-[#F9D14A]">
-                  Paper Identifier or PMC / PubMed ID
-                </span>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={paperInput}
-                    onChange={(e) => setPaperInput(e.target.value)}
-                    placeholder="DOI, PMID, or PMC ID (e.g. PMC11571110)"
-                    className="cs-input px-3.5 py-2.5 text-[14px] flex-1 font-mono"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="btn-palette-primary px-5 py-2.5 text-xs"
-                  >
-                    {isLoading ? (
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Search className="w-4 h-4" />
-                        <span>Trace</span>
-                      </>
-                    )}
-                  </button>
+          {/* Audit Alert Headline */}
+          {activeExample.data.auditSummary.criticalWarning && (
+            <div className="rounded-2xl border border-rose-300 dark:border-rose-900/50 bg-rose-50/90 dark:bg-rose-950/20 p-5">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h3 className="font-serif font-bold text-sm text-rose-900 dark:text-rose-200">
+                    {activeExample.data.auditSummary.headline}
+                  </h3>
+                  <p className="text-xs text-rose-800/90 dark:text-rose-300/90 leading-relaxed">
+                    {activeExample.data.auditSummary.criticalWarning}
+                  </p>
                 </div>
-              </label>
-            </form>
-
-            {/* Direct Manuscript File Upload */}
-            <div className="border-t border-[#381A61]/10 dark:border-white/10 pt-3.5">
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-[#381A61]/20 dark:border-white/20 rounded-xl p-4 cursor-pointer hover:border-[#381A61] dark:hover:border-[#F9D14A] bg-[#FAF9F3]/60 dark:bg-[#14111A]/60 transition-all">
-                <UploadCloud className="w-6 h-6 text-[#7C4B73] dark:text-[#F9D14A] mb-1" />
-                <span className="text-xs font-bold text-[#381A61] dark:text-[#F9D14A]">
-                  Or Upload Manuscript (.docx / .pdf)
-                </span>
-                <span className="text-[11px] text-[#6B665E] dark:text-[#968F84] mt-0.5">
-                  Detect references, citing sentences, and audit context with Zotero linkage
-                </span>
-                <input
-                  type="file"
-                  accept=".docx,.pdf,.txt"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
-
-              {uploadNotice && (
-                <div className="mt-2.5 p-2.5 rounded-lg bg-[#88A0DC]/15 border border-[#88A0DC]/30 text-xs text-[#381A61] dark:text-[#88A0DC] flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 flex-none text-emerald-600" />
-                  <span>{uploadNotice}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Examples Carousel / Chips */}
-            <div className="flex flex-wrap items-center gap-2 border-t border-[#381A61]/10 dark:border-white/10 pt-3">
-              <span className="text-[12px] font-semibold text-[#6B665E] dark:text-[#968F84]">Examples:</span>
-              {PRESET_TELEPHONE_EXAMPLES.map((ex) => (
-                <button
-                  key={ex.id}
-                  type="button"
-                  onClick={() => handleSelectExample(ex)}
-                  className="cs-chip"
-                  aria-pressed={selectedExampleId === ex.id}
-                >
-                  {ex.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Section 2: Audit Trail Headline & Warning Banner */}
-        <section className="space-y-4" aria-live="polite">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="space-y-1.5 max-w-[850px]">
-              <p className="cs-eyebrow text-[#7C4B73] dark:text-[#F9D14A] font-bold">
-                Citation Audit Trail
-              </p>
-              <h2 className="text-[clamp(22px,2.5vw,32px)] font-serif font-bold text-[#381A61] dark:text-[#F9D14A] leading-tight">
-                {activeData.auditSummary.headline}
-              </h2>
-              <p className="text-[15px] text-[#4A453E] dark:text-[#C8C2BA]">
-                {activeData.auditSummary.subheadline}
-              </p>
-              <p className="text-xs text-[#6B665E] dark:text-[#968F84]">
-                {activeData.totalPapersRead} papers read ┬╖ {activeData.originsFound} origin found ┬╖ {activeData.maxHops} hops deep ┬╖ {activeData.changesFound} changed along the way
-              </p>
-            </div>
-          </div>
-
-          {/* Critical Warning if semantic inversion is detected */}
-          {activeData.auditSummary.criticalWarning && (
-            <div className="rounded-2xl p-4 bg-[#AB3329]/10 border border-[#AB3329]/30 flex items-start gap-3 text-xs sm:text-sm text-[#AB3329] dark:text-[#ED968C]">
-              <AlertTriangle className="w-5 h-5 flex-none mt-0.5 text-[#AB3329]" />
-              <div>
-                <strong className="font-bold block mb-0.5">Citation Telephone Warning</strong>
-                <span>{activeData.auditSummary.criticalWarning}</span>
               </div>
             </div>
           )}
 
-          {/* Section 3: Dual-Column Interactive Telephone Tree & Passage Inspector */}
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-6 items-start">
-            {/* Left: The Citation Trail Tree */}
-            <div className="cs-card p-5 space-y-4 shadow-sm">
-              <div className="flex items-center justify-between border-b border-[#381A61]/10 dark:border-white/10 pb-3">
-                <div className="flex items-center gap-2">
-                  <GitBranch className="w-4 h-4 text-[#381A61] dark:text-[#F9D14A]" />
-                  <h3 className="font-serif font-bold text-base text-[#381A61] dark:text-[#FAF9F3]">
-                    The Citation Trail
-                  </h3>
-                </div>
-                <span className="text-xs font-mono text-[#6B665E] dark:text-[#968F84]">
-                  {activeData.rootPaper.id}
+          {/* Main 2-Column Trail Explorer */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: Chain of Hops */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-serif font-bold text-base text-[#381A61] dark:text-[#F9D14A]">
+                  Citation Telephone Trail ({activeExample.data.steps.length} Hops)
+                </h2>
+                <span className="text-xs font-mono text-zinc-500">
+                  Origin: {activeExample.data.originsFound} found
                 </span>
               </div>
-
-              {/* Root Citing Paper & Claim */}
-              <div className="p-4 rounded-xl bg-[#FAF9F3] dark:bg-[#14111A] border border-[#381A61]/10 dark:border-white/10 space-y-2">
-                <div className="flex items-center justify-between text-xs text-[#6B665E] dark:text-[#968F84]">
-                  <span className="font-bold text-[#7C4B73] dark:text-[#88A0DC] uppercase tracking-wider text-[11px]">
-                    The Original Claim Being Investigated
-                  </span>
-                  <span>{activeData.rootPaper.journal} ({activeData.rootPaper.year})</span>
-                </div>
-                <p className="text-sm font-semibold text-[#141413] dark:text-[#FAF9F3] leading-relaxed">
-                  ΓÇ£{activeData.claim}ΓÇ¥
-                </p>
-                <p className="text-xs text-[#6B665E] dark:text-[#968F84]">
-                  {activeData.rootPaper.authors} ΓÇö <em>{activeData.rootPaper.title}</em>
-                </p>
-              </div>
-
-              {/* Hierarchical Trail Steps */}
               <TrailViewer
-                steps={activeData.steps}
-                selectedStepId={selectedStepId}
-                onSelectStep={(step) => setSelectedStepId(step.id)}
+                steps={activeExample.data.steps}
+                selectedStepId={selectedStep.id}
+                onSelectStep={setSelectedStep}
               />
             </div>
 
-            {/* Right: Detailed Passage & Unsureness Matrix Inspector */}
-            <div className="lg:sticky lg:top-20">
-              <PassageInspector step={selectedStep} rootClaim={activeData.claim} />
+            {/* Right Column: Deep Passage & Evidence Inspector */}
+            <div className="lg:col-span-7">
+              <PassageInspector step={selectedStep} />
             </div>
           </div>
-        </section>
-      </main>
+        </div>
+      ) : (
+        /* Custom Text Extractor & Comparator */
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          {/* Section 1 */}
+          <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-black/[0.08] dark:border-zinc-800 p-6 space-y-4 shadow-2xs">
+            <h2 className="font-serif text-lg font-bold text-[#381A61] dark:text-[#F9D14A]">
+              1. Extract Numbered Citation Claims
+            </h2>
+            <p className="text-xs text-[#6B665E] dark:text-zinc-400">
+              Paste manuscript paragraphs containing bracketed citations such as [1] with a numbered References list.
+            </p>
+            <form onSubmit={handleCustomParse} className="space-y-3">
+              <textarea
+                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-3 text-xs font-mono min-h-40 focus:ring-2 focus:ring-[#381A61]"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                required
+                disabled={busy}
+              />
+              <button
+                type="submit"
+                disabled={busy || !text.trim()}
+                className="px-4 py-2 rounded-lg bg-[#381A61] hover:bg-[#2A1348] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Extract Citations (Demo)
+              </button>
+            </form>
+
+            {parsed && (
+              <div className="space-y-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  Extracted {parsed.totalClaimsFound} citation claims and {parsed.totalReferencesFound} references.
+                </p>
+                {parsed.claims.map((item: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 space-y-1.5 text-xs"
+                  >
+                    <p className="font-medium text-zinc-900 dark:text-zinc-100">{item.citingSentence}</p>
+                    <p className="text-[11px] text-zinc-500 font-mono">
+                      Ref [{item.refNumber}]: {parsed.references[item.refNumber]}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClaim(item.citingSentence);
+                        setSourceTitle(parsed.references[item.refNumber]);
+                      }}
+                      className="text-[11px] font-semibold text-[#381A61] dark:text-[#F9D14A] underline"
+                    >
+                      Compare with source text →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Section 2 */}
+          <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-black/[0.08] dark:border-zinc-800 p-6 space-y-4 shadow-2xs">
+            <h2 className="font-serif text-lg font-bold text-[#381A61] dark:text-[#F9D14A]">
+              2. Compare Claim with Original Source Passage
+            </h2>
+            <form onSubmit={handleComparePassage} className="space-y-3">
+              <label className="block space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <span>Citing claim</span>
+                <textarea
+                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-3 text-xs font-mono min-h-20 focus:ring-2 focus:ring-[#381A61]"
+                  value={claim}
+                  onChange={(e) => setClaim(e.target.value)}
+                  required
+                  disabled={busy}
+                />
+              </label>
+
+              <label className="block space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <span>Source publication title</span>
+                <input
+                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-2.5 text-xs focus:ring-2 focus:ring-[#381A61]"
+                  value={sourceTitle}
+                  onChange={(e) => setSourceTitle(e.target.value)}
+                  disabled={busy}
+                />
+              </label>
+
+              <label className="block space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <span>Source passage text</span>
+                <textarea
+                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-3 text-xs font-mono min-h-24 focus:ring-2 focus:ring-[#381A61]"
+                  value={passage}
+                  onChange={(e) => setPassage(e.target.value)}
+                  required
+                  disabled={busy}
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={busy || !claim.trim() || !passage.trim()}
+                className="px-4 py-2 rounded-lg bg-[#381A61] hover:bg-[#2A1348] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                Run Passage Audit (Demo)
+              </button>
+            </form>
+
+            {comparison && (
+              <div className="p-4 rounded-xl border border-amber-300 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/20 space-y-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-serif font-bold text-sm text-amber-900 dark:text-amber-200">
+                    {comparison.verdictLabel}
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
+                    Drift: 70%
+                  </span>
+                </div>
+                <p className="text-amber-900/90 dark:text-amber-200/90">{comparison.unsureness.reason}</p>
+                <p className="text-[10.5px] text-zinc-500 pt-1 border-t border-amber-200 dark:border-amber-900">
+                  Simulated local Laya passage calibration. Traces discrepancies between the citing sentence and source passage.
+                </p>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { Plus, Folder, Calendar } from "lucide-react";
 
 export function ProjectList() {
-  const { data: projects, isLoading } = useQuery({
+  const { data: projects, isLoading, error, refetch } = useQuery({
     queryKey: ["projects"],
     queryFn: api.listProjects,
   });
@@ -22,6 +22,12 @@ export function ProjectList() {
       </div>
 
       {isLoading && <p className="text-gray-400">Loading projects...</p>}
+      {error && (
+        <div role="alert" className="card p-5 border-red-200 text-red-800">
+          <p>Could not load projects: {error.message}</p>
+          <button className="btn-primary mt-3" onClick={() => refetch()}>Retry</button>
+        </div>
+      )}
 
       {projects && projects.length === 0 && (
         <div className="card p-12 text-center">
