@@ -1,5 +1,9 @@
 # Bolt's Journal - Performance Learnings
 
+## 2026-10-28 - Pre-Sorted Keys, Fast Substring Pre-Check, and LRU Cache for Search String Term Lookups
+**Learning:** In deterministic literature search string generation (`generate_search_strings`), querying medical terminology mappings (`MESH_MAPPING`) over hundreds of key phrases was performing `sorted(MESH_MAPPING.keys(), key=len, reverse=True)` on every single phrase lookup and executing un-cached word-boundary regexes. Pre-sorting dictionary keys into a module-level tuple (`_SORTED_MESH_KEYS`), adding C-level `key in phrase_lower` substring pre-checks before word-boundary regexes, and memoizing `_lookup_term` and `_get_synonyms` with `@lru_cache` reduced 1,000 search string generation calls from ~5.28s to ~0.16s (~33x speedup).
+**Action:** When matching text phrases against large dictionary key lists by length priority, pre-sort keys once at module level, use C-level string `in` pre-checks before running regexes, and memoize lookup helper functions with `@lru_cache`.
+
 ## 2026-10-25 - Parallel Integer Priority Array for Character-Level Span Conflict Resolution
 **Learning:** In abstract screening span resolution (`resolve_character_spans`), checking character priorities via dictionary lookups (`curr.get("type")` & `priority_map.get(...)`) inside inner loops for every character index creates significant CPU overhead. Pre-evaluating integer priorities once per span and using a parallel integer array (`char_prios: list[int]`) for fast C-level integer comparisons (`prio > char_prios[i]`) eliminates inner-loop dict lookups and yields a ~1.75x speedup without altering span resolution output.
 **Action:** When resolving overlapping character spans by priority across strings, maintain a parallel integer array tracking max assigned priority per character instead of querying dict properties inside character loops.
