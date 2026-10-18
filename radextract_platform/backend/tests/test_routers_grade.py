@@ -197,3 +197,27 @@ class TestExport:
         assert r.status_code == 200
         assert "text/csv" in r.headers.get("content-type", "")
         assert "Outcome" in r.text
+
+
+class TestGradeAuthorization:
+
+    def test_non_member_access_forbidden(self, client, project_with_study):
+        pid, _, _ = project_with_study
+        # Create a non-member user and token
+        from dependencies import create_access_token, create_user
+        other_u = create_user("other_user", "pass", role="reviewer")
+        other_token = create_access_token(other_u["user_id"], other_u["username"], other_u["role"])
+        non_member_headers = {"Authorization": f"Bearer {other_token}"}
+
+        # Attempt to access project grade endpoints
+        r_list = client.get(f"/api/projects/{pid}/grade", headers=non_member_headers)
+        assert r_list.status_code == 403
+        assert "Insufficient permissions" in r_list.json()["detail"]
+
+        r_start = client.get(f"/api/projects/{pid}/grade/starting-level", headers=non_member_headers)
+        assert r_start.status_code == 403
+        assert "Insufficient permissions" in r_start.json()["detail"]
+
+        r_export = client.get(f"/api/projects/{pid}/grade/export?format=csv", headers=non_member_headers)
+        assert r_export.status_code == 403
+        assert "Insufficient permissions" in r_export.json()["detail"]
