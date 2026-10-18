@@ -315,8 +315,13 @@ async def accept_ai_suggestions(
 # ── Project Summary & Batch Runner ──
 
 @router.get("/projects/{project_id}/summary")
-async def project_rob_summary(project_id: str):
+async def project_rob_summary(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Get RoB summary for traffic-light chart rendering."""
+    check_project_access(conn, project_id, user)
     return rob_service.get_project_summary(project_id)
 
 
@@ -326,12 +331,15 @@ async def project_rob_figure(
     plot: str = Query("traffic", pattern="^(traffic|traffic_light|summary)$"),
     colour: str = Query("cochrane"),
     tool: Optional[str] = Query(None),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
     """Publication RoB figure from the robvis R package.
 
     plot is traffic or summary. colour is cochrane or colourblind.
     When R or robvis is missing, the traffic light uses the matplotlib chart.
     """
+    check_project_access(conn, project_id, user)
     summary = rob_service.get_project_summary(project_id)
     groups = summary.get("tool_groups") or {}
     if tool:
@@ -345,8 +353,14 @@ async def project_rob_figure(
 
 
 @router.get("/projects/{project_id}/figures")
-async def project_rob_figures(project_id: str, colour: str = Query("cochrane")):
+async def project_rob_figures(
+    project_id: str,
+    colour: str = Query("cochrane"),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Traffic-light and summary figures separated by applicable tool."""
+    check_project_access(conn, project_id, user)
     summary = rob_service.get_project_summary(project_id)
     return {"project_id": project_id, "figures": robvis_service.render_project_figures(summary, colour)}
 
@@ -354,9 +368,11 @@ async def project_rob_figures(project_id: str, colour: str = Query("cochrane")):
 @router.get("/projects/{project_id}/reporting-profile")
 async def project_reporting_profile(
     project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Separate MTR/RC reporting-completeness data and publication figure."""
+    check_project_access(conn, project_id, user)
     import base64
     from services.reporting_profile_service import get_project_profile, render_profile_figure
     data = get_project_profile(project_id, conn)

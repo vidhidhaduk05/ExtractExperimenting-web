@@ -304,3 +304,20 @@ class TestToolOverrideAndBatchRun:
         # Test calling with non-existent study_id returns 404
         r_invalid = client.post(f"/api/rob/projects/{pid}/studies/nonexistent-sid/auto-assess?tool_id=rob2")
         assert r_invalid.status_code == 404
+
+
+class TestSecurityAccessControl:
+
+    def test_unauthorized_user_denied_access(self, client, project_and_study):
+        pid, _ = project_and_study
+        db = get_connection()
+        db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES ('unauth_rob_user', 'unauth_rob_user', 'test')")
+        db.commit()
+        db.close()
+        token = create_access_token('unauth_rob_user', 'unauth_rob_user', 'viewer')
+        headers = {"Authorization": f"Bearer {token}"}
+
+        assert client.get(f"/api/rob/projects/{pid}/summary", headers=headers).status_code == 403
+        assert client.get(f"/api/rob/projects/{pid}/figure", headers=headers).status_code == 403
+        assert client.get(f"/api/rob/projects/{pid}/figures", headers=headers).status_code == 403
+        assert client.get(f"/api/rob/projects/{pid}/reporting-profile", headers=headers).status_code == 403
