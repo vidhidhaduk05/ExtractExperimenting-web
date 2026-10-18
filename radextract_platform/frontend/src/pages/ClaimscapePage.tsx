@@ -267,14 +267,21 @@ export const ClaimscapePage: React.FC = () => {
               Evidence Map
             </span>
             <Link
+              to="/citation-telephone"
+              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <span>Citation Telephone</span>
+              <span className="px-1.5 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded bg-[#F9D14A]/25 text-[#381A61] dark:text-[#F9D14A]">New</span>
+            </Link>
+            <Link
               to="/projects"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors flex items-center gap-1.5 text-xs font-semibold"
             >
               Systematic Reviews
             </Link>
             <a
               href="#method"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors"
+              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
             >
               Methodology
             </a>

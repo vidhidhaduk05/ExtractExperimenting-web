@@ -12,6 +12,7 @@ import { subscribeApiConnection, ApiConnectionInfo, getApiConnectionInfo } from 
 
 const navItems = [
   { to: "/claimscape", label: "ClaimScape", icon: Layers },
+  { to: "/citation-telephone", label: "Citation Telephone", icon: Share2 },
   { to: "/projects", label: "Projects", icon: Home, end: true },
   { to: "/graph/code", label: "Code Graph", icon: Network },
 ];

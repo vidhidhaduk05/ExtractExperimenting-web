@@ -20,11 +20,13 @@ import { AnalysisPage } from "./pages/AnalysisPage";
 import { CodeGraphPage } from "./pages/CodeGraphPage";
 import { ReviewGraphPage } from "./pages/ReviewGraphPage";
 import { ClaimscapePage } from "./pages/ClaimscapePage";
+import { CitationTelephonePage } from "./pages/CitationTelephonePage";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/claimscape" element={<ClaimscapePage />} />
+      <Route path="/citation-telephone" element={<CitationTelephonePage />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<ProjectList />} />
         <Route path="/projects" element={<ProjectList />} />
