@@ -18,9 +18,9 @@
     "semantic_hash": "0a4cd961473a30f008fc0d5fa0bc7e96"
   },
   "radextract_platform/backend/main.py": {
-    "mtime": 1792279735.8548284,
-    "seen": 1792279857.297567,
-    "ast_hash": "7ae39d35862d6d433df8b570c7accf9d",
+    "mtime": 1792343272.4280508,
+    "seen": 1792343466.904006,
+    "ast_hash": "b66291007698306408e6cf5b6b00a72d",
     "semantic_hash": ""
   },
   "radextract_platform/backend/models.py": {
@@ -774,21 +774,21 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/App.tsx": {
-    "mtime": 1792279735.9128296,
-    "seen": 1792279857.4975655,
-    "ast_hash": "b14c8d5c4707b967f33a03d466b102b6",
+    "mtime": 1792343162.9644425,
+    "seen": 1792343467.2061498,
+    "ast_hash": "d39f24cdb984aee88e5ff6b780fcb28a",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/layout/AppLayout.tsx": {
-    "mtime": 1792279735.9198275,
-    "seen": 1792279857.5045643,
-    "ast_hash": "961ac2367ee9394ea3486d30f4ff4c5a",
+    "mtime": 1792343176.9190824,
+    "seen": 1792343467.2500415,
+    "ast_hash": "092a512608ea4f91c27a88e4820d6138",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1792279735.9278295,
-    "seen": 1792279857.5055645,
-    "ast_hash": "b103ca52ba70fa9d3f0aef9a18c8cd80",
+    "mtime": 1792343140.6333158,
+    "seen": 1792343467.2520502,
+    "ast_hash": "1a7c9a91fa3f835518cc0803bf0ca43c",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -3705,6 +3705,72 @@
     "mtime": 1792337522.5530868,
     "seen": 1792337973.01573,
     "ast_hash": "0639e653c74d820e8604948305369eb5",
+    "semantic_hash": ""
+  },
+  "sync_web_repo.py": {
+    "mtime": 1792341393.144603,
+    "seen": 1792341593.199328,
+    "ast_hash": "e9b8b17843c89b2084a2acce9e54ec5d",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/routers/citation_telephone.py": {
+    "mtime": 1792343250.3159106,
+    "seen": 1792343466.9375403,
+    "ast_hash": "31c2d37d5fa58dfc400701067d4ff446",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/routers/rigor_scan.py": {
+    "mtime": 1792342965.6205955,
+    "seen": 1792343466.9466147,
+    "ast_hash": "602881aab86dca3ac36df64a915afacd",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/services/citation_telephone_service.py": {
+    "mtime": 1792342965.629475,
+    "seen": 1792343466.9734306,
+    "ast_hash": "f97bc1c49c85ce99422978b14220fd28",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/services/rigor_scan_service.py": {
+    "mtime": 1792342965.6244621,
+    "seen": 1792343467.0081325,
+    "ast_hash": "60d46ad10f4c6b9445f0891098580ac3",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/citation/PassageInspector.tsx": {
+    "mtime": 1792342965.606734,
+    "seen": 1792343467.2061498,
+    "ast_hash": "a647c7ede863d920eebffe97e034d9ec",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/citation/TrailViewer.tsx": {
+    "mtime": 1792342965.6113143,
+    "seen": 1792343467.2061498,
+    "ast_hash": "ad18006379231fede30a5b38335bca38",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/lib/citationTelephoneMethod.ts": {
+    "mtime": 1792342965.61578,
+    "seen": 1792343467.2560725,
+    "ast_hash": "7205987115ee24fa90eff2e023fe9e7e",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/lib/rigorTypes.ts": {
+    "mtime": 1792342965.5994017,
+    "seen": 1792343467.2631142,
+    "ast_hash": "77a17b29d73db0ab4f0b4fcbceb72de3",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/pages/CitationTelephonePage.tsx": {
+    "mtime": 1792342965.6029234,
+    "seen": 1792343467.268491,
+    "ast_hash": "6748e1f54721e0e1dc63ff4f59accf57",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/pages/RigorScanPage.tsx": {
+    "mtime": 1792342965.584444,
+    "seen": 1792343467.2785466,
+    "ast_hash": "dbd6c4e92433e308f01862c98d6aa0cf",
     "semantic_hash": ""
   }
 }

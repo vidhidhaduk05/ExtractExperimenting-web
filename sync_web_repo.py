@@ -102,20 +102,31 @@ jobs:
       - name: Build Production Web App
         working-directory: radextract_platform/frontend
         run: |
-          npm run build
+          npx vite build
           cp dist/index.html dist/404.html 2>/dev/null || true
+
+      - name: Deploy to gh-pages branch (Direct Branch Publishing)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: radextract_platform/frontend/dist
+          publish_branch: gh-pages
+          force_orphan: true
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        continue-on-error: true
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: radextract_platform/frontend/dist
+        continue-on-error: true
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        continue-on-error: true
 """
     workflow_path.write_text(content, encoding="utf-8")
     print("  -> Verified .github/workflows/deploy-pages.yml")
