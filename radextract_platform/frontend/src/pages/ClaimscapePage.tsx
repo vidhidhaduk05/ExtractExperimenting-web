@@ -67,7 +67,7 @@ export const ClaimscapePage: React.FC = () => {
   // Form states
   const [claim, setClaim] = useState<string>(hrtDataRaw.claim);
   const [query, setQuery] = useState<string>(hrtDataRaw.query);
-  const [paperCount, setPaperCount] = useState<number>(200);
+  const [paperCount, setPaperCount] = useState<number>(300);
   const [includeCommentary, setIncludeCommentary] = useState<boolean>(false);
   const [directOnly, setDirectOnly] = useState<boolean>(false);
   const [showReviews, setShowReviews] = useState<boolean>(true);

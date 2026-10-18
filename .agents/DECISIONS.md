@@ -378,4 +378,18 @@ un_full_pipeline) verify pause and cancellation cleanly between individual studi
      - Created `POST /api/claimscape/evaluate` and `GET /api/claimscape/status` in `radextract_platform/backend/routers/claimscape.py`.
      - Added live latency badge (`⚡ Laya Fast Pipeline: X ms`) on the ClaimScape evidence banner.
 
+## 2026-10-17 — ClaimScape Forest Plot & Full 300-Paper Landmark Evidence Map
+
+- **User Requirement**: Integrate the complete, verified 300-paper HRT evidence dataset and explicit Forest Plot column (`Forest Plot (Wilson 95% CI)`) with exact statistics:
+  - Meta-analyses & systematic reviews (12 papers): *Mostly against*, $n = 12$, 8% for · 95% CI 1%–35%
+  - Randomized trials (71 papers): *Leans against*, $n = 55$, 26% for · 95% CI 17%–39%
+  - Observational studies (75 papers): *Split*, $n = 65$, 60% for · 95% CI 48%–71%
+  - Case reports & series (1 paper): *Too few to say*, $n = 0$, 0 for · 0 mixed · 0 against
+  - Animal studies (5 papers): *Too few to say*
+- **Visual & Structural Upgrades**:
+  - Expanded `ClaimscapeMap` grid layout (`.cs-row`: `200px minmax(0, 1fr) 270px`) with dedicated table headers distinguishing *Study Design Hierarchy*, *Evidence Timeline (Publication Year)*, and *Forest Plot (Wilson 95% CI)*.
+  - Enhanced Wilson 95% CI whisker bar (`.cs-ci`) and point-estimate node with high-contrast editorial styling and 50% neutral reference line.
+  - Updated default scan size to $n = 300$ papers in `ClaimscapePage.tsx` and pre-loaded the full verified landmark payload in `src/data/hrt_example.json`.
+
+
 
