@@ -310,8 +310,14 @@ export function ExtractionSheetPage() {
     URL.revokeObjectURL(url);
   };
 
-  const activeStudyVerifiedCount = variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
-  const activeStudyPercent = variableList.length > 0 ? Math.round((activeStudyVerifiedCount / variableList.length) * 100) : 0;
+  // Bolt Optimization: Memoize verified count calculation to avoid O(V) array filtering on every render frame
+  const activeStudyVerifiedCount = useMemo(() => {
+    return variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
+  }, [variableList, extractionMap]);
+
+  const activeStudyPercent = useMemo(() => {
+    return variableList.length > 0 ? Math.round((activeStudyVerifiedCount / variableList.length) * 100) : 0;
+  }, [variableList.length, activeStudyVerifiedCount]);
 
   return (
     <div className="min-h-screen bg-[#FAF9F3] text-[#141413] pb-16">

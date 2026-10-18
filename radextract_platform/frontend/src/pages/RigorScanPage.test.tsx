@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { RigorScanPage } from "./RigorScanPage";
 import { api } from "../lib/api";
@@ -26,7 +27,7 @@ function upload() {
 
 it("starts empty and renders a real upload response with the returned engine", async () => {
   vi.mocked(api.scanPdfRigor).mockResolvedValue(result);
-  render(<RigorScanPage />);
+  render(<MemoryRouter><RigorScanPage /></MemoryRouter>);
   expect(api.getRigorExample).not.toHaveBeenCalled();
   expect(screen.getByText(/No manuscript has been scanned yet/)).toBeInTheDocument();
   const file = upload();
@@ -38,7 +39,7 @@ it("starts empty and renders a real upload response with the returned engine", a
 
 it("clears previous results on a failing scan and enables retry", async () => {
   vi.mocked(api.scanPdfRigor).mockResolvedValueOnce(result).mockRejectedValueOnce(new Error("Backend unavailable"));
-  render(<RigorScanPage />);
+  render(<MemoryRouter><RigorScanPage /></MemoryRouter>);
   upload();
   await screen.findByText("Uploaded research manuscript");
   upload();
@@ -49,7 +50,7 @@ it("clears previous results on a failing scan and enables retry", async () => {
 
 it("rejects empty server results instead of claiming a completed scan", async () => {
   vi.mocked(api.scanPdfRigor).mockResolvedValue({ view: { ...result.view, checks: [] } });
-  render(<RigorScanPage />);
+  render(<MemoryRouter><RigorScanPage /></MemoryRouter>);
   upload();
   expect(await screen.findByRole("alert")).toHaveTextContent("The server returned no reporting checks");
   expect(screen.queryByText("Uploaded research manuscript")).not.toBeInTheDocument();
@@ -58,7 +59,7 @@ it("rejects empty server results instead of claiming a completed scan", async ()
 it("disables upload and examples until the current request finishes", async () => {
   let resolveScan!: (value: RigorScanResult) => void;
   vi.mocked(api.scanPdfRigor).mockReturnValue(new Promise(resolve => { resolveScan = resolve; }));
-  render(<RigorScanPage />);
+  render(<MemoryRouter><RigorScanPage /></MemoryRouter>);
   upload();
   expect(screen.getByLabelText("Upload PDF for Rigor Scan")).toBeDisabled();
   expect(screen.getByRole("button", { name: /View reference example/ })).toBeDisabled();
