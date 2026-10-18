@@ -20,12 +20,17 @@ import { AnalysisPage } from "./pages/AnalysisPage";
 import { CodeGraphPage } from "./pages/CodeGraphPage";
 import { ReviewGraphPage } from "./pages/ReviewGraphPage";
 import { ClaimscapePage } from "./pages/ClaimscapePage";
+import { CitationTelephonePage } from "./pages/CitationTelephonePage";
+import { RigorScanPage } from "./pages/RigorScanPage";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<ClaimscapePage />} />
       <Route path="/claimscape" element={<ClaimscapePage />} />
+      <Route path="/evidence-map" element={<ClaimscapePage />} />
+      <Route path="/citation-telephone" element={<CitationTelephonePage />} />
+      <Route path="/rigor-scan" element={<RigorScanPage />} />
       <Route element={<AppLayout />}>
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/projects/new" element={<ProjectCreate />} />

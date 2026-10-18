@@ -3605,6 +3605,93 @@ export const api = {
     request<any>("/settings/llm-config/reset", {
       method: "POST",
     }),
+
+  // Citation Telephone (Laya-Powered)
+  auditCitationTelephoneText: (text: string) =>
+    request<{
+      references: Record<number, string>;
+      claims: Array<{
+        sentenceIndex: number;
+        citingSentence: string;
+        refNumber: number;
+        refText: string;
+      }>;
+      totalClaimsFound: number;
+      totalReferencesFound: number;
+    }>("/citation-telephone/audit-text", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+  evaluateCitationTelephoneClaim: (citing_sentence: string, source_passage: string, source_title: string = "") =>
+    request<{
+      supportScore: number;
+      ownResultScore: number;
+      verdict: "same" | "partial" | "stronger" | "weaker" | "different" | "unrelated" | "not_found";
+      verdictLabel: string;
+      probabilities: Record<string, number>;
+      unsureness: {
+        isGenuinelyUnsure: boolean;
+        margin: number;
+        entropyScore: number;
+        reason?: string;
+        recommendation: "verified" | "manual_audit_advised" | "contradiction_flagged";
+      };
+      engine: string;
+    }>("/citation-telephone/evaluate-claim", {
+      method: "POST",
+      body: JSON.stringify({ citing_sentence, source_title, source_passage }),
+    }),
+  uploadCitationTelephoneManuscript: (formData: FormData) =>
+    fetch(`${getApiBase()}/citation-telephone/upload-manuscript`, {
+      method: "POST",
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        throw new Error(`Upload failed with status ${res.status}`);
+      }
+      return res.json();
+    }),
+  getCitationTelephoneStatus: () =>
+    request<{
+      status: string;
+      engine: string;
+      model: string;
+      has_unsureness_matrix: boolean;
+    }>("/citation-telephone/status"),
+
+  // ── Rigor Scan ──
+  getRigorExample: () =>
+    request<any>("/rigor-scan/example"),
+
+  getRigorSpecs: () =>
+    request<any[]>("/rigor-scan/specs"),
+
+  getRigorStatus: () =>
+    request<any>("/rigor-scan/status"),
+
+  scanTextRigor: (text: string, title?: string, doi?: string) =>
+    request<any>("/rigor-scan/scan-text", {
+      method: "POST",
+      body: JSON.stringify({ text, title, doi }),
+    }),
+
+  scanPdfRigor: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${getApiBase()}/rigor-scan/scan-pdf`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || "PDF scan failed");
+    }
+    return res.json();
+  },
 };
 
 

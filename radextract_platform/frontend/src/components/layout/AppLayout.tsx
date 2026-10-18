@@ -2,7 +2,7 @@ import { Outlet, NavLink, useParams, Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useState, useEffect } from "react";
-import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles, Bell, Bookmark } from "lucide-react";
+import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, ShieldAlert, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles, Bell, Bookmark } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ErrorBoundary } from "../common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "../common/ClarificationNotificationCenter";
@@ -11,8 +11,10 @@ import { ApiSettingsModal } from "../common/ApiSettingsModal";
 import { subscribeApiConnection, ApiConnectionInfo, getApiConnectionInfo } from "../../lib/api";
 
 const navItems = [
-  { to: "/claimscape", label: "ClaimScape", icon: Layers },
+  { to: "/claimscape", label: "Evidence Map", icon: Layers },
   { to: "/projects", label: "Projects", icon: Home, end: true },
+  { to: "/rigor-scan", label: "Rigor Scan", icon: ShieldCheck },
+  { to: "/citation-telephone", label: "Citation Telephone", icon: Share2 },
   { to: "/graph/code", label: "Code Graph", icon: Network },
 ];
 
