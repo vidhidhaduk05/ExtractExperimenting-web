@@ -18,3 +18,9 @@ description: Mandatory rules for code generation, architectural coherence, graph
 - **TDD & Verification Loop**: Combine `python-testing` / `tdd-workflow` with `verification-loop`. Write or update unit/integration tests before claiming completion.
 - **Systematic Review Domain Alignment**: Integrate research and extraction pipelines cleanly with the domain rules in `.agents/skills/systematic-review` and logged protocol specifications in `.agents/DECISIONS.md`.
 - **Autonomous Delegation**: For large-scale multi-file refactors or repo-wide test repairs, delegate to Google Jules following `.agents/rules/jules.md`.
+
+## 4. Irrelevant Skills Exclusion & Scope Discipline
+- **Strictly Ignored Domains**: This codebase is a Python/FastAPI backend, React/Vite web application, and systematic literature review platform. Never invoke, suggest, or load skills related to unrelated ecosystems, specifically:
+  - Mobile/Native stacks: `android-*`, `compose-multiplatform-*`, `dart-flutter-*`, `flutter-*`, `ios-*`, `swift-*`, `swiftui-*`
+  - Unrelated backends: `csharp-*`, `dotnet-*`, `fsharp-*`, `quarkus-*`, `laravel-*`, `perl-*`
+  - Unrelated hardware/domain tools: `cisco-*`, `homelab-*`, `blender-*`

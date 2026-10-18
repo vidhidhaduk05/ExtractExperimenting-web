@@ -1,0 +1,27 @@
+{
+  "inherits": [],
+  "entries": [
+    {
+      "path": "skills"
+    }
+  ],
+  "exclude": [
+    "android-.*",
+    "compose-multiplatform-.*",
+    "dart-flutter-.*",
+    "flutter-.*",
+    "ios-.*",
+    "swift-.*",
+    "swiftui-.*",
+    "quarkus-.*",
+    "csharp-.*",
+    "dotnet-.*",
+    "fsharp-.*",
+    "laravel-.*",
+    "php-.*",
+    "perl-.*",
+    "cisco-.*",
+    "homelab-.*",
+    "blender-.*"
+  ]
+}
