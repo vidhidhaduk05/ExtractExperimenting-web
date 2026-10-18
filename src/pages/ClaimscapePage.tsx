@@ -213,15 +213,15 @@ export const ClaimscapePage: React.FC = () => {
         });
         setSelectedPmid(res.papers[0]?.pmid || "");
         setEvalSpeed(res.elapsed_ms);
-        setResultSource(`${res.cached ? "Cached result" : "Synthesized result"} · Engine: ${res.engine || "Laya System-1"}`);
+        setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: ${res.engine || "Laya System-1"}`);
         setIsScanning(false);
         return;
       }
     } catch {
-      // Backend not running on this domain/host
+      // Backend not running on this domain/host, proceed to direct client-side live PubMed
     }
 
-    // Step 2: Query Live PubMed directly via NCBI E-Utilities
+    // Step 2: Query Live PubMed directly via NCBI E-Utilities with Laya System-1 Inference
     try {
       const liveRes = await fetchLivePubMedEvidence(activeClaim, activeQuery, paperCount);
       if (Array.isArray(liveRes?.papers) && liveRes.papers.length > 0) {
@@ -233,84 +233,28 @@ export const ClaimscapePage: React.FC = () => {
           judgments: liveRes.judgments,
         });
         setSelectedPmid(liveRes.papers[0]?.pmid || "");
-        setResultSource(`Live PubMed query: "${activeQuery}" · ${liveRes.papers.length} publications indexed from NCBI`);
+        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Laya System-1`);
+        setIsScanning(false);
+        return;
+      } else {
+        setScanError(`No PubMed publications found matching "${activeQuery}". Try expanding or refining your claim terms.`);
         setIsScanning(false);
         return;
       }
     } catch (e: any) {
       console.warn("Live PubMed retrieval warning:", e);
+      setScanError(`PubMed live search failed: ${e?.message || "Please check connection"}`);
+      setIsScanning(false);
+      return;
     }
-
-    // Client-side synthesis fallback: adapt base papers to match claim topic dynamically
-    await new Promise((r) => setTimeout(r, 450));
-
-    const claimLower = activeClaim.toLowerCase();
-    const isMucormycosis = claimLower.includes("mucor") || claimLower.includes("albumin");
-    const isVitaminD = claimLower.includes("vitamin d") || claimLower.includes("fracture");
-    const isMetformin = claimLower.includes("metformin") || claimLower.includes("lifespan") || claimLower.includes("aging");
-    const isAnesthesia = claimLower.includes("anesthesia") || claimLower.includes("propofol") || claimLower.includes("volatile");
-
-    const adaptedPapers = (hrtDataRaw.papers as Paper[]).map((p, idx) => {
-      let customTitle = p.title;
-      let customSentences = p.sentences ? [...p.sentences] : [];
-      let customFinding = p.findingText || "";
-
-      if (isMucormycosis) {
-        if (idx === 0) {
-          customTitle = "Serum Albumin Levels and Clinical Outcomes in COVID-19-Associated Mucormycosis: A Multicenter Cohort Study";
-          customFinding = "Hypoalbuminemia (<3.0 g/dL) was independently associated with a 3.4-fold increase in 90-day mortality from rhino-orbital-cerebral mucormycosis.";
-          customSentences = [
-            "Mucormycosis is a fulminant fungal infection associated with high morbidity.",
-            "We assessed whether serum albumin status serves as a protective prognostic marker in 420 patients.",
-            customFinding,
-            "Targeted albumin restoration may offer adjunctive therapeutic protection during aggressive antifungal therapy."
-          ];
-        } else if (idx % 3 === 0) {
-          customTitle = `Protective role of serum albumin and host nutritional factors in invasive zygomycosis / mucormycosis (Study ${p.pmid})`;
-        }
-      } else if (isVitaminD) {
-        if (idx === 0) {
-          customTitle = "Vitamin D Supplementation and Prevention of Fractures in Community-Dwelling Older Adults: A Randomized Trial";
-          customFinding = "High-dose vitamin D supplementation did not reduce the overall incidence of non-vertebral fractures compared with placebo.";
-          customSentences = [
-            "Vitamin D deficiency is common among older adults.",
-            "We conducted a double-blind randomized controlled trial of 25,871 participants.",
-            customFinding,
-            "Routine supplementation for fracture prevention is not supported in unselected older populations."
-          ];
-        }
-      } else if (isMetformin) {
-        if (idx === 0) {
-          customTitle = "Metformin as a Geroprotector: Cellular Longevity and Healthspan Extension in Murine and Human Cohorts";
-          customFinding = "Metformin treatment was associated with a 14% increase in median lifespan and improved metabolic insulin sensitivity.";
-          customSentences = [
-            "Metformin targets multiple hallmarks of aging including AMPK activation.",
-            "We evaluated all-cause mortality and physiological biomarkers in aging cohorts.",
-            customFinding,
-            "These findings suggest potential geroprotective properties warranting formal clinical testing."
-          ];
-        }
-      }
-
-      return {
-        ...p,
-        title: customTitle,
-        sentences: customSentences.length > 0 ? customSentences : p.sentences,
-        findingText: customFinding || p.findingText,
-      };
-    });
-
-    setDataset({
-      claim: activeClaim,
-      query: activeQuery,
-      total: adaptedPapers.length,
-      papers: adaptedPapers,
-      judgments: (hrtDataRaw as any).judgments || [],
-    });
-    setSelectedPmid(adaptedPapers[0]?.pmid || "12117397");
-    setResultSource(`Evidence mapped for: "${activeClaim.length > 55 ? activeClaim.slice(0, 55) + "…" : activeClaim}" · ${adaptedPapers.length} publications`);
-    setIsScanning(false);
   };
+
+  // Run search on initial load if URL contains a custom claim
+  useEffect(() => {
+    if (urlClaim && urlClaim !== hrtDataRaw.claim) {
+      void runEvidenceSearch(urlClaim, urlQ || buildPubMedQuery(urlClaim));
+    }
+  }, [urlClaim, urlQ]);
 
   const handleSelectExample = (ex: typeof PRESET_EXAMPLES[0]) => {
     if (isScanning) return;
