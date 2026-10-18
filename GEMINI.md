@@ -50,3 +50,8 @@
      4. **Never exact-retry a failure**: Change the diagnosis, context, or strategy before attempting a fix again.
      5. **Satisfy the contract**: Acceptance criteria and required tests gate completion.
      6. **Report what actually happened**: Say what you can or cannot verify; never fabricate certainty.
+
+10. **Auto-Proceed & Autonomous Execution**:
+   - For all steps, plans, tool executions, and questions: **always auto-proceed** autonomously.
+   - Do NOT stall or pause execution to ask trivial confirmation or interactive questions (`ask_question`).
+   - Select the recommended/best path, proceed automatically, and present verified results.
