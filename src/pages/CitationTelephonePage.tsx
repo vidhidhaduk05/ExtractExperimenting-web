@@ -21,6 +21,7 @@ import {
 } from "../lib/citationTelephoneMethod";
 import { TrailViewer } from "../components/citation/TrailViewer";
 import { PassageInspector } from "../components/citation/PassageInspector";
+import { TrailGraphView } from "../components/citation/TrailGraphView";
 
 export const CitationTelephonePage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -223,6 +224,14 @@ export const CitationTelephonePage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Visual Interactive DAG Graph View */}
+          <TrailGraphView
+            steps={activeExample.data.steps}
+            selectedStepId={selectedStep.id}
+            onSelectStep={setSelectedStep}
+            rootPaper={activeExample.data.rootPaper}
+          />
 
           {/* Main 2-Column Trail Explorer */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
