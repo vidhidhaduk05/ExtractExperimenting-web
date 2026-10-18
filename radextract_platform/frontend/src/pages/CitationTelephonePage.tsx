@@ -63,9 +63,7 @@ export const CitationTelephonePage: React.FC = () => {
   const [sourceTitle, setSourceTitle] = useState(
     "Challenges Coexist with Opportunities: Spatial Heterogeneity Expression of PD-L1 in Cancer Therapy"
   );
-  const [passage, setPassage] = useState(
-    "nPD-L1 can also serve as a key nuclear protein that promotes immune-independent cell proliferation without binding to PD-1."
-  );
+  const [passage, setPassage] = useState("");
   const [comparison, setComparison] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,67 +76,32 @@ export const CitationTelephonePage: React.FC = () => {
     }
   };
 
-  const handleCustomParse = (e: React.FormEvent) => {
+  const handleCustomParse = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    setTimeout(() => {
-      setParsed({
-        totalClaimsFound: 2,
-        totalReferencesFound: 2,
-        claims: [
-          {
-            sentenceIndex: 0,
-            refNumber: "1",
-            citingSentence:
-              "Nuclear PD-L1 promotes cell proliferation in an immune-dependent manner without interacting with PD-1 [1].",
-          },
-          {
-            sentenceIndex: 1,
-            refNumber: "2",
-            citingSentence:
-              "Contrast-induced nephropathy risk is reduced with bicarbonate hydration [2].",
-          },
-        ],
-        references: {
-          "1": "Wang Y, et al. Spatial Heterogeneity of PD-L1 in Cancer Therapy. Adv Sci. 2024.",
-          "2": "Merten GJ, et al. Prevention of contrast-medium-induced nephropathy with sodium bicarbonate. JAMA. 2004.",
-        },
-      });
+    try {
+      const res = await api.auditCitationTelephoneText(text);
+      setParsed(res);
+    } catch (err: any) {
+      setError(err?.message || "Failed to audit text");
+    } finally {
       setBusy(false);
-    }, 400);
+    }
   };
 
-  const handleComparePassage = (e: React.FormEvent) => {
+  const handleComparePassage = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    setTimeout(() => {
-      setComparison({
-        engine: "local_laya_system_1",
-        verdict: "different",
-        verdictLabel: "Contradiction / Semantic Drift Detected",
-        supportScore: 0.15,
-        ownResultScore: 0.85,
-        probabilities: {
-          matches: 0.05,
-          partlyMatches: 0.1,
-          goesFurther: 0.05,
-          moreCautious: 0.05,
-          changed: 0.7,
-          notThere: 0.05,
-        },
-        unsureness: {
-          isGenuinelyUnsure: false,
-          margin: 0.6,
-          entropyScore: 0.32,
-          reason:
-            "Critical Semantic Inversion: Citing claim asserts 'immune-dependent' proliferation, but source passage states 'immune-INDEPENDENT'.",
-          recommendation: "contradiction_flagged",
-        },
-      });
+    try {
+      const res = await api.evaluateCitationTelephoneClaim(claim, passage, sourceTitle);
+      setComparison(res);
+    } catch (err: any) {
+      setError(err?.message || "Failed to compare passage");
+    } finally {
       setBusy(false);
-    }, 500);
+    }
   };
 
   return (
@@ -283,6 +246,7 @@ export const CitationTelephonePage: React.FC = () => {
             </p>
             <form onSubmit={handleCustomParse} className="space-y-3">
               <textarea
+                aria-label="Manuscript text"
                 className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-3 text-xs font-mono min-h-40 focus:ring-2 focus:ring-[#381A61]"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -295,7 +259,7 @@ export const CitationTelephonePage: React.FC = () => {
                 className="px-4 py-2 rounded-lg bg-[#381A61] hover:bg-[#2A1348] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <FileText className="w-3.5 h-3.5" />
-                Extract Citations (Demo)
+                Extract citations
               </button>
             </form>
 
@@ -317,11 +281,12 @@ export const CitationTelephonePage: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setClaim(item.citingSentence);
-                        setSourceTitle(parsed.references[item.refNumber]);
+                        setPassage("");
+                        setSourceTitle(parsed.references[item.refNumber] || "");
                       }}
                       className="text-[11px] font-semibold text-[#381A61] dark:text-[#F9D14A] underline"
                     >
-                      Compare with source text →
+                      Compare this claim with source text
                     </button>
                   </div>
                 ))}
@@ -357,7 +322,7 @@ export const CitationTelephonePage: React.FC = () => {
               </label>
 
               <label className="block space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                <span>Source passage text</span>
+                <span>Actual source passage</span>
                 <textarea
                   className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-3 text-xs font-mono min-h-24 focus:ring-2 focus:ring-[#381A61]"
                   value={passage}
@@ -373,9 +338,15 @@ export const CitationTelephonePage: React.FC = () => {
                 className="px-4 py-2 rounded-lg bg-[#381A61] hover:bg-[#2A1348] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <Share2 className="w-3.5 h-3.5" />
-                Run Passage Audit (Demo)
+                Compare passage
               </button>
             </form>
+
+            {error && (
+              <div role="alert" className="p-4 rounded-xl border border-rose-300 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-200 text-xs">
+                {error}
+              </div>
+            )}
 
             {comparison && (
               <div className="p-4 rounded-xl border border-amber-300 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/20 space-y-2 text-xs">

@@ -276,7 +276,7 @@ export function ScreeningPage() {
     }
   };
 
-  const studyList = Array.isArray(studies) ? studies : [];
+  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
@@ -686,8 +686,8 @@ export function ScreeningPage() {
     }
 
     // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-    let activeSpans = [...spans];
-    if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
+    const resolvedSpans: HighlightSpan[] = [...spans];
+    if (resolvedSpans.length === 0 && fallbackKeywordsList.length > 0) {
       fallbackKeywordsList.forEach((kw) => {
         const word = kw.keyword.trim();
         if (!word) return;
@@ -696,7 +696,7 @@ export function ScreeningPage() {
           const regex = new RegExp(`\\b${escaped}\\b`, "gi");
           let match;
           while ((match = regex.exec(rawText)) !== null) {
-            activeSpans.push({
+            resolvedSpans.push({
               start: match.index,
               end: match.index + match[0].length,
               text: match[0],
@@ -712,7 +712,7 @@ export function ScreeningPage() {
       });
     }
 
-    if (activeSpans.length === 0) {
+    if (resolvedSpans.length === 0) {
       return isTitle ? (
         <span className="text-slate-900">{rawText}</span>
       ) : (
@@ -720,7 +720,8 @@ export function ScreeningPage() {
       );
     }
 
-    // Resolve character-level priority so keywords (green/red) are never swallowed by broad sentence spans
+    // Resolve interval priority so keywords (green/red) are never swallowed by broad sentence spans.
+    // Uses a fast O(N log N + N*K) cut-point interval algorithm (N <= 20) to avoid O(text_length) character array allocations.
     const priorityMap: Record<string, number> = {
       exclude_keyword: 40,
       include_keyword: 30,
@@ -731,31 +732,46 @@ export function ScreeningPage() {
       outcome: 10,
     };
 
-    const charSpans: (HighlightSpan | null)[] = new Array(rawText.length).fill(null);
-    for (const span of activeSpans) {
+    const cutsSet = new Set<number>();
+    cutsSet.add(0);
+    cutsSet.add(rawText.length);
+    for (const span of resolvedSpans) {
       const start = Math.max(0, span.start);
       const end = Math.min(rawText.length, span.end);
-      if (end <= start) continue;
-      const prio = priorityMap[span.type] || 0;
-      for (let i = start; i < end; i++) {
-        const curr = charSpans[i];
-        if (!curr || (priorityMap[curr.type] || 0) < prio) {
-          charSpans[i] = span;
-        }
+      if (end > start) {
+        cutsSet.add(start);
+        cutsSet.add(end);
       }
     }
+    const cuts = Array.from(cutsSet).sort((a, b) => a - b);
 
     const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
-    let currentSpan = charSpans[0];
-    let currentStart = 0;
-    for (let i = 1; i < rawText.length; i++) {
-      if (charSpans[i] !== currentSpan) {
-        segments.push({ start: currentStart, end: i, span: currentSpan });
-        currentSpan = charSpans[i];
-        currentStart = i;
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const start = cuts[i];
+      const end = cuts[i + 1];
+      if (start >= end) continue;
+
+      let bestSpan: HighlightSpan | null = null;
+      let maxPrio = -1;
+
+      for (const span of resolvedSpans) {
+        const spanStart = Math.max(0, span.start);
+        const spanEnd = Math.min(rawText.length, span.end);
+        if (spanStart <= start && spanEnd >= end) {
+          const prio = priorityMap[span.type] || 0;
+          if (prio > maxPrio) {
+            maxPrio = prio;
+            bestSpan = span;
+          }
+        }
+      }
+
+      if (segments.length > 0 && segments[segments.length - 1].span === bestSpan) {
+        segments[segments.length - 1].end = end;
+      } else {
+        segments.push({ start, end, span: bestSpan });
       }
     }
-    segments.push({ start: currentStart, end: rawText.length, span: currentSpan });
 
     const elements: React.ReactNode[] = segments.map((seg, idx) => {
       const segText = rawText.substring(seg.start, seg.end);
@@ -1220,6 +1236,8 @@ export function ScreeningPage() {
               <option value="medium">60% - 79% (Moderate)</option>
               <option value="low">&lt; 60% (Low Confidence)</option>
             </select>
+
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
 
             <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">
               <input
