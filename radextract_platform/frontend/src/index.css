@@ -372,7 +372,7 @@
 
 .cs .cs-row {
   border-top: 1px solid var(--cs-line-soft);
-  grid-template-columns: 200px minmax(0, 1fr) 250px;
+  grid-template-columns: 200px minmax(0, 1fr) 270px;
   align-items: stretch;
   display: grid;
 }
@@ -393,7 +393,7 @@
   border-left: 1px solid var(--cs-line-soft);
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   padding: 10px 18px 10px 14px;
   display: flex;
 }
@@ -482,31 +482,35 @@
 }
 
 .cs .cs-ci {
-  height: 10px;
+  height: 12px;
   position: relative;
+  background: color-mix(in srgb, var(--cs-track) 40%, transparent);
+  border-radius: 4px;
 }
 
 .cs .cs-ci > i {
   background: #381A61;
-  border-radius: 2px;
-  height: 2px;
+  border-radius: 3px;
+  height: 3px;
   position: absolute;
-  top: 4px;
+  top: 4.5px;
+  box-shadow: 0 1px 2px rgba(56, 26, 97, 0.2);
 }
 
 .dark .cs .cs-ci > i {
   background: #F9D14A;
+  box-shadow: 0 1px 3px rgba(249, 209, 74, 0.3);
 }
 
 .cs .cs-ci > b {
   background: #381A61;
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   box-shadow: 0 0 0 2px var(--cs-card);
   border-radius: 50%;
-  margin-left: -4px;
+  margin-left: -4.5px;
   position: absolute;
-  top: 1px;
+  top: 1.5px;
 }
 
 .dark .cs .cs-ci > b {
@@ -517,9 +521,10 @@
   background: var(--cs-line);
   width: 1px;
   position: absolute;
-  top: -1px;
-  bottom: -1px;
+  top: 0;
+  bottom: 0;
   left: 50%;
+  opacity: 0.8;
 }
 
 .cs .cs-tipbox {

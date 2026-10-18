@@ -135,6 +135,20 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
       onPointerLeave={() => setHovered(null)}
     >
       <div className="cs-rows border-b border-[var(--cs-line)]">
+        {/* Column Headers for Map and Forest Plot */}
+        <div className="cs-row bg-[var(--cs-panel)] border-b border-[var(--cs-line)] text-[11px] font-bold uppercase tracking-wider text-[#6B665E] dark:text-[#968F84] max-lg:hidden">
+          <div className="lab !py-2.5">
+            <span>Study Design Hierarchy</span>
+          </div>
+          <div className="flex items-center px-3.5 !py-2.5 text-[11px]">
+            <span>Evidence Timeline (Publication Year)</span>
+          </div>
+          <div className="sum !py-2.5 flex-row items-center justify-between">
+            <span>Forest Plot (Wilson 95% CI)</span>
+            <span className="text-[10px] font-mono normal-case text-[var(--cs-ink-3)] font-normal">n = papers with verdict</span>
+          </div>
+        </div>
+
         {rows.map(({ summary, placed, height }) => {
           const tier = TIER_BY_ID[summary.id];
           return (

@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 from services import analysis_service
 
 
@@ -322,3 +323,56 @@ class TestReportEndpoints:
         assert response.headers["content-type"] == "application/json"
         data = json.loads(response.text)
         assert data == mock_report
+
+
+class TestSecurityAccessControl:
+
+    def test_unauthorized_user_denied_access(self, client, project):
+        db = get_connection()
+        db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES ('unauth_analysis_user', 'unauth_analysis_user', 'test')")
+        db.commit()
+        db.close()
+        token = create_access_token('unauth_analysis_user', 'unauth_analysis_user', 'viewer')
+        headers = {"Authorization": f"Bearer {token}"}
+
+        assert client.get(f"/api/projects/{project}/analysis/profile", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/heterogeneity?outcome=test", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/forest-data?outcome=test", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/funnel-data?outcome=test", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/sensitivity?outcome=test", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/outcomes", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/report/download", headers=headers).status_code == 403
+
+
+class TestAnalysisAuthorization:
+
+    def test_analysis_endpoints_authorization(self, client):
+        client.post("/api/auth/register", json={"username": "owner_user", "password": "password123"})
+        owner_token = client.post("/api/auth/login", json={"username": "owner_user", "password": "password123"}).json()["access_token"]
+        owner_headers = {"Authorization": f"Bearer {owner_token}"}
+
+        p_res = client.post("/api/projects", json={"name": "Secure Analysis Project"}, headers=owner_headers)
+        assert p_res.status_code == 200
+        project_id = p_res.json()["project_id"]
+
+        client.post("/api/auth/register", json={"username": "unauthorized_user", "password": "password123"})
+        unauthorized_token = client.post("/api/auth/login", json={"username": "unauthorized_user", "password": "password123"}).json()["access_token"]
+        unauthorized_headers = {"Authorization": f"Bearer {unauthorized_token}"}
+
+        endpoints = [
+            f"/api/projects/{project_id}/analysis/descriptive",
+            f"/api/projects/{project_id}/analysis/profile",
+            f"/api/projects/{project_id}/analysis/stats/v1",
+            f"/api/projects/{project_id}/analysis/heterogeneity?outcome=Overall",
+            f"/api/projects/{project_id}/analysis/forest-data?outcome=Overall",
+            f"/api/projects/{project_id}/analysis/funnel-data?outcome=Overall",
+            f"/api/projects/{project_id}/analysis/sensitivity?outcome=Overall",
+            f"/api/projects/{project_id}/analysis/outcomes",
+            f"/api/projects/{project_id}/analysis/report",
+            f"/api/projects/{project_id}/analysis/report/download",
+        ]
+
+        for url in endpoints:
+            r = client.get(url, headers=unauthorized_headers)
+            assert r.status_code == 403, f"Endpoint {url} did not return 403 for unauthorized user"
+            assert "Insufficient permissions" in r.json()["detail"]
