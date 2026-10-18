@@ -1,0 +1,383 @@
+# Radiology base validation rules — declarative, config-driven.
+#
+# Rule kinds understood by litextract.validate:
+#   required              - codebook 'Required' fields must be populated (auto)
+#   vocab                 - controlled-vocab cells hold allowed value or missing token (auto)
+#   numeric_format        - numeric field parses to a scalar (auto via field_types)
+#   range                 - numeric field within [min, max]
+#   year                  - 4-digit year in [min, max]
+#   key_resolves          - child key's parent value exists in parent sheet
+#   unique_within_parent  - child key unique within its parent group
+#   comparator_resolves   - cross-reference field resolves (or is a missing token)
+#   le_field              - field_a <= field_b within the same row
+#   le_parent_field       - child numeric field <= a parent-row numeric field
+#   conditional_required  - [NEW] field required when another field has a specific value
+#
+# Severity: error | warn
+
+rules:
+  # ---- referential integrity ----
+  - id: cohort_study_resolves
+    kind: key_resolves
+    sheet: Cohort_Level
+    parent_key_field: Study ID
+    severity: error
+    message: "Cohort_Level Study ID not found in Study_Level"
+
+  - id: cohort_id_unique_in_study
+    kind: unique_within_parent
+    sheet: Cohort_Level
+    parent_field: Study ID
+    key_field: Cohort ID
+    severity: error
+    message: "Duplicate Cohort ID within a study"
+
+  - id: protocol_cohort_resolves
+    kind: key_resolves
+    sheet: Protocol_Level
+    parent_key_field: Cohort ID
+    parent_sheet: Cohort_Level
+    severity: error
+    message: "Protocol_Level Cohort ID not found in Cohort_Level"
+
+  - id: protocol_id_unique_in_cohort
+    kind: unique_within_parent
+    sheet: Protocol_Level
+    parent_field: Cohort ID
+    key_field: Protocol ID
+    severity: error
+    message: "Duplicate Protocol ID within a cohort"
+
+  - id: outcome_protocol_resolves
+    kind: key_resolves
+    sheet: Outcome_Level
+    parent_key_field: Protocol ID
+    parent_sheet: Protocol_Level
+    severity: error
+    message: "Outcome_Level Protocol ID not found in Protocol_Level"
+
+  - id: outcome_id_unique_in_protocol
+    kind: unique_within_parent
+    sheet: Outcome_Level
+    parent_field: Protocol ID
+    key_field: Outcome ID
+    severity: error
+    message: "Duplicate Outcome ID within a protocol"
+
+  - id: qa_study_resolves
+    kind: key_resolves
+    sheet: Quality_Assessment
+    parent_key_field: Study ID
+    parent_sheet: Study_Level
+    severity: error
+    message: "Quality_Assessment Study ID not found in Study_Level"
+
+  - id: qa_id_unique_in_study
+    kind: unique_within_parent
+    sheet: Quality_Assessment
+    parent_field: Study ID
+    key_field: QA ID
+    severity: error
+    message: "Duplicate QA ID within a study"
+
+  # ---- range / logical sanity ----
+  - id: pub_year_valid
+    kind: year
+    sheet: Study_Level
+    field: Publication Year
+    min: 1950
+    max: 2100
+    severity: error
+    message: "Publication Year not a plausible 4-digit year"
+
+  - id: female_pct_range
+    kind: range
+    sheet: Cohort_Level
+    field: Female (%)
+    min: 0
+    max: 100
+    severity: error
+    message: "Female (%) outside 0-100"
+
+  - id: sens_range
+    kind: range
+    sheet: Outcome_Level
+    field: Sensitivity (%)
+    min: 0
+    max: 100
+    severity: error
+    message: "Sensitivity (%) outside 0-100"
+
+  - id: spec_range
+    kind: range
+    sheet: Outcome_Level
+    field: Specificity (%)
+    min: 0
+    max: 100
+    severity: error
+    message: "Specificity (%) outside 0-100"
+
+  - id: ppv_range
+    kind: range
+    sheet: Outcome_Level
+    field: PPV (%)
+    min: 0
+    max: 100
+    severity: error
+    message: "PPV (%) outside 0-100"
+
+  - id: npv_range
+    kind: range
+    sheet: Outcome_Level
+    field: NPV (%)
+    min: 0
+    max: 100
+    severity: error
+    message: "NPV (%) outside 0-100"
+
+  - id: auc_range
+    kind: range
+    sheet: Outcome_Level
+    field: AUC
+    min: 0
+    max: 1
+    severity: error
+    message: "AUC outside 0-1"
+
+  - id: auc_ci_ordered
+    kind: le_field
+    sheet: Outcome_Level
+    field_a: AUC 95CI Lower
+    field_b: AUC 95CI Upper
+    severity: error
+    message: "AUC 95CI Lower > AUC 95CI Upper"
+
+  - id: n_analyzed_le_enrolled
+    kind: le_parent_field
+    sheet: Outcome_Level
+    field: N Analyzed
+    parent_sheet: Protocol_Level
+    parent_key_field: Protocol ID
+    parent_ref_field: Protocol ID
+    self_ref_field: Protocol ID
+    parent_field: N Analyzed
+    severity: warn
+    message: "Outcome N Analyzed > Protocol N Analyzed"
+
+  - id: n_readers_ge_2
+    kind: range
+    sheet: Outcome_Level
+    field: N Readers
+    min: 2
+    severity: warn
+    message: "N Readers < 2 when agreement metric populated"
+
+  # ---- conditional requirements (new rule kind) ----
+  - id: mri_field_strength
+    kind: conditional_required
+    sheet: Protocol_Level
+    condition_field: Modality
+    condition_value: MRI
+    required_field: Field Strength (T)
+    severity: error
+    message: "Field Strength (T) required when Modality is MRI"
+
+  - id: ct_kvp
+    kind: conditional_required
+    sheet: Protocol_Level
+    condition_field: Modality
+    condition_value: CT
+    required_field: kVp
+    severity: error
+    message: "kVp required when Modality is CT"
+
+  - id: contrast_dose
+    kind: conditional_required
+    sheet: Protocol_Level
+    condition_field: Contrast Agent
+    condition_value: none
+    required_field: Contrast Dose
+    condition_mode: not_equal
+    severity: error
+    message: "Contrast Dose required when Contrast Agent is not 'none'"
+
+  - id: diag_acc_sens
+    kind: conditional_required
+    sheet: Outcome_Level
+    condition_field: Result Type
+    condition_value: diagnostic_accuracy
+    required_field: Sensitivity (%)
+    severity: error
+    message: "Sensitivity (%) required when Result Type is diagnostic_accuracy"
+
+  - id: diag_acc_spec
+    kind: conditional_required
+    sheet: Outcome_Level
+    condition_field: Result Type
+    condition_value: diagnostic_accuracy
+    required_field: Specificity (%)
+    severity: error
+    message: "Specificity (%) required when Result Type is diagnostic_accuracy"
+
+  - id: agreement_metric
+    kind: conditional_required
+    sheet: Outcome_Level
+    condition_field: Result Type
+    condition_value: inter_reader_agreement
+    required_field: Agreement Metric
+    severity: error
+    message: "Agreement Metric required when Result Type is inter_reader_agreement"
+
+  - id: agreement_value
+    kind: conditional_required
+    sheet: Outcome_Level
+    condition_field: Result Type
+    condition_value: inter_reader_agreement
+    required_field: Agreement Value
+    severity: error
+    message: "Agreement Value required when Result Type is inter_reader_agreement"
+
+  - id: n_centers
+    kind: conditional_required
+    sheet: Study_Level
+    condition_field: Study Setting
+    condition_value: multicenter
+    required_field: N Centers
+    severity: error
+    message: "N Centers required when Study Setting is multicenter"
+
+  - id: registration_id
+    kind: conditional_required
+    sheet: Study_Level
+    condition_field: Registration
+    condition_value: none
+    required_field: Registration ID
+    condition_mode: not_equal
+    severity: error
+    message: "Registration ID required when Registration is not 'none'"
+
+  - id: quadas_d1_rob
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: QUADAS_2
+    required_field: "D1: Patient Selection — Risk of Bias"
+    severity: error
+    message: "QUADAS-2 D1 Risk of Bias required when Assessment Tool is QUADAS_2"
+
+  - id: quadas_d2_rob
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: QUADAS_2
+    required_field: "D2: Index Test — Risk of Bias"
+    severity: error
+    message: "QUADAS-2 D2 Risk of Bias required when Assessment Tool is QUADAS_2"
+
+  - id: quadas_d3_rob
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: QUADAS_2
+    required_field: "D3: Reference Standard — Risk of Bias"
+    severity: error
+    message: "QUADAS-2 D3 Risk of Bias required when Assessment Tool is QUADAS_2"
+
+  - id: quadas_d4_rob
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: QUADAS_2
+    required_field: "D4: Flow and Timing — Risk of Bias"
+    severity: error
+    message: "QUADAS-2 D4 Risk of Bias required when Assessment Tool is QUADAS_2"
+
+  - id: quadas_overall_rob
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: QUADAS_2
+    required_field: Overall Risk of Bias
+    severity: error
+    message: "Overall Risk of Bias required when Assessment Tool is QUADAS_2"
+
+  - id: quadas_overall_app
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: QUADAS_2
+    required_field: Overall Applicability
+    severity: error
+    message: "Overall Applicability required when Assessment Tool is QUADAS_2"
+
+  - id: robins_d1_confounding
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: ROBINS_I
+    required_field: "D1: Confounding"
+    severity: error
+    message: "ROBINS-I D1 Confounding required when Assessment Tool is ROBINS_I"
+
+  - id: robins_d2_selection
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: ROBINS_I
+    required_field: "D2: Selection of Participants"
+    severity: error
+    message: "ROBINS-I D2 Selection required when Assessment Tool is ROBINS_I"
+
+  - id: robins_d3_classification
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: ROBINS_I
+    required_field: "D3: Classification of Interventions"
+    severity: error
+    message: "ROBINS-I D3 Classification required when Assessment Tool is ROBINS_I"
+
+  - id: robins_d4_deviations
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: ROBINS_I
+    required_field: "D4: Deviations from Interventions"
+    severity: error
+    message: "ROBINS-I D4 Deviations required when Assessment Tool is ROBINS_I"
+
+  - id: robins_d5_missing
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: ROBINS_I
+    required_field: "D5: Missing Data"
+    severity: error
+    message: "ROBINS-I D5 Missing Data required when Assessment Tool is ROBINS_I"
+
+  - id: robins_d6_measurement
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: ROBINS_I
+    required_field: "D6: Measurement of Outcomes"
+    severity: error
+    message: "ROBINS-I D6 Measurement required when Assessment Tool is ROBINS_I"
+
+  - id: robins_d7_reporting
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: ROBINS_I
+    required_field: "D7: Selection of Reported Result"
+    severity: error
+    message: "ROBINS-I D7 Reporting required when Assessment Tool is ROBINS_I"
+
+  - id: robins_overall_rob
+    kind: conditional_required
+    sheet: Quality_Assessment
+    condition_field: Assessment Tool
+    condition_value: ROBINS_I
+    required_field: Overall Risk of Bias
+    severity: error
+    message: "Overall Risk of Bias required when Assessment Tool is ROBINS_I"

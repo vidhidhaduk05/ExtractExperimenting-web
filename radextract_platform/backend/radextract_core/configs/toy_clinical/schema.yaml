@@ -1,0 +1,35 @@
+codebook_sheet: Codebook
+data_start_row: 3
+data_sheets:
+- Trial
+- Arm
+missing_tokens:
+- NR
+- NA
+- unclear
+- ''
+type_defaults:
+  Integer: int
+  Number: float
+  Percentage: percent
+  Category: enum
+  Text: free_text
+entity_graph:
+  Trial:
+    role: parent
+    key: Trial ID
+    parent: null
+    parent_key: null
+  Arm:
+    role: child
+    key: Arm ID
+    parent: Trial
+    parent_key: Trial ID
+field_types:
+  Arm::Response Rate (%):
+    type: percent
+    tol: 0.1
+  Trial::N Enrolled:
+    type: int
+  Arm::N Allocated:
+    type: int

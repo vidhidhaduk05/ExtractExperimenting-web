@@ -1,0 +1,30 @@
+name: RadExtract Web App CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  frontend-build-check:
+    name: Frontend Vite Build & Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: radextract_platform/frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: radextract_platform/frontend
+        run: npm install --legacy-peer-deps
+
+      - name: Build Production Frontend
+        working-directory: radextract_platform/frontend
+        run: npx vite build
