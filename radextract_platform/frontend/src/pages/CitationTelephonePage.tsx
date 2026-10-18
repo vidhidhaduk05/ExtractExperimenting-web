@@ -50,22 +50,16 @@ export const CitationTelephonePage: React.FC = () => {
   }, [urlPaper]);
 
   // View tabs
-  const [activeTab, setActiveTab] = useState<"trail" | "custom">("trail");
+  const [activeTab, setActiveTab] = useState<"trail" | "custom">(urlPaper ? "trail" : "custom");
 
   // Custom audit state
   const [text, setText] = useState(
     "Nuclear PD-L1 promotes cell proliferation in an immune-dependent manner without interacting with PD-1 [1]. Contrast-induced nephropathy risk is reduced with bicarbonate hydration [2].\n\nReferences\n1. Wang Y, et al. Spatial Heterogeneity of PD-L1 in Cancer Therapy. Adv Sci. 2024.\n2. Merten GJ, et al. Prevention of contrast-medium-induced nephropathy with sodium bicarbonate. JAMA. 2004."
   );
   const [parsed, setParsed] = useState<any>(null);
-  const [claim, setClaim] = useState(
-    "Nuclear PD-L1 can promote cell proliferation in an immune-dependent manner without interacting with PD-1."
-  );
-  const [sourceTitle, setSourceTitle] = useState(
-    "Challenges Coexist with Opportunities: Spatial Heterogeneity Expression of PD-L1 in Cancer Therapy"
-  );
-  const [passage, setPassage] = useState(
-    "nPD-L1 can also serve as a key nuclear protein that promotes immune-independent cell proliferation without binding to PD-1."
-  );
+  const [claim, setClaim] = useState("");
+  const [sourceTitle, setSourceTitle] = useState("");
+  const [passage, setPassage] = useState("");
   const [comparison, setComparison] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,67 +72,33 @@ export const CitationTelephonePage: React.FC = () => {
     }
   };
 
-  const handleCustomParse = (e: React.FormEvent) => {
+  const handleCustomParse = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    setTimeout(() => {
-      setParsed({
-        totalClaimsFound: 2,
-        totalReferencesFound: 2,
-        claims: [
-          {
-            sentenceIndex: 0,
-            refNumber: "1",
-            citingSentence:
-              "Nuclear PD-L1 promotes cell proliferation in an immune-dependent manner without interacting with PD-1 [1].",
-          },
-          {
-            sentenceIndex: 1,
-            refNumber: "2",
-            citingSentence:
-              "Contrast-induced nephropathy risk is reduced with bicarbonate hydration [2].",
-          },
-        ],
-        references: {
-          "1": "Wang Y, et al. Spatial Heterogeneity of PD-L1 in Cancer Therapy. Adv Sci. 2024.",
-          "2": "Merten GJ, et al. Prevention of contrast-medium-induced nephropathy with sodium bicarbonate. JAMA. 2004.",
-        },
-      });
+    try {
+      const res = await api.auditCitationTelephoneText(text);
+      setParsed(res);
+    } catch (err: any) {
+      setError(err?.message || "Failed to extract citations");
+    } finally {
       setBusy(false);
-    }, 400);
+    }
   };
 
-  const handleComparePassage = (e: React.FormEvent) => {
+  const handleComparePassage = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    setTimeout(() => {
-      setComparison({
-        engine: "local_laya_system_1",
-        verdict: "different",
-        verdictLabel: "Contradiction / Semantic Drift Detected",
-        supportScore: 0.15,
-        ownResultScore: 0.85,
-        probabilities: {
-          matches: 0.05,
-          partlyMatches: 0.1,
-          goesFurther: 0.05,
-          moreCautious: 0.05,
-          changed: 0.7,
-          notThere: 0.05,
-        },
-        unsureness: {
-          isGenuinelyUnsure: false,
-          margin: 0.6,
-          entropyScore: 0.32,
-          reason:
-            "Critical Semantic Inversion: Citing claim asserts 'immune-dependent' proliferation, but source passage states 'immune-INDEPENDENT'.",
-          recommendation: "contradiction_flagged",
-        },
-      });
+    setComparison(null);
+    try {
+      const res = await api.evaluateCitationTelephoneClaim(claim, passage, sourceTitle);
+      setComparison(res);
+    } catch (err: any) {
+      setError(err?.message || "Evaluation failed");
+    } finally {
       setBusy(false);
-    }, 500);
+    }
   };
 
   return (
@@ -282,20 +242,24 @@ export const CitationTelephonePage: React.FC = () => {
               Paste manuscript paragraphs containing bracketed citations such as [1] with a numbered References list.
             </p>
             <form onSubmit={handleCustomParse} className="space-y-3">
-              <textarea
-                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-3 text-xs font-mono min-h-40 focus:ring-2 focus:ring-[#381A61]"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                required
-                disabled={busy}
-              />
+              <label className="block space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <span>Manuscript text</span>
+                <textarea
+                  aria-label="Manuscript text"
+                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-3 text-xs font-mono min-h-40 focus:ring-2 focus:ring-[#381A61]"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  required
+                  disabled={busy}
+                />
+              </label>
               <button
                 type="submit"
                 disabled={busy || !text.trim()}
                 className="px-4 py-2 rounded-lg bg-[#381A61] hover:bg-[#2A1348] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <FileText className="w-3.5 h-3.5" />
-                Extract Citations (Demo)
+                Extract citations
               </button>
             </form>
 
@@ -317,11 +281,12 @@ export const CitationTelephonePage: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setClaim(item.citingSentence);
-                        setSourceTitle(parsed.references[item.refNumber]);
+                        setSourceTitle(parsed.references[item.refNumber] || "");
+                        setPassage("");
                       }}
                       className="text-[11px] font-semibold text-[#381A61] dark:text-[#F9D14A] underline"
                     >
-                      Compare with source text →
+                      Compare this claim with source text
                     </button>
                   </div>
                 ))}
@@ -334,10 +299,16 @@ export const CitationTelephonePage: React.FC = () => {
             <h2 className="font-serif text-lg font-bold text-[#381A61] dark:text-[#F9D14A]">
               2. Compare Claim with Original Source Passage
             </h2>
+            {error && (
+              <div role="alert" className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+                {error}
+              </div>
+            )}
             <form onSubmit={handleComparePassage} className="space-y-3">
               <label className="block space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
                 <span>Citing claim</span>
                 <textarea
+                  aria-label="Citing claim"
                   className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-3 text-xs font-mono min-h-20 focus:ring-2 focus:ring-[#381A61]"
                   value={claim}
                   onChange={(e) => setClaim(e.target.value)}
@@ -349,6 +320,7 @@ export const CitationTelephonePage: React.FC = () => {
               <label className="block space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
                 <span>Source publication title</span>
                 <input
+                  aria-label="Source publication title"
                   className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-2.5 text-xs focus:ring-2 focus:ring-[#381A61]"
                   value={sourceTitle}
                   onChange={(e) => setSourceTitle(e.target.value)}
@@ -357,8 +329,9 @@ export const CitationTelephonePage: React.FC = () => {
               </label>
 
               <label className="block space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                <span>Source passage text</span>
+                <span>Actual source passage</span>
                 <textarea
+                  aria-label="Actual source passage"
                   className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-3 text-xs font-mono min-h-24 focus:ring-2 focus:ring-[#381A61]"
                   value={passage}
                   onChange={(e) => setPassage(e.target.value)}
@@ -370,10 +343,10 @@ export const CitationTelephonePage: React.FC = () => {
               <button
                 type="submit"
                 disabled={busy || !claim.trim() || !passage.trim()}
-                className="px-4 py-2 rounded-lg bg-[#381A61] hover:bg-[#2A1348] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="px-4 py-2 rounded-lg bg-[#381A61] hover:bg-[#2A1348] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
               >
                 <Share2 className="w-3.5 h-3.5" />
-                Run Passage Audit (Demo)
+                Compare passage
               </button>
             </form>
 
@@ -383,14 +356,10 @@ export const CitationTelephonePage: React.FC = () => {
                   <span className="font-serif font-bold text-sm text-amber-900 dark:text-amber-200">
                     {comparison.verdictLabel}
                   </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
-                    Drift: 70%
-                  </span>
                 </div>
-                <p className="text-amber-900/90 dark:text-amber-200/90">{comparison.unsureness.reason}</p>
-                <p className="text-[10.5px] text-zinc-500 pt-1 border-t border-amber-200 dark:border-amber-900">
-                  Simulated local Laya passage calibration. Traces discrepancies between the citing sentence and source passage.
-                </p>
+                {comparison.unsureness?.reason && (
+                  <p className="text-amber-900/90 dark:text-amber-200/90">{comparison.unsureness.reason}</p>
+                )}
               </div>
             )}
           </section>

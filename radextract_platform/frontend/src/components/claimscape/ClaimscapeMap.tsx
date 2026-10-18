@@ -307,7 +307,7 @@ interface DotSymbolProps {
   r: number;
 }
 
-const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, r }) => {
+const DotSymbol: React.FC<DotSymbolProps> = React.memo(({ category, direct, strength, r }) => {
   const opacity =
     category === "supports" || category === "contradicts" || category === "mixed"
       ? 0.45 + 0.55 * Math.min(1, Math.max(0, (strength - 0.6) / 0.4))
@@ -393,7 +393,7 @@ const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, r }) 
 };
 
 // Row verdict & Wilson score interval summary
-const RowSummary: React.FC<{ summary: TierSummary }> = ({ summary }) => {
+const RowSummary: React.FC<{ summary: TierSummary }> = React.memo(({ summary }) => {
   const { supports, mixed, contradicts } = summary.counts;
 
   if (!summary.papers.length) {

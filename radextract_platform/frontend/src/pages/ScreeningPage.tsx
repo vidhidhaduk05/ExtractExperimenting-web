@@ -353,7 +353,7 @@ export function ScreeningPage() {
   }, [statusFilter, stageFilter, filteredStudies, selectedStudyId]);
 
   // Selection and keyboard actions use the same visible record set as all filters.
-  const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || null;
+  const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || studyList.find(s => s.study_id === selectedStudyId) || null;
   const prevActiveStudyIdRef = useRef<string | null>(null);
   useEffect(() => {
     const currentId = selectedStudy?.study_id || null;
@@ -1195,6 +1195,7 @@ export function ScreeningPage() {
 
           {/* Quick Dropdowns & Saved Filter */}
           <div className="flex items-center gap-2 flex-wrap">
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

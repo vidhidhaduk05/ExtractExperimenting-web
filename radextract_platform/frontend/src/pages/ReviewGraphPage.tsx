@@ -77,13 +77,21 @@ export function ReviewGraphPage() {
       );
       // Add direct study→variable links when extractions are hidden
       const studyVarPairs = new Set<string>();
+      const valueOfTargetsBySource = new Map<string, string[]>();
+      graph.links.forEach((l) => {
+        if (l.relation === "value_of") {
+          const list = valueOfTargetsBySource.get(l.source) || [];
+          list.push(l.target);
+          valueOfTargetsBySource.set(l.source, list);
+        }
+      });
+
       graph.links.forEach((l) => {
         if (l.relation === "has_extraction") {
-          // study → extraction
           const studyId = l.source;
-          graph.links.forEach((l2) => {
-            if (l2.source === l.target && l2.relation === "value_of") {
-              const varId = l2.target;
+          const varIds = valueOfTargetsBySource.get(l.target);
+          if (varIds) {
+            varIds.forEach((varId) => {
               const key = `${studyId}->${varId}`;
               if (!studyVarPairs.has(key)) {
                 studyVarPairs.add(key);
@@ -93,8 +101,8 @@ export function ReviewGraphPage() {
                   relation: "extracts",
                 });
               }
-            }
-          });
+            });
+          }
         }
       });
     }
