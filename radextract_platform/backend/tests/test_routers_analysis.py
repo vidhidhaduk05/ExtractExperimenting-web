@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 from services import analysis_service
 
 
@@ -322,3 +323,22 @@ class TestReportEndpoints:
         assert response.headers["content-type"] == "application/json"
         data = json.loads(response.text)
         assert data == mock_report
+
+
+class TestSecurityAccessControl:
+
+    def test_unauthorized_user_denied_access(self, client, project):
+        db = get_connection()
+        db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES ('unauth_analysis_user', 'unauth_analysis_user', 'test')")
+        db.commit()
+        db.close()
+        token = create_access_token('unauth_analysis_user', 'unauth_analysis_user', 'viewer')
+        headers = {"Authorization": f"Bearer {token}"}
+
+        assert client.get(f"/api/projects/{project}/analysis/profile", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/heterogeneity?outcome=test", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/forest-data?outcome=test", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/funnel-data?outcome=test", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/sensitivity?outcome=test", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/outcomes", headers=headers).status_code == 403
+        assert client.get(f"/api/projects/{project}/analysis/report/download", headers=headers).status_code == 403
