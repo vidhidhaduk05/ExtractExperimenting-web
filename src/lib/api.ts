@@ -3520,7 +3520,7 @@ export const api = {
   getStudyClarifications: (studyId: string) =>
     request<ClarificationQuestion[]>(`/studies/${studyId}/clarifications`),
 
-  // ── K-Dense-AI Scientific Review and Statistical Methods ──
+  // ── Scientific Review and Statistical Methods ──
 
   analyzeStats: (data: { group1: number[], group2: number[], group1_name?: string, group2_name?: string, paired?: boolean, alpha?: number }) =>
     request<any>('/stats/analyze', { method: 'POST', body: JSON.stringify(data) }),

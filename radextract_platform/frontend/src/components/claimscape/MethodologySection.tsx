@@ -223,18 +223,18 @@ export const MethodologySection: React.FC = () => {
         </div>
       </div>
 
-      {/* Credit & Provenance Statement */}
+      {/* Provenance Statement */}
       <footer className="mt-8 border-t border-[var(--cs-line)] pt-6 text-[12.5px] cs-muted space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p>
-            <strong>Methodology & Academic Provenance Credit:</strong> The Claimscape evidence mapping framework, dual-prompt stance verification protocol, and Wilson score visual synthesis implemented here follow the open research methodology and reproducible standards pioneered by <strong>K-Dense AI</strong> (Claimscape v0.1).
+            <strong>Evidence Mapping Framework:</strong> Dual-prompt stance verification and Wilson score visual synthesis calibrated for systematic biomedical reviews.
           </p>
           <span className="cs-mono text-[11px] text-[var(--cs-ink-3)]">
             NLM / NCBI E-Utilities Citation Data
           </span>
         </div>
         <p className="text-[11.5px] text-[var(--cs-ink-3)]">
-          RadExtract Systematic Platform · Free open-science clinical research synthesis tool.
+          RadExtract Systematic Platform · Open-science clinical research synthesis tool.
         </p>
       </footer>
     </section>

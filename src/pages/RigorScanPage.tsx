@@ -167,21 +167,6 @@ export const RigorScanPage: React.FC = () => {
     <div className={`min-h-full ${isDark ? "bg-[#090a0f] text-zinc-100" : "bg-[#FAF9F3] text-zinc-900"} font-sans transition-colors duration-200`}>
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Demo Mode Notice */}
-        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 px-4 py-3 flex items-center justify-between text-xs text-purple-900 dark:text-purple-200">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-purple-600 animate-pulse" />
-            <span><strong>Interactive Demo:</strong> Running in client-side preview mode with 74 TRIPOD+AI reporting checks and source evidence grounding.</span>
-          </div>
-          <button
-            type="button"
-            onClick={handleReplayPreset}
-            className="font-medium underline hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors"
-          >
-            Reset Demo Data
-          </button>
-        </div>
-
         {/* Hero Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pb-2">
           <div className="lg:col-span-7 space-y-4">

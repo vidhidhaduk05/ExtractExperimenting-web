@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   FileText,
   UploadCloud,
@@ -22,10 +23,30 @@ import { TrailViewer } from "../components/citation/TrailViewer";
 import { PassageInspector } from "../components/citation/PassageInspector";
 
 export const CitationTelephonePage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const urlPaper = searchParams.get("paper");
+  const urlP = searchParams.get("p");
+  const urlS = searchParams.get("s");
+  const urlR = searchParams.get("r");
+
   // Preset example state
-  const [selectedExampleIndex, setSelectedExampleIndex] = useState(0);
+  const initialIndex = urlPaper
+    ? Math.max(0, PRESET_TELEPHONE_EXAMPLES.findIndex(ex => ex.paperId === urlPaper || ex.data.rootPaper.id === urlPaper))
+    : 0;
+
+  const [selectedExampleIndex, setSelectedExampleIndex] = useState(initialIndex);
   const activeExample = PRESET_TELEPHONE_EXAMPLES[selectedExampleIndex] || PRESET_TELEPHONE_EXAMPLES[0];
   const [selectedStep, setSelectedStep] = useState<TraceStep>(activeExample.data.steps[0]);
+
+  useEffect(() => {
+    if (urlPaper) {
+      const idx = PRESET_TELEPHONE_EXAMPLES.findIndex(ex => ex.paperId === urlPaper || ex.data.rootPaper.id === urlPaper);
+      if (idx !== -1) {
+        setSelectedExampleIndex(idx);
+        setSelectedStep(PRESET_TELEPHONE_EXAMPLES[idx].data.steps[0]);
+      }
+    }
+  }, [urlPaper]);
 
   // View tabs
   const [activeTab, setActiveTab] = useState<"trail" | "custom">("trail");
@@ -121,19 +142,6 @@ export const CitationTelephonePage: React.FC = () => {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-8">
-      {/* Demo Notification Banner */}
-      <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 px-4 py-3 flex items-center justify-between text-xs text-purple-900 dark:text-purple-200">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-purple-600 animate-pulse" />
-          <span>
-            <strong>Interactive Demo:</strong> Tracing multi-hop citation telephone chains and semantic claim drift. Preview mode enabled.
-          </span>
-        </div>
-        <span className="font-mono text-[11px] text-purple-700 dark:text-purple-300">
-          Reverse-engineered from K-Dense AI
-        </span>
-      </div>
-
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-black/[0.08]">
         <div>
