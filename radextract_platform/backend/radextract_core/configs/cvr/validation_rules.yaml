@@ -1,0 +1,121 @@
+# CVR validation rules — declarative generalization of the original hardcoded
+# checks in cvr_helpers.check_relational_integrity + validate_cvr_workbook.py.
+#
+# Rule kinds understood by litextract.validate:
+#   required             - codebook 'Required' fields must be populated
+#   vocab                - controlled-vocab cells hold an allowed value or missing token
+#   numeric_format       - a numeric field parses to a scalar number (else warn: non-scalar)
+#   range                - numeric field within [min, max]
+#   year                 - 4-digit year in [min, max]
+#   key_resolves         - child key's parent value exists in the parent sheet
+#   unique_within_parent - child key unique within its parent group
+#   comparator_resolves  - an optional cross-reference field resolves (or is a missing token)
+#   le_field             - field_a <= field_b within the same row
+#   le_parent_field      - child numeric field <= a parent-row numeric field
+#
+# 'required' and 'vocab' are applied codebook-wide automatically by validate();
+# they are listed here only to document intent. Severity: error | warn.
+
+rules:
+  # ---- referential integrity (was: hardcoded Study->Cohort->Outcome) ----
+  - id: cohort_study_resolves
+    kind: key_resolves
+    sheet: Cohort_Methods
+    parent_key_field: Study ID
+    severity: error
+    message: "Cohort_Methods Study ID not found in Study_Level"
+
+  - id: cohort_id_unique_in_study
+    kind: unique_within_parent
+    sheet: Cohort_Methods
+    parent_field: Study ID
+    key_field: Cohort ID
+    severity: error
+    message: "Duplicate Cohort ID within a study"
+
+  - id: outcome_study_resolves
+    kind: key_resolves
+    sheet: Outcome_Level
+    parent_key_field: Study ID
+    parent_sheet: Study_Level
+    severity: error
+    message: "Outcome_Level Study ID not found in Study_Level"
+
+  - id: outcome_cohort_resolves
+    kind: comparator_resolves
+    sheet: Outcome_Level
+    ref_field: Cohort ID
+    parent_sheet: Cohort_Methods
+    parent_key_field: Study ID
+    parent_ref_field: Cohort ID
+    allow_missing: false
+    severity: error
+    message: "Outcome_Level Cohort ID has no matching Cohort_Methods row"
+
+  - id: comparator_cohort_resolves
+    kind: comparator_resolves
+    sheet: Outcome_Level
+    ref_field: Comparator Cohort ID
+    parent_sheet: Cohort_Methods
+    parent_key_field: Study ID
+    parent_ref_field: Cohort ID
+    allow_missing: true
+    severity: error
+    message: "Comparator Cohort ID unresolved"
+
+  # ---- logical sanity ----
+  - id: female_pct_range
+    kind: range
+    sheet: Cohort_Methods
+    field: Female (%)
+    min: 0
+    max: 100
+    severity: error
+    message: "Female (%) outside 0-100"
+
+  - id: pub_year_valid
+    kind: year
+    sheet: Study_Level
+    field: Publication Year
+    min: 1950
+    max: 2100
+    severity: error
+    message: "Publication Year not a plausible 4-digit year"
+
+  - id: failed_le_denominator
+    kind: le_field
+    sheet: Outcome_Level
+    field_a: Failed Subjects (n)
+    field_b: Failure Denominator (n)
+    severity: warn
+    message: "Failed Subjects > Failure Denominator"
+
+  # NOTE: deliberately 'warn', not 'error'. N Analyzed can legitimately exceed
+  # the cohort patient count when the analytic unit differs (examination pairs,
+  # territory-level CVR counts). Preserves the validated CVR 0-errors outcome.
+  - id: n_analyzed_le_cohort_size
+    kind: le_parent_field
+    sheet: Outcome_Level
+    field: N Analyzed
+    parent_sheet: Cohort_Methods
+    parent_key_field: Study ID
+    parent_ref_field: Cohort ID
+    self_ref_field: Cohort ID
+    parent_field: Sample Size (Reported)
+    severity: warn
+    message: "N Analyzed > cohort Sample Size (analytic-unit cases expected)"
+
+  # ---- numeric format (faithful non-scalars -> warn, never error) ----
+  - id: central_estimate_numeric
+    kind: numeric_format
+    sheet: Outcome_Level
+    field: Central Estimate
+    severity: warn
+    message: "Central Estimate is non-scalar (range / mean±SD text) — faithful transcription"
+
+  - id: dispersion_value_numeric
+    kind: numeric_format
+    sheet: Outcome_Level
+    field: Dispersion Value
+    severity: warn
+    message: "Dispersion Value is non-scalar — faithful transcription"

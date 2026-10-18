@@ -1,0 +1,35 @@
+# Caddy reverse proxy configuration for RadExtract Platform
+# Supports automatic HTTPS via Let's Encrypt for custom domains,
+# or plain HTTP / local testing on localhost.
+
+{$DOMAIN:localhost} {
+    # Encode with zstd and gzip for high throughput
+    encode zstd gzip
+
+    # Proxy all API requests to the FastAPI backend container
+    handle /api/* {
+        reverse_proxy api:8000 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Proxy health check
+    handle /health {
+        reverse_proxy api:8000
+    }
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Default fallback response for non-API endpoints
+    handle {
+        respond "RadExtract Platform API Gateway — Service Online. Frontend is hosted on GitHub Pages or custom domain." 200
+    }
+}

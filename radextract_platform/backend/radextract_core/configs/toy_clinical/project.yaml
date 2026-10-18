@@ -1,0 +1,3 @@
+name: toy_clinical
+description: Minimal 2-sheet clinical-trial schema proving engine reusability.
+codebook: codebook.xlsx

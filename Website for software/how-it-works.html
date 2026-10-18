@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f1e6" />
+  <title>How it works — MetaSynthesis AI</title>
+  <meta name="description" content="How MetaSynthesis AI extracts data from systematic reviews: dual-extractor + referee architecture, sentence-level provenance, and an append-only audited workbook. AI-assisted, human-verified." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400;1,8..60,500&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       Design tokens (mirrors version_1_website_MetaSynthesis.html)
+       ============================================================ */
+    :root {
+      --beige-bg: #f4f1e6;
+      --beige-card: #eae6d7;
+      --beige-hover: #e0dccf;
+      --beige-deep: #d5d0c3;
+
+      --ink-black: #0f0f0f;
+      --ink-mid: #444;
+      --ink-light: #666;
+      --ink-muted: #888;
+      --ink-faint: #9c9487;
+
+      --divider: #d5d0c3;
+      --border-soft: rgba(0,0,0,0.08);
+      --border-mid: rgba(0,0,0,0.12);
+      --border-firm: rgba(0,0,0,0.20);
+
+      --sage: #5B7553;
+      --ochre: #B5764A;
+      --plum: #7B6B8A;
+      --amber: #C4924A;
+
+      --note-sage: #c5cebd;
+      --note-ochre: #dbc9a0;
+      --note-plum: #c4b5c8;
+      --note-cream: #e0dccf;
+
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+      --radius-2xl: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif;
+      background-color: var(--beige-bg);
+      color: var(--ink-black);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .font-body    { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; }
+    .font-heading { font-family: 'EB Garamond', Georgia, serif; }
+    .font-sans    { font-family: 'Inter', system-ui, sans-serif; }
+    .font-mono    { font-family: 'Space Mono', monospace; }
+
+    p {
+      color: var(--ink-mid);
+      font-family: 'Source Serif 4', serif;
+      font-size: 15px;
+      line-height: 1.55;
+      letter-spacing: -0.01em;
+      max-width: 90%;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--sage);
+      outline-offset: 2px;
+    }
+
+    /* ============================================================
+       Layout
+       ============================================================ */
+    .section-divider { border-top: 1px solid var(--divider); }
+    .section-divider:first-of-type { border-top: none; }
+
+    .section-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 56px 24px;
+    }
+    @media (min-width: 768px) { .section-inner { padding: 72px 48px; } }
+    @media (min-width: 1024px) { .section-inner { padding: 96px 64px; } }
+
+    /* ============================================================
+       Header
+       ============================================================ */
+    .site-header {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--beige-bg);
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .site-header__inner {
+      max-width: 1440px; margin: 0 auto;
+      padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    }
+    .logo {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 20px; font-weight: 500;
+      color: var(--ink-black);
+    }
+    .logo__mark {
+      /* [[LOGO MARK INSTRUCTION]] keep S glyph until M / MS monogram ships */
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--ink-black); color: var(--beige-bg);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: 'EB Garamond', serif;
+      font-style: italic; font-size: 16px; font-weight: 600;
+    }
+    .nav-desktop {
+      display: none;
+      align-items: center; gap: 28px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 500;
+      color: var(--ink-mid);
+    }
+    .nav-desktop a:hover { color: var(--ink-black); }
+    .nav-actions { display: none; align-items: center; gap: 12px; }
+    @media (min-width: 768px) {
+      .nav-desktop, .nav-actions { display: inline-flex; }
+      #hamburger { display: none; }
+    }
+
+    .btn-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid var(--border-mid);
+      border-radius: 999px;
+      padding: 7px 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 500;
+      background: transparent; color: var(--ink-black);
+      cursor: pointer; transition: background 0.2s;
+    }
+    .btn-pill:hover { background: var(--beige-hover); }
+
+    .btn-solid {
+      display: inline-flex; align-items: center; gap: 8px;
+      background-color: var(--ink-black); color: var(--beige-bg);
+      border: none; border-radius: var(--radius-xl);
+      padding: 14px 32px;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.05rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn-solid:hover { opacity: 0.92; }
+    .btn-solid:hover .arrow { transform: translateX(4px); }
+    .btn-solid .arrow { display: inline-block; transition: transform 0.3s; }
+
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: transparent;
+      border: 1px solid var(--border-firm);
+      border-radius: var(--radius-xl);
+      padding: 14px 28px;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.05rem; font-weight: 600;
+      color: var(--ink-black);
+      cursor: pointer; transition: background 0.2s;
+    }
+    .btn-outline:hover { background: var(--beige-hover); }
+
+    #hamburger {
+      display: inline-flex; width: 36px; height: 36px;
+      border: 1px solid var(--border-mid); border-radius: 8px;
+      background: transparent;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    #hamburger span {
+      display: block; width: 16px; height: 1.5px;
+      background: var(--ink-black);
+      position: relative;
+    }
+    #hamburger span::before, #hamburger span::after {
+      content: ""; position: absolute; left: 0;
+      width: 16px; height: 1.5px; background: var(--ink-black);
+    }
+    #hamburger span::before { top: -5px; }
+    #hamburger span::after  { top:  5px; }
+
+    #mobile-menu {
+      display: none;
+      border-top: 1px solid var(--border-soft);
+      padding: 16px 24px 24px;
+      background: var(--beige-bg);
+    }
+    #mobile-menu.open { display: block; }
+    #mobile-menu a {
+      display: block; padding: 10px 0;
+      font-family: 'Inter', sans-serif; font-size: 14px;
+      color: var(--ink-mid);
+      border-bottom: 1px solid var(--border-soft);
+    }
+    #mobile-menu .mobile-cta { margin-top: 16px; }
+
+    /* ============================================================
+       Eyebrow + headings
+       ============================================================ */
+    .section-eyebrow {
+      display: flex; align-items: center; gap: 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; letter-spacing: 0.08em;
+      color: var(--ink-muted); text-transform: uppercase;
+    }
+    .eyebrow-line { flex: 0 0 48px; height: 1px; background: var(--divider); }
+    .eyebrow-dot {
+      display: inline-block; width: 6px; height: 6px;
+      border-radius: 50%; background: var(--sage);
+      animation: pulse-slow 2s ease-in-out infinite;
+    }
+
+    .section-h2 {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(32px, 4.2vw, 48px);
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+      color: var(--ink-black);
+      margin: 24px 0 0 0; max-width: 820px;
+    }
+    .italic { font-style: italic; }
+
+    .hero-h1 {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(42px, 6vw, 72px);
+      line-height: 1.05; letter-spacing: -0.02em;
+      color: var(--ink-black);
+      margin: 32px 0 0 0; max-width: 900px;
+    }
+
+    h3.sub-h3 {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 400; font-style: italic;
+      font-size: 22px;
+      letter-spacing: -0.01em;
+      color: var(--ink-black);
+      margin: 0 0 8px 0;
+    }
+
+    /* ============================================================
+       Animations
+       ============================================================ */
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.4; transform: scale(1.4); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up {
+      opacity: 0; transform: translateY(20px);
+      transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+    .fade-up.visible.d1 { transition-delay: 0.1s; }
+    .fade-up.visible.d2 { transition-delay: 0.2s; }
+    .fade-up.visible.d3 { transition-delay: 0.3s; }
+
+    /* ============================================================
+       Step list (numbered process)
+       ============================================================ */
+    .step-list {
+      margin: 56px 0 0 0;
+      display: grid; gap: 24px;
+      max-width: 1080px;
+    }
+    .step {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding: 28px;
+      background: rgba(255, 255, 255, 0.35);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-2xl);
+    }
+    @media (min-width: 768px) {
+      .step { grid-template-columns: 120px 1fr; gap: 32px; padding: 36px 40px; }
+    }
+    .step-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+    .step-num strong {
+      display: block;
+      font-family: 'EB Garamond', Georgia, serif;
+      font-style: italic;
+      font-size: 56px; font-weight: 400;
+      color: var(--sage);
+      letter-spacing: -0.02em;
+      line-height: 1;
+      margin-top: 4px;
+    }
+    .step-body h3 {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 28px; line-height: 1.2;
+      letter-spacing: -0.01em;
+      color: var(--ink-black);
+      margin: 0 0 12px 0;
+    }
+    .step-body p { margin: 0 0 12px 0; max-width: 660px; }
+    .step-body p:last-child { margin-bottom: 0; }
+    .step-meta {
+      margin-top: 16px;
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .card-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      border: 1px solid var(--border-mid); border-radius: 999px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--ink-mid);
+      background: transparent;
+    }
+
+    .card-code {
+      background: rgba(0,0,0,0.04);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; line-height: 1.9;
+      margin-top: 20px;
+      color: var(--ink-mid);
+      overflow-x: auto;
+    }
+
+    /* ============================================================
+       Architecture diagram (simple, all inline)
+       ============================================================ */
+    .arch-grid {
+      margin-top: 48px;
+      display: grid; gap: 20px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 768px) {
+      .arch-grid { grid-template-columns: 1fr 1fr 1fr; }
+    }
+    .arch-card {
+      background: var(--beige-bg);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-2xl);
+      padding: 24px;
+      position: relative;
+    }
+    .arch-card .pin {
+      position: absolute; top: -6px; left: 24px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--sage);
+    }
+    .arch-card .pin.amber { background: var(--ochre); }
+    .arch-card .pin.plum  { background: var(--plum); }
+    .arch-card .label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 8px;
+    }
+    .arch-card h4 {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 22px; line-height: 1.2;
+      margin: 0 0 8px 0;
+    }
+    .arch-card p { margin: 0; font-size: 14px; }
+
+    /* ============================================================
+       Compare table (vs ChatGPT-style ad-hoc extraction)
+       ============================================================ */
+    .compare-wrap {
+      margin-top: 48px; max-width: 1080px;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-2xl);
+      overflow: hidden;
+    }
+    .compare-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      border-bottom: 1px solid var(--divider);
+    }
+    @media (min-width: 768px) {
+      .compare-row { grid-template-columns: 1.2fr 1fr 1fr; }
+    }
+    .compare-row:last-child { border-bottom: none; }
+    .compare-cell {
+      padding: 18px 22px;
+      font-family: 'Source Serif 4', serif;
+      font-size: 14px; line-height: 1.5;
+      color: var(--ink-mid);
+      border-right: 1px solid var(--divider);
+    }
+    .compare-cell:last-child { border-right: none; }
+    @media (max-width: 767px) {
+      .compare-cell { border-right: none; border-bottom: 1px solid var(--divider); }
+      .compare-cell:last-child { border-bottom: none; }
+    }
+    .compare-row.head .compare-cell {
+      background: var(--beige-card);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+    .compare-row.head .compare-cell.col-ms { color: var(--sage); }
+    .compare-cell.label-cell {
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 17px;
+      color: var(--ink-black);
+      background: rgba(0,0,0,0.02);
+    }
+
+    /* ============================================================
+       Aside callout (limits / not-yet-validated)
+       ============================================================ */
+    .aside-card {
+      margin-top: 48px;
+      max-width: 820px;
+      background: var(--note-cream);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-2xl);
+      padding: 28px 32px;
+      position: relative;
+    }
+    .aside-card::before {
+      content: "";
+      position: absolute; top: -6px; left: 28px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--ochre);
+    }
+    .aside-card h3 {
+      margin: 0 0 12px 0;
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 400; font-size: 22px;
+    }
+    .aside-card p { margin: 0 0 12px 0; }
+    .aside-card p:last-child { margin-bottom: 0; }
+
+    /* ============================================================
+       FAQ (waitlist-style)
+       ============================================================ */
+    .faq-list {
+      margin-top: 40px; max-width: 820px;
+      border-top: 1px solid var(--divider);
+    }
+    .faq-item { border-bottom: 1px solid var(--divider); }
+    .faq-q {
+      width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 22px 0;
+      background: transparent; border: none; text-align: left;
+      font-family: 'Source Serif 4', serif;
+      font-size: 17px; color: var(--ink-black); cursor: pointer;
+    }
+    .faq-chevron {
+      font-family: 'Space Mono', monospace;
+      font-size: 18px; color: var(--ink-muted);
+      transition: transform 0.2s;
+    }
+    .faq-q[aria-expanded="true"] .faq-chevron { transform: rotate(45deg); }
+    .faq-answer {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .faq-answer p { margin: 0 0 22px 0; max-width: 720px; }
+
+    /* ============================================================
+       CTA strip
+       ============================================================ */
+    .cta-strip {
+      display: flex; flex-wrap: wrap; gap: 16px;
+      margin-top: 32px; align-items: center;
+    }
+    .cta-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; letter-spacing: 0.04em;
+      color: var(--ink-muted);
+    }
+
+    /* ============================================================
+       Footer
+       ============================================================ */
+    .site-footer {
+      background: var(--ink-black); color: var(--beige-bg);
+      padding: 64px 24px 32px;
+    }
+    .footer-inner {
+      max-width: 1440px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr; gap: 40px;
+    }
+    @media (min-width: 768px) {
+      .footer-inner { grid-template-columns: 2fr 1fr 1fr 1fr; }
+    }
+    .footer-brand p {
+      color: rgba(244,241,230,0.7);
+      max-width: 360px; margin: 16px 0 0 0;
+      font-size: 14px;
+    }
+    .footer-col h4 {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(244,241,230,0.6);
+      margin: 0 0 16px 0;
+    }
+    .footer-col ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+    .footer-col a {
+      font-family: 'Inter', sans-serif; font-size: 14px;
+      color: rgba(244,241,230,0.85);
+    }
+    .footer-col a:hover { color: var(--beige-bg); }
+    .footer-bottom {
+      max-width: 1440px; margin: 48px auto 0;
+      padding-top: 24px;
+      border-top: 1px solid rgba(244,241,230,0.12);
+      display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; letter-spacing: 0.04em;
+      color: rgba(244,241,230,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!--
+    [[LINKS NOTICE]]
+    Anchors using /#section-id point back to the landing page
+    (version_1_website_MetaSynthesis.html). All [[TOKEN]] placeholders are intentional;
+    do a single find-and-replace pass before going live.
+  -->
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a href="[[HOME_URL]]" class="logo" aria-label="MetaSynthesis AI — home">
+        <!-- [[LOGO MARK INSTRUCTION]] retain S glyph until M / MS monogram is finalized -->
+        <span class="logo__mark">S</span>
+        <span>MetaSynthesis AI</span>
+      </a>
+
+      <nav class="nav-desktop" aria-label="Primary">
+        <a href="/#features">Features</a>
+        <a href="/#evidence">Evidence</a>
+        <a href="/how-it-works.html" aria-current="page" style="color:var(--ink-black);">How it works</a>
+        <a href="/#pricing">Pricing</a>
+        <a href="/#about">About</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="[[SIGN_IN_URL]]" class="btn-pill">Sign in</a>
+        <a href="/waitlist.html" class="btn-pill" style="background:var(--ink-black); color:var(--beige-bg); border-color:var(--ink-black);">
+          Get Early Access
+          <span class="arrow" style="display:inline-block;transition:transform 0.3s;">→</span>
+        </a>
+      </div>
+
+      <button id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+        <span></span>
+      </button>
+    </div>
+
+    <div id="mobile-menu" role="region" aria-label="Mobile navigation">
+      <a href="/#features">Features</a>
+      <a href="/#evidence">Evidence</a>
+      <a href="/how-it-works.html" aria-current="page">How it works</a>
+      <a href="/#pricing">Pricing</a>
+      <a href="/#about">About</a>
+      <a href="[[SIGN_IN_URL]]">Sign in</a>
+      <a href="/waitlist.html" class="btn-solid mobile-cta">
+        Get Early Access
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       HERO
+       ============================================================ -->
+  <section class="section-divider" aria-label="How it works hero">
+    <div class="section-inner">
+      <div class="section-eyebrow fade-up">
+        <span class="eyebrow-dot" aria-hidden="true"></span>
+        <span>[ 01 ]</span>
+        <span class="eyebrow-line"></span>
+        <span>HOW IT WORKS</span>
+      </div>
+
+      <h1 class="hero-h1 fade-up d1">
+        A six-step pipeline,<br>
+        <span class="italic" style="color:var(--plum);">designed to be auditable.</span>
+      </h1>
+
+      <p class="font-body fade-up d2" style="margin-top:28px; max-width:680px; font-size:17px;">
+        MetaSynthesis AI extracts data from the studies in your review and writes the result
+        into an append-only workbook. Every value is linked back to a sentence in the source
+        PDF, two independent extractors are run on every field, and a referee step flags
+        disagreements before they reach you.
+      </p>
+
+      <p class="font-body fade-up d3" style="margin-top:16px; max-width:680px;">
+        The tool is AI-assisted, human-verified. It is not a replacement reviewer and not a
+        medical device. The TRIPOD-LLM validation study is in preparation; numbers below are
+        framed as targets against published literature, not measured benchmarks.
+      </p>
+
+      <div class="cta-strip fade-up d3">
+        <a href="/waitlist.html" class="btn-solid">
+          Get Early Access
+          <span class="arrow">→</span>
+        </a>
+        <a href="/#evidence" class="btn-outline">View the Evidence Board</a>
+        <span class="cta-meta">Closed beta · Aligned with Cochrane / JBI / RAISE guidance</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ARCHITECTURE OVERVIEW (--beige-bg)
+       ============================================================ -->
+  <section class="section-divider" id="architecture" aria-label="Architecture overview" style="background:var(--beige-bg);">
+    <div class="section-inner">
+      <div class="section-eyebrow fade-up">
+        <span>[ 02 ]</span>
+        <span class="eyebrow-line"></span>
+        <span>ARCHITECTURE</span>
+      </div>
+
+      <h2 class="section-h2 fade-up d1">
+        Two extractors, one referee,<br>
+        <span class="italic" style="color:var(--plum);">one audited workbook.</span>
+      </h2>
+
+      <p class="font-body fade-up d2" style="margin-top:24px; max-width:680px;">
+        Every field is extracted twice by independent prompts, then compared by a referee
+        step that either accepts the agreed value, surfaces the disagreement for review, or
+        rejects extraction when the source text is insufficient.
+      </p>
+
+      <div class="arch-grid fade-up d3">
+        <div class="arch-card">
+          <span class="pin" aria-hidden="true"></span>
+          <div class="label">Extractor A</div>
+          <h4>Primary pass</h4>
+          <p>Reads the study, locates the field, returns a value plus the exact sentence(s) it was drawn from. Refuses to answer when no sentence supports the field.</p>
+        </div>
+        <div class="arch-card">
+          <span class="pin amber" aria-hidden="true"></span>
+          <div class="label">Extractor B</div>
+          <h4>Independent pass</h4>
+          <p>Runs blind to A's output. Same prompt, separate context window. Same refusal behavior when evidence is missing.</p>
+        </div>
+        <div class="arch-card">
+          <span class="pin plum" aria-hidden="true"></span>
+          <div class="label">Referee</div>
+          <h4>Disagreement check</h4>
+          <p>Compares A and B. Agreement is recorded. Disagreement is flagged as a human-review task with both candidate values and both source spans.</p>
+        </div>
+      </div>
+
+      <pre class="card-code fade-up" aria-label="Pipeline summary">
+study.pdf  ─→  parse  ─→  Extractor A ─┬─→  Referee  ─→  workbook
+                       ─→  Extractor B ─┘         │
+                                                  └─→  human review (when flagged)</pre>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SIX-STEP PROCESS (default)
+       ============================================================ -->
+  <section class="section-divider" id="steps" aria-label="Six-step process">
+    <div class="section-inner">
+      <div class="section-eyebrow fade-up">
+        <span>[ 03 ]</span>
+        <span class="eyebrow-line"></span>
+        <span>THE PIPELINE</span>
+      </div>
+
+      <h2 class="section-h2 fade-up d1">
+        From PDF to a row in the workbook,<br>
+        <span class="italic" style="color:var(--plum);">one auditable step at a time.</span>
+      </h2>
+
+      <p class="font-body fade-up d2" style="margin-top:24px; max-width:680px;">
+        Each step writes to the workbook. Nothing is overwritten. Returning to a study a
+        month later shows the same extractions plus any human edits, with timestamps.
+      </p>
+
+      <ol class="step-list" style="list-style:none; padding:0;">
+        <li class="step fade-up">
+          <div class="step-num">Step <strong>01</strong></div>
+          <div class="step-body">
+            <h3>Define the protocol</h3>
+            <p>Upload your protocol or paste a PICO. Define the extraction schema: which fields, which units, which study-design constraints. Schemas can be saved and reused across reviews.</p>
+            <p>Cochrane Handbook and JBI Manual templates are available as starting points. PRISMA 2020 reporting fields are pre-mapped.</p>
+            <div class="step-meta">
+              <span class="card-pill">PICO</span>
+              <span class="card-pill">Schema</span>
+              <span class="card-pill">PRISMA 2020</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="step fade-up">
+          <div class="step-num">Step <strong>02</strong></div>
+          <div class="step-body">
+            <h3>Ingest the study set</h3>
+            <p>Upload PDFs, point at a Zotero / EndNote / RIS export, or sync from a reference manager. The parser preserves page numbers, figure captions, table cells, and supplementary appendices.</p>
+            <p>Files that fail to parse cleanly are quarantined rather than silently dropped. You see the list before extraction starts.</p>
+            <div class="step-meta">
+              <span class="card-pill">PDF / RIS</span>
+              <span class="card-pill">Tables preserved</span>
+              <span class="card-pill">Quarantine on failure</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="step fade-up">
+          <div class="step-num">Step <strong>03</strong></div>
+          <div class="step-body">
+            <h3>Dual extraction</h3>
+            <p>Two independent extractor passes (A and B) run on every field defined in your schema. Each pass returns the value plus the sentence(s) it was drawn from, or refuses if no sentence supports the field.</p>
+            <p>Refusals are not failures. A refusal recorded with reason is more useful than a hallucinated number.</p>
+            <div class="step-meta">
+              <span class="card-pill">Extractor A</span>
+              <span class="card-pill">Extractor B</span>
+              <span class="card-pill">Sentence-level provenance</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="step fade-up">
+          <div class="step-num">Step <strong>04</strong></div>
+          <div class="step-body">
+            <h3>Referee + flag</h3>
+            <p>The referee compares A and B field-by-field. Agreement is written to the workbook with both source spans attached. Disagreement is logged as a review task with both candidate values, both spans, and a short summary of where they diverge.</p>
+            <p>Disagreement rates per field are visible in the dashboard. Persistently divergent fields usually indicate a schema issue, not a model issue.</p>
+            <div class="step-meta">
+              <span class="card-pill">Referee</span>
+              <span class="card-pill">Disagreement log</span>
+              <span class="card-pill">Inter-rater diagnostics</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="step fade-up">
+          <div class="step-num">Step <strong>05</strong></div>
+          <div class="step-body">
+            <h3>Human review</h3>
+            <p>Review tasks open the source PDF at the cited sentence. You confirm, correct, or reject. Every edit is captured with the editor's identity, timestamp, and prior value. Nothing in the audit trail is overwritten.</p>
+            <p>The reviewer is always the source of truth. The tool's output is a draft until a human signs the row off.</p>
+            <div class="step-meta">
+              <span class="card-pill">Source-anchored</span>
+              <span class="card-pill">Append-only audit</span>
+              <span class="card-pill">Human in the loop</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="step fade-up">
+          <div class="step-num">Step <strong>06</strong></div>
+          <div class="step-body">
+            <h3>Export + cite</h3>
+            <p>Export the workbook as CSV, XLSX, or RevMan-compatible JSON. Every cell carries its source span. A bundled report records model name, prompt version, schema version, and the full edit history for the review.</p>
+            <p>The How-to-Cite section on the landing page provides BibTeX. The TRIPOD-LLM validation study, when published, will be the canonical reference for the pipeline's behavior.</p>
+            <div class="step-meta">
+              <span class="card-pill">CSV / XLSX</span>
+              <span class="card-pill">RevMan JSON</span>
+              <span class="card-pill">Cite-ready report</span>
+            </div>
+          </div>
+        </li>
+      </ol>
+
+      <aside class="aside-card fade-up" aria-label="What is not yet validated">
+        <h3 class="font-heading">What is not yet validated</h3>
+        <p>None of the steps above carries a measured accuracy claim. We have internal targets drawn from <a href="https://doi.org/10.1101/2024.04.06.24305412" style="color:var(--sage); text-decoration:underline;">Konet et al. (2024)</a>, <a href="https://doi.org/10.1371/journal.pone.0306157" style="color:var(--sage); text-decoration:underline;">Sun et al. (2024)</a>, and <a href="https://doi.org/10.1136/bmjopen-2023-076656" style="color:var(--sage); text-decoration:underline;">Khraisha et al. (2023)</a>, but the prospective TRIPOD-LLM study to test those targets on our own pipeline is in preparation. Until it is published, we describe per-field performance as <em>aspirational</em>.</p>
+        <p>If you need numbers right now to satisfy a funder or an IRB, the safe summary is: the pipeline is positioned to meet or exceed published accuracy targets on extraction tasks of comparable difficulty, and it is structured so that any miss is recoverable from the audit trail.</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       COMPARISON (--beige-bg)
+       ============================================================ -->
+  <section class="section-divider" id="compare" aria-label="Compared to ad-hoc LLM extraction" style="background:var(--beige-bg);">
+    <div class="section-inner">
+      <div class="section-eyebrow fade-up">
+        <span>[ 04 ]</span>
+        <span class="eyebrow-line"></span>
+        <span>COMPARED TO AD-HOC LLM EXTRACTION</span>
+      </div>
+
+      <h2 class="section-h2 fade-up d1">
+        Why not just use<br>
+        <span class="italic" style="color:var(--plum);">a chat window?</span>
+      </h2>
+
+      <p class="font-body fade-up d2" style="margin-top:24px; max-width:680px;">
+        A general-purpose LLM in a chat interface can pull values from a paper. It cannot, by
+        default, prove which sentence a value came from, run a second blind pass, or refuse to
+        invent a number when one is missing. Those are the parts that make a review defensible.
+      </p>
+
+      <div class="compare-wrap fade-up d3">
+        <div class="compare-row head">
+          <div class="compare-cell">Property</div>
+          <div class="compare-cell">Ad-hoc LLM chat</div>
+          <div class="compare-cell col-ms">MetaSynthesis AI</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell label-cell">Source provenance</div>
+          <div class="compare-cell">Free-text citation; often paraphrased or invented.</div>
+          <div class="compare-cell">Sentence-level span attached to every value. Click to open the PDF at that sentence.</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell label-cell">Independent verification</div>
+          <div class="compare-cell">Single pass. Re-running the same prompt is not independent.</div>
+          <div class="compare-cell">Two blind extractors plus a referee on every field.</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell label-cell">Refusal behavior</div>
+          <div class="compare-cell">Tends to fill in plausible-looking values when text is silent.</div>
+          <div class="compare-cell">Refuses with a reason when no source sentence supports the field.</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell label-cell">Audit trail</div>
+          <div class="compare-cell">Chat history; mutable; rarely linkable to a row in a workbook.</div>
+          <div class="compare-cell">Append-only workbook. Every edit captures editor, timestamp, and prior value.</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell label-cell">Reporting alignment</div>
+          <div class="compare-cell">None by default.</div>
+          <div class="compare-cell">Cochrane Handbook, JBI Manual, RAISE guidance, PRISMA 2020 fields pre-mapped.</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell label-cell">Validation plan</div>
+          <div class="compare-cell">Vendor-defined, often unspecified.</div>
+          <div class="compare-cell">TRIPOD-LLM prospective study in preparation. Targets drawn from published literature, not vendor benchmarks.</div>
+        </div>
+      </div>
+
+      <p class="font-body fade-up" style="margin-top:32px; max-width:680px; font-style:italic;">
+        None of this prevents you from using a chat LLM as a thinking partner. It prevents the
+        chat LLM from being mistaken for the extraction record.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FAQ (default)
+       ============================================================ -->
+  <section class="section-divider" id="how-it-works-faq" aria-label="How it works FAQ">
+    <div class="section-inner">
+      <div class="section-eyebrow fade-up" style="justify-content:center;">
+        <span>[ 05 ]</span>
+        <span class="eyebrow-line"></span>
+        <span>QUESTIONS</span>
+      </div>
+
+      <h2 class="section-h2 fade-up d1" style="text-align:center; margin-left:auto; margin-right:auto;">
+        Common questions about<br>
+        <span class="italic" style="color:var(--plum);">the pipeline.</span>
+      </h2>
+
+      <div class="faq-list fade-up d2" style="margin-left:auto; margin-right:auto;">
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q1">
+            Which model powers the extractors?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q1">
+            <p>The model name is recorded in the bundled report next to every export ([[MODEL_NAME]]). We expose the model and prompt version in the audit trail so a reviewer in 2028 can reproduce the pipeline used in 2026. Model selection is a configuration choice, not a hidden default.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q2">
+            What happens when extractors A and B disagree?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q2">
+            <p>The disagreement is logged as a human review task. Both candidate values and both source spans are attached. Nothing is written to the final workbook for that field until a human reviewer resolves it. Disagreement rates per field are visible in the dashboard; persistently divergent fields usually indicate a schema problem.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q3">
+            Is the workbook editable?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q3">
+            <p>Yes, by reviewers. Every edit is captured with editor identity, timestamp, and prior value, in an append-only log. The visible workbook always shows the latest accepted value, but the full edit history can be replayed and exported alongside the workbook.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q4">
+            Can it handle non-English studies?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q4">
+            <p>The current beta is focused on English-language studies. Multilingual extraction is on the roadmap and will only ship after the TRIPOD-LLM validation study covers it. We will not silently extend the pipeline to languages we have not validated for.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q5">
+            How does this align with Cochrane / JBI / RAISE?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q5">
+            <p>Cochrane Handbook and JBI Manual templates are available as starting schemas. RAISE guidance on AI in evidence synthesis shapes how we surface AI involvement in the audit trail. PRISMA 2020 reporting fields are pre-mapped. None of this is the same as endorsement; it is alignment.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q6">
+            Is MetaSynthesis AI a medical device?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q6">
+            <p>No. It is a research tool for data extraction in systematic reviews and meta-analyses. It does not make clinical recommendations, diagnose, or treat. Outputs are reviewed by humans before they are used in any downstream synthesis.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="cta-strip fade-up" style="justify-content:center; margin-top:48px;">
+        <a href="/waitlist.html" class="btn-solid">
+          Get Early Access
+          <span class="arrow">→</span>
+        </a>
+        <a href="/#evidence" class="btn-outline">View the Evidence Board</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="site-footer" aria-label="Site footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="logo" style="color:var(--beige-bg);">
+          <span class="logo__mark" style="background:var(--beige-bg); color:var(--ink-black);">S</span>
+          <span>MetaSynthesis AI</span>
+        </div>
+        <p>Audit-first, AI-assisted data extraction for systematic reviews and meta-analyses. Built by the Curie Project. Currently in closed beta.</p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/#features">Features</a></li>
+          <li><a href="/how-it-works.html">How it works</a></li>
+          <li><a href="/#pricing">Pricing</a></li>
+          <li><a href="/#faq">FAQ</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Evidence</h4>
+        <ul>
+          <li><a href="/#evidence">Evidence Board</a></li>
+          <li><a href="/#how-cite">How to cite</a></li>
+          <li><a href="/validation-study/">Validation study</a></li>
+          <li><a href="/#about">About the project</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="mailto:[[CONTACT_EMAIL]]">Contact</a></li>
+          <li><a href="[[GITHUB_URL]]">GitHub</a></li>
+          <li><a href="[[LINKEDIN_OR_PROFILE]]">Profile</a></li>
+          <li><a href="[[CALENDLY_OR_DEMO_URL]]">Book a call</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© Curie Project · MetaSynthesis AI</span>
+      <span>v0.1 · Closed beta · TRIPOD-LLM validation in preparation</span>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       JS — minimal subset (mobile menu, fade-up, FAQ)
+       ============================================================ -->
+  <script>
+    // Mobile menu
+    (function () {
+      var btn = document.getElementById('hamburger');
+      var menu = document.getElementById('mobile-menu');
+      if (!btn || !menu) return;
+      btn.addEventListener('click', function () {
+        var open = menu.classList.toggle('open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    })();
+
+    // fade-up reveal
+    (function () {
+      var els = document.querySelectorAll('.fade-up');
+      if (!('IntersectionObserver' in window)) {
+        els.forEach(function (el) { el.classList.add('visible'); });
+        return;
+      }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      els.forEach(function (el) { io.observe(el); });
+    })();
+
+    // FAQ accordion
+    (function () {
+      document.querySelectorAll('.faq-q').forEach(function (q) {
+        q.addEventListener('click', function () {
+          var expanded = q.getAttribute('aria-expanded') === 'true';
+          q.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+          var ans = q.nextElementSibling;
+          if (!ans) return;
+          if (expanded) {
+            ans.style.maxHeight = '0px';
+          } else {
+            ans.style.maxHeight = ans.scrollHeight + 'px';
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

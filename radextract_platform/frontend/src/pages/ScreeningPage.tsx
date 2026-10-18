@@ -1,0 +1,2555 @@
+import { resolveScreeningStage } from "../lib/screeningStage";
+import { BookmarkButton } from "../components/common/BookmarkButton";
+import { useBookmarks } from "../lib/bookmarks";
+import { matchesTag, useProjectTags } from "../lib/recordCollaboration";
+import { RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
+import {
+  api,
+  type Study,
+  type AIScreeningProgress,
+  type ScreeningSummary,
+  type AIScreeningSummary,
+  type AbstractHighlights,
+  type HighlightSpan,
+  type ScreeningKeyword,
+  type ClarificationQuestion,
+  type ClarificationOption,
+  type ClarificationAnswerResponse,
+  type BatchUploadResult,
+} from "../lib/api";
+import {
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Filter,
+  ShieldCheck,
+  Loader2,
+  Sparkles,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  Upload,
+  FileText,
+  Bot,
+  Check,
+  ExternalLink,
+  HelpCircle,
+  MessageSquare,
+  Send,
+  X,
+  Tag,
+  Plus,
+  Trash2,
+  Play,
+  ChevronRight,
+  Search,
+  SlidersHorizontal,
+  Layers,
+  FileUp,
+  FileCheck,
+  AlertCircle,
+  BookOpen,
+  Minimize2,
+  Maximize2,
+  Keyboard,
+  FolderPlus,
+  ArrowLeftRight,
+  RotateCcw,
+  Pause,
+  Square,
+} from "lucide-react";
+import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
+import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
+
+
+export function ScreeningPage() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const bookmarks = useBookmarks(projectId);
+  const tagIndex = useProjectTags(projectId);
+  const [tagFilter, setTagFilter] = useState("");
+  const [savedOnly, setSavedOnly] = useState(false);
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Layout & Selection state
+  const [selectedStudyId, setSelectedStudyId] = useState<string | null>(null);
+  const [stageFilter, setStageFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [confidenceFilter, setConfidenceFilter] = useState<"all" | "high" | "medium" | "low">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Protocol Screening Rules & PICO Criteria Minimization
+  const [isProtocolRulesMinimized, setIsProtocolRulesMinimized] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("radextract_screening_rules_minimized") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleProtocolRulesMinimized = () => {
+    setIsProtocolRulesMinimized((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("radextract_screening_rules_minimized", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Reviewer identity
+  const authToken = localStorage.getItem("token");
+  const { data: currentReviewer, error: reviewerError } = useQuery({
+    queryKey: ["screening-reviewer", authToken], queryFn: api.getCurrentUser,
+    enabled: !!authToken, retry: false,
+  });
+  const reviewerName = currentReviewer?.username || "";
+
+  // Highlight toggles & Keywords drawer state
+  const [showHighlights, setShowHighlights] = useState(true);
+  const [showKeywordsDrawer, setShowKeywordsDrawer] = useState(false);
+  const [newKeywordText, setNewKeywordText] = useState("");
+  const [newKeywordType, setNewKeywordType] = useState<"include" | "exclude">("include");
+
+  // Clarification active answering state
+  const [answeringQuestionId, setAnsweringQuestionId] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string>("");
+  const [freetextAnswer, setFreetextAnswer] = useState<string>("");
+  const [resolutionFeedback, setResolutionFeedback] = useState<Record<string, ClarificationAnswerResponse>>({});
+
+  // Universal Inline Clarification Workspace state
+  const [universalClarificationIdx, setUniversalClarificationIdx] = useState(0);
+  const [universalSelectedOption, setUniversalSelectedOption] = useState<string>("");
+  const [universalFreetext, setUniversalFreetext] = useState<string>("");
+
+  // Exclude reason code for selected study
+  const [excludeReasonCode, setExcludeReasonCode] = useState<string>("");
+  const [excludeReasonText, setExcludeReasonText] = useState<string>("");
+  const [reasonError, setReasonError] = useState<string | null>(null);
+  const reasonSelectRef = useRef<HTMLSelectElement>(null);
+
+  // Save failure recovery state (Task 30)
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [failedDecision, setFailedDecision] = useState<{
+    studyId: string;
+    stage: "ta" | "ft";
+    decision: "included" | "excluded" | "maybe";
+    reasonCode?: string;
+    reasonText?: string;
+  } | null>(null);
+
+  // PDF upload for selected study
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Bulk Upload & Hotkeys state
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [showHotkeysModal, setShowHotkeysModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
+
+  const { data: dedupData } = useQuery({
+    queryKey: ["duplicate_groups", projectId],
+    queryFn: () => api.getDuplicateGroups(projectId!),
+    enabled: !!projectId,
+  });
+
+
+  // While an AI screening run is in flight, poll so each screened study appears as soon as it is saved
+  const isMutating = useIsMutating() > 0;
+
+  // Live progress (which study is being screened now). Fetched on load so a run started earlier,
+  // or before a page refresh, is picked up too; polls quickly only while something is running.
+  const { data: progress } = useQuery<AIScreeningProgress>({
+    queryKey: ["screening-progress", projectId],
+    queryFn: () => api.getAIScreeningProgress(projectId!),
+    enabled: !!projectId,
+    refetchInterval: (q) => (isMutating || q.state.data?.active ? 1500 : false),
+  });
+  const isRunning = isMutating || !!progress?.active;
+  const queuedIds = useMemo(() => new Set(progress?.active ? progress.pending_ids : []), [progress]);
+  const doneIds = useMemo(() => new Set(progress?.active ? progress.done_ids : []), [progress]);
+
+  // Queries
+  const { data: studies = [], isLoading: isLoadingStudies } = useQuery({
+    queryKey: ["screening-studies", projectId, stageFilter, statusFilter],
+    queryFn: () => api.listScreening(projectId!, stageFilter === "all" ? undefined : stageFilter, statusFilter === "all" ? undefined : statusFilter),
+    enabled: !!projectId,
+    refetchInterval: isRunning ? 3000 : false,
+  });
+
+  const { data: summary } = useQuery<ScreeningSummary>({
+    queryKey: ["screening-summary", projectId],
+    queryFn: () => api.screeningSummary(projectId!),
+    enabled: !!projectId,
+    refetchInterval: isRunning ? 3000 : false,
+  });
+
+  const { data: exclusionReasonsData } = useQuery({
+    queryKey: ["exclusion-reasons", projectId],
+    queryFn: () => api.getExclusionReasons(projectId!),
+    enabled: !!projectId,
+  });
+  const exclusionReasons = exclusionReasonsData?.reasons || [];
+
+  const { data: keywords = [] } = useQuery<ScreeningKeyword[]>({
+    queryKey: ["screening-keywords", projectId],
+    queryFn: () => api.listScreeningKeywords(projectId!),
+    enabled: !!projectId,
+  });
+
+  const { data: selectedHighlights } = useQuery<AbstractHighlights>({
+    queryKey: ["abstract-highlights", selectedStudyId],
+    queryFn: () => api.getAbstractHighlights(selectedStudyId!),
+    enabled: !!selectedStudyId && showHighlights,
+  });
+
+  const { data: studyClarifications = [] } = useQuery<ClarificationQuestion[]>({
+    queryKey: ["study-clarifications", selectedStudyId],
+    queryFn: () => api.getStudyClarifications(selectedStudyId!),
+    enabled: !!selectedStudyId,
+  });
+
+  // Universal pending clarifications for the entire project during screening
+  const { data: pendingProjectClarifications = [] } = useQuery<ClarificationQuestion[]>({
+    queryKey: ["pending-clarifications", projectId],
+    queryFn: () => (projectId ? api.listClarifications(projectId, "pending") : Promise.resolve([])),
+    enabled: !!projectId,
+    refetchInterval: isRunning ? 3000 : 8000,
+  });
+
+  const { data: robSummary } = useQuery({
+    queryKey: ["rob-summary", projectId],
+    queryFn: () => api.robSummary(projectId!),
+    enabled: !!projectId,
+  });
+
+  const { data: robRunProgress } = useQuery({
+    queryKey: ["rob-run-progress", projectId],
+    queryFn: () => (projectId ? api.getRobRunProgress(projectId) : Promise.resolve(null)),
+    enabled: !!projectId,
+    refetchInterval: 5000,
+  });
+
+  const startBatchRobMutation = useMutation({
+    mutationFn: () => api.startRobRun(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rob-run-progress", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["rob-summary", projectId] });
+    },
+    onError: (err: any) => {
+      alert(`Failed to start batch RoB: ${err.message}`);
+    },
+  });
+
+  const [robStarting, setRobStarting] = useState<Record<string, boolean>>({});
+  const [extractionMsg, setExtractionMsg] = useState<Record<string, string>>({});
+  const [extractingStudyId, setExtractingStudyId] = useState<string | null>(null);
+
+  // Map study_id -> existing RoB assessment (for Start RoB / View RoB rendering)
+  const robByStudy = new Map(
+    (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
+  );
+
+  const handleStartRob = async (study: Study) => {
+    setRobStarting((prev) => ({ ...prev, [study.study_id]: true }));
+    try {
+      const assessment = await api.autoCreateAssessment(
+        study.study_id, projectId!, study.study_design || ""
+      );
+      await api.aiPrefill(assessment.assessment_id, study.abstract || "");
+      queryClient.invalidateQueries({ queryKey: ["rob-summary", projectId] });
+    } catch (err: any) {
+      alert(`RoB start failed: ${err.message}`);
+    } finally {
+      setRobStarting((prev) => ({ ...prev, [study.study_id]: false }));
+    }
+  };
+
+  const handleRobAllIncluded = async () => {
+    if (projectId) {
+      startBatchRobMutation.mutate();
+    }
+  };
+
+  const handleCodedExtract = async (study: Study) => {
+    setExtractingStudyId(study.study_id);
+    setExtractionMsg((prev) => ({ ...prev, [study.study_id]: "" }));
+    try {
+      const res = await api.codedExtract(study.study_id, projectId!);
+      const missing = (res.minus_99?.length || 0) + (res.minus_77?.length || 0) + (res.minus_88?.length || 0);
+      setExtractionMsg((prev) => ({
+        ...prev,
+        [study.study_id]: `Extracted ${res.extracted || 0} variables` +
+          (res.coded_ds ? ` (${res.coded_ds} direct` +
+            (res.coded_calc ? `, ${res.coded_calc} calculated` : "") +
+            (res.coded_inf ? `, ${res.coded_inf} inferred` : "") + ")" : "") +
+          (missing ? `, ${missing} coded missing` : "")
+      }));
+      queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["review-progress", projectId] });
+    } catch (err: any) {
+      setExtractionMsg((prev) => ({
+        ...prev,
+        [study.study_id]: `Error: ${err.message}`
+      }));
+    } finally {
+      setExtractingStudyId(null);
+    }
+  };
+
+  const studyList = Array.isArray(studies) ? studies : [];
+
+  // Filtered Studies List
+  const filteredStudies = useMemo(() => {
+    return studyList.filter((s) => {
+      if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
+      if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
+      // Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesTitle = (s.title || "").toLowerCase().includes(q);
+        const matchesAuthors = (s.authors || "").toLowerCase().includes(q);
+        const matchesAbstract = (s.abstract || "").toLowerCase().includes(q);
+        if (!matchesTitle && !matchesAuthors && !matchesAbstract) return false;
+      }
+      // Confidence filter
+      if (confidenceFilter !== "all") {
+        const conf = s.ai_confidence ?? 0;
+        if (confidenceFilter === "high" && conf < 0.8) return false;
+        if (confidenceFilter === "medium" && (conf < 0.6 || conf >= 0.8)) return false;
+        if (confidenceFilter === "low" && (conf <= 0 || conf >= 0.6)) return false;
+      }
+      return true;
+    });
+  }, [studies, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
+
+  // Selection and keyboard actions use the same visible record set as all filters.
+  const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || null;
+  const prevActiveStudyIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentId = selectedStudy?.study_id || null;
+    if (prevActiveStudyIdRef.current && currentId && prevActiveStudyIdRef.current !== currentId) {
+      setReasonError(null);
+      setSaveError(null);
+      setFailedDecision(null);
+    }
+    prevActiveStudyIdRef.current = currentId;
+  }, [selectedStudy?.study_id]);
+
+  // Mutations
+  const startFullPipelineMutation = useMutation({
+    mutationFn: () => api.startAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+    },
+  });
+
+  const startAnalysisMutation = useMutation({
+    mutationFn: () => api.startAIAnalysis(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+    },
+  });
+
+  const continuePipelineMutation = useMutation({
+    mutationFn: (stage: "abstract" | "fulltext") => api.continueAIScreening(projectId!, stage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+    },
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: () => api.pauseAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: () => api.resumeAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => api.cancelAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+    },
+  });
+
+  type DecisionPayload = {
+    studyId: string;
+    stage: "ta" | "ft";
+    decision: "included" | "excluded" | "maybe";
+    reasonCode?: string;
+    reasonText?: string;
+  };
+
+  const decisionMutation = useMutation({
+    mutationFn: (data: DecisionPayload) =>
+      api.screeningDecision(data.studyId, {
+        project_id: projectId!,
+        decision: data.decision,
+        stage: data.stage,
+        reason_code: data.reasonCode,
+        reason_text: data.reasonText,
+      }),
+    onSuccess: (_, variables) => {
+      // Clear errors on confirmed server save
+      setSaveError(null);
+      setFailedDecision(null);
+      setReasonError(null);
+
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+
+      // Clear the reason selector for the next record ONLY after successful save
+      if (variables.decision === "excluded") {
+        setExcludeReasonCode("");
+        setExcludeReasonText("");
+      }
+
+      // Advance to next study in filtered list ONLY after the server confirms a successful save
+      const currentIndex = filteredStudies.findIndex((s) => s.study_id === variables.studyId);
+      if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
+        setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
+      }
+    },
+    onError: (err: any, variables) => {
+      const errMsg = err?.message || "Failed to save screening decision due to a server or network error.";
+      setSaveError(errMsg);
+      setFailedDecision(variables);
+    },
+  });
+
+  // Retry the same decision without creating duplicate entries
+  const handleRetry = () => {
+    if (!failedDecision || decisionMutation.isPending) return;
+    setSaveError(null);
+    decisionMutation.mutate(failedDecision);
+  };
+
+  // Screening decision handler (auto-advances to next study ONLY on server confirmation)
+  const handleScreenDecision = (decision: "included" | "excluded" | "maybe", targetStudyId?: string) => {
+    // Prevent duplicate submissions while a save is in flight
+    if (decisionMutation.isPending) return;
+
+    if (!currentReviewer) {
+      setSaveError("Sign in with a valid account to save screening decisions.");
+      return;
+    }
+
+    const currentStudyId = targetStudyId || selectedStudy?.study_id;
+    if (!currentStudyId) return;
+    const targetStudy = studyList.find(study => study.study_id === currentStudyId);
+    if (!targetStudy) {
+      setSaveError("Record could not be found. Refresh before saving.");
+      return;
+    }
+    let stage: "ta" | "ft";
+    try { stage = resolveScreeningStage(targetStudy); }
+    catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Screening stage could not be determined.");
+      return;
+    }
+
+
+    if (decision === "excluded") {
+      // Must have a valid exclusion reason selected (Task 27)
+      if (!excludeReasonCode || !excludeReasonCode.trim()) {
+        if (targetStudyId && selectedStudy?.study_id !== targetStudyId) {
+          setSelectedStudyId(targetStudyId);
+        }
+        setReasonError("Please select a valid exclusion reason before excluding this record.");
+        reasonSelectRef.current?.focus();
+        return;
+      }
+
+      setReasonError(null);
+      setSaveError(null);
+      setFailedDecision(null);
+
+      // Find label for reasonCode if custom rationale text is not provided
+      const selectedReasonObj = exclusionReasons.find(
+        (r: any) => (r.code || r.reason_id) === excludeReasonCode
+      );
+      const reasonLabel = selectedReasonObj ? (selectedReasonObj.label || selectedReasonObj.code) : excludeReasonCode;
+
+      decisionMutation.mutate({
+        studyId: currentStudyId,
+        stage,
+        decision: "excluded",
+        reasonCode: excludeReasonCode,
+        reasonText: excludeReasonText.trim() || reasonLabel || "Ineligible based on criteria",
+      });
+      return;
+    }
+
+    // Include and Maybe: clear any reason error & save error, and mutate
+    setReasonError(null);
+    setSaveError(null);
+    setFailedDecision(null);
+
+    if (decision === "included") {
+      decisionMutation.mutate({
+        studyId: currentStudyId,
+        stage,
+        decision: "included",
+        reasonText: "Eligible under PICO criteria",
+      });
+    } else if (decision === "maybe") {
+      decisionMutation.mutate({
+        studyId: currentStudyId,
+        stage,
+        decision: "maybe",
+        reasonText: "Uncertain - requires further assessment",
+      });
+    }
+  };
+
+  const handleSelectPreviousStudy = () => {
+    if (!selectedStudy || filteredStudies.length === 0) return;
+    const currentIndex = filteredStudies.findIndex((s) => s.study_id === selectedStudy.study_id);
+    if (currentIndex > 0) {
+      setSelectedStudyId(filteredStudies[currentIndex - 1].study_id);
+    }
+  };
+
+  const handleSelectNextStudy = () => {
+    if (!selectedStudy || filteredStudies.length === 0) return;
+    const currentIndex = filteredStudies.findIndex((s) => s.study_id === selectedStudy.study_id);
+    if (currentIndex < filteredStudies.length - 1) {
+      setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
+    }
+  };
+
+  // Keyboard hotkeys listener: I/1 (Include), E/2 (Exclude), M/3 (Maybe), ←/J (Prev), →/K (Next), ? (Cheatsheet)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"][data-record-collaboration]')) return;
+      if (!hotkeysEnabled) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (showKeywordsDrawer || showBulkUploadModal || showHotkeysModal) {
+        if (e.key === "Escape") {
+          setShowBulkUploadModal(false);
+          setShowHotkeysModal(false);
+          setShowKeywordsDrawer(false);
+        }
+        return;
+      }
+
+      if (decisionMutation.isPending) return;
+
+      if (e.key === "i" || e.key === "I" || e.key === "1") {
+        e.preventDefault();
+        handleScreenDecision("included");
+      } else if (e.key === "e" || e.key === "E" || e.key === "2") {
+        e.preventDefault();
+        handleScreenDecision("excluded");
+      } else if (e.key === "m" || e.key === "M" || e.key === "3" || e.key === "u" || e.key === "U") {
+        e.preventDefault();
+        handleScreenDecision("maybe");
+      } else if (e.key === "ArrowLeft" || e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        handleSelectPreviousStudy();
+      } else if (e.key === "ArrowRight" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        handleSelectNextStudy();
+      } else if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        e.preventDefault();
+        setShowHotkeysModal(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    hotkeysEnabled,
+    currentReviewer,
+    selectedStudy,
+    filteredStudies,
+    excludeReasonCode,
+    excludeReasonText,
+    showKeywordsDrawer,
+    showBulkUploadModal,
+    showHotkeysModal,
+  ]);
+
+  const addKeywordMutation = useMutation({
+    mutationFn: (data: { keyword: string; type: "include" | "exclude" }) =>
+      api.addScreeningKeyword(projectId!, data.keyword, data.type),
+    onSuccess: () => {
+      setNewKeywordText("");
+      queryClient.invalidateQueries({ queryKey: ["screening-keywords", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["abstract-highlights"] });
+    },
+  });
+
+  const deleteKeywordMutation = useMutation({
+    mutationFn: (keywordId: string) => api.deleteScreeningKeyword(keywordId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-keywords", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["abstract-highlights"] });
+    },
+  });
+
+  const autoGenerateKeywordsMutation = useMutation({
+    mutationFn: () => api.autoGenerateKeywords(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-keywords", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["abstract-highlights"] });
+    },
+  });
+
+  const answerClarificationMutation = useMutation({
+    mutationFn: (data: { questionId: string; answer: string; label?: string; freetext?: string }) =>
+      api.answerClarification(data.questionId, {
+        answer: data.answer,
+        answer_label: data.label,
+        answer_freetext: data.freetext,
+        answered_by: reviewerName,
+      }),
+    onSuccess: (res, vars) => {
+      setResolutionFeedback((prev) => ({ ...prev, [vars.questionId]: res }));
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["study-clarifications", selectedStudyId] });
+      queryClient.invalidateQueries({ queryKey: ["pending-clarifications", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["all-clarifications", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["rob-summary", projectId] });
+    },
+  });
+
+  // Cache compiled RegExp instances to eliminate repeated regex allocations in render loops
+  const keywordRegexCache = useRef<Map<string, RegExp>>(new Map());
+  const getCompiledKeywordRegex = (word: string): RegExp => {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    let cached = keywordRegexCache.current.get(escaped);
+    if (!cached) {
+      cached = new RegExp(`\\b${escaped}\\b`, "gi");
+      keywordRegexCache.current.set(escaped, cached);
+    }
+    cached.lastIndex = 0;
+    return cached;
+  };
+
+  // Render Highlighted Text (Abstract or Title) with Priority Resolution & Instant Fallback
+  const renderHighlightedText = (
+    rawText: string,
+    spans: HighlightSpan[] = [],
+    fallbackKeywordsList: ScreeningKeyword[] = [],
+    isTitle: boolean = false
+  ) => {
+    if (!rawText) {
+      return isTitle ? null : <p className="text-gray-400 italic">No abstract available for this study.</p>;
+    }
+    if (!showHighlights) {
+      return isTitle ? (
+        <span className="text-slate-900">{rawText}</span>
+      ) : (
+        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
+      );
+    }
+
+    // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
+    const activeSpans = [...spans];
+    if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
+      const rawTextLower = rawText.toLowerCase();
+      fallbackKeywordsList.forEach((kw) => {
+        const word = kw.keyword.trim();
+        if (!word) return;
+        // Fast substring pre-check: skip regex searching if keyword substring is not present
+        if (!rawTextLower.includes(word.toLowerCase())) return;
+        try {
+          const regex = getCompiledKeywordRegex(word);
+          let match;
+          while ((match = regex.exec(rawText)) !== null) {
+            activeSpans.push({
+              start: match.index,
+              end: match.index + match[0].length,
+              text: match[0],
+              type: kw.keyword_type === "include" ? "include_keyword" : "exclude_keyword",
+              color: kw.keyword_type === "include" ? "green" : "red",
+              confidence: 1.0,
+              label: `${kw.keyword_type === "include" ? "Include" : "Exclude"} keyword: ${kw.keyword}`,
+            });
+          }
+        } catch {
+          // ignore regex errors for special chars
+        }
+      });
+    }
+
+    if (activeSpans.length === 0) {
+      return isTitle ? (
+        <span className="text-slate-900">{rawText}</span>
+      ) : (
+        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
+      );
+    }
+
+    // Resolve character-level priority so keywords (green/red) are never swallowed by broad sentence spans
+    const priorityMap: Record<string, number> = {
+      exclude_keyword: 40,
+      include_keyword: 30,
+      ai_keyword: 20,
+      population: 10,
+      intervention: 10,
+      comparator: 10,
+      outcome: 10,
+    };
+
+    const charSpans: (HighlightSpan | null)[] = new Array(rawText.length).fill(null);
+    for (const span of activeSpans) {
+      const start = Math.max(0, span.start);
+      const end = Math.min(rawText.length, span.end);
+      if (end <= start) continue;
+      const prio = priorityMap[span.type] || 0;
+      for (let i = start; i < end; i++) {
+        const curr = charSpans[i];
+        if (!curr || (priorityMap[curr.type] || 0) < prio) {
+          charSpans[i] = span;
+        }
+      }
+    }
+
+    const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
+    let currentSpan = charSpans[0];
+    let currentStart = 0;
+    for (let i = 1; i < rawText.length; i++) {
+      if (charSpans[i] !== currentSpan) {
+        segments.push({ start: currentStart, end: i, span: currentSpan });
+        currentSpan = charSpans[i];
+        currentStart = i;
+      }
+    }
+    segments.push({ start: currentStart, end: rawText.length, span: currentSpan });
+
+    const elements: React.ReactNode[] = segments.map((seg, idx) => {
+      const segText = rawText.substring(seg.start, seg.end);
+      if (!seg.span) {
+        return <span key={`plain-${seg.start}-${idx}`}>{segText}</span>;
+      }
+      const s = seg.span;
+      let colorClass = "bg-yellow-100 text-yellow-900 border-yellow-300";
+      if (s.color === "green" || s.type === "include_keyword") {
+        colorClass = "bg-emerald-100 text-emerald-900 border-emerald-300 font-semibold";
+      } else if (s.color === "red" || s.type === "exclude_keyword") {
+        colorClass = "bg-rose-100 text-rose-900 border-rose-300 font-semibold";
+      } else if (s.color === "purple" || s.type === "population") {
+        colorClass = "bg-purple-100 text-purple-900 border-purple-300";
+      } else if (s.color === "blue" || s.type === "intervention" || s.type === "comparator") {
+        colorClass = "bg-sky-100 text-sky-900 border-sky-300";
+      } else if (s.color === "orange" || s.type === "outcome") {
+        colorClass = "bg-amber-100 text-amber-900 border-amber-300";
+      }
+
+      return (
+        <mark
+          key={`mark-${seg.start}-${idx}`}
+          className={`px-1 py-0.5 rounded border ${isTitle ? "text-base inline" : "text-sm inline"} transition-colors ${colorClass}`}
+          title={`${s.label || s.type} (${s.type})`}
+        >
+          {segText}
+        </mark>
+      );
+    });
+
+    if (isTitle) {
+      return <span className="leading-tight">{elements}</span>;
+    }
+    return <div className="text-gray-800 leading-relaxed text-sm whitespace-pre-wrap">{elements}</div>;
+  };
+
+  // Upload single PDF handler
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedStudy) return;
+    setUploadingPdf(true);
+    setUploadError(null);
+    try {
+      await api.uploadPdf(selectedStudy.study_id, file);
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+    } catch (err: any) {
+      setUploadError(err?.message || "Failed to upload PDF");
+    } finally {
+      setUploadingPdf(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      {/* Top Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-3 shadow-sm">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              to={`/projects/${projectId}`}
+              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Back to Project"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <ShieldCheck className="w-6 h-6 text-indigo-600" />
+                AI Screening Workspace
+              </h1>
+              <p className="text-xs text-slate-500">
+                Multi-Stage Screening: Title &rarr; Abstract &rarr; Full-Text with Rayyan-Style Highlighting
+              </p>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Deduplication Step: Duplicate Review Button */}
+            <button
+              onClick={() => setShowDuplicateModal(true)}
+              className="px-3 py-2 text-xs font-semibold text-slate-800 bg-amber-50 border border-amber-300 hover:bg-amber-100 rounded-lg flex items-center gap-1.5 shadow-sm transition-all"
+              title="Deduplication Step: Review candidate duplicate pairs side-by-side with match score"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-amber-700" />
+              <span>Duplicate Review</span>
+              {dedupData && dedupData.total_duplicates > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-200 text-amber-900 font-bold">
+                  {dedupData.total_duplicates}
+                </span>
+              ) : null}
+            </button>
+
+            {/* Bulk Upload from Laptop Button */}
+            <button
+              onClick={() => setShowBulkUploadModal(true)}
+              className="px-3.5 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center gap-1.5 shadow-sm transition-all"
+              title="Bulk upload study PDFs, spreadsheets, or citations directly from your laptop"
+            >
+              <FolderPlus className="w-3.5 h-3.5 text-amber-300" />
+              <span>Bulk Upload from Laptop</span>
+            </button>
+
+
+            {/* Hotkeys Cheatsheet Button */}
+            <button
+              onClick={() => setShowHotkeysModal(true)}
+              className="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 shadow-sm transition-all"
+              title="Keyboard Shortcuts: [I/1] Include, [E/2] Exclude, [M/3] Maybe, [←/J] Prev, [→/K] Next"
+            >
+              <Keyboard className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Hotkeys</span>
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-indigo-200/70 text-indigo-900 rounded font-bold">?</kbd>
+            </button>
+
+            <button
+              onClick={() => setShowKeywordsDrawer(true)}
+              className="px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-1.5 shadow-sm transition-all"
+            >
+              <Tag className="w-3.5 h-3.5 text-indigo-600" />
+              Keywords & Highlighting ({keywords.length})
+            </button>
+
+            {progress?.active ? (
+              progress.paused ? (
+                <>
+                  <button
+                    onClick={() => resumeMutation.mutate()}
+                    disabled={resumeMutation.isPending || cancelMutation.isPending}
+                    className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Resume AI screening from current study"
+                  >
+                    {resumeMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5 text-emerald-700 fill-emerald-700" />
+                    )}
+                    <span>Resume Screening</span>
+                  </button>
+                  <button
+                    onClick={() => cancelMutation.mutate()}
+                    disabled={cancelMutation.isPending || resumeMutation.isPending}
+                    className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Stop AI screening run completely"
+                  >
+                    {cancelMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Square className="w-3.5 h-3.5 text-rose-600 fill-rose-600" />
+                    )}
+                    <span>Stop</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => pauseMutation.mutate()}
+                    disabled={pauseMutation.isPending || cancelMutation.isPending}
+                    className="px-3.5 py-2 text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Pause screening cleanly after current study finishes"
+                  >
+                    {pauseMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Pause className="w-3.5 h-3.5 text-amber-800 fill-amber-800" />
+                    )}
+                    <span>{pauseMutation.isPending ? "Pausing..." : "Pause Screening"}</span>
+                  </button>
+                  <button
+                    onClick={() => cancelMutation.mutate()}
+                    disabled={cancelMutation.isPending || pauseMutation.isPending}
+                    className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Stop AI screening run completely"
+                  >
+                    {cancelMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Square className="w-3.5 h-3.5 text-rose-600 fill-rose-600" />
+                    )}
+                    <span>Stop</span>
+                  </button>
+                </>
+              )
+            ) : (
+              <>
+                <button
+                  onClick={() => startAnalysisMutation.mutate()}
+                  disabled={startAnalysisMutation.isPending || startFullPipelineMutation.isPending}
+                  className="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 transition-all disabled:opacity-50"
+                >
+                  {startAnalysisMutation.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5 text-indigo-600" />
+                  )}
+                  Start Stage 1 (Title Only)
+                </button>
+
+                <button
+                  onClick={() => startFullPipelineMutation.mutate()}
+                  disabled={startFullPipelineMutation.isPending || startAnalysisMutation.isPending}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                >
+                  {startFullPipelineMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  Start Full AI Screening
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Metric Summary Ribbon */}
+        {summary && (
+          <div className="max-w-7xl mx-auto mt-3 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+            <div className="bg-slate-100/70 border border-slate-200/80 rounded-lg px-3 py-1.5">
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Total</span>
+              <span className="text-sm font-bold text-slate-800">{summary.total}</span>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+              <span className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider block">T/A Inc</span>
+              <span className="text-sm font-bold text-emerald-800">{summary.ta_included}</span>
+            </div>
+            <div className="bg-emerald-100/60 border border-emerald-300 rounded-lg px-3 py-1.5">
+              <span className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block">FT Inc</span>
+              <span className="text-sm font-bold text-emerald-900">{summary.ft_included}</span>
+            </div>
+            <div className="bg-rose-50 border border-rose-200 rounded-lg px-3 py-1.5">
+              <span className="text-[10px] font-semibold text-rose-700 uppercase tracking-wider block">Excluded</span>
+              <span className="text-sm font-bold text-rose-800">{summary.ta_excluded + summary.ft_excluded}</span>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+              <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider block">Uncertain</span>
+              <span className="text-sm font-bold text-amber-800">{summary.uncertain ?? summary.pending}</span>
+            </div>
+            {dedupData && dedupData.total_duplicates > 0 && (
+              <div
+                onClick={() => setShowDuplicateModal(true)}
+                className="bg-amber-100/70 border border-amber-300 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-amber-200/80 transition-colors shadow-2xs"
+                title="Click to review candidate duplicate pairs side-by-side"
+              >
+                <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider block">Duplicates</span>
+                <span className="text-sm font-bold text-amber-900 flex items-center gap-1">
+                  <span>{dedupData.total_duplicates}</span>
+                  <ArrowLeftRight className="w-3 h-3 text-amber-700" />
+                </span>
+              </div>
+            )}
+
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setStatusFilter(statusFilter === "awaiting_clarification" ? "all" : "awaiting_clarification")}
+              className={`border rounded-lg px-3 py-1.5 cursor-pointer transition-all ${
+                statusFilter === "awaiting_clarification"
+                  ? "bg-purple-600 border-purple-700 text-white shadow-sm ring-2 ring-purple-400"
+                  : "bg-purple-50 border-purple-200 hover:bg-purple-100/90"
+              }`}
+              title="Click to filter studies awaiting reviewer clarification"
+            >
+              <span className={`text-[10px] font-semibold uppercase tracking-wider block ${
+                statusFilter === "awaiting_clarification" ? "text-purple-100" : "text-purple-700"
+              }`}>Questions</span>
+              <span className={`text-sm font-bold ${
+                statusFilter === "awaiting_clarification" ? "text-white" : "text-purple-800"
+              }`}>{summary.awaiting_clarification ?? 0}</span>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
+              <span className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider block">Need PDF</span>
+              <span className="text-sm font-bold text-blue-800">{summary.awaiting_pdf ?? 0}</span>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Live AI screening progress & controls */}
+      {progress?.active && (
+        <div className={`border-b px-6 py-2.5 transition-colors ${
+          progress.paused ? "bg-amber-50/95 border-amber-200" : "bg-indigo-50 border-indigo-200"
+        }`}>
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                {progress.paused ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-200 text-amber-900 border border-amber-300 shrink-0">
+                    <Pause className="w-3 h-3 fill-amber-800" />
+                    PAUSED
+                  </span>
+                ) : (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
+                )}
+                <span className={`font-semibold shrink-0 ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
+                  AI screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
+                </span>
+                <span className={`truncate ${progress.paused ? "text-amber-800" : "text-indigo-700"}`}>
+                  {progress.paused
+                    ? (progress.current_study_id ? `Paused at: ${progress.current_title || progress.current_study_id}` : "Paused between studies (clean state)")
+                    : (progress.current_study_id ? `Screening: ${progress.current_title || progress.current_study_id}` : "Preparing next study…")}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <span className={`font-bold whitespace-nowrap ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
+                  {progress.done} / {progress.total} screened ({progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%)
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {progress.paused ? (
+                    <button
+                      onClick={() => resumeMutation.mutate()}
+                      disabled={resumeMutation.isPending || cancelMutation.isPending}
+                      className="px-2.5 py-1 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded flex items-center gap-1 shadow-2xs transition-all disabled:opacity-50"
+                      title="Resume screening"
+                    >
+                      {resumeMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3 text-emerald-700 fill-emerald-700" />}
+                      <span>Resume</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => pauseMutation.mutate()}
+                      disabled={pauseMutation.isPending || cancelMutation.isPending}
+                      className="px-2.5 py-1 text-xs font-semibold text-amber-900 bg-amber-200 hover:bg-amber-300 border border-amber-300 rounded flex items-center gap-1 shadow-2xs transition-all disabled:opacity-50"
+                      title="Pause screening after current study"
+                    >
+                      {pauseMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Pause className="w-3 h-3 text-amber-800 fill-amber-800" />}
+                      <span>Pause</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => cancelMutation.mutate()}
+                    disabled={cancelMutation.isPending || pauseMutation.isPending || resumeMutation.isPending}
+                    className="px-2.5 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded flex items-center gap-1 shadow-2xs transition-all disabled:opacity-50"
+                    title="Stop screening run"
+                  >
+                    {cancelMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Square className="w-3 h-3 text-rose-600 fill-rose-600" />}
+                    <span>Stop</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className={`mt-1.5 h-1.5 rounded-full overflow-hidden ${progress.paused ? "bg-amber-200/80" : "bg-indigo-100"}`}>
+              <div
+                className={`h-full transition-all duration-500 ${progress.paused ? "bg-amber-500" : "bg-indigo-600"}`}
+                style={{ width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!currentReviewer && <div role="alert" className="px-6 py-3 text-sm text-amber-800 bg-amber-50">
+        {reviewerError?.message || (authToken ? "Checking your sign-in…" : "Sign in to record screening decisions under your account.")}
+      </div>}
+
+      {/* Universal Screening Clarification Workspace (Inline, displayed then-and-there) */}
+      {pendingProjectClarifications.length > 0 && (() => {
+        const safeIdx = Math.min(universalClarificationIdx, pendingProjectClarifications.length - 1);
+        const curQ = pendingProjectClarifications[safeIdx];
+        if (!curQ) return null;
+        const curOptions = curQ.options || [];
+
+        return (
+          <aside
+            aria-label="Universal AI Clarification Workspace"
+            className="bg-purple-950 text-purple-50 border-b border-purple-900 px-6 py-4 shadow-md transition-all"
+          >
+            <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-5 items-start justify-between">
+              {/* Question Details Left Pane */}
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold bg-purple-700 text-purple-100 border border-purple-500/50 shadow-xs">
+                    <HelpCircle className="w-3.5 h-3.5 text-purple-300" />
+                    Reviewer Clarification Required
+                  </span>
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-purple-900 text-purple-200 border border-purple-800">
+                    Question {safeIdx + 1} of {pendingProjectClarifications.length}
+                  </span>
+                  {curQ.pico_aspect && (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-400 text-amber-950">
+                      PICO Aspect: {curQ.pico_aspect}
+                    </span>
+                  )}
+                  {curQ.stage && (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono uppercase bg-purple-900 text-purple-300 border border-purple-800">
+                      {curQ.stage} stage
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-sm font-semibold text-white leading-snug">
+                  {curQ.question_text}
+                </div>
+
+                {curQ.context_excerpt && (
+                  <div className="text-xs bg-purple-900/60 border border-purple-800/80 rounded-md p-2.5 text-purple-200 italic max-h-24 overflow-y-auto font-serif">
+                    &ldquo;{curQ.context_excerpt}&rdquo;
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 text-xs text-purple-300 pt-1 flex-wrap">
+                  <span>
+                    Study ID: <strong className="text-white font-mono">{curQ.study_id}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedStudyId(curQ.study_id);
+                      setStageFilter("all");
+                      setStatusFilter("all");
+                    }}
+                    className="underline text-purple-200 hover:text-white flex items-center gap-1"
+                    title="Select and display this study in the inspector panel below"
+                  >
+                    <span>Inspect study details in viewer &darr;</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Answering Controls Right Pane */}
+              <div className="w-full lg:w-96 bg-purple-900/50 border border-purple-800 rounded-xl p-3.5 space-y-3 shrink-0">
+                <div className="text-xs font-bold uppercase tracking-wider text-purple-200">
+                  Select Decision
+                </div>
+
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {curOptions.map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`flex items-center gap-2 p-2 rounded-lg text-xs cursor-pointer border transition-all ${
+                        universalSelectedOption === opt.value
+                          ? "bg-purple-600 border-purple-400 text-white font-semibold shadow-xs"
+                          : "bg-purple-950/70 border-purple-800/80 text-purple-100 hover:bg-purple-900/80"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`universal-opt-${curQ.question_id}`}
+                        value={opt.value}
+                        checked={universalSelectedOption === opt.value}
+                        onChange={() => setUniversalSelectedOption(opt.value)}
+                        className="text-purple-400 focus:ring-purple-300"
+                      />
+                      <span className="flex-1 leading-tight">{opt.label}</span>
+                    </label>
+                  ))}
+
+                  <label
+                    className={`flex items-center gap-2 p-2 rounded-lg text-xs cursor-pointer border transition-all ${
+                      universalSelectedOption === "other"
+                        ? "bg-purple-600 border-purple-400 text-white font-semibold shadow-xs"
+                        : "bg-purple-950/70 border-purple-800/80 text-purple-100 hover:bg-purple-900/80"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`universal-opt-${curQ.question_id}`}
+                      value="other"
+                      checked={universalSelectedOption === "other"}
+                      onChange={() => setUniversalSelectedOption("other")}
+                      className="text-purple-400 focus:ring-purple-300"
+                    />
+                    <span className="flex-1 leading-tight">Other (custom answer)</span>
+                  </label>
+                </div>
+
+                {universalSelectedOption === "other" && (
+                  <input
+                    type="text"
+                    placeholder="Type custom clarification answer..."
+                    value={universalFreetext}
+                    onChange={(e) => setUniversalFreetext(e.target.value)}
+                    className="w-full text-xs px-2.5 py-1.5 bg-purple-950 border border-purple-700 rounded text-white placeholder-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                  />
+                )}
+
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-purple-800">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={safeIdx <= 0}
+                      onClick={() => {
+                        setUniversalClarificationIdx((prev) => Math.max(0, prev - 1));
+                        setUniversalSelectedOption("");
+                        setUniversalFreetext("");
+                      }}
+                      className="px-2 py-1 text-[11px] rounded bg-purple-900 hover:bg-purple-800 text-purple-200 disabled:opacity-40"
+                    >
+                      &larr; Prev
+                    </button>
+                    <button
+                      type="button"
+                      disabled={safeIdx >= pendingProjectClarifications.length - 1}
+                      onClick={() => {
+                        setUniversalClarificationIdx((prev) => Math.min(pendingProjectClarifications.length - 1, prev + 1));
+                        setUniversalSelectedOption("");
+                        setUniversalFreetext("");
+                      }}
+                      className="px-2 py-1 text-[11px] rounded bg-purple-900 hover:bg-purple-800 text-purple-200 disabled:opacity-40"
+                    >
+                      Next &rarr;
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!universalSelectedOption || answerClarificationMutation.isPending}
+                    onClick={() => {
+                      const selectedLabel = curOptions.find((o) => o.value === universalSelectedOption)?.label || universalSelectedOption;
+                      answerClarificationMutation.mutate({
+                        questionId: curQ.question_id,
+                        answer: universalSelectedOption,
+                        label: selectedLabel,
+                        freetext: universalSelectedOption === "other" ? universalFreetext : undefined,
+                      }, {
+                        onSuccess: () => {
+                          setUniversalSelectedOption("");
+                          setUniversalFreetext("");
+                          setUniversalClarificationIdx(0);
+                        }
+                      });
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                  >
+                    {answerClarificationMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                    <span>Submit & Re-Screen</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </aside>
+        );
+      })()}
+
+      {/* Filter and Search Bar */}
+      <div className="bg-white border-b border-slate-200 px-6 py-2"><div className="max-w-7xl mx-auto">
+        <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
+      </div></div>
+      <div className="bg-white border-b border-slate-200 px-6 py-2.5">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({studyList.filter(s => bookmarks.ids.includes(s.study_id)).length})</label>
+          <span className="text-xs text-slate-500">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
+          {bookmarks.error && <span role="alert" className="text-xs text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
+          {/* Stage & Status Filter Tabs */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex bg-slate-100 p-0.5 rounded-lg text-xs font-medium text-slate-600">
+              <button
+                onClick={() => setStageFilter("all")}
+                className={`px-2.5 py-1 rounded-md transition-all ${
+                  stageFilter === "all" ? "bg-white text-slate-900 shadow-sm font-semibold" : "hover:text-slate-900"
+                }`}
+              >
+                All Stages
+              </button>
+              <button
+                onClick={() => setStageFilter("ta")}
+                className={`px-2.5 py-1 rounded-md transition-all ${
+                  stageFilter === "ta" ? "bg-white text-slate-900 shadow-sm font-semibold" : "hover:text-slate-900"
+                }`}
+              >
+                Title & Abstract
+              </button>
+              <button
+                onClick={() => setStageFilter("ft")}
+                className={`px-2.5 py-1 rounded-md transition-all ${
+                  stageFilter === "ft" ? "bg-white text-slate-900 shadow-sm font-semibold" : "hover:text-slate-900"
+                }`}
+              >
+                Full-Text
+              </button>
+            </div>
+
+            <div className="h-4 w-px bg-slate-300" />
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="included">Included</option>
+              <option value="ta_included">T/A Included</option>
+              <option value="excluded">Excluded</option>
+              <option value="uncertain">Uncertain</option>
+              <option value="awaiting_clarification">Needs Clarification</option>
+              <option value="awaiting_pdf">Awaiting PDF</option>
+            </select>
+
+            <select
+              value={confidenceFilter}
+              onChange={(e) => setConfidenceFilter(e.target.value as any)}
+              className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="all">All Confidence</option>
+              <option value="high">&ge; 80% (High Confidence)</option>
+              <option value="medium">60% - 79% (Moderate)</option>
+              <option value="low">&lt; 60% (Low Confidence)</option>
+            </select>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
+            <input
+              type="text"
+              placeholder="Search studies..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── COLLAPSIBLE PROTOCOL SCREENING RULES & PICO CRITERIA PANEL ── */}
+      <div className="max-w-7xl mx-auto w-full px-4 md:px-6 pt-4">
+        {isProtocolRulesMinimized ? (
+          <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs">
+              <BookOpen className="w-4 h-4 text-indigo-600" />
+              <span className="font-bold text-slate-800">
+                Protocol Eligibility & PICO Rules:
+              </span>
+              <span className="text-slate-500">
+                Population: Intracranial PAMs / Arterial Malformations &bull; Intervention: Endovascular / Surgical &bull; Outcomes: Occlusion / Safety
+              </span>
+            </div>
+            <button
+              onClick={toggleProtocolRulesMinimized}
+              className="px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Expand full protocol screening rules"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Expand Protocol Rules</span>
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white border border-indigo-100 rounded-xl shadow-xs overflow-hidden transition-all duration-300">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-50/80 via-white to-slate-50 border-b border-indigo-100 px-4 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-indigo-600" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                  Protocol Screening Rules & PICO Eligibility Criteria
+                </h3>
+                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+                  PRISMA Protocol Active
+                </span>
+              </div>
+              <button
+                onClick={toggleProtocolRulesMinimized}
+                className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                title="Minimize protocol rules panel"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span>Minimize Rules</span>
+              </button>
+            </div>
+
+            {/* PICO Grid & Inclusion/Exclusion Rules */}
+            <div className="p-4 space-y-3">
+              {/* PICO 4-Pill Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div className="p-2.5 bg-indigo-50/60 border border-indigo-100 rounded-lg">
+                  <div className="font-bold text-indigo-900 flex items-center gap-1 mb-1">
+                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">P</span>
+                    <span>Population</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Patients with pure arterial malformations (PAM) or tortuous dilated intracranial arteries without nidus or direct arteriovenous shunts.
+                  </p>
+                </div>
+
+                <div className="p-2.5 bg-sky-50/60 border border-sky-100 rounded-lg">
+                  <div className="font-bold text-sky-900 flex items-center gap-1 mb-1">
+                    <span className="w-4 h-4 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-black">I</span>
+                    <span>Intervention</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Endovascular embolization (coiling, onyx, flow diverter stenting), microsurgical clipping/resection, or conservative clinical surveillance.
+                  </p>
+                </div>
+
+                <div className="p-2.5 bg-purple-50/60 border border-purple-100 rounded-lg">
+                  <div className="font-bold text-purple-900 flex items-center gap-1 mb-1">
+                    <span className="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">C</span>
+                    <span>Comparator</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Conservative angiographic follow-up vs active interventional occlusion or historical lesion cohorts.
+                  </p>
+                </div>
+
+                <div className="p-2.5 bg-emerald-50/60 border border-emerald-100 rounded-lg">
+                  <div className="font-bold text-emerald-900 flex items-center gap-1 mb-1">
+                    <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">O</span>
+                    <span>Outcomes</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Aneurysm co-occurrence, angiographic obliteration, recurrent hemorrhage, ischemic stroke, and modified Rankin Scale (mRS).
+                  </p>
+                </div>
+              </div>
+
+              {/* Explicit Inclusion vs Exclusion Criteria Rows */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
+                <div className="p-2.5 bg-emerald-50/40 border border-emerald-200/80 rounded-lg">
+                  <span className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1 text-[11px]">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    Mandatory Inclusion Criteria
+                  </span>
+                  <ul className="text-[11px] text-emerald-800 space-y-1 list-disc list-inside">
+                    <li>Human subjects (in vivo) with radiographically confirmed intracranial PAM.</li>
+                    <li>Reports angiographic details (DSA, CTA, or 3T MRA) and clinical management.</li>
+                    <li>Peer-reviewed original research, cohort studies, or clinical case series.</li>
+                  </ul>
+                </div>
+
+                <div className="p-2.5 bg-rose-50/40 border border-rose-200/80 rounded-lg">
+                  <span className="font-bold text-rose-900 flex items-center gap-1.5 mb-1 text-[11px]">
+                    <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                    Explicit Exclusion Disqualifiers
+                  </span>
+                  <ul className="text-[11px] text-rose-800 space-y-1 list-disc list-inside">
+                    <li>Classic AVMs with parenchymal nidus or early draining cortical veins.</li>
+                    <li>Dural arteriovenous fistulas (dAVF) or cavernous hemangiomas without PAM.</li>
+                    <li>Animal models, in vitro hydrodynamic bench studies, or non-English abstracts.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Main Two-Pane Screening Workspace */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Study List (5 cols) */}
+        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-[calc(100vh-230px)] sticky top-[180px]">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-xl">
+            <span className="text-xs font-semibold text-slate-700">
+              Studies ({filteredStudies.length})
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => continuePipelineMutation.mutate("abstract")}
+                disabled={continuePipelineMutation.isPending}
+                className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100"
+                title="Run Stage 2 (Abstract) on pending & uncertain studies"
+              >
+                Advance Abstract &rarr;
+              </button>
+              <button
+                onClick={() => continuePipelineMutation.mutate("fulltext")}
+                disabled={continuePipelineMutation.isPending}
+                className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100"
+                title="Run Stage 3 (Full-text) on included studies with PDFs"
+              >
+                Advance Full-Text &rarr;
+              </button>
+              {robRunProgress?.status === "running" ? (
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 animate-pulse">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Auto RoB Running ({robRunProgress.completed_studies}/{robRunProgress.total_studies})
+                </span>
+              ) : (
+                <button
+                  onClick={handleRobAllIncluded}
+                  disabled={startBatchRobMutation.isPending}
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1"
+                  title="Run automated batch Risk of Bias assessment on all included studies"
+                >
+                  <ShieldCheck className="w-3 h-3" />
+                  {startBatchRobMutation.isPending ? "Starting RoB..." : "Batch RoB Included"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Scrollable list */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-2 space-y-1">
+            {isLoadingStudies ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                <span className="text-xs">Loading studies...</span>
+              </div>
+            ) : filteredStudies.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs">
+                No studies match the selected filters.
+              </div>
+            ) : (
+              filteredStudies.map((study) => {
+                const isSelected = selectedStudy?.study_id === study.study_id;
+                const conf = study.ai_confidence ? Math.round(study.ai_confidence * 100) : null;
+                const isCurrent = !!progress?.active && progress.current_study_id === study.study_id;
+                const isQueued = !isCurrent && queuedIds.has(study.study_id);
+                const isJustDone = doneIds.has(study.study_id);
+
+                return (
+                  <div
+                    key={study.study_id}
+                    onClick={() => setSelectedStudyId(study.study_id)}
+                    className={`p-3 rounded-lg cursor-pointer transition-all border ${
+                      isCurrent
+                        ? "bg-indigo-50 border-indigo-400 ring-2 ring-indigo-300 animate-pulse"
+                        : isSelected
+                        ? "bg-indigo-50/60 border-indigo-300 shadow-sm"
+                        : "hover:bg-slate-50 border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 leading-snug">
+                        {study.title}
+                      </h3>
+                      <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
+                      {conf !== null && (
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                            conf >= 80
+                              ? "bg-emerald-100 text-emerald-800"
+                              : conf >= 60
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-rose-100 text-rose-800"
+                          }`}
+                        >
+                          {conf}%
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 line-clamp-1 mb-2">
+                      {study.authors || "Unknown Authors"} &bull; {study.publication_year || "N/A"} &bull; {study.journal || "No Journal"}
+                    </p>
+                    <TagBadges index={tagIndex.data} studyId={study.study_id} />
+
+                    <div className="flex items-center justify-between gap-2 flex-wrap text-[10px]">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Status Badge */}
+                        <span
+                          className={`px-2 py-0.5 rounded font-medium ${
+                            study.screening_status === "included" || study.screening_status === "ta_included"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : study.screening_status === "excluded"
+                              ? "bg-rose-50 text-rose-700 border border-rose-200"
+                              : study.screening_status === "awaiting_clarification"
+                              ? "bg-purple-50 text-purple-700 border border-purple-200"
+                              : study.screening_status === "awaiting_pdf"
+                              ? "bg-blue-50 text-blue-700 border border-blue-200"
+                              : "bg-slate-100 text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          {study.screening_status.replace("_", " ")}
+                        </span>
+
+                        {isCurrent && (
+                          <span className="px-2 py-0.5 rounded font-semibold bg-indigo-600 text-white flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Screening now
+                          </span>
+                        )}
+                        {isQueued && (
+                          <span className="px-2 py-0.5 rounded font-medium bg-slate-50 text-slate-500 border border-dashed border-slate-300 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Queued
+                          </span>
+                        )}
+                        {!isCurrent && !isQueued && study.ai_decision && (
+                          <span
+                            className={`px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
+                              study.ai_decision === "include"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : study.ai_decision === "exclude"
+                                ? "bg-rose-50 text-rose-700"
+                                : "bg-amber-50 text-amber-700"
+                            }`}
+                            title={isJustDone ? "Screened in the current run" : "Screened by AI"}
+                          >
+                            <CheckCircle className="w-3 h-3" />
+                            AI screened: {study.ai_decision}
+                          </span>
+                        )}
+
+                        {study.ai_stage && (
+                          <span className="text-slate-400 capitalize">
+                            stage: {study.ai_stage}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Quick Action Icons */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (decisionMutation.isPending) return;
+                            handleScreenDecision("included", study.study_id);
+                          }}
+                          disabled={decisionMutation.isPending || !currentReviewer}
+                          className="p-1 hover:bg-emerald-100 rounded text-emerald-600 disabled:opacity-40"
+                          title="Quick Include"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (decisionMutation.isPending) return;
+                            handleScreenDecision("excluded", study.study_id);
+                          }}
+                          disabled={decisionMutation.isPending || !currentReviewer}
+                          className="p-1 hover:bg-rose-100 rounded text-rose-600 disabled:opacity-40"
+                          title="Quick Exclude (Reason required)"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Rayyan-Style Preview Pane (7 cols) */}
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col min-h-[calc(100vh-230px)]">
+          {selectedStudy ? (
+            <div className="p-6 space-y-6">
+              {/* Header section */}
+              <div>
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <h2 className="text-base font-bold text-slate-900 leading-tight">
+                    {renderHighlightedText(
+                      selectedStudy.title,
+                      selectedHighlights?.title_spans || [],
+                      keywords,
+                      true
+                    )}
+                  </h2>
+                  <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
+                  <span
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap ${
+                      selectedStudy.screening_status === "included" || selectedStudy.screening_status === "ta_included"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : selectedStudy.screening_status === "excluded"
+                        ? "bg-rose-100 text-rose-800"
+                        : selectedStudy.screening_status === "awaiting_clarification"
+                        ? "bg-purple-100 text-purple-800"
+                        : selectedStudy.screening_status === "awaiting_pdf"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {selectedStudy.screening_status.replace("_", " ")}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-600 mb-1">
+                  <span className="font-semibold">Authors:</span> {selectedStudy.authors || "Not reported"}
+                </p>
+                <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
+                  <span><span className="font-semibold">Journal:</span> {selectedStudy.journal || "N/A"}</span>
+                  <span><span className="font-semibold">Year:</span> {selectedStudy.publication_year || "N/A"}</span>
+                  {selectedStudy.doi && (
+                    <a
+                      href={`https://doi.org/${selectedStudy.doi}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:underline flex items-center gap-0.5"
+                    >
+                      DOI: {selectedStudy.doi} <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* AI Verdict & Confidence Card */}
+              {selectedStudy.ai_decision && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bot className="w-4 h-4 text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-800">
+                        AI Recommendation: <span className="capitalize">{selectedStudy.ai_decision}</span>
+                      </span>
+                    </div>
+                    {selectedStudy.ai_confidence && (
+                      <span className="text-xs font-semibold text-slate-600">
+                        {Math.round(selectedStudy.ai_confidence * 100)}% Confidence
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Confidence Progress Bar */}
+                  {selectedStudy.ai_confidence && (
+                    <div className="w-full bg-slate-200 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full ${
+                          selectedStudy.ai_confidence >= 0.8
+                            ? "bg-emerald-500"
+                            : selectedStudy.ai_confidence >= 0.6
+                            ? "bg-amber-500"
+                            : "bg-rose-500"
+                        }`}
+                        style={{ width: `${Math.round(selectedStudy.ai_confidence * 100)}%` }}
+                      />
+                    </div>
+                  )}
+
+                  {selectedStudy.ai_reason && (
+                    <p className="text-xs text-slate-700 italic bg-white p-2.5 rounded border border-slate-200">
+                      &ldquo;{selectedStudy.ai_reason}&rdquo;
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <TagBadges index={tagIndex.data} studyId={selectedStudy.study_id} />
+              <details className="rounded-lg border border-slate-200">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-800">Comments & tags</summary>
+                <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
+              </details>
+
+              {/* Clarification Questions Panel (if study requires clarification) */}
+              {studyClarifications.length > 0 && (
+                <div className="bg-purple-50/70 border border-purple-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-purple-900 font-bold text-xs">
+                    <HelpCircle className="w-4 h-4 text-purple-600" />
+                    Reviewer Clarification Required
+                  </div>
+
+                  {studyClarifications.map((q) => {
+                    const isAnswered = q.status === "answered";
+                    const isAnswering = answeringQuestionId === q.question_id;
+
+                    return (
+                      <div key={q.question_id} className="bg-white border border-purple-100 rounded-lg p-3 space-y-2.5">
+                        <p className="text-xs font-semibold text-slate-800">{q.question_text}</p>
+                        {q.context_excerpt && (
+                          <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-200 italic">
+                            Excerpt: &ldquo;{q.context_excerpt}&rdquo;
+                          </p>
+                        )}
+
+                        {!isAnswered ? (
+                          <div className="space-y-2 pt-1">
+                            <div className="space-y-1.5">
+                              {q.options.map((opt) => (
+                                <label
+                                  key={opt.value}
+                                  className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer"
+                                >
+                                  <input
+                                    type="radio"
+                                    name={`option-${q.question_id}`}
+                                    value={opt.value}
+                                    checked={selectedOption === opt.value}
+                                    onChange={() => {
+                                      setSelectedOption(opt.value);
+                                      setAnsweringQuestionId(q.question_id);
+                                    }}
+                                    className="text-purple-600 focus:ring-purple-500"
+                                  />
+                                  <span>{opt.label}</span>
+                                </label>
+                              ))}
+                              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`option-${q.question_id}`}
+                                  value="other"
+                                  checked={selectedOption === "other"}
+                                  onChange={() => {
+                                    setSelectedOption("other");
+                                    setAnsweringQuestionId(q.question_id);
+                                  }}
+                                  className="text-purple-600 focus:ring-purple-500"
+                                />
+                                <span>Other (specify below)</span>
+                              </label>
+                            </div>
+
+                            {selectedOption === "other" && (
+                              <input
+                                type="text"
+                                placeholder="Enter custom clarification answer..."
+                                value={freetextAnswer}
+                                onChange={(e) => setFreetextAnswer(e.target.value)}
+                                className="w-full text-xs p-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                              />
+                            )}
+
+                            <button
+                              onClick={() => {
+                                const selectedLabel = q.options.find((o) => o.value === selectedOption)?.label || selectedOption;
+                                answerClarificationMutation.mutate({
+                                  questionId: q.question_id,
+                                  answer: selectedOption,
+                                  label: selectedLabel,
+                                  freetext: selectedOption === "other" ? freetextAnswer : undefined,
+                                });
+                              }}
+                              disabled={!selectedOption || answerClarificationMutation.isPending}
+                              className="px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              {answerClarificationMutation.isPending ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Send className="w-3.5 h-3.5" />
+                              )}
+                              Submit Answer & Re-Evaluate Study
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded p-2 text-xs text-emerald-800">
+                            <span className="font-semibold">Answered:</span> {q.answer_label || q.answer}
+                            {q.final_decision && (
+                              <p className="text-[11px] mt-1 text-slate-700">
+                                Re-evaluated Verdict: <span className="font-bold capitalize">{q.final_decision}</span> &bull; {q.final_reason_text}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Abstract with Rayyan-Style Highlights */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Abstract
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowHighlights(!showHighlights)}
+                      className={`text-xs px-2.5 py-1 rounded border flex items-center gap-1 transition-all ${
+                        showHighlights
+                          ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-medium"
+                          : "bg-white border-slate-200 text-slate-500"
+                      }`}
+                    >
+                      {showHighlights ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      Highlights {showHighlights ? "On" : "Off"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Highlight Legend Ribbon */}
+                {showHighlights && (
+                  <div className="flex items-center gap-2 flex-wrap text-[10px] pb-1">
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium border border-emerald-300">
+                      Include Keywords
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-medium border border-rose-300">
+                      Exclude Keywords
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-300">
+                      Population (P)
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-300">
+                      Intervention (I/C)
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                      Outcome (O)
+                    </span>
+                  </div>
+                )}
+
+                {/* Abstract Text Area */}
+                <div className="bg-slate-50/50 border border-slate-200 rounded-lg p-4 min-h-[140px]">
+                  {renderHighlightedText(
+                    selectedStudy.abstract,
+                    selectedHighlights?.all_spans || [],
+                    keywords,
+                    false
+                  )}
+                </div>
+              </div>
+
+              {/* Full-Text Stage & PDF Dropzone */}
+              {(stageFilter === "ft" || selectedStudy.screening_status === "awaiting_pdf" || selectedStudy.screening_stage === "ft") && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+                  <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-indigo-600" />
+                    Full-Text Document
+                  </h3>
+                  {selectedStudy.pdf_path ? (
+                    <div className="flex items-center justify-between bg-white p-3 rounded border border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <FileCheck className="w-5 h-5 text-emerald-600" />
+                        <span className="text-xs font-semibold text-slate-800">
+                          PDF Document Processed ({selectedStudy.pdf_status})
+                        </span>
+                      </div>
+                      <a
+                        href={`/api/studies/${selectedStudy.study_id}/pdf`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-indigo-600 hover:underline flex items-center gap-1"
+                      >
+                        View Full PDF <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center space-y-2">
+                      <FileUp className="w-8 h-8 text-slate-400 mx-auto" />
+                      <p className="text-xs text-slate-600">
+                        No PDF uploaded for full-text evaluation.
+                      </p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf"
+                        onChange={handlePdfUpload}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingPdf}
+                        className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                      >
+                        {uploadingPdf ? "Uploading & Processing..." : "Upload Full-Text PDF"}
+                      </button>
+                      {uploadError && (
+                        <p className="text-xs text-rose-600">{uploadError}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Reviewer Action Bar */}
+              <div className="border-t border-slate-200 pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Reviewer Decision
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    Reviewer: <span className="font-semibold text-slate-700">{reviewerName || "Not signed in"}</span>
+                  </span>
+                </div>
+
+                {/* Exclude reason selection (for exclude decisions) */}
+                <div className="space-y-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <select
+                      ref={reasonSelectRef}
+                      value={excludeReasonCode}
+                      onChange={(e) => {
+                        setExcludeReasonCode(e.target.value);
+                        if (e.target.value) setReasonError(null);
+                      }}
+                      className={`text-xs bg-white border rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 ${
+                        reasonError
+                          ? "border-rose-500 ring-1 ring-rose-500 bg-rose-50/40"
+                          : "border-slate-300 focus:ring-indigo-500"
+                      }`}
+                    >
+                      <option value="">Select Exclusion Reason (Required to exclude)</option>
+                      {exclusionReasons.map((r: any) => (
+                        <option key={r.code || r.reason_id} value={r.code || r.reason_id}>
+                          {r.label || r.code}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Custom exclusion rationale..."
+                      value={excludeReasonText}
+                      onChange={(e) => setExcludeReasonText(e.target.value)}
+                      className="text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  {reasonError && (
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{reasonError}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Save in Progress Indicator */}
+                {decisionMutation.isPending && (
+                  <div
+                    role="status"
+                    className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-700 text-xs font-semibold animate-pulse"
+                  >
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
+                    <span>Saving screening decision to server... Please wait.</span>
+                  </div>
+                )}
+
+                {/* Save Failure Recovery Banner with Retry */}
+                {saveError && (
+                  <div
+                    role="alert"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 bg-rose-50 border border-rose-300 rounded-lg text-rose-900 text-xs shadow-xs"
+                  >
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Failed to save decision</p>
+                        <p className="text-rose-700 text-[11px] mt-0.5">{saveError}</p>
+                        <p className="text-slate-600 text-[11px] mt-0.5 font-medium">
+                          Your selected decision, exclusion reason, and rationale were kept.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <button
+                        type="button"
+                        onClick={handleRetry}
+                        disabled={decisionMutation.isPending || !currentReviewer}
+                        className="px-3 py-1.5 font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-md shadow-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 text-xs"
+                      >
+                        {decisionMutation.isPending ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        )}
+                        <span>Retry Save</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Action Buttons with Hotkey badges */}
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    onClick={() => handleScreenDecision("included")}
+                    disabled={decisionMutation.isPending || !currentReviewer}
+                    className="py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Include Study (Hotkeys: 'I' or '1')"
+                  >
+                    {decisionMutation.isPending && decisionMutation.variables?.decision === "included" ? (
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>
+                      {decisionMutation.isPending && decisionMutation.variables?.decision === "included"
+                        ? "Saving..."
+                        : "Include Study"}
+                    </span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/20 text-white font-mono text-[10px] font-bold">
+                      I / 1
+                    </kbd>
+                  </button>
+
+                  <button
+                    onClick={() => handleScreenDecision("excluded")}
+                    disabled={decisionMutation.isPending || !currentReviewer}
+                    className="py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    title="Exclude Study (Hotkeys: 'E' or '2')"
+                  >
+                    {decisionMutation.isPending && decisionMutation.variables?.decision === "excluded" ? (
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    ) : (
+                      <XCircle className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>
+                      {decisionMutation.isPending && decisionMutation.variables?.decision === "excluded"
+                        ? "Saving..."
+                        : "Exclude Study"}
+                    </span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/20 text-white font-mono text-[10px] font-bold">
+                      E / 2
+                    </kbd>
+                  </button>
+
+                  <button
+                    onClick={() => handleScreenDecision("maybe")}
+                    disabled={decisionMutation.isPending || !currentReviewer}
+                    className="py-2.5 text-xs font-bold text-slate-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                    title="Maybe / Uncertain (Hotkeys: 'M' or '3')"
+                  >
+                    {decisionMutation.isPending && decisionMutation.variables?.decision === "maybe" ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-800 shrink-0" />
+                    ) : (
+                      <HelpCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                    )}
+                    <span>
+                      {decisionMutation.isPending && decisionMutation.variables?.decision === "maybe"
+                        ? "Saving..."
+                        : "Maybe / Uncertain"}
+                    </span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/10 text-amber-900 font-mono text-[10px] font-bold">
+                      M / 3
+                    </kbd>
+                  </button>
+                </div>
+
+                {/* Hotkey Navigation Ribbon */}
+                <div className="flex items-center justify-between pt-1 px-1 text-xs text-slate-500 border-b border-slate-100 pb-2">
+                  <button
+                    type="button"
+                    onClick={handleSelectPreviousStudy}
+                    className="inline-flex items-center gap-1.5 hover:text-slate-900 transition-colors py-1 px-2 rounded hover:bg-slate-100"
+                    title="Previous Study (Hotkeys: '←' or 'J')"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Previous</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-800 text-[10px] font-mono font-medium">← / J</kbd>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[11px] text-slate-400">
+                      Study {filteredStudies.findIndex(s => s.study_id === selectedStudy.study_id) + 1} of {filteredStudies.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowHotkeysModal(true)}
+                      className="text-[10px] text-indigo-600 hover:underline flex items-center gap-0.5"
+                    >
+                      <Keyboard className="w-3 h-3" /> All Shortcuts
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSelectNextStudy}
+                    className="inline-flex items-center gap-1.5 hover:text-slate-900 transition-colors py-1 px-2 rounded hover:bg-slate-100"
+                    title="Next Study (Hotkeys: '→' or 'K')"
+                  >
+                    <span>Next</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-800 text-[10px] font-mono font-medium">→ / K</kbd>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* RoB + Coded Extraction actions for included studies */}
+                {selectedStudy.screening_status === "included" && (
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
+                    {robByStudy.has(selectedStudy.study_id) ? (
+                      <Link
+                        to={`/projects/${projectId}/rob/${robByStudy.get(selectedStudy.study_id)!.assessment_id}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+                        title="View the Risk of Bias assessment for this study"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" /> View RoB
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => handleStartRob(selectedStudy)}
+                        disabled={!!robStarting[selectedStudy.study_id]}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                        title="Auto-create a Risk of Bias assessment (tool selected from study design) and AI-prefill it"
+                      >
+                        {robStarting[selectedStudy.study_id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                        Start RoB
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleCodedExtract(selectedStudy)}
+                      disabled={extractingStudyId === selectedStudy.study_id}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                      title="Coded extraction: per-variable prompts, confidence tags, missing-data codes"
+                    >
+                      {extractingStudyId === selectedStudy.study_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      Coded Extract
+                    </button>
+                    {extractionMsg[selectedStudy.study_id] && (
+                      <span className="text-[11px] text-slate-500">{extractionMsg[selectedStudy.study_id]}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-400">
+              <ShieldCheck className="w-12 h-12 text-slate-300 mb-3" />
+              <p className="text-sm font-semibold text-slate-600">No Study Selected</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Select a study from the left pane to view its abstract and bibliographic highlights.
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Keywords & Highlighting Drawer / Modal */}
+      {showKeywordsDrawer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex justify-end">
+          <div className="bg-white w-full max-w-md h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-indigo-600" />
+                  Screening Keywords
+                </h2>
+                <button
+                  onClick={() => setShowKeywordsDrawer(false)}
+                  className="p-1 text-slate-400 hover:text-slate-700 rounded-md"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Sync from Protocol */}
+              <div className="bg-indigo-50/70 border border-indigo-200 rounded-lg p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-900">Sync with Protocol</span>
+                  <button
+                    onClick={() => autoGenerateKeywordsMutation.mutate()}
+                    disabled={autoGenerateKeywordsMutation.isPending}
+                    className="px-2.5 py-1 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {autoGenerateKeywordsMutation.isPending ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3 h-3" />
+                    )}
+                    Sync from Protocol
+                  </button>
+                </div>
+                <p className="text-[11px] text-indigo-700">
+                  Automatically synchronizes include and exclude keywords with this review's research protocol, PICO criteria, study designs, and search strings.
+                </p>
+              </div>
+
+              {/* Add Custom Keyword */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 block">Add Custom Keyword</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. randomized, pediatric..."
+                    value={newKeywordText}
+                    onChange={(e) => setNewKeywordText(e.target.value)}
+                    className="flex-1 text-xs p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                  <select
+                    value={newKeywordType}
+                    onChange={(e) => setNewKeywordType(e.target.value as any)}
+                    className="text-xs bg-white border border-slate-300 rounded-lg px-2 text-slate-700"
+                  >
+                    <option value="include">Include (Green)</option>
+                    <option value="exclude">Exclude (Red)</option>
+                  </select>
+                  <button
+                    onClick={() => {
+                      if (newKeywordText.trim()) {
+                        addKeywordMutation.mutate({
+                          keyword: newKeywordText.trim(),
+                          type: newKeywordType,
+                        });
+                      }
+                    }}
+                    disabled={!newKeywordText.trim() || addKeywordMutation.isPending}
+                    className="px-3 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg disabled:opacity-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Keywords List */}
+              <div className="space-y-4">
+                {/* Include Keywords */}
+                <div>
+                  <h3 className="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-2">
+                    Include Keywords ({keywords.filter((k) => k.keyword_type === "include").length})
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {keywords
+                      .filter((k) => k.keyword_type === "include")
+                      .map((k) => (
+                        <span
+                          key={k.keyword_id}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        >
+                          {k.keyword}
+                          <button
+                            onClick={() => deleteKeywordMutation.mutate(k.keyword_id)}
+                            className="hover:text-emerald-950"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Exclude Keywords */}
+                <div>
+                  <h3 className="text-xs font-bold text-rose-800 uppercase tracking-wider mb-2">
+                    Exclude Keywords ({keywords.filter((k) => k.keyword_type === "exclude").length})
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {keywords
+                      .filter((k) => k.keyword_type === "exclude")
+                      .map((k) => (
+                        <span
+                          key={k.keyword_id}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-800 border border-rose-300"
+                        >
+                          {k.keyword}
+                          <button
+                            onClick={() => deleteKeywordMutation.mutate(k.keyword_id)}
+                            className="hover:text-rose-950"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 pt-4">
+              <button
+                onClick={() => setShowKeywordsDrawer(false)}
+                className="w-full py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Close Panel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Universal Bulk Upload Modal for Screening */}
+      {showBulkUploadModal && (
+        <UniversalBulkUploadModal
+          projectId={projectId!}
+          isOpen={showBulkUploadModal}
+          onClose={() => setShowBulkUploadModal(false)}
+          defaultTarget="screening"
+          onSuccess={(count, target, firstStudyId) => {
+            queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            if (firstStudyId) {
+              setSelectedStudyId(firstStudyId);
+            }
+          }}
+        />
+      )}
+
+      {/* Keyboard Hotkeys Cheatsheet Modal */}
+      {showHotkeysModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs font-sans animate-in fade-in duration-150">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                  <Keyboard className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Screening Keyboard Hotkeys</h3>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-[11px] font-medium text-emerald-700">Hotkeys Active in Workspace</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHotkeysModal(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Screen hundreds of titles & abstracts efficiently without leaving your keyboard. Pressing a decision hotkey automatically applies the decision and advances to the next study.
+            </p>
+
+            <div className="space-y-2 border border-slate-100 rounded-xl p-3 bg-slate-50/60 text-xs">
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-600" /> Include Study & Advance
+                </span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">I</kbd>
+                  <span className="text-slate-400 font-mono text-[11px]">or</span>
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">1</kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-rose-600" /> Exclude Study & Advance (Reason required)
+                </span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">E</kbd>
+                  <span className="text-slate-400 font-mono text-[11px]">or</span>
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">2</kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <HelpCircle className="h-4 w-4 text-amber-600" /> Maybe / Uncertain & Advance
+                </span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">M</kbd>
+                  <span className="text-slate-400 font-mono text-[11px]">or</span>
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">3</kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <ArrowLeft className="h-4 w-4 text-slate-500" /> Navigate to Previous Study
+                </span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">←</kbd>
+                  <span className="text-slate-400 font-mono text-[11px]">or</span>
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">J</kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <ChevronRight className="h-4 w-4 text-slate-500" /> Navigate to Next Study
+                </span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">→</kbd>
+                  <span className="text-slate-400 font-mono text-[11px]">or</span>
+                  <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">K</kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-slate-700 font-medium flex items-center gap-2">
+                  <Keyboard className="h-4 w-4 text-indigo-500" /> Show / Hide Shortcuts
+                </span>
+                <kbd className="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono font-bold text-slate-800 shadow-2xs">?</kbd>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hotkeysEnabled}
+                  onChange={(e) => setHotkeysEnabled(e.target.checked)}
+                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>Enable keyboard shortcuts</span>
+              </label>
+
+              <button
+                type="button"
+                onClick={() => setShowHotkeysModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Universal Bulk Upload Modal from Laptop ── */}
+      {showBulkUploadModal && (
+        <UniversalBulkUploadModal
+          projectId={projectId!}
+          isOpen={showBulkUploadModal}
+          onClose={() => setShowBulkUploadModal(false)}
+          defaultTarget="screening"
+          onSuccess={(count, target, firstStudyId) => {
+            queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            if (firstStudyId) {
+              setSelectedStudyId(firstStudyId);
+            }
+          }}
+        />
+      )}
+
+      {/* ── Deduplication Step: Duplicate Review Modal ── */}
+      <DuplicateReviewModal
+        projectId={projectId!}
+        isOpen={showDuplicateModal}
+        onClose={() => setShowDuplicateModal(false)}
+        onResolved={() => {
+          queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["prisma", projectId] });
+        }}
+      />
+    </div>
+  );
+}
+

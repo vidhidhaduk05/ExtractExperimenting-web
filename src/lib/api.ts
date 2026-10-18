@@ -211,7 +211,7 @@ export function getStoredScreeningDecisions(projectId = "proj_pam_current"): Scr
   return [];
 }
 
-export function saveStoredScreeningDecision(projectId = "proj_pam_current", decision: ScreeningDecision): void {
+export function getStoredScreeningDecision(projectId = "proj_pam_current", decision: ScreeningDecision): void {
   if (typeof window === "undefined") return;
   try {
     const current = getStoredScreeningDecisions(projectId);
@@ -223,6 +223,140 @@ export function saveStoredScreeningDecision(projectId = "proj_pam_current", deci
     }
     localStorage.setItem(`radextract_screening_decisions_${projectId}`, JSON.stringify(current));
   } catch (e) {}
+}
+
+export const DEFAULT_ROB2_DEFINITION: RobToolDef = {
+  key: "rob2",
+  name: "RoB 2",
+  full_name: "Cochrane Risk of Bias 2 (revised tool for randomized trials)",
+  description: "Assesses risk of bias in randomized controlled trials.",
+  study_designs: ["rct", "randomized", "randomised", "random", "controlled trial"],
+  judgment_options: ["low", "some_concerns", "high"],
+  domains: [
+    {
+      key: "randomization",
+      label: "Bias arising from the randomization process",
+      has_applicability: false,
+      signaling_questions: [
+        { key: "sq_1_1", text: "Was the allocation sequence random?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: null, trigger_answers: null },
+        { key: "sq_1_2", text: "Was the allocation sequence concealed until participants were recruited and assigned?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: null, trigger_answers: null },
+        { key: "sq_1_3", text: "Did baseline differences between intervention groups suggest a problem with the randomization process?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: null, trigger_answers: null }
+      ]
+    },
+    {
+      key: "deviations",
+      label: "Bias due to deviations from intended interventions",
+      has_applicability: false,
+      signaling_questions: [
+        { key: "sq_2_1", text: "Were participants aware of their assigned intervention during the trial?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: null, trigger_answers: null },
+        { key: "sq_2_2", text: "Were carers and trial personnel aware of participants' assigned intervention during the trial?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: null, trigger_answers: null },
+        { key: "sq_2_3", text: "If Yes/Probably yes to 2.1 or 2.2: Were deviations from intended intervention reflected in the analysis?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: "sq_2_1", trigger_answers: ["yes", "probably_yes"] },
+        { key: "sq_2_4", text: "Were analysis estimates likely to be biased due to unintended deviations from intended intervention?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: null, trigger_answers: null }
+      ]
+    },
+    {
+      key: "missing_outcome",
+      label: "Bias due to missing outcome data",
+      has_applicability: false,
+      signaling_questions: [
+        { key: "sq_3_1", text: "Were data for this outcome available for all, or nearly all, participants randomized?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: null, trigger_answers: null },
+        { key: "sq_3_2", text: "If No/Probably no: Are the proportions of missing data similar across intervention groups?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: "sq_3_1", trigger_answers: ["no", "probably_no"] },
+        { key: "sq_3_3", text: "If No/Probably no to 3.2: Are the reasons for missing data acceptable?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: "sq_3_2", trigger_answers: ["no", "probably_no"] },
+        { key: "sq_3_4", text: "If No/Probably no to 3.1: Could missingness depend on the true value of the outcome?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: "sq_3_1", trigger_answers: ["no", "probably_no"] },
+        { key: "sq_3_5", text: "If Yes/Probably yes to 3.4: Is the proportion of missing data enough to induce bias?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: "sq_3_4", trigger_answers: ["yes", "probably_yes"] }
+      ]
+    },
+    {
+      key: "measurement",
+      label: "Bias in measurement of the outcome",
+      has_applicability: false,
+      signaling_questions: [
+        { key: "sq_4_1", text: "Was the method of measuring the outcome appropriate?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: null, trigger_answers: null },
+        { key: "sq_4_2", text: "Could the measurement or ascertainment of the outcome have differed between intervention groups?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: null, trigger_answers: null },
+        { key: "sq_4_3", text: "If Yes/Probably yes to 4.2: Were outcome assessors aware of the assigned intervention?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: "sq_4_2", trigger_answers: ["yes", "probably_yes"] },
+        { key: "sq_4_4", text: "If Yes/Probably yes to 4.3: Could awareness of the assigned intervention have influenced assessment of the outcome?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: "sq_4_3", trigger_answers: ["yes", "probably_yes"] }
+      ]
+    },
+    {
+      key: "selection_reported",
+      label: "Bias in selection of the reported result",
+      has_applicability: false,
+      signaling_questions: [
+        { key: "sq_5_1", text: "Were the data that produced this result selected from multiple outcome measurements or analyses within the outcome domain?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: null, trigger_answers: null },
+        { key: "sq_5_2", text: "If Yes/Probably yes to 5.1: Were the data that produced this result selected from multiple eligible outcome measurements?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: "sq_5_1", trigger_answers: ["yes", "probably_yes"] },
+        { key: "sq_5_3", text: "If Yes/Probably yes to 5.2: Were the data that produced this result selected from multiple eligible analyses of the data?", response_options: ["yes", "probably_yes", "probably_no", "no", "no_information"], parent_key: "sq_5_2", trigger_answers: ["yes", "probably_yes"] }
+      ]
+    }
+  ]
+};
+
+export function getStoredRobAssessment(assessmentId: string): RobAssessment | null {
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem(`radextract_rob_${assessmentId}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+  }
+  return null;
+}
+
+export function saveStoredRobAssessment(assessment: RobAssessment): void {
+  if (typeof window === "undefined" || !assessment?.assessment_id) return;
+  try {
+    localStorage.setItem(`radextract_rob_${assessment.assessment_id}`, JSON.stringify(assessment));
+  } catch (e) {}
+}
+
+export function buildDefaultRobAssessment(assessmentId: string, studyId = "study_birua_2022", projectId = "proj_pam_current"): RobAssessment {
+  const tool = DEFAULT_ROB2_DEFINITION;
+  const domainJudgments: RobDomainJudgment[] = tool.domains.map((dom, dIdx) => ({
+    judgment_id: `jd_${assessmentId}_${dom.key}`,
+    assessment_id: assessmentId,
+    domain_key: dom.key,
+    domain_label: dom.label,
+    risk_judgment: dIdx === 0 ? "some_concerns" : "low",
+    applicability: "",
+    support_text: "Evaluated via local Laya System-1 engine based on in-situ text evidence.",
+    ai_suggested: dIdx === 0 ? "some_concerns" : "low",
+    ai_support: "Laya System-1 inference with sentence quote alignment.",
+    ai_confidence: 0.88,
+    human_verified: 0,
+    signaling_answers: dom.signaling_questions.map((sq, sqIdx) => {
+      // Auto-recorded answer from Laya
+      const ans = sq.response_options.includes("yes") ? "yes" : (sq.response_options[0] || "yes");
+      const isFirst = dIdx === 0 && sqIdx === 0;
+      const conf = isFirst ? 0.65 : 0.88;
+      return {
+        answer_id: `ans_${assessmentId}_${sq.key}`,
+        judgment_id: `jd_${assessmentId}_${dom.key}`,
+        question_key: sq.key,
+        question_text: sq.text,
+        answer: ans,
+        ai_answer: ans,
+        ai_quote: sqIdx % 2 === 0
+          ? "Patients underwent diagnostic catheter angiography with continuous arterial monitoring and prespecified imaging protocols."
+          : "Treatment and follow-up clinical endpoints were evaluated without knowledge of prior noninvasive imaging results.",
+        ai_page: sqIdx + 1,
+        ai_confidence: conf,
+        human_verified: isFirst ? 0 : 1,
+        needs_human_review: isFirst ? 1 : 0,
+        reviewed_by: isFirst ? null : "Laya Auto-Record",
+        reviewed_at: new Date().toISOString()
+      };
+    })
+  }));
+
+  return {
+    assessment_id: assessmentId,
+    study_id: studyId,
+    project_id: projectId,
+    tool: "rob2",
+    outcome_label: "Primary Angiographic Occlusion",
+    overall_judgment: "some_concerns",
+    ai_prefilled: 1,
+    domain_judgments: domainJudgments,
+    tool_definition: tool
+  };
 }
 
 function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
@@ -488,11 +622,82 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         rob_confidence_threshold: body.rob_confidence_threshold || 0.7
       } as unknown as T;
     }
+    if (path.includes("/rob/answers/") && method === "PUT") {
+      const ansId = path.split("/").pop() || "";
+      // Search all stored assessments
+      for (const a of DEMO_ROB_SUMMARY.assessments) {
+        const stored = getStoredRobAssessment(a.assessment_id) || buildDefaultRobAssessment(a.assessment_id, a.study_id);
+        let found = false;
+        for (const dj of stored.domain_judgments) {
+          for (const sa of dj.signaling_answers) {
+            if (sa.answer_id === ansId) {
+              if (body.answer !== undefined) sa.answer = body.answer;
+              if (body.human_verified !== undefined) sa.human_verified = body.human_verified ? 1 : 0;
+              sa.needs_human_review = 0;
+              sa.reviewed_by = "Human Reviewer";
+              sa.reviewed_at = new Date().toISOString();
+              found = true;
+            }
+          }
+        }
+        if (found) {
+          saveStoredRobAssessment(stored);
+          return stored as unknown as T;
+        }
+      }
+      return { status: "updated" } as unknown as T;
+    }
+    if (path.includes("/rob/judgments/") && method === "PUT") {
+      const jdId = path.split("/").pop() || "";
+      for (const a of DEMO_ROB_SUMMARY.assessments) {
+        const stored = getStoredRobAssessment(a.assessment_id) || buildDefaultRobAssessment(a.assessment_id, a.study_id);
+        const dj = stored.domain_judgments.find((j) => j.judgment_id === jdId);
+        if (dj) {
+          if (body.risk_judgment !== undefined) dj.risk_judgment = body.risk_judgment;
+          if (body.applicability !== undefined) dj.applicability = body.applicability;
+          if (body.support_text !== undefined) dj.support_text = body.support_text;
+          if (body.human_verified !== undefined) dj.human_verified = body.human_verified ? 1 : 0;
+          saveStoredRobAssessment(stored);
+          return stored as unknown as T;
+        }
+      }
+      return { status: "updated" } as unknown as T;
+    }
     if (path.includes("/rob/") && path.includes("/ai-prefill")) {
-      return DEMO_ROB_SUMMARY.assessments[0] as unknown as T;
+      const aId = path.split("/")[3];
+      const found = (DEMO_ROB_SUMMARY.assessments as any[]).find((a) => a.assessment_id === aId);
+      const studyId = found ? found.study_id : "study_birua_2022";
+      const fresh = buildDefaultRobAssessment(aId || "rob_birua_2022", studyId);
+      fresh.ai_prefilled = 1;
+      saveStoredRobAssessment(fresh);
+      return {
+        assessment_id: aId,
+        domains_prefilled: fresh.domain_judgments.length,
+        questions_prefilled: fresh.domain_judgments.reduce((acc, dj) => acc + dj.signaling_answers.length, 0),
+        avg_confidence: 0.88,
+        used_full_text: true,
+        warnings: []
+      } as unknown as T;
     }
     if (path.includes("/accept-ai")) {
-      return { status: "accepted" } as unknown as T;
+      const aId = path.split("/")[3];
+      const found = (DEMO_ROB_SUMMARY.assessments as any[]).find((a) => a.assessment_id === aId);
+      const studyId = found ? found.study_id : "study_birua_2022";
+      const stored = getStoredRobAssessment(aId) || buildDefaultRobAssessment(aId, studyId);
+      let accepted = 0;
+      stored.domain_judgments.forEach((dj) => {
+        dj.human_verified = 1;
+        dj.signaling_answers.forEach((sa) => {
+          if (sa.ai_answer) {
+            sa.answer = sa.ai_answer;
+            sa.human_verified = 1;
+            sa.needs_human_review = 0;
+            accepted++;
+          }
+        });
+      });
+      saveStoredRobAssessment(stored);
+      return { assessment_id: aId, answers_accepted: accepted } as unknown as T;
     }
     if (path.includes("/grade/auto-populate")) {
       return DEMO_GRADE_LIST as unknown as T;
@@ -691,13 +896,20 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       alternatives: ["robins_i", "nos"]
     } as unknown as T;
   }
+  if (path.includes("/rob/tools")) {
+    return [DEFAULT_ROB2_DEFINITION] as unknown as T;
+  }
   if (path.includes("/rob/summary") || path.includes("/rob-summary")) {
     return DEMO_ROB_SUMMARY as unknown as T;
   }
-  if (path.match(/\/rob\/[^/]+$/)) {
-    const id = path.split("/").pop();
+  if (path.includes("/rob/assessments/") || path.match(/\/rob\/[^/]+$/)) {
+    const id = path.split("/").pop() || "";
+    const stored = getStoredRobAssessment(id);
+    if (stored) return stored as unknown as T;
     const found = DEMO_ROB_SUMMARY.assessments.find((a: any) => a.assessment_id === id);
-    return (found || DEMO_ROB_SUMMARY.assessments[0]) as unknown as T;
+    const studyId = found ? found.study_id : "study_birua_2022";
+    const built = buildDefaultRobAssessment(id || "rob_birua_2022", studyId);
+    return built as unknown as T;
   }
   if (path.includes("/grade")) {
     return DEMO_GRADE_LIST as unknown as T;

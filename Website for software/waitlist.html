@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f1e6" />
+  <title>Early Access — MetaSynthesis AI</title>
+  <meta name="description" content="Join the MetaSynthesis AI waitlist. Audit-first, AI-assisted data extraction for systematic reviews and meta-analyses. Currently in closed beta." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400;1,8..60,500&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       Design tokens (mirrors version_1_website_MetaSynthesis.html)
+       ============================================================ */
+    :root {
+      --beige-bg: #f4f1e6;
+      --beige-card: #eae6d7;
+      --beige-hover: #e0dccf;
+      --beige-deep: #d5d0c3;
+
+      --ink-black: #0f0f0f;
+      --ink-mid: #444;
+      --ink-light: #666;
+      --ink-muted: #888;
+      --ink-faint: #9c9487;
+
+      --divider: #d5d0c3;
+      --border-soft: rgba(0,0,0,0.08);
+      --border-mid: rgba(0,0,0,0.12);
+      --border-firm: rgba(0,0,0,0.20);
+
+      --sage: #5B7553;
+      --ochre: #B5764A;
+      --plum: #7B6B8A;
+      --amber: #C4924A;
+
+      --note-sage: #c5cebd;
+      --note-ochre: #dbc9a0;
+      --note-plum: #c4b5c8;
+      --note-cream: #e0dccf;
+
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+      --radius-2xl: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif;
+      background-color: var(--beige-bg);
+      color: var(--ink-black);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .font-body    { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; }
+    .font-heading { font-family: 'EB Garamond', Georgia, serif; }
+    .font-sans    { font-family: 'Inter', system-ui, sans-serif; }
+    .font-mono    { font-family: 'Space Mono', monospace; }
+
+    p {
+      color: var(--ink-mid);
+      font-family: 'Source Serif 4', serif;
+      font-size: 15px;
+      line-height: 1.55;
+      letter-spacing: -0.01em;
+      max-width: 90%;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    a:focus-visible, button:focus-visible, input:focus-visible,
+    select:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--sage);
+      outline-offset: 2px;
+    }
+
+    /* ============================================================
+       Layout
+       ============================================================ */
+    .section-divider {
+      border-top: 1px solid var(--divider);
+    }
+    .section-divider:first-of-type { border-top: none; }
+
+    .section-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 56px 24px;
+    }
+    @media (min-width: 768px) {
+      .section-inner { padding: 72px 48px; }
+    }
+    @media (min-width: 1024px) {
+      .section-inner { padding: 96px 64px; }
+    }
+
+    /* ============================================================
+       Header (shared chrome)
+       ============================================================ */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--beige-bg);
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .site-header__inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--ink-black);
+    }
+    .logo__mark {
+      /* [[LOGO MARK INSTRUCTION]] keep S glyph until M/MS monogram ships */
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--ink-black);
+      color: var(--beige-bg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .nav-desktop {
+      display: none;
+      align-items: center;
+      gap: 28px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-mid);
+    }
+    .nav-desktop a:hover { color: var(--ink-black); }
+    .nav-actions {
+      display: none;
+      align-items: center;
+      gap: 12px;
+    }
+    @media (min-width: 768px) {
+      .nav-desktop, .nav-actions { display: inline-flex; }
+      #hamburger { display: none; }
+    }
+
+    .btn-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid var(--border-mid);
+      border-radius: 999px;
+      padding: 7px 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 500;
+      background: transparent; color: var(--ink-black);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-pill:hover { background: var(--beige-hover); }
+
+    .btn-solid {
+      display: inline-flex; align-items: center; gap: 8px;
+      background-color: var(--ink-black);
+      color: var(--beige-bg);
+      border: none;
+      border-radius: var(--radius-xl);
+      padding: 14px 32px;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.05rem; font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    .btn-solid:hover { opacity: 0.92; }
+    .btn-solid:hover .arrow { transform: translateX(4px); }
+    .btn-solid .arrow { display: inline-block; transition: transform 0.3s; }
+
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: transparent;
+      border: 1px solid var(--border-firm);
+      border-radius: var(--radius-xl);
+      padding: 14px 28px;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.05rem; font-weight: 600;
+      color: var(--ink-black);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-outline:hover { background: var(--beige-hover); }
+
+    /* Hamburger */
+    #hamburger {
+      display: inline-flex;
+      width: 36px; height: 36px;
+      border: 1px solid var(--border-mid);
+      border-radius: 8px;
+      background: transparent;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    #hamburger span {
+      display: block;
+      width: 16px; height: 1.5px;
+      background: var(--ink-black);
+      position: relative;
+    }
+    #hamburger span::before,
+    #hamburger span::after {
+      content: ""; position: absolute; left: 0;
+      width: 16px; height: 1.5px;
+      background: var(--ink-black);
+    }
+    #hamburger span::before { top: -5px; }
+    #hamburger span::after  { top:  5px; }
+
+    #mobile-menu {
+      display: none;
+      border-top: 1px solid var(--border-soft);
+      padding: 16px 24px 24px;
+      background: var(--beige-bg);
+    }
+    #mobile-menu.open { display: block; }
+    #mobile-menu a {
+      display: block;
+      padding: 10px 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: var(--ink-mid);
+      border-bottom: 1px solid var(--border-soft);
+    }
+    #mobile-menu .mobile-cta {
+      margin-top: 16px;
+    }
+
+    /* ============================================================
+       Section eyebrow
+       ============================================================ */
+    .section-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+    }
+    .eyebrow-line {
+      flex: 0 0 48px;
+      height: 1px;
+      background: var(--divider);
+    }
+    .eyebrow-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--sage);
+      animation: pulse-slow 2s ease-in-out infinite;
+    }
+
+    /* ============================================================
+       Headings
+       ============================================================ */
+    .section-h2 {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(32px, 4.2vw, 48px);
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+      color: var(--ink-black);
+      margin: 24px 0 0 0;
+      max-width: 820px;
+    }
+    .italic { font-style: italic; }
+
+    .hero-h1 {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(42px, 6vw, 72px);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      color: var(--ink-black);
+      margin: 32px 0 0 0;
+      max-width: 900px;
+    }
+
+    /* ============================================================
+       Animations
+       ============================================================ */
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1;   transform: scale(1); }
+      50%      { opacity: 0.4; transform: scale(1.4); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .fade-up.visible.d1 { transition-delay: 0.1s; }
+    .fade-up.visible.d2 { transition-delay: 0.2s; }
+    .fade-up.visible.d3 { transition-delay: 0.3s; }
+
+    /* ============================================================
+       Waitlist form
+       ============================================================ */
+    .form-grid {
+      margin-top: 48px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      max-width: 720px;
+    }
+    @media (min-width: 768px) {
+      .form-grid { grid-template-columns: 1fr 1fr; }
+      .form-grid .full { grid-column: 1 / -1; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 8px; }
+
+    .field label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+    }
+    .field .req { color: var(--ochre); }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-family: 'Source Serif 4', serif;
+      font-size: 15px;
+      color: var(--ink-black);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .field input::placeholder,
+    .field textarea::placeholder { color: var(--ink-faint); }
+    .field input:hover,
+    .field select:hover,
+    .field textarea:hover { border-color: var(--border-firm); }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--sage);
+      background: rgba(255,255,255,0.4);
+      outline: none;
+    }
+    .field textarea { resize: vertical; min-height: 96px; }
+    .field .hint {
+      font-family: 'Source Serif 4', serif;
+      font-size: 13px;
+      color: var(--ink-light);
+      font-style: italic;
+    }
+
+    /* Checkbox group (audience selector) */
+    .checkbox-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    @media (min-width: 640px) {
+      .checkbox-row { grid-template-columns: 1fr 1fr; }
+    }
+    .checkbox-row label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      font-family: 'Source Serif 4', serif;
+      font-size: 14px;
+      color: var(--ink-mid);
+      letter-spacing: 0;
+      text-transform: none;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .checkbox-row label:hover {
+      border-color: var(--border-firm);
+      background: var(--beige-hover);
+    }
+    .checkbox-row input[type="checkbox"],
+    .checkbox-row input[type="radio"] {
+      margin-top: 3px;
+      accent-color: var(--sage);
+      width: auto;
+    }
+
+    .form-actions {
+      margin-top: 32px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+    .form-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--ink-muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* What-to-expect side note */
+    .expect-card {
+      margin-top: 56px;
+      max-width: 720px;
+      background: var(--beige-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-2xl);
+      padding: 28px 32px;
+    }
+    .expect-card h3 {
+      margin: 0 0 12px 0;
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 22px;
+      letter-spacing: -0.01em;
+    }
+    .expect-list {
+      list-style: none;
+      padding: 0; margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+    .expect-list li {
+      font-family: 'Source Serif 4', serif;
+      font-size: 14px;
+      color: var(--ink-mid);
+      line-height: 1.5;
+      padding-left: 20px;
+      position: relative;
+    }
+    .expect-list li::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 9px;
+      width: 8px; height: 1px;
+      background: var(--sage);
+    }
+
+    /* Success state */
+    .success-card {
+      display: none;
+      max-width: 720px;
+      margin-top: 32px;
+      padding: 28px 32px;
+      border: 1px solid var(--sage);
+      border-radius: var(--radius-2xl);
+      background: rgba(91, 117, 83, 0.08);
+    }
+    .success-card.show { display: block; }
+    .success-card h3 {
+      margin: 0 0 8px 0;
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 24px;
+    }
+    .success-card p { margin: 0; color: var(--ink-mid); }
+
+    /* ============================================================
+       FAQ (subset reused from landing)
+       ============================================================ */
+    .faq-list {
+      margin-top: 40px;
+      max-width: 820px;
+      border-top: 1px solid var(--divider);
+    }
+    .faq-item { border-bottom: 1px solid var(--divider); }
+    .faq-q {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 0;
+      background: transparent;
+      border: none;
+      text-align: left;
+      font-family: 'Source Serif 4', serif;
+      font-size: 17px;
+      color: var(--ink-black);
+      cursor: pointer;
+    }
+    .faq-chevron {
+      font-family: 'Space Mono', monospace;
+      font-size: 18px;
+      color: var(--ink-muted);
+      transition: transform 0.2s;
+    }
+    .faq-q[aria-expanded="true"] .faq-chevron { transform: rotate(45deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .faq-answer p {
+      margin: 0 0 22px 0;
+      max-width: 720px;
+    }
+
+    /* ============================================================
+       Footer (shared chrome)
+       ============================================================ */
+    .site-footer {
+      background: var(--ink-black);
+      color: var(--beige-bg);
+      padding: 64px 24px 32px;
+    }
+    .footer-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+    @media (min-width: 768px) {
+      .footer-inner { grid-template-columns: 2fr 1fr 1fr 1fr; }
+    }
+    .footer-brand p {
+      color: rgba(244, 241, 230, 0.7);
+      max-width: 360px;
+      margin: 16px 0 0 0;
+      font-size: 14px;
+    }
+    .footer-col h4 {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(244,241,230,0.6);
+      margin: 0 0 16px 0;
+    }
+    .footer-col ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+    .footer-col a {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: rgba(244,241,230,0.85);
+    }
+    .footer-col a:hover { color: var(--beige-bg); }
+    .footer-bottom {
+      max-width: 1440px;
+      margin: 48px auto 0;
+      padding-top: 24px;
+      border-top: 1px solid rgba(244,241,230,0.12);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: space-between;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: rgba(244,241,230,0.5);
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+
+  <!--
+    [[LINKS NOTICE]]
+    Several anchors on this page point back to /#section-id on the landing page
+    (version_1_website_MetaSynthesis.html). Until the production domain is wired
+    up, replace [[DOMAIN]] tokens with the canonical URL.
+  -->
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a href="[[HOME_URL]]" class="logo" aria-label="MetaSynthesis AI — home">
+        <!-- [[LOGO MARK INSTRUCTION]] retain S glyph until M / MS monogram is finalized -->
+        <span class="logo__mark">S</span>
+        <span>MetaSynthesis AI</span>
+      </a>
+
+      <nav class="nav-desktop" aria-label="Primary">
+        <a href="/#features">Features</a>
+        <a href="/#evidence">Evidence</a>
+        <a href="/#how-it-works">How it works</a>
+        <a href="/#pricing">Pricing</a>
+        <a href="/#about">About</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="[[SIGN_IN_URL]]" class="btn-pill">Sign in</a>
+        <a href="#waitlist-form" class="btn-pill" style="background:var(--ink-black); color:var(--beige-bg); border-color:var(--ink-black);">
+          Get Early Access
+          <span class="arrow" style="display:inline-block;transition:transform 0.3s;">→</span>
+        </a>
+      </div>
+
+      <button id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+        <span></span>
+      </button>
+    </div>
+
+    <div id="mobile-menu" role="region" aria-label="Mobile navigation">
+      <a href="/#features">Features</a>
+      <a href="/#evidence">Evidence</a>
+      <a href="/#how-it-works">How it works</a>
+      <a href="/#pricing">Pricing</a>
+      <a href="/#about">About</a>
+      <a href="[[SIGN_IN_URL]]">Sign in</a>
+      <a href="#waitlist-form" class="btn-solid mobile-cta">
+        Get Early Access
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       HERO
+       ============================================================ -->
+  <section class="section-divider" aria-label="Early access hero">
+    <div class="section-inner">
+      <div class="section-eyebrow fade-up">
+        <span class="eyebrow-dot" aria-hidden="true"></span>
+        <span>[ 01 ]</span>
+        <span class="eyebrow-line"></span>
+        <span>EARLY ACCESS</span>
+      </div>
+
+      <h1 class="hero-h1 fade-up d1">
+        Join the closed beta for<br>
+        <span class="italic" style="color:var(--plum);">audit-first extraction.</span>
+      </h1>
+
+      <p class="font-body fade-up d2" style="margin-top:28px; max-width:680px; font-size:17px;">
+        MetaSynthesis AI is in development. We are onboarding a small cohort of methodologists,
+        clinician-researchers, and PhD students to test the dual-extractor + referee workflow on
+        real reviews. The waitlist below is how we sequence invites.
+      </p>
+
+      <p class="font-body fade-up d3" style="margin-top:16px; max-width:680px;">
+        We do not market this as a replacement reviewer, and we do not yet have a published
+        validation study — a TRIPOD-LLM protocol is in preparation. Expect a beta-grade tool
+        with rough edges and direct access to the team building it.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FORM SECTION
+       ============================================================ -->
+  <section class="section-divider" id="waitlist-form" aria-label="Waitlist form" style="background:var(--beige-bg);">
+    <div class="section-inner">
+      <div class="section-eyebrow fade-up">
+        <span>[ 02 ]</span>
+        <span class="eyebrow-line"></span>
+        <span>REQUEST AN INVITE</span>
+      </div>
+
+      <h2 class="section-h2 fade-up d1">
+        Tell us about the review<br>
+        <span class="italic" style="color:var(--plum);">you are working on.</span>
+      </h2>
+
+      <p class="font-body fade-up d2" style="margin-top:24px; max-width:680px;">
+        Three required fields, the rest optional. The more context you share, the better we can
+        sequence invites against active beta capacity. We do not share your information and we
+        do not sell email lists.
+      </p>
+
+      <!-- Success state (revealed by JS after submit) -->
+      <div class="success-card" id="success" role="status" aria-live="polite">
+        <h3>You're on the list.</h3>
+        <p>We'll reach out from <strong>[[CONTACT_EMAIL]]</strong> when the next cohort opens. In the meantime, the <a href="/#evidence" style="color:var(--sage); text-decoration:underline;">Evidence Board</a> and <a href="/#how-it-works" style="color:var(--sage); text-decoration:underline;">how-it-works</a> sections cover what we're building and why.</p>
+      </div>
+
+      <form class="form-grid fade-up d3" id="waitlist" novalidate>
+        <div class="field">
+          <label for="name">Full name <span class="req">*</span></label>
+          <input id="name" name="name" type="text" placeholder="Dhaduk, V." required autocomplete="name" />
+        </div>
+
+        <div class="field">
+          <label for="email">Work or institutional email <span class="req">*</span></label>
+          <input id="email" name="email" type="email" placeholder="name@university.edu" required autocomplete="email" />
+        </div>
+
+        <div class="field">
+          <label for="affiliation">Affiliation</label>
+          <input id="affiliation" name="affiliation" type="text" placeholder="University, hospital, or research group" autocomplete="organization" />
+        </div>
+
+        <div class="field">
+          <label for="orcid">ORCID iD</label>
+          <input id="orcid" name="orcid" type="text" placeholder="0000-0000-0000-0000" pattern="[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]" />
+          <span class="hint">Optional. Helps us prioritize methodologists with prior review work.</span>
+        </div>
+
+        <div class="field full">
+          <label>Which best describes you? <span class="req">*</span></label>
+          <div class="checkbox-row" role="radiogroup" aria-label="Audience">
+            <label><input type="radio" name="audience" value="methodologist" required /> Research methodologist (Cochrane / Campbell / JBI)</label>
+            <label><input type="radio" name="audience" value="clinician" /> Clinician-researcher running my own review</label>
+            <label><input type="radio" name="audience" value="phd" /> PhD student or research assistant</label>
+            <label><input type="radio" name="audience" value="other" /> Other</label>
+          </div>
+        </div>
+
+        <div class="field full">
+          <label>Review type (select all that apply)</label>
+          <div class="checkbox-row">
+            <label><input type="checkbox" name="review_type" value="systematic" /> Systematic review</label>
+            <label><input type="checkbox" name="review_type" value="meta-analysis" /> Meta-analysis</label>
+            <label><input type="checkbox" name="review_type" value="scoping" /> Scoping review</label>
+            <label><input type="checkbox" name="review_type" value="living" /> Living / rapid review</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="studies">Approx. number of studies to extract</label>
+          <select id="studies" name="studies">
+            <option value="">Select a range</option>
+            <option value="<25">Fewer than 25</option>
+            <option value="25-100">25 – 100</option>
+            <option value="100-500">100 – 500</option>
+            <option value="500+">More than 500</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="timeline">Target timeline</label>
+          <select id="timeline" name="timeline">
+            <option value="">Select a window</option>
+            <option value="now">Already extracting</option>
+            <option value="3mo">Starting in the next 3 months</option>
+            <option value="6mo">Starting in 3 – 6 months</option>
+            <option value="exploring">Exploring, no fixed date</option>
+          </select>
+        </div>
+
+        <div class="field full">
+          <label for="notes">Anything else we should know?</label>
+          <textarea id="notes" name="notes" placeholder="Protocol registration, PROSPERO ID, current pain points with extraction, or specific data fields you need."></textarea>
+          <span class="hint">Optional. Free text — no character limit.</span>
+        </div>
+
+        <div class="field full">
+          <div class="checkbox-row" style="grid-template-columns:1fr;">
+            <label>
+              <input type="checkbox" name="updates" value="yes" checked />
+              Send occasional updates on the validation study and beta cohort openings. Unsubscribe at any time.
+            </label>
+          </div>
+        </div>
+
+        <div class="form-actions full">
+          <button type="submit" class="btn-solid">
+            Request an invite
+            <span class="arrow">→</span>
+          </button>
+          <a href="/#evidence" class="btn-outline">View the Evidence Board</a>
+          <span class="form-meta">No spam. No sharing. Beta-grade tool.</span>
+        </div>
+      </form>
+
+      <!-- What to expect -->
+      <aside class="expect-card fade-up" aria-label="What to expect">
+        <h3 class="font-heading">What to expect after you submit</h3>
+        <ul class="expect-list">
+          <li>A confirmation email from <strong>[[CONTACT_EMAIL]]</strong> within one working day.</li>
+          <li>A short questionnaire (5 – 10 minutes) when your cohort is next in queue, covering scope, dataset, and consent for usage logging during beta.</li>
+          <li>An onboarding call with the founder to walk through the dual-extractor + referee workflow and the audited workbook output.</li>
+          <li>Access aligns with Cochrane, JBI, and RAISE guidance. The TRIPOD-LLM validation study is in preparation; participation does not require waiting for it.</li>
+        </ul>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FAQ (waitlist-specific)
+       ============================================================ -->
+  <section class="section-divider" id="waitlist-faq" aria-label="Waitlist FAQ">
+    <div class="section-inner">
+      <div class="section-eyebrow fade-up" style="justify-content:center;">
+        <span>[ 03 ]</span>
+        <span class="eyebrow-line"></span>
+        <span>QUESTIONS</span>
+      </div>
+
+      <h2 class="section-h2 fade-up d1" style="text-align:center; margin-left:auto; margin-right:auto;">
+        Common questions about<br>
+        <span class="italic" style="color:var(--plum);">the closed beta.</span>
+      </h2>
+
+      <div class="faq-list fade-up d2" style="margin-left:auto; margin-right:auto;">
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q1">
+            How long is the waitlist?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q1">
+            <p>We onboard in small cohorts to keep founder support meaningful. Typical wait is 2 – 8 weeks depending on review type and capacity. Methodologists running registered protocols are usually invited first.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q2">
+            Is there a cost during beta?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q2">
+            <p>Beta access is free. Pricing tiers are listed on the landing page but dollar amounts are intentionally hidden until the model stabilizes. PhD students and RAs will have a free tier sized to cover a thesis-scale review.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q3">
+            Is MetaSynthesis AI a replacement reviewer?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q3">
+            <p>No. The tool is positioned as AI-assisted, human-verified. Every extraction is traceable to a sentence-level source, dual-extracted, and referee-checked. The human reviewer is always in the loop. We do not market this as a medical device.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q4">
+            Has it been validated?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q4">
+            <p>A prospective validation study following the TRIPOD-LLM reporting guideline is in preparation. We do not yet have a published validation paper to cite, and we will not claim accuracy benchmarks until that work is peer-reviewed. Targets used in onboarding materials are framed as aspirational against published literature.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q font-body" aria-expanded="false" id="faq-q5">
+            What happens to my data?
+            <span class="faq-chevron font-mono">+</span>
+          </button>
+          <div class="faq-answer" role="region" aria-labelledby="faq-q5">
+            <p>Your uploaded studies and extractions stay in your project workspace. Beta participants are asked for consent to log workflow events (timing, edit patterns) for product improvement; consent is opt-in and revocable. We do not train models on your private corpus.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="site-footer" aria-label="Site footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="logo" style="color:var(--beige-bg);">
+          <span class="logo__mark" style="background:var(--beige-bg); color:var(--ink-black);">S</span>
+          <span>MetaSynthesis AI</span>
+        </div>
+        <p>Audit-first, AI-assisted data extraction for systematic reviews and meta-analyses. Built by the Curie Project. Currently in closed beta.</p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/#features">Features</a></li>
+          <li><a href="/#how-it-works">How it works</a></li>
+          <li><a href="/#pricing">Pricing</a></li>
+          <li><a href="/#faq">FAQ</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Evidence</h4>
+        <ul>
+          <li><a href="/#evidence">Evidence Board</a></li>
+          <li><a href="/#how-cite">How to cite</a></li>
+          <li><a href="/validation-study/">Validation study</a></li>
+          <li><a href="/#about">About the project</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="mailto:[[CONTACT_EMAIL]]">Contact</a></li>
+          <li><a href="[[GITHUB_URL]]">GitHub</a></li>
+          <li><a href="[[LINKEDIN_OR_PROFILE]]">Profile</a></li>
+          <li><a href="[[CALENDLY_OR_DEMO_URL]]">Book a call</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© Curie Project · MetaSynthesis AI</span>
+      <span>v0.1 · Closed beta · TRIPOD-LLM validation in preparation</span>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       JS — minimal subset (mobile menu, fade-up, FAQ, form handler)
+       ============================================================ -->
+  <script>
+    // Mobile menu
+    (function () {
+      var btn = document.getElementById('hamburger');
+      var menu = document.getElementById('mobile-menu');
+      if (!btn || !menu) return;
+      btn.addEventListener('click', function () {
+        var open = menu.classList.toggle('open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    })();
+
+    // fade-up reveal
+    (function () {
+      var els = document.querySelectorAll('.fade-up');
+      if (!('IntersectionObserver' in window)) {
+        els.forEach(function (el) { el.classList.add('visible'); });
+        return;
+      }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      els.forEach(function (el) { io.observe(el); });
+    })();
+
+    // FAQ accordion
+    (function () {
+      document.querySelectorAll('.faq-q').forEach(function (q) {
+        q.addEventListener('click', function () {
+          var expanded = q.getAttribute('aria-expanded') === 'true';
+          q.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+          var ans = q.nextElementSibling;
+          if (!ans) return;
+          if (expanded) {
+            ans.style.maxHeight = '0px';
+          } else {
+            ans.style.maxHeight = ans.scrollHeight + 'px';
+          }
+        });
+      });
+    })();
+
+    // Waitlist form — client-side only (no backend wired up yet)
+    (function () {
+      var form = document.getElementById('waitlist');
+      var success = document.getElementById('success');
+      if (!form) return;
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        // Basic native validation
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+        // [[FORM ENDPOINT INSTRUCTION]] wire up POST to a real endpoint here.
+        // For now: hide the form and reveal the success card.
+        form.style.display = 'none';
+        if (success) {
+          success.classList.add('show');
+          success.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+open-design/
+radextract_web_repo/
+.playwright-mcp/
+node_modules/
+dist/
+build/
+.venv/
+venv/
