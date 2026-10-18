@@ -41,8 +41,8 @@ export const RigorScanPage: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
-  // Scan state - initialize with DEMO_RIGOR_RESULT so features work seamlessly in demo mode
-  const [scanResult, setScanResult] = useState<RigorScanResult | null>(DEMO_RIGOR_RESULT);
+  // Scan state
+  const [scanResult, setScanResult] = useState<RigorScanResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"checks" | "software" | "methodology">("checks");
   const [selectedDomain, setSelectedDomain] = useState<string>("all");
@@ -84,6 +84,7 @@ export const RigorScanPage: React.FC = () => {
     requestInFlight.current = true;
     setIsLoading(true);
     setHasError(false);
+    setScanResult(null);
     setSelectedDomain("all");
     setSelectedOutcome("all");
     setSearchQuery("");
@@ -92,8 +93,7 @@ export const RigorScanPage: React.FC = () => {
 
   const acceptResult = (result: RigorScanResult, example: boolean) => {
     if (!result?.view || !Array.isArray(result.view.checks) || !result.view.checks.length) {
-      // Fallback to demo result
-      result = DEMO_RIGOR_RESULT;
+      throw new Error("The server returned no reporting checks.");
     }
     setScanResult(result);
     setIsExample(example);
@@ -109,25 +109,10 @@ export const RigorScanPage: React.FC = () => {
     try {
       if (!file.name.toLowerCase().endsWith(".pdf")) throw new Error("Please choose a PDF file.");
       setStatusMessage("Uploading PDF and running reporting checks…");
-      try {
-        const liveResult = await api.scanPdfRigor(file);
-        acceptResult(liveResult, false);
-      } catch (backendErr) {
-        // Fallback to simulated scan with uploaded filename
-        await new Promise((r) => setTimeout(r, 800));
-        const simulated: RigorScanResult = {
-          ...DEMO_RIGOR_RESULT,
-          view: {
-            ...DEMO_RIGOR_RESULT.view,
-            paper: {
-              ...DEMO_RIGOR_RESULT.view.paper,
-              title: file.name.replace(/\.pdf$/i, ""),
-            },
-          },
-        };
-        acceptResult(simulated, false);
-      }
+      const liveResult = await api.scanPdfRigor(file);
+      acceptResult(liveResult, false);
     } catch (err: unknown) {
+      setScanResult(null);
       setHasError(true);
       setStatusMessage(err instanceof Error ? err.message : "PDF scan failed. Please retry.");
     } finally {
