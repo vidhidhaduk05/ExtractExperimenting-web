@@ -25,7 +25,7 @@ def _count_matches(text_lower: str, terms: list[str]) -> tuple[int, list[str]]:
         if term_clean not in text_lower:
             continue
         # Bolt performance optimization: Reuse cached pre-compiled regex `_get_signal_regex(term_clean)`
-        # instead of dynamic string formatting & re-compiling per term (~1.89x speedup)
+        # instead of dynamic string formatting & re-compiling per term
         if _get_signal_regex(term_clean).search(text_lower):
             matched.append(term_clean)
     return len(matched), matched
