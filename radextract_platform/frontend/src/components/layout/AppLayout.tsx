@@ -11,6 +11,7 @@ import { ApiSettingsModal } from "../common/ApiSettingsModal";
 import { subscribeApiConnection, ApiConnectionInfo, getApiConnectionInfo } from "../../lib/api";
 
 const navItems = [
+  { to: "/rigor-scan", label: "Rigor Scan", icon: ShieldCheck },
   { to: "/claimscape", label: "ClaimScape", icon: Layers },
   { to: "/citation-telephone", label: "Citation Telephone", icon: Share2 },
   { to: "/projects", label: "Projects", icon: Home, end: true },

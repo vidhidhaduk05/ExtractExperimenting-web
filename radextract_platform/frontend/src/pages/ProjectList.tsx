@@ -16,9 +16,14 @@ export function ProjectList() {
           <h1 className="text-2xl font-bold">Systematic Review Projects</h1>
           <p className="text-gray-500 text-sm mt-1">Manage your radiology systematic review projects</p>
         </div>
-        <Link to="/projects/new" className="btn-primary">
-          <Plus className="h-4 w-4" /> New Project
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to="/rigor-scan" className="btn-secondary flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg">
+            Rigor Scan (74 Checks)
+          </Link>
+          <Link to="/projects/new" className="btn-primary">
+            <Plus className="h-4 w-4" /> New Project
+          </Link>
+        </div>
       </div>
 
       {isLoading && <p className="text-gray-400">Loading projects...</p>}

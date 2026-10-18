@@ -3669,6 +3669,41 @@ export const api = {
     request<any>("/settings/llm-config/reset", {
       method: "POST",
     }),
+
+  // ── Rigor Scan ──
+  getRigorExample: () =>
+    request<any>("/rigor-scan/example"),
+
+  getRigorSpecs: () =>
+    request<any[]>("/rigor-scan/specs"),
+
+  getRigorStatus: () =>
+    request<any>("/rigor-scan/status"),
+
+  scanTextRigor: (text: string, title?: string, doi?: string) =>
+    request<any>("/rigor-scan/scan-text", {
+      method: "POST",
+      body: JSON.stringify({ text, title, doi }),
+    }),
+
+  scanPdfRigor: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/rigor-scan/scan-pdf`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || "PDF scan failed");
+    }
+    return res.json();
+  },
 };
+
 
 
