@@ -224,10 +224,12 @@ export function ScreeningPage() {
   const [extractionMsg, setExtractionMsg] = useState<Record<string, string>>({});
   const [extractingStudyId, setExtractingStudyId] = useState<string | null>(null);
 
-  // Map study_id -> existing RoB assessment (for Start RoB / View RoB rendering)
-  const robByStudy = new Map(
-    (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
-  );
+  // Bolt Optimization: Memoize study_id -> RoB assessment Map to avoid recreating Map & entries on every render
+  const robByStudy = useMemo(() => {
+    return new Map(
+      (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
+    );
+  }, [robSummary?.assessments]);
 
   const handleStartRob = async (study: Study) => {
     setRobStarting((prev) => ({ ...prev, [study.study_id]: true }));
@@ -276,7 +278,8 @@ export function ScreeningPage() {
     }
   };
 
-  const studyList = Array.isArray(studies) ? studies : [];
+  // Bolt Optimization: Memoize studyList array reference to keep filteredStudies useMemo stable
+  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
@@ -686,7 +689,7 @@ export function ScreeningPage() {
     }
 
     // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-    let activeSpans = [...spans];
+    const activeSpans = [...spans];
     if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
       fallbackKeywordsList.forEach((kw) => {
         const word = kw.keyword.trim();
