@@ -7,10 +7,11 @@ import { autoIdentifyPdf } from "../lib/pdfAutoIdentifier";
 import {
   Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2,
   Highlighter, FileSpreadsheet, ArrowRight, CheckCircle2, X,
-  RefreshCw, Sparkles, FolderPlus, Check, AlertCircle
+  RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight
 } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
 import { useRef, useState, useCallback } from "react";
+import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
 
 export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean }) {
   const { projectId } = useParams<{ projectId: string }>();
@@ -23,6 +24,13 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   const bulkPdfInputRef = useRef<HTMLInputElement>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+
+  const { data: dedupData } = useQuery({
+    queryKey: ["duplicate_groups", projectId],
+    queryFn: () => api.getDuplicateGroups(projectId!),
+    enabled: !!projectId,
+  });
 
   const { data: studies, isLoading } = useQuery({
     queryKey: ["studies", projectId],
@@ -148,6 +156,22 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
               <span>Start Blank Workspace</span>
             </button>
           )}
+
+          {/* Duplicate Review Button */}
+          <button
+            type="button"
+            onClick={() => setShowDuplicateModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 text-xs font-medium hover:bg-amber-100 transition-colors shadow-2xs"
+            title="Deduplication Step: Review candidate duplicate pairs side-by-side with match score"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5 text-amber-700" />
+            <span>Duplicate Review</span>
+            {dedupData && dedupData.total_duplicates > 0 ? (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-200 text-amber-900 font-bold">
+                {dedupData.total_duplicates}
+              </span>
+            ) : null}
+          </button>
 
           {/* Bulk Upload PDFs Button */}
           <button
@@ -297,6 +321,15 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
             </table>
           </div>
         </div>
+      )}
+
+      {/* Duplicate Review Modal */}
+      {showDuplicateModal && (
+        <DuplicateReviewModal
+          projectId={projectId!}
+          isOpen={showDuplicateModal}
+          onClose={() => setShowDuplicateModal(false)}
+        />
       )}
 
       {/* Bulk Upload Modal */}

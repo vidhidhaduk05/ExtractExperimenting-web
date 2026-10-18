@@ -63,7 +63,6 @@ import {
   Square,
 } from "lucide-react";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
-import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
 
 
 export function ScreeningPage() {
@@ -82,23 +81,18 @@ export function ScreeningPage() {
   const [confidenceFilter, setConfidenceFilter] = useState<"all" | "high" | "medium" | "low">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Protocol Screening Rules & PICO Criteria Minimization
-  const [isProtocolRulesMinimized, setIsProtocolRulesMinimized] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("radextract_screening_rules_minimized") === "true";
-    } catch {
-      return false;
-    }
-  });
+  // Protocol Screening Rules & PICO Criteria Right-Side Slider State
+  const [isProtocolSliderOpen, setIsProtocolSliderOpen] = useState(false);
+  const [activeBumpKey, setActiveBumpKey] = useState<string | null>(null);
 
-  const toggleProtocolRulesMinimized = () => {
-    setIsProtocolRulesMinimized((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem("radextract_screening_rules_minimized", String(next));
-      } catch {}
-      return next;
-    });
+  const handleBundleClick = (bundleKey: string) => {
+    setActiveBumpKey(bundleKey);
+    setTimeout(() => setActiveBumpKey(null), 350);
+    if (statusFilter === bundleKey) {
+      setStatusFilter("all");
+    } else {
+      setStatusFilter(bundleKey);
+    }
   };
 
   // Reviewer identity
@@ -144,14 +138,7 @@ export function ScreeningPage() {
   // Bulk Upload & Hotkeys state
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showHotkeysModal, setShowHotkeysModal] = useState(false);
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
-
-  const { data: dedupData } = useQuery({
-    queryKey: ["duplicate_groups", projectId],
-    queryFn: () => api.getDuplicateGroups(projectId!),
-    enabled: !!projectId,
-  });
 
 
   // While an AI screening run is in flight, poll so each screened study appears as soon as it is saved
@@ -291,11 +278,51 @@ export function ScreeningPage() {
 
   const studyList = Array.isArray(studies) ? studies : [];
 
-  // Filtered Studies List
+  // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
       if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
+
+      // Stage filter
+      if (stageFilter !== "all") {
+        if (stageFilter === "ta" && s.screening_stage !== "ta" && s.screening_status !== "ta_included") {
+          return false;
+        }
+        if (stageFilter === "ft" && s.screening_stage !== "ft" && s.screening_status !== "included") {
+          return false;
+        }
+      }
+
+      // Status & Interactive Bundle filter
+      if (statusFilter !== "all") {
+        if (statusFilter === "ta_included") {
+          const isTaInc = s.screening_status === "ta_included" ||
+            (s.screening_status === "included" && s.screening_stage === "ta") ||
+            s.ai_decision === "include";
+          if (!isTaInc) return false;
+        } else if (statusFilter === "included") {
+          const isFtInc = s.screening_status === "included" && s.screening_stage !== "ta";
+          if (!isFtInc && s.screening_status !== "included") return false;
+        } else if (statusFilter === "excluded") {
+          const isExc = s.screening_status === "excluded" || s.ai_decision === "exclude";
+          if (!isExc) return false;
+        } else if (statusFilter === "uncertain") {
+          const isUnc = s.screening_status === "uncertain" || s.screening_status === "pending" || s.ai_decision === "maybe";
+          if (!isUnc) return false;
+        } else if (statusFilter === "awaiting_clarification") {
+          const isClar = s.screening_status === "awaiting_clarification" || (s as any).clarification_needed;
+          if (!isClar) return false;
+        } else if (statusFilter === "awaiting_pdf") {
+          const isPdf = s.screening_status === "awaiting_pdf" || (!s.pdf_path && s.screening_status === "included");
+          if (!isPdf) return false;
+        } else if (statusFilter === "pending") {
+          if (s.screening_status !== "pending") return false;
+        } else {
+          if (s.screening_status !== statusFilter) return false;
+        }
+      }
+
       // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -313,7 +340,17 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studies, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
+  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
+
+  // Auto-select first study in filtered set if current selectedStudyId is filtered out
+  useEffect(() => {
+    if (filteredStudies.length > 0) {
+      const isVisible = filteredStudies.some((s) => s.study_id === selectedStudyId);
+      if (!isVisible) {
+        setSelectedStudyId(filteredStudies[0].study_id);
+      }
+    }
+  }, [statusFilter, stageFilter, filteredStudies, selectedStudyId]);
 
   // Selection and keyboard actions use the same visible record set as all filters.
   const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || null;
@@ -800,21 +837,6 @@ export function ScreeningPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Deduplication Step: Duplicate Review Button */}
-            <button
-              onClick={() => setShowDuplicateModal(true)}
-              className="px-3 py-2 text-xs font-semibold text-slate-800 bg-amber-50 border border-amber-300 hover:bg-amber-100 rounded-lg flex items-center gap-1.5 shadow-sm transition-all"
-              title="Deduplication Step: Review candidate duplicate pairs side-by-side with match score"
-            >
-              <ArrowLeftRight className="w-3.5 h-3.5 text-amber-700" />
-              <span>Duplicate Review</span>
-              {dedupData && dedupData.total_duplicates > 0 ? (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-200 text-amber-900 font-bold">
-                  {dedupData.total_duplicates}
-                </span>
-              ) : null}
-            </button>
-
             {/* Bulk Upload from Laptop Button */}
             <button
               onClick={() => setShowBulkUploadModal(true)}
@@ -824,7 +846,6 @@ export function ScreeningPage() {
               <FolderPlus className="w-3.5 h-3.5 text-amber-300" />
               <span>Bulk Upload from Laptop</span>
             </button>
-
 
             {/* Hotkeys Cheatsheet Button */}
             <button
@@ -910,20 +931,21 @@ export function ScreeningPage() {
                 <button
                   onClick={() => startAnalysisMutation.mutate()}
                   disabled={startAnalysisMutation.isPending || startFullPipelineMutation.isPending}
-                  className="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 transition-all disabled:opacity-50"
+                  className="px-3.5 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                  title="Run Stage 1: Automated Title & Abstract screening triage"
                 >
                   {startAnalysisMutation.isPending ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <Play className="w-3.5 h-3.5 text-indigo-600" />
+                    <Play className="w-3.5 h-3.5 text-indigo-600 fill-indigo-600" />
                   )}
-                  Start Stage 1 (Title Only)
+                  <span>Start Stage 1 (Title & Abstract)</span>
                 </button>
 
                 <button
                   onClick={() => startFullPipelineMutation.mutate()}
                   disabled={startFullPipelineMutation.isPending || startAnalysisMutation.isPending}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                  className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {startFullPipelineMutation.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -937,51 +959,127 @@ export function ScreeningPage() {
           </div>
         </div>
 
-        {/* Metric Summary Ribbon */}
+        {/* Metric Summary Ribbon with Interactive Click-to-Filter Bundles */}
         {summary && (
-          <div className="max-w-7xl mx-auto mt-3 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-            <div className="bg-slate-100/70 border border-slate-200/80 rounded-lg px-3 py-1.5">
+          <div className="max-w-7xl mx-auto mt-2.5 px-4 md:px-0 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+            {/* TOTAL */}
+            <button
+              type="button"
+              onClick={() => handleBundleClick("all")}
+              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+                statusFilter === "all"
+                  ? "bg-slate-200/90 border-slate-400 ring-2 ring-slate-400/40 shadow-xs scale-[1.02]"
+                  : "bg-slate-100/70 border-slate-200/80 hover:bg-slate-100 hover:border-slate-300"
+              }`}
+              title="Click to view all studies in the project"
+            >
               <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Total</span>
-              <span className="text-sm font-bold text-slate-800">{summary.total}</span>
-            </div>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
-              <span className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider block">T/A Inc</span>
-              <span className="text-sm font-bold text-emerald-800">{summary.ta_included}</span>
-            </div>
-            <div className="bg-emerald-100/60 border border-emerald-300 rounded-lg px-3 py-1.5">
-              <span className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block">FT Inc</span>
-              <span className="text-sm font-bold text-emerald-900">{summary.ft_included}</span>
-            </div>
-            <div className="bg-rose-50 border border-rose-200 rounded-lg px-3 py-1.5">
-              <span className="text-[10px] font-semibold text-rose-700 uppercase tracking-wider block">Excluded</span>
-              <span className="text-sm font-bold text-rose-800">{summary.ta_excluded + summary.ft_excluded}</span>
-            </div>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-              <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider block">Uncertain</span>
-              <span className="text-sm font-bold text-amber-800">{summary.uncertain ?? summary.pending}</span>
-            </div>
-            {dedupData && dedupData.total_duplicates > 0 && (
-              <div
-                onClick={() => setShowDuplicateModal(true)}
-                className="bg-amber-100/70 border border-amber-300 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-amber-200/80 transition-colors shadow-2xs"
-                title="Click to review candidate duplicate pairs side-by-side"
-              >
-                <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider block">Duplicates</span>
-                <span className="text-sm font-bold text-amber-900 flex items-center gap-1">
-                  <span>{dedupData.total_duplicates}</span>
-                  <ArrowLeftRight className="w-3 h-3 text-amber-700" />
-                </span>
-              </div>
-            )}
+              <span className={`text-base font-bold text-slate-800 block ${activeBumpKey === "all" ? "animate-bump" : ""}`}>
+                {summary.total}
+              </span>
+            </button>
 
-            <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5">
+            {/* T/A INC */}
+            <button
+              type="button"
+              onClick={() => handleBundleClick("ta_included")}
+              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+                statusFilter === "ta_included"
+                  ? "bg-emerald-100 border-emerald-500 ring-2 ring-emerald-400/50 shadow-xs scale-[1.02]"
+                  : "bg-emerald-50/80 border-emerald-200 hover:bg-emerald-100/70 hover:border-emerald-300"
+              }`}
+              title="Click to filter to Title & Abstract Included studies"
+            >
+              <span className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider block">T/A Inc</span>
+              <span className={`text-base font-bold text-emerald-800 block ${activeBumpKey === "ta_included" ? "animate-bump" : ""}`}>
+                {summary.ta_included}
+              </span>
+            </button>
+
+            {/* FT INC */}
+            <button
+              type="button"
+              onClick={() => handleBundleClick("included")}
+              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+                statusFilter === "included"
+                  ? "bg-emerald-200/80 border-emerald-600 ring-2 ring-emerald-500/50 shadow-xs scale-[1.02]"
+                  : "bg-emerald-100/60 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400"
+              }`}
+              title="Click to filter to Full-Text Included studies"
+            >
+              <span className="text-[10px] font-semibold text-emerald-900 uppercase tracking-wider block">FT Inc</span>
+              <span className={`text-base font-bold text-emerald-900 block ${activeBumpKey === "included" ? "animate-bump" : ""}`}>
+                {summary.ft_included}
+              </span>
+            </button>
+
+            {/* EXCLUDED */}
+            <button
+              type="button"
+              onClick={() => handleBundleClick("excluded")}
+              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+                statusFilter === "excluded"
+                  ? "bg-rose-100 border-rose-500 ring-2 ring-rose-400/50 shadow-xs scale-[1.02]"
+                  : "bg-rose-50/80 border-rose-200 hover:bg-rose-100/70 hover:border-rose-300"
+              }`}
+              title="Click to filter to Excluded studies"
+            >
+              <span className="text-[10px] font-semibold text-rose-700 uppercase tracking-wider block">Excluded</span>
+              <span className={`text-base font-bold text-rose-800 block ${activeBumpKey === "excluded" ? "animate-bump" : ""}`}>
+                {summary.ta_excluded + summary.ft_excluded}
+              </span>
+            </button>
+
+            {/* UNCERTAIN */}
+            <button
+              type="button"
+              onClick={() => handleBundleClick("uncertain")}
+              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+                statusFilter === "uncertain"
+                  ? "bg-amber-100 border-amber-500 ring-2 ring-amber-400/50 shadow-xs scale-[1.02]"
+                  : "bg-amber-50/80 border-amber-200 hover:bg-amber-100/70 hover:border-amber-300"
+              }`}
+              title="Click to filter to Uncertain & Pending studies"
+            >
+              <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider block">Uncertain</span>
+              <span className={`text-base font-bold text-amber-800 block ${activeBumpKey === "uncertain" ? "animate-bump" : ""}`}>
+                {summary.uncertain ?? summary.pending}
+              </span>
+            </button>
+
+            {/* QUESTIONS */}
+            <button
+              type="button"
+              onClick={() => handleBundleClick("awaiting_clarification")}
+              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+                statusFilter === "awaiting_clarification"
+                  ? "bg-purple-100 border-purple-500 ring-2 ring-purple-400/50 shadow-xs scale-[1.02]"
+                  : "bg-purple-50/80 border-purple-200 hover:bg-purple-100/70 hover:border-purple-300"
+              }`}
+              title="Click to filter to Studies Awaiting Human Clarification"
+            >
               <span className="text-[10px] font-semibold text-purple-700 uppercase tracking-wider block">Questions</span>
-              <span className="text-sm font-bold text-purple-800">{summary.awaiting_clarification ?? 0}</span>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
+              <span className={`text-base font-bold text-purple-800 block ${activeBumpKey === "awaiting_clarification" ? "animate-bump" : ""}`}>
+                {summary.awaiting_clarification ?? 0}
+              </span>
+            </button>
+
+            {/* NEED PDF */}
+            <button
+              type="button"
+              onClick={() => handleBundleClick("awaiting_pdf")}
+              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+                statusFilter === "awaiting_pdf"
+                  ? "bg-blue-100 border-blue-500 ring-2 ring-blue-400/50 shadow-xs scale-[1.02]"
+                  : "bg-blue-50/80 border-blue-200 hover:bg-blue-100/70 hover:border-blue-300"
+              }`}
+              title="Click to filter to Studies Awaiting Full-Text PDF"
+            >
               <span className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider block">Need PDF</span>
-              <span className="text-sm font-bold text-blue-800">{summary.awaiting_pdf ?? 0}</span>
-            </div>
+              <span className={`text-base font-bold text-blue-800 block ${activeBumpKey === "awaiting_pdf" ? "animate-bump" : ""}`}>
+                {summary.awaiting_pdf ?? 0}
+              </span>
+            </button>
           </div>
         )}
       </header>
@@ -1064,54 +1162,47 @@ export function ScreeningPage() {
         {reviewerError?.message || (authToken ? "Checking your sign-in…" : "Sign in to record screening decisions under your account.")}
       </div>}
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white border-b border-slate-200 px-6 py-2"><div className="max-w-7xl mx-auto">
-        <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
-      </div></div>
-      <div className="bg-white border-b border-slate-200 px-6 py-2.5">
+      {/* Compact Single-Line Filter & Search Toolbar */}
+      <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-2">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({studyList.filter(s => bookmarks.ids.includes(s.study_id)).length})</label>
-          <span className="text-xs text-slate-500">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
-          {bookmarks.error && <span role="alert" className="text-xs text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
-          {/* Stage & Status Filter Tabs */}
+          {/* Stage Filter Pills */}
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-xs font-medium text-slate-600">
+            <button
+              onClick={() => setStageFilter("all")}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                stageFilter === "all" ? "bg-white text-slate-900 shadow-2xs font-semibold" : "hover:text-slate-900"
+              }`}
+            >
+              All Stages
+            </button>
+            <button
+              onClick={() => setStageFilter("ta")}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                stageFilter === "ta" ? "bg-white text-slate-900 shadow-2xs font-semibold" : "hover:text-slate-900"
+              }`}
+            >
+              Title & Abstract
+            </button>
+            <button
+              onClick={() => setStageFilter("ft")}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                stageFilter === "ft" ? "bg-white text-slate-900 shadow-2xs font-semibold" : "hover:text-slate-900"
+              }`}
+            >
+              Full-Text
+            </button>
+          </div>
+
+          {/* Quick Dropdowns & Saved Filter */}
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex bg-slate-100 p-0.5 rounded-lg text-xs font-medium text-slate-600">
-              <button
-                onClick={() => setStageFilter("all")}
-                className={`px-2.5 py-1 rounded-md transition-all ${
-                  stageFilter === "all" ? "bg-white text-slate-900 shadow-sm font-semibold" : "hover:text-slate-900"
-                }`}
-              >
-                All Stages
-              </button>
-              <button
-                onClick={() => setStageFilter("ta")}
-                className={`px-2.5 py-1 rounded-md transition-all ${
-                  stageFilter === "ta" ? "bg-white text-slate-900 shadow-sm font-semibold" : "hover:text-slate-900"
-                }`}
-              >
-                Title & Abstract
-              </button>
-              <button
-                onClick={() => setStageFilter("ft")}
-                className={`px-2.5 py-1 rounded-md transition-all ${
-                  stageFilter === "ft" ? "bg-white text-slate-900 shadow-sm font-semibold" : "hover:text-slate-900"
-                }`}
-              >
-                Full-Text
-              </button>
-            </div>
-
-            <div className="h-4 w-px bg-slate-300" />
-
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
-              <option value="included">Included</option>
+              <option value="included">FT Included</option>
               <option value="ta_included">T/A Included</option>
               <option value="excluded">Excluded</option>
               <option value="uncertain">Uncertain</option>
@@ -1122,155 +1213,180 @@ export function ScreeningPage() {
             <select
               value={confidenceFilter}
               onChange={(e) => setConfidenceFilter(e.target.value as any)}
-              className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
             >
               <option value="all">All Confidence</option>
               <option value="high">&ge; 80% (High Confidence)</option>
               <option value="medium">60% - 79% (Moderate)</option>
               <option value="low">&lt; 60% (Low Confidence)</option>
             </select>
+
+            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={savedOnly}
+                onChange={(e) => setSavedOnly(e.target.checked)}
+                className="rounded text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
+            </label>
           </div>
 
           {/* Search Box */}
           <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
             <input
               type="text"
-              placeholder="Search studies..."
+              placeholder="Search title, authors, DOI..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-sans"
             />
           </div>
         </div>
       </div>
 
-      {/* ── COLLAPSIBLE PROTOCOL SCREENING RULES & PICO CRITERIA PANEL ── */}
-      <div className="max-w-7xl mx-auto w-full px-4 md:px-6 pt-4">
-        {isProtocolRulesMinimized ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs">
-              <BookOpen className="w-4 h-4 text-indigo-600" />
-              <span className="font-bold text-slate-800">
-                Protocol Eligibility & PICO Rules:
-              </span>
-              <span className="text-slate-500">
-                Population: Intracranial PAMs / Arterial Malformations &bull; Intervention: Endovascular / Surgical &bull; Outcomes: Occlusion / Safety
-              </span>
+      {/* ── RIGHT-SIDE PROTOCOL SLIDER RIBBON TAB ── */}
+      <aside
+        aria-label="Protocol and PICO Rules"
+        onClick={() => setIsProtocolSliderOpen(true)}
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-gradient-to-b from-[#381A61] to-[#4F46E5] text-white py-4 px-2 rounded-l-xl cursor-pointer shadow-xl border-l border-t border-b border-indigo-300 hover:shadow-2xl hover:scale-105 transition-all flex flex-col items-center gap-2.5 group select-none"
+        title="Click to slide open Protocol Eligibility & PICO Rules"
+      >
+        <BookOpen className="w-4 h-4 text-amber-300 group-hover:rotate-12 transition-transform" />
+        <span className="text-[10px] font-bold uppercase tracking-widest [writing-mode:vertical-rl] rotate-180 text-indigo-100 group-hover:text-white">
+          Protocol &amp; PICO Criteria
+        </span>
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <ChevronRight className="w-3.5 h-3.5 text-indigo-200 group-hover:text-white rotate-180" />
+      </aside>
+
+      {/* ── SLIDE-OVER PROTOCOL DRAWER ── */}
+      {isProtocolSliderOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsProtocolSliderOpen(false)}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-md bg-white shadow-2xl border-l border-slate-200 flex flex-col animate-tag-pop">
+              {/* Drawer Header */}
+              <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-[#381A61] text-white p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <BookOpen className="w-5 h-5 text-amber-300" />
+                  <div>
+                    <h3 className="text-sm font-bold tracking-tight">Protocol &amp; PICO Rules</h3>
+                    <p className="text-[11px] text-indigo-200">Systematic Review Eligibility Criteria</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsProtocolSliderOpen(false)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-indigo-200 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Drawer Content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+                {/* Protocol Badge */}
+                <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 p-2.5 rounded-lg">
+                  <span className="font-bold text-indigo-900 text-[11px]">PRISMA Protocol Active</span>
+                  <span className="text-[10px] bg-indigo-600 text-white font-semibold px-2 py-0.5 rounded-full">Automated Triage</span>
+                </div>
+
+                {/* PICO Cards */}
+                <div className="space-y-2.5">
+                  <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-lg">
+                    <div className="font-bold text-indigo-900 flex items-center gap-1.5 mb-1 text-[11px]">
+                      <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">P</span>
+                      <span>Population</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Patients with pure arterial malformations (PAM) or tortuous dilated intracranial arteries without nidus or direct arteriovenous shunts.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-sky-50/70 border border-sky-100 rounded-lg">
+                    <div className="font-bold text-sky-900 flex items-center gap-1.5 mb-1 text-[11px]">
+                      <span className="w-4 h-4 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-black">I</span>
+                      <span>Intervention</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Endovascular embolization (coiling, onyx, flow diverter stenting), microsurgical clipping/resection, or conservative clinical surveillance.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-lg">
+                    <div className="font-bold text-purple-900 flex items-center gap-1.5 mb-1 text-[11px]">
+                      <span className="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">C</span>
+                      <span>Comparator</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Conservative angiographic follow-up vs active interventional occlusion or historical lesion cohorts.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-lg">
+                    <div className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1 text-[11px]">
+                      <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">O</span>
+                      <span>Outcomes</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Aneurysm co-occurrence, angiographic obliteration, recurrent hemorrhage, ischemic stroke, and modified Rankin Scale (mRS).
+                    </p>
+                  </div>
+                </div>
+
+                {/* Mandatory Inclusion & Explicit Exclusion */}
+                <div className="space-y-2.5 pt-1">
+                  <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg">
+                    <span className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      Mandatory Inclusion Criteria
+                    </span>
+                    <ul className="text-[11px] text-emerald-800 space-y-1 list-disc list-inside">
+                      <li>Human subjects (in vivo) with radiographically confirmed intracranial PAM.</li>
+                      <li>Reports angiographic details (DSA, CTA, or 3T MRA) and clinical management.</li>
+                      <li>Peer-reviewed original research, cohort studies, or clinical case series.</li>
+                    </ul>
+                  </div>
+
+                  <div className="p-3 bg-rose-50/60 border border-rose-200 rounded-lg">
+                    <span className="font-bold text-rose-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
+                      <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                      Explicit Exclusion Disqualifiers
+                    </span>
+                    <ul className="text-[11px] text-rose-800 space-y-1 list-disc list-inside">
+                      <li>Classic AVMs with parenchymal nidus or early draining cortical veins.</li>
+                      <li>Dural arteriovenous fistulas (dAVF) or cavernous hemangiomas without PAM.</li>
+                      <li>Animal models, in vitro hydrodynamic bench studies, or non-English abstracts.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
+                <button
+                  onClick={() => setIsProtocolSliderOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Close Ribbon
+                </button>
+              </div>
             </div>
-            <button
-              onClick={toggleProtocolRulesMinimized}
-              className="px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Expand full protocol screening rules"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-              <span>Expand Protocol Rules</span>
-            </button>
           </div>
-        ) : (
-          <div className="bg-white border border-indigo-100 rounded-xl shadow-xs overflow-hidden transition-all duration-300">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-50/80 via-white to-slate-50 border-b border-indigo-100 px-4 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                  Protocol Screening Rules & PICO Eligibility Criteria
-                </h3>
-                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
-                  PRISMA Protocol Active
-                </span>
-              </div>
-              <button
-                onClick={toggleProtocolRulesMinimized}
-                className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
-                title="Minimize protocol rules panel"
-              >
-                <Minimize2 className="w-3.5 h-3.5" />
-                <span>Minimize Rules</span>
-              </button>
-            </div>
-
-            {/* PICO Grid & Inclusion/Exclusion Rules */}
-            <div className="p-4 space-y-3">
-              {/* PICO 4-Pill Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                <div className="p-2.5 bg-indigo-50/60 border border-indigo-100 rounded-lg">
-                  <div className="font-bold text-indigo-900 flex items-center gap-1 mb-1">
-                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">P</span>
-                    <span>Population</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Patients with pure arterial malformations (PAM) or tortuous dilated intracranial arteries without nidus or direct arteriovenous shunts.
-                  </p>
-                </div>
-
-                <div className="p-2.5 bg-sky-50/60 border border-sky-100 rounded-lg">
-                  <div className="font-bold text-sky-900 flex items-center gap-1 mb-1">
-                    <span className="w-4 h-4 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-black">I</span>
-                    <span>Intervention</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Endovascular embolization (coiling, onyx, flow diverter stenting), microsurgical clipping/resection, or conservative clinical surveillance.
-                  </p>
-                </div>
-
-                <div className="p-2.5 bg-purple-50/60 border border-purple-100 rounded-lg">
-                  <div className="font-bold text-purple-900 flex items-center gap-1 mb-1">
-                    <span className="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">C</span>
-                    <span>Comparator</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Conservative angiographic follow-up vs active interventional occlusion or historical lesion cohorts.
-                  </p>
-                </div>
-
-                <div className="p-2.5 bg-emerald-50/60 border border-emerald-100 rounded-lg">
-                  <div className="font-bold text-emerald-900 flex items-center gap-1 mb-1">
-                    <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">O</span>
-                    <span>Outcomes</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Aneurysm co-occurrence, angiographic obliteration, recurrent hemorrhage, ischemic stroke, and modified Rankin Scale (mRS).
-                  </p>
-                </div>
-              </div>
-
-              {/* Explicit Inclusion vs Exclusion Criteria Rows */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
-                <div className="p-2.5 bg-emerald-50/40 border border-emerald-200/80 rounded-lg">
-                  <span className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1 text-[11px]">
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                    Mandatory Inclusion Criteria
-                  </span>
-                  <ul className="text-[11px] text-emerald-800 space-y-1 list-disc list-inside">
-                    <li>Human subjects (in vivo) with radiographically confirmed intracranial PAM.</li>
-                    <li>Reports angiographic details (DSA, CTA, or 3T MRA) and clinical management.</li>
-                    <li>Peer-reviewed original research, cohort studies, or clinical case series.</li>
-                  </ul>
-                </div>
-
-                <div className="p-2.5 bg-rose-50/40 border border-rose-200/80 rounded-lg">
-                  <span className="font-bold text-rose-900 flex items-center gap-1.5 mb-1 text-[11px]">
-                    <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                    Explicit Exclusion Disqualifiers
-                  </span>
-                  <ul className="text-[11px] text-rose-800 space-y-1 list-disc list-inside">
-                    <li>Classic AVMs with parenchymal nidus or early draining cortical veins.</li>
-                    <li>Dural arteriovenous fistulas (dAVF) or cavernous hemangiomas without PAM.</li>
-                    <li>Animal models, in vitro hydrodynamic bench studies, or non-English abstracts.</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Main Two-Pane Screening Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* Left Column: Study List (5 cols) */}
-        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-[calc(100vh-230px)] sticky top-[180px]">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-xl">
+        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-[calc(100vh-185px)] sticky top-[135px]">
+          <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-xl">
             <span className="text-xs font-semibold text-slate-700">
               Studies ({filteredStudies.length})
             </span>
@@ -1348,7 +1464,7 @@ export function ScreeningPage() {
                       <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
                       {conf !== null && (
                         <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap animate-tag-pop ${
                             conf >= 80
                               ? "bg-emerald-100 text-emerald-800"
                               : conf >= 60
@@ -1368,9 +1484,9 @@ export function ScreeningPage() {
 
                     <div className="flex items-center justify-between gap-2 flex-wrap text-[10px]">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {/* Status Badge */}
+                        {/* Status Badge with pop-up animation */}
                         <span
-                          className={`px-2 py-0.5 rounded font-medium ${
+                          className={`px-2 py-0.5 rounded font-medium animate-tag-pop ${
                             study.screening_status === "included" || study.screening_status === "ta_included"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : study.screening_status === "excluded"
@@ -1386,20 +1502,20 @@ export function ScreeningPage() {
                         </span>
 
                         {isCurrent && (
-                          <span className="px-2 py-0.5 rounded font-semibold bg-indigo-600 text-white flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded font-semibold bg-indigo-600 text-white flex items-center gap-1 animate-tag-pop">
                             <Loader2 className="w-3 h-3 animate-spin" />
                             Screening now
                           </span>
                         )}
                         {isQueued && (
-                          <span className="px-2 py-0.5 rounded font-medium bg-slate-50 text-slate-500 border border-dashed border-slate-300 flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded font-medium bg-slate-50 text-slate-500 border border-dashed border-slate-300 flex items-center gap-1 animate-tag-pop">
                             <Clock className="w-3 h-3" />
                             Queued
                           </span>
                         )}
                         {!isCurrent && !isQueued && study.ai_decision && (
                           <span
-                            className={`px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
+                            className={`px-2 py-0.5 rounded font-medium flex items-center gap-1 animate-tag-pop ${
                               study.ai_decision === "include"
                                 ? "bg-emerald-50 text-emerald-700"
                                 : study.ai_decision === "exclude"
@@ -1456,7 +1572,7 @@ export function ScreeningPage() {
         </div>
 
         {/* Right Column: Rayyan-Style Preview Pane (7 cols) */}
-        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col min-h-[calc(100vh-230px)]">
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-[calc(100vh-185px)] overflow-y-auto">
           {selectedStudy ? (
             <div className="p-6 space-y-6">
               {/* Header section */}
@@ -1472,7 +1588,7 @@ export function ScreeningPage() {
                   </h2>
                   <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
                   <span
-                    className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap ${
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap animate-tag-pop ${
                       selectedStudy.screening_status === "included" || selectedStudy.screening_status === "ta_included"
                         ? "bg-emerald-100 text-emerald-800"
                         : selectedStudy.screening_status === "excluded"
@@ -1554,109 +1670,182 @@ export function ScreeningPage() {
                 <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
               </details>
 
-              {/* Clarification Questions Panel (if study requires clarification) */}
-              {studyClarifications.length > 0 && (
-                <div className="bg-purple-50/70 border border-purple-200 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-purple-900 font-bold text-xs">
-                    <HelpCircle className="w-4 h-4 text-purple-600" />
-                    Reviewer Clarification Required
+              {/* Biomni Clarification Questions Panel */}
+              {(studyClarifications.length > 0 || selectedStudy.screening_status === "awaiting_clarification" || selectedStudy.ai_decision === "maybe") && (
+                <div className="bg-gradient-to-r from-purple-50/90 to-indigo-50/90 border-2 border-purple-300 rounded-xl p-4 space-y-3 shadow-xs animate-tag-pop">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-purple-950 font-bold text-xs">
+                      <div className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center shadow-xs">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="block text-purple-900 font-bold">Biomni AI Clarification Request</span>
+                        <span className="text-[10px] text-purple-600 font-normal">Ambiguous eligibility against PICO criteria &bull; Human clarification needed</span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 border border-purple-300">
+                      Awaiting Clarification
+                    </span>
                   </div>
 
-                  {studyClarifications.map((q) => {
-                    const isAnswered = q.status === "answered";
-                    const isAnswering = answeringQuestionId === q.question_id;
+                  {studyClarifications.length > 0 ? (
+                    studyClarifications.map((q) => {
+                      const isAnswered = q.status === "answered";
 
-                    return (
-                      <div key={q.question_id} className="bg-white border border-purple-100 rounded-lg p-3 space-y-2.5">
-                        <p className="text-xs font-semibold text-slate-800">{q.question_text}</p>
-                        {q.context_excerpt && (
-                          <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-200 italic">
-                            Excerpt: &ldquo;{q.context_excerpt}&rdquo;
-                          </p>
-                        )}
+                      return (
+                        <div key={q.question_id} className="bg-white border border-purple-100 rounded-lg p-3 space-y-2.5">
+                          <p className="text-xs font-semibold text-slate-800">{q.question_text}</p>
+                          {q.context_excerpt && (
+                            <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-200 italic">
+                              Excerpt: &ldquo;{q.context_excerpt}&rdquo;
+                            </p>
+                          )}
 
-                        {!isAnswered ? (
-                          <div className="space-y-2 pt-1">
-                            <div className="space-y-1.5">
-                              {q.options.map((opt) => (
-                                <label
-                                  key={opt.value}
-                                  className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer"
-                                >
+                          {!isAnswered ? (
+                            <div className="space-y-2 pt-1">
+                              <div className="space-y-1.5">
+                                {q.options.map((opt) => (
+                                  <label
+                                    key={opt.value}
+                                    className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer"
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`option-${q.question_id}`}
+                                      value={opt.value}
+                                      checked={selectedOption === opt.value}
+                                      onChange={() => {
+                                        setSelectedOption(opt.value);
+                                        setAnsweringQuestionId(q.question_id);
+                                      }}
+                                      className="text-purple-600 focus:ring-purple-500"
+                                    />
+                                    <span>{opt.label}</span>
+                                  </label>
+                                ))}
+                                <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
                                   <input
                                     type="radio"
                                     name={`option-${q.question_id}`}
-                                    value={opt.value}
-                                    checked={selectedOption === opt.value}
+                                    value="other"
+                                    checked={selectedOption === "other"}
                                     onChange={() => {
-                                      setSelectedOption(opt.value);
+                                      setSelectedOption("other");
                                       setAnsweringQuestionId(q.question_id);
                                     }}
                                     className="text-purple-600 focus:ring-purple-500"
                                   />
-                                  <span>{opt.label}</span>
+                                  <span>Other (specify below)</span>
                                 </label>
-                              ))}
-                              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                              </div>
+
+                              {selectedOption === "other" && (
                                 <input
-                                  type="radio"
-                                  name={`option-${q.question_id}`}
-                                  value="other"
-                                  checked={selectedOption === "other"}
-                                  onChange={() => {
-                                    setSelectedOption("other");
-                                    setAnsweringQuestionId(q.question_id);
-                                  }}
-                                  className="text-purple-600 focus:ring-purple-500"
+                                  type="text"
+                                  placeholder="Enter custom clarification answer..."
+                                  value={freetextAnswer}
+                                  onChange={(e) => setFreetextAnswer(e.target.value)}
+                                  className="w-full text-xs p-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
                                 />
-                                <span>Other (specify below)</span>
-                              </label>
-                            </div>
-
-                            {selectedOption === "other" && (
-                              <input
-                                type="text"
-                                placeholder="Enter custom clarification answer..."
-                                value={freetextAnswer}
-                                onChange={(e) => setFreetextAnswer(e.target.value)}
-                                className="w-full text-xs p-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
-                              />
-                            )}
-
-                            <button
-                              onClick={() => {
-                                const selectedLabel = q.options.find((o) => o.value === selectedOption)?.label || selectedOption;
-                                answerClarificationMutation.mutate({
-                                  questionId: q.question_id,
-                                  answer: selectedOption,
-                                  label: selectedLabel,
-                                  freetext: selectedOption === "other" ? freetextAnswer : undefined,
-                                });
-                              }}
-                              disabled={!selectedOption || answerClarificationMutation.isPending}
-                              className="px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                            >
-                              {answerClarificationMutation.isPending ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Send className="w-3.5 h-3.5" />
                               )}
-                              Submit Answer & Re-Evaluate Study
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="bg-emerald-50 border border-emerald-200 rounded p-2 text-xs text-emerald-800">
-                            <span className="font-semibold">Answered:</span> {q.answer_label || q.answer}
-                            {q.final_decision && (
-                              <p className="text-[11px] mt-1 text-slate-700">
-                                Re-evaluated Verdict: <span className="font-bold capitalize">{q.final_decision}</span> &bull; {q.final_reason_text}
-                              </p>
-                            )}
-                          </div>
-                        )}
+
+                              <button
+                                onClick={() => {
+                                  const selectedLabel = q.options.find((o) => o.value === selectedOption)?.label || selectedOption;
+                                  answerClarificationMutation.mutate({
+                                    questionId: q.question_id,
+                                    answer: selectedOption,
+                                    label: selectedLabel,
+                                    freetext: selectedOption === "other" ? freetextAnswer : undefined,
+                                  });
+                                }}
+                                disabled={!selectedOption || answerClarificationMutation.isPending}
+                                className="px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                              >
+                                {answerClarificationMutation.isPending ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Send className="w-3.5 h-3.5" />
+                                )}
+                                Submit Answer & Re-Evaluate Study
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="bg-emerald-50 border border-emerald-200 rounded p-2 text-xs text-emerald-800">
+                              <span className="font-semibold">Answered:</span> {q.answer_label || q.answer}
+                              {q.final_decision && (
+                                <p className="text-[11px] mt-1 text-slate-700">
+                                  Re-evaluated Verdict: <span className="font-bold capitalize">{q.final_decision}</span> &bull; {q.final_reason_text}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="bg-white border border-purple-100 rounded-lg p-3 space-y-3">
+                      <p className="text-xs font-semibold text-slate-800">
+                        Biomni is uncertain whether this study meets the Population (pure arterial malformation without nidus) or Intervention criteria. Please clarify:
+                      </p>
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                          <input
+                            type="radio"
+                            name="biomni-clarify"
+                            value="included"
+                            checked={selectedOption === "included"}
+                            onChange={() => setSelectedOption("included")}
+                            className="text-purple-600 focus:ring-purple-500"
+                          />
+                          <span>Eligible: Meets Population criteria (Pure arterial malformation confirmed on angio)</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                          <input
+                            type="radio"
+                            name="biomni-clarify"
+                            value="excluded"
+                            checked={selectedOption === "excluded"}
+                            onChange={() => setSelectedOption("excluded")}
+                            className="text-purple-600 focus:ring-purple-500"
+                          />
+                          <span>Disqualified: Meets Exclusion criteria (Classic AVM with nidus or dAVF present)</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                          <input
+                            type="radio"
+                            name="biomni-clarify"
+                            value="pdf"
+                            checked={selectedOption === "pdf"}
+                            onChange={() => setSelectedOption("pdf")}
+                            className="text-purple-600 focus:ring-purple-500"
+                          />
+                          <span>Awaiting PDF: Need full-text angio review to verify vessel morphology</span>
+                        </label>
                       </div>
-                    );
-                  })}
+
+                      <button
+                        onClick={() => {
+                          if (selectedOption === "included") {
+                            handleScreenDecision("included");
+                          } else if (selectedOption === "excluded") {
+                            handleScreenDecision("excluded");
+                          } else if (selectedOption === "pdf") {
+                            handleScreenDecision("maybe");
+                          }
+                        }}
+                        disabled={!selectedOption || decisionMutation.isPending}
+                        className="px-3.5 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50 cursor-pointer"
+                      >
+                        {decisionMutation.isPending ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Send className="w-3.5 h-3.5" />
+                        )}
+                        <span>Confirm Clarification & Re-Evaluate</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2310,20 +2499,6 @@ export function ScreeningPage() {
           }}
         />
       )}
-
-      {/* ── Deduplication Step: Duplicate Review Modal ── */}
-      <DuplicateReviewModal
-        projectId={projectId!}
-        isOpen={showDuplicateModal}
-        onClose={() => setShowDuplicateModal(false)}
-        onResolved={() => {
-          queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
-          queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
-          queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-          queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
-          queryClient.invalidateQueries({ queryKey: ["prisma", projectId] });
-        }}
-      />
     </div>
   );
 }
