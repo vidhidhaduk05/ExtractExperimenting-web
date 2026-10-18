@@ -2482,6 +2482,59 @@ export const api = {
       max_papers_per_batch: number;
     }>("/claimscape/status"),
 
+  // Citation Telephone (Laya-Powered)
+  auditCitationTelephoneText: (text: string) =>
+    request<{
+      references: Record<number, string>;
+      claims: Array<{
+        sentenceIndex: number;
+        citingSentence: string;
+        refNumber: number;
+        refText: string;
+      }>;
+      totalClaimsFound: number;
+      totalReferencesFound: number;
+    }>("/citation-telephone/audit-text", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+  evaluateCitationTelephoneClaim: (citing_sentence: string, source_passage: string, source_title: string = "") =>
+    request<{
+      supportScore: number;
+      ownResultScore: number;
+      verdict: "same" | "partial" | "stronger" | "weaker" | "different" | "unrelated" | "not_found";
+      verdictLabel: string;
+      probabilities: Record<string, number>;
+      unsureness: {
+        isGenuinelyUnsure: boolean;
+        margin: number;
+        entropyScore: number;
+        reason?: string;
+        recommendation: "verified" | "manual_audit_advised" | "contradiction_flagged";
+      };
+      engine: string;
+    }>("/citation-telephone/evaluate-claim", {
+      method: "POST",
+      body: JSON.stringify({ citing_sentence, source_title, source_passage }),
+    }),
+  uploadCitationTelephoneManuscript: (formData: FormData) =>
+    fetch(`${getApiBase()}/citation-telephone/upload-manuscript`, {
+      method: "POST",
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        throw new Error(`Upload failed with status ${res.status}`);
+      }
+      return res.json();
+    }),
+  getCitationTelephoneStatus: () =>
+    request<{
+      status: string;
+      engine: string;
+      model: string;
+      has_unsureness_matrix: boolean;
+    }>("/citation-telephone/status"),
+
   // Projects
   listProjects: () => request<Project[]>("/projects"),
   getProject: (id: string) => request<Project>(`/projects/${id}`),
