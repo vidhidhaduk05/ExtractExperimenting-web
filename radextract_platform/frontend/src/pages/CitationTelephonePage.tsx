@@ -350,25 +350,31 @@ export const CitationTelephonePage: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-[#381A61] flex items-center justify-center text-[#F9D14A] shadow-sm">
               <Layers className="w-4 h-4 stroke-[2.2]" />
             </div>
-            <span>RadExtract <span className="text-[#381A61] dark:text-[#F9D14A] font-extrabold font-serif">Research Suite</span></span>
+            <span>RadExtract <span className="text-[#381A61] dark:text-[#F9D14A] font-extrabold font-serif">Citation Telephone</span></span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1 text-[13.5px] font-medium text-[#4A453E] dark:text-[#C8C2BA]">
             <Link
               to="/claimscape"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors"
+              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
             >
-              ClaimScape
+              Evidence Map
             </Link>
             <span className="px-3 py-1.5 rounded-lg bg-[#381A61] text-white font-semibold text-xs shadow-2xs">
               Citation Telephone
             </span>
             <Link
               to="/projects"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors flex items-center gap-1.5 text-xs font-semibold"
             >
               Systematic Reviews
             </Link>
+            <a
+              href="#method"
+              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
+            >
+              Methodology
+            </a>
           </div>
         </div>
 
