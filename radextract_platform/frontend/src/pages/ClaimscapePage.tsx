@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Share2,
@@ -24,7 +24,8 @@ import {
   PRESET_EXAMPLES,
   ProcessedPaper,
   TIER_BY_ID,
-  STANCE_LABEL
+  STANCE_LABEL,
+  buildQueryFromClaim
 } from "../lib/claimscapeMethod";
 import { ClaimscapeMap } from "../components/claimscape/ClaimscapeMap";
 import { PaperInspector } from "../components/claimscape/PaperInspector";
@@ -75,6 +76,10 @@ export const ClaimscapePage: React.FC = () => {
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [evalSpeed, setEvalSpeed] = useState<number | null>(null);
+  const [userEditedQuery, setUserEditedQuery] = useState<boolean>(false);
+
+  // Ref to results section for auto-scrolling
+  const resultsRef = useRef<HTMLElement>(null);
 
   // Table filter search
   const [tableSearch, setTableSearch] = useState<string>("");
@@ -153,10 +158,19 @@ export const ClaimscapePage: React.FC = () => {
       });
   }, [processedPapers, directOnly, tableSearch]);
 
+  const scrollToResults = () => {
+    setTimeout(() => {
+      if (resultsRef.current) {
+        resultsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 100);
+  };
+
   const handleSelectExample = async (ex: typeof PRESET_EXAMPLES[0]) => {
     setSelectedExample(ex.id);
     setClaim(ex.claim);
     setQuery(ex.query);
+    setUserEditedQuery(false);
 
     setIsScanning(true);
     try {
@@ -187,19 +201,27 @@ export const ClaimscapePage: React.FC = () => {
       });
     } finally {
       setIsScanning(false);
+      scrollToResults();
     }
   };
 
-  const handleMapEvidence = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleMapEvidence = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!claim.trim() || isScanning) return;
+
     setIsScanning(true);
     setEvalSpeed(null);
+    const activeQuery = query.trim() || buildQueryFromClaim(claim);
+    if (!query.trim()) {
+      setQuery(activeQuery);
+    }
+
     try {
-      const res = await api.evaluateClaimscape(claim, query, paperCount);
+      const res = await api.evaluateClaimscape(claim.trim(), activeQuery, paperCount);
       if (res && res.papers && res.papers.length > 0) {
         setDataset({
           claim: res.claim || claim,
-          query: res.query || query,
+          query: res.query || activeQuery,
           total: res.total || res.papers.length,
           papers: res.papers as Paper[],
           judgments: res.judgments as Judgment[],
@@ -215,6 +237,7 @@ export const ClaimscapePage: React.FC = () => {
       console.warn("Live evaluate fallback to active dataset:", err);
     } finally {
       setIsScanning(false);
+      scrollToResults();
     }
   };
 
@@ -323,14 +346,27 @@ export const ClaimscapePage: React.FC = () => {
               <span className="text-[13px] font-semibold cs-soft">Claim statement</span>
               <textarea
                 value={claim}
-                onChange={(e) => setClaim(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setClaim(val);
+                  if (!userEditedQuery) {
+                    setQuery(buildQueryFromClaim(val));
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleMapEvidence();
+                  }
+                }}
                 className="cs-input resize-none px-4 py-3 text-[17px] leading-snug font-medium"
                 rows={2}
                 maxLength={300}
-                placeholder="e.g. Metformin extends lifespan"
+                placeholder="e.g. Metformin extends lifespan (Press Enter to map)"
               />
-              <span className="text-[12px] cs-muted">
-                One plain statement works best, phrased positively: “X reduces Y in Z”.
+              <span className="text-[12px] cs-muted flex items-center justify-between">
+                <span>One plain statement works best, phrased positively: “X reduces Y in Z”.</span>
+                <span className="text-[11px] font-mono text-[#7C4B73] dark:text-[#F9D14A]">Press ↵ Enter to run</span>
               </span>
             </label>
 
@@ -343,7 +379,17 @@ export const ClaimscapePage: React.FC = () => {
                 <input
                   type="text"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setUserEditedQuery(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleMapEvidence();
+                    }
+                  }}
+                  placeholder="e.g. Metformin lifespan aging"
                   className="cs-input cs-mono px-3.5 py-2.5 text-[13px]"
                 />
               </label>
@@ -412,7 +458,7 @@ export const ClaimscapePage: React.FC = () => {
         </section>
 
         {/* Section 2: Dynamic Headline & Stat KPIs */}
-        <section className="grid gap-4" aria-live="polite">
+        <section ref={resultsRef} className="grid gap-4 scroll-mt-20" aria-live="polite">
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
             <div className="grid max-w-[900px] gap-1.5">
               <div className="flex flex-wrap items-center gap-2.5">

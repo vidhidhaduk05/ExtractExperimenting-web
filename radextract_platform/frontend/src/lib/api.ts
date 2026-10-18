@@ -30,6 +30,7 @@ import {
   DEMO_CODEBOOK_RULES,
   DEMO_ERROR_ANALYSIS
 } from "./demoData";
+import hrtDataRaw from "../data/hrt_example.json";
 
 export type ApiConnectionState = "live" | "demo_fallback" | "explicit_demo" | "error";
 
@@ -639,6 +640,16 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         localStorage.setItem("radextract_custom_projects", JSON.stringify(stored));
       } catch (e) {}
       return newProj as unknown as T;
+    }
+    if (path.includes("/claimscape/evaluate")) {
+      return {
+        claim: body.claim || hrtDataRaw.claim,
+        query: body.query || hrtDataRaw.query,
+        total: hrtDataRaw.total || 593,
+        papers: hrtDataRaw.papers,
+        judgments: hrtDataRaw.judgments,
+        elapsed_ms: 0.12,
+      } as unknown as T;
     }
     return { status: "success" } as unknown as T;
   }

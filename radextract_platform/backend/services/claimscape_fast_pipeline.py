@@ -60,8 +60,13 @@ def _get_laya_model():
         return None
 
     try:
+        import sys
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        if repo_root not in sys.path:
+            sys.path.insert(0, repo_root)
+
         from laya.laya_engine import LayaModel
-        model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "laya", "models"))
+        model_dir = os.path.join(repo_root, "laya", "models")
         if not os.path.exists(os.path.join(model_dir, "laya.onnx")):
             logger.warning("Laya ONNX model not found at %s", model_dir)
             _laya_failed = True

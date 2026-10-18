@@ -496,3 +496,24 @@ export const PRESET_EXAMPLES = [
     query: "Metformin lifespan aging"
   }
 ];
+
+export function buildQueryFromClaim(claimStr: string): string {
+  if (!claimStr || !claimStr.trim()) return "";
+  let q = claimStr.trim();
+  const directional = [
+    /\b(reduces|lowers|decreases|diminishes|inhibits|prevents|protects against|mitigates)\b/gi,
+    /\b(increases|elevates|enhances|promotes|exacerbates|extends|causes|leads to|induces)\b/gi,
+    /\b(the risk of|risk of|incidence of|prevalence of|rate of)\b/gi,
+    /\b(in patients with|in subjects with|in adults|in humans|in women|in men)\b/gi,
+    /\b(is associated with|correlates with|contributes to|acts as)\b/gi,
+    /\b(compared with|versus|vs\.?)\b/gi,
+    /\b(a|an|the|of|in|to|for|with|by|on|at|from)\b/gi,
+  ];
+  for (const pat of directional) {
+    q = q.replace(pat, " ");
+  }
+  q = q.replace(/[^\w\s-]/g, " ");
+  const terms = q.split(/\s+/).filter((t) => t.length > 2);
+  const uniqueTerms = Array.from(new Set(terms));
+  return uniqueTerms.slice(0, 7).join(" ");
+}
