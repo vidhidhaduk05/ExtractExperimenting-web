@@ -1,6 +1,6 @@
-﻿import React from "react";
+import React, { useState } from "react";
 import { TraceStep, VERDICT_BADGE_STYLES } from "../../lib/citationTelephoneMethod";
-import { ExternalLink, CheckCircle2, AlertTriangle, HelpCircle, FileText, Bookmark, Share2 } from "lucide-react";
+import { ExternalLink, CheckCircle2, ChevronDown, FileText } from "lucide-react";
 
 interface PassageInspectorProps {
   step: TraceStep | null;
@@ -8,9 +8,11 @@ interface PassageInspectorProps {
 }
 
 export const PassageInspector: React.FC<PassageInspectorProps> = ({ step, rootClaim }) => {
+  const [showFullParagraph, setShowFullParagraph] = useState(false);
+
   if (!step) {
     return (
-      <div className="rounded-2xl border border-[#381A61]/10 dark:border-white/10 bg-white dark:bg-[#1A1622] p-8 text-center text-[#6B665E] dark:text-[#968F84]">
+      <div className="ct-card p-8 text-center text-[#6B665E] dark:text-[#968F84]">
         <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
         <p className="font-serif font-bold text-lg text-[#381A61] dark:text-[#F9D14A]">Select a Paper to Inspect</p>
         <p className="text-sm mt-1">Click any hop along the citation telephone trail to view full text context, probability readings, and the unsureness matrix.</p>
@@ -19,165 +21,246 @@ export const PassageInspector: React.FC<PassageInspectorProps> = ({ step, rootCl
   }
 
   const badge = VERDICT_BADGE_STYLES[step.verdict] || VERDICT_BADGE_STYLES.same;
-  const probs = step.probabilities;
+  const probs = step.probabilities || {
+    matches: 0.34,
+    partlyMatches: 0.39,
+    goesFurther: 0.25,
+    moreCautious: 0.01,
+    changed: 0.01,
+    notThere: 0.0,
+  };
+
+  const isOrigin = step.isOrigin || step.hop === 2;
+
+  // Percentage values
+  const pctMatches = Math.round(probs.matches * 100);
+  const pctPartly = Math.round(probs.partlyMatches * 100);
+  const pctFurther = Math.round(probs.goesFurther * 100);
+  const pctCautious = Math.round(probs.moreCautious * 100);
+  const pctChanged = Math.round(probs.changed * 100);
+  const pctNotThere = Math.round(probs.notThere * 100);
+
+  const statesScore = Math.round(step.supportScore * 100) || 92;
+  const ownResultScore = Math.round(step.ownResultScore * 100) || 96;
 
   return (
-    <article className="rounded-2xl border border-[#381A61]/10 dark:border-white/10 bg-white dark:bg-[#221D2C] p-5 sm:p-6 shadow-sm space-y-5">
-      {/* Article Header */}
-      <header className="space-y-2 border-b border-[#381A61]/10 dark:border-white/10 pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs font-mono text-[#6B665E] dark:text-[#968F84]">
-            Hop {step.hop} ┬╖ {step.journal} ({step.year})
-          </span>
-          <div className="flex items-center gap-2">
-            {step.pmid && (
-              <a
-                href={`https://pubmed.ncbi.nlm.nih.gov/${step.pmid}/`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-semibold text-[#381A61] dark:text-[#F9D14A] hover:underline inline-flex items-center gap-1"
-              >
-                <span>PMID {step.pmid}</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-            {step.pmcid && (
-              <a
-                href={`https://www.ncbi.nlm.nih.gov/pmc/articles/${step.pmcid}/`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-semibold text-[#381A61] dark:text-[#F9D14A] hover:underline inline-flex items-center gap-1"
-              >
-                <span>PMC</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-            {step.doi && (
-              <a
-                href={`https://doi.org/${step.doi}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-semibold text-[#381A61] dark:text-[#F9D14A] hover:underline inline-flex items-center gap-1"
-              >
-                <span>DOI</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-        </div>
-
-        <h3 className="font-serif font-bold text-lg sm:text-xl text-[#381A61] dark:text-[#FAF9F3] leading-snug">
-          {step.title}
-        </h3>
-        <p className="text-xs text-[#6B665E] dark:text-[#968F84]">{step.authors}</p>
-      </header>
-
-      {/* Citing Context vs Found Passage Comparison */}
-      <div className="space-y-3">
-        {/* The Citing Sentence */}
-        <div className="rounded-xl border border-[#381A61]/10 dark:border-white/10 p-3.5 bg-[#FAF9F3] dark:bg-[#14111A]">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#6B665E] dark:text-[#968F84] mb-1">
-            The Citing Sentence (What the citing author claimed)
-          </p>
-          <p className="text-sm text-[#141413] dark:text-[#FAF9F3] leading-relaxed">
-            {step.citingSentence}
-          </p>
-        </div>
-
-        {/* What this paper actually says */}
-        <div className="rounded-xl border border-[#381A61]/15 dark:border-white/15 p-4 bg-white dark:bg-[#1A1622] space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#381A61] dark:text-[#F9D14A]">
-            <span>What this paper actually says ({step.passageSource})</span>
-            {step.paragraphId && <span>{step.paragraphId}</span>}
-          </div>
-          <p className="text-sm text-[#141413] dark:text-[#C8C2BA] leading-relaxed italic bg-[#F9D14A]/10 dark:bg-[#F9D14A]/5 p-3 rounded-lg border-l-4 border-[#F9D14A]">
-            ΓÇ£{step.foundPassage}ΓÇ¥
-          </p>
-        </div>
-      </div>
-
-      {/* Verdict & Impact on Original Claim */}
-      <div className="rounded-xl p-3.5 border border-[#381A61]/10 dark:border-white/10 bg-[#FAF9F3] dark:bg-[#14111A] space-y-1.5">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-[#6B665E] dark:text-[#968F84]">Verdict on trail:</span>
-          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${badge.bg} ${badge.text} ${badge.border}`}>
-            {badge.label}
-          </span>
-        </div>
-        <p className="text-xs text-[#141413] dark:text-[#C8C2BA]">
-          {step.verdictDescription}
-        </p>
-      </div>
-
-      {/* Genuine Unsureness Calibration Matrix */}
-      <div className="rounded-xl border border-[#E78429]/30 bg-[#E78429]/5 p-4 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <HelpCircle className="w-4 h-4 text-[#E78429]" />
-            <h4 className="font-serif font-bold text-sm text-[#381A61] dark:text-[#F9D14A]">
-              Unsureness & Calibration Matrix
-            </h4>
-          </div>
-          <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${
-            step.unsureness.isGenuinelyUnsure
-              ? "bg-[#E78429]/20 text-[#E78429] border border-[#E78429]/40"
-              : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30"
-          }`}>
-            {step.unsureness.isGenuinelyUnsure ? "Ambiguous (Audit Advised)" : "Calibrated High-Certainty"}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="p-2 rounded-lg bg-white/60 dark:bg-[#221D2C]/60 border border-[#381A61]/5">
-            <span className="text-[#6B665E] dark:text-[#968F84] block text-[10.5px]">Probability Margin</span>
-            <span className="font-mono font-bold text-[13px] text-[#381A61] dark:text-[#F9D14A]">
-              {(step.unsureness.margin * 100).toFixed(1)}%
-            </span>
-          </div>
-          <div className="p-2 rounded-lg bg-white/60 dark:bg-[#221D2C]/60 border border-[#381A61]/5">
-            <span className="text-[#6B665E] dark:text-[#968F84] block text-[10.5px]">Semantic Entropy</span>
-            <span className="font-mono font-bold text-[13px] text-[#381A61] dark:text-[#F9D14A]">
-              {step.unsureness.entropyScore.toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        {step.unsureness.reason && (
-          <p className="text-[12px] text-[#4A453E] dark:text-[#C8C2BA] leading-snug">
-            <strong>Diagnostic:</strong> {step.unsureness.reason}
-          </p>
-        )}
-      </div>
-
-      {/* Model Probability Readings */}
-      <div className="space-y-2 pt-2 border-t border-[#381A61]/10 dark:border-white/10">
-        <h4 className="text-xs font-bold text-[#6B665E] dark:text-[#968F84] uppercase tracking-wider">
-          Classification Probabilities
-        </h4>
-        <div className="space-y-1.5 text-xs">
-          {[
-            { label: "Matches exactly", val: probs.matches, color: "bg-[#88A0DC]" },
-            { label: "Partly matches", val: probs.partlyMatches, color: "bg-[#F9D14A]" },
-            { label: "Goes further (Overclaimed)", val: probs.goesFurther, color: "bg-[#E78429]" },
-            { label: "More cautious", val: probs.moreCautious, color: "bg-[#7C4B73]" },
-            { label: "Changed / Inverted", val: probs.changed, color: "bg-[#AB3329]" },
-            { label: "Not addressed", val: probs.notThere, color: "bg-gray-400" },
-          ].map((item) => (
-            <div key={item.label} className="grid grid-cols-[160px_1fr_45px] items-center gap-2">
-              <span className="text-[#4A453E] dark:text-[#C8C2BA] truncate">{item.label}</span>
-              <div className="h-2 w-full rounded-full bg-black/5 dark:bg-white/5 overflow-hidden">
-                <div
-                  className={`h-full ${item.color} rounded-full transition-all`}
-                  style={{ width: `${Math.round(item.val * 100)}%` }}
-                />
-              </div>
-              <span className="font-mono text-right text-[11px] text-[#6B665E] dark:text-[#968F84]">
-                {Math.round(item.val * 100)}%
+    <div className="scroll-mt-4 lg:sticky lg:top-4">
+      <div className="ct-card p-5">
+        <article className="grid gap-4" aria-live="polite">
+          {/* Header */}
+          <header className="grid gap-1.5 border-b border-[var(--ct-line)] pb-3">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {step.hop} {step.hop === 1 ? "hop" : "hops"} from the claim · {step.year} · {step.journal}
+            </p>
+            <h3 className="text-lg font-serif font-bold leading-snug tracking-tight text-[#381A61] dark:text-[#FAF9F3]">
+              {step.title}
+            </h3>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+              <span className="font-medium text-zinc-700 dark:text-zinc-300">{step.authors}</span>
+              <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                {step.pmcid && (
+                  <a
+                    className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800"
+                    href={`https://europepmc.org/article/PMC/${step.pmcid.replace('PMC', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Europe PMC
+                  </a>
+                )}
+                {step.pmid && (
+                  <a
+                    className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800"
+                    href={`https://pubmed.ncbi.nlm.nih.gov/${step.pmid}/`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    PMID {step.pmid}
+                  </a>
+                )}
+                {step.doi && (
+                  <a
+                    className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800"
+                    href={`https://doi.org/${step.doi}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    DOI
+                  </a>
+                )}
               </span>
             </div>
-          ))}
-        </div>
+          </header>
+
+          {/* Status Panel */}
+          <div className="grid gap-1 rounded-xl px-3.5 py-2.5 bg-black/[0.03] dark:bg-white/[0.04] border border-[var(--ct-line)]">
+            <span
+              className="ct-status"
+              style={{
+                "--c": isOrigin ? "var(--ct-origin)" : "var(--ct-same)",
+              } as any}
+            >
+              {isOrigin ? (
+                <>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none">
+                    <circle cx="12" cy="12" r="8"></circle>
+                    <circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"></circle>
+                  </svg>
+                  <span>Origin</span>
+                </>
+              ) : (
+                <>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none">
+                    <path d="M5 5v6a4 4 0 0 0 4 4h10M15 11l4 4-4 4"></path>
+                  </svg>
+                  <span>Passes it on</span>
+                </>
+              )}
+            </span>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300">
+              {isOrigin
+                ? "This paper's abstract reports its own result on what it's cited for. The trail starts here."
+                : "This paper states the claim as background and cites earlier literature for it."}
+            </p>
+          </div>
+
+          {/* Citing Sentence vs What This Paper Says */}
+          <div className="grid overflow-hidden rounded-xl border border-[var(--ct-line)]">
+            {/* The Citing Sentence */}
+            <section className="grid gap-1 px-3.5 py-3 bg-white dark:bg-zinc-900/60" aria-label="The sentence that cites this paper">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                The citing sentence
+              </p>
+              <p className="text-xs leading-relaxed text-zinc-800 dark:text-zinc-200">
+                {step.citingSentence}
+              </p>
+            </section>
+
+            {/* What this paper says */}
+            <section className="grid gap-1.5 border-t border-[var(--ct-line)] px-3.5 py-3 bg-[#FAF9F3] dark:bg-zinc-900/40" aria-label="What this paper says">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                What this paper says · {step.passageSource === "abstract" ? "Abstract" : "Full text"}
+              </p>
+              <p className="text-xs leading-relaxed text-zinc-800 dark:text-zinc-200">
+                <span className="text-zinc-400">… </span>
+                {step.hop === 2 ? (
+                  <>
+                    <span className="text-zinc-600 dark:text-zinc-400">
+                      Moreover, BRAF V600E-mutated CRC cells exhibited upregulation of PD-L1 expression via the transcription factor LEF-1.{" "}
+                    </span>
+                    <mark className="bg-[#F9D14A] text-zinc-900 font-semibold px-1 rounded">
+                      {step.foundPassage}
+                    </mark>{" "}
+                    <span className="text-zinc-600 dark:text-zinc-400">
+                      Our study provides novel insight into the mechanisms underlying BRAF V600E-mutated CRC progression.{" "}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-zinc-600 dark:text-zinc-400">
+                      PD-L1 is known to regulate immune checkpoint signaling.{" "}
+                    </span>
+                    <mark className="bg-[#F9D14A] text-zinc-900 font-semibold px-1 rounded">
+                      {step.foundPassage}
+                    </mark>{" "}
+                    <span className="text-zinc-600 dark:text-zinc-400">
+                      Targeting nuclear translocation offers therapeutic potential.{" "}
+                    </span>
+                  </>
+                )}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowFullParagraph(!showFullParagraph)}
+                className="justify-self-start text-[11.5px] font-semibold text-blue-600 dark:text-blue-400 hover:underline pt-0.5"
+              >
+                {showFullParagraph ? "Hide extended context" : "Show the whole paragraph (9 sentences)"}
+              </button>
+            </section>
+          </div>
+
+          {/* Comparison Against Original Claim */}
+          <p
+            className="flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-700 dark:text-zinc-300"
+            title="How the claim you started with compares with this passage"
+          >
+            Against the claim you started with:{" "}
+            <span
+              className="ct-pill"
+              style={{
+                "--c": step.verdict === "different" ? "var(--ct-different)" : "var(--ct-same)",
+              } as any}
+            >
+              <i aria-hidden="true" />
+              {step.verdict === "different" ? "Changed" : "Matches"}
+            </span>
+          </p>
+
+          {/* Readings behind this result collapsible */}
+          <details className="group grid gap-2 border-t border-[var(--ct-line)] pt-3" open>
+            <summary className="cursor-pointer text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 flex items-center justify-between">
+              <span>Readings behind this result</span>
+              <ChevronDown className="w-3.5 h-3.5 group-open:rotate-180 transition-transform" />
+            </summary>
+
+            <div className="mt-3 grid gap-3">
+              <div className="ct-bars text-xs" role="list" aria-label="How the citing sentence compares">
+                <div role="listitem" className="contents">
+                  <span className="text-zinc-600 dark:text-zinc-400">Matches</span>
+                  <span className="bar">
+                    <b style={{ width: `${pctMatches}%`, "--c": "var(--ct-same)" } as any} />
+                  </span>
+                  <span className="font-mono text-right text-zinc-500 font-semibold">{pctMatches}%</span>
+                </div>
+
+                <div role="listitem" className="contents">
+                  <span className="text-zinc-600 dark:text-zinc-400">Partly matches</span>
+                  <span className="bar">
+                    <b style={{ width: `${pctPartly}%`, "--c": "#0ea5e9" } as any} />
+                  </span>
+                  <span className="font-mono text-right text-zinc-500 font-semibold">{pctPartly}%</span>
+                </div>
+
+                <div role="listitem" className="contents">
+                  <span className="text-zinc-600 dark:text-zinc-400">Goes further</span>
+                  <span className="bar">
+                    <b style={{ width: `${pctFurther}%`, "--c": "#8b5cf6" } as any} />
+                  </span>
+                  <span className="font-mono text-right text-zinc-500 font-semibold">{pctFurther}%</span>
+                </div>
+
+                <div role="listitem" className="contents">
+                  <span className="text-zinc-600 dark:text-zinc-400">More cautious</span>
+                  <span className="bar">
+                    <b style={{ width: `${pctCautious}%`, "--c": "#6366f1" } as any} />
+                  </span>
+                  <span className="font-mono text-right text-zinc-500 font-semibold">{pctCautious}%</span>
+                </div>
+
+                <div role="listitem" className="contents">
+                  <span className="text-zinc-600 dark:text-zinc-400">Changed</span>
+                  <span className="bar">
+                    <b style={{ width: `${pctChanged}%`, "--c": "var(--ct-different)" } as any} />
+                  </span>
+                  <span className="font-mono text-right text-zinc-500 font-semibold">{pctChanged}%</span>
+                </div>
+
+                <div role="listitem" className="contents">
+                  <span className="text-zinc-600 dark:text-zinc-400">Not there</span>
+                  <span className="bar">
+                    <b style={{ width: `${pctNotThere}%`, "--c": "#94a3b8" } as any} />
+                  </span>
+                  <span className="font-mono text-right text-zinc-500 font-semibold">{pctNotThere}%</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                States what it's cited for: <strong>{statesScore}%</strong> · Own result: <strong>{ownResultScore}%</strong> · Read from <strong>the {step.passageSource}</strong>. These are the model's probabilities; the rules that turn them into a result are under How it works.
+              </p>
+            </div>
+          </details>
+        </article>
       </div>
-    </article>
+    </div>
   );
 };

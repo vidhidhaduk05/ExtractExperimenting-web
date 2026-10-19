@@ -29,9 +29,13 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route path="/" element={<Navigate to="/projects" replace />} />
         <Route path="/claimscape" element={<ClaimscapePage />} />
+        <Route path="/tools/claimscape" element={<Navigate to="/claimscape" replace />} />
         <Route path="/evidence-map" element={<Navigate to="/claimscape" replace />} />
         <Route path="/citation-telephone" element={<CitationTelephonePage />} />
+        <Route path="/tools/citation-telephone" element={<Navigate to="/citation-telephone" replace />} />
         <Route path="/rigor-scan" element={<RigorScanPage />} />
+        <Route path="/tools/rigor-scan" element={<Navigate to="/rigor-scan" replace />} />
+        <Route path="/rigorscan" element={<Navigate to="/rigor-scan" replace />} />
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/projects/new" element={<ProjectCreate />} />
         <Route path="/projects/:projectId" element={<ProjectDetail />} />
