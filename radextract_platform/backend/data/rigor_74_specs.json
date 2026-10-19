@@ -1,0 +1,490 @@
+[
+  {
+    "id": "rs-01",
+    "label": "Hypothesis stated",
+    "domain": "design",
+    "guideline": "",
+    "question": "Does the paper explicitly state the scientific hypothesis or primary research question being tested?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-02",
+    "label": "Primary outcome defined",
+    "domain": "design",
+    "guideline": "",
+    "question": "Is the primary experimental outcome clearly defined in advance?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-03",
+    "label": "Control group",
+    "domain": "design",
+    "guideline": "",
+    "question": "Is a proper vehicle, sham, or negative control group included in the experimental design?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-04",
+    "label": "Group sizes reported",
+    "domain": "design",
+    "guideline": "",
+    "question": "Are exact sample sizes (n per group) explicitly reported for each experimental condition?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-05",
+    "label": "Sample size justified",
+    "domain": "design",
+    "guideline": "ARRIVE 2",
+    "question": "Is a formal power calculation or sample size justification provided?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-06",
+    "label": "Randomization",
+    "domain": "design",
+    "guideline": "ARRIVE 4",
+    "question": "Were experimental subjects randomly allocated to treatment groups?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-07",
+    "label": "Randomization method",
+    "domain": "design",
+    "guideline": "",
+    "question": "Is the specific random allocation sequence generation method described?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-08",
+    "label": "Blinded allocation",
+    "domain": "design",
+    "guideline": "ARRIVE 5",
+    "question": "Was allocation sequence concealed until interventions were assigned?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-09",
+    "label": "Blinded assessment",
+    "domain": "design",
+    "guideline": "ARRIVE 5",
+    "question": "Were outcome assessors blinded to the treatment condition during scoring?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-10",
+    "label": "Inclusion criteria",
+    "domain": "design",
+    "guideline": "ARRIVE 3",
+    "question": "Are pre-specified inclusion and exclusion criteria for animal subjects detailed?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-11",
+    "label": "Exclusions reported",
+    "domain": "design",
+    "guideline": "ARRIVE 3",
+    "question": "Are all animal exclusions, mortalities, or attrition clearly reported with reasons?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-12",
+    "label": "Independent replication",
+    "domain": "design",
+    "guideline": "",
+    "question": "Were primary findings replicated across independent experimental runs?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-13",
+    "label": "Replicate type defined",
+    "domain": "design",
+    "guideline": "",
+    "question": "Is the distinction between biological and technical replicates explicitly stated?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-14",
+    "label": "Tests named",
+    "domain": "stats",
+    "guideline": "ARRIVE 7",
+    "question": "Does the paper report on tests named according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-15",
+    "label": "Experimental unit",
+    "domain": "stats",
+    "guideline": "ARRIVE 1",
+    "question": "Does the paper report on experimental unit according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-16",
+    "label": "Assumptions checked",
+    "domain": "stats",
+    "guideline": "",
+    "question": "Does the paper report on assumptions checked according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-17",
+    "label": "Multiplicity handled",
+    "domain": "stats",
+    "guideline": "",
+    "question": "Does the paper report on multiplicity handled according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-18",
+    "label": "Uncertainty reported",
+    "domain": "stats",
+    "guideline": "",
+    "question": "Does the paper report on uncertainty reported according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-19",
+    "label": "Effect sizes",
+    "domain": "stats",
+    "guideline": "",
+    "question": "Does the paper report on effect sizes according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-20",
+    "label": "Error bars defined",
+    "domain": "stats",
+    "guideline": "",
+    "question": "Does the paper report on error bars defined according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-21",
+    "label": "Analysis software",
+    "domain": "stats",
+    "guideline": "",
+    "question": "Does the paper report on analysis software according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-22",
+    "label": "p-value only reporting",
+    "domain": "stats",
+    "guideline": "",
+    "question": "Does the paper report on p-value only reporting according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-23",
+    "label": "Species &amp; strain",
+    "domain": "materials",
+    "guideline": "ARRIVE 8",
+    "question": "Does the paper report on species &amp; strain according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-24",
+    "label": "Sex reported",
+    "domain": "materials",
+    "guideline": "ARRIVE 8",
+    "question": "Does the paper report on sex reported according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-25",
+    "label": "Age or weight",
+    "domain": "materials",
+    "guideline": "ARRIVE 8",
+    "question": "Does the paper report on age or weight according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-26",
+    "label": "Animal source",
+    "domain": "materials",
+    "guideline": "ARRIVE 8",
+    "question": "Does the paper report on animal source according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-27",
+    "label": "Housing &amp; husbandry",
+    "domain": "materials",
+    "guideline": "ARRIVE 15",
+    "question": "Does the paper report on housing &amp; husbandry according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-28",
+    "label": "Cell line source",
+    "domain": "materials",
+    "guideline": "",
+    "question": "Does the paper report on cell line source according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-29",
+    "label": "Cell authentication",
+    "domain": "materials",
+    "guideline": "",
+    "question": "Does the paper state that cell lines were authenticated, for example by STR profiling?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-30",
+    "label": "Mycoplasma testing",
+    "domain": "materials",
+    "guideline": "",
+    "question": "Does the paper report on mycoplasma testing according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-31",
+    "label": "Antibody identifiers",
+    "domain": "materials",
+    "guideline": "",
+    "question": "Does the paper report on antibody identifiers according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-32",
+    "label": "Reagent sources",
+    "domain": "materials",
+    "guideline": "",
+    "question": "Does the paper report on reagent sources according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-33",
+    "label": "Doses &amp; routes",
+    "domain": "materials",
+    "guideline": "",
+    "question": "Does the paper report on doses &amp; routes according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-34",
+    "label": "Instruments named",
+    "domain": "materials",
+    "guideline": "",
+    "question": "Does the paper report on instruments named according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-35",
+    "label": "Data statement",
+    "domain": "openness",
+    "guideline": "",
+    "question": "Does the paper report on data statement according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-36",
+    "label": "Data in a repository",
+    "domain": "openness",
+    "guideline": "",
+    "question": "Does the paper report on data in a repository according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-37",
+    "label": "Data only on request",
+    "domain": "openness",
+    "guideline": "",
+    "question": "Does the paper report on data only on request according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-38",
+    "label": "Code available",
+    "domain": "openness",
+    "guideline": "",
+    "question": "Does the paper report on code available according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-39",
+    "label": "Code link",
+    "domain": "openness",
+    "guideline": "",
+    "question": "Does the paper report on code link according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-40",
+    "label": "Protocol shared",
+    "domain": "openness",
+    "guideline": "",
+    "question": "Does the paper report on protocol shared according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-41",
+    "label": "Preregistered",
+    "domain": "openness",
+    "guideline": "",
+    "question": "Does the paper report on preregistered according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-42",
+    "label": "Supporting files",
+    "domain": "openness",
+    "guideline": "",
+    "question": "Does the paper report on supporting files according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-43",
+    "label": "Raw data",
+    "domain": "openness",
+    "guideline": "",
+    "question": "Does the paper report on raw data according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-44",
+    "label": "Ethics approval",
+    "domain": "ethics",
+    "guideline": "ARRIVE 13",
+    "question": "Does the paper report on ethics approval according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-45",
+    "label": "Approval number",
+    "domain": "ethics",
+    "guideline": "",
+    "question": "Does the paper report on approval number according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-46",
+    "label": "Humane endpoints",
+    "domain": "ethics",
+    "guideline": "ARRIVE 16",
+    "question": "Does the paper report on humane endpoints according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-47",
+    "label": "Anesthesia &amp; analgesia",
+    "domain": "ethics",
+    "guideline": "",
+    "question": "Does the paper report on anesthesia &amp; analgesia according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-48",
+    "label": "Euthanasia method",
+    "domain": "ethics",
+    "guideline": "",
+    "question": "Does the paper report on euthanasia method according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-49",
+    "label": "Funding statement",
+    "domain": "ethics",
+    "guideline": "",
+    "question": "Does the paper report on funding statement according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-50",
+    "label": "Funder role",
+    "domain": "ethics",
+    "guideline": "",
+    "question": "Does the paper report on funder role according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-51",
+    "label": "Competing interests",
+    "domain": "ethics",
+    "guideline": "",
+    "question": "Does the paper report on competing interests according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-52",
+    "label": "Author contributions",
+    "domain": "ethics",
+    "guideline": "",
+    "question": "Does the paper report on author contributions according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-53",
+    "label": "Reporting guideline",
+    "domain": "ethics",
+    "guideline": "",
+    "question": "Does the paper report on reporting guideline according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-54",
+    "label": "Limitations discussed",
+    "domain": "claims",
+    "guideline": "",
+    "question": "Does the paper report on limitations discussed according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-55",
+    "label": "Compared to prior work",
+    "domain": "claims",
+    "guideline": "",
+    "question": "Does the paper report on compared to prior work according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-56",
+    "label": "Alternative explanations",
+    "domain": "claims",
+    "guideline": "",
+    "question": "Does the paper report on alternative explanations according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-57",
+    "label": "Null results reported",
+    "domain": "claims",
+    "guideline": "",
+    "question": "Does the paper report on null results reported according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-58",
+    "label": "Translation caveat",
+    "domain": "claims",
+    "guideline": "",
+    "question": "Does the paper report on translation caveat according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-59",
+    "label": "Causal overreach",
+    "domain": "claims",
+    "guideline": "",
+    "question": "Does the paper report on causal overreach according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-60",
+    "label": "Overgeneralization",
+    "domain": "claims",
+    "guideline": "",
+    "question": "Does the paper report on overgeneralization according to scientific reporting standards?",
+    "polarity": "good"
+  },
+  {
+    "id": "rs-61",
+    "label": "Next steps stated",
+    "domain": "claims",
+    "guideline": "",
+    "question": "Does the paper report on next steps stated according to scientific reporting standards?",
+    "polarity": "good"
+  }
+]

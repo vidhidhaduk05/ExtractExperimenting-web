@@ -1,4 +1,4 @@
-﻿"""Rigor Scan Service powered by Local Laya System-1 and Clinical Prediction Modeling.
+"""Rigor Scan Service powered by Local Laya System-1 and Clinical Prediction Modeling.
 
 Reverse-engineered from K-Dense AI Rigor Scan (https://www.k-dense.ai/tools/rigor-scan)
 with full grounding on:
@@ -361,6 +361,7 @@ def run_full_rigor_scan(
     laya = get_laya_model()
     gates = detect_study_gates(text)
     gates_dict = {g["id"]: g["on"] for g in gates}
+    engine_used = "local_laya_system_1" if laya is not None else "heuristic_fallback"
 
     # Sentence extraction with page locating
     sentences_with_loc = []
@@ -437,7 +438,15 @@ def run_full_rigor_scan(
         outcome = "good"
         status = "Reported"
 
-        kw_list = keywords_map.get(check_id, [label.lower()])
+        clean_label = label.lower()
+        kw_list = list(keywords_map.get(check_id, []))
+        kw_list.append(clean_label)
+        for word in re.findall(r'[a-zA-Z]{5,}', clean_label):
+            kw_list.append(word)
+        for k, v in keywords_map.items():
+            if k in clean_label or k in check_id.lower():
+                kw_list.extend(v)
+        kw_list = list(set(kw_list))
         matching_sents = [s for s in sentences_with_loc if any(kw in s["text"].lower() for kw in kw_list)]
         
         if matching_sents:
@@ -464,9 +473,10 @@ def run_full_rigor_scan(
                 status = "Not seen"
                 ev_p = 0.95
 
-        # Check with Local Laya System-1 if applicable and available
-        if laya is not None and matching_sents and applies:
+        # Check with TypeSafe Jev API (primary) or Local Laya System-1 (backup)
+        if matching_sents and applies:
             try:
+                from services import jev_client
                 candidate_text = matching_sents[0]["text"]
                 laya_state = {
                     "claim": f"{label}: {question}",
@@ -485,7 +495,8 @@ def run_full_rigor_scan(
                         "instructions": question
                     }
                 }
-                ans = laya.system_one(laya_state, laya_q)
+                ans, eng = jev_client.ask_with_engine(laya_state, laya_q)
+                engine_used = eng
                 if check_id in ans:
                     rep_p = ans[check_id]["probabilities"].get("reported", 0.5)
                     ev_p = round(rep_p, 2)
@@ -499,7 +510,8 @@ def run_full_rigor_scan(
                         outcome = "bad"
                         status = "Missing"
             except Exception as e:
-                logger.debug("Laya check on %s skipped: %s", check_id, e)
+                logger.debug("Jev/Laya check on %s skipped: %s", check_id, e)
+
 
         all_checks.append({
             "id": check_id,
@@ -637,7 +649,7 @@ def run_full_rigor_scan(
             },
             "counts": counts,
         },
-        "engine": "local_laya_system_1" if laya is not None else "heuristic_fallback",
+        "engine": engine_used,
         "citation": {
             "title": paper_title,
             "doi": doi,

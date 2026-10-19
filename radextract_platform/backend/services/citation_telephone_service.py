@@ -1,4 +1,4 @@
-﻿"""Citation Telephone service powered by local Laya System-1 Model.
+"""Citation Telephone service powered by local Laya System-1 Model.
 
 Extracts all in-text citations and context claims from uploaded manuscripts (.docx, .pdf, text)
 or PubMed/PMC identifiers, retrieves cited reference passages, and runs real Laya System-1
@@ -253,10 +253,24 @@ def evaluate_passage_with_laya(
         }
     }
 
-    if laya is not None:
+    answers = None
+    engine_used = "heuristic_fallback"
+
+    # 1. Attempt via Jev Cloud API (with seamless Laya backup)
+    try:
+        from services import jev_client
+        answers, engine_used = jev_client.ask_with_engine(state, questions)
+    except Exception as exc:
+        logger.warning("Jev/Laya client failed (%s), checking direct local model fallback", exc)
+        if laya is not None:
+            try:
+                answers = laya.system_one(state, questions)
+                engine_used = "local_laya_system_1"
+            except Exception as e:
+                logger.error("Direct local Laya fallback failed: %s", e)
+
+    if answers is not None:
         try:
-            answers = laya.system_one(state, questions)
-            
             sup_ans = answers.get("support_type", {})
             raw_probs = sup_ans.get("probabilities", {})
             probs = {
@@ -294,12 +308,13 @@ def evaluate_passage_with_laya(
                 "verdictLabel": v_label,
                 "probabilities": probs,
                 "unsureness": unsureness,
-                "engine": "local_laya_system_1",
+                "engine": engine_used,
             }
         except Exception as e:
-            logger.error("Laya inference failed: %s", e)
+            logger.error("Failed to parse answers from %s: %s", engine_used, e)
 
-    # Heuristic fallback if Laya is offline
+    # Heuristic fallback if both Jev and Laya are offline
+
     return {
         "supportScore": 0.5,
         "ownResultScore": 0.5,

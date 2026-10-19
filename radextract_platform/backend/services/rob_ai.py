@@ -225,12 +225,12 @@ def prefill_assessment_with_laya(
     study_metadata: dict,
     study_text: str,
     is_full_text: bool,
+    warnings: Optional[list] = None,
 ) -> Optional[dict]:
-    """Assess study signaling questions directly via local Laya System-1 engine."""
+    """Assess study signaling questions via TypeSafe Jev Cloud API with local Laya fallback."""
     try:
         from services import jev_client
-        engine = jev_client._get_laya_engine()
-        if not engine:
+        if not jev_client.is_jev_enabled():
             return None
 
         tool = get_tool(tool_key)
@@ -246,7 +246,7 @@ def prefill_assessment_with_laya(
             "text": study_text[:16000] if is_full_text else study_text[:3000],
         }
 
-        # Build questions for Laya system_one
+        # Build questions for Jev / Laya system_one
         questions_payload: dict[str, dict[str, Any]] = {}
         sq_map: dict[str, tuple[Domain, SignalingQuestion]] = {}
 
@@ -261,14 +261,14 @@ def prefill_assessment_with_laya(
                 }
                 sq_map[sq.key] = (domain, sq)
 
-        answers_from_laya = engine.system_one(state, questions_payload)
+        answers_from_engine, engine_used = jev_client.ask_with_engine(state, questions_payload)
 
         # Assemble results by domain
         domains_result: dict[str, dict[str, Any]] = {}
         for domain in tool.domains:
             domain_answers = {}
             for sq in domain.signaling_questions:
-                laya_res = answers_from_laya.get(sq.key, {})
+                laya_res = answers_from_engine.get(sq.key, {})
                 choice = str(laya_res.get("choice", "")).lower().strip().replace(" ", "_")
                 if choice not in sq.response_options and sq.response_options:
                     choice = sq.response_options[0]
@@ -289,7 +289,7 @@ def prefill_assessment_with_laya(
             # Compute domain judgment
             answer_dict = {k: v["ai_answer"] for k, v in domain_answers.items()}
             dom_judgment = compute_domain_judgment(tool_key, answer_dict)
-            dom_support = f"Evaluated via local Laya System-1 engine based on in-situ text evidence."
+            dom_support = f"Evaluated via {engine_used.replace('_', ' ').title()} engine based on in-situ text evidence."
 
             domains_result[domain.key] = {
                 "answers": domain_answers,
@@ -301,13 +301,14 @@ def prefill_assessment_with_laya(
         return {
             "domains": domains_result,
             "used_full_text": is_full_text,
-            "warnings": [],
-            "engine": "laya",
+            "warnings": list(warnings) if warnings else [],
+            "engine": engine_used,
         }
     except Exception as e:
         import logging
-        logging.getLogger("radextract.rob").warning(f"Laya RoB prefill failed, falling back: {e}")
+        logging.getLogger("radextract.rob").warning(f"Jev/Laya RoB prefill failed, falling back: {e}")
         return None
+
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -357,6 +358,7 @@ def prefill_assessment(
         study_metadata=study_metadata,
         study_text=study_text,
         is_full_text=used_full_text,
+        warnings=warnings,
     )
     if laya_result is not None:
         return laya_result

@@ -90,20 +90,13 @@ def jev_mode() -> str:
 
 
 def is_jev_enabled() -> bool:
-    """True when screening should be attempted via local Laya or TypeSafe Jev API."""
+    """True when screening should be attempted via configured primary or fallback provider."""
     if jev_mode() == "off":
         return False
     if time.monotonic() < _open_until:
         return False
-
-    provider = getattr(settings, "jev_provider", "laya").lower()
-    if provider == "laya":
-        if bool(_get_laya_model_dir()):
-            return True
-        # If local Laya files not found, check if remote API key is configured
-        return bool(_api_key())
-
-    # Provider is "typesafe" (remote API)
+    if getattr(settings, "jev_provider", "typesafe") == "laya":
+        return bool(_get_laya_model_dir())
     return bool(_api_key())
 
 
@@ -131,28 +124,11 @@ def reset_breaker() -> None:
         _open_until = 0.0
 
 
-def ask(state: Any, questions: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    """Send one System One request and return the ``answers`` map (keyed by question id).
-
-    Uses local Laya ONNX engine if available, or TypeSafe cloud API if configured.
-    Raises JevError on any failure after retries.
-    """
-    provider = getattr(settings, "jev_provider", "laya").lower()
-    if provider == "laya":
-        engine = _get_laya_engine()
-        if engine is not None:
-            try:
-                answers = engine.system_one(state, questions)
-                _record_success()
-                return answers
-            except Exception as e:
-                _record_failure()
-                raise JevError(f"Local Laya inference failed: {e}")
-
-    # Fallback to Remote TypeSafe Jev API
+def _ask_typesafe(state: Any, questions: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Execute System One query via TypeSafe Jev Cloud API."""
     key = _api_key()
     if not key:
-        raise JevError("No Jev API key configured and local Laya unavailable")
+        raise JevError("No Jev API key configured")
 
     payload = {"state": state, "model": settings.jev_model, "questions": questions}
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
@@ -184,4 +160,65 @@ def ask(state: Any, questions: dict[str, dict[str, Any]]) -> dict[str, dict[str,
             break
     _record_failure()
     raise JevError(str(last_err) if last_err else "Jev request failed")
+
+
+def _ask_laya(state: Any, questions: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Execute System One query via local Laya ONNX engine."""
+    engine = _get_laya_engine()
+    if engine is None:
+        raise JevError("Local Laya ONNX engine unavailable")
+    try:
+        answers = engine.system_one(state, questions)
+        return answers
+    except Exception as e:
+        raise JevError(f"Local Laya inference failed: {e}")
+
+
+def ask_with_engine(state: Any, questions: dict[str, dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], str]:
+    """Execute System One request with Jev as primary and Laya as backup (or vice versa based on settings).
+
+    Returns:
+        (answers, engine_name) where engine_name is "typesafe_jev" or "local_laya_system_1".
+    """
+    provider = getattr(settings, "jev_provider", "typesafe").lower()
+
+    if provider == "typesafe":
+        # 1. Primary: TypeSafe Jev Cloud API
+        if time.monotonic() >= _open_until and bool(_api_key()):
+            try:
+                answers = _ask_typesafe(state, questions)
+                return answers, "typesafe_jev"
+            except Exception as jev_exc:
+                logger.warning("TypeSafe Jev Cloud API failed (%s); seamlessly falling back to local Laya", jev_exc)
+
+        # 2. Backup: Local Laya System-1 ONNX engine
+        try:
+            answers = _ask_laya(state, questions)
+            return answers, "local_laya_system_1"
+        except Exception as laya_exc:
+            logger.error("Both TypeSafe Jev and Local Laya backup failed: %s", laya_exc)
+            raise JevError(f"Both Jev Cloud and Local Laya engines failed: {laya_exc}")
+
+    else:
+        # Provider configured as local Laya primary
+        try:
+            answers = _ask_laya(state, questions)
+            return answers, "local_laya_system_1"
+        except Exception as laya_exc:
+            logger.warning("Local Laya engine failed (%s); falling back to TypeSafe Jev Cloud API", laya_exc)
+            if bool(_api_key()):
+                answers = _ask_typesafe(state, questions)
+                return answers, "typesafe_jev"
+            raise JevError(f"Local Laya failed ({laya_exc}) and no Jev API key configured")
+
+
+def ask(state: Any, questions: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Send one System One request and return the ``answers`` map (keyed by question id).
+
+    Uses TypeSafe Jev Cloud API as primary with Local Laya ONNX as backup.
+    Raises JevError on any failure after both engines are exhausted.
+    """
+    answers, _ = ask_with_engine(state, questions)
+    return answers
+
 

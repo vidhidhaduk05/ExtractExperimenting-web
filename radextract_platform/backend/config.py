@@ -43,16 +43,16 @@ class Settings(BaseSettings):
     llm_request_timeout: int = 90
     llm_max_retries: int = 2
 
-    # TypeSafe Jev / Laya screening (optional; "off" keeps the existing LLM screening untouched)
+    # TypeSafe Jev / Laya screening
     #   off    -> Jev never called
     #   shadow -> runs alongside and is logged for comparison; the LLM result is still returned
     #   on     -> Jev / Laya result is returned; any failure falls back to the LLM path
-    jev_mode: str = "off"
-    jev_provider: str = "laya"  # "laya" (local ONNX, zero API key) or "typesafe" (remote cloud API)
-    laya_model_dir: str = ""    # Path to local Laya ONNX bundle; defaults to <project_root>/laya/models
-    jev_api_key: str = ""       # For "typesafe" provider; falls back to TYPESAFE_API_KEY env var
-    jev_api_url: str = "https://api.typesafe.ai/v1/systemone"
-    jev_model: str = "jev-latest"
+    jev_mode: str = os.environ.get("RADEXTRACT_JEV_MODE") or os.environ.get("JEV_MODE") or "on"
+    jev_provider: str = os.environ.get("RADEXTRACT_JEV_PROVIDER") or os.environ.get("JEV_PROVIDER") or "typesafe"  # "typesafe" (remote cloud API) with "laya" (local ONNX) backup
+    laya_model_dir: str = os.environ.get("LAYA_MODEL_DIR") or ""    # Path to local Laya ONNX bundle; defaults to <project_root>/laya/models
+    jev_api_key: str = os.environ.get("RADEXTRACT_JEV_API_KEY") or os.environ.get("TYPESAFE_API_KEY") or os.environ.get("JEV_API_KEY") or ""       # For "typesafe" provider
+    jev_api_url: str = os.environ.get("JEV_API_URL") or "https://api.typesafe.ai/v1/systemone"
+    jev_model: str = os.environ.get("JEV_MODEL") or "jev-latest"
     jev_timeout: int = 30
     jev_max_retries: int = 2
     # Decision policy (validate on labelled data before relying on these)

@@ -62,6 +62,8 @@ graphify-out/20*/
 uploads/
 backend/uploads/
 radextract_platform/backend/data/
+!radextract_platform/backend/data/rigor_74_specs.json
+!radextract_platform/backend/data/kdense_rigor_example_full.json
 radextract_platform/backend/uploads/
 radextract_platform/backend/exports/
 Biomni/
