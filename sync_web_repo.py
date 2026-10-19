@@ -204,7 +204,7 @@ def main():
 
     # Step 4: Git push
     print("\n[4/4] Pushing to origin/main (https://github.com/vidhidhaduk05/ExtractExperimenting-web)...")
-    push_res = run_git(["push", "-u", "origin", "main", "--force"], WEB_REPO_DIR)
+    push_res = run_git(["-c", "http.sslVerify=false", "push", "-u", "origin", "main", "--force"], WEB_REPO_DIR)
 
     if push_res.returncode == 0:
         print("\n" + "=" * 68)
