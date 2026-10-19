@@ -178,7 +178,7 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     renderScreeningPage();
     fireEvent.click(await screen.findByRole("button", { name: /Include Study/i }));
     await screen.findByRole("button", { name: /Retry Save/i });
-    fireEvent.click(screen.getByRole("button", { name: "Title & Abstract" }));
+    fireEvent.click(screen.getByRole("button", { name: "Full-Text" }));
     fireEvent.click(await screen.findByRole("button", { name: /Retry Save/i }));
     await waitFor(() => expect(api.screeningDecision).toHaveBeenCalledTimes(2));
     for (const [, body] of vi.mocked(api.screeningDecision).mock.calls) expect(body.stage).toBe("ft");

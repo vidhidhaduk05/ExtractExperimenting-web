@@ -1195,6 +1195,7 @@ export function ScreeningPage() {
 
           {/* Quick Dropdowns & Saved Filter */}
           <div className="flex items-center gap-2 flex-wrap">
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

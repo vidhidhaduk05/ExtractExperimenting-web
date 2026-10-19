@@ -134,6 +134,28 @@ export function RobAssessmentPage() {
     }
   }, [assessment]);
 
+  // Pre-build O(1) domain lookup map from tool definition
+  const domainMap = useMemo(() => {
+    const map = new Map<string, any>();
+    toolDef?.domains.forEach((d) => {
+      map.set(d.key, d);
+    });
+    return map;
+  }, [toolDef]);
+
+  // Pre-build O(1) signaling answer lookup map (composite key `${domain_key}:${question_key}`)
+  const signalingAnswersMap = useMemo(() => {
+    const map = new Map<string, RobSignalingAnswer>();
+    if (assessment?.domain_judgments) {
+      for (const dj of assessment.domain_judgments) {
+        for (const sa of dj.signaling_answers) {
+          map.set(`${dj.domain_key}:${sa.question_key}`, sa);
+        }
+      }
+    }
+    return map;
+  }, [assessment?.domain_judgments]);
+
   // Flatten signaling questions list for linear hotkey navigation
   const allSignalingQuestions = useMemo(() => {
     if (!assessment) return [];
@@ -145,9 +167,12 @@ export function RobAssessmentPage() {
     }> = [];
     let idx = 1;
     for (const dj of assessment.domain_judgments) {
-      const domainDef = assessment.tool_definition?.domains.find((d) => d.key === dj.domain_key);
+      const domainDef = domainMap.get(dj.domain_key);
+      const sqMap = new Map<string, any>();
+      domainDef?.signaling_questions?.forEach((q: any) => sqMap.set(q.key, q));
+
       for (const sa of dj.signaling_answers) {
-        const sqDef = domainDef?.signaling_questions.find((q) => q.key === sa.question_key);
+        const sqDef = sqMap.get(sa.question_key);
         list.push({
           answer: sa,
           domain: dj,
@@ -157,7 +182,7 @@ export function RobAssessmentPage() {
       }
     }
     return list;
-  }, [assessment]);
+  }, [assessment, domainMap]);
 
   // Map RoB signaling questions to spatial PDF highlight items for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -764,7 +789,7 @@ export function RobAssessmentPage() {
           {/* Main Scrollable Review Area: Domains & Signaling Questions */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {displayedDomainJudgments.map((dj) => {
-              const domainDef = toolDef?.domains.find((d) => d.key === dj.domain_key);
+              const domainDef = domainMap.get(dj.domain_key);
               const isExpanded = expandedDomains.has(dj.domain_key);
               const allVerified = dj.signaling_answers.every((sa) => sa.human_verified === 1);
               const flaggedInDomain = dj.signaling_answers.filter(
@@ -821,7 +846,7 @@ export function RobAssessmentPage() {
                   {isExpanded && domainDef && (
                     <div className="p-4 space-y-3.5 bg-[#FAF9F3]/40">
                       {domainDef.signaling_questions.map((sq) => {
-                        const sa = dj.signaling_answers.find((a) => a.question_key === sq.key);
+                        const sa = signalingAnswersMap.get(`${dj.domain_key}:${sq.key}`);
                         if (!sa) return null;
                         if (isReviewMode && sa.needs_human_review !== 1) return null;
 
