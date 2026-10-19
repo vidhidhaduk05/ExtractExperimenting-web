@@ -17,9 +17,16 @@ from typing import Optional
 from database import get_db_backend
 from services.db_backend import DBBackend
 
+import re
 from functools import lru_cache
 
 TITLE_SIMILARITY_THRESHOLD = 0.90
+
+# Pre-compiled regex patterns for title & author normalization
+_PUNCTUATION_RE = re.compile(r"[^\w\s]")
+_WHITESPACE_RE = re.compile(r"\s+")
+_AUTHOR_DELIM_RE = re.compile(r"[,;&]")
+_NON_ALNUM_RE = re.compile(r"\W+")
 
 # Try python-Levenshtein (fast C extension), fall back to difflib with length bound pre-check
 try:
@@ -102,22 +109,19 @@ def _normalize_title(title: str) -> str:
     """Normalize a title for comparison — lowercase, strip punctuation/whitespace."""
     if not title:
         return ""
-    import re
     t = title.lower().strip()
     # Remove punctuation
-    t = re.sub(r"[^\w\s]", " ", t)
+    t = _PUNCTUATION_RE.sub(" ", t)
     # Collapse whitespace
-    t = re.sub(r"\s+", " ", t).strip()
-    return t
+    return _WHITESPACE_RE.sub(" ", t).strip()
 
 
 def _normalize_authors(authors: str) -> set[str]:
     """Extract a set of author last names for comparison."""
     if not authors:
         return set()
-    import re
-    # Split on common delimiters
-    parts = re.split(r"[,;]&]", authors)
+    # Split on common delimiters (, ; &)
+    parts = _AUTHOR_DELIM_RE.split(authors)
     names = set()
     for p in parts:
         p = p.strip().lower()
@@ -130,14 +134,23 @@ def _normalize_authors(authors: str) -> set[str]:
     return names
 
 
+def _author_overlap_sets(s1: set[str], s2: set[str]) -> float:
+    """Compute author name overlap ratio directly from pre-normalized author sets.
+
+    Avoids O(N^2) string parsing and splitting when called in pairwise deduplication loops.
+    """
+    if not s1 or not s2:
+        return 0.0
+    overlap = s1 & s2
+    min_len = len(s1) if len(s1) < len(s2) else len(s2)
+    return len(overlap) / min_len
+
+
 def _author_overlap(a1: str, a2: str) -> float:
     """Compute author name overlap ratio."""
     s1 = _normalize_authors(a1)
     s2 = _normalize_authors(a2)
-    if not s1 or not s2:
-        return 0.0
-    overlap = s1 & s2
-    return len(overlap) / min(len(s1), len(s2))
+    return _author_overlap_sets(s1, s2)
 
 
 def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DBBackend] = None) -> dict:
@@ -174,14 +187,17 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
     norm_titles: list[str] = []
     norm_dois: list[str] = []
     norm_pmids: list[str] = []
+    norm_author_sets: list[set[str]] = []
 
     for i, s in enumerate(studies):
         ndoi = _normalize_doi(s.get("doi", ""))
         npmid = _normalize_pmid(s.get("pmid", ""))
         ntitle = _normalize_title(s.get("title", ""))
+        nauthor = _normalize_authors(s.get("authors", ""))
         norm_titles.append(ntitle)
         norm_dois.append(ndoi)
         norm_pmids.append(npmid)
+        norm_author_sets.append(nauthor)
         if ndoi:
             doi_map.setdefault(ndoi, []).append(i)
         if npmid:
@@ -224,12 +240,13 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
     # Strategy 4: alphanumeric title + first author surname + year
     author_year: dict[tuple, list[int]] = {}
     for i, study in enumerate(studies):
-        alnum = "".join(ch for ch in (study.get("title") or "").lower() if ch.isalnum())
+        alnum = _NON_ALNUM_RE.sub("", (study.get("title") or "").lower())
         first = ""
         authors = study.get("authors") or ""
         if authors:
-            first = authors.split(",")[0].split(";")[0].strip().split()
-            first = first[0].lower() if first else ""
+            first_parts = _AUTHOR_DELIM_RE.split(authors)
+            first_words = first_parts[0].strip().split() if first_parts else []
+            first = first_words[0].lower() if first_words else ""
         year = study.get("publication_year")
         if alnum and first and year:
             author_year.setdefault((alnum, first, year), []).append(i)
@@ -267,7 +284,8 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                     and y_j is not None
                     and y_i == y_j
                 )
-                author_sim = _author_overlap(a_i, authors[j])
+                # Bolt Optimization: Use pre-computed author sets to avoid O(N^2) redundant string parsing
+                author_sim = _author_overlap_sets(norm_author_sets[i], norm_author_sets[j])
 
                 # If title is very similar (>0.95), group regardless
                 # If title is 0.90-0.95, require either year match or author overlap > 0.3
