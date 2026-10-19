@@ -82,7 +82,7 @@ async def create_highlight(study_id: str, body: HighlightCreate, user: Optional[
     conn: DBBackend = Depends(get_db)):
     """Create a new PDF highlight."""
     _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
-    if _pid: check_project_access(conn, _pid["project_id"], user)
+    if _pid: check_project_access(conn, _pid["project_id"], user, min_role="editor")
     study = conn.execute(
         "SELECT study_id, project_id FROM studies WHERE study_id = ?", (study_id,)
     ).fetchone()
@@ -132,6 +132,10 @@ async def update_highlight(highlight_id: str, body: HighlightUpdate, user: Optio
     if not existing:
         raise HTTPException(status_code=404, detail="Highlight not found")
 
+    # Security check: Ensure user has access to the project
+    if existing["project_id"]:
+        check_project_access(conn, existing["project_id"], user, min_role="editor")
+
     now = datetime.utcnow().isoformat()
     updates = []
     params = []
@@ -175,12 +179,20 @@ async def update_highlight(highlight_id: str, body: HighlightUpdate, user: Optio
 async def delete_highlight(highlight_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
     """Delete a PDF highlight."""
+    existing = conn.execute(
+        "SELECT project_id FROM pdf_highlights WHERE highlight_id = ?", (highlight_id,)
+    ).fetchone()
+    if not existing:
+        raise HTTPException(status_code=404, detail="Highlight not found")
+
+    # Security check: Ensure user has access to the project
+    if existing["project_id"]:
+        check_project_access(conn, existing["project_id"], user, min_role="editor")
+
     cursor = conn.execute(
         "DELETE FROM pdf_highlights WHERE highlight_id = ?", (highlight_id,)
     )
     conn.commit()
-    if cursor.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Highlight not found")
     return {"deleted": True, "highlight_id": highlight_id}
 
 

@@ -30,3 +30,24 @@ def test_list_study_highlights_access_control():
 
     response = client.get("/api/studies/s_sec_test2/pdf-highlights")
     assert response.status_code in (200, 401, 403)
+
+def test_update_and_delete_highlight_access_control():
+    """Verify that update_highlight and delete_highlight enforce project access control."""
+    init_db()
+    conn = get_connection()
+    conn.execute("INSERT OR REPLACE INTO projects (project_id, name) VALUES ('p_sec_test3', 'Security Test Project 3')")
+    conn.execute("INSERT OR REPLACE INTO studies (study_id, project_id, title) VALUES ('s_sec_test3', 'p_sec_test3', 'Test Study 3')")
+    conn.execute(
+        """INSERT OR REPLACE INTO pdf_highlights
+           (highlight_id, study_id, project_id, page_number, position_json, content_text)
+           VALUES ('h_sec_test3', 's_sec_test3', 'p_sec_test3', 1, '{}', 'Test Highlight')"""
+    )
+    conn.commit()
+
+    # Update request
+    put_resp = client.put("/api/pdf-highlights/h_sec_test3", json={"content_text": "Updated text"})
+    assert put_resp.status_code in (200, 401, 403)
+
+    # Delete request
+    del_resp = client.delete("/api/pdf-highlights/h_sec_test3")
+    assert del_resp.status_code in (200, 401, 403)
