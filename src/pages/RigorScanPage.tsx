@@ -416,58 +416,7 @@ export const RigorScanPage: React.FC = () => {
                 </p>
               </div>
             </section>
-            </span>
-            <span className="text-xs rs-muted">unclear</span>
-          </div>
 
-          <div className="grid gap-0.5 border-[var(--rs-line)] px-4 py-3.5 border-r">
-            <span className="inline-flex items-center gap-2 rs-mono text-2xl font-bold">
-              <span className="w-4 h-4 rounded-full border-2 border-rose-500" />
-              {data.counts.bad}
-            </span>
-            <span className="text-xs rs-muted">missing or flagged</span>
-          </div>
-
-          <div className="grid gap-0.5 border-[var(--rs-line)] px-4 py-3.5 sm:border-r-0 lg:border-r">
-            <span className="inline-flex items-center gap-2 rs-mono text-2xl font-bold">
-              <span className="w-3.5 h-3.5 rounded-full bg-[var(--rs-na)]" />
-              {data.counts.na}
-            </span>
-            <span className="text-xs rs-muted">don't apply to this study</span>
-          </div>
-
-          <div className="grid content-center gap-2 border-t border-[var(--rs-line)] px-5 py-3 sm:col-span-4 lg:col-span-1 lg:border-t-0">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="grid gap-1 text-[11px] rs-soft font-medium">
-                <i className="block h-1 overflow-hidden rounded bg-[var(--rs-track)]">
-                  <b className="block h-full rounded bg-[var(--rs-accent)] w-full" />
-                </i>
-                Read on device
-              </div>
-              <div className="grid gap-1 text-[11px] rs-soft font-medium">
-                <i className="block h-1 overflow-hidden rounded bg-[var(--rs-track)]">
-                  <b className="block h-full rounded bg-[var(--rs-accent)] w-full" />
-                </i>
-                Software checks
-              </div>
-              <div className="grid gap-1 text-[11px] rs-soft font-medium">
-                <i className="block h-1 overflow-hidden rounded bg-[var(--rs-track)]">
-                  <b className="block h-full rounded bg-[var(--rs-accent)] w-full" />
-                </i>
-                Check items
-              </div>
-              <div className="grid gap-1 text-[11px] rs-soft font-medium">
-                <i className="block h-1 overflow-hidden rounded bg-[var(--rs-track)]">
-                  <b className="block h-full rounded bg-[var(--rs-accent)] w-full" />
-                </i>
-                Link evidence
-              </div>
-            </div>
-            <p className="text-xs rs-soft" aria-live="polite">
-              Scan complete. Select any check to see its evidence on the page.
-            </p>
-          </div>
-        </section>
 
         {/* 2-Column Main Workspace: Reader on Left, Fingerprint & Checks on Right */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
