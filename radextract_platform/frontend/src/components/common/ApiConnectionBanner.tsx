@@ -53,7 +53,7 @@ export const ApiConnectionBanner: React.FC<ApiConnectionBannerProps> = ({ onOpen
               <code className="bg-rose-100 px-1.5 py-0.5 rounded font-mono text-[11px] text-rose-800">
                 {info.apiBase || getApiBase()}
               </code>
-              . Currently displaying offline demo preview.
+              . No demo results have been substituted. Check the server connection and retry.
             </span>
           </div>
           <div className="flex items-center gap-2">

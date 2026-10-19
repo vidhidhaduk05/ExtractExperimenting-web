@@ -80,9 +80,6 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -184,13 +181,21 @@ def main():
 
     # Step 3: Git stage & commit
     print("\n[3/4] Checking Git staging in radextract_web_repo...")
+    run_git(["config", "core.longpaths", "true"], WEB_REPO_DIR)
     run_git(["add", "-A"], WEB_REPO_DIR)
 
-    diff_proc = run_git(["diff", "--staged", "--quiet"], WEB_REPO_DIR)
-    if diff_proc.returncode != 0:
+    # Check if there are staged changes using porcelain status
+    status_proc = run_git(["status", "--porcelain"], WEB_REPO_DIR)
+    has_staged = False
+    for line in status_proc.stdout.splitlines():
+        if len(line) >= 2 and line[0] in "AMDRC":
+            has_staged = True
+            break
+
+    if has_staged:
         print("  -> New changes detected. Committing...")
         commit_res = run_git(
-            ["commit", "-m", "deploy: sync latest web app changes with R metafor support"],
+            ["commit", "-m", "feat: complete RadExtract web app with Evidence Map, Rigor Scan, and Citation Telephone"],
             WEB_REPO_DIR,
         )
         print(f"  -> {commit_res.stdout.strip()}")

@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useMemo, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Share2,
   Check,
@@ -30,26 +30,19 @@ import { ClaimscapeMap } from "../components/claimscape/ClaimscapeMap";
 import { PaperInspector } from "../components/claimscape/PaperInspector";
 import { MethodologySection } from "../components/claimscape/MethodologySection";
 import { api } from "../lib/api";
+import { fetchLivePubMedEvidence } from "../lib/pubmedLiveClient";
 
 export const ClaimscapePage: React.FC = () => {
-  // Theme state
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    return document.documentElement.classList.contains("dark");
-  });
+  const [searchParams] = useSearchParams();
+  const urlClaim = searchParams.get("claim");
+  const urlQ = searchParams.get("q");
+  const urlN = searchParams.get("n");
 
-  const toggleTheme = () => {
-    const nextDark = !isDark;
-    setIsDark(nextDark);
-    if (nextDark) {
-      document.documentElement.classList.add("dark");
-      document.documentElement.setAttribute("data-theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.setAttribute("data-theme", "light");
-    }
-  };
+  const initialClaim = urlClaim || hrtDataRaw.claim;
+  const initialQuery = urlQ || (urlClaim ? urlClaim.split("+").join(" ") : hrtDataRaw.query);
+  const initialCount = urlN ? parseInt(urlN, 10) || 300 : 300;
 
-  // Active dataset state (live backend or cached preset)
+  // Active dataset state (initialized with 300 publications so the map renders immediately)
   const [dataset, setDataset] = useState<{
     claim: string;
     query: string;
@@ -57,30 +50,65 @@ export const ClaimscapePage: React.FC = () => {
     papers: Paper[];
     judgments: Judgment[];
   }>({
-    claim: hrtDataRaw.claim,
-    query: hrtDataRaw.query,
-    total: hrtDataRaw.total || 593,
-    papers: hrtDataRaw.papers as unknown as Paper[],
-    judgments: hrtDataRaw.judgments as unknown as Judgment[],
+    claim: initialClaim,
+    query: initialQuery,
+    total: hrtDataRaw.total || 594,
+    papers: hrtDataRaw.papers as Paper[],
+    judgments: (hrtDataRaw as any).judgments || [],
   });
 
+  // Helper to build neutral PubMed query from claim statement
+  const buildPubMedQuery = (claimText: string): string => {
+    let q = claimText.trim();
+    if (!q) return "";
+    const directional = [
+      /\breduces\b/gi, /\breduce\b/gi, /\bdecreases\b/gi, /\bdecrease\b/gi,
+      /\bincreases\b/gi, /\bincrease\b/gi, /\bimproves\b/gi, /\bimprove\b/gi,
+      /\bworsens\b/gi, /\bworsen\b/gi, /\bprevents\b/gi, /\bprevent\b/gi,
+      /\bcauses\b/gi, /\bcause\b/gi, /\bleads to\b/gi, /\bprotects against\b/gi,
+      /\bprotective nature against\b/gi, /\bprotective against\b/gi,
+      /\blowers\b/gi, /\blower\b/gi, /\belevates\b/gi, /\belevate\b/gi,
+      /\bextends\b/gi, /\bextend\b/gi
+    ];
+    for (const d of directional) {
+      q = q.replace(d, " ");
+    }
+    q = q.replace(/[^\w\s-]/g, " ");
+    const stopWords = new Set(["the", "a", "an", "and", "or", "for", "with", "from", "in", "on", "at", "by", "to", "of", "is", "are", "was", "were", "risk", "nature"]);
+    const terms = q.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w.toLowerCase()));
+    return terms.join(" ");
+  };
+
+  // Track if user explicitly edited the query field
+  const [userEditedQuery, setUserEditedQuery] = useState<boolean>(false);
+
   // Form states
-  const [claim, setClaim] = useState<string>(hrtDataRaw.claim);
-  const [query, setQuery] = useState<string>(hrtDataRaw.query);
-  const [paperCount, setPaperCount] = useState<number>(300);
+  const [claim, setClaim] = useState<string>(initialClaim);
+  const [query, setQuery] = useState<string>(initialQuery);
+  const [paperCount, setPaperCount] = useState<number>(initialCount);
   const [includeCommentary, setIncludeCommentary] = useState<boolean>(false);
   const [directOnly, setDirectOnly] = useState<boolean>(false);
   const [showReviews, setShowReviews] = useState<boolean>(true);
   const [selectedExample, setSelectedExample] = useState<string>("hrt");
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [scanError, setScanError] = useState("");
+  const [resultSource, setResultSource] = useState("Evidence synthesis active · 300 publications analyzed across study designs");
   const [evalSpeed, setEvalSpeed] = useState<number | null>(null);
+
+  // Handle claim changes: auto-build query if user hasn't typed custom query
+  const handleClaimChange = (newClaim: string) => {
+    setClaim(newClaim);
+    if (!userEditedQuery) {
+      setQuery(buildPubMedQuery(newClaim));
+    }
+  };
 
   // Table filter search
   const [tableSearch, setTableSearch] = useState<string>("");
 
-  // Selected paper in inspector (default to the landmark WHI trial or Cochrane review)
-  const [selectedPmid, setSelectedPmid] = useState<string>("41307293");
+  // Selected paper in inspector (default to landmark WHI trial)
+  const [selectedPmid, setSelectedPmid] = useState<string>("12117397");
 
   // Map judgments by PMID
   const judgmentMap = useMemo(() => {
@@ -129,7 +157,7 @@ export const ClaimscapePage: React.FC = () => {
     );
 
     return {
-      totalMatches: dataset.total || 593,
+      totalMatches: dataset.total || 594,
       read: Math.min(paperCount, processedPapers.length),
       onTopic: onTopicList.length,
       onMap: mappedList.length,
@@ -153,68 +181,111 @@ export const ClaimscapePage: React.FC = () => {
       });
   }, [processedPapers, directOnly, tableSearch]);
 
-  const handleSelectExample = async (ex: typeof PRESET_EXAMPLES[0]) => {
-    setSelectedExample(ex.id);
-    setClaim(ex.claim);
-    setQuery(ex.query);
+  const runEvidenceSearch = async (nextClaim: string, nextQuery: string) => {
+    const activeClaim = nextClaim.trim();
+    const activeQuery = nextQuery.trim() || buildPubMedQuery(activeClaim);
+    if (!activeClaim) return;
 
     setIsScanning(true);
+    setScanError("");
+    setEvalSpeed(null);
+    setResultSource("Synthesizing evidence across biomedical literature…");
+
+    // Sync URL parameters without full page reload
     try {
-      const res = await api.evaluateClaimscape(ex.claim, ex.query, paperCount);
-      if (res && res.papers && res.papers.length > 0) {
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set("claim", activeClaim);
+      if (activeQuery) newUrl.searchParams.set("q", activeQuery);
+      newUrl.searchParams.set("n", paperCount.toString());
+      window.history.replaceState({}, "", newUrl.toString());
+    } catch {}
+
+    // Step 1: Try Local Backend API if available
+    try {
+      const res = await api.evaluateClaimscape(activeClaim, activeQuery, paperCount);
+      if (Array.isArray(res?.papers) && res.papers.length > 0 && Array.isArray(res?.judgments)) {
         setDataset({
-          claim: res.claim,
-          query: res.query,
-          total: res.total || res.papers.length,
-          papers: res.papers as Paper[],
-          judgments: res.judgments as Judgment[],
+          claim: res.claim || activeClaim,
+          query: res.query || activeQuery,
+          total: res.total ?? res.papers.length,
+          papers: res.papers,
+          judgments: res.judgments,
         });
-        if (res.papers[0]?.pmid) {
-          setSelectedPmid(res.papers[0].pmid);
-        }
-        if (res.elapsed_ms) {
-          setEvalSpeed(res.elapsed_ms);
-        }
+        setSelectedPmid(res.papers[0]?.pmid || "");
+        setEvalSpeed(res.elapsed_ms);
+        setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: ${res.engine || "Laya System-1"}`);
+        setIsScanning(false);
+        return;
       }
     } catch {
-      // Fallback to local embedded dataset
-      setDataset({
-        claim: ex.claim,
-        query: ex.query,
-        total: hrtDataRaw.total || 593,
-        papers: hrtDataRaw.papers as unknown as Paper[],
-        judgments: hrtDataRaw.judgments as unknown as Judgment[],
-      });
-    } finally {
+      // Backend not running on this domain/host, proceed to direct client-side live PubMed
+    }
+
+    // Step 2: Query Live PubMed directly via NCBI E-Utilities with Laya System-1 Inference
+    try {
+      const liveRes = await fetchLivePubMedEvidence(activeClaim, activeQuery, paperCount);
+      if (Array.isArray(liveRes?.papers) && liveRes.papers.length > 0) {
+        setDataset({
+          claim: activeClaim,
+          query: activeQuery,
+          total: liveRes.totalMatches || liveRes.papers.length,
+          papers: liveRes.papers,
+          judgments: liveRes.judgments,
+        });
+        setSelectedPmid(liveRes.papers[0]?.pmid || "");
+        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Laya System-1`);
+        setIsScanning(false);
+        return;
+      } else {
+        setScanError(`No PubMed publications found matching "${activeQuery}". Try expanding or refining your claim terms.`);
+        setIsScanning(false);
+        return;
+      }
+    } catch (e: any) {
+      console.warn("Live PubMed retrieval warning:", e);
+      setScanError(`PubMed live search failed: ${e?.message || "Please check connection"}`);
       setIsScanning(false);
+      return;
     }
   };
 
-  const handleMapEvidence = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsScanning(true);
-    setEvalSpeed(null);
-    try {
-      const res = await api.evaluateClaimscape(claim, query, paperCount);
-      if (res && res.papers && res.papers.length > 0) {
-        setDataset({
-          claim: res.claim || claim,
-          query: res.query || query,
-          total: res.total || res.papers.length,
-          papers: res.papers as Paper[],
-          judgments: res.judgments as Judgment[],
-        });
-        if (res.papers[0]?.pmid) {
-          setSelectedPmid(res.papers[0].pmid);
-        }
-        if (res.elapsed_ms) {
-          setEvalSpeed(res.elapsed_ms);
-        }
+  // Run search on initial load if URL contains a custom claim
+  useEffect(() => {
+    if (urlClaim && urlClaim !== hrtDataRaw.claim) {
+      void runEvidenceSearch(urlClaim, urlQ || buildPubMedQuery(urlClaim));
+    }
+  }, [urlClaim, urlQ]);
+
+  const handleSelectExample = (ex: typeof PRESET_EXAMPLES[0]) => {
+    if (isScanning) return;
+    setSelectedExample(ex.id);
+    setClaim(ex.claim);
+    setQuery(ex.query);
+    setUserEditedQuery(false);
+    void runEvidenceSearch(ex.claim, ex.query);
+  };
+
+  const handleMapEvidence = (e?: React.FormEvent) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (isScanning || !claim.trim()) return;
+    void runEvidenceSearch(claim.trim(), query.trim());
+  };
+
+  const handleClaimKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!isScanning && claim.trim()) {
+        void runEvidenceSearch(claim.trim(), query.trim());
       }
-    } catch (err) {
-      console.warn("Live evaluate fallback to active dataset:", err);
-    } finally {
-      setIsScanning(false);
+    }
+  };
+
+  const handleQueryKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (!isScanning && claim.trim()) {
+        void runEvidenceSearch(claim.trim(), query.trim());
+      }
     }
   };
 
@@ -225,62 +296,11 @@ export const ClaimscapePage: React.FC = () => {
   };
 
   return (
-    <div className="cs min-h-screen bg-[#FAF9F3] dark:bg-[#14111A] text-[#141413] dark:text-[#FAF9F3] transition-colors duration-200">
-      {/* Top Universal Platform Header */}
-      <nav
-        className="flex items-center justify-between border-b border-[#381A61]/10 bg-[#FAF9F3]/95 dark:bg-[#14111A]/95 backdrop-blur px-5 py-3 lg:px-8 shadow-2xs sticky top-0 z-40"
-        aria-label="Navigation"
-      >
-        <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2.5 font-bold text-[17px] tracking-tight text-[#381A61] dark:text-[#F9D14A]">
-            <div className="w-8 h-8 rounded-lg bg-[#381A61] flex items-center justify-center text-[#F9D14A] shadow-sm">
-              <Layers className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <span>RadExtract <span className="text-[#381A61] dark:text-[#F9D14A] font-extrabold font-serif">ClaimScape</span></span>
-          </Link>
-
-          <div className="hidden md:flex items-center gap-1 text-[13.5px] font-medium text-[#4A453E] dark:text-[#C8C2BA]">
-            <span className="px-3 py-1.5 rounded-lg bg-[#381A61] text-white font-semibold text-xs shadow-2xs">
-              Evidence Map
-            </span>
-            <Link
-              to="/projects"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors flex items-center gap-1.5"
-            >
-              Systematic Reviews
-            </Link>
-            <a
-              href="#method"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors"
-            >
-              Methodology
-            </a>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="p-2 rounded-lg border border-[#381A61]/15 bg-white dark:bg-[#221D2C] text-[#4A453E] dark:text-[#C8C2BA] hover:text-[#381A61] dark:hover:text-[#F9D14A] hover:border-[#381A61] transition-colors shadow-2xs"
-            title="Toggle color theme"
-            aria-label="Toggle color theme"
-          >
-            {isDark ? <Sun className="w-4 h-4 text-[#F9D14A]" /> : <Moon className="w-4 h-4 text-[#381A61]" />}
-          </button>
-
-          <Link
-            to="/projects"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#381A61] hover:bg-[#4E2487] px-4 py-2 text-xs font-bold text-white transition-all shadow-sm active:scale-[0.98]"
-          >
-            <span>Review Workspace</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </nav>
-
+    <div className="cs min-h-full bg-[#FAF9F3] dark:bg-[#14111A] text-[#141413] dark:text-[#FAF9F3] transition-colors duration-200">
+      <div className="px-6 pt-3" role="status">{resultSource}</div>
+      {scanError && <div role="alert" className="mx-6 mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800">{scanError}</div>}
       {/* Main Container */}
-      <main className="mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-8 px-4 pb-20 pt-6 sm:px-6 lg:px-8">
+      <main className="mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-8 px-4 pb-20 pt-4 sm:px-6 lg:px-8">
         {/* Section 1: Hero & Search Form */}
         <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10">
           <div className="max-w-[760px] xl:pt-2">
@@ -323,14 +343,15 @@ export const ClaimscapePage: React.FC = () => {
               <span className="text-[13px] font-semibold cs-soft">Claim statement</span>
               <textarea
                 value={claim}
-                onChange={(e) => setClaim(e.target.value)}
+                onChange={(e) => handleClaimChange(e.target.value)}
+                onKeyDown={handleClaimKeyDown}
                 className="cs-input resize-none px-4 py-3 text-[17px] leading-snug font-medium"
                 rows={2}
                 maxLength={300}
                 placeholder="e.g. Metformin extends lifespan"
               />
               <span className="text-[12px] cs-muted">
-                One plain statement works best, phrased positively: “X reduces Y in Z”.
+                One plain statement works best, phrased positively: “X reduces Y in Z”. Press Enter to map.
               </span>
             </label>
 
@@ -343,7 +364,11 @@ export const ClaimscapePage: React.FC = () => {
                 <input
                   type="text"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setUserEditedQuery(true);
+                  }}
+                  onKeyDown={handleQueryKeyDown}
                   className="cs-input cs-mono px-3.5 py-2.5 text-[13px]"
                 />
               </label>
@@ -372,7 +397,7 @@ export const ClaimscapePage: React.FC = () => {
                 {isScanning ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Evaluating with Laya...</span>
+                    <span>Searching evidence...</span>
                   </>
                 ) : (
                   <>

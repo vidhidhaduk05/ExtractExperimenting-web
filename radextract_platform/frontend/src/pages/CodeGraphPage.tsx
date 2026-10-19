@@ -64,7 +64,7 @@ export function CodeGraphPage() {
     return p;
   }, [sourceFile, community, relation, fileType, limit]);
 
-  const { data: graph, isLoading: graphLoading } = useQuery<CodeGraph>({
+  const { data: graph, isLoading: graphLoading, error: graphError, refetch } = useQuery<CodeGraph>({
     queryKey: ["code-graph", params],
     queryFn: () => api.getCodeGraph(params as any),
   });
@@ -119,6 +119,10 @@ export function CodeGraphPage() {
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
+      {graphError && <div role="alert" className="mb-4 rounded-xl border border-red-200 p-4 text-red-800">
+        <p>Could not load the code graph: {graphError.message}</p>
+        <button onClick={() => refetch()} className="btn-primary mt-2">Retry</button>
+      </div>}
       {/* Header */}
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">

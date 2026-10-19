@@ -31,7 +31,7 @@ import {
   DEMO_ERROR_ANALYSIS
 } from "./demoData";
 
-export type ApiConnectionState = "live" | "demo_fallback" | "explicit_demo" | "error";
+export type ApiConnectionState = "live" | "checking" | "demo_fallback" | "explicit_demo" | "error";
 
 export interface ApiConnectionInfo {
   state: ApiConnectionState;
@@ -62,19 +62,11 @@ export function isDemoModeEnabled(): boolean {
 }
 
 export function shouldUseDemoFallback(): boolean {
-  if (typeof window === "undefined") return true;
-  if (isDemoModeEnabled()) return true;
-  const isGithubPages = window.location.hostname.includes("github.io");
-  const hasCustom = !!localStorage.getItem("custom_api_base");
-  const hasEnvBase = !!import.meta.env.VITE_API_BASE_URL;
-  if (isGithubPages && !hasCustom && !hasEnvBase) {
-    return true;
-  }
-  return false;
+  return isDemoModeEnabled();
 }
 
 let currentApiState: ApiConnectionInfo = {
-  state: shouldUseDemoFallback() ? (isDemoModeEnabled() ? "explicit_demo" : "demo_fallback") : "live",
+  state: isDemoModeEnabled() ? "explicit_demo" : "checking",
   apiBase: getApiBase(),
   lastChecked: Date.now(),
   isExplicitDemo: isDemoModeEnabled(),
@@ -111,7 +103,7 @@ export function setCustomApiBase(url: string | null): void {
   API_BASE = getApiBase();
   updateApiState({
     apiBase: API_BASE,
-    state: shouldUseDemoFallback() ? (isDemoModeEnabled() ? "explicit_demo" : "demo_fallback") : "live",
+    state: isDemoModeEnabled() ? "explicit_demo" : "checking",
   });
 }
 
@@ -124,7 +116,7 @@ export function setDemoModeEnabled(enabled: boolean): void {
   }
   updateApiState({
     isExplicitDemo: enabled,
-    state: enabled ? "explicit_demo" : (shouldUseDemoFallback() ? "demo_fallback" : "live"),
+    state: enabled ? "explicit_demo" : "checking",
   });
 }
 
@@ -1025,7 +1017,7 @@ async function request<T>(
   const isBrowser = typeof window !== "undefined";
   const base = getApiBase();
 
-  // If explicit demo mode or unconfigured GitHub Pages (no custom or env API base set)
+  // Demo data is available only when explicitly selected in connection settings.
   if (shouldUseDemoFallback()) {
     updateApiState({
       state: isDemoModeEnabled() ? "explicit_demo" : "demo_fallback",
@@ -1037,7 +1029,7 @@ async function request<T>(
 
   const token = isBrowser ? localStorage.getItem("token") : null;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
     ...((options.headers as Record<string, string>) || {}),
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -1048,14 +1040,14 @@ async function request<T>(
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }
+    const data = res.status === 204 ? undefined : await res.json();
     updateApiState({ state: "live", apiBase: base, errorMessage: undefined });
-    if (res.status === 204) return undefined as T;
-    return res.json();
+    return data as T;
   } catch (err: any) {
     const msg = err?.message || "Network request failed";
     console.warn(`[API Connection Failed] ${base}${path}:`, err);
     updateApiState({ state: "error", apiBase: base, errorMessage: msg });
-    return handleDemoRequest<T>(path, options);
+    throw err;
   }
 }
 
@@ -2459,6 +2451,8 @@ export const api = {
       papers: any[];
       judgments: any[];
       elapsed_ms: number;
+      engine?: string;
+      cached?: boolean;
     }>("/claimscape/evaluate", {
       method: "POST",
       body: JSON.stringify({ claim, query, count }),
@@ -3526,7 +3520,7 @@ export const api = {
   getStudyClarifications: (studyId: string) =>
     request<ClarificationQuestion[]>(`/studies/${studyId}/clarifications`),
 
-  // ── K-Dense-AI Scientific Review and Statistical Methods ──
+  // ── Scientific Review and Statistical Methods ──
 
   analyzeStats: (data: { group1: number[], group2: number[], group1_name?: string, group2_name?: string, paired?: boolean, alpha?: number }) =>
     request<any>('/stats/analyze', { method: 'POST', body: JSON.stringify(data) }),
@@ -3642,15 +3636,7 @@ export const api = {
       body: JSON.stringify({ citing_sentence, source_title, source_passage }),
     }),
   uploadCitationTelephoneManuscript: (formData: FormData) =>
-    fetch(`${getApiBase()}/citation-telephone/upload-manuscript`, {
-      method: "POST",
-      body: formData,
-    }).then(async (res) => {
-      if (!res.ok) {
-        throw new Error(`Upload failed with status ${res.status}`);
-      }
-      return res.json();
-    }),
+    request<any>("/citation-telephone/upload-manuscript", { method: "POST", body: formData }),
   getCitationTelephoneStatus: () =>
     request<{
       status: string;
@@ -3678,19 +3664,7 @@ export const api = {
   scanPdfRigor: async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    const token = localStorage.getItem("token");
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${getApiBase()}/rigor-scan/scan-pdf`, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || "PDF scan failed");
-    }
-    return res.json();
+    return request<any>("/rigor-scan/scan-pdf", { method: "POST", body: formData });
   },
 };
 

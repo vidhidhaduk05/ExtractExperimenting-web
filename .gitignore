@@ -91,5 +91,8 @@ tests_tmp/
 radextract_platform/backend/tests/.test_tmp/
 radextract_platform/backend/tests/.test_db_dir/
 TESTING/
+scratch/
+.pytest_temp/
+.tmp_pytest/
 
 

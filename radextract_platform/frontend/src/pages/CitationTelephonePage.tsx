@@ -1,588 +1,672 @@
-﻿import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
-  Layers,
-  Search,
-  Sparkles,
-  ArrowRight,
-  Sun,
-  Moon,
-  UploadCloud,
-  FileText,
-  AlertTriangle,
-  HelpCircle,
-  CheckCircle2,
   Share2,
-  RefreshCw,
+  Download,
+  Copy,
   ExternalLink,
-  ChevronRight,
-  GitBranch
+  HelpCircle,
+  FileText,
+  Sparkles,
+  GitGraph,
+  Layers,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Search,
+  BookOpen,
 } from "lucide-react";
 import {
   PRESET_TELEPHONE_EXAMPLES,
+  TraceStep,
   CitationTelephoneData,
-  TraceStep
 } from "../lib/citationTelephoneMethod";
-import { api } from "../lib/api";
 import { TrailViewer } from "../components/citation/TrailViewer";
 import { PassageInspector } from "../components/citation/PassageInspector";
+import { TrailGraphView } from "../components/citation/TrailGraphView";
+import { api } from "../lib/api";
 
 export const CitationTelephonePage: React.FC = () => {
-  // Theme state
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    return document.documentElement.classList.contains("dark");
-  });
+  const [searchParams] = useSearchParams();
+  const urlPaper = searchParams.get("paper");
 
-  const toggleTheme = () => {
-    const nextDark = !isDark;
-    setIsDark(nextDark);
-    if (nextDark) {
-      document.documentElement.classList.add("dark");
-      document.documentElement.setAttribute("data-theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.setAttribute("data-theme", "light");
+  // Tab mode: "audit" (Live Claim & Manuscript Audit) or "landmark" (K-Dense Benchmark Traces)
+  const [activeTab, setActiveTab] = useState<"audit" | "landmark">(urlPaper ? "landmark" : "audit");
+
+  // Live Audit states
+  const [manuscriptText, setManuscriptText] = useState<string>("");
+  const [extractedClaims, setExtractedClaims] = useState<Array<{
+    sentenceIndex: number;
+    citingSentence: string;
+    refNumber: number;
+    refText: string;
+  }>>([]);
+  const [citingClaim, setCitingClaim] = useState<string>("");
+  const [sourcePassage, setSourcePassage] = useState<string>("");
+  const [isExtracting, setIsExtracting] = useState<boolean>(false);
+  const [isComparing, setIsComparing] = useState<boolean>(false);
+  const [evalError, setEvalError] = useState<string | null>(null);
+  const [evalResult, setEvalResult] = useState<{
+    verdictLabel: string;
+    verdict: string;
+    supportScore: number;
+    ownResultScore: number;
+    probabilities: Record<string, number>;
+    engine?: string;
+  } | null>(null);
+
+  // Landmark Trace states
+  const initialIndex = urlPaper
+    ? Math.max(0, PRESET_TELEPHONE_EXAMPLES.findIndex(ex => ex.paperId === urlPaper || ex.data.rootPaper.id === urlPaper))
+    : 0;
+
+  const [selectedExampleIndex, setSelectedExampleIndex] = useState(initialIndex);
+  const activeExample = PRESET_TELEPHONE_EXAMPLES[selectedExampleIndex] || PRESET_TELEPHONE_EXAMPLES[0];
+  
+  // Flatten steps for selection
+  const allSteps: TraceStep[] = [];
+  const gatherSteps = (items: TraceStep[]) => {
+    for (const it of items) {
+      allSteps.push(it);
+      if (it.nextSteps) gatherSteps(it.nextSteps);
     }
   };
+  gatherSteps(activeExample.data.steps);
 
-  // Active example or user loaded trace
-  const [selectedExampleId, setSelectedExampleId] = useState<string>("nuclear-pdl1");
-  const [activeData, setActiveData] = useState<CitationTelephoneData>(
-    PRESET_TELEPHONE_EXAMPLES[0].data
-  );
+  const [selectedStep, setSelectedStep] = useState<TraceStep>(allSteps[allSteps.length - 1] || activeExample.data.steps[0]);
+  const [paperInput, setPaperInput] = useState(activeExample.paperId);
+  const [showGraphView, setShowGraphView] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedMethod, setCopiedMethod] = useState(false);
 
-  // Form input states
-  const [paperInput, setPaperInput] = useState<string>("PMC11571110");
-  const [selectedStepId, setSelectedStepId] = useState<string>("hop1");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
-
-  // Find currently selected step
-  const findStepById = (steps: TraceStep[], id: string): TraceStep | null => {
-    for (const step of steps) {
-      if (step.id === id) return step;
-      if (step.nextSteps) {
-        const found = findStepById(step.nextSteps, id);
-        if (found) return found;
+  useEffect(() => {
+    if (urlPaper) {
+      setActiveTab("landmark");
+      const idx = PRESET_TELEPHONE_EXAMPLES.findIndex(ex => ex.paperId === urlPaper || ex.data.rootPaper.id === urlPaper);
+      if (idx !== -1) {
+        setSelectedExampleIndex(idx);
+        const ex = PRESET_TELEPHONE_EXAMPLES[idx];
+        setPaperInput(ex.paperId);
+        const steps: TraceStep[] = [];
+        gatherSteps(ex.data.steps);
+        setSelectedStep(steps[steps.length - 1] || ex.data.steps[0]);
       }
     }
-    return null;
-  };
+  }, [urlPaper]);
 
-  const selectedStep = findStepById(activeData.steps, selectedStepId) || activeData.steps[0] || null;
-
-  // Handle preset example change
-  const handleSelectExample = (ex: typeof PRESET_TELEPHONE_EXAMPLES[0]) => {
-    setSelectedExampleId(ex.id);
+  const handleSelectExample = (idx: number) => {
+    setSelectedExampleIndex(idx);
+    const ex = PRESET_TELEPHONE_EXAMPLES[idx];
     setPaperInput(ex.paperId);
-    setActiveData(ex.data);
-    setSelectedStepId(ex.data.steps[0]?.id || "hop1");
+    const steps: TraceStep[] = [];
+    const getS = (s: TraceStep[]) => {
+      for (const it of s) {
+        steps.push(it);
+        if (it.nextSteps) getS(it.nextSteps);
+      }
+    };
+    getS(ex.data.steps);
+    setSelectedStep(steps[steps.length - 1] || ex.data.steps[0]);
   };
 
-  // Handle Load / Trace submission
-  const handleTracePaper = async (e: React.FormEvent) => {
+  const handleLoadPaper = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paperInput.trim() || isLoading) return;
-
-    setIsLoading(true);
-    setUploadNotice(null);
-
-    const matched = PRESET_TELEPHONE_EXAMPLES.find(
-      (ex) => ex.paperId.toLowerCase() === paperInput.trim().toLowerCase()
+    const query = paperInput.trim().toUpperCase();
+    const idx = PRESET_TELEPHONE_EXAMPLES.findIndex(
+      ex => ex.paperId.toUpperCase().includes(query) || ex.data.rootPaper.id.toUpperCase().includes(query)
     );
-    if (matched) {
-      setActiveData(matched.data);
-      setSelectedStepId(matched.data.steps[0]?.id || "hop1");
-      setIsLoading(false);
-      return;
+    if (idx !== -1) {
+      handleSelectExample(idx);
     }
+  };
 
+  // Live Audit Handlers
+  const handleExtractCitations = async () => {
+    if (!manuscriptText.trim()) return;
+    setIsExtracting(true);
+    setEvalError(null);
     try {
-      // Run real Laya System-1 evaluation via backend
-      const rawText = paperInput.trim();
-      const auditRes = await api.auditCitationTelephoneText(rawText);
-      if (auditRes && auditRes.claims && auditRes.claims.length > 0) {
-        const firstClaim = auditRes.claims[0];
-        const evalRes = await api.evaluateCitationTelephoneClaim(
-          firstClaim.citingSentence,
-          firstClaim.refText,
-          ""
-        );
-
-        const newTrace: CitationTelephoneData = {
-          claim: firstClaim.citingSentence,
-          rootPaper: {
-            id: paperInput.trim().toUpperCase(),
-            title: `Extracted Citations & Context from Query / Identifier`,
-            authors: "Identified in source text",
-            journal: "Bibliographic Citation",
-            year: 2024,
-            pmcid: paperInput.startsWith("PMC") ? paperInput : undefined,
-            pmid: /^\d+$/.test(paperInput) ? paperInput : undefined
-          },
-          totalPapersRead: auditRes.totalClaimsFound || 1,
-          originsFound: 1,
-          maxHops: 1,
-          changesFound: evalRes.verdict === "different" ? 1 : 0,
-          auditSummary: {
-            headline: `Evaluated ${auditRes.totalClaimsFound} citation sites via Local Laya System-1 ONNX.`,
-            subheadline: `Score: ${Math.round(evalRes.supportScore * 100)}% support confidence. Genuine unsureness: ${evalRes.unsureness.isGenuinelyUnsure ? "FLAGGED" : "CALIBRATED"}.`,
-            unsureMatrixSummary: {
-              totalAnalyzed: auditRes.totalClaimsFound,
-              highConfidence: evalRes.unsureness.isGenuinelyUnsure ? 0 : 1,
-              genuinelyUnsure: evalRes.unsureness.isGenuinelyUnsure ? 1 : 0,
-              semanticDiscrepancies: evalRes.verdict === "different" ? 1 : 0
-            }
-          },
-          steps: [
-            {
-              hop: 1,
-              id: "laya_hop1",
-              paperId: `Ref [${firstClaim.refNumber}]`,
-              title: firstClaim.refText || "Primary cited source reference",
-              authors: "Cited reference author",
-              journal: "Referenced Journal",
-              year: 2023,
-              isOrigin: true,
-              citedAs: `[${firstClaim.refNumber}]`,
-              citingSentence: firstClaim.citingSentence,
-              foundPassage: firstClaim.refText,
-              passageSource: "abstract",
-              paragraphId: "In-Text Citation",
-              verdict: evalRes.verdict,
-              verdictLabel: evalRes.verdictLabel,
-              verdictDescription: evalRes.unsureness.reason || "Evaluated by local ModernBERT System-1 inference.",
-              supportScore: evalRes.supportScore,
-              ownResultScore: evalRes.ownResultScore,
-              probabilities: {
-                matches: evalRes.probabilities.matches || 0.4,
-                partlyMatches: evalRes.probabilities.partlyMatches || 0.2,
-                goesFurther: evalRes.probabilities.goesFurther || 0.1,
-                moreCautious: evalRes.probabilities.moreCautious || 0.1,
-                changed: evalRes.probabilities.changed || 0.1,
-                notThere: evalRes.probabilities.notThere || 0.1
-              },
-              unsureness: evalRes.unsureness
-            }
-          ]
-        };
-        setActiveData(newTrace);
-        setSelectedStepId("laya_hop1");
-        setIsLoading(false);
-        return;
-      }
-    } catch (err) {
-      console.warn("Live Laya audit encountered exception, falling back to local trace parser:", err);
+      const res = await api.auditCitationTelephoneText(manuscriptText);
+      setExtractedClaims(res.claims || []);
+    } catch (err: any) {
+      setEvalError(err?.message || "Failed to extract citations");
+    } finally {
+      setIsExtracting(false);
     }
+  };
 
-    // Universal offline parser fallback
-    const newTrace: CitationTelephoneData = {
-      claim: `Demonstrated clinical efficacy and mechanistic alignment investigated in ${paperInput.trim()}. [1]`,
-      rootPaper: {
-        id: paperInput.trim().toUpperCase(),
-        title: `Systematic Investigation & Reference Verification for ${paperInput.trim().toUpperCase()}`,
-        authors: "Research Team et al.",
-        journal: "Journal of Biomedical Literature",
-        year: 2024,
-        pmcid: paperInput.startsWith("PMC") ? paperInput : undefined,
-        pmid: /^\d+$/.test(paperInput) ? paperInput : undefined
+  const handleSelectClaimToCompare = (claim: { citingSentence: string }) => {
+    setCitingClaim(claim.citingSentence);
+    setSourcePassage("");
+    setEvalResult(null);
+    setEvalError(null);
+  };
+
+  const handleComparePassage = async () => {
+    if (!citingClaim.trim() || !sourcePassage.trim()) return;
+    setIsComparing(true);
+    setEvalError(null);
+    setEvalResult(null);
+    try {
+      const res = await api.evaluateCitationTelephoneClaim(citingClaim, sourcePassage, "");
+      setEvalResult(res);
+    } catch (err: any) {
+      setEvalError(err?.message || "Local Laya is unavailable");
+      setEvalResult(null);
+    } finally {
+      setIsComparing(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard?.writeText(window.location.href);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleCopyMethod = () => {
+    const methodObj = {
+      name: "Citation Telephone",
+      version: "0.3",
+      publishedDate: "2026-10-05",
+      thresholds: {
+        supportMinimum: 0.40,
+        confidentComparison: 0.60,
+        notThereMaximum: 0.15,
+        ownResultMinimum: 0.50,
+        warningThreshold: 0.50
       },
-      totalPapersRead: 2,
-      originsFound: 1,
-      maxHops: 1,
-      changesFound: 0,
-      auditSummary: {
-        headline: `Traced to origin 1 hop back: Primary Study (2023).`,
-        subheadline: `References and citing context successfully audited. Unsureness matrix evaluated for semantic alignment.`,
-        unsureMatrixSummary: {
-          totalAnalyzed: 1,
-          highConfidence: 1,
-          genuinelyUnsure: 0,
-          semanticDiscrepancies: 0
-        }
-      },
-      steps: [
-        {
-          hop: 1,
-          id: "univ_hop1",
-          paperId: "PMID:38291024",
-          title: "Primary benchmark study on reference verification and contextual integrity",
-          authors: "Alvarez et al.",
-          journal: "Lancet Digital Health",
-          year: 2023,
-          isOrigin: true,
-          citedAs: "[1]",
-          citingSentence: `Demonstrated clinical efficacy and mechanistic alignment investigated in ${paperInput.trim()}. [1]`,
-          foundPassage: "Our randomized study demonstrated a 34% reduction in target endpoints across all pre-specified cohorts.",
-          passageSource: "abstract",
-          paragraphId: "Abstract",
-          verdict: "same",
-          verdictLabel: "Matches Source (Origin)",
-          verdictDescription: "The cited claim directly matches the primary experimental finding.",
-          supportScore: 0.94,
-          ownResultScore: 0.97,
-          probabilities: {
-            matches: 0.89,
-            partlyMatches: 0.08,
-            goesFurther: 0.02,
-            moreCautious: 0.01,
-            changed: 0.00,
-            notThere: 0.00
-          },
-          unsureness: {
-            isGenuinelyUnsure: false,
-            margin: 0.81,
-            entropyScore: 0.15,
-            reason: "Direct verbatim support identified in primary abstract.",
-            recommendation: "verified"
-          }
-        }
+      questions: [
+        "1. Stated anywhere (yes/no, per window)",
+        "2. Closest paragraph (paragraph id)",
+        "3. Own result anywhere (yes/no, per window)",
+        "4. Own-result paragraph (paragraph id)",
+        "5. Sentences (sentence id)",
+        "6. Support (yes/no, per candidate)",
+        "7. Comparison (same/partial/stronger/weaker/different/unrelated)",
+        "8. Own result (yes/no, per candidate)",
+        "9. References to follow (yes/no, per ref)",
+        "10. Against original claim (same/partial/stronger/weaker/different/unrelated)"
       ]
     };
-    setActiveData(newTrace);
-    setSelectedStepId("univ_hop1");
-    setIsLoading(false);
-  };
-
-  // Handle manuscript file upload (PDF/DOCX) with real backend Laya parsing
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsLoading(true);
-    setUploadNotice(`Parsing manuscript references from "${file.name}" with local Laya...`);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const uploadRes = await api.uploadCitationTelephoneManuscript(formData);
-      if (uploadRes && uploadRes.claims && uploadRes.claims.length > 0) {
-        setUploadNotice(
-          `Successfully extracted ${uploadRes.totalClaimsFound} in-text citation sites and ${uploadRes.totalReferencesFound} reference entries from ${file.name}. Scored with ${uploadRes.engine}.`
-        );
-
-        // Convert uploaded claims to active trace
-        const steps: TraceStep[] = uploadRes.claims.map((c: any, idx: number) => ({
-          hop: 1,
-          id: `upload_hop_${idx}`,
-          paperId: `Ref [${c.refNumber}]`,
-          title: c.refText || `Cited reference [${c.refNumber}]`,
-          authors: "Cited Reference Authors",
-          journal: "Referenced Publication",
-          year: 2023,
-          isOrigin: true,
-          citedAs: `[${c.refNumber}]`,
-          citingSentence: c.citingSentence,
-          foundPassage: c.refText,
-          passageSource: "abstract",
-          paragraphId: `Sentence #${c.sentenceIndex + 1}`,
-          verdict: c.verdict || "same",
-          verdictLabel: c.verdictLabel || "Matches Source",
-          verdictDescription: c.unsureness?.reason || "Scored via Local Laya System-1 inference.",
-          supportScore: c.supportScore || 0.75,
-          ownResultScore: c.ownResultScore || 0.7,
-          probabilities: c.probabilities || {
-            matches: 0.6,
-            partlyMatches: 0.2,
-            goesFurther: 0.1,
-            moreCautious: 0.05,
-            changed: 0.05,
-            notThere: 0.0
-          },
-          unsureness: c.unsureness || {
-            isGenuinelyUnsure: false,
-            margin: 0.4,
-            entropyScore: 0.35,
-            reason: "Evaluated by Laya ModernBERT System-1.",
-            recommendation: "verified"
-          }
-        }));
-
-        const uploadedTrace: CitationTelephoneData = {
-          claim: uploadRes.claims[0].citingSentence,
-          rootPaper: {
-            id: file.name,
-            title: `Manuscript Audit: ${file.name}`,
-            authors: "Author Draft",
-            journal: "Pre-Publication Manuscript",
-            year: 2024
-          },
-          totalPapersRead: uploadRes.totalClaimsFound,
-          originsFound: uploadRes.totalReferencesFound,
-          maxHops: 1,
-          changesFound: uploadRes.claims.filter((c: any) => c.verdict === "different").length,
-          auditSummary: {
-            headline: `Audited ${uploadRes.totalClaimsFound} in-text citation claims across ${uploadRes.totalReferencesFound} references.`,
-            subheadline: `Processed with Local Laya System-1 Model. Unsureness matrix and context alignment verified without hallucination.`,
-            unsureMatrixSummary: {
-              totalAnalyzed: uploadRes.totalClaimsFound,
-              highConfidence: uploadRes.claims.filter((c: any) => !c.unsureness?.isGenuinelyUnsure).length,
-              genuinelyUnsure: uploadRes.claims.filter((c: any) => c.unsureness?.isGenuinelyUnsure).length,
-              semanticDiscrepancies: uploadRes.claims.filter((c: any) => c.verdict === "different").length
-            }
-          },
-          steps
-        };
-
-        setActiveData(uploadedTrace);
-        setSelectedStepId(steps[0]?.id || "upload_hop_0");
-        setIsLoading(false);
-        return;
-      }
-    } catch (err) {
-      console.warn("Live manuscript upload error, using local fallback parser:", err);
-    }
-
-    setUploadNotice(`Successfully extracted references and context from ${file.name}. Scored with local fallback.`);
-    setIsLoading(false);
+    navigator.clipboard?.writeText(JSON.stringify(methodObj, null, 2));
+    setCopiedMethod(true);
+    setTimeout(() => setCopiedMethod(false), 2000);
   };
 
   return (
-    <div className="cs min-h-screen bg-[#FAF9F3] dark:bg-[#14111A] text-[#141413] dark:text-[#FAF9F3] transition-colors duration-200">
-      {/* Top Universal Platform Header */}
-      <nav
-        className="flex items-center justify-between border-b border-[#381A61]/10 bg-[#FAF9F3]/95 dark:bg-[#14111A]/95 backdrop-blur px-5 py-3 lg:px-8 shadow-2xs sticky top-0 z-40"
-        aria-label="Navigation"
-      >
-        <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2.5 font-bold text-[17px] tracking-tight text-[#381A61] dark:text-[#F9D14A]">
-            <div className="w-8 h-8 rounded-lg bg-[#381A61] flex items-center justify-center text-[#F9D14A] shadow-sm">
-              <Layers className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <span>RadExtract <span className="text-[#381A61] dark:text-[#F9D14A] font-extrabold font-serif">Citation Telephone</span></span>
-          </Link>
-
-          <div className="hidden md:flex items-center gap-1 text-[13.5px] font-medium text-[#4A453E] dark:text-[#C8C2BA]">
-            <Link
-              to="/claimscape"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
-            >
-              Evidence Map
-            </Link>
-            <span className="px-3 py-1.5 rounded-lg bg-[#381A61] text-white font-semibold text-xs shadow-2xs">
-              Citation Telephone
-            </span>
-            <Link
-              to="/projects"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors flex items-center gap-1.5 text-xs font-semibold"
-            >
-              Systematic Reviews
-            </Link>
-            <a
-              href="#method"
-              className="px-3 py-1.5 rounded-lg hover:bg-[#F2F1EB] dark:hover:bg-[#221D2C] hover:text-[#381A61] dark:hover:text-[#F9D14A] transition-colors text-xs font-semibold"
-            >
-              Methodology
-            </a>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="p-2 rounded-lg border border-[#381A61]/15 bg-white dark:bg-[#221D2C] text-[#4A453E] dark:text-[#C8C2BA] hover:text-[#381A61] dark:hover:text-[#F9D14A] hover:border-[#381A61] transition-colors shadow-2xs"
-            title="Toggle color theme"
-            aria-label="Toggle color theme"
-          >
-            {isDark ? <Sun className="w-4 h-4 text-[#F9D14A]" /> : <Moon className="w-4 h-4 text-[#381A61]" />}
-          </button>
-
-          <Link
-            to="/projects"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#381A61] hover:bg-[#4E2487] px-4 py-2 text-xs font-bold text-white transition-all shadow-sm active:scale-[0.98]"
-          >
-            <span>Review Workspace</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </nav>
-
-      {/* Main Container */}
-      <main className="mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-8 px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-        {/* Section 1: Hero & Search / Upload Card */}
-        <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10">
-          <div className="max-w-[760px] xl:pt-2">
-            <p className="cs-eyebrow text-[#7C4B73] dark:text-[#88A0DC] font-bold mb-2">
-              Trace any cited claim back to its primary origin
+    <div className="ct min-h-screen bg-[var(--ct-panel)] text-[var(--ct-ink)] pb-24 font-sans selection:bg-[#F9D14A] selection:text-[#381A61]">
+      <main className="mx-auto grid w-full max-w-[1380px] grid-cols-[minmax(0,1fr)] gap-8 px-4 pt-6 sm:px-6 lg:px-8">
+        {/* Top Hero & Tab Switcher */}
+        <section className="grid items-start gap-6 pt-2 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10">
+          <div className="max-w-[760px] xl:pt-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#381A61] dark:text-[#F9D14A] mb-2.5">
+              Trace a claim to its source
             </p>
-            <h1 className="text-[clamp(36px,4.5vw,56px)] font-serif font-bold leading-tight tracking-tight text-[#381A61] dark:text-[#F9D14A]">
+            <h1 className="text-[clamp(36px,5vw,56px)] font-serif font-bold leading-none tracking-tight text-[#381A61] dark:text-[#F9D14A]">
               Citation Telephone
             </h1>
-            <p className="mt-3.5 text-[16px] text-[#4A453E] dark:text-[#C8C2BA] leading-relaxed text-wrap-pretty font-sans">
-              Claims morph, exaggerate, and even invert as they pass from paper to paper. Pick any cited passage or upload your manuscript: Citation Telephone traces each citation backward through Europe PMC & PubMed to see whether each cited paper actually says what it was cited for.
+            <p className="mt-4 max-w-[560px] text-[16px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              Claims change as they pass from paper to paper. Pick a cited sentence and follow it back through the papers it cites, to see where it came from and what changed on the way.
             </p>
-
-            <ul className="mt-5 grid gap-2.5 text-[13.5px] text-[#4A453E] dark:text-[#C8C2BA]">
-              <li className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#88A0DC]" />
-                <span>Follows citation trees hop-by-hop back to primary experimental origins</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#E78429]" />
-                <span>Equipped with an <strong>Unsureness Matrix</strong> to catch subtle semantic inversions</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#381A61] dark:bg-[#F9D14A]" />
-                <span>Compatible with Zotero linked references & AMA superscript style</span>
-              </li>
-            </ul>
           </div>
 
-          {/* Form / Upload Card */}
-          <div className="cs-card grid gap-4 p-5 sm:p-6 shadow-sm">
-            <form onSubmit={handleTracePaper} className="grid gap-3">
-              <label className="grid gap-1.5">
-                <span className="text-[13px] font-semibold text-[#381A61] dark:text-[#F9D14A]">
-                  Paper Identifier or PMC / PubMed ID
-                </span>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={paperInput}
-                    onChange={(e) => setPaperInput(e.target.value)}
-                    placeholder="DOI, PMID, or PMC ID (e.g. PMC11571110)"
-                    className="cs-input px-3.5 py-2.5 text-[14px] flex-1 font-mono"
+          <div className="ct-card grid gap-4 p-5 rounded-2xl shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="inline-flex rounded-xl bg-black/5 dark:bg-white/5 p-1 text-xs font-semibold" role="group" aria-label="Workflow mode">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("audit")}
+                  className={`px-3.5 py-1.5 rounded-lg transition-all ${
+                    activeTab === "audit"
+                      ? "bg-white dark:bg-zinc-800 text-[#381A61] dark:text-[#F9D14A] shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400"
+                  }`}
+                >
+                  Live Claim Audit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("landmark")}
+                  className={`px-3.5 py-1.5 rounded-lg transition-all ${
+                    activeTab === "landmark"
+                      ? "bg-white dark:bg-zinc-800 text-[#381A61] dark:text-[#F9D14A] shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400"
+                  }`}
+                >
+                  Landmark Benchmark Trace
+                </button>
+              </div>
+              <span className="text-xs text-zinc-500">
+                {activeTab === "audit" ? "Local Laya System-1 ONNX Model" : "K-Dense Ground Truth Multi-Hop Trace"}
+              </span>
+            </div>
+
+            {activeTab === "landmark" ? (
+              <>
+                <form onSubmit={handleLoadPaper} className="grid gap-2">
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Paper Identifier</span>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={paperInput}
+                        onChange={(e) => setPaperInput(e.target.value)}
+                        placeholder="DOI, PMID or PMC ID, e.g. PMC11571110"
+                        className="flex-1 rounded-xl border border-[var(--ct-line)] bg-[var(--ct-panel)] px-3.5 py-2.5 text-sm font-mono outline-none focus:border-[#381A61] dark:focus:border-[#F9D14A]"
+                      />
+                      <button
+                        type="submit"
+                        className="rounded-xl bg-[#381A61] dark:bg-[#F9D14A] px-5 py-2.5 text-xs font-bold text-white dark:text-[#381A61] hover:opacity-90 transition-all shadow-sm"
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </label>
+                </form>
+
+                <div className="flex flex-wrap items-center gap-2 border-t border-[var(--ct-line)] pt-3.5">
+                  <span className="text-xs font-semibold text-zinc-500 mr-1">Examples:</span>
+                  {PRESET_TELEPHONE_EXAMPLES.map((ex, idx) => (
+                    <button
+                      key={ex.id}
+                      type="button"
+                      onClick={() => handleSelectExample(idx)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium border transition-all ${
+                        idx === selectedExampleIndex
+                          ? "bg-[#381A61] dark:bg-[#F9D14A] text-white dark:text-[#381A61] border-transparent"
+                          : "border-[var(--ct-line)] bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400"
+                      }`}
+                    >
+                      {ex.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                Audit any citing sentence against its cited source passage using the local Laya inference engine. Extract citations from manuscript text or evaluate claim alignment directly.
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Tab 1: Live Claim Audit Mode */}
+        {activeTab === "audit" && (
+          <section className="grid gap-6 border-t border-[var(--ct-line)] pt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              {/* Step 1: Manuscript Text Citation Extraction */}
+              <div className="ct-card p-5 rounded-2xl grid gap-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-[#381A61] dark:text-[#F9D14A]">
+                    1. Manuscript In-Text Citations
+                  </h2>
+                  <span className="text-xs text-zinc-500">Extracts cited sentences & bibliography</span>
+                </div>
+
+                <div className="grid gap-2">
+                  <label htmlFor="manuscript-text-input" className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    Manuscript text
+                  </label>
+                  <textarea
+                    id="manuscript-text-input"
+                    aria-label="Manuscript text"
+                    value={manuscriptText}
+                    onChange={(e) => setManuscriptText(e.target.value)}
+                    placeholder="Paste manuscript text with in-text references, e.g. 'Treatment helped [1].'"
+                    rows={4}
+                    className="w-full rounded-xl border border-[var(--ct-line)] bg-[var(--ct-panel)] p-3 text-xs font-sans leading-relaxed outline-none focus:border-[#381A61] dark:focus:border-[#F9D14A]"
                   />
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleExtractCitations}
+                      disabled={isExtracting || !manuscriptText.trim()}
+                      className="rounded-xl bg-[#381A61] dark:bg-[#F9D14A] px-4 py-2 text-xs font-bold text-white dark:text-[#381A61] hover:opacity-90 disabled:opacity-50 transition-all shadow-sm"
+                    >
+                      {isExtracting ? "Extracting..." : "Extract citations"}
+                    </button>
+                  </div>
+                </div>
+
+                {extractedClaims.length > 0 && (
+                  <div className="border-t border-[var(--ct-line)] pt-3.5 space-y-2.5">
+                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                      Discovered Claims ({extractedClaims.length}):
+                    </span>
+                    <div className="space-y-2 max-h-[220px] overflow-y-auto">
+                      {extractedClaims.map((claim, idx) => (
+                        <div
+                          key={idx}
+                          className="rounded-xl border border-[var(--ct-line)] bg-white dark:bg-zinc-800/80 p-3 text-xs space-y-2"
+                        >
+                          <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                            {claim.citingSentence}
+                          </p>
+                          <div className="flex items-center justify-between text-zinc-500 text-[11px]">
+                            <span>Ref [{claim.refNumber}]: {claim.refText || "Cited Source"}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectClaimToCompare(claim)}
+                              className="rounded-lg bg-[#381A61]/10 dark:bg-[#F9D14A]/10 text-[#381A61] dark:text-[#F9D14A] px-2.5 py-1 font-semibold hover:bg-[#381A61]/20 transition-colors"
+                            >
+                              Compare this claim with source text
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Semantic Passage Comparison */}
+              <div className="ct-card p-5 rounded-2xl grid gap-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-[#381A61] dark:text-[#F9D14A]">
+                    2. Claim vs Source Evaluation
+                  </h2>
+                  <span className="text-xs text-zinc-500">Local Laya Verification</span>
+                </div>
+
+                {evalError && (
+                  <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-950/40 p-3.5 text-xs font-semibold text-rose-800 dark:text-rose-300">
+                    {evalError}
+                  </div>
+                )}
+
+                <div className="grid gap-2">
+                  <label htmlFor="citing-claim-input" className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    Citing claim
+                  </label>
+                  <textarea
+                    id="citing-claim-input"
+                    aria-label="Citing claim"
+                    value={citingClaim}
+                    onChange={(e) => setCitingClaim(e.target.value)}
+                    placeholder="The claim made in the citing manuscript"
+                    rows={2}
+                    className="w-full rounded-xl border border-[var(--ct-line)] bg-[var(--ct-panel)] p-3 text-xs font-sans leading-relaxed outline-none focus:border-[#381A61] dark:focus:border-[#F9D14A]"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <label htmlFor="actual-source-passage-input" className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    Actual source passage
+                  </label>
+                  <textarea
+                    id="actual-source-passage-input"
+                    aria-label="Actual source passage"
+                    value={sourcePassage}
+                    onChange={(e) => setSourcePassage(e.target.value)}
+                    placeholder="The actual verbatim sentence or paragraph in the cited source paper"
+                    rows={3}
+                    className="w-full rounded-xl border border-[var(--ct-line)] bg-[var(--ct-panel)] p-3 text-xs font-sans leading-relaxed outline-none focus:border-[#381A61] dark:focus:border-[#F9D14A]"
+                  />
+                </div>
+
+                <div className="flex justify-end">
                   <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="btn-palette-primary px-5 py-2.5 text-xs"
+                    type="button"
+                    onClick={handleComparePassage}
+                    disabled={!citingClaim.trim() || !sourcePassage.trim() || isComparing}
+                    className="rounded-xl bg-[#381A61] dark:bg-[#F9D14A] px-5 py-2.5 text-xs font-bold text-white dark:text-[#381A61] hover:opacity-90 disabled:opacity-50 transition-all shadow-sm"
                   >
-                    {isLoading ? (
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Search className="w-4 h-4" />
-                        <span>Trace</span>
-                      </>
-                    )}
+                    {isComparing ? "Evaluating..." : "Compare passage"}
                   </button>
                 </div>
-              </label>
-            </form>
 
-            {/* Direct Manuscript File Upload */}
-            <div className="border-t border-[#381A61]/10 dark:border-white/10 pt-3.5">
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-[#381A61]/20 dark:border-white/20 rounded-xl p-4 cursor-pointer hover:border-[#381A61] dark:hover:border-[#F9D14A] bg-[#FAF9F3]/60 dark:bg-[#14111A]/60 transition-all">
-                <UploadCloud className="w-6 h-6 text-[#7C4B73] dark:text-[#F9D14A] mb-1" />
-                <span className="text-xs font-bold text-[#381A61] dark:text-[#F9D14A]">
-                  Or Upload Manuscript (.docx / .pdf)
-                </span>
-                <span className="text-[11px] text-[#6B665E] dark:text-[#968F84] mt-0.5">
-                  Detect references, citing sentences, and audit context with Zotero linkage
-                </span>
-                <input
-                  type="file"
-                  accept=".docx,.pdf,.txt"
-                  onChange={handleFileUpload}
-                  className="hidden"
+                {evalResult && (
+                  <div className="border-t border-[var(--ct-line)] pt-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                        Evaluation Verdict:
+                      </span>
+                      <span className="rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 px-3 py-0.5 text-xs font-bold">
+                        {evalResult.verdictLabel || "Matches Source"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-lg bg-black/5 dark:bg-white/5 p-2.5">
+                        <span className="text-zinc-500 block text-[11px]">Support Confidence</span>
+                        <strong className="text-base font-mono font-bold text-[#381A61] dark:text-[#F9D14A]">
+                          {Math.round(evalResult.supportScore * 100)}%
+                        </strong>
+                      </div>
+                      <div className="rounded-lg bg-black/5 dark:bg-white/5 p-2.5">
+                        <span className="text-zinc-500 block text-[11px]">Own Result Confidence</span>
+                        <strong className="text-base font-mono font-bold text-[#381A61] dark:text-[#F9D14A]">
+                          {Math.round(evalResult.ownResultScore * 100)}%
+                        </strong>
+                      </div>
+                    </div>
+
+                    {evalResult.probabilities && (
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">
+                          Probability Distribution:
+                        </span>
+                        {Object.entries(evalResult.probabilities).map(([key, val]) => (
+                          <div key={key} className="flex items-center gap-2 text-xs">
+                            <span className="w-24 capitalize text-zinc-600 dark:text-zinc-400 text-[11px]">
+                              {key.replace(/([A-Z])/g, " $1")}
+                            </span>
+                            <div className="flex-1 h-2 rounded-full bg-black/5 dark:bg-white/10 overflow-hidden">
+                              <div
+                                className="h-full bg-[#381A61] dark:bg-[#F9D14A]"
+                                style={{ width: `${Math.round(val * 100)}%` }}
+                              />
+                            </div>
+                            <span className="w-8 text-right font-mono text-[11px] text-zinc-600 dark:text-zinc-400">
+                              {Math.round(val * 100)}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Tab 2: K-Dense Landmark Trace Mode */}
+        {activeTab === "landmark" && (
+          <>
+            {/* Example Trace Overview Header */}
+            <section className="grid gap-4 border-t border-[var(--ct-line)] pt-6">
+              <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+                <div className="grid max-w-[900px] gap-1">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#381A61] dark:text-[#F9D14A]">
+                    Example trace
+                  </p>
+                  <h2 className="text-[clamp(22px,2.6vw,30px)] font-serif font-bold leading-tight tracking-tight text-[#381A61] dark:text-[#F9D14A]">
+                    {activeExample.data.auditSummary.headline}
+                  </h2>
+                  <p className="text-[15px] text-zinc-700 dark:text-zinc-300">
+                    {activeExample.data.auditSummary.subheadline}
+                  </p>
+                  <p className="text-xs font-mono text-zinc-500">
+                    {activeExample.data.totalPapersRead} papers read · {activeExample.data.originsFound} origin · {activeExample.data.maxHops} hops deep · {activeExample.data.changesFound} changed on the way
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowGraphView(!showGraphView)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--ct-line)] bg-[var(--ct-card)] px-3.5 py-2 text-xs font-semibold hover:border-zinc-400 transition-colors shadow-2xs"
+                  >
+                    <GitGraph className="w-3.5 h-3.5 text-[#381A61] dark:text-[#F9D14A]" />
+                    {showGraphView ? "Tree View" : "Visual DAG Graph"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--ct-line)] bg-[var(--ct-card)] px-3.5 py-2 text-xs font-semibold hover:border-zinc-400 transition-colors shadow-2xs"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    {copiedLink ? "Link Copied!" : "Copy link"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyMethod}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--ct-line)] bg-[var(--ct-card)] px-3.5 py-2 text-xs font-semibold hover:border-zinc-400 transition-colors shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    {copiedMethod ? "JSON Copied!" : "Download"}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* Main Interactive Workspace: Trail on Left, Passage Inspector on Right */}
+            <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column (7 Cols): Trail Step-by-Step Tree or DAG */}
+              <div className="lg:col-span-7">
+                {showGraphView ? (
+                  <TrailGraphView
+                    data={activeExample.data}
+                    selectedStep={selectedStep}
+                    onSelectStep={setSelectedStep}
+                  />
+                ) : (
+                  <TrailViewer
+                    data={activeExample.data}
+                    selectedStep={selectedStep}
+                    onSelectStep={setSelectedStep}
+                  />
+                )}
+              </div>
+
+              {/* Right Column (5 Cols): Detailed Passage & Unsureness Matrix Inspector */}
+              <div className="lg:col-span-5 lg:sticky lg:top-20">
+                <PassageInspector
+                  step={selectedStep}
+                  rootClaim={activeExample.data.claim}
                 />
-              </label>
+              </div>
+            </section>
 
-              {uploadNotice && (
-                <div className="mt-2.5 p-2.5 rounded-lg bg-[#88A0DC]/15 border border-[#88A0DC]/30 text-xs text-[#381A61] dark:text-[#88A0DC] flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 flex-none text-emerald-600" />
-                  <span>{uploadNotice}</span>
+            {/* Privacy & Methodology Footer Card */}
+            <section className="ct-card grid gap-3 p-5 text-xs text-zinc-600 dark:text-zinc-400 rounded-2xl">
+              <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200 font-semibold">
+                <FileText className="w-4 h-4 text-[#381A61] dark:text-[#F9D14A]" />
+                <span>Zero data retention guarantee</span>
+              </div>
+              <p>
+                Every paper on this trace is open-access or read under CC BY. Citation Telephone runs read-only extraction and evaluates probabilities without altering or storing the original scientific texts.
+              </p>
+            </section>
+
+            {/* Published Method v0.3 Section */}
+            <section id="method" className="grid gap-5 border-t border-[var(--ct-line)] pt-8" aria-labelledby="ct-method-title">
+              <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#381A61] dark:text-[#F9D14A]">
+                    Method v0.3 · October 5, 2026
+                  </p>
+                  <h2 id="ct-method-title" className="mt-1 text-2xl font-serif font-bold tracking-tight text-[#381A61] dark:text-[#F9D14A]">
+                    How a trace is made
+                  </h2>
+                  <p className="mt-1 max-w-[72ch] text-xs text-zinc-600 dark:text-zinc-400">
+                    Everything that decides a trace is published here: every question exactly as it is asked, every threshold and every rule.
+                  </p>
                 </div>
-              )}
-            </div>
-
-            {/* Examples Carousel / Chips */}
-            <div className="flex flex-wrap items-center gap-2 border-t border-[#381A61]/10 dark:border-white/10 pt-3">
-              <span className="text-[12px] font-semibold text-[#6B665E] dark:text-[#968F84]">Examples:</span>
-              {PRESET_TELEPHONE_EXAMPLES.map((ex) => (
                 <button
-                  key={ex.id}
                   type="button"
-                  onClick={() => handleSelectExample(ex)}
-                  className="cs-chip"
-                  aria-pressed={selectedExampleId === ex.id}
+                  onClick={handleCopyMethod}
+                  className="rounded-xl border border-[var(--ct-line)] bg-white dark:bg-zinc-800 px-3.5 py-2 text-xs font-bold text-[#381A61] dark:text-[#F9D14A] hover:border-zinc-400 shadow-2xs"
                 >
-                  {ex.label}
+                  {copiedMethod ? "JSON Copied!" : "Copy method as JSON"}
                 </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Section 2: Audit Trail Headline & Warning Banner */}
-        <section className="space-y-4" aria-live="polite">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="space-y-1.5 max-w-[850px]">
-              <p className="cs-eyebrow text-[#7C4B73] dark:text-[#F9D14A] font-bold">
-                Citation Audit Trail
-              </p>
-              <h2 className="text-[clamp(22px,2.5vw,32px)] font-serif font-bold text-[#381A61] dark:text-[#F9D14A] leading-tight">
-                {activeData.auditSummary.headline}
-              </h2>
-              <p className="text-[15px] text-[#4A453E] dark:text-[#C8C2BA]">
-                {activeData.auditSummary.subheadline}
-              </p>
-              <p className="text-xs text-[#6B665E] dark:text-[#968F84]">
-                {activeData.totalPapersRead} papers read ┬╖ {activeData.originsFound} origin found ┬╖ {activeData.maxHops} hops deep ┬╖ {activeData.changesFound} changed along the way
-              </p>
-            </div>
-          </div>
-
-          {/* Critical Warning if semantic inversion is detected */}
-          {activeData.auditSummary.criticalWarning && (
-            <div className="rounded-2xl p-4 bg-[#AB3329]/10 border border-[#AB3329]/30 flex items-start gap-3 text-xs sm:text-sm text-[#AB3329] dark:text-[#ED968C]">
-              <AlertTriangle className="w-5 h-5 flex-none mt-0.5 text-[#AB3329]" />
-              <div>
-                <strong className="font-bold block mb-0.5">Citation Telephone Warning</strong>
-                <span>{activeData.auditSummary.criticalWarning}</span>
               </div>
-            </div>
-          )}
 
-          {/* Section 3: Dual-Column Interactive Telephone Tree & Passage Inspector */}
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-6 items-start">
-            {/* Left: The Citation Trail Tree */}
-            <div className="cs-card p-5 space-y-4 shadow-sm">
-              <div className="flex items-center justify-between border-b border-[#381A61]/10 dark:border-white/10 pb-3">
-                <div className="flex items-center gap-2">
-                  <GitBranch className="w-4 h-4 text-[#381A61] dark:text-[#F9D14A]" />
-                  <h3 className="font-serif font-bold text-base text-[#381A61] dark:text-[#FAF9F3]">
-                    The Citation Trail
+              <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+                {/* The 10 Questions */}
+                <div className="ct-card grid gap-4 p-5 text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                  <h3 className="text-sm font-bold text-[#381A61] dark:text-[#F9D14A]">
+                    The questions asked of every cited paper
                   </h3>
+                  <p>
+                    Each paper is read against the sentence that cites it, given as the claim along with how it cites this paper (<code className="font-mono bg-black/5 dark:bg-white/10 px-1 rounded">[14]</code>, <code className="font-mono bg-black/5 dark:bg-white/10 px-1 rounded">Smith et al., 2010</code>). Every question is about what that sentence cites this paper for, so a sentence that also covers other points is read only for its part. The model returns a probability for every option; it doesn't write text.
+                  </p>
+                  <div className="grid gap-3 pt-1">
+                    <div className="border-l-2 border-[#381A61]/30 pl-3">
+                      <strong>1. Stated anywhere (yes/no, per window):</strong> “Does this paper state what the claim cites this paper for, as its own result or as background?”
+                    </div>
+                    <div className="border-l-2 border-[#381A61]/30 pl-3">
+                      <strong>2. Closest paragraph:</strong> “Which paragraph comes closest to stating what the claim cites this paper for?”
+                    </div>
+                    <div className="border-l-2 border-[#381A61]/30 pl-3">
+                      <strong>3. Own result anywhere (yes/no):</strong> “Does this paper report its own result on what the claim cites this paper for, from its own experiments, data, analysis or pooled analysis?”
+                    </div>
+                    <div className="border-l-2 border-[#381A61]/30 pl-3">
+                      <strong>4. Own-result paragraph:</strong> “Which paragraph reports this paper's own result on what the claim cites this paper for?”
+                    </div>
+                    <div className="border-l-2 border-[#381A61]/30 pl-3">
+                      <strong>5. Sentences:</strong> “Which sentence comes closest to stating what the claim cites this paper for?”
+                    </div>
+                    <div className="border-l-2 border-[#381A61]/30 pl-3">
+                      <strong>6. Support (yes/no):</strong> “Does the passage state what the claim cites this paper for, or part of it?”
+                    </div>
+                    <div className="border-l-2 border-[#381A61]/30 pl-3">
+                      <strong>7. Comparison:</strong> “Compare what the claim cites this paper for with what the passage says: same, partial, stronger, weaker, different, unrelated.”
+                    </div>
+                    <div className="border-l-2 border-[#381A61]/30 pl-3">
+                      <strong>8. Own result (yes/no):</strong> “Does the sentence report a result of this paper's own study, rather than describing earlier work?”
+                    </div>
+                    <div className="border-l-2 border-[#381A61]/30 pl-3">
+                      <strong>9. References to follow:</strong> “Is this reference cited in the passage as a source for what the claim cites this paper for?”
+                    </div>
+                    <div className="border-l-2 border-[#381A61]/30 pl-3">
+                      <strong>10. Against original claim:</strong> “Compare the claim with what the passage says across the multi-hop chain.”
+                    </div>
+                  </div>
                 </div>
-                <span className="text-xs font-mono text-[#6B665E] dark:text-[#968F84]">
-                  {activeData.rootPaper.id}
-                </span>
-              </div>
 
-              {/* Root Citing Paper & Claim */}
-              <div className="p-4 rounded-xl bg-[#FAF9F3] dark:bg-[#14111A] border border-[#381A61]/10 dark:border-white/10 space-y-2">
-                <div className="flex items-center justify-between text-xs text-[#6B665E] dark:text-[#968F84]">
-                  <span className="font-bold text-[#7C4B73] dark:text-[#88A0DC] uppercase tracking-wider text-[11px]">
-                    The Original Claim Being Investigated
-                  </span>
-                  <span>{activeData.rootPaper.journal} ({activeData.rootPaper.year})</span>
+                {/* From readings to results */}
+                <div className="grid gap-4">
+                  <div className="ct-card grid gap-2.5 p-5 text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                    <h3 className="text-sm font-bold text-[#381A61] dark:text-[#F9D14A]">
+                      From readings to results
+                    </h3>
+                    <ul className="grid list-disc gap-1.5 pl-4">
+                      <li>A passage addresses what the paper is cited for when its support reading is at least <strong>40%</strong>, or when its comparison is confidently one of matches, goes further, more cautious, changed (at least <strong>60%</strong>) with “not there” below <strong>15%</strong>.</li>
+                      <li>Of the two candidate sentences, the paper's own result is used when it addresses the claim; otherwise the one with the stronger support.</li>
+                      <li>A comparison is shown on the trail when its top option reaches <strong>40%</strong>. “Goes further” and “changed” are warnings, shown only at <strong>50%</strong> or more.</li>
+                    </ul>
+
+                    <div className="grid gap-2 pt-2 border-t border-[var(--ct-line)]">
+                      <div>
+                        <strong className="text-[#381A61] dark:text-[#F9D14A]">Origin:</strong> The paper states what it is cited for and that passage reports the paper's own result (own-result reading ≥ 0.50).
+                      </div>
+                      <div>
+                        <strong className="text-[#381A61] dark:text-[#F9D14A]">Passes it on:</strong> The paper states the claim as background and cites other papers for it.
+                      </div>
+                      <div>
+                        <strong className="text-[#381A61] dark:text-[#F9D14A]">Changed:</strong> The passage addresses the same question but inverts the mechanism, effect size, or biological direction.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Limits */}
+                  <div className="ct-card grid gap-2.5 p-5 text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                    <h3 className="text-sm font-bold text-[#381A61] dark:text-[#F9D14A]">Limits</h3>
+                    <ul className="grid list-disc gap-1.5 pl-4">
+                      <li>Full text only for open-access papers, arXiv papers and NIH author manuscripts. Everything else is read from its abstract.</li>
+                      <li>Up to 3 references followed per sentence, 6 hops and 24 papers per trace.</li>
+                      <li>Figures aren't read, but tables and figure legends are parsed.</li>
+                    </ul>
+                  </div>
                 </div>
-                <p className="text-sm font-semibold text-[#141413] dark:text-[#FAF9F3] leading-relaxed">
-                  ΓÇ£{activeData.claim}ΓÇ¥
-                </p>
-                <p className="text-xs text-[#6B665E] dark:text-[#968F84]">
-                  {activeData.rootPaper.authors} ΓÇö <em>{activeData.rootPaper.title}</em>
-                </p>
               </div>
-
-              {/* Hierarchical Trail Steps */}
-              <TrailViewer
-                steps={activeData.steps}
-                selectedStepId={selectedStepId}
-                onSelectStep={(step) => setSelectedStepId(step.id)}
-              />
-            </div>
-
-            {/* Right: Detailed Passage & Unsureness Matrix Inspector */}
-            <div className="lg:sticky lg:top-20">
-              <PassageInspector step={selectedStep} rootClaim={activeData.claim} />
-            </div>
-          </div>
-        </section>
+            </section>
+          </>
+        )}
       </main>
     </div>
   );
