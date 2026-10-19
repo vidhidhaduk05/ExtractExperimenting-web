@@ -11,14 +11,15 @@ study; others are marked as duplicates.
 """
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Optional
+from functools import lru_cache
 
 from database import get_db_backend
 from services.db_backend import DBBackend
 
-from functools import lru_cache
-
+_AUTHOR_DELIM_RE = re.compile(r"[,;&]")
 TITLE_SIMILARITY_THRESHOLD = 0.90
 
 # Try python-Levenshtein (fast C extension), fall back to difflib with length bound pre-check
@@ -111,13 +112,12 @@ def _normalize_title(title: str) -> str:
     return t
 
 
-def _normalize_authors(authors: str) -> set[str]:
-    """Extract a set of author last names for comparison."""
+@lru_cache(maxsize=4096)
+def _normalize_authors(authors: str) -> frozenset[str]:
+    """Extract an immutable set of author last names for comparison (memoized)."""
     if not authors:
-        return set()
-    import re
-    # Split on common delimiters
-    parts = re.split(r"[,;]&]", authors)
+        return frozenset()
+    parts = _AUTHOR_DELIM_RE.split(authors)
     names = set()
     for p in parts:
         p = p.strip().lower()
@@ -127,17 +127,20 @@ def _normalize_authors(authors: str) -> set[str]:
         words = p.split()
         if words:
             names.add(words[0])
-    return names
+    return frozenset(names)
 
 
-def _author_overlap(a1: str, a2: str) -> float:
-    """Compute author name overlap ratio."""
-    s1 = _normalize_authors(a1)
-    s2 = _normalize_authors(a2)
+def _author_overlap_sets(s1: frozenset[str], s2: frozenset[str]) -> float:
+    """Compute author name overlap ratio directly from normalized sets."""
     if not s1 or not s2:
         return 0.0
     overlap = s1 & s2
     return len(overlap) / min(len(s1), len(s2))
+
+
+def _author_overlap(a1: str, a2: str) -> float:
+    """Compute author name overlap ratio."""
+    return _author_overlap_sets(_normalize_authors(a1), _normalize_authors(a2))
 
 
 def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DBBackend] = None) -> dict:
@@ -240,14 +243,14 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
     # Strategy 3: Title similarity + author/year
     titles = [s.get("title", "") for s in studies]
     years = [s.get("publication_year") for s in studies]
-    authors = [s.get("authors", "") for s in studies]
+    authors_sets = [_normalize_authors(s.get("authors", "")) for s in studies]
 
     for i in range(len(studies)):
         t_i = titles[i]
         if not t_i:
             continue
         y_i = years[i]
-        a_i = authors[i]
+        a_i_set = authors_sets[i]
 
         for j in range(i + 1, len(studies)):
             if find(i) == find(j):
@@ -267,7 +270,7 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                     and y_j is not None
                     and y_i == y_j
                 )
-                author_sim = _author_overlap(a_i, authors[j])
+                author_sim = _author_overlap_sets(a_i_set, authors_sets[j])
 
                 # If title is very similar (>0.95), group regardless
                 # If title is 0.90-0.95, require either year match or author overlap > 0.3
