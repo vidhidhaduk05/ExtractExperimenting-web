@@ -244,6 +244,7 @@ async def ai_screen_fulltext(
         raise HTTPException(status_code=404, detail="Study not found")
 
     project_id = study["project_id"]
+    check_project_access(conn, project_id, user)
     project = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
     pico = json.loads(project["pico_json"]) if project and project["pico_json"] else {}
 
@@ -366,6 +367,7 @@ async def ai_screen_title_abstract(
         raise HTTPException(status_code=404, detail="Study not found")
 
     project_id = study["project_id"]
+    check_project_access(conn, project_id, user)
     project = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
     pico = json.loads(project["pico_json"]) if project and project["pico_json"] else {}
 
@@ -499,6 +501,7 @@ async def batch_upload_pdf(
     background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     auto_screen: bool = Query(True, description="Also trigger AI full-text screening after Docling JSON conversion"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Batch upload PDFs for full-text screening with automatic Docling JSON conversion.
@@ -507,6 +510,7 @@ async def batch_upload_pdf(
     Unmatched PDFs auto-create new study records from PDF metadata (title, authors).
     Queues Docling conversion + AI screening + Data Review auto-extraction in the background.
     """
+    check_project_access(conn, project_id, user)
     import re
     studies = conn.execute(
         "SELECT study_id, title, pmid, doi FROM studies WHERE project_id = ?",
