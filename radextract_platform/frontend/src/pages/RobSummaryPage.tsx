@@ -350,8 +350,13 @@ function TrafficLightChart({
     return list.filter((a) => (a.needs_human_review_count ?? 0) > 0);
   }, [rawAssessments, filterNeedsReview]);
 
-  const domainKeys = (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_key) || [];
-  const domainLabels = (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_label) || [];
+  const domainKeys = useMemo(() => {
+    return (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_key) || [];
+  }, [rawAssessments]);
+
+  const domainLabels = useMemo(() => {
+    return (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_label) || [];
+  }, [rawAssessments]);
 
   const domainMapByAssessment = useMemo(() => {
     const map = new Map<string, Map<string, any>>();
