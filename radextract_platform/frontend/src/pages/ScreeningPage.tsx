@@ -281,6 +281,7 @@ export function ScreeningPage() {
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
+      if (failedDecision && failedDecision.studyId === s.study_id) return true;
       if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
 
@@ -1195,6 +1196,8 @@ export function ScreeningPage() {
 
           {/* Quick Dropdowns & Saved Filter */}
           <div className="flex items-center gap-2 flex-wrap">
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
+
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

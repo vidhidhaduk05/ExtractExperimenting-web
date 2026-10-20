@@ -32,6 +32,30 @@ import { MethodologySection } from "../components/claimscape/MethodologySection"
 import { api } from "../lib/api";
 import { fetchLivePubMedEvidence } from "../lib/pubmedLiveClient";
 
+const DIRECTIONAL_TERMS = [
+  /\breduces\b/gi, /\breduce\b/gi, /\bdecreases\b/gi, /\bdecrease\b/gi,
+  /\bincreases\b/gi, /\bincrease\b/gi, /\bimproves\b/gi, /\bimprove\b/gi,
+  /\bworsens\b/gi, /\bworsen\b/gi, /\bprevents\b/gi, /\bprevent\b/gi,
+  /\bcauses\b/gi, /\bcause\b/gi, /\bleads to\b/gi, /\bprotects against\b/gi,
+  /\bprotective nature against\b/gi, /\bprotective against\b/gi,
+  /\blowers\b/gi, /\blower\b/gi, /\belevates\b/gi, /\belevate\b/gi,
+  /\bextends\b/gi, /\bextend\b/gi
+];
+
+const STOP_WORDS = new Set(["the", "a", "an", "and", "or", "for", "with", "from", "in", "on", "at", "by", "to", "of", "is", "are", "was", "were", "risk", "nature"]);
+
+// Helper to build neutral PubMed query from claim statement
+const buildPubMedQuery = (claimText: string): string => {
+  let q = claimText.trim();
+  if (!q) return "";
+  for (const d of DIRECTIONAL_TERMS) {
+    q = q.replace(d, " ");
+  }
+  q = q.replace(/[^\w\s-]/g, " ");
+  const terms = q.split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.has(w.toLowerCase()));
+  return terms.join(" ");
+};
+
 export const ClaimscapePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const urlClaim = searchParams.get("claim");
@@ -56,28 +80,6 @@ export const ClaimscapePage: React.FC = () => {
     papers: hrtDataRaw.papers as Paper[],
     judgments: (hrtDataRaw as any).judgments || [],
   });
-
-  // Helper to build neutral PubMed query from claim statement
-  const buildPubMedQuery = (claimText: string): string => {
-    let q = claimText.trim();
-    if (!q) return "";
-    const directional = [
-      /\breduces\b/gi, /\breduce\b/gi, /\bdecreases\b/gi, /\bdecrease\b/gi,
-      /\bincreases\b/gi, /\bincrease\b/gi, /\bimproves\b/gi, /\bimprove\b/gi,
-      /\bworsens\b/gi, /\bworsen\b/gi, /\bprevents\b/gi, /\bprevent\b/gi,
-      /\bcauses\b/gi, /\bcause\b/gi, /\bleads to\b/gi, /\bprotects against\b/gi,
-      /\bprotective nature against\b/gi, /\bprotective against\b/gi,
-      /\blowers\b/gi, /\blower\b/gi, /\belevates\b/gi, /\belevate\b/gi,
-      /\bextends\b/gi, /\bextend\b/gi
-    ];
-    for (const d of directional) {
-      q = q.replace(d, " ");
-    }
-    q = q.replace(/[^\w\s-]/g, " ");
-    const stopWords = new Set(["the", "a", "an", "and", "or", "for", "with", "from", "in", "on", "at", "by", "to", "of", "is", "are", "was", "were", "risk", "nature"]);
-    const terms = q.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w.toLowerCase()));
-    return terms.join(" ");
-  };
 
   // Track if user explicitly edited the query field
   const [userEditedQuery, setUserEditedQuery] = useState<boolean>(false);

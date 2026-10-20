@@ -61,7 +61,8 @@ it("disables upload and examples until the current request finishes", async () =
   render(<RigorScanPage />);
   upload();
   expect(screen.getByLabelText("Upload PDF for Rigor Scan")).toBeDisabled();
-  expect(screen.getByRole("button", { name: /View reference example/ })).toBeDisabled();
+  const exampleButtons = screen.getAllByRole("button", { name: /View reference example/ });
+  exampleButtons.forEach(btn => expect(btn).toBeDisabled());
   resolveScan(result);
   await waitFor(() => expect(screen.getByLabelText("Upload PDF for Rigor Scan")).toBeEnabled());
 });
