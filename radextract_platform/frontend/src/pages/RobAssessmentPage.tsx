@@ -111,15 +111,25 @@ export function RobAssessmentPage() {
     }));
   }, [dynamicStudies]);
 
-  // Compute PDF URL for the current study
+  // Pre-build O(1) Map for study lookups to eliminate repetitive O(N) array scans during renders
+  const studyMap = useMemo(() => {
+    const map = new Map<string, any>();
+    allStudies.forEach((p: any) => {
+      if (p.study_id) map.set(p.study_id, p);
+      if (p.id) map.set(p.id, p);
+    });
+    return map;
+  }, [allStudies]);
+
+  // Compute PDF URL for the current study using O(1) Map lookup
   const currentPdfUrl = useMemo(() => {
     if (customPdfUrl) return customPdfUrl;
     const currentStudyId = assessment?.study_id || "study_birua_2022";
-    const paper = allStudies.find((p: any) => p.study_id === currentStudyId || p.id === currentStudyId) || allStudies[0];
+    const paper = studyMap.get(currentStudyId) || allStudies[0];
     const base = import.meta.env.BASE_URL || "/";
     const cleanBase = base.endsWith("/") ? base : base + "/";
     return cleanBase + "papers/" + (paper?.filename || paper?.title + ".pdf" || "Birua_2022.pdf");
-  }, [customPdfUrl, assessment?.study_id, allStudies]);
+  }, [customPdfUrl, assessment?.study_id, studyMap, allStudies]);
 
   useEffect(() => {
     if (assessment?.tool && !selectedNewTool) {
@@ -134,30 +144,53 @@ export function RobAssessmentPage() {
     }
   }, [assessment]);
 
-  // Flatten signaling questions list for linear hotkey navigation
-  const allSignalingQuestions = useMemo(() => {
-    if (!assessment) return [];
-    const list: Array<{
+  // Pre-build O(1) Maps for domain definitions and signaling questions to prevent quadratic find calls in render loops
+  const domainDefMap = useMemo(() => {
+    const map = new Map<string, any>();
+    if (assessment?.tool_definition?.domains) {
+      for (const d of assessment.tool_definition.domains) {
+        map.set(d.key, d);
+      }
+    }
+    return map;
+  }, [assessment?.tool_definition]);
+
+  const signalingQuestionMap = useMemo(() => {
+    const map = new Map<string, {
       answer: RobSignalingAnswer;
       domain: RobDomainJudgment;
       questionDef?: { key: string; text: string; response_options: string[]; parent_key?: string | null; trigger_answers?: string[] | null };
       globalIndex: number;
-    }> = [];
+    }>();
+    if (!assessment) return map;
+
     let idx = 1;
     for (const dj of assessment.domain_judgments) {
-      const domainDef = assessment.tool_definition?.domains.find((d) => d.key === dj.domain_key);
+      const domainDef = domainDefMap.get(dj.domain_key);
+      const sqDefMap = new Map<string, any>();
+      if (domainDef?.signaling_questions) {
+        for (const q of domainDef.signaling_questions) {
+          sqDefMap.set(q.key, q);
+        }
+      }
+
       for (const sa of dj.signaling_answers) {
-        const sqDef = domainDef?.signaling_questions.find((q) => q.key === sa.question_key);
-        list.push({
+        const item = {
           answer: sa,
           domain: dj,
-          questionDef: sqDef,
+          questionDef: sqDefMap.get(sa.question_key),
           globalIndex: idx++,
-        });
+        };
+        map.set(sa.question_key, item);
       }
     }
-    return list;
-  }, [assessment]);
+    return map;
+  }, [assessment, domainDefMap]);
+
+  // Flatten signaling questions list for linear hotkey navigation
+  const allSignalingQuestions = useMemo(() => {
+    return Array.from(signalingQuestionMap.values());
+  }, [signalingQuestionMap]);
 
   // Map RoB signaling questions to spatial PDF highlight items for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -393,7 +426,7 @@ export function RobAssessmentPage() {
         target.isContentEditable;
       if (isInput) return;
 
-      const currentQ = allSignalingQuestions.find((q) => q.answer.question_key === selectedQuestionKey);
+      const currentQ = selectedQuestionKey ? signalingQuestionMap.get(selectedQuestionKey) : undefined;
 
       if (e.key === "a" || e.key === "A" || e.key === "Enter") {
         e.preventDefault();
@@ -820,8 +853,15 @@ export function RobAssessmentPage() {
                   {/* Domain Signaling Questions Body */}
                   {isExpanded && domainDef && (
                     <div className="p-4 space-y-3.5 bg-[#FAF9F3]/40">
-                      {domainDef.signaling_questions.map((sq) => {
-                        const sa = dj.signaling_answers.find((a) => a.question_key === sq.key);
+              {(() => {
+                // Pre-map signaling answers for O(1) lookup inside question list render loop
+                const saMap = new Map<string, RobSignalingAnswer>();
+                for (const sa of dj.signaling_answers) {
+                  saMap.set(sa.question_key, sa);
+                }
+
+                return domainDef.signaling_questions.map((sq) => {
+                  const sa = saMap.get(sq.key);
                         if (!sa) return null;
                         if (isReviewMode && sa.needs_human_review !== 1) return null;
 
@@ -1033,7 +1073,8 @@ export function RobAssessmentPage() {
                             </div>
                           </div>
                         );
-                      })}
+                      });
+              })()}
 
                       {/* Domain Support Text */}
                       {!isReviewMode && (
