@@ -280,13 +280,13 @@ export function ExtractionSheetPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Export Combined Matrix CSV across all studies
+  // Export Combined Matrix CSV across all studies using pre-built O(1) paperVariableExtMap
   const handleExportAllStudiesMatrixCsv = () => {
     const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p) => `"${p.title}"`)];
     const rows = variableList.map((v: any) => {
       const studyValues = availablePapers.map((p) => {
-        const exts = (DEMO_EXTRACTIONS as any)[p.id] || [];
-        const found = exts.find((e: any) => e.variable_id === v.variable_id);
+        // Fast O(1) hash map lookup instead of O(E) array scan per grid cell
+        const found = paperVariableExtMap.get(`${p.id}:${v.variable_id}`);
         const val = found?.value || "NR";
         const status = found?.is_verified ? " [Verified]" : "";
         return `"${val}${status}"`;
