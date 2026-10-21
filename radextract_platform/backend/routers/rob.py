@@ -152,18 +152,31 @@ async def list_study_assessments(study_id: str):
 
 
 @router.get("/assessments/{assessment_id}")
-async def get_assessment(assessment_id: str):
+async def get_assessment(
+    assessment_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Get full assessment detail with all domain judgments and signaling answers."""
     result = rob_service.get_assessment(assessment_id)
     if not result:
         raise HTTPException(status_code=404, detail="Assessment not found")
+    check_project_access(conn, result.get("project_id", ""), user, min_role="viewer")
     return result
 
 
 @router.delete("/assessments/{assessment_id}")
-async def delete_assessment(assessment_id: str):
+async def delete_assessment(
+    assessment_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Delete a RoB assessment and all its child records."""
-    success = rob_service.delete_assessment(assessment_id)
+    assessment = rob_service.get_assessment(assessment_id)
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    check_project_access(conn, assessment.get("project_id", ""), user, min_role="editor")
+    success = rob_service.delete_assessment(assessment_id, db=conn)
     if not success:
         raise HTTPException(status_code=404, detail="Assessment not found")
     return {"deleted": True, "assessment_id": assessment_id}
@@ -173,9 +186,14 @@ async def delete_assessment(assessment_id: str):
 async def override_assessment_tool(
     assessment_id: str,
     body: RobToolOverrideRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Override or switch the tool used for an assessment."""
+    assessment = rob_service.get_assessment(assessment_id)
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    check_project_access(conn, assessment.get("project_id", ""), user, min_role="editor")
     try:
         return rob_service.change_assessment_tool(assessment_id, body.tool_id, db=conn)
     except ValueError as e:
