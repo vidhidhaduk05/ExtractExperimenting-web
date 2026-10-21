@@ -140,6 +140,13 @@ async def get_meta_analysis(meta_id: str, user: Optional[dict] = Depends(get_cur
 async def delete_meta_analysis(meta_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
     """Delete a meta-analysis and all linked studies."""
+    ma_row = conn.execute(
+        "SELECT project_id FROM meta_analyses WHERE meta_id = ?", (meta_id,)
+    ).fetchone()
+    if not ma_row:
+        raise HTTPException(status_code=404, detail="Meta-analysis not found")
+    check_project_access(conn, ma_row["project_id"], user, min_role="editor")
+
     conn.execute("DELETE FROM meta_analysis_studies WHERE meta_id = ?", (meta_id,))
     cursor = conn.execute("DELETE FROM meta_analyses WHERE meta_id = ?", (meta_id,))
     conn.commit()
@@ -155,6 +162,7 @@ async def run_meta_analysis(
     meta_id: str,
     analysis_type: str = Query("", description="Override analysis type"),
     effect_measure: str = Query("", description="Override effect measure"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Run the meta-analysis and store results."""
@@ -163,6 +171,7 @@ async def run_meta_analysis(
     ).fetchone()
     if not ma_row:
         raise HTTPException(status_code=404, detail="Meta-analysis not found")
+    check_project_access(conn, ma_row["project_id"], user, min_role="editor")
 
     at = analysis_type or ma_row["analysis_type"]
     em = effect_measure or ma_row["effect_measure"]
@@ -268,10 +277,11 @@ async def update_studies(meta_id: str, body: MetaAnalysisStudyUpdate, user: Opti
     conn: DBBackend = Depends(get_db)):
     """Update the study data linked to a meta-analysis."""
     ma_row = conn.execute(
-        "SELECT meta_id FROM meta_analyses WHERE meta_id = ?", (meta_id,)
+        "SELECT project_id FROM meta_analyses WHERE meta_id = ?", (meta_id,)
     ).fetchone()
     if not ma_row:
         raise HTTPException(status_code=404, detail="Meta-analysis not found")
+    check_project_access(conn, ma_row["project_id"], user, min_role="editor")
 
     # Clear existing
     conn.execute("DELETE FROM meta_analysis_studies WHERE meta_id = ?", (meta_id,))
@@ -301,10 +311,11 @@ async def get_forest_plot(meta_id: str, user: Optional[dict] = Depends(get_curre
     conn: DBBackend = Depends(get_db)):
     """Get the forest plot as SVG."""
     row = conn.execute(
-        "SELECT forest_plot_svg FROM meta_analyses WHERE meta_id = ?", (meta_id,)
+        "SELECT project_id, forest_plot_svg FROM meta_analyses WHERE meta_id = ?", (meta_id,)
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Meta-analysis not found")
+    check_project_access(conn, row["project_id"], user, min_role="viewer")
     if not row["forest_plot_svg"]:
         raise HTTPException(status_code=404, detail="Forest plot not generated. Run the analysis first.")
     return Response(content=row["forest_plot_svg"], media_type="image/svg+xml")
@@ -315,10 +326,11 @@ async def get_sroc_curve(meta_id: str, user: Optional[dict] = Depends(get_curren
     conn: DBBackend = Depends(get_db)):
     """Get the SROC curve as SVG (diagnostic accuracy only)."""
     row = conn.execute(
-        "SELECT sroc_curve_svg FROM meta_analyses WHERE meta_id = ?", (meta_id,)
+        "SELECT project_id, sroc_curve_svg FROM meta_analyses WHERE meta_id = ?", (meta_id,)
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Meta-analysis not found")
+    check_project_access(conn, row["project_id"], user, min_role="viewer")
     if not row["sroc_curve_svg"]:
         raise HTTPException(status_code=404, detail="SROC curve not generated. Run a diagnostic accuracy analysis first.")
     return Response(content=row["sroc_curve_svg"], media_type="image/svg+xml")
@@ -329,10 +341,11 @@ async def get_funnel_plot(meta_id: str, user: Optional[dict] = Depends(get_curre
     conn: DBBackend = Depends(get_db)):
     """Get the funnel plot as SVG."""
     row = conn.execute(
-        "SELECT funnel_plot_svg FROM meta_analyses WHERE meta_id = ?", (meta_id,)
+        "SELECT project_id, funnel_plot_svg FROM meta_analyses WHERE meta_id = ?", (meta_id,)
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Meta-analysis not found")
+    check_project_access(conn, row["project_id"], user, min_role="viewer")
     if not row["funnel_plot_svg"]:
         raise HTTPException(status_code=404, detail="Funnel plot not generated. Run the analysis first.")
     return Response(content=row["funnel_plot_svg"], media_type="image/svg+xml")
