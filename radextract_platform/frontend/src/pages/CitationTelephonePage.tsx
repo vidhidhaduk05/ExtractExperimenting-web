@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Share2,
@@ -63,16 +63,20 @@ export const CitationTelephonePage: React.FC = () => {
 
   const [selectedExampleIndex, setSelectedExampleIndex] = useState(initialIndex);
   const activeExample = PRESET_TELEPHONE_EXAMPLES[selectedExampleIndex] || PRESET_TELEPHONE_EXAMPLES[0];
-  
-  // Flatten steps for selection
-  const allSteps: TraceStep[] = [];
-  const gatherSteps = (items: TraceStep[]) => {
-    for (const it of items) {
-      allSteps.push(it);
-      if (it.nextSteps) gatherSteps(it.nextSteps);
-    }
-  };
-  gatherSteps(activeExample.data.steps);
+
+  // Performance Optimization: Memoize flattened trace step list so tree traversal & array allocations
+  // do not re-run on every render frame (e.g., user keystrokes, tab changes, or hover state updates).
+  const allSteps = useMemo(() => {
+    const steps: TraceStep[] = [];
+    const gatherSteps = (items: TraceStep[]) => {
+      for (const it of items) {
+        steps.push(it);
+        if (it.nextSteps) gatherSteps(it.nextSteps);
+      }
+    };
+    gatherSteps(activeExample.data.steps);
+    return steps;
+  }, [activeExample]);
 
   const [selectedStep, setSelectedStep] = useState<TraceStep>(allSteps[allSteps.length - 1] || activeExample.data.steps[0]);
   const [paperInput, setPaperInput] = useState(activeExample.paperId);
