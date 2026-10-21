@@ -1,5 +1,9 @@
 # Bolt's Journal - Performance Learnings
 
+## 2026-11-02 - Pre-Parsed Author Surname Sets & Short-Circuited Pairwise Deduplication
+**Learning:** In pairwise study deduplication (`deduplicate_studies`), re-normalizing author strings and splitting them via regex inside the $O(N^2)$ pairwise comparison loop causes substantial redundant string parsing. Pre-computing normalized author surname sets (`norm_author_sets = [_normalize_authors(a) for a in authors]`) once per study prior to the loop, supporting pre-parsed `set[str]` arguments in `_author_overlap`, and short-circuiting secondary signal checks when title similarity is $\ge 0.95$ eliminates redundant regex execution and allows fast C-level set intersections (`s1 & s2`).
+**Action:** When performing $O(N^2)$ pairwise entity matching in Python, pre-parse string attributes into normalized sets or feature vectors once prior to the loop and short-circuit secondary feature evaluations when primary similarity metrics exceed absolute grouping thresholds.
+
 ## 2026-11-01 - Object Identity Pointer Comparison (`is not`) for Character Span Sweeps
 **Learning:** In character-by-character span sweeps (`resolve_character_spans`), evaluating dictionary value equality (`char_spans[i] != curr_span`) forces Python to invoke `dict.__eq__` and check key-value pairs on every character loop iteration. Since characters belonging to the same span reference the exact same dictionary object instance in memory, replacing `!=` with object identity pointer comparison (`char_spans[i] is not curr_span`) performs fast C-level pointer comparisons and reduces sweep execution time by ~21.8% (1.28x speedup) with 100% identical outputs.
 **Action:** In Python array/list sweep algorithms tracking object transitions across contiguous indices, use object identity comparisons (`is not` / `is`) instead of value equality (`!=` / `==`) when elements share reference identity.

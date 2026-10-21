@@ -111,13 +111,16 @@ def _normalize_title(title: str) -> str:
     return t
 
 
+import re
+
+_AUTHOR_SPLIT_RE = re.compile(r"[,;&]|\s+and\s+", re.IGNORECASE)
+
+
 def _normalize_authors(authors: str) -> set[str]:
     """Extract a set of author last names for comparison."""
     if not authors:
         return set()
-    import re
-    # Split on common delimiters
-    parts = re.split(r"[,;]&]", authors)
+    parts = _AUTHOR_SPLIT_RE.split(authors)
     names = set()
     for p in parts:
         p = p.strip().lower()
@@ -130,10 +133,10 @@ def _normalize_authors(authors: str) -> set[str]:
     return names
 
 
-def _author_overlap(a1: str, a2: str) -> float:
+def _author_overlap(a1: set[str] | str, a2: set[str] | str) -> float:
     """Compute author name overlap ratio."""
-    s1 = _normalize_authors(a1)
-    s2 = _normalize_authors(a2)
+    s1 = a1 if isinstance(a1, set) else _normalize_authors(a1)
+    s2 = a2 if isinstance(a2, set) else _normalize_authors(a2)
     if not s1 or not s2:
         return 0.0
     overlap = s1 & s2
@@ -241,13 +244,16 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
     titles = [s.get("title", "") for s in studies]
     years = [s.get("publication_year") for s in studies]
     authors = [s.get("authors", "") for s in studies]
+    # Bolt Optimization: Pre-compute normalized author surname sets once per study
+    # prior to the O(N^2) pairwise loop to eliminate redundant re-parsing & regex splits.
+    norm_author_sets = [_normalize_authors(a) for a in authors]
 
     for i in range(len(studies)):
         t_i = titles[i]
         if not t_i:
             continue
         y_i = years[i]
-        a_i = authors[i]
+        a_set_i = norm_author_sets[i]
 
         for j in range(i + 1, len(studies)):
             if find(i) == find(j):
@@ -260,19 +266,20 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
             sim = _title_similarity(t_i, t_j)
 
             if sim >= TITLE_SIMILARITY_THRESHOLD:
-                # Strong title match — check author/year as secondary signal
-                y_j = years[j]
-                year_match = (
-                    y_i is not None
-                    and y_j is not None
-                    and y_i == y_j
-                )
-                author_sim = _author_overlap(a_i, authors[j])
-
-                # If title is very similar (>0.95), group regardless
-                # If title is 0.90-0.95, require either year match or author overlap > 0.3
-                if sim >= 0.95 or year_match or author_sim > 0.3:
+                # Bolt Optimization: If title similarity is >= 0.95, group immediately
+                # without evaluating secondary author/year signals. If 0.90-0.95, check
+                # year match first before invoking C-level set overlap on pre-parsed sets.
+                if sim >= 0.95:
                     union(i, j)
+                else:
+                    y_j = years[j]
+                    year_match = (
+                        y_i is not None
+                        and y_j is not None
+                        and y_i == y_j
+                    )
+                    if year_match or _author_overlap(a_set_i, norm_author_sets[j]) > 0.3:
+                        union(i, j)
 
     # Build groups from union-find
     groups: dict[int, list[int]] = {}
@@ -293,13 +300,8 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
         duplicates = []
         for idx in indices[1:]:
             s = studies[idx]
-            # Determine match reason
-            match_reason = "title_similarity"
-            sim_score = _title_similarity(
-                canonical.get("title", ""),
-                s.get("title", ""),
-            )
-
+            # Bolt Optimization: Check exact DOI/PMID equality first to avoid
+            # computing SequenceMatcher title similarity ratio when exact IDs match.
             ndoi_c = _normalize_doi(canonical.get("doi", ""))
             ndoi_s = _normalize_doi(s.get("doi", ""))
             if ndoi_c and ndoi_s and ndoi_c == ndoi_s:
@@ -311,17 +313,24 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                 if npmid_c and npmid_s and npmid_c == npmid_s:
                     match_reason = "pmid"
                     sim_score = 1.0
-                elif sim_score >= 0.95:
-                    match_reason = "title_similarity"
                 else:
-                    # Check if author/year contributed
-                    year_match = (
-                        canonical.get("publication_year")
-                        and s.get("publication_year")
-                        and canonical["publication_year"] == s["publication_year"]
+                    sim_score = _title_similarity(
+                        canonical.get("title", ""),
+                        s.get("title", ""),
                     )
-                    if year_match:
-                        match_reason = "author_year"
+                    if sim_score >= 0.95:
+                        match_reason = "title_similarity"
+                    else:
+                        # Check if author/year contributed
+                        year_match = (
+                            canonical.get("publication_year")
+                            and s.get("publication_year")
+                            and canonical["publication_year"] == s["publication_year"]
+                        )
+                        if year_match:
+                            match_reason = "author_year"
+                        else:
+                            match_reason = "title_similarity"
 
             duplicates.append({
                 "study_id": s["study_id"],
