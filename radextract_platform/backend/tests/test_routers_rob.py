@@ -321,3 +321,6 @@ class TestSecurityAccessControl:
         assert client.get(f"/api/rob/projects/{pid}/figure", headers=headers).status_code == 403
         assert client.get(f"/api/rob/projects/{pid}/figures", headers=headers).status_code == 403
         assert client.get(f"/api/rob/projects/{pid}/reporting-profile", headers=headers).status_code == 403
+        sid = project_and_study[1]
+        assert client.post(f"/api/rob/studies/{sid}/rob", json={"study_id": sid, "project_id": pid, "tool": "quadas2"}, headers=headers).status_code == 403
+        assert client.post(f"/api/rob/studies/{sid}/rob/auto?project_id={pid}&study_design=diagnostic+accuracy", headers=headers).status_code == 403
