@@ -178,16 +178,27 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                     const localY = e.clientY - rect.top;
                     const match = findNearest(placed, localX, localY);
                     if (!match || !containerRef.current) {
-                      setHovered(null);
+                      setHovered((prev) => (prev === null ? prev : null));
                       return;
                     }
                     const parentRect = containerRef.current.getBoundingClientRect();
-                    setHovered({
-                      pmid: match.paper.paper.pmid,
-                      paper: match.paper,
-                      left: rect.left - parentRect.left + match.x,
-                      top: rect.top - parentRect.top + match.y,
-                      width: parentRect.width
+                    const left = rect.left - parentRect.left + match.x;
+                    const top = rect.top - parentRect.top + match.y;
+                    const width = parentRect.width;
+                    const pmid = match.paper.paper.pmid;
+
+                    // Performance optimization: Skip state update and re-render if target dot and coordinates haven't changed
+                    setHovered((prev) => {
+                      if (
+                        prev &&
+                        prev.pmid === pmid &&
+                        prev.left === left &&
+                        prev.top === top &&
+                        prev.width === width
+                      ) {
+                        return prev;
+                      }
+                      return { pmid, paper: match.paper, left, top, width };
                     });
                   }}
                   onPointerLeave={() => setHovered(null)}
@@ -307,7 +318,7 @@ interface DotSymbolProps {
   r: number;
 }
 
-const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, r }) => {
+const DotSymbol: React.FC<DotSymbolProps> = React.memo(function DotSymbol({ category, direct, strength, r }) {
   const opacity =
     category === "supports" || category === "contradicts" || category === "mixed"
       ? 0.45 + 0.55 * Math.min(1, Math.max(0, (strength - 0.6) / 0.4))
@@ -390,10 +401,10 @@ const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, r }) 
       strokeWidth={2}
     />
   );
-};
+});
 
 // Row verdict & Wilson score interval summary
-const RowSummary: React.FC<{ summary: TierSummary }> = ({ summary }) => {
+const RowSummary: React.FC<{ summary: TierSummary }> = React.memo(function RowSummary({ summary }) {
   const { supports, mixed, contradicts } = summary.counts;
 
   if (!summary.papers.length) {
@@ -497,7 +508,7 @@ const RowSummary: React.FC<{ summary: TierSummary }> = ({ summary }) => {
       </p>
     </>
   );
-};
+});
 
 // Hover tooltip box
 interface TooltipProps {
