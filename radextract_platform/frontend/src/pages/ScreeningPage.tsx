@@ -686,7 +686,7 @@ export function ScreeningPage() {
     }
 
     // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-    let activeSpans = [...spans];
+    const activeSpans = [...spans];
     if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
       fallbackKeywordsList.forEach((kw) => {
         const word = kw.keyword.trim();
