@@ -74,11 +74,15 @@ export function ExtractionSheetPage() {
     enabled: !!projectId,
   });
 
+  const benchmarkMap = useMemo(() => {
+    return new Map(BENCHMARK_PAPERS.map((b) => [b.id, b]));
+  }, []);
+
   const availablePapers = useMemo(() => {
     if (!projectStudies) return BENCHMARK_PAPERS;
     if (projectStudies.length === 0) return [];
     return projectStudies.map((s, idx) => {
-      const match = BENCHMARK_PAPERS.find((b) => b.id === s.study_id);
+      const match = benchmarkMap.get(s.study_id);
       if (match) return match;
       return {
         id: s.study_id,
@@ -87,7 +91,7 @@ export function ExtractionSheetPage() {
         filename: s.pdf_path || `${s.title}.pdf`,
       };
     });
-  }, [projectStudies]);
+  }, [projectStudies, benchmarkMap]);
 
   // Sync selectedStudyId if current is not in available papers
   useEffect(() => {
@@ -285,8 +289,7 @@ export function ExtractionSheetPage() {
     const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p) => `"${p.title}"`)];
     const rows = variableList.map((v: any) => {
       const studyValues = availablePapers.map((p) => {
-        const exts = (DEMO_EXTRACTIONS as any)[p.id] || [];
-        const found = exts.find((e: any) => e.variable_id === v.variable_id);
+        const found = paperVariableExtMap.get(`${p.id}:${v.variable_id}`);
         const val = found?.value || "NR";
         const status = found?.is_verified ? " [Verified]" : "";
         return `"${val}${status}"`;
@@ -310,7 +313,9 @@ export function ExtractionSheetPage() {
     URL.revokeObjectURL(url);
   };
 
-  const activeStudyVerifiedCount = variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
+  const activeStudyVerifiedCount = useMemo(() => {
+    return variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
+  }, [variableList, extractionMap]);
   const activeStudyPercent = variableList.length > 0 ? Math.round((activeStudyVerifiedCount / variableList.length) * 100) : 0;
 
   return (

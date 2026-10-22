@@ -16,6 +16,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.test_tmp/
+**/.test_tmp/
+.test_db_dir/
+**/.test_db_dir/
+uploads/
+**/uploads/
+*.db
 .venv/
 env/
 venv/
