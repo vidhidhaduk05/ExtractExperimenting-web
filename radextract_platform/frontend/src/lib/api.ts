@@ -56,6 +56,41 @@ export function getApiBase(): string {
 
 export let API_BASE = getApiBase();
 
+export async function autoDiscoverBackend(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const custom = localStorage.getItem("custom_api_base");
+  if (custom && custom.trim()) return custom.trim();
+
+  try {
+    let res = await fetch("./active_backend.json", { cache: "no-store" }).catch(() => null);
+    if (!res || !res.ok) {
+      res = await fetch(
+        "https://raw.githubusercontent.com/vidhidhaduk05/ExtractExperimenting-web/main/public/active_backend.json",
+        { cache: "no-store" }
+      ).catch(() => null);
+    }
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data?.backend_url) {
+        const url = String(data.backend_url).replace(/\/+$/, "");
+        const check = await testBackendConnection(url);
+        if (check.ok) {
+          API_BASE = url.endsWith("/api") ? url : `${url}/api`;
+          updateApiState({ apiBase: API_BASE, state: "online" });
+          return API_BASE;
+        }
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+if (typeof window !== "undefined") {
+  setTimeout(() => {
+    autoDiscoverBackend().catch(() => {});
+  }, 100);
+}
+
 export function isDemoModeEnabled(): boolean {
   if (typeof window === "undefined") return false;
   return localStorage.getItem("demo_mode") === "true";
