@@ -585,52 +585,69 @@ def select_rob_tool(study_design: str) -> str:
 
 
 def select_rob_tool_with_alternatives(study_design: str) -> tuple[str, float, list[str]]:
-    """Auto-select RoB tool with confidence score and alternative suggestions."""
+    """Auto-select RoB tool with confidence score and alternative suggestions.
+    Detects ambiguous study designs (e.g. studies reporting both RCT arms and observational cohorts)
+    and lowers confidence to trigger LLM resolution or manual confirmation (§1.3).
+    """
     design = (study_design or "").lower().strip()
     if not design:
         return ("manual", 0.0, ["rob2", "robins_i", "robins_e", "nos", "quadas2"])
 
-    # Diagnostic accuracy studies → QUADAS-2
-    if any(kw in design for kw in [
-        "diagnostic accuracy", "diagnostic test", "dta", "diagnostic",
-        "sensitivity", "specificity", "index test", "accuracy study",
-    ]):
-        return ("quadas2", 0.95, ["robins_i", "rob2"])
+    matched: list[tuple[str, float, str, list[str]]] = []
 
-    # Randomized controlled trials → RoB 2
-    if any(kw in design for kw in [
-        "rct", "randomized", "randomised", "random", "controlled trial",
-        "randomized controlled", "crossover", "cluster",
-    ]) and not any(kw in design for kw in ["non-randomized", "non randomised", "non-randomised"]):
-        return ("rob2", 0.98, ["robins_i"])
+    # 1. Diagnostic accuracy
+    diag_kws = ["diagnostic accuracy", "diagnostic test", "dta", "diagnostic", "sensitivity and specificity", "sensitivity", "specificity", "index test", "accuracy study"]
+    if any(kw in design for kw in diag_kws):
+        matched.append(("quadas2", 0.95, "diagnostic", ["robins_i", "rob2"]))
 
-    # Non-randomized interventional studies → ROBINS-I
-    if any(kw in design for kw in [
-        "non-randomized", "non randomised", "non-randomised",
-        "quasi-experimental", "quasi experimental", "quasi",
-    ]):
-        return ("robins_i", 0.90, ["rob2", "nos"])
+    # 2. Randomized controlled trial (unless non-randomized)
+    has_non_random = any(kw in design for kw in ["non-randomized", "non randomised", "non-randomised"])
+    rct_kws = ["randomized controlled", "randomised controlled", "controlled trial", "rct", "randomized", "randomised", "random allocation", "crossover", "cluster"]
+    if any(kw in design for kw in rct_kws) and not has_non_random:
+        matched.append(("rob2", 0.98, "randomized", ["robins_i"]))
 
-    # Exposure / Etiology / Environmental / Occupational studies → ROBINS-E
-    if any(kw in design for kw in [
-        "exposure", "etiology", "environmental", "occupational", "toxicology",
-    ]):
-        return ("robins_e", 0.88, ["robins_i", "nos"])
+    # 3. Non-randomized interventional studies
+    non_rct_kws = ["non-randomized", "non randomised", "non-randomised", "quasi-experimental", "quasi experimental", "quasi"]
+    if any(kw in design for kw in non_rct_kws):
+        matched.append(("robins_i", 0.90, "non-randomized", ["rob2", "nos"]))
 
+    # 4. Exposures / Environmental
+    exposure_kws = ["exposure", "etiology", "environmental", "occupational", "toxicology"]
+    if any(kw in design for kw in exposure_kws):
+        matched.append(("robins_e", 0.88, "exposure", ["robins_i", "nos"]))
+
+    # 5. Case report
     if any(kw in design for kw in ["case report", "single case"]):
-        return ("jbi_case_report", 0.96, ["jbi_case_series"])
+        matched.append(("jbi_case_report", 0.96, "case report", ["jbi_case_series"]))
 
+    # 6. Case series
     if any(kw in design for kw in ["case series", "clinical series"]):
-        return ("jbi_case_series", 0.96, ["jbi_case_report", "nos"])
+        matched.append(("jbi_case_series", 0.96, "case series", ["jbi_case_report", "nos"]))
 
-    # Observational cohort or case-control studies → ROBINS-I / NOS
-    if any(kw in design for kw in [
-        "prospective cohort", "retrospective cohort", "case-control", "case control",
-        "cross-sectional", "observational", "registry", "cohort",
-    ]):
-        return ("nos", 0.82, ["robins_i", "robins_e"])
+    # 7. Observational cohort or case-control
+    obs_kws = ["prospective cohort", "retrospective cohort", "case-control", "case control", "cross-sectional", "observational", "registry", "cohort"]
+    if any(kw in design for kw in obs_kws):
+        matched.append(("nos", 0.82, "observational", ["robins_i", "robins_e"]))
 
-    return ("manual", 0.2, ["robins_i", "rob2", "robins_e", "nos", "quadas2"])
+    if not matched:
+        return ("manual", 0.2, ["robins_i", "rob2", "robins_e", "nos", "quadas2"])
+
+    if len(matched) == 1:
+        tool, conf, _, alts = matched[0]
+        return (tool, conf, alts)
+
+    # Multiple designs matched -> Ambiguous study design (§1.3)
+    top_tool, _, _, _ = matched[0]
+    matched_tools = [m[0] for m in matched]
+    alt_tools = [t for t in matched_tools if t != top_tool]
+    for m in matched:
+        for a in m[3]:
+            if a not in alt_tools and a != top_tool:
+                alt_tools.append(a)
+
+    ambiguous_conf = 0.55  # Below 0.70 threshold to trigger LLM resolution / manual review
+    return (top_tool, ambiguous_conf, alt_tools)
+
 
 
 # ── Judgment algorithms ──

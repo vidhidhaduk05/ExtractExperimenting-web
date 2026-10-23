@@ -67,25 +67,7 @@ def _get_laya_model():
             _laya_failed = True
             return None
 
-        # Custom initialization with optimized thread counts
         instance = LayaModel(model_dir)
-        try:
-            # Recreate session with optimized intra_op_num_threads for fast CPU inference
-            threads = min(24, os.cpu_count() or 4)
-            opts = ort.SessionOptions()
-            opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-            opts.intra_op_num_threads = threads
-            opts.inter_op_num_threads = 2
-            opts.execution_mode = ort.ExecutionMode.ORT_PARALLEL
-            instance.session = ort.InferenceSession(
-                os.path.join(model_dir, "laya.onnx"),
-                sess_options=opts,
-                providers=["CPUExecutionProvider"]
-            )
-            logger.info("Optimized Laya ONNX session initialized with %d threads", threads)
-        except Exception as e:
-            logger.warning("Could not tune ONNX threads, using default session: %s", e)
-
         _laya_instance = instance
         logger.info("Loaded Laya System-1 Model for ClaimScape Pipeline")
         return _laya_instance
@@ -253,8 +235,8 @@ def _parse_efetch_xml(xml_text: str) -> List[Dict[str, Any]]:
                 "sentences": sentences,
                 "tier": tier,
             })
-    except Exception as e:
-        logger.warning("Error parsing efetch XML: %s", e)
+    except ET.ParseError as e:
+        raise RuntimeError("PubMed returned invalid article XML") from e
 
     return articles
 
@@ -406,7 +388,10 @@ def evaluate_claim_fast(
     count = min(300, max(20, count))
 
     # Cache key
-    cache_key = hashlib.sha256(f"{clean_claim}:{search_query}:{count}".encode("utf-8")).hexdigest()
+    # Versioned structured keys exclude historical preset/unknown-provenance results.
+    cache_key = hashlib.sha256(json.dumps(
+        ["live-v2", clean_claim, search_query, count], ensure_ascii=False
+    ).encode("utf-8")).hexdigest()
 
     # Tier 1: In-memory cache (< 0.1 ms)
     if cache_key in _CLAIMSCAPE_CACHE:
@@ -428,29 +413,6 @@ def evaluate_claim_fast(
         except Exception:
             pass
 
-    # Tier 3: Pre-packaged landmark datasets
-    if "hormone replacement" in clean_claim.lower() or "hrt" in search_query.lower():
-        hrt_example_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "src", "data", "hrt_example.json")
-        )
-        if os.path.exists(hrt_example_path):
-            try:
-                with open(hrt_example_path, "r", encoding="utf-8") as f:
-                    hrt_data = json.load(f)
-                    res = {
-                        "claim": clean_claim,
-                        "query": search_query,
-                        "total": hrt_data.get("total", 593),
-                        "papers": hrt_data.get("papers", [])[:count],
-                        "judgments": hrt_data.get("judgments", [])[:count],
-                        "elapsed_ms": 1.2,
-                        "cached": True,
-                    }
-                    _CLAIMSCAPE_CACHE[cache_key] = res
-                    return res
-            except Exception:
-                pass
-
     t0 = time.perf_counter()
     client = _get_http_client()
     api_key = api_key or getattr(settings, "ncbi_api_key", "")
@@ -471,14 +433,19 @@ def evaluate_claim_fast(
 
     try:
         resp = client.get("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi", params=params)
+        resp.raise_for_status()
         data = resp.json()
-        esearch_res = data.get("esearchresult", {})
-        total_pubmed = int(esearch_res.get("count", 0))
-        pmids = [str(x) for x in esearch_res.get("idlist", [])]
+        esearch_res = data["esearchresult"]
+        if data.get("error") or esearch_res.get("ERROR"):
+            raise ValueError("PubMed reported a search error")
+        total_pubmed = int(esearch_res["count"])
+        raw_pmids = esearch_res["idlist"]
+        if not isinstance(raw_pmids, list) or total_pubmed < 0 or (total_pubmed > 0 and not raw_pmids):
+            raise ValueError("PubMed returned an incomplete search response")
+        pmids = [str(x) for x in raw_pmids]
     except Exception as e:
         logger.error("PubMed esearch failed: %s", e)
-        total_pubmed = 0
-        pmids = []
+        raise RuntimeError("PubMed search failed; please retry") from e
 
     if not pmids:
         return {
@@ -489,6 +456,7 @@ def evaluate_claim_fast(
             "judgments": [],
             "elapsed_ms": round((time.perf_counter() - t0) * 1000, 1),
             "cached": False,
+            "engine": "none",
         }
 
     # 2. Single-Pass E-Fetch (Retrieves Full Metadata, PubTypes, DOI, Authors & Abstract Text)
@@ -507,11 +475,18 @@ def evaluate_claim_fast(
 
         try:
             fetch_resp = client.get("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi", params=fetch_params)
-            if fetch_resp.status_code == 200:
-                parsed_articles = _parse_efetch_xml(fetch_resp.text)
+            fetch_resp.raise_for_status()
+            parsed_articles = _parse_efetch_xml(fetch_resp.text)
+            if parsed_articles:
                 articles.extend(parsed_articles)
         except Exception as e:
-            logger.warning("Batch efetch chunk error: %s", e)
+            logger.warning("Batch efetch chunk warning: %s", e)
+
+    # Filter to only requested PMIDs and ensure retrieval did not completely fail
+    pmid_set = set(pmids)
+    articles = [a for a in articles if a.get("pmid") in pmid_set]
+    if pmids and not articles:
+        raise RuntimeError("PubMed article retrieval failed")
 
     # 3. High-Throughput Batched Laya System-1 Tensor Inference
     laya = _get_laya_model()
@@ -537,8 +512,11 @@ def evaluate_claim_fast(
     else:
         judgments = []
 
+    engine = "local_laya_onnx" if judgments else "heuristic_fallback"
     # Fast heuristic fallback if Laya is offline or incomplete
     if len(judgments) < len(articles):
+        if judgments:
+            engine = "mixed_laya_heuristic"
         existing_pmids = {j["pmid"] for j in judgments}
         for art in articles:
             if art["pmid"] in existing_pmids:
@@ -566,6 +544,7 @@ def evaluate_claim_fast(
         "judgments": judgments,
         "elapsed_ms": elapsed,
         "cached": False,
+        "engine": engine,
     }
 
     # Save to memory & persistent disk cache

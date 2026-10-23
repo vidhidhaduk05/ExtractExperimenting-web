@@ -40,6 +40,8 @@ from routers import (
     fulltext,
     rob_run,
     claimscape,
+    citation_telephone,
+    rigor_scan,
     settings as system_settings,
 )
 
@@ -149,6 +151,8 @@ def create_app() -> FastAPI:
     app.include_router(fulltext.router)
     app.include_router(rob_run.router)
     app.include_router(claimscape.router)
+    app.include_router(citation_telephone.router)
+    app.include_router(rigor_scan.router)
     app.include_router(system_settings.router)
 
     # Health check

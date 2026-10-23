@@ -11,6 +11,17 @@ Usage:
 """
 from __future__ import annotations
 
+import os
+import tempfile
+
+# Prevent permission denied errors on Windows / locked font cache
+if "MPLCONFIGDIR" not in os.environ:
+    os.environ["MPLCONFIGDIR"] = os.path.join(tempfile.gettempdir(), "matplotlib_radextract")
+    try:
+        os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
+    except Exception:
+        pass
+
 import io
 import base64
 import matplotlib
@@ -75,8 +86,9 @@ def configure_plots():
 
     Call this once at module import time.
     """
-    # Font: Liberation Sans (metric-equivalent to Arial)
-    plt.rcParams["font.family"] = ["Liberation Sans", "Arimo", "DejaVu Sans"]
+    # Font: Arial / DejaVu Sans / standard sans-serif
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["Arial", "DejaVu Sans", "Liberation Sans", "sans-serif"]
     plt.rcParams["font.size"] = 10
     plt.rcParams["axes.titlesize"] = 12
     plt.rcParams["axes.labelsize"] = 10

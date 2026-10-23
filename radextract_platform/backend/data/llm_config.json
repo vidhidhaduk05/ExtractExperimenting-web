@@ -1,0 +1,10 @@
+{
+  "provider": "local",
+  "antigravity_model": "",
+  "antigravity_api_key": "",
+  "local_endpoint_url": "https://prize-burton-generate-routines.trycloudflare.com/v1",
+  "local_model_name": "biomni-r0",
+  "custom_api_key": "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e",
+  "temperature": 0.1,
+  "timeout_seconds": 90
+}

@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS studies (
     study_design      TEXT DEFAULT '',
     pdf_path          TEXT DEFAULT '',
     pdf_status        TEXT DEFAULT 'none',
+    pdf_processor_engine TEXT DEFAULT '',
     screening_status  TEXT DEFAULT 'pending',
     screening_reason  TEXT DEFAULT '',
     screening_stage   TEXT DEFAULT '',
@@ -661,6 +662,7 @@ MIGRATION_COLUMNS = [
     ("rob_signaling_answers", "needs_human_review", "INTEGER DEFAULT 0"),
     ("rob_signaling_answers", "reviewed_by", "TEXT DEFAULT ''"),
     ("rob_signaling_answers", "reviewed_at", "TEXT DEFAULT ''"),
+    ("studies", "pdf_processor_engine", "TEXT DEFAULT ''"),
 ]
 
 

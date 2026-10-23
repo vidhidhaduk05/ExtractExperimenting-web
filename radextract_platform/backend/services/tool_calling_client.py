@@ -27,6 +27,25 @@ _circuit_breaker = CircuitBreaker(failure_threshold=5, recovery_timeout=60.0)
 
 # Global in-memory cache for tool results (cache_key -> (timestamp, result, ttl))
 _tool_cache: Dict[str, Tuple[float, Dict[str, Any], float]] = {}
+_cache_stats: Dict[str, int] = {"hits": 0, "misses": 0, "tokens_saved": 0}
+
+
+def get_cache_stats() -> Dict[str, int]:
+    """Retrieve global extraction and tool cache statistics."""
+    return dict(_cache_stats)
+
+
+def invalidate_tool_cache(prefix: Optional[str] = None) -> int:
+    """Invalidate items in the tool cache. If prefix is provided, only matches are cleared."""
+    global _tool_cache
+    if not prefix:
+        count = len(_tool_cache)
+        _tool_cache.clear()
+        return count
+    keys_to_del = [k for k in _tool_cache if k.startswith(prefix)]
+    for k in keys_to_del:
+        del _tool_cache[k]
+    return len(keys_to_del)
 
 
 class ToolCallingClient:
@@ -74,21 +93,26 @@ class ToolCallingClient:
             else getattr(settings, "llm_max_retries", 2)
         )
         self.circuit_breaker = circuit_breaker or CircuitBreaker(failure_threshold=5, recovery_timeout=60.0)
-        self._cache: Dict[str, Tuple[float, Dict[str, Any], float]] = {}
+        self._cache = _tool_cache
 
     def _get_cache_key(self, tool_name: str, prompt: str) -> str:
-        return hashlib.md5(f"{tool_name}:{prompt}".encode("utf-8")).hexdigest()
+        return hashlib.sha256(f"{tool_name}:{prompt}".encode("utf-8")).hexdigest()
 
     def _get_cached(self, key: str) -> Optional[Dict[str, Any]]:
         if key in self._cache:
             ts, val, ttl = self._cache[key]
             if time.time() - ts < ttl:
+                _cache_stats["hits"] += 1
+                # Estimate token savings based on cached json length (~4 chars per token)
+                saved_tokens = max(50, len(json.dumps(val)) // 4)
+                _cache_stats["tokens_saved"] += saved_tokens
                 return val
             else:
                 del self._cache[key]
+        _cache_stats["misses"] += 1
         return None
 
-    def _set_cached(self, key: str, val: Dict[str, Any], ttl: float = 3600.0):
+    def _set_cached(self, key: str, val: Dict[str, Any], ttl: float = 86400.0):
         self._cache[key] = (time.time(), val, ttl)
 
     def _log_token_usage(self, tool_name: str, usage: Dict[str, Any]):
@@ -582,6 +606,7 @@ class ToolCallingClient:
         system_prompt: str = "You are a helpful assistant.",
         temperature: float = 0.1,
         max_tokens: int = 4096,
+        use_cache: bool = True,
     ) -> Callable[[str], Optional[Dict[str, Any]]]:
         """Return a callable (prompt: str) -> Optional[Dict[str, Any]]."""
         def model_fn(prompt: str) -> Optional[Dict[str, Any]]:
@@ -591,5 +616,7 @@ class ToolCallingClient:
                 system_prompt=system_prompt,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                use_cache=use_cache,
             )
         return model_fn
+
