@@ -1,0 +1,8 @@
+{
+  "backend_url": "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com",
+  "api_url": "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/api",
+  "health_url": "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health",
+  "updated_at": "2026-10-23T22:29:52Z",
+  "status": "online",
+  "model": "biomni-r0"
+}
