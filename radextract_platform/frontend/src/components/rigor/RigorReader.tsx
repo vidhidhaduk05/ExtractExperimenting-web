@@ -22,7 +22,7 @@ export const RigorReader: React.FC<RigorReaderProps> = ({
   // Scroll to active check's page when targetPage changes
   useEffect(() => {
     const pageNum = targetPage || selectedCheck.page;
-    if (pageNum && pageRefs.current[pageNum]) {
+    if (pageNum && pageRefs.current[pageNum] && typeof pageRefs.current[pageNum]?.scrollIntoView === "function") {
       pageRefs.current[pageNum]?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [targetPage, selectedCheck]);

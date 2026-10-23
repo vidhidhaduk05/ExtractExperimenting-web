@@ -134,6 +134,33 @@ export function RobAssessmentPage() {
     }
   }, [assessment]);
 
+  // Memoized O(1) Maps for Rob Assessment hot-path renders
+  const domainDefMap = useMemo(() => {
+    const map = new Map<string, any>();
+    (assessment?.tool_definition?.domains || []).forEach((d) => map.set(d.key, d));
+    return map;
+  }, [assessment?.tool_definition]);
+
+  const signalingAnswerMap = useMemo(() => {
+    const map = new Map<string, RobSignalingAnswer>();
+    (assessment?.domain_judgments || []).forEach((dj) => {
+      (dj.signaling_answers || []).forEach((sa) => {
+        map.set(`${dj.domain_key}:${sa.question_key}`, sa);
+      });
+    });
+    return map;
+  }, [assessment?.domain_judgments]);
+
+  const questionDefMap = useMemo(() => {
+    const map = new Map<string, any>();
+    (assessment?.tool_definition?.domains || []).forEach((d) => {
+      (d.signaling_questions || []).forEach((q) => {
+        map.set(`${d.key}:${q.key}`, q);
+      });
+    });
+    return map;
+  }, [assessment?.tool_definition]);
+
   // Flatten signaling questions list for linear hotkey navigation
   const allSignalingQuestions = useMemo(() => {
     if (!assessment) return [];
@@ -145,9 +172,8 @@ export function RobAssessmentPage() {
     }> = [];
     let idx = 1;
     for (const dj of assessment.domain_judgments) {
-      const domainDef = assessment.tool_definition?.domains.find((d) => d.key === dj.domain_key);
       for (const sa of dj.signaling_answers) {
-        const sqDef = domainDef?.signaling_questions.find((q) => q.key === sa.question_key);
+        const sqDef = questionDefMap.get(`${dj.domain_key}:${sa.question_key}`);
         list.push({
           answer: sa,
           domain: dj,
@@ -157,7 +183,7 @@ export function RobAssessmentPage() {
       }
     }
     return list;
-  }, [assessment]);
+  }, [assessment, questionDefMap]);
 
   // Map RoB signaling questions to spatial PDF highlight items for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -764,7 +790,7 @@ export function RobAssessmentPage() {
           {/* Main Scrollable Review Area: Domains & Signaling Questions */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {displayedDomainJudgments.map((dj) => {
-              const domainDef = toolDef?.domains.find((d) => d.key === dj.domain_key);
+              const domainDef = domainDefMap.get(dj.domain_key);
               const isExpanded = expandedDomains.has(dj.domain_key);
               const allVerified = dj.signaling_answers.every((sa) => sa.human_verified === 1);
               const flaggedInDomain = dj.signaling_answers.filter(
@@ -820,8 +846,8 @@ export function RobAssessmentPage() {
                   {/* Domain Signaling Questions Body */}
                   {isExpanded && domainDef && (
                     <div className="p-4 space-y-3.5 bg-[#FAF9F3]/40">
-                      {domainDef.signaling_questions.map((sq) => {
-                        const sa = dj.signaling_answers.find((a) => a.question_key === sq.key);
+                      {domainDef.signaling_questions.map((sq: any) => {
+                        const sa = signalingAnswerMap.get(`${dj.domain_key}:${sq.key}`);
                         if (!sa) return null;
                         if (isReviewMode && sa.needs_human_review !== 1) return null;
 

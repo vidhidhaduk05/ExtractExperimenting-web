@@ -225,9 +225,11 @@ export function ScreeningPage() {
   const [extractingStudyId, setExtractingStudyId] = useState<string | null>(null);
 
   // Map study_id -> existing RoB assessment (for Start RoB / View RoB rendering)
-  const robByStudy = new Map(
-    (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
-  );
+  const robByStudy = useMemo(() => {
+    return new Map(
+      (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
+    );
+  }, [robSummary?.assessments]);
 
   const handleStartRob = async (study: Study) => {
     setRobStarting((prev) => ({ ...prev, [study.study_id]: true }));
@@ -352,8 +354,8 @@ export function ScreeningPage() {
     }
   }, [statusFilter, stageFilter, filteredStudies, selectedStudyId]);
 
-  // Selection and keyboard actions use the same visible record set as all filters.
-  const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || null;
+  // Selection and keyboard actions use the same visible record set as all filters, falling back gracefully to the current record if filtered.
+  const selectedStudy = studyList.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || null;
   const prevActiveStudyIdRef = useRef<string | null>(null);
   useEffect(() => {
     const currentId = selectedStudy?.study_id || null;
@@ -686,7 +688,7 @@ export function ScreeningPage() {
     }
 
     // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-    let activeSpans = [...spans];
+    const activeSpans = [...spans];
     if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
       fallbackKeywordsList.forEach((kw) => {
         const word = kw.keyword.trim();
@@ -1195,6 +1197,7 @@ export function ScreeningPage() {
 
           {/* Quick Dropdowns & Saved Filter */}
           <div className="flex items-center gap-2 flex-wrap">
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

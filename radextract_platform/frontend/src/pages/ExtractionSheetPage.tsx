@@ -117,7 +117,7 @@ export function ExtractionSheetPage() {
   const paperVariableExtMap = useMemo(() => {
     const map = new Map<string, any>();
     availablePapers.forEach((paper) => {
-      const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+      const paperExts = paper.id === selectedStudyId && extractions ? extractions : ((DEMO_EXTRACTIONS as any)[paper.id] || []);
       paperExts.forEach((e: any) => {
         if (e.variable_id) {
           map.set(`${paper.id}:${e.variable_id}`, e);
@@ -125,7 +125,7 @@ export function ExtractionSheetPage() {
       });
     });
     return map;
-  }, [availablePapers]);
+  }, [availablePapers, extractions, selectedStudyId]);
 
   // Overall metrics across all papers
   const allBenchmarkStats = useMemo(() => {
@@ -285,8 +285,7 @@ export function ExtractionSheetPage() {
     const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p) => `"${p.title}"`)];
     const rows = variableList.map((v: any) => {
       const studyValues = availablePapers.map((p) => {
-        const exts = (DEMO_EXTRACTIONS as any)[p.id] || [];
-        const found = exts.find((e: any) => e.variable_id === v.variable_id);
+        const found = paperVariableExtMap.get(`${p.id}:${v.variable_id}`);
         const val = found?.value || "NR";
         const status = found?.is_verified ? " [Verified]" : "";
         return `"${val}${status}"`;
