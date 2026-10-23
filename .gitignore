@@ -5,6 +5,12 @@ node_modules/
 
 # Testing
 coverage/
+.test_tmp/
+.test_db_dir/
+
+# Uploads & local databases
+uploads/
+*.db
 
 # Production
 dist/
