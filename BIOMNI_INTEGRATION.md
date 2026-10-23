@@ -7,6 +7,7 @@
 - **Process PID**: `4097181` (`llama-server`)
 - **Direct Port**: `http://127.0.0.1:18000/v1`
 - **Proxy Port**: `http://127.0.0.1:18003/v1`
+- **Active Cloudflare Tunnel**: `https://prize-burton-generate-routines.trycloudflare.com/v1`
 - **Biomni Gradio UI**: [https://ctsi-hpc.hsc.wvu.edu/rnode/hsc-hpc-g-002/7860/](https://ctsi-hpc.hsc.wvu.edu/rnode/hsc-hpc-g-002/7860/)
 
 ## 2. API Credentials & Parameters

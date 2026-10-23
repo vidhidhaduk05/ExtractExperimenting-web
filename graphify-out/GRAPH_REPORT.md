@@ -1,7 +1,7 @@
-# Graph Report - Rad Extract Experimenting  (2026-10-23)
+# Graph Report - Rad Extract Experimenting  (2026-10-24)
 
 ## Corpus Check
-- 582 files · ~1,391,343 words
+- 582 files · ~1,391,348 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 47 file(s) not represented in the graph (top: (none) 15, .css 11, .download 9)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8446bf5b`
+- Built from commit: `7b183942`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

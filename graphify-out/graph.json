@@ -82104,7 +82104,7 @@
       "node_kind": "heading",
       "norm_label": "2. api credentials & parameters",
       "source_file": "BIOMNI_INTEGRATION.md",
-      "source_location": "L12"
+      "source_location": "L13"
     },
     {
       "id": "biomni_integration_3_configuration_in_software_home_vd00026_desktop_software",
@@ -82116,7 +82116,7 @@
       "node_kind": "heading",
       "norm_label": "3. configuration in software (`/home/vd00026/desktop/software`)",
       "source_file": "BIOMNI_INTEGRATION.md",
-      "source_location": "L19"
+      "source_location": "L20"
     },
     {
       "id": "biomni_integration_4_verification",
@@ -82128,7 +82128,7 @@
       "node_kind": "heading",
       "norm_label": "4. verification",
       "source_file": "BIOMNI_INTEGRATION.md",
-      "source_location": "L26"
+      "source_location": "L27"
     },
     {
       "id": "biomni_integration_biomni_r0_32b_model_integration_reference",
@@ -207407,7 +207407,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "BIOMNI_INTEGRATION.md",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -207418,7 +207418,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "BIOMNI_INTEGRATION.md",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -207429,7 +207429,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "BIOMNI_INTEGRATION.md",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -285191,7 +285191,7 @@
       "confidence_score": 0.95,
       "context": "ToolCallingClient",
       "source_file": "BIOMNI_INTEGRATION.md",
-      "source_location": "L27",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -285683,7 +285683,7 @@
       "confidence_score": 0.95,
       "context": "extract_variables",
       "source_file": "BIOMNI_INTEGRATION.md",
-      "source_location": "L27",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -293429,5 +293429,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "8446bf5bf6f74e8441e7afbc40efcaf8472ff121"
+  "built_at_commit": "7b18394237651768093074d68625003e21bb52a5"
 }
