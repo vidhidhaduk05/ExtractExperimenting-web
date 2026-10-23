@@ -134,6 +134,30 @@ export function RobAssessmentPage() {
     }
   }, [assessment]);
 
+  // Performance optimization (Bolt): O(1) Map for domain definition lookups
+  const domainDefMap = useMemo(() => {
+    const map = new Map<string, any>();
+    if (assessment?.tool_definition?.domains) {
+      for (const d of assessment.tool_definition.domains) {
+        map.set(d.key, d);
+      }
+    }
+    return map;
+  }, [assessment?.tool_definition]);
+
+  // Performance optimization (Bolt): O(1) Map for signaling answers per domain
+  const signalingAnswerMap = useMemo(() => {
+    const map = new Map<string, RobSignalingAnswer>();
+    if (assessment?.domain_judgments) {
+      for (const dj of assessment.domain_judgments) {
+        for (const sa of dj.signaling_answers) {
+          map.set(`${dj.domain_key}:${sa.question_key}`, sa);
+        }
+      }
+    }
+    return map;
+  }, [assessment?.domain_judgments]);
+
   // Flatten signaling questions list for linear hotkey navigation
   const allSignalingQuestions = useMemo(() => {
     if (!assessment) return [];
@@ -145,9 +169,10 @@ export function RobAssessmentPage() {
     }> = [];
     let idx = 1;
     for (const dj of assessment.domain_judgments) {
-      const domainDef = assessment.tool_definition?.domains.find((d) => d.key === dj.domain_key);
+      const domainDef = domainDefMap.get(dj.domain_key);
+      const sqDefMap = new Map((domainDef?.signaling_questions || []).map((q: any) => [q.key, q]));
       for (const sa of dj.signaling_answers) {
-        const sqDef = domainDef?.signaling_questions.find((q) => q.key === sa.question_key);
+        const sqDef = sqDefMap.get(sa.question_key);
         list.push({
           answer: sa,
           domain: dj,
@@ -157,7 +182,16 @@ export function RobAssessmentPage() {
       }
     }
     return list;
-  }, [assessment]);
+  }, [assessment, domainDefMap]);
+
+  // Performance optimization (Bolt): O(1) Map for active signaling question lookup by key
+  const questionByKeyMap = useMemo(() => {
+    const map = new Map<string, typeof allSignalingQuestions[number]>();
+    for (const q of allSignalingQuestions) {
+      map.set(q.answer.question_key, q);
+    }
+    return map;
+  }, [allSignalingQuestions]);
 
   // Map RoB signaling questions to spatial PDF highlight items for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -382,7 +416,7 @@ export function RobAssessmentPage() {
     queryClient.invalidateQueries({ queryKey: ["rob-summary", projectId] });
   };
 
-  // Keyboard shortcut listener
+  // Keyboard shortcut listener (Bolt: using O(1) Map lookup questionByKeyMap)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -393,7 +427,7 @@ export function RobAssessmentPage() {
         target.isContentEditable;
       if (isInput) return;
 
-      const currentQ = allSignalingQuestions.find((q) => q.answer.question_key === selectedQuestionKey);
+      const currentQ = selectedQuestionKey ? questionByKeyMap.get(selectedQuestionKey) : undefined;
 
       if (e.key === "a" || e.key === "A" || e.key === "Enter") {
         e.preventDefault();
@@ -764,7 +798,7 @@ export function RobAssessmentPage() {
           {/* Main Scrollable Review Area: Domains & Signaling Questions */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {displayedDomainJudgments.map((dj) => {
-              const domainDef = toolDef?.domains.find((d) => d.key === dj.domain_key);
+              const domainDef = domainDefMap.get(dj.domain_key);
               const isExpanded = expandedDomains.has(dj.domain_key);
               const allVerified = dj.signaling_answers.every((sa) => sa.human_verified === 1);
               const flaggedInDomain = dj.signaling_answers.filter(
@@ -821,7 +855,7 @@ export function RobAssessmentPage() {
                   {isExpanded && domainDef && (
                     <div className="p-4 space-y-3.5 bg-[#FAF9F3]/40">
                       {domainDef.signaling_questions.map((sq) => {
-                        const sa = dj.signaling_answers.find((a) => a.question_key === sq.key);
+                        const sa = signalingAnswerMap.get(`${dj.domain_key}:${sq.key}`);
                         if (!sa) return null;
                         if (isReviewMode && sa.needs_human_review !== 1) return null;
 
