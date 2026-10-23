@@ -26,19 +26,30 @@ def sample_project(client):
     return proj_id
 
 
+from unittest.mock import patch
+
+
 def test_pubmed_preview_dry_run(client, sample_project):
     """Test PubMed preview search dry-run endpoint."""
-    res = client.post("/api/pubmed/preview", json={
-        "query": "Multiparametric MRI prostate cancer",
-        "project_id": sample_project,
-        "sample_size": 3,
-    })
-    assert res.status_code == 200
-    data = res.json()
-    assert "total_matching_records" in data
-    assert "sample_previews" in data
-    assert data["total_matching_records"] > 0
-    assert len(data["sample_previews"]) <= 3
+    with patch("services.pubmed_service.preview_search") as mock_preview:
+        mock_preview.return_value = {
+            "query": "Multiparametric MRI prostate cancer",
+            "total_matching_records": 42,
+            "sample_previews": [
+                {"pmid": "12345", "title": "Multiparametric MRI of Prostate Cancer", "year": "2024", "journal": "Radiology"}
+            ],
+        }
+        res = client.post("/api/pubmed/preview", json={
+            "query": "Multiparametric MRI prostate cancer",
+            "project_id": sample_project,
+            "sample_size": 3,
+        })
+        assert res.status_code == 200
+        data = res.json()
+        assert "total_matching_records" in data
+        assert "sample_previews" in data
+        assert data["total_matching_records"] > 0
+        assert len(data["sample_previews"]) <= 3
 
 
 def test_reviewer_agreement_endpoint_empty(client, sample_project):

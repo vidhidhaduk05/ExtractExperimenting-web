@@ -44,27 +44,50 @@ def _heuristic_classification(study: dict, text: str) -> dict[str, Any]:
         ("rob2", 0.96, ["randomized controlled trial", "randomised controlled trial", "random allocation"]),
         ("robins_i", 0.90, ["non-randomized intervention", "non-randomised intervention", "quasi-experimental"]),
         ("robins_e", 0.88, ["exposure study", "environmental exposure", "occupational exposure", "etiology"]),
+        ("nos", 0.82, ["prospective cohort", "retrospective cohort", "case-control", "observational cohort"]),
     ]
+
+    matched_evidence = []
     for tool, confidence, phrases in patterns:
         phrase = next((p for p in phrases if p in sample), "")
         if phrase:
-            alternatives = {
-                "jbi_case_report": ["jbi_case_series"],
-                "jbi_case_series": ["jbi_case_report", "nos"],
-                "quadas2": ["robins_i"],
-                "rob2": ["robins_i"],
-                "robins_i": ["nos", "robins_e"],
-                "robins_e": ["nos", "robins_i"],
-            }[tool]
-            return {
-                "study_design": design or phrase,
-                "tool": tool,
-                "confidence": confidence,
-                "alternatives": alternatives,
-                "rationale": f"Document evidence contains the design signal '{phrase}'.",
-                "evidence": [phrase],
-                "model_name": "deterministic-evidence-v1",
-            }
+            matched_evidence.append((tool, confidence, phrase))
+
+    # Ambiguity: Multiple distinct designs found in document (§1.3)
+    if len(matched_evidence) > 1:
+        top_tool, _, top_phrase = matched_evidence[0]
+        other_tools = [m[0] for m in matched_evidence[1:]]
+        all_alts = other_tools + [t for t in ALLOWED_TOOLS if t not in other_tools and t != top_tool and t != "manual"]
+        return {
+            "study_design": design or top_phrase,
+            "tool": top_tool,
+            "confidence": 0.55,
+            "alternatives": all_alts,
+            "rationale": f"Ambiguous study design signals: matches multiple patterns ({', '.join(f'{m[0]}: {m[2]}' for m in matched_evidence)}).",
+            "evidence": [m[2] for m in matched_evidence],
+            "model_name": "deterministic-evidence-v1",
+        }
+
+    if len(matched_evidence) == 1:
+        tool, confidence, phrase = matched_evidence[0]
+        alternatives = {
+            "jbi_case_report": ["jbi_case_series"],
+            "jbi_case_series": ["jbi_case_report", "nos"],
+            "quadas2": ["robins_i"],
+            "rob2": ["robins_i"],
+            "robins_i": ["nos", "robins_e"],
+            "robins_e": ["nos", "robins_i"],
+            "nos": ["robins_i", "robins_e"],
+        }.get(tool, ["robins_i", "rob2"])
+        return {
+            "study_design": design or phrase,
+            "tool": tool,
+            "confidence": confidence,
+            "alternatives": alternatives,
+            "rationale": f"Document evidence contains the design signal '{phrase}'.",
+            "evidence": [phrase],
+            "model_name": "deterministic-evidence-v1",
+        }
 
     tool, confidence, alternatives = select_rob_tool_with_alternatives(declared)
     return {
@@ -81,26 +104,29 @@ def _heuristic_classification(study: dict, text: str) -> dict[str, Any]:
     }
 
 
-def _llm_classification(study: dict, text: str, model_fn: Callable[[str], Any]) -> Optional[dict]:
+def _llm_classification(
+    study: dict,
+    text: str,
+    model_fn: Callable[[str], Any],
+    candidate_tools: Optional[list[str]] = None,
+) -> Optional[dict]:
+    allowed_list = candidate_tools or list(ALLOWED_TOOLS)
+    tool_descriptions = "\n".join(
+        f"- {t}: { { 'rob2': 'randomized intervention trials', 'robins_i': 'non-randomized studies of interventions', 'robins_e': 'causal studies of exposures', 'quadas2': 'diagnostic accuracy studies', 'nos': 'eligible cohort or case-control quality assessment', 'jbi_case_report': 'one clinical case', 'jbi_case_series': 'descriptive case series', 'manual': 'insufficient or conflicting evidence' }.get(t, t) }"
+        for t in allowed_list
+    )
     prompt = f"""Select exactly one appraisal tool for this study.
 
-Allowed tools:
-- rob2: randomized intervention trials
-- robins_i: non-randomized studies of interventions
-- robins_e: causal studies of exposures
-- quadas2: diagnostic accuracy studies
-- nos: eligible cohort or case-control quality assessment
-- jbi_case_report: one case
-- jbi_case_series: descriptive case series
-- manual: insufficient or conflicting evidence
+Candidate tools:
+{tool_descriptions}
 
 Stored design: {study.get('study_design', '')}
 Title: {study.get('title', '')}
 Article text:
 {text[:24000]}
 
-Return the structured classification. Do not infer a tool from clinical topic alone.
-Evidence entries must be short verbatim quotes from the supplied article text."""
+Return JSON with keys: "tool", "study_design", "confidence" (0.0 to 1.0), "alternatives" (list), "rationale", "evidence" (list of short verbatim quotes).
+Do not infer a tool from clinical topic alone."""
     raw = model_fn(prompt)
     if not isinstance(raw, dict):
         return None
@@ -135,17 +161,52 @@ def classify_study(
     threshold: float = 0.7,
     model_fn: Optional[Callable[[str], Any]] = None,
 ) -> dict[str, Any]:
-    """Classify one study, routing uncertain results to manual review."""
+    """Classify one study, resolving ambiguous designs via LLM fallback or routing to manual review (§1.3)."""
     text = _document_text(study, pdf_data)
-    result = _llm_classification(study, text, model_fn) if model_fn else None
-    result = result or _heuristic_classification(study, text)
-    assigned = result["tool"] != "manual" and result["confidence"] >= threshold
-    result["status"] = "assigned" if assigned else "manual_review"
+
+    # 1. Deterministic heuristic classification
+    heuristic_res = _heuristic_classification(study, text)
+
+    # If heuristic is decisive and confident, accept immediately
+    if heuristic_res["confidence"] >= threshold and heuristic_res["tool"] != "manual":
+        heuristic_res["status"] = "assigned"
+        return heuristic_res
+
+    # 2. If ambiguous or below threshold, try LLM fallback
+    resolved_model_fn = model_fn
+    if resolved_model_fn is None:
+        try:
+            from services.llm_extractor import is_llm_available
+            if is_llm_available():
+                from services.llm_client import get_client
+                resolved_model_fn = get_client().as_model_fn("classify_rob_tool")
+        except Exception as e:
+            logger.debug(f"LLM client unavailable for rob classification: {e}")
+            resolved_model_fn = None
+
+    if resolved_model_fn:
+        try:
+            candidate_tools = [heuristic_res["tool"]] + [a for a in heuristic_res.get("alternatives", []) if a in ALLOWED_TOOLS]
+            llm_res = _llm_classification(study, text, resolved_model_fn, candidate_tools=candidate_tools)
+            if llm_res and llm_res.get("tool") in ALLOWED_TOOLS:
+                assigned = llm_res["tool"] != "manual" and llm_res["confidence"] >= threshold
+                llm_res["status"] = "assigned" if assigned else "manual_review"
+                if not assigned:
+                    if llm_res["tool"] != "manual" and llm_res["tool"] not in llm_res["alternatives"]:
+                        llm_res["alternatives"] = [llm_res["tool"], *llm_res["alternatives"]]
+                    llm_res["tool"] = "manual"
+                return llm_res
+        except Exception as e:
+            logger.warning(f"LLM fallback classification failed: {e}")
+
+    # 3. Fallback to heuristic result (routed to manual_review)
+    assigned = heuristic_res["tool"] != "manual" and heuristic_res["confidence"] >= threshold
+    heuristic_res["status"] = "assigned" if assigned else "manual_review"
     if not assigned:
-        if result["tool"] != "manual" and result["tool"] not in result["alternatives"]:
-            result["alternatives"] = [result["tool"], *result["alternatives"]]
-        result["tool"] = "manual"
-    return result
+        if heuristic_res["tool"] != "manual" and heuristic_res["tool"] not in heuristic_res["alternatives"]:
+            heuristic_res["alternatives"] = [heuristic_res["tool"], *heuristic_res["alternatives"]]
+        heuristic_res["tool"] = "manual"
+    return heuristic_res
 
 
 def persist_classification(

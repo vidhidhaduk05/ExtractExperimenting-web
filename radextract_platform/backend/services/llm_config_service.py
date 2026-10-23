@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 import time
 from pathlib import Path
@@ -33,9 +34,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "provider": "antigravity",
     "antigravity_model": "",          # empty = use settings.llm_model
     "antigravity_api_key": "",        # optional Gemini key (connection test only)
-    "local_endpoint_url": "http://127.0.0.1:18000/v1",
-    "local_model_name": "biomni-r0",
-    "custom_api_key": "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e",
+    "local_endpoint_url": os.environ.get("OPENAI_BASE_URL") or "http://127.0.0.1:18000/v1",
+    "local_model_name": os.environ.get("OPENAI_MODEL") or "biomni-r0",
+    "custom_api_key": os.environ.get("OPENAI_API_KEY") or "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e",
     "temperature": 0.1,
     "timeout_seconds": 90,
 }
@@ -241,7 +242,7 @@ async def test_connection(
                         "latency_ms": ms(), "message": f"Chat completions verified ({ms()} ms)."}
             return {"success": False, "provider": target, "latency_ms": ms(),
                     "status_code": res2.status_code,
-                    "message": f"Endpoint returned status {res2.status_code}."}
+                    "message": f"Could not connect to {endpoint}: Endpoint returned status {res2.status_code}."}
     except Exception as e:
         return {"success": False, "provider": target, "endpoint": endpoint, "latency_ms": ms(),
                 "message": f"Could not connect to {endpoint}: {e}"}

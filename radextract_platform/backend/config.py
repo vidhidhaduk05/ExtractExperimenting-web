@@ -33,10 +33,18 @@ class Settings(BaseSettings):
         return secret
 
     # LLM Gateway (Biomni-R0 on HPC or remote OpenAI-compatible endpoint)
-    llm_api_url: str = os.environ.get("LLM_BASE_URL") or os.environ.get("LLM_API_URL") or "http://127.0.0.1:18000/v1/chat/completions"
-    llm_api_key: str = os.environ.get("LLM_API_KEY") or "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
-    llm_models_url: str = os.environ.get("LLM_MODELS_URL") or "http://127.0.0.1:18000/v1/models"
-    llm_model: str = os.environ.get("LLM_MODEL") or "biomni-r0"
+    llm_api_url: str = (
+        (os.environ.get("OPENAI_BASE_URL", "").rstrip("/") + "/chat/completions")
+        if os.environ.get("OPENAI_BASE_URL") and not os.environ.get("OPENAI_BASE_URL", "").rstrip("/").endswith("/chat/completions")
+        else (os.environ.get("OPENAI_BASE_URL") or os.environ.get("LLM_BASE_URL") or os.environ.get("LLM_API_URL") or "http://127.0.0.1:18000/v1/chat/completions")
+    )
+    llm_api_key: str = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY") or "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
+    llm_models_url: str = (
+        (os.environ.get("OPENAI_BASE_URL", "").rstrip("/") + "/models")
+        if os.environ.get("OPENAI_BASE_URL")
+        else (os.environ.get("LLM_MODELS_URL") or "http://127.0.0.1:18000/v1/models")
+    )
+    llm_model: str = os.environ.get("OPENAI_MODEL") or os.environ.get("LLM_MODEL") or "biomni-r0"
     llm_tool_calling_enabled: bool = True
     llm_tool_call_fallback: bool = True
     llm_provider: str = "gateway"

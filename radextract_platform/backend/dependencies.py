@@ -24,7 +24,38 @@ from services.db_backend import get_db_backend, DBBackend
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 # Role hierarchy for access control (higher = more permissions)
-ROLE_LEVELS = {"viewer": 1, "reviewer": 2, "editor": 3, "owner": 4}
+ROLE_LEVELS = {"viewer": 1, "reviewer": 2, "editor": 3, "manager": 3, "owner": 4}
+
+DISPOSABLE_EMAIL_DOMAINS = {
+    "mailinator.com", "tempmail.com", "guerrillamail.com", "10minutemail.com",
+    "sharklasers.com", "trashmail.com", "dispostable.com", "getairmail.com",
+    "yopmail.com", "fakeinbox.com", "temp-mail.org", "throwawaymail.com",
+}
+
+
+def is_disposable_email(email: str) -> bool:
+    """Check if an email domain is in the disposable/temporary email blacklist (D107)."""
+    if not email or "@" not in email:
+        return False
+    domain = email.strip().split("@", 1)[1].lower()
+    return domain in DISPOSABLE_EMAIL_DOMAINS
+
+
+def canonicalize_email(email: str) -> str:
+    """Provider-aware email normalization (D108 & D111).
+    For Gmail/Googlemail, strip dots from local part and normalize domain.
+    For other domains, lowercase and trim.
+    """
+    if not email or "@" not in email:
+        return (email or "").strip().lower()
+    local_part, domain = email.strip().split("@", 1)
+    domain = domain.lower()
+    if domain in ("gmail.com", "googlemail.com"):
+        domain = "gmail.com"
+        local_part = local_part.split("+")[0].replace(".", "").lower()
+    else:
+        local_part = local_part.lower()
+    return f"{local_part}@{domain}"
 
 
 def hash_password(password: str) -> str:
@@ -55,10 +86,24 @@ def create_access_token(user_id: str, username: str, role: str) -> str:
 
 def create_user(username: str, password: str, email: str = "", role: str = "reviewer",
                 db: Optional[DBBackend] = None) -> dict:
-    """Create a new user in the database."""
+    """Create a new user in the database with disposable check and canonical uniqueness."""
+    db = db or get_db_backend()
+    email_clean = (email or "").strip()
+
+    if email_clean:
+        if is_disposable_email(email_clean):
+            raise ValueError("Temporary or disposable email addresses are not permitted. Please use a permanent institutional or personal email address.")
+        
+        canonical = canonicalize_email(email_clean)
+        # Check canonical email uniqueness across existing users
+        all_users = db.query("users")
+        for u in all_users:
+            u_email = (u.get("email") or "").strip()
+            if u_email and canonicalize_email(u_email) == canonical:
+                raise ValueError("An account with this email address already exists.")
+
     user_id = str(uuid.uuid4())
     hashed = hash_password(password)
-    db = db or get_db_backend()
     # Check if username already exists
     existing = db.query("users", {"username": username})
     if existing:
@@ -67,11 +112,11 @@ def create_user(username: str, password: str, email: str = "", role: str = "revi
         "user_id": user_id,
         "username": username,
         "password_hash": hashed,
-        "email": email,
+        "email": email_clean,
         "role": role,
     })
     db.commit()
-    return {"user_id": user_id, "username": username, "email": email, "role": role}
+    return {"user_id": user_id, "username": username, "email": email_clean, "role": role}
 
 
 def authenticate_user(username: str, password: str, db: Optional[DBBackend] = None) -> Optional[dict]:

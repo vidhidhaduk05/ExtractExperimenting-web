@@ -59,6 +59,23 @@ def start_llm_gateway():
 def start_backend():
     """Start FastAPI backend."""
     env = os.environ.copy()
+    openai_base = env.get("OPENAI_BASE_URL", "")
+    openai_key = env.get("OPENAI_API_KEY", "")
+    openai_model = env.get("OPENAI_MODEL", "")
+
+    default_llm_url = (
+        (openai_base.rstrip("/") + "/chat/completions")
+        if openai_base and not openai_base.rstrip("/").endswith("/chat/completions")
+        else (openai_base or env.get("RADEXTRACT_LLM_API_URL") or "http://127.0.0.1:18000/v1/chat/completions")
+    )
+    default_models_url = (
+        (openai_base.rstrip("/") + "/models")
+        if openai_base
+        else env.get("RADEXTRACT_LLM_MODELS_URL", "http://127.0.0.1:18000/v1/models")
+    )
+    default_api_key = openai_key or env.get("RADEXTRACT_LLM_API_KEY", "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e")
+    default_model = openai_model or env.get("RADEXTRACT_LLM_MODEL", "biomni-r0")
+
     env.update({
         "RADEXTRACT_ENV": "development",
         "RADEXTRACT_DB_BACKEND": os.getenv("RADEXTRACT_DB_BACKEND", "sqlite"),
@@ -67,10 +84,13 @@ def start_backend():
         "RADEXTRACT_AWS_REGION": "us-east-1",
         "RADEXTRACT_AWS_ACCESS_KEY_ID": "test",
         "RADEXTRACT_AWS_SECRET_ACCESS_KEY": "test",
-        "RADEXTRACT_LLM_API_URL": os.getenv("RADEXTRACT_LLM_API_URL", "http://127.0.0.1:18000/v1/chat/completions"),
-        "RADEXTRACT_LLM_MODELS_URL": os.getenv("RADEXTRACT_LLM_MODELS_URL", "http://127.0.0.1:18000/v1/models"),
-        "RADEXTRACT_LLM_API_KEY": os.getenv("RADEXTRACT_LLM_API_KEY", "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"),
-        "RADEXTRACT_LLM_MODEL": os.getenv("RADEXTRACT_LLM_MODEL", "biomni-r0"),
+        "RADEXTRACT_LLM_API_URL": default_llm_url,
+        "RADEXTRACT_LLM_MODELS_URL": default_models_url,
+        "RADEXTRACT_LLM_API_KEY": default_api_key,
+        "RADEXTRACT_LLM_MODEL": default_model,
+        "OPENAI_BASE_URL": openai_base,
+        "OPENAI_API_KEY": default_api_key,
+        "OPENAI_MODEL": default_model,
     })
     backend_dir = os.path.join(ROOT_DIR, "radextract_platform", "backend")
     print("[Dev] Starting FastAPI backend on http://localhost:8000 ...")

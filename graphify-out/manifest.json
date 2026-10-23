@@ -1,21 +1,21 @@
 {
   "radextract_platform/backend/config.py": {
-    "mtime": 1792437291.4629757,
-    "seen": 1792438371.9599342,
-    "ast_hash": "0e91aa1f8ae2a04ffaca0122607fa021",
+    "mtime": 1792657209.7423146,
+    "seen": 1792777002.011414,
+    "ast_hash": "7f5fe90dda620deeda119e2870ca614e",
     "semantic_hash": ""
   },
   "radextract_platform/backend/database.py": {
-    "mtime": 1791927219.1085598,
-    "seen": 1791927525.4083705,
-    "ast_hash": "8139e128962214e52d7a56a0e551c33c",
+    "mtime": 1792775884.2931845,
+    "seen": 1792777002.011414,
+    "ast_hash": "3d77c7dfd7cfef0d9004a9bf447e739c",
     "semantic_hash": ""
   },
   "radextract_platform/backend/dependencies.py": {
-    "mtime": 1791664520.9089131,
-    "seen": 1791664941.925462,
-    "ast_hash": "0a4cd961473a30f008fc0d5fa0bc7e96",
-    "semantic_hash": "0a4cd961473a30f008fc0d5fa0bc7e96"
+    "mtime": 1792774240.4518776,
+    "seen": 1792777002.011414,
+    "ast_hash": "a4471563f1ff3ba8e27947e448c5384a",
+    "semantic_hash": ""
   },
   "radextract_platform/backend/main.py": {
     "mtime": 1792343272.4280508,
@@ -366,9 +366,9 @@
     "semantic_hash": "d3327fbdf4184cb26a8c13f46880e191"
   },
   "radextract_platform/backend/routers/screening.py": {
-    "mtime": 1792279735.862828,
-    "seen": 1792279857.362561,
-    "ast_hash": "e78521aa66f41ffff9725b40a4af0a5e",
+    "mtime": 1792776271.2905042,
+    "seen": 1792777002.0570834,
+    "ast_hash": "cfba29a96373e642cedbc7be3f96cee1",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/statistics.py": {
@@ -408,9 +408,9 @@
     "semantic_hash": "ca10f918bda7bdb5098ba4a234f0c3d5"
   },
   "radextract_platform/backend/services/auto_extract_service.py": {
-    "mtime": 1791664521.051612,
-    "seen": 1791664941.925462,
-    "ast_hash": "2437dc83cb0896053029eeab3ba09b7e",
+    "mtime": 1792774709.4467943,
+    "seen": 1792777002.0653381,
+    "ast_hash": "c15a871804b96922b7c58fa385226a85",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/biomni_service.py": {
@@ -492,9 +492,9 @@
     "semantic_hash": "8dff25674e6c148fbc78136da018232a"
   },
   "radextract_platform/backend/services/pdf_service.py": {
-    "mtime": 1791925182.976804,
-    "seen": 1791927525.4522495,
-    "ast_hash": "49e66a77b0201cb02293415321613b82",
+    "mtime": 1792775917.3096578,
+    "seen": 1792777002.0855596,
+    "ast_hash": "b412ea931a1d52d9ef41b0b55f69cf43",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/pico_extractor.py": {
@@ -546,9 +546,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/rob_tools.py": {
-    "mtime": 1791664521.1042686,
-    "seen": 1791664941.925462,
-    "ast_hash": "d88beb00dff39c2344e8a1f7e8f4dfb8",
+    "mtime": 1792775015.3082404,
+    "seen": 1792777002.0940042,
+    "ast_hash": "abc1a6b0103c6c18199819177754cbbc",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/search_string_generator.py": {
@@ -564,9 +564,9 @@
     "semantic_hash": "b036c2c4d1bc350d32a372ba24a8b1a6"
   },
   "radextract_platform/backend/services/tool_calling_client.py": {
-    "mtime": 1792279735.8808281,
-    "seen": 1792279857.4455638,
-    "ast_hash": "c2dc239779de3070058cead22833ed93",
+    "mtime": 1792775641.6374056,
+    "seen": 1792777002.100052,
+    "ast_hash": "4a5c2dbe93264067da491b0971909373",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/tool_registry.py": {
@@ -720,15 +720,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_screening_decisions.py": {
-    "mtime": 1791715149.3434258,
-    "seen": 1791715552.2425747,
-    "ast_hash": "4695e05ecc27ed34d60428427aad5009",
+    "mtime": 1792776471.4128115,
+    "seen": 1792777002.137394,
+    "ast_hash": "a499fad6e0acb8f8bd92a2f28162fc2e",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_screening_extensions.py": {
-    "mtime": 1791664521.194195,
-    "seen": 1791664941.925462,
-    "ast_hash": "5645f032dd5aee9d9efecac1b1b79915",
+    "mtime": 1792772839.8906782,
+    "seen": 1792777002.137394,
+    "ast_hash": "327a35e3525541c812e8067de3afd7f1",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_search_string_generator.py": {
@@ -738,9 +738,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_tool_calling_client.py": {
-    "mtime": 1792291128.6242218,
-    "seen": 1792291212.5508885,
-    "ast_hash": "bb82e6d67e12f5506153fba01ff6fb2c",
+    "mtime": 1792775661.0484014,
+    "seen": 1792777002.1445935,
+    "ast_hash": "7dfb4c69c1ea3e73a4477d616516beed",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_tool_registry.py": {
@@ -960,10 +960,10 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_ai_integration.py": {
-    "mtime": 1791664521.1208599,
-    "seen": 1791664941.925462,
-    "ast_hash": "c6c080a9134b6e762a53f4002c1c79dc",
-    "semantic_hash": "c6c080a9134b6e762a53f4002c1c79dc"
+    "mtime": 1792771846.3938518,
+    "seen": 1792777002.102065,
+    "ast_hash": "bbc86adc4da6d0dbed46585009fa90fd",
+    "semantic_hash": ""
   },
   "radextract_platform/backend/lambda_handler.py": {
     "mtime": 1791664520.9089131,
@@ -1038,9 +1038,9 @@
     "semantic_hash": ""
   },
   "dev-start.py": {
-    "mtime": 1792279735.8476477,
-    "seen": 1792279857.268562,
-    "ast_hash": "6b2bd374d288c79f7c295c03a0db9d01",
+    "mtime": 1792657221.4934454,
+    "seen": 1792777001.9984045,
+    "ast_hash": "2921b05afe8f16088f6d28202a53d0c2",
     "semantic_hash": ""
   },
   "dev-start.sh": {
@@ -1146,9 +1146,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_clarification.py": {
-    "mtime": 1792279735.884828,
-    "seen": 1792279857.4535642,
-    "ast_hash": "c9d23aa99d9ba26452794ba9afdaf015",
+    "mtime": 1792772218.6179287,
+    "seen": 1792777002.107606,
+    "ast_hash": "4cd1b3135ab0ebd5a30c55a466f03e29",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/ai_screening.py": {
@@ -1680,9 +1680,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/llm_config_service.py": {
-    "mtime": 1792279735.873827,
-    "seen": 1792279857.4205666,
-    "ast_hash": "518107994d26080dd64b86142dc18ffa",
+    "mtime": 1792772636.762437,
+    "seen": 1792777002.0819314,
+    "ast_hash": "7f3e4e848a6d2e91626a6784664fff75",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/CodebookDesignerModal.tsx": {
@@ -1836,9 +1836,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/rob_classification_service.py": {
-    "mtime": 1791664521.0902956,
-    "seen": 1791664941.925462,
-    "ast_hash": "cdc5fa14508236387ef73e2dc006e51f",
+    "mtime": 1792775082.5582128,
+    "seen": 1792777002.0922477,
+    "ast_hash": "f71ac5fa8dc3ca09b6be10e7bd30e8ba",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/rob_export_service.py": {
@@ -2514,9 +2514,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/claimscape_fast_pipeline.py": {
-    "mtime": 1792361761.5504427,
-    "seen": 1792362150.3305688,
-    "ast_hash": "70229d772ced92a25f4c859432ec61ad",
+    "mtime": 1792772253.4653869,
+    "seen": 1792777002.0693657,
+    "ast_hash": "bf665f26b9c0773103a8d9253f3bef20",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_graphify_auth.py": {
@@ -3849,6 +3849,36 @@
     "mtime": 1792433292.650535,
     "seen": 1792434522.9581933,
     "ast_hash": "f02cb793938cc4678eeaf3d494546a65",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/data/kdense_rigor_example_full.json": {
+    "mtime": 1792438028.3095639,
+    "seen": 1792777002.011414,
+    "ast_hash": "bd879084c6dd18fac63e711f608c9dea",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/data/rigor_74_specs.json": {
+    "mtime": 1792438028.3105156,
+    "seen": 1792777002.011414,
+    "ast_hash": "aa69bc6fcf3b62cb6a8d46c711b00882",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_quote_verification.py": {
+    "mtime": 1792774499.9479592,
+    "seen": 1792777002.1267345,
+    "ast_hash": "b13973e5b4a785e874fbfeb95f06369d",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_rob_ambiguity.py": {
+    "mtime": 1792775237.6900744,
+    "seen": 1792777002.1303785,
+    "ast_hash": "18dd7ad202e059e9540d60785a03efa4",
+    "semantic_hash": ""
+  },
+  "PLANS/prompt_and_user_data_handoff.md": {
+    "mtime": 1792770010.5022552,
+    "seen": 1792777002.2748404,
+    "ast_hash": "860c5cde90fa4d54d024c65b1ea45cae",
     "semantic_hash": ""
   }
 }

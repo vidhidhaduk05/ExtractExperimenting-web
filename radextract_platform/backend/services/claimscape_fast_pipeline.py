@@ -482,6 +482,12 @@ def evaluate_claim_fast(
         except Exception as e:
             logger.warning("Batch efetch chunk warning: %s", e)
 
+    # Filter to only requested PMIDs and ensure retrieval did not completely fail
+    pmid_set = set(pmids)
+    articles = [a for a in articles if a.get("pmid") in pmid_set]
+    if pmids and not articles:
+        raise RuntimeError("PubMed article retrieval failed")
+
     # 3. High-Throughput Batched Laya System-1 Tensor Inference
     laya = _get_laya_model()
     q_defs = {

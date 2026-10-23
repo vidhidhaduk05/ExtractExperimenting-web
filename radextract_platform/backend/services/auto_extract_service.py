@@ -1,6 +1,7 @@
 """Automated data extraction service: extracts variable values from PDF text using Gemini LLM, exhaustive search, gap rules, and missing data taxonomy."""
 from __future__ import annotations
 
+import difflib
 import json
 import logging
 import re
@@ -96,6 +97,69 @@ def _match_variable_to_keywords(var_name: str, var_desc: str = "") -> list[str]:
     # Fallback to variable name words
     words = [w for w in name_lower.split() if len(w) > 2]
     return words or [name_lower]
+
+
+def verify_quote_provenance(quote: str, full_text: str, threshold: float = 0.85) -> tuple[bool, float]:
+    """Verify that an extracted quote actually appears in the document text (§1.2).
+    Uses normalized exact matching, punctuation-insensitive matching, and difflib fuzzy matching.
+    Returns (is_verified, match_score).
+    """
+    if not quote or not full_text:
+        return False, 0.0
+    if quote.startswith("[MISSING:"):
+        return True, 1.0
+
+    q_norm = " ".join(quote.lower().split())
+    if not q_norm:
+        return False, 0.0
+
+    t_norm = " ".join(full_text.lower().split())
+    if q_norm in t_norm:
+        return True, 1.0
+
+    # Punctuation/hyphen-insensitive match (common OCR variation)
+    q_nopunct = " ".join(re.sub(r"[^\w\s]", " ", q_norm).split())
+    t_nopunct = " ".join(re.sub(r"[^\w\s]", " ", t_norm).split())
+    if q_nopunct and q_nopunct in t_nopunct:
+        return True, 0.98
+
+    sentences = re.split(r"(?<=[.!?])\s+", t_norm)
+    q_words = [w for w in q_norm.split() if len(w) > 3]
+    best_ratio = 0.0
+
+    for s in sentences:
+        if q_words and not any(w in s for w in q_words):
+            continue
+        # Direct ratio
+        direct_ratio = difflib.SequenceMatcher(None, q_norm, s).ratio()
+        if direct_ratio > best_ratio:
+            best_ratio = direct_ratio
+        if best_ratio >= threshold:
+            return True, best_ratio
+
+        # Sliding window within the sentence if sentence is longer than quote
+        if len(s) > len(q_norm):
+            q_len = len(q_norm)
+            for start_idx in range(0, len(s) - q_len + 1, max(1, q_len // 4)):
+                window = s[start_idx : start_idx + q_len]
+                w_ratio = difflib.SequenceMatcher(None, q_norm, window).ratio()
+                if w_ratio > best_ratio:
+                    best_ratio = w_ratio
+                    if best_ratio >= threshold:
+                        return True, best_ratio
+
+    # Document-wide sliding window fallback for long quotes spanning boundaries
+    if best_ratio < threshold and len(q_norm) > 30:
+        step = max(10, len(q_norm) // 4)
+        for i in range(0, max(1, len(t_norm) - len(q_norm) + 1), step):
+            window = t_norm[i : i + len(q_norm)]
+            ratio = difflib.SequenceMatcher(None, q_norm, window).ratio()
+            if ratio > best_ratio:
+                best_ratio = ratio
+                if best_ratio >= threshold:
+                    return True, best_ratio
+
+    return best_ratio >= threshold, best_ratio
 
 
 def auto_extract(study_id: str, project_id: str, reviewer: str = "auto", db: Optional[DBBackend] = None) -> dict:
@@ -286,7 +350,29 @@ def auto_extract(study_id: str, project_id: str, reviewer: str = "auto", db: Opt
         quote = item.get("source_text", "")
         src_page = item.get("source_page", 1)
 
+        # §1.2 Quote/provenance verification guardrail
+        if quote and val not in ("-99", "-77", "-88", None, ""):
+            is_verified, score = verify_quote_provenance(quote, full_text)
+            if not is_verified:
+                conf = min(conf, 0.40)
+                conf_tag = "[UNVERIFIED QUOTE]"
+                if not quote.startswith("[UNVERIFIED QUOTE]"):
+                    quote = f"[UNVERIFIED QUOTE] {quote}"
+
         existing = db.query("extractions", {"study_id": study_id, "variable_id": var_id})
+        # D30 / Phase 7: Preserve human-verified or human-edited values across reruns
+        if existing and (existing[0].get("is_edited") == 1 or existing[0].get("is_verified") == 1):
+            results.append({
+                "variable_id": var_id,
+                "variable_name": var_name,
+                "value": str(existing[0].get("value", ""))[:100],
+                "confidence": float(existing[0].get("confidence", 1.0)),
+                "confidence_tag": existing[0].get("confidence_tag", "[HUMAN]"),
+                "source_page": existing[0].get("source_page", 1),
+            })
+            extracted += 1
+            continue
+
         data = {
             "value": val,
             "confidence": conf,

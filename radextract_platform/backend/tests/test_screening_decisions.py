@@ -168,3 +168,36 @@ def test_blind_mode_sets_is_blinded(client):
     r = _make_decision(client, sids[0], pid, "r1", "Alice", "included")
     assert r.status_code == 200
     assert r.json()["is_blinded"] == 1
+
+
+def test_reveal_concealment_between_reviewers(client):
+    """Reviewer 2 cannot see Reviewer 1's vote until both reviewers have cast their vote (D12, D14, D85)."""
+    pid, sids = _create_project_and_studies(client, 1)
+    client.put(f"/api/projects/{pid}/screening-config", json={
+        "blind_mode": True, "n_reviewers": 2, "conflict_mode": "manual",
+    })
+
+    # Reviewer 1 votes
+    _make_decision(client, sids[0], pid, "r1", "Alice", "included")
+
+    # Reviewer 2 queries before voting -> Reviewer 1's vote is concealed
+    db = get_connection()
+    db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (?, ?, ?)", ("r2", "Bob", "test"))
+    db.execute("INSERT OR IGNORE INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)", (f"{pid}-r2", pid, "r2", "reviewer"))
+    db.commit()
+    client.headers["Authorization"] = f"Bearer {create_access_token('r2', 'Bob', 'reviewer')}"
+
+    r_before = client.get(f"/api/studies/{sids[0]}/screening-decisions")
+    assert r_before.status_code == 200
+    # r2 has not voted yet, so r1's decision is concealed
+    assert len(r_before.json()) == 0
+
+    # Reviewer 2 now casts vote
+    _make_decision(client, sids[0], pid, "r2", "Bob", "excluded", "wrong_population")
+
+    # Now both have voted -> decisions are revealed
+    client.headers["Authorization"] = f"Bearer {create_access_token('r2', 'Bob', 'reviewer')}"
+    r_after = client.get(f"/api/studies/{sids[0]}/screening-decisions")
+    assert r_after.status_code == 200
+    assert len(r_after.json()) == 2
+

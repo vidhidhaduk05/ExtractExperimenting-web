@@ -7,10 +7,13 @@ table for retrieval by the frontend PDF viewer and AI pre-fill.
 """
 from __future__ import annotations
 import json
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
+
+logger = logging.getLogger("radextract.pdf")
 
 from database import get_db_backend
 from services.db_backend import DBBackend
@@ -51,6 +54,8 @@ def process_pdf(study_id: str, db: Optional[DBBackend] = None) -> dict:
     tables_json = json.dumps(doc.parsed.get("tables", []), ensure_ascii=False)
     metadata_json = json.dumps(doc.metadata, ensure_ascii=False)
     engine = doc.metadata.get("engine", "unknown")
+    if engine != "docling":
+        logger.warning(f"[PDF] Study {study_id} processed with fallback engine '{engine}' (not docling).")
 
     # Delete any existing record for this study
     existing = db.query("pdf_documents", {"study_id": study_id})
@@ -70,8 +75,11 @@ def process_pdf(study_id: str, db: Optional[DBBackend] = None) -> dict:
         "processed_at": now,
     })
 
-    # Update study status
-    db.update("studies", study_id, {"pdf_status": "processed"})
+    # Update study status and processor engine (§0.2)
+    db.update("studies", study_id, {
+        "pdf_status": "processed",
+        "pdf_processor_engine": engine,
+    })
     db.commit()
 
     return {

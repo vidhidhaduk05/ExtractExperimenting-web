@@ -4,7 +4,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 import httpx
 
-from services.tool_calling_client import ToolCallingClient
+from services.tool_calling_client import ToolCallingClient, invalidate_tool_cache
+
+
+@pytest.fixture(autouse=True)
+def clean_tool_cache():
+    invalidate_tool_cache()
+    yield
+    invalidate_tool_cache()
 
 
 class TestToolCallingClient:

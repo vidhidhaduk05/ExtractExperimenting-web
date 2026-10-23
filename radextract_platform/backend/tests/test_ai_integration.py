@@ -22,6 +22,7 @@ def fresh_db(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "db_path", str(tmp_path / "test_ai_integration.db"))
     monkeypatch.setattr(settings, "upload_root", str(tmp_path / "uploads"))
     monkeypatch.setattr(settings, "export_root", str(tmp_path / "exports"))
+    monkeypatch.setattr(settings, "jev_mode", "off")
     reset_db()
     init_db()
     yield

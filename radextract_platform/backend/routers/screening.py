@@ -942,14 +942,65 @@ async def list_screening_decisions(
 
 
 @router.get("/studies/{study_id}/screening-decisions")
-async def get_study_screening_decisions(study_id: str, user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db)):
-    """Get all screening decisions for a single study."""
+async def get_study_screening_decisions(
+    study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Get all screening decisions for a single study.
+    Enforces server-side reveal concealment (D12, D14, D85):
+    In blind mode, a reviewer cannot see another reviewer's vote until both have voted.
+    AI screening recommendation is concealed from reviewers who haven't yet voted on this study.
+    """
     rows = conn.execute(
         "SELECT * FROM screening_decisions WHERE study_id = ? ORDER BY created_at",
         (study_id,),
     ).fetchall()
-    return [dict(r) for r in rows]
+    decisions = [dict(r) for r in rows]
+
+    current_uid = user.get("user_id") if user else None
+    current_role = user.get("role", "") if user else ""
+
+    study = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if not study:
+        return decisions
+
+    project_id = study["project_id"]
+    proj = conn.execute("SELECT screening_config_json FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+    blind_mode = True
+    n_reviewers = 2
+    if proj and proj["screening_config_json"]:
+        try:
+            cfg = json.loads(proj["screening_config_json"])
+            blind_mode = cfg.get("blind_mode", True)
+            n_reviewers = int(cfg.get("n_reviewers", 2))
+        except Exception:
+            pass
+
+    if not blind_mode or current_role in ("owner", "manager"):
+        return decisions
+
+    # In blind mode for reviewers:
+    user_votes = [d for d in decisions if d.get("reviewer_id") == current_uid]
+    has_user_voted = len(user_votes) > 0
+
+    human_votes = [d for d in decisions if d.get("reviewer_id") not in ("ai_screener", "ai_reviewer", "ai")]
+    is_revealed = len(human_votes) >= n_reviewers
+
+    if is_revealed:
+        return decisions
+
+    filtered = []
+    for d in decisions:
+        r_id = d.get("reviewer_id")
+        if r_id == current_uid:
+            filtered.append(d)
+        elif r_id in ("ai_screener", "ai_reviewer", "ai"):
+            # D14: AI recommendation revealed only AFTER user's own initial vote
+            if has_user_voted:
+                filtered.append(d)
+
+    return filtered
 
 
 # ═══════════════════════════════════════════════════════════════════════
