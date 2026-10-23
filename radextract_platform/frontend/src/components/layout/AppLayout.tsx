@@ -6,8 +6,6 @@ import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, ShieldAlert, 
 import { cn } from "../../lib/utils";
 import { ErrorBoundary } from "../common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "../common/ClarificationNotificationCenter";
-import { ApiConnectionBanner } from "../common/ApiConnectionBanner";
-import { ApiSettingsModal } from "../common/ApiSettingsModal";
 import { subscribeApiConnection, ApiConnectionInfo, getApiConnectionInfo } from "../../lib/api";
 
 const navItems = [
@@ -455,7 +453,6 @@ export function AppLayout() {
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isClarificationDrawerOpen, setIsClarificationDrawerOpen] = useState(false);
-  const [isApiSettingsOpen, setIsApiSettingsOpen] = useState(false);
   const [apiInfo, setApiInfo] = useState<ApiConnectionInfo>(getApiConnectionInfo());
 
   useEffect(() => { setIsMobileMenuOpen(false); }, [pathname]);
@@ -658,12 +655,17 @@ export function AppLayout() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* API Connection Indicator */}
-              <button
-                onClick={() => setIsApiSettingsOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border border-black/10 bg-white/70 hover:bg-white text-[#141413] transition-colors shadow-2xs"
-                title={`API Server: ${apiInfo.apiBase || "Default"} (${apiInfo.state})`}
-                aria-label="API Server Configuration"
+              {/* Permanent HPC Backend Indicator */}
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border shadow-2xs select-none",
+                  apiInfo.state === "live"
+                    ? "border-emerald-200/80 bg-emerald-50/80 text-emerald-900"
+                    : apiInfo.state === "error"
+                    ? "border-rose-200/80 bg-rose-50/80 text-rose-900"
+                    : "border-black/10 bg-white/70 text-[#6B665E]"
+                )}
+                title={`HPC Backend: ${apiInfo.apiBase || "Permanent HPC Tunnel"} (${apiInfo.state})`}
               >
                 <span
                   className={cn(
@@ -675,16 +677,14 @@ export function AppLayout() {
                       : "bg-amber-500"
                   )}
                 />
-                <span className="font-mono text-[10px] text-[#6B665E]">
+                <span className="font-mono text-[10px]">
                   {apiInfo.state === "live"
-                    ? "Live API"
+                    ? "HPC GPU Live"
                     : apiInfo.state === "error"
-                    ? "API Offline"
-                    : apiInfo.state === "checking"
-                    ? "API not checked"
-                    : "Demo Mode"}
+                    ? "HPC Offline"
+                    : "Connecting..."}
                 </span>
-              </button>
+              </div>
 
               <span className="hidden lg:inline-flex tag-phylo-yellow text-[10px] px-2.5 py-0.5">
                 ✦ OPEN-DESIGN WARM EDITORIAL
@@ -720,8 +720,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        {/* Global API Connection Warning/Status Banner */}
-        <ApiConnectionBanner onOpenSettings={() => setIsApiSettingsOpen(true)} />
+
 
         <div className="flex-1 overflow-y-auto">
           <ErrorBoundary>
@@ -738,11 +737,6 @@ export function AppLayout() {
           />
         )}
 
-        {/* API Settings Modal */}
-        <ApiSettingsModal
-          isOpen={isApiSettingsOpen}
-          onClose={() => setIsApiSettingsOpen(false)}
-        />
       </main>
     </div>
   );

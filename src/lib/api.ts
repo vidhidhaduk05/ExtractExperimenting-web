@@ -44,6 +44,8 @@ export interface ApiConnectionInfo {
 type ApiListener = (info: ApiConnectionInfo) => void;
 const apiListeners: Set<ApiListener> = new Set();
 
+export const PERMANENT_HPC_BACKEND = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
+
 export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
   const custom = localStorage.getItem("custom_api_base");
@@ -51,7 +53,7 @@ export function getApiBase(): string {
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") return "/api";
-  return "/api";
+  return `${PERMANENT_HPC_BACKEND}/api`;
 }
 
 export let API_BASE = getApiBase();
@@ -59,7 +61,16 @@ export let API_BASE = getApiBase();
 export async function autoDiscoverBackend(): Promise<string | null> {
   if (typeof window === "undefined") return null;
   const custom = localStorage.getItem("custom_api_base");
-  if (custom && custom.trim()) return custom.trim();
+  if (custom && custom.trim()) {
+    const checkCustom = await testBackendConnection(custom.trim()).catch(() => null);
+    if (checkCustom && checkCustom.ok) {
+      API_BASE = custom.trim().replace(/\/+$/, "");
+      updateApiState({ apiBase: API_BASE, state: "live" });
+      return API_BASE;
+    }
+    // Stale or dead custom URL; remove it so auto-discovery can take over
+    localStorage.removeItem("custom_api_base");
+  }
 
   try {
     let res = await fetch("./active_backend.json", { cache: "no-store" }).catch(() => null);
@@ -76,19 +87,31 @@ export async function autoDiscoverBackend(): Promise<string | null> {
         const check = await testBackendConnection(url);
         if (check.ok) {
           API_BASE = url.endsWith("/api") ? url : `${url}/api`;
-          updateApiState({ apiBase: API_BASE, state: "online" });
+          updateApiState({ apiBase: API_BASE, state: "live" });
           return API_BASE;
         }
       }
     }
   } catch (e) {}
+
+  // Hardcoded fallback to current known HPC active tunnel
+  const hpcFallback = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
+  try {
+    const checkFallback = await testBackendConnection(hpcFallback);
+    if (checkFallback.ok) {
+      API_BASE = `${hpcFallback}/api`;
+      updateApiState({ apiBase: API_BASE, state: "live" });
+      return API_BASE;
+    }
+  } catch (e) {}
+
   return null;
 }
 
 if (typeof window !== "undefined") {
   setTimeout(() => {
     autoDiscoverBackend().catch(() => {});
-  }, 100);
+  }, 50);
 }
 
 export function isDemoModeEnabled(): boolean {
