@@ -292,3 +292,35 @@ def test_resolve_merge_metadata(client):
     finally:
         conn.close()
 
+
+def test_dedup_none_title_handling():
+    """Ensure studies with None or empty title in DB do not raise TypeError during deduplication."""
+    class MockDB:
+        def query(self, table, filter_dict, order_by=None):
+            return [
+                {"study_id": "s1", "title": None, "doi": "10.8888/none1", "authors": "Smith J", "publication_year": 2021},
+                {"study_id": "s2", "title": None, "doi": "10.8888/none2", "authors": "Jones K", "publication_year": 2022},
+            ]
+
+    db = MockDB()
+    res = deduplicate_studies("test_project", auto_mark=False, db=db)
+    assert res["total_studies"] == 2
+    assert res["total_duplicates"] == 0
+
+
+def test_dedup_title_formatting_variations(client):
+    """Ensure titles differing only by punctuation or formatting are correctly detected as duplicates."""
+    pid = _create_project(client)
+    sid1 = _create_study(
+        client, pid,
+        title="Diagnostic accuracy of CT for acute appendicitis: a systematic review",
+        authors="Smith J; Jones K", year=2022
+    )
+    sid2 = _create_study(
+        client, pid,
+        title="Diagnostic accuracy of CT for acute appendicitis - a systematic review",
+        authors="Smith J & Jones K", year=2022
+    )
+
+    res = deduplicate_studies(pid)
+    assert res["total_duplicates"] >= 1

@@ -11,6 +11,7 @@ study; others are marked as duplicates.
 """
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Optional
 
@@ -20,6 +21,7 @@ from services.db_backend import DBBackend
 from functools import lru_cache
 
 TITLE_SIMILARITY_THRESHOLD = 0.90
+AUTHOR_DELIM_RE = re.compile(r"[,;&]")
 
 # Try python-Levenshtein (fast C extension), fall back to difflib with length bound pre-check
 try:
@@ -102,7 +104,6 @@ def _normalize_title(title: str) -> str:
     """Normalize a title for comparison — lowercase, strip punctuation/whitespace."""
     if not title:
         return ""
-    import re
     t = title.lower().strip()
     # Remove punctuation
     t = re.sub(r"[^\w\s]", " ", t)
@@ -111,13 +112,13 @@ def _normalize_title(title: str) -> str:
     return t
 
 
-def _normalize_authors(authors: str) -> set[str]:
-    """Extract a set of author last names for comparison."""
+@lru_cache(maxsize=2048)
+def _normalize_authors(authors: str) -> frozenset[str]:
+    """Extract a set of author last names for comparison (cached, returns immutable frozenset)."""
     if not authors:
-        return set()
-    import re
-    # Split on common delimiters
-    parts = re.split(r"[,;]&]", authors)
+        return frozenset()
+    # Split on common delimiters (, ; &) using pre-compiled regex
+    parts = AUTHOR_DELIM_RE.split(authors)
     names = set()
     for p in parts:
         p = p.strip().lower()
@@ -127,7 +128,15 @@ def _normalize_authors(authors: str) -> set[str]:
         words = p.split()
         if words:
             names.add(words[0])
-    return names
+    return frozenset(names)
+
+
+def _get_3grams(text: str) -> set[str]:
+    """Extract character 3-grams for ultra-fast title pre-filtering."""
+    t = text.lower().strip()
+    if len(t) < 3:
+        return {t} if t else set()
+    return {t[i:i + 3] for i in range(len(t) - 2)}
 
 
 def _author_overlap(a1: str, a2: str) -> float:
@@ -238,26 +247,48 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
             union(indices[0], indices[j])
 
     # Strategy 3: Title similarity + author/year
-    titles = [s.get("title", "") for s in studies]
+    # Bolt Performance Optimization: Pre-compute normalized titles, title lengths, character 3-grams, and author sets
+    # once prior to the O(N^2) pairwise comparison loop.
+    titles = [s.get("title") or "" for s in studies]
+    norm_titles = [_normalize_title(t) for t in titles]
+    title_lens = [len(nt) for nt in norm_titles]
+    title_3grams = [_get_3grams(nt) for nt in norm_titles]
     years = [s.get("publication_year") for s in studies]
-    authors = [s.get("authors", "") for s in studies]
+    authors = [s.get("authors") or "" for s in studies]
+    norm_author_sets = [_normalize_authors(a) for a in authors]
 
     for i in range(len(studies)):
         t_i = titles[i]
-        if not t_i:
+        l_i = title_lens[i]
+        if not l_i:
             continue
+        g_i = title_3grams[i]
         y_i = years[i]
-        a_i = authors[i]
+        a_set_i = norm_author_sets[i]
 
         for j in range(i + 1, len(studies)):
             if find(i) == find(j):
                 continue  # already grouped
 
-            t_j = titles[j]
-            if not t_j:
+            l_j = title_lens[j]
+            if not l_j:
                 continue
 
-            sim = _title_similarity(t_i, t_j)
+            # Fast path 1: Mathematical upper bound on Levenshtein/SequenceMatcher ratio based on normalized title lengths.
+            min_l = l_i if l_i < l_j else l_j
+            if (2 * min_l) / (l_i + l_j) < TITLE_SIMILARITY_THRESHOLD:
+                continue
+
+            # Fast path 2: C-level character 3-gram set intersection pre-check on normalized titles.
+            # If 3-gram set overlap ratio is < 0.35, SequenceMatcher ratio cannot reach 0.90 threshold.
+            g_j = title_3grams[j]
+            max_g = len(g_i) if len(g_i) > len(g_j) else len(g_j)
+            if max_g > 0 and (len(g_i & g_j) / max_g) < 0.35:
+                continue
+
+            t_j = titles[j]
+            # Order arguments canonically (a <= b) to maximize LRU cache hits
+            sim = _title_similarity(t_i, t_j) if t_i <= t_j else _title_similarity(t_j, t_i)
 
             if sim >= TITLE_SIMILARITY_THRESHOLD:
                 # Strong title match — check author/year as secondary signal
@@ -267,7 +298,11 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                     and y_j is not None
                     and y_i == y_j
                 )
-                author_sim = _author_overlap(a_i, authors[j])
+                a_set_j = norm_author_sets[j]
+                author_sim = (
+                    len(a_set_i & a_set_j) / min(len(a_set_i), len(a_set_j))
+                    if a_set_i and a_set_j else 0.0
+                )
 
                 # If title is very similar (>0.95), group regardless
                 # If title is 0.90-0.95, require either year match or author overlap > 0.3
