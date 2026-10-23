@@ -137,6 +137,14 @@ export function RobAssessmentPage() {
   // Flatten signaling questions list for linear hotkey navigation
   const allSignalingQuestions = useMemo(() => {
     if (!assessment) return [];
+    // Pre-index domain definitions for O(1) lookups during array flattening
+    const domainDefMap = new Map<string, any>();
+    if (assessment.tool_definition?.domains) {
+      for (const d of assessment.tool_definition.domains) {
+        domainDefMap.set(d.key, d);
+      }
+    }
+
     const list: Array<{
       answer: RobSignalingAnswer;
       domain: RobDomainJudgment;
@@ -145,9 +153,15 @@ export function RobAssessmentPage() {
     }> = [];
     let idx = 1;
     for (const dj of assessment.domain_judgments) {
-      const domainDef = assessment.tool_definition?.domains.find((d) => d.key === dj.domain_key);
+      const domainDef = domainDefMap.get(dj.domain_key);
+      const sqDefMap = new Map<string, any>();
+      if (domainDef?.signaling_questions) {
+        for (const q of domainDef.signaling_questions) {
+          sqDefMap.set(q.key, q);
+        }
+      }
       for (const sa of dj.signaling_answers) {
-        const sqDef = domainDef?.signaling_questions.find((q) => q.key === sa.question_key);
+        const sqDef = sqDefMap.get(sa.question_key);
         list.push({
           answer: sa,
           domain: dj,
@@ -158,6 +172,20 @@ export function RobAssessmentPage() {
     }
     return list;
   }, [assessment]);
+
+  // O(1) HashMap lookup for signaling answers by composite key `${domainKey}:${questionKey}`
+  // Replaces quadratic array `.find()` scans inside the nested render loop on every frame/keystroke
+  const signalingAnswerMap = useMemo(() => {
+    const map = new Map<string, RobSignalingAnswer>();
+    if (assessment?.domain_judgments) {
+      for (const dj of assessment.domain_judgments) {
+        for (const sa of dj.signaling_answers) {
+          map.set(`${dj.domain_key}:${sa.question_key}`, sa);
+        }
+      }
+    }
+    return map;
+  }, [assessment?.domain_judgments]);
 
   // Map RoB signaling questions to spatial PDF highlight items for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -821,7 +849,7 @@ export function RobAssessmentPage() {
                   {isExpanded && domainDef && (
                     <div className="p-4 space-y-3.5 bg-[#FAF9F3]/40">
                       {domainDef.signaling_questions.map((sq) => {
-                        const sa = dj.signaling_answers.find((a) => a.question_key === sq.key);
+                        const sa = signalingAnswerMap.get(`${dj.domain_key}:${sq.key}`);
                         if (!sa) return null;
                         if (isReviewMode && sa.needs_human_review !== 1) return null;
 
