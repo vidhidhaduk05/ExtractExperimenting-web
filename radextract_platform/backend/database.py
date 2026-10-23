@@ -8,10 +8,89 @@ Extends the original RadExtract schema with:
   - Dual-reviewer columns on extractions and rob_assessments (via migration)
 """
 from __future__ import annotations
+import os
+import atexit
+import shutil
 import sqlite3
+import logging
+from pathlib import Path
 from typing import Generator, Union
 from config import settings, ensure_dirs
 from services.db_backend import DBBackend, SQLiteBackend, get_db_backend, init_dynamodb_tables
+
+logger = logging.getLogger("radextract.database")
+
+_ORIGINAL_PERSISTENT_DB_PATH: str | None = None
+_SCRATCH_STAGED: bool = False
+
+
+def stage_db_to_scratch(scratch_dir: str | None = None) -> str:
+    """Stage radextract.db from academic NFS onto fast node-local scratch storage (/tmp or $TMPDIR).
+    Eliminates SQLite 'database is locked' errors under multi-worker concurrent loads.
+    """
+    global _ORIGINAL_PERSISTENT_DB_PATH, _SCRATCH_STAGED
+    if _SCRATCH_STAGED:
+        return settings.db_path
+
+    persistent_path = Path(settings.db_path).resolve()
+    target_dir = Path(scratch_dir or os.environ.get("TMPDIR") or "/tmp")
+    target_dir.mkdir(parents=True, exist_ok=True)
+    scratch_path = (target_dir / "radextract.db").resolve()
+
+    # Do not stage if already in scratch directory
+    if persistent_path == scratch_path or str(persistent_path).startswith(str(target_dir)):
+        _SCRATCH_STAGED = True
+        return str(persistent_path)
+
+    _ORIGINAL_PERSISTENT_DB_PATH = str(persistent_path)
+
+    # If persistent DB exists, copy over to node-local scratch
+    if persistent_path.exists():
+        if not scratch_path.exists() or persistent_path.stat().st_mtime > scratch_path.stat().st_mtime:
+            shutil.copy2(persistent_path, scratch_path)
+            for ext in ("-wal", "-shm"):
+                src = Path(f"{persistent_path}{ext}")
+                dst = Path(f"{scratch_path}{ext}")
+                if src.exists():
+                    shutil.copy2(src, dst)
+            logger.info(f"Staged persistent DB {persistent_path} to local scratch {scratch_path}")
+
+    settings.db_path = str(scratch_path)
+    _SCRATCH_STAGED = True
+
+    atexit.register(sync_scratch_to_persistent)
+    return str(scratch_path)
+
+
+def sync_scratch_to_persistent():
+    """Checkpoint WAL and sync node-local scratch DB back to persistent NFS storage on exit."""
+    global _ORIGINAL_PERSISTENT_DB_PATH, _SCRATCH_STAGED
+    if not _SCRATCH_STAGED or not _ORIGINAL_PERSISTENT_DB_PATH:
+        return
+    scratch_path = Path(settings.db_path)
+    persistent_path = Path(_ORIGINAL_PERSISTENT_DB_PATH)
+
+    if scratch_path.exists():
+        try:
+            conn = sqlite3.connect(str(scratch_path), timeout=30.0)
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            conn.close()
+        except Exception as e:
+            logger.warning(f"WAL checkpoint before sync warning: {e}")
+
+        try:
+            persistent_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(scratch_path, persistent_path)
+            for ext in ("-wal", "-shm"):
+                p = Path(f"{persistent_path}{ext}")
+                if p.exists():
+                    try:
+                        p.unlink()
+                    except Exception:
+                        pass
+            logger.info(f"Successfully synced scratch DB {scratch_path} back to persistent {persistent_path}")
+        except Exception as e:
+            logger.error(f"Failed to sync scratch DB to {persistent_path}: {e}")
 
 
 SCHEMA_SQL = """
@@ -683,6 +762,7 @@ def get_connection() -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=60000")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA synchronous=NORMAL")
     return conn
 
 

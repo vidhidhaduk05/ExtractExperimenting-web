@@ -52,15 +52,26 @@ rate_limiter = RateLimiter(max_requests=300, window_seconds=60.0)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize database and storage on startup."""
+    import os
     setup_logging(
         level="INFO",
         json_format=(settings.env == "production"),
     )
     logger.info(f"Starting RadExtract API (env={settings.env}, db={settings.db_backend}, storage={settings.storage_backend})")
+
+    # Stage radextract.db onto node-local scratch (/tmp or $TMPDIR) to avoid NFS locking under multi-worker loads
+    if os.environ.get("STAGE_DB_SCRATCH", "1") == "1" and settings.db_backend == "sqlite":
+        from database import stage_db_to_scratch, sync_scratch_to_persistent
+        stage_db_to_scratch()
+
     ensure_dirs()
     init_db()
     init_s3_buckets()
     yield
+    # On graceful exit, flush WAL and sync scratch DB back to persistent NFS storage
+    if settings.db_backend == "sqlite":
+        from database import sync_scratch_to_persistent
+        sync_scratch_to_persistent()
 
 
 def create_app() -> FastAPI:
@@ -72,10 +83,15 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS
+    # CORS - Explicit origins plus regex for GitHub Pages and Cloudflare Tunnels
+    origins = list(settings.cors_origins) if isinstance(settings.cors_origins, (list, tuple)) else ["*"]
+    if "https://vidhidhaduk05.github.io" not in origins:
+        origins.append("https://vidhidhaduk05.github.io")
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=origins,
+        allow_origin_regex=r"^https://.*\.github\.io/?.*|^https://.*\.trycloudflare\.com/?.*|^http://(localhost|127\.0\.0\.1)(:\d+)?/?.*",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
