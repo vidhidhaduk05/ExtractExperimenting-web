@@ -162,6 +162,11 @@ class TestHypothesisEndpoints:
 
 class TestAutoGenerateVariables:
 
+    @pytest.fixture(autouse=True)
+    def disable_external_llm(self, monkeypatch):
+        import services.variable_generator
+        monkeypatch.setattr(services.variable_generator, "is_llm_available", lambda: False)
+
     def test_auto_generate_success(self, client, project):
         """Auto-generate should create variables from PICO."""
         # First set PICO

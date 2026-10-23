@@ -1,0 +1,3213 @@
+[
+  {
+    "id": "hypothesis",
+    "label": "Hypothesis stated",
+    "question": "Does the paper state a specific hypothesis or research question that the experiments test?",
+    "domain": "design",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "To test the hypothesis that volatile anesthesia accelerates breast cancer recurrence after surgical resection of the primary tumor, we used three mouse models of breast cancer.",
+      "section": "Abstract",
+      "page": 1,
+      "rects": [
+        [
+          1,
+          0.3268,
+          0.7948,
+          0.5938,
+          0.015
+        ],
+        [
+          1,
+          0.3268,
+          0.8125,
+          0.6044,
+          0.015
+        ]
+      ],
+      "paraRects": [
+        [
+          1,
+          0.0588,
+          0.4364,
+          0.8724000000000001,
+          0.4618
+        ]
+      ]
+    }
+  },
+  {
+    "id": "primary_outcome",
+    "label": "Primary outcome defined",
+    "question": "Does the paper name a primary outcome measure for its main experiment?",
+    "domain": "design",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.89,
+    "evidence": 0.89,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Survival analyses were used to explore group differences (sevofluorane vs. propofol) in time taken to primary tumor recurrence and time to metastasis (distant recurrence).",
+      "section": "Methods",
+      "page": 5,
+      "rects": [
+        [
+          5,
+          0.3268,
+          0.7348,
+          0.5899,
+          0.0158
+        ],
+        [
+          5,
+          0.3268,
+          0.7513,
+          0.6023,
+          0.0158
+        ],
+        [
+          5,
+          0.3268,
+          0.7677,
+          0.5932,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          5,
+          0.3268,
+          0.7184,
+          0.6067,
+          0.1471
+        ]
+      ]
+    }
+  },
+  {
+    "id": "control_group",
+    "label": "Control group",
+    "question": "Does the paper include a control or comparison group for its main experiment?",
+    "domain": "design",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "We compared volatile sevoflurane anesthesia with intravenous propofol anesthesia and used serial non-invasive bioluminescent imaging to track primary tumor recurrence and metastatic recurrence.",
+      "section": "Abstract",
+      "page": 1,
+      "rects": [
+        [
+          1,
+          0.3268,
+          0.8125,
+          0.6044,
+          0.015
+        ],
+        [
+          1,
+          0.3268,
+          0.8302,
+          0.5949,
+          0.015
+        ],
+        [
+          1,
+          0.3268,
+          0.8478,
+          0.5876,
+          0.015
+        ],
+        [
+          1,
+          0.3268,
+          0.8655,
+          0.6036,
+          0.015
+        ]
+      ],
+      "paraRects": [
+        [
+          1,
+          0.0588,
+          0.4364,
+          0.8724000000000001,
+          0.4618
+        ]
+      ]
+    }
+  },
+  {
+    "id": "n_per_group",
+    "label": "Group sizes reported",
+    "question": "Does the paper report the number of animals, participants, or samples in each experimental group?",
+    "domain": "design",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.96,
+    "evidence": 0.96,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Recurrence after primary tumor resection was analyzed over seven individual experimental replicates, each with 7–9 mice per condition: four replicates with MDA-MB-231 (total n = 33– 34 mice), two replicates with 66cl4 (n = 15–17 mice) and a single replicate with 4T1.2 (n = 7–9 mice).",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.8333,
+          0.5913,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.8497,
+          0.6105,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.8662,
+          0.6101,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.8826,
+          0.0408,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          4,
+          0.3268,
+          0.7513,
+          0.6142,
+          0.14710000000000012
+        ]
+      ]
+    }
+  },
+  {
+    "id": "sample_size_rationale",
+    "label": "Sample size justified",
+    "question": "Does the paper explain how the sample size was chosen, for example with a power calculation?",
+    "domain": "design",
+    "guideline": "ARRIVE 2",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.08,
+    "evidence": 0.08,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "The effect of anesthetic type on cancer progression was assessed by examining the effect on both the onset and the kinetics of cancer recurrence. Survival analyses were used to explore group differences (sevofluorane vs. propofol) in time taken to primary tumor recurrence and …",
+      "section": "Methods",
+      "page": 5,
+      "rects": [
+        [
+          5,
+          0.3268,
+          0.7184,
+          0.6067,
+          0.1471
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:4:ev:rects"
+    }
+  },
+  {
+    "id": "randomization",
+    "label": "Randomization",
+    "question": "Does the paper state that subjects or samples were randomly allocated to experimental groups?",
+    "domain": "design",
+    "guideline": "ARRIVE 4",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.97,
+    "evidence": 0.97,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "On the day of surgery, mice were randomly assigned to surgical resection under two different anesthetic techniques.",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.5212,
+          0.6049,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.5376,
+          0.6019,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          4,
+          0.3268,
+          0.5212,
+          0.6142,
+          0.18000000000000005
+        ]
+      ]
+    }
+  },
+  {
+    "id": "randomization_method",
+    "label": "Randomization method",
+    "question": "Does the paper describe the method used to generate the random allocation sequence?",
+    "domain": "design",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.14,
+    "evidence": 0.14,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "On the day of surgery, mice were randomly assigned to surgical resection under two different anesthetic techniques. For the volatile condition, anesthesia was maintained with 3–5% sevoflurane (Baxter), adjusted as required to maintain a stable depth of anesthesia (loss of …",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.5212,
+          0.6142,
+          0.18000000000000005
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:6:ev:rects"
+    }
+  },
+  {
+    "id": "blinding_allocation",
+    "label": "Blinded allocation",
+    "question": "Does the paper state that the people who allocated subjects or gave the treatments did not know which group each subject was in?",
+    "domain": "design",
+    "guideline": "ARRIVE 5",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.25,
+    "evidence": 0.25,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Mice were monitored for primary tumor recurrence and onset of metastasis twice a week using bioluminescence imaging by an investigator blinded to the assigned anesthesia condition used during surgical resection. Mice were injected with d-luciferin (150 mg/kg, Promega) in 100 μL …",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.7513,
+          0.6142,
+          0.14710000000000012
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:7:ev:rects"
+    }
+  },
+  {
+    "id": "blinding_outcome",
+    "label": "Blinded assessment",
+    "question": "Does the paper state that outcomes were assessed, or data analyzed, by someone who did not know which group each subject was in?",
+    "domain": "design",
+    "guideline": "ARRIVE 5",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.97,
+    "evidence": 0.97,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Statistical analyses were undertaken by an investigator (RB) blinded to treatment conditions.",
+      "section": "Methods",
+      "page": 6,
+      "rects": [
+        [
+          6,
+          0.3268,
+          0.4717,
+          0.6042,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.4882,
+          0.6072,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          6,
+          0.3268,
+          0.3732,
+          0.6099,
+          0.1472000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "inclusion_criteria",
+    "label": "Inclusion criteria",
+    "question": "Does the paper state criteria for including or excluding subjects, samples, or data points?",
+    "domain": "design",
+    "guideline": "ARRIVE 3",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.45,
+    "evidence": 0.45,
+    "outcome": "mid",
+    "status": "Unclear",
+    "ev": {
+      "kind": "sentence",
+      "text": "No mice were excluded from the analysis.",
+      "section": "Methods",
+      "page": 5,
+      "rects": [
+        [
+          5,
+          0.3268,
+          0.7841,
+          0.5793,
+          0.0158
+        ],
+        [
+          5,
+          0.3268,
+          0.8005,
+          0.5739,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          5,
+          0.3268,
+          0.7184,
+          0.6067,
+          0.1471
+        ]
+      ]
+    }
+  },
+  {
+    "id": "exclusions_reported",
+    "label": "Exclusions reported",
+    "question": "Does the paper report whether any subjects, samples, or data points were excluded from analysis?",
+    "domain": "design",
+    "guideline": "ARRIVE 3",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.91,
+    "evidence": 0.91,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "No mice were excluded from the analysis.",
+      "section": "Methods",
+      "page": 5,
+      "rects": [
+        [
+          5,
+          0.3268,
+          0.7841,
+          0.5793,
+          0.0158
+        ],
+        [
+          5,
+          0.3268,
+          0.8005,
+          0.5739,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          5,
+          0.3268,
+          0.7184,
+          0.6067,
+          0.1471
+        ]
+      ]
+    }
+  },
+  {
+    "id": "replication",
+    "label": "Independent replication",
+    "question": "Does the paper state that key experiments were repeated independently or replicated in more than one model?",
+    "domain": "design",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.94,
+    "evidence": 0.94,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Recurrence after primary tumor resection was analyzed over seven individual experimental replicates, each with 7–9 mice per condition: four replicates with MDA-MB-231 (total n = 33– 34 mice), two replicates with 66cl4 (n = 15–17 mice) and a single replicate with 4T1.2 (n = 7–9 mice).",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.8333,
+          0.5913,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.8497,
+          0.6105,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.8662,
+          0.6101,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.8826,
+          0.0408,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          4,
+          0.3268,
+          0.7513,
+          0.6142,
+          0.14710000000000012
+        ]
+      ]
+    }
+  },
+  {
+    "id": "replicate_type",
+    "label": "Replicate type defined",
+    "question": "Does the paper say whether replicates are biological or technical replicates?",
+    "domain": "design",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.21,
+    "evidence": 0.21,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Mice were monitored for primary tumor recurrence and onset of metastasis twice a week using bioluminescence imaging by an investigator blinded to the assigned anesthesia condition used during surgical resection. Mice were injected with d-luciferin (150 mg/kg, Promega) in 100 μL …",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.7513,
+          0.6142,
+          0.14710000000000012
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:12:ev:rects"
+    }
+  },
+  {
+    "id": "tests_named",
+    "label": "Tests named",
+    "question": "Does the paper name the statistical tests or models used to analyze the data?",
+    "domain": "stats",
+    "guideline": "ARRIVE 7",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Kaplan-Meier survival analysis and Bayesian regression were performed with the survival and brms packages for R 3.5 [30–32].",
+      "section": "Methods",
+      "page": 6,
+      "rects": [
+        [
+          6,
+          0.3268,
+          0.4061,
+          0.6033,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.4224,
+          0.6029,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          6,
+          0.3268,
+          0.3732,
+          0.6099,
+          0.1472000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "unit_of_analysis",
+    "label": "Experimental unit",
+    "question": "Does the paper state what the experimental unit of analysis is, such as a single animal, cage, or culture?",
+    "domain": "stats",
+    "guideline": "ARRIVE 1",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.9,
+    "evidence": 0.9,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "S1 Table (see S1 File) describes the groups that were compared and the total number of mice (experimental unit) in each group.",
+      "section": "Methods",
+      "page": 5,
+      "rects": [
+        [
+          5,
+          0.3268,
+          0.7677,
+          0.5932,
+          0.0158
+        ],
+        [
+          5,
+          0.3268,
+          0.7841,
+          0.5793,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          5,
+          0.3268,
+          0.7184,
+          0.6067,
+          0.1471
+        ]
+      ]
+    }
+  },
+  {
+    "id": "assumptions",
+    "label": "Assumptions checked",
+    "question": "Does the paper describe checking the assumptions of its statistical tests, such as normality?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.13,
+    "evidence": 0.13,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Bayesian credibility intervals (CI) at the 95% level were used to evaluate the estimated group differences in survival time and recurrence rates, with a CI crossing zero indicating that a difference cannot be detected. Kaplan-Meier survival analysis and Bayesian regression were …",
+      "section": "Methods",
+      "page": 6,
+      "rects": [
+        [
+          6,
+          0.3268,
+          0.3732,
+          0.6099,
+          0.1472000000000001
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:15:ev:rects"
+    }
+  },
+  {
+    "id": "multiple_comparisons",
+    "label": "Multiplicity handled",
+    "question": "Does the paper describe correcting for multiple comparisons or a pooled approach that addresses them?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.94,
+    "evidence": 0.94,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Differences in immune cell populations were tested using nonparametric Wilcox tests and false discovery rate was used to correct for multiple comparisons.",
+      "section": "Methods",
+      "page": 6,
+      "rects": [
+        [
+          6,
+          0.3268,
+          0.4224,
+          0.6029,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.4389,
+          0.6092,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.4553,
+          0.5904,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          6,
+          0.3268,
+          0.3732,
+          0.6099,
+          0.1472000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "uncertainty",
+    "label": "Uncertainty reported",
+    "question": "Does the paper report confidence intervals, credible intervals, or standard errors for its main estimates?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.94,
+    "evidence": 0.94,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Bayesian credibility intervals (CI) at the 95% level were used to evaluate the estimated group differences in survival time and recurrence rates, with a CI crossing zero indicating that a difference cannot be detected.",
+      "section": "Methods",
+      "page": 6,
+      "rects": [
+        [
+          6,
+          0.3464,
+          0.3732,
+          0.5536,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.3897,
+          0.6099,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.4061,
+          0.6033,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          6,
+          0.3268,
+          0.3732,
+          0.6099,
+          0.1472000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "effect_size",
+    "label": "Effect sizes",
+    "question": "Does the paper report the size of the effect or difference between groups, not only whether it was significant?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.6,
+    "evidence": 0.6,
+    "outcome": "mid",
+    "status": "Unclear",
+    "ev": {
+      "kind": "sentence",
+      "text": "A metaanalysis comparing anesthetic technique found that use of propofol TIVA anesthesia was associated with improved overall survival compared to volatile anesthesia (pooled HR, 0.76; 95% CI, 0.63–0.92; P < 0.01) [47].",
+      "section": "Discussion",
+      "page": 12,
+      "rects": [
+        [
+          12,
+          0.3268,
+          0.5209,
+          0.611,
+          0.0158
+        ],
+        [
+          12,
+          0.3268,
+          0.5373,
+          0.6123,
+          0.0158
+        ],
+        [
+          12,
+          0.3268,
+          0.5538,
+          0.597,
+          0.0158
+        ],
+        [
+          12,
+          0.3268,
+          0.5702,
+          0.5833,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          12,
+          0.3268,
+          0.5046,
+          0.6123,
+          0.22909999999999997
+        ]
+      ]
+    }
+  },
+  {
+    "id": "error_bars",
+    "label": "Error bars defined",
+    "question": "Does the paper define what its error bars or dispersion measures represent, such as SD or SEM?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.89,
+    "evidence": 0.89,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Data show mean ± SD.",
+      "section": "Results",
+      "page": 9,
+      "rects": [
+        [
+          9,
+          0.3268,
+          0.796,
+          0.602,
+          0.0126
+        ]
+      ],
+      "paraRects": [
+        [
+          8,
+          0.2498,
+          0.4254,
+          0.6912999999999999,
+          0.47120000000000006
+        ],
+        [
+          9,
+          0.3268,
+          0.7361,
+          0.6059,
+          0.15250000000000008
+        ]
+      ]
+    }
+  },
+  {
+    "id": "stats_software",
+    "label": "Analysis software",
+    "question": "Does the paper name the software or packages used for statistical analysis?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Kaplan-Meier survival analysis and Bayesian regression were performed with the survival and brms packages for R 3.5 [30–32].",
+      "section": "Methods",
+      "page": 6,
+      "rects": [
+        [
+          6,
+          0.3268,
+          0.4061,
+          0.6033,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.4224,
+          0.6029,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          6,
+          0.3268,
+          0.3732,
+          0.6099,
+          0.1472000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "significance_only",
+    "label": "p-value only reporting",
+    "question": "Does the paper report results only as significant or not significant, without estimates of effect size?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "flag",
+    "applies": true,
+    "p": 0.19,
+    "evidence": 0.81,
+    "outcome": "good",
+    "status": "Not seen",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Survival analyses found that the kinetics of cancer recurrence and impact on survival were similar regardless of the anesthetic agent used during cancer surgery. Vascular permeability, immune cell infiltration and cytokine profiles showed no statistical difference after …",
+      "section": "Abstract",
+      "page": 2,
+      "rects": [
+        [
+          2,
+          0.3268,
+          0.1176,
+          0.6087,
+          0.0679
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:21:ev:rects"
+    }
+  },
+  {
+    "id": "species_strain",
+    "label": "Species & strain",
+    "question": "Does the paper report the species and strain of the animals used?",
+    "domain": "materials",
+    "guideline": "ARRIVE 8",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.97,
+    "evidence": 0.97,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Female BALB/c nu/nu (Animal Resources Centre, Western Australia) and BALB/c mice (Monash University, Australia) were housed in specific pathogen free cages in a temperature and humidity-controlled environment with a 12h light-dark cycle.",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.4542,
+          0.6125,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.4706,
+          0.5829,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.487,
+          0.565,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.5035,
+          0.601,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "animal_sex",
+    "label": "Sex reported",
+    "question": "Does the paper report the sex of the animals used?",
+    "domain": "materials",
+    "guideline": "ARRIVE 8",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Female BALB/c nu/nu (Animal Resources Centre, Western Australia) and BALB/c mice (Monash University, Australia) were housed in specific pathogen free cages in a temperature and humidity-controlled environment with a 12h light-dark cycle.",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.4542,
+          0.6125,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.4706,
+          0.5829,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.487,
+          0.565,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.5035,
+          0.601,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "animal_age",
+    "label": "Age or weight",
+    "question": "Does the paper report the age or weight of the animals used?",
+    "domain": "materials",
+    "guideline": "ARRIVE 8",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.9,
+    "evidence": 0.9,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Mice were acquired at 6–8 weeks old and were given one week to acclimate before experimentation commenced.",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.5199,
+          0.6054,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.5363,
+          0.6051,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "animal_source",
+    "label": "Animal source",
+    "question": "Does the paper name the supplier or source of the animals?",
+    "domain": "materials",
+    "guideline": "ARRIVE 8",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.96,
+    "evidence": 0.96,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Female BALB/c nu/nu (Animal Resources Centre, Western Australia) and BALB/c mice (Monash University, Australia) were housed in specific pathogen free cages in a temperature and humidity-controlled environment with a 12h light-dark cycle.",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.4542,
+          0.6125,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.4706,
+          0.5829,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.487,
+          0.565,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.5035,
+          0.601,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "housing",
+    "label": "Housing & husbandry",
+    "question": "Does the paper describe how the animals were housed, such as cage conditions, light cycle, or food and water access?",
+    "domain": "materials",
+    "guideline": "ARRIVE 15",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Female BALB/c nu/nu (Animal Resources Centre, Western Australia) and BALB/c mice (Monash University, Australia) were housed in specific pathogen free cages in a temperature and humidity-controlled environment with a 12h light-dark cycle.",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.4542,
+          0.6125,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.4706,
+          0.5829,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.487,
+          0.565,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.5035,
+          0.601,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "cell_source",
+    "label": "Cell line source",
+    "question": "Does the paper name the source of each cell line used?",
+    "domain": "materials",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.94,
+    "evidence": 0.94,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "The human metastatic breast cancer cell line MDA-MB-231HM was a kind gift from Dr Zhou, Fudan University, Shanghai Cancer Centre, China.",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.6274,
+          0.6064,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.6438,
+          0.6036,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.6274,
+          0.6133,
+          0.17990000000000006
+        ]
+      ]
+    }
+  },
+  {
+    "id": "cell_authentication",
+    "label": "Cell authentication",
+    "question": "Does the paper state that cell lines were authenticated, for example by STR profiling?",
+    "domain": "materials",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Cell line identities were confirmed by short tandem repeat profiling (Cellbank, Australia).",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.7587,
+          0.6133,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.7751,
+          0.5849,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.6274,
+          0.6133,
+          0.17990000000000006
+        ]
+      ]
+    }
+  },
+  {
+    "id": "mycoplasma",
+    "label": "Mycoplasma testing",
+    "question": "Does the paper state that cell lines were tested for mycoplasma contamination?",
+    "domain": "materials",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Cancer cell lines were maintained at 37˚C and 5% CO2 and confirmed to be negative for mycoplasma [26].",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.7423,
+          0.6116,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.7587,
+          0.6133,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.6274,
+          0.6133,
+          0.17990000000000006
+        ]
+      ]
+    }
+  },
+  {
+    "id": "antibody_ids",
+    "label": "Antibody identifiers",
+    "question": "Does the paper give clone names, catalog numbers, or RRIDs for the antibodies used?",
+    "domain": "materials",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.14,
+    "evidence": 0.14,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "The following antibodies from BD Pharmingen, eBioscience and Biolegend were used for staining: Phycoerythrin (PE) cyanine dye (Cy) PECy7-conjugated CD49b, PECy7-CD11b, Fluorescein-isothiocyanate (FITC)-conjugated Ly6G, FITC-Ly6G, FITC-CD4, Bright Violet (BV) BV710-conjugated …",
+      "section": "Methods",
+      "page": 5,
+      "rects": [
+        [
+          5,
+          0.3268,
+          0.3888,
+          0.6123,
+          0.11430000000000001
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:30:ev:rects"
+    }
+  },
+  {
+    "id": "reagent_sources",
+    "label": "Reagent sources",
+    "question": "Does the paper name the manufacturer or supplier of key reagents?",
+    "domain": "materials",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.96,
+    "evidence": 0.96,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "MDA-MB-231 and 4T1.2 were cultured in Dulbecco’s Modified Eagle’s medium-GlutaMAX media (Life Technologies), and 66cl4 was cultured in alpha-Modified Eagle’s Medium-GlutaMAX media (Life Technologies).",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.693,
+          0.591,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.7094,
+          0.5854,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.7258,
+          0.5833,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.6274,
+          0.6133,
+          0.17990000000000006
+        ]
+      ]
+    }
+  },
+  {
+    "id": "doses",
+    "label": "Doses & routes",
+    "question": "Does the paper report the doses and routes of administration for treatments given?",
+    "domain": "materials",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.94,
+    "evidence": 0.94,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "For the intravenous propofol condition, after brief induction with 3–5% sevoflurane, the lateral tail vein was catheterized and 2% Propofol-Lipuro (Braun) was administered with an initial bolus of 27 mg/kg over 60 seconds.",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.5705,
+          0.6137,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.5869,
+          0.6106,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.6033,
+          0.5974,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.6197,
+          0.6084,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          4,
+          0.3268,
+          0.5212,
+          0.6142,
+          0.18000000000000005
+        ]
+      ]
+    }
+  },
+  {
+    "id": "instruments",
+    "label": "Instruments named",
+    "question": "Does the paper name the instruments or equipment models used for measurements?",
+    "domain": "materials",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.97,
+    "evidence": 0.97,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Clear surgical margins were confirmed by bioluminescence imaging with injection of d-luciferin (150 mg.kg-1, Promega) in 100 μL Dulbecco’s Phosphate Buffered Saline via tail vein, and bioluminescence from any residual tumor cells was quantified using an IVIS Lumina II (Perkin Elmer) with Living Image Software.",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.1763,
+          0.6064,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.1927,
+          0.575,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.2091,
+          0.6136,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.2255,
+          0.5935,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.8497,
+          0.6012,
+          0.04870000000000008
+        ],
+        [
+          4,
+          0.3268,
+          0.0942,
+          0.6136,
+          0.19639999999999996
+        ]
+      ]
+    }
+  },
+  {
+    "id": "data_statement",
+    "label": "Data statement",
+    "question": "Does the paper include a data availability statement?",
+    "domain": "openness",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Data Availability Statement: All data included in the paper are available at DOI: 10.5281/zenodo.",
+      "section": "Abstract",
+      "page": 1,
+      "rects": [
+        [
+          1,
+          0.0588,
+          0.7525,
+          0.2343,
+          0.0126
+        ],
+        [
+          1,
+          0.0588,
+          0.7664,
+          0.2282,
+          0.0126
+        ]
+      ],
+      "paraRects": [
+        [
+          1,
+          0.0588,
+          0.7525,
+          0.23430000000000004,
+          0.026499999999999968
+        ]
+      ]
+    }
+  },
+  {
+    "id": "data_repository",
+    "label": "Data in a repository",
+    "question": "Does the paper deposit its data in a public repository and give an accession number, DOI, or link?",
+    "domain": "openness",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Data Availability Statement: All data included in the paper are available at DOI: 10.5281/zenodo.",
+      "section": "Abstract",
+      "page": 1,
+      "rects": [
+        [
+          1,
+          0.0588,
+          0.7525,
+          0.2343,
+          0.0126
+        ],
+        [
+          1,
+          0.0588,
+          0.7664,
+          0.2282,
+          0.0126
+        ]
+      ],
+      "paraRects": [
+        [
+          1,
+          0.0588,
+          0.7525,
+          0.23430000000000004,
+          0.026499999999999968
+        ]
+      ]
+    }
+  },
+  {
+    "id": "data_on_request",
+    "label": "Data only on request",
+    "question": "Does the paper say its data are available only on request from the authors?",
+    "domain": "openness",
+    "guideline": null,
+    "polarity": "flag",
+    "applies": true,
+    "p": 0.02,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Not seen",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Data Availability Statement: All data included in the paper are available at DOI: 10.5281/zenodo.",
+      "section": "Abstract",
+      "page": 1,
+      "rects": [
+        [
+          1,
+          0.0588,
+          0.7525,
+          0.23430000000000004,
+          0.026499999999999968
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:36:ev:rects"
+    }
+  },
+  {
+    "id": "code_available",
+    "label": "Code available",
+    "question": "Does the paper state that its analysis code is publicly available?",
+    "domain": "openness",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.16,
+    "evidence": 0.16,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Bayesian credibility intervals (CI) at the 95% level were used to evaluate the estimated group differences in survival time and recurrence rates, with a CI crossing zero indicating that a difference cannot be detected. Kaplan-Meier survival analysis and Bayesian regression were …",
+      "section": "Methods",
+      "page": 6,
+      "rects": [
+        [
+          6,
+          0.3268,
+          0.3732,
+          0.6099,
+          0.1472000000000001
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:37:ev:rects"
+    }
+  },
+  {
+    "id": "code_link",
+    "label": "Code link",
+    "question": "Does the paper give a link or DOI for its analysis code?",
+    "domain": "openness",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.25,
+    "evidence": 0.25,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Data Availability Statement: All data included in the paper are available at DOI: 10.5281/zenodo.",
+      "section": "Abstract",
+      "page": 1,
+      "rects": [
+        [
+          1,
+          0.0588,
+          0.7525,
+          0.23430000000000004,
+          0.026499999999999968
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:38:ev:rects"
+    }
+  },
+  {
+    "id": "protocol_shared",
+    "label": "Protocol shared",
+    "question": "Does the paper link to a detailed protocol, such as on protocols.io or in the supplement?",
+    "domain": "openness",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.29,
+    "evidence": 0.29,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "S1 File. Supporting information including S1 Fig, S1 and S2 Tables.",
+      "section": "Back matter",
+      "page": 13,
+      "rects": [
+        [
+          13,
+          0.3268,
+          0.1996,
+          0.45589999999999997,
+          0.01580000000000001
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:39:ev:rects"
+    }
+  },
+  {
+    "id": "preregistration",
+    "label": "Preregistered",
+    "question": "Does the paper state that the study or its analysis plan was preregistered?",
+    "domain": "openness",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.03,
+    "evidence": 0.03,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "All procedures involving mice were carried out under protocols approved by the Institutional Animal Ethics Committee (MIPS-2015-13121, Monash University, Australia) and in accordance with guidelines of the National Health and Medical Research Council, Australia. Female BALB/c …",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:40:ev:rects"
+    }
+  },
+  {
+    "id": "supplement",
+    "label": "Supporting files",
+    "question": "Does the paper provide supplementary data, tables, or figures?",
+    "domain": "openness",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Supporting information including S1 Fig, S1 and S2 Tables.",
+      "section": "Back matter",
+      "page": 13,
+      "rects": [
+        [
+          13,
+          0.3268,
+          0.1996,
+          0.4559,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          13,
+          0.3268,
+          0.1996,
+          0.45589999999999997,
+          0.01580000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "raw_data",
+    "label": "Raw data",
+    "question": "Does the paper state that raw or individual-level data are shared, not only summary statistics?",
+    "domain": "openness",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.87,
+    "evidence": 0.87,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Data Availability Statement: All data included in the paper are available at DOI: 10.5281/zenodo.",
+      "section": "Abstract",
+      "page": 1,
+      "rects": [
+        [
+          1,
+          0.0588,
+          0.7525,
+          0.2343,
+          0.0126
+        ],
+        [
+          1,
+          0.0588,
+          0.7664,
+          0.2282,
+          0.0126
+        ]
+      ],
+      "paraRects": [
+        [
+          1,
+          0.0588,
+          0.7525,
+          0.23430000000000004,
+          0.026499999999999968
+        ]
+      ]
+    }
+  },
+  {
+    "id": "ethics_approval",
+    "label": "Ethics approval",
+    "question": "Does the paper state that an ethics committee or institutional board approved the study?",
+    "domain": "ethics",
+    "guideline": "ARRIVE 13",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "All procedures involving mice were carried out under protocols approved by the Institutional Animal Ethics Committee (MIPS-2015-13121, Monash University, Australia) and in accordance with guidelines of the National Health and Medical Research Council, Australia.",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6054,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.4378,
+          0.5921,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.4542,
+          0.6125,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "approval_number",
+    "label": "Approval number",
+    "question": "Does the paper give the protocol or approval number from the ethics committee?",
+    "domain": "ethics",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "All procedures involving mice were carried out under protocols approved by the Institutional Animal Ethics Committee (MIPS-2015-13121, Monash University, Australia) and in accordance with guidelines of the National Health and Medical Research Council, Australia.",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6054,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.4378,
+          0.5921,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.4542,
+          0.6125,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "consent",
+    "label": "Informed consent",
+    "question": "Does the paper state that informed consent was obtained from participants?",
+    "domain": "ethics",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.02,
+    "evidence": 0.02,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "All procedures involving mice were carried out under protocols approved by the Institutional Animal Ethics Committee (MIPS-2015-13121, Monash University, Australia) and in accordance with guidelines of the National Health and Medical Research Council, Australia. Female BALB/c …",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:45:ev:rects"
+    }
+  },
+  {
+    "id": "humane_endpoints",
+    "label": "Humane endpoints",
+    "question": "Does the paper define humane endpoints for the animals?",
+    "domain": "ethics",
+    "guideline": "ARRIVE 16",
+    "polarity": "good",
+    "applies": true,
+    "p": 0.96,
+    "evidence": 0.96,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Humane endpoints based on body weight loss, body condition score and metastatic progression tracked by non-invasive bioluminescence imaging were used.",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.5363,
+          0.6051,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.5527,
+          0.5772,
+          0.0158
+        ],
+        [
+          3,
+          0.3268,
+          0.5691,
+          0.5912,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "analgesia",
+    "label": "Anesthesia & analgesia",
+    "question": "Does the paper describe the anesthesia or pain relief given to the animals?",
+    "domain": "ethics",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "For the volatile condition, anesthesia was maintained with 3–5% sevoflurane (Baxter), adjusted as required to maintain a stable depth of anesthesia (loss of corneal and pedal reflex, respiratory rate less than 100 breaths per minute).",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.5376,
+          0.6019,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.554,
+          0.6017,
+          0.0158
+        ],
+        [
+          4,
+          0.3268,
+          0.5705,
+          0.6137,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          4,
+          0.3268,
+          0.5212,
+          0.6142,
+          0.18000000000000005
+        ]
+      ]
+    }
+  },
+  {
+    "id": "euthanasia",
+    "label": "Euthanasia method",
+    "question": "Does the paper describe how the animals were euthanized?",
+    "domain": "ethics",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Mice were euthanized with CO2.",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.5691,
+          0.5912,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "funding",
+    "label": "Funding statement",
+    "question": "Does the paper state who funded the work?",
+    "domain": "ethics",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Funding: This work was supported by the Australian and New Zealand College of Anaesthetists (17/003, JD, BR) and Perpetual Trustees (JD, BR), National Health and Medical Research Council (NHMRC) grants 1147498 (ES, FH, OM, BR), 1160191 (BR), National Breast Cancer Foundation IIRS-20-025 (ES, BR), and The",
+      "section": "Abstract",
+      "page": 1,
+      "rects": [
+        [
+          1,
+          0.0588,
+          0.8018,
+          0.2013,
+          0.0126
+        ],
+        [
+          1,
+          0.0588,
+          0.8157,
+          0.1848,
+          0.0126
+        ],
+        [
+          1,
+          0.0588,
+          0.8296,
+          0.219,
+          0.0126
+        ],
+        [
+          1,
+          0.0588,
+          0.8434,
+          0.2267,
+          0.0126
+        ],
+        [
+          1,
+          0.0588,
+          0.8573,
+          0.2381,
+          0.0126
+        ],
+        [
+          1,
+          0.0588,
+          0.8712,
+          0.2147,
+          0.0126
+        ],
+        [
+          1,
+          0.0588,
+          0.8851,
+          0.2427,
+          0.0126
+        ]
+      ],
+      "paraRects": [
+        [
+          1,
+          0.0588,
+          0.8018,
+          0.2427,
+          0.09589999999999999
+        ]
+      ]
+    }
+  },
+  {
+    "id": "funder_role",
+    "label": "Funder role",
+    "question": "Does the paper state what role, if any, the funders had in the study?",
+    "domain": "ethics",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "The funders had no role in study design, data collection and analysis, decision to publish, or preparation of the manuscript.",
+      "section": "Introduction",
+      "page": 2,
+      "rects": [
+        [
+          2,
+          0.0588,
+          0.1089,
+          0.2178,
+          0.0126
+        ],
+        [
+          2,
+          0.0588,
+          0.1228,
+          0.2213,
+          0.0126
+        ],
+        [
+          2,
+          0.0588,
+          0.1367,
+          0.1466,
+          0.0126
+        ]
+      ],
+      "paraRects": [
+        [
+          2,
+          0.0588,
+          0.1089,
+          0.22130000000000002,
+          0.04039999999999999
+        ]
+      ]
+    }
+  },
+  {
+    "id": "competing_interests",
+    "label": "Competing interests",
+    "question": "Does the paper include a competing interests or conflict of interest statement?",
+    "domain": "ethics",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Competing interests: BR is the principal investigator for Volatile Anaesthesia and Perioperative Outcomes Related to Cancer: The VAPOR-C Study.",
+      "section": "Introduction",
+      "page": 2,
+      "rects": [
+        [
+          2,
+          0.0588,
+          0.1582,
+          0.1949,
+          0.0126
+        ],
+        [
+          2,
+          0.0588,
+          0.1721,
+          0.1928,
+          0.0126
+        ],
+        [
+          2,
+          0.0588,
+          0.186,
+          0.228,
+          0.0126
+        ],
+        [
+          2,
+          0.0588,
+          0.1999,
+          0.2227,
+          0.0126
+        ]
+      ],
+      "paraRects": [
+        [
+          2,
+          0.0588,
+          0.1582,
+          0.23480000000000004,
+          0.09589999999999999
+        ]
+      ]
+    }
+  },
+  {
+    "id": "contributions",
+    "label": "Author contributions",
+    "question": "Does the paper list what each author contributed?",
+    "domain": "ethics",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Conceptualization: Julia Dubowitz, Bernhard Riedel, Erica K.",
+      "section": "Back matter",
+      "page": 13,
+      "rects": [
+        [
+          13,
+          0.3268,
+          0.3687,
+          0.4471,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          13,
+          0.3268,
+          0.3687,
+          0.44710000000000005,
+          0.01579999999999998
+        ]
+      ]
+    }
+  },
+  {
+    "id": "guideline_named",
+    "label": "Reporting guideline",
+    "question": "Does the paper state that it follows a reporting guideline such as ARRIVE, CONSORT, or STROBE?",
+    "domain": "ethics",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.05,
+    "evidence": 0.05,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "All procedures involving mice were carried out under protocols approved by the Institutional Animal Ethics Committee (MIPS-2015-13121, Monash University, Australia) and in accordance with guidelines of the National Health and Medical Research Council, Australia. Female BALB/c …",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:53:ev:rects"
+    }
+  },
+  {
+    "id": "limitations",
+    "label": "Limitations discussed",
+    "question": "Does the paper discuss limitations of its own study?",
+    "domain": "claims",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "The findings are limited by the extent to which mouse models replicate the clinical scenario experienced by breast cancer patients.",
+      "section": "Discussion",
+      "page": 10,
+      "rects": [
+        [
+          10,
+          0.3464,
+          0.6036,
+          0.5926,
+          0.0158
+        ],
+        [
+          10,
+          0.3268,
+          0.6199,
+          0.596,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          10,
+          0.3268,
+          0.6036,
+          0.6129,
+          0.22909999999999997
+        ]
+      ]
+    }
+  },
+  {
+    "id": "prior_work",
+    "label": "Compared to prior work",
+    "question": "Does the paper compare its findings with results from previous studies?",
+    "domain": "claims",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.98,
+    "evidence": 0.98,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "The results found here contrast with a recent study in 4T1 and MDA-MB-231 mouse models of breast cancer, which found that surgical resection of the primary mammary tumor under sevoflurane anesthesia led to more lung metastasis than resection with propofol [45].",
+      "section": "Discussion",
+      "page": 12,
+      "rects": [
+        [
+          12,
+          0.3464,
+          0.2748,
+          0.5904,
+          0.0158
+        ],
+        [
+          12,
+          0.3268,
+          0.2912,
+          0.5718,
+          0.0158
+        ],
+        [
+          12,
+          0.3268,
+          0.3076,
+          0.5915,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          12,
+          0.3268,
+          0.2748,
+          0.6126,
+          0.22920000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "alternatives",
+    "label": "Alternative explanations",
+    "question": "Does the paper consider alternative explanations for its findings?",
+    "domain": "claims",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.95,
+    "evidence": 0.95,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "However, it is also plausible that an increased inflammatory insult at the time of surgery masked a differential effect of anesthesia type on cancer outcomes.",
+      "section": "Discussion",
+      "page": 10,
+      "rects": [
+        [
+          10,
+          0.3268,
+          0.7841,
+          0.5943,
+          0.0158
+        ],
+        [
+          10,
+          0.3268,
+          0.8005,
+          0.6014,
+          0.0158
+        ],
+        [
+          10,
+          0.3268,
+          0.8169,
+          0.366,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          10,
+          0.3268,
+          0.6036,
+          0.6129,
+          0.22909999999999997
+        ]
+      ]
+    }
+  },
+  {
+    "id": "null_results",
+    "label": "Null results reported",
+    "question": "Does the paper report experiments that found no effect or no difference?",
+    "domain": "claims",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.99,
+    "evidence": 0.99,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Survival analyses found that the kinetics of cancer recurrence and impact on survival were similar regardless of the anesthetic agent used during cancer surgery.",
+      "section": "Abstract",
+      "page": 2,
+      "rects": [
+        [
+          2,
+          0.3268,
+          0.1176,
+          0.6013,
+          0.015
+        ],
+        [
+          2,
+          0.3268,
+          0.1352,
+          0.6052,
+          0.015
+        ]
+      ],
+      "paraRects": [
+        [
+          2,
+          0.3268,
+          0.1176,
+          0.6087,
+          0.0679
+        ]
+      ]
+    }
+  },
+  {
+    "id": "translation_caveat",
+    "label": "Translation caveat",
+    "question": "Does the paper caution that results in its model system may not carry over to humans?",
+    "domain": "claims",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.96,
+    "evidence": 0.96,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "The findings are limited by the extent to which mouse models replicate the clinical scenario experienced by breast cancer patients.",
+      "section": "Discussion",
+      "page": 10,
+      "rects": [
+        [
+          10,
+          0.3464,
+          0.6036,
+          0.5926,
+          0.0158
+        ],
+        [
+          10,
+          0.3268,
+          0.6199,
+          0.596,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          10,
+          0.3268,
+          0.6036,
+          0.6129,
+          0.22909999999999997
+        ]
+      ]
+    }
+  },
+  {
+    "id": "causal_overreach",
+    "label": "Causal overreach",
+    "question": "Does the paper describe a correlation or association as if it proves causation?",
+    "domain": "claims",
+    "guideline": null,
+    "polarity": "flag",
+    "applies": true,
+    "p": 0.15,
+    "evidence": 0.85,
+    "outcome": "good",
+    "status": "Not seen",
+    "ev": {
+      "kind": "paragraph",
+      "text": "More than 60% of all cancer patients require surgical resection of their cancer [1]. An additional 20% of patients may require anesthesia for diagnostic or supportive care procedures (for example, for imaging or port insertion) or for other cancer therapies (such as high density …",
+      "section": "Introduction",
+      "page": 2,
+      "rects": [
+        [
+          2,
+          0.3268,
+          0.4229,
+          0.6143,
+          0.2785
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:59:ev:rects"
+    }
+  },
+  {
+    "id": "overgeneralization",
+    "label": "Overgeneralization",
+    "question": "Does the paper generalize its conclusions to populations or conditions it did not study?",
+    "domain": "claims",
+    "guideline": null,
+    "polarity": "flag",
+    "applies": true,
+    "p": 0.71,
+    "evidence": 0.29000000000000004,
+    "outcome": "bad",
+    "status": "Warning sign found",
+    "ev": {
+      "kind": "paragraph",
+      "text": "The findings are limited by the extent to which mouse models replicate the clinical scenario experienced by breast cancer patients. As volatile anesthesia has been suggested to modulate adaptive anti-cancer immunity [18, 24, 25], we included mouse models with an intact immune …",
+      "section": "Discussion",
+      "page": 10,
+      "rects": [
+        [
+          10,
+          0.3268,
+          0.6036,
+          0.6129,
+          0.22909999999999997
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:60:ev:rects"
+    }
+  },
+  {
+    "id": "future_work",
+    "label": "Next steps stated",
+    "question": "Does the paper state what further studies are needed to confirm or extend its findings?",
+    "domain": "claims",
+    "guideline": null,
+    "polarity": "good",
+    "applies": true,
+    "p": 0.95,
+    "evidence": 0.95,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "To better understand emerging retrospective clinical evidence in other cancer types, it will be important to investigate putative biological mechanisms in preclinical models as this will guide the design of future large-scale randomized clinical trials.",
+      "section": "Discussion",
+      "page": 12,
+      "rects": [
+        [
+          12,
+          0.3268,
+          0.8169,
+          0.6076,
+          0.0158
+        ],
+        [
+          12,
+          0.3268,
+          0.8333,
+          0.5934,
+          0.0158
+        ],
+        [
+          12,
+          0.3268,
+          0.8497,
+          0.5963,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          12,
+          0.3268,
+          0.7841,
+          0.6136,
+          0.11430000000000007
+        ],
+        [
+          13,
+          0.3268,
+          0.0942,
+          0.6104,
+          0.065
+        ]
+      ]
+    }
+  },
+  {
+    "id": "trial_registration",
+    "label": "Trial registration",
+    "question": "Does the paper give a clinical trial registration number, such as an NCT number?",
+    "domain": "design",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.94,
+    "evidence": 0.94,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "The importance of definitively identifying if anesthetic agents impact outcome in other cancer types, underpins the importance of the ongoing international multi-center VAPOR-C prospective clinical study, focused on lung and colorectal cancer (NCT04316013).",
+      "section": "Discussion",
+      "page": 13,
+      "rects": [
+        [
+          13,
+          0.3268,
+          0.1106,
+          0.6104,
+          0.0158
+        ],
+        [
+          13,
+          0.3268,
+          0.127,
+          0.5889,
+          0.0158
+        ],
+        [
+          13,
+          0.3268,
+          0.1434,
+          0.507,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          12,
+          0.3268,
+          0.7841,
+          0.6136,
+          0.11430000000000007
+        ],
+        [
+          13,
+          0.3268,
+          0.0942,
+          0.6104,
+          0.065
+        ]
+      ]
+    }
+  },
+  {
+    "id": "allocation_concealment",
+    "label": "Allocation concealment",
+    "question": "Does the paper describe how treatment allocation was concealed until assignment?",
+    "domain": "design",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.2,
+    "evidence": 0.2,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "On the day of surgery, mice were randomly assigned to surgical resection under two different anesthetic techniques. For the volatile condition, anesthesia was maintained with 3–5% sevoflurane (Baxter), adjusted as required to maintain a stable depth of anesthesia (loss of …",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.5212,
+          0.6142,
+          0.18000000000000005
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:63:ev:rects"
+    }
+  },
+  {
+    "id": "adverse_events",
+    "label": "Adverse events",
+    "question": "Does the paper report adverse events or harms in each group?",
+    "domain": "claims",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.09,
+    "evidence": 0.09,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "All procedures involving mice were carried out under protocols approved by the Institutional Animal Ethics Committee (MIPS-2015-13121, Monash University, Australia) and in accordance with guidelines of the National Health and Medical Research Council, Australia. Female BALB/c …",
+      "section": "Methods",
+      "page": 3,
+      "rects": [
+        [
+          3,
+          0.3268,
+          0.4214,
+          0.6125,
+          0.1635000000000001
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:64:ev:rects"
+    }
+  },
+  {
+    "id": "confounders",
+    "label": "Confounders adjusted",
+    "question": "Does the paper adjust its analysis for potential confounding variables?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.76,
+    "evidence": 0.76,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "The model assumed a censored log-normal response distribution and used a random effect of experimental replicate nested within mouse cancer model type to model experimental structure.",
+      "section": "Methods",
+      "page": 6,
+      "rects": [
+        [
+          6,
+          0.3268,
+          0.1927,
+          0.5856,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.2091,
+          0.6112,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.2255,
+          0.5965,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          5,
+          0.3268,
+          0.8662,
+          0.6107,
+          0.03220000000000012
+        ],
+        [
+          6,
+          0.3268,
+          0.0942,
+          0.6143,
+          0.16349999999999998
+        ]
+      ]
+    }
+  },
+  {
+    "id": "missing_data",
+    "label": "Missing data handled",
+    "question": "Does the paper describe how missing data were handled?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.32,
+    "evidence": 0.32,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "The effect of anesthetic type on cancer progression was assessed by examining the effect on both the onset and the kinetics of cancer recurrence. Survival analyses were used to explore group differences (sevofluorane vs. propofol) in time taken to primary tumor recurrence and …",
+      "section": "Methods",
+      "page": 5,
+      "rects": [
+        [
+          5,
+          0.3268,
+          0.7184,
+          0.6067,
+          0.1471
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:66:ev:rects"
+    }
+  },
+  {
+    "id": "holdout",
+    "label": "Held-out evaluation",
+    "question": "Does the paper evaluate its model on data that were not used for training?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.12,
+    "evidence": 0.12,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Mice were monitored for primary tumor recurrence and onset of metastasis twice a week using bioluminescence imaging by an investigator blinded to the assigned anesthesia condition used during surgical resection. Mice were injected with d-luciferin (150 mg/kg, Promega) in 100 μL …",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.7513,
+          0.6142,
+          0.14710000000000012
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:67:ev:rects"
+    }
+  },
+  {
+    "id": "leakage",
+    "label": "Leakage prevented",
+    "question": "Does the paper describe steps taken to prevent information leaking from test data into training?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.08,
+    "evidence": 0.08,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Mice were monitored for primary tumor recurrence and onset of metastasis twice a week using bioluminescence imaging by an investigator blinded to the assigned anesthesia condition used during surgical resection. Mice were injected with d-luciferin (150 mg/kg, Promega) in 100 μL …",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.7513,
+          0.6142,
+          0.14710000000000012
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:68:ev:rects"
+    }
+  },
+  {
+    "id": "baseline",
+    "label": "Baseline compared",
+    "question": "Does the paper compare its model against a simpler baseline method?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.18,
+    "evidence": 0.18,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Stress response signaling through neural and inflammatory pathways are evolutionarily conserved in mice and humans. However, compared to humans, rodents are resistant to inflammatory challenge [28]. Therefore, to induce an inflammatory response of similar magnitude to that …",
+      "section": "Methods",
+      "page": 4,
+      "rects": [
+        [
+          4,
+          0.3268,
+          0.2912,
+          0.6142,
+          0.17989999999999995
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:69:ev:rects"
+    }
+  },
+  {
+    "id": "external_validation",
+    "label": "External validation",
+    "question": "Does the paper validate its model on an independent external dataset?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.04,
+    "evidence": 0.04,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "The findings are limited by the extent to which mouse models replicate the clinical scenario experienced by breast cancer patients. As volatile anesthesia has been suggested to modulate adaptive anti-cancer immunity [18, 24, 25], we included mouse models with an intact immune …",
+      "section": "Discussion",
+      "page": 10,
+      "rects": [
+        [
+          10,
+          0.3268,
+          0.6036,
+          0.6129,
+          0.22909999999999997
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:70:ev:rects"
+    }
+  },
+  {
+    "id": "omics_accession",
+    "label": "Omics accession",
+    "question": "Does the paper give an accession number for its sequencing or omics data, such as a GEO or SRA ID?",
+    "domain": "openness",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.06,
+    "evidence": 0.06,
+    "outcome": "bad",
+    "status": "Missing",
+    "ev": {
+      "kind": "paragraph",
+      "text": "Data Availability Statement: All data included in the paper are available at DOI: 10.5281/zenodo.",
+      "section": "Abstract",
+      "page": 1,
+      "rects": [
+        [
+          1,
+          0.0588,
+          0.7525,
+          0.23430000000000004,
+          0.026499999999999968
+        ]
+      ],
+      "paraRects": "$7:props:children:0:props:children:1:props:children:1:props:example:view:checks:71:ev:rects"
+    }
+  },
+  {
+    "id": "fdr",
+    "label": "FDR control",
+    "question": "Does the paper control the false discovery rate for its high-throughput analyses?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.86,
+    "evidence": 0.86,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "Differences in immune cell populations were tested using nonparametric Wilcox tests and false discovery rate was used to correct for multiple comparisons.",
+      "section": "Methods",
+      "page": 6,
+      "rects": [
+        [
+          6,
+          0.3268,
+          0.4224,
+          0.6029,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.4389,
+          0.6092,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.4553,
+          0.5904,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          6,
+          0.3268,
+          0.3732,
+          0.6099,
+          0.1472000000000001
+        ]
+      ]
+    }
+  },
+  {
+    "id": "batch_effects",
+    "label": "Batch effects",
+    "question": "Does the paper describe how batch effects were assessed or corrected?",
+    "domain": "stats",
+    "guideline": null,
+    "polarity": "good",
+    "applies": false,
+    "p": 0.72,
+    "evidence": 0.72,
+    "outcome": "good",
+    "status": "Reported",
+    "ev": {
+      "kind": "sentence",
+      "text": "The model assumed a censored log-normal response distribution and used a random effect of experimental replicate nested within mouse cancer model type to model experimental structure.",
+      "section": "Methods",
+      "page": 6,
+      "rects": [
+        [
+          6,
+          0.3268,
+          0.1927,
+          0.5856,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.2091,
+          0.6112,
+          0.0158
+        ],
+        [
+          6,
+          0.3268,
+          0.2255,
+          0.5965,
+          0.0158
+        ]
+      ],
+      "paraRects": [
+        [
+          5,
+          0.3268,
+          0.8662,
+          0.6107,
+          0.03220000000000012
+        ],
+        [
+          6,
+          0.3268,
+          0.0942,
+          0.6143,
+          0.16349999999999998
+        ]
+      ]
+    }
+  }
+]

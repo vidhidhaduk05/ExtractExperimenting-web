@@ -160,6 +160,7 @@ def classify_study(
     pdf_data: Optional[dict],
     threshold: float = 0.7,
     model_fn: Optional[Callable[[str], Any]] = None,
+    use_llm: bool = True,
 ) -> dict[str, Any]:
     """Classify one study, resolving ambiguous designs via LLM fallback or routing to manual review (§1.3)."""
     text = _document_text(study, pdf_data)
@@ -174,7 +175,7 @@ def classify_study(
 
     # 2. If ambiguous or below threshold, try LLM fallback
     resolved_model_fn = model_fn
-    if resolved_model_fn is None:
+    if resolved_model_fn is None and use_llm:
         try:
             from services.llm_extractor import is_llm_available
             if is_llm_available():

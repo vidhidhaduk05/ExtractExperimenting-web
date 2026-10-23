@@ -21,7 +21,7 @@ def test_ambiguous_study_heuristic_routes_to_manual_when_no_llm():
         "abstract": "We conducted a randomized trial and an observational cohort.",
     }
     # With no LLM, ambiguous design (conf 0.55 < 0.70) routes to manual_review
-    res = classify_study(study, pdf_data=None, threshold=0.70, model_fn=None)
+    res = classify_study(study, pdf_data=None, threshold=0.70, model_fn=None, use_llm=False)
     assert res["status"] == "manual_review"
     assert res["tool"] == "manual"
     assert "rob2" in res["alternatives"]

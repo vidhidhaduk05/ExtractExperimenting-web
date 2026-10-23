@@ -49,5 +49,11 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
 node_modules
+
+# Large binary models and archives
+*.zip
+*.onnx
+*.onnx.data
+laya/models/
+scratch/ai_ich_lvo/

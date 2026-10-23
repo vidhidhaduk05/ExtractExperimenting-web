@@ -1,0 +1,4 @@
+pkgs_dirs:
+  - /home/vd00026/.conda/pkgs
+envs_dirs:
+  - /home/vd00026/.conda/envs
