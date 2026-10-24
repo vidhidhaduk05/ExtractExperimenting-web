@@ -277,12 +277,18 @@ export function ScreeningPage() {
     }
   };
 
-  const studyList = Array.isArray(studies) ? studies : [];
+  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
+
+  // Optimize O(1) bookmark lookups and count memoization to avoid O(N*M) linear scans during renders
+  const bookmarkedIdsSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids]);
+  const savedCount = useMemo(() => {
+    return studyList.reduce((acc, s) => (bookmarkedIdsSet.has(s.study_id) ? acc + 1 : acc), 0);
+  }, [studyList, bookmarkedIdsSet]);
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
-      if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
+      if (savedOnly && !bookmarkedIdsSet.has(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
 
       // Stage filter
@@ -341,7 +347,7 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
+  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarkedIdsSet, tagIndex.data, tagFilter]);
 
   // Auto-select first study in filtered set if current selectedStudyId is filtered out
   useEffect(() => {
@@ -687,7 +693,7 @@ export function ScreeningPage() {
     }
 
     // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-    let activeSpans = [...spans];
+    const activeSpans = [...spans];
     if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
       fallbackKeywordsList.forEach((kw) => {
         const word = kw.keyword.trim();
@@ -1229,7 +1235,7 @@ export function ScreeningPage() {
                 onChange={(e) => setSavedOnly(e.target.checked)}
                 className="rounded text-indigo-600 focus:ring-indigo-500"
               />
-              <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
+              <span className="font-medium">Saved ({savedCount})</span>
             </label>
           </div>
 
@@ -1468,7 +1474,7 @@ export function ScreeningPage() {
                       <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 leading-snug">
                         {study.title}
                       </h3>
-                      <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
+                      <BookmarkButton saved={bookmarkedIdsSet.has(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
                       {conf !== null && (
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap animate-tag-pop ${
@@ -1593,7 +1599,7 @@ export function ScreeningPage() {
                       true
                     )}
                   </h2>
-                  <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
+                  <BookmarkButton saved={bookmarkedIdsSet.has(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
                   <span
                     className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap animate-tag-pop ${
                       selectedStudy.screening_status === "included" || selectedStudy.screening_status === "ta_included"
