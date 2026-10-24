@@ -48,6 +48,8 @@ export RADEXTRACT_DB_BACKEND="sqlite"
 export RADEXTRACT_STORAGE_BACKEND="local"
 export JEV_MODE="on"
 export JEV_PROVIDER="laya"
+export DOCLING_DEVICE="cuda"
+export DOCLING_NUM_THREADS="8"
 
 # Biomni-R0 32B Local LLM Configuration
 if curl -s http://127.0.0.1:18000/v1/models >/dev/null 2>&1; then

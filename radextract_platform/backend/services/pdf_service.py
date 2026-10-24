@@ -20,6 +20,7 @@ from services.db_backend import DBBackend
 from services.storage_backend import resolve_pdf_path
 from radextract_core.radextract.document_processor import (
     convert_with_fallback, ProcessedDocument, DoclingProcessor, FallbackProcessor,
+    save_processed_document,
 )
 
 
@@ -42,6 +43,15 @@ def process_pdf(study_id: str, db: Optional[DBBackend] = None) -> dict:
 
     # Convert with graceful fallback
     doc = convert_with_fallback(pdf_path, doc_id=study_id, prefer_docling=True)
+
+    # Save complete .docling.json file alongside the source PDF
+    docling_json_path = f"{os.path.splitext(pdf_path)[0]}.docling.json"
+    try:
+        save_processed_document(doc, docling_json_path)
+        doc.metadata["docling_json_path"] = docling_json_path
+        logger.info(f"[PDF] Saved Docling JSON file for study {study_id} to {docling_json_path}")
+    except Exception as e:
+        logger.warning(f"[PDF] Could not save .docling.json to {docling_json_path}: {e}")
 
     # Build storage dict
     doc_id = str(uuid.uuid4())
@@ -93,6 +103,7 @@ def process_pdf(study_id: str, db: Optional[DBBackend] = None) -> dict:
         "processed_at": now,
         "n_tables": len(doc.parsed.get("tables", [])),
         "n_annotations": len(annotations.get("texts", [])),
+        "docling_json_path": docling_json_path,
     }
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, BackgroundTasks
+from fastapi.responses import FileResponse
 from typing import Optional
 import sqlite3
 
@@ -811,6 +812,33 @@ async def get_pdf_data(
     _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
     if _pid:
         check_project_access(conn, _pid["project_id"], user)
+    data = pdf_service.get_pdf_data(study_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="No processed PDF data. Process the PDF first.")
+    return data
+
+
+@router.get("/studies/{study_id}/docling-json")
+async def get_docling_json(
+    study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Download the complete Docling structured JSON for a study."""
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid:
+        check_project_access(conn, _pid["project_id"], user)
+
+    # Check if .docling.json exists on disk
+    study = conn.get("studies", study_id)
+    if study and study.get("pdf_path"):
+        pdf_path = resolve_pdf_path(study["pdf_path"])
+        if pdf_path:
+            json_path = f"{os.path.splitext(pdf_path)[0]}.docling.json"
+            if os.path.exists(json_path):
+                return FileResponse(json_path, media_type="application/json", filename=f"{study_id}.docling.json")
+
+    # Fallback to pdf_documents table record
     data = pdf_service.get_pdf_data(study_id)
     if not data:
         raise HTTPException(status_code=404, detail="No processed PDF data. Process the PDF first.")

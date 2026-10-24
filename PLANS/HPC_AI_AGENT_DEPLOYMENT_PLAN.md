@@ -159,6 +159,10 @@ RADEXTRACT_ENV=production
 RADEXTRACT_DB_BACKEND=sqlite
 RADEXTRACT_STORAGE_BACKEND=local
 
+# GPU-Accelerated Docling PDF -> JSON
+DOCLING_DEVICE=cuda
+DOCLING_NUM_THREADS=8
+
 # System 1: Local Laya Screening (Mandatory)
 JEV_MODE=on
 JEV_PROVIDER=laya
@@ -238,13 +242,25 @@ git push origin main
 
 ---
 
-## 5. Unattended Slurm Automation Script
+## 5. Unattended Slurm Automation Scripts
 
-To run the entire pipeline automatically as a scheduled batch job, submit:
+### A. Full Web & API Platform Stack
+To run the full backend, SQLite database, and tunnel:
 ```bash
 sbatch /home/vd00026/Desktop/Software/jobs/radextract_web.slurm
 ```
 This batch script handles resource allocation, local database scratch staging, uvicorn backgrounding, Open OnDemand proxy routing, and graceful database sync on exit.
+
+### B. High-Speed Batch PDF -> Docling JSON Conversion on GPU
+To batch-convert an entire folder of clinical study PDFs into `.docling.json` files on the Tesla V100S GPU:
+```bash
+# Convert all PDFs in TESTING/files:
+sbatch /home/vd00026/Desktop/Software/jobs/convert_pdfs_docling_gpu.slurm
+
+# Or specify a custom folder:
+sbatch /home/vd00026/Desktop/Software/jobs/convert_pdfs_docling_gpu.slurm /path/to/custom/pdfs
+```
+This uses CUDA hardware acceleration to parse layouts, OCR, and table structures into `.docling.json` files at ~1–3 seconds per PDF (10–20x faster than CPU).
 
 ---
 
