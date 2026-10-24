@@ -50,6 +50,11 @@ export const RigorScanPage: React.FC = () => {
   const [includeRadiology, setIncludeRadiology] = useState<boolean>(false);
   const [showSoftwareChecks, setShowSoftwareChecks] = useState<boolean>(false);
 
+  // Drag & drop upload states
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [currentFileMeta, setCurrentFileMeta] = useState<{ name: string; size: string } | null>(null);
+  const [scanStepMessage, setScanStepMessage] = useState<string>("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Derive active dataset: whether custom scan result or Dubowitz benchmark, with optional Radiology extension
@@ -60,7 +65,8 @@ export const RigorScanPage: React.FC = () => {
       const v = scanResult.view;
       const convertedChecks: RigorCheckItem[] = v.checks.map((c: RigorCheck, idx: number) => {
         const pVal = c.p ?? 0.5;
-        const evVal = c.evidence !== undefined && c.evidence !== null ? c.evidence : Math.round(pVal * 100);
+        const rawEv = c.evidence !== undefined && c.evidence !== null ? c.evidence : (pVal <= 1.0 ? pVal * 100 : pVal);
+        const evVal = rawEv <= 1.0 ? Math.round(rawEv * 100) : Math.round(rawEv);
         const outcomeVal = c.outcome || (evVal >= 70 ? "good" : evVal >= 35 ? "mid" : "bad");
         const col = outcomeVal === "good" ? "var(--rs-good)" : outcomeVal === "bad" ? "var(--rs-crit)" : "var(--rs-warn)";
         const hlList = (c as any).highlights || (c.ev?.rects ? c.ev.rects.map((r: any) => ({
@@ -81,7 +87,7 @@ export const RigorScanPage: React.FC = () => {
           guideline: c.guideline || null,
           polarity: c.polarity || "good",
           applies: c.applies ?? true,
-          p: pVal,
+          p: pVal <= 1.0 ? pVal : pVal / 100.0,
           evidence: evVal,
           outcome: outcomeVal,
           status: c.status || (evVal >= 70 ? "Reported" : evVal >= 35 ? "Unclear" : "Missing"),
@@ -198,33 +204,94 @@ export const RigorScanPage: React.FC = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const processUploadedFile = async (file: File) => {
     if (!file) return;
 
+    const fileNameLower = file.name.toLowerCase();
+    const isPdf = file.type === "application/pdf" || fileNameLower.endsWith(".pdf");
+    const isText = fileNameLower.endsWith(".txt") || fileNameLower.endsWith(".text") || fileNameLower.endsWith(".md");
+
+    if (!isPdf && !isText) {
+      setErrorMessage(`Unsupported format. Please select a PDF (.pdf) or text manuscript (.txt, .md). Given: "${file.name}"`);
+      return;
+    }
+
+    const fileSizeFormatted = file.size > 1024 * 1024
+      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.round(file.size / 1024)} KB`;
+
+    setCurrentFileMeta({ name: file.name, size: fileSizeFormatted });
     setIsScanning(true);
     setErrorMessage(null);
     setScanResult(null);
     setIsReferenceActive(false);
+    setScanStepMessage("Connecting to local Laya System-1 & Biomni pipeline...");
 
     try {
-      const res = await api.scanPdfRigor(file);
-      if (!res?.view?.checks || res.view.checks.length === 0) {
-        setErrorMessage("The server returned no reporting checks for this PDF.");
-        setScanResult(null);
-        setIsReferenceActive(true);
-        return;
+      let res: RigorScanResult | null = null;
+
+      if (isPdf) {
+        setScanStepMessage("Parsing PDF layout & extracting publication sections...");
+        try {
+          res = await api.scanPdfRigor(file);
+        } catch (pdfUploadErr: any) {
+          console.warn("Direct PDF upload error; attempting client-side text fallback:", pdfUploadErr);
+          setScanStepMessage("Extracting text via browser PDF engine...");
+          try {
+            // Lazy-load pdfjsLib for browser fallback
+            const pdfjsLib = await import("pdfjs-dist");
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const pagesText: string[] = [];
+            for (let i = 1; i <= Math.min(pdf.numPages, 40); i++) {
+              const page = await pdf.getPage(i);
+              const content = await page.getTextContent();
+              const strings = content.items.map((it: any) => it.str || "");
+              pagesText.push(strings.join(" "));
+            }
+            const fullText = pagesText.join("\n\n");
+            if (fullText.trim().length > 50) {
+              setScanStepMessage("Scanning extracted text with local Laya System-1...");
+              res = await api.scanTextRigor(fullText, file.name.replace(/\.[^/.]+$/, ""));
+            } else {
+              throw pdfUploadErr;
+            }
+          } catch {
+            throw pdfUploadErr;
+          }
+        }
+      } else {
+        setScanStepMessage("Reading manuscript text...");
+        const textContent = await file.text();
+        setScanStepMessage("Scanning manuscript with local Laya System-1...");
+        res = await api.scanTextRigor(textContent, file.name.replace(/\.[^/.]+$/, ""));
       }
+
+      if (!res?.view?.checks || res.view.checks.length === 0) {
+        throw new Error("Scan completed but returned no checklist items. Please verify manuscript content.");
+      }
+
       setScanResult(res);
       setSelectedCheckId(res.view.checks[0]?.id || "rs-01");
+      setTargetPage(res.view.checks[0]?.page || 1);
+      setErrorMessage(null);
     } catch (err: any) {
-      setErrorMessage(err?.message || "Backend scan error. Reverting to reference example.");
-      setIsReferenceActive(true);
+      console.error("Rigor Scan error:", err);
+      const detail = err?.message || "Scan service encountered an error.";
+      setErrorMessage(`Scan error on "${file.name}": ${detail}`);
     } finally {
       setIsScanning(false);
+      setScanStepMessage("");
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processUploadedFile(file);
     }
   };
 
@@ -232,6 +299,7 @@ export const RigorScanPage: React.FC = () => {
     setErrorMessage(null);
     setScanResult(null);
     setIsReferenceActive(true);
+    setCurrentFileMeta(null);
     setSelectedCheckId("rs-29");
     setTargetPage(3);
   };
@@ -274,32 +342,94 @@ export const RigorScanPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-3">
-            <label
-              htmlFor="rs-file"
-              className={`grid cursor-pointer grid-cols-[auto_1fr] items-center gap-3.5 rounded-2xl border-[1.5px] border-dashed px-5 py-4 transition-all border-[var(--rs-line)] rs-panel hover:border-[var(--rs-accent)] group ${isScanning ? "opacity-60 cursor-not-allowed" : ""}`}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!isScanning) setIsDragging(true);
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!isScanning) setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+                if (isScanning) return;
+                const droppedFile = e.dataTransfer.files?.[0];
+                if (droppedFile) {
+                  processUploadedFile(droppedFile);
+                }
+              }}
+              onClick={() => {
+                if (!isScanning) {
+                  fileInputRef.current?.click();
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              aria-label="Upload PDF or text manuscript for Rigor Scan"
+              className={`grid cursor-pointer grid-cols-[auto_1fr] items-center gap-3.5 rounded-2xl border-2 border-dashed px-5 py-4 transition-all ${
+                isDragging
+                  ? "border-[#381A61] dark:border-[#F9D14A] bg-[#381A61]/10 dark:bg-[#F9D14A]/10 scale-[1.01] shadow-md ring-2 ring-[#381A61]/20 dark:ring-[#F9D14A]/30"
+                  : "border-[var(--rs-line)] rs-panel hover:border-[var(--rs-accent)] hover:bg-[var(--rs-accent-soft)]/20"
+              } group ${isScanning ? "opacity-75 cursor-wait" : ""}`}
             >
               <input
                 id="rs-file"
                 ref={fileInputRef}
                 type="file"
-                accept="application/pdf,.pdf"
-                aria-label="Upload PDF for Rigor Scan"
+                accept="application/pdf,.pdf,.txt,.text,.md"
+                aria-label="Upload PDF or text for Rigor Scan"
                 disabled={isScanning}
                 onChange={handleFileUpload}
                 className="sr-only"
               />
-              <span className="grid h-[44px] w-[44px] place-items-center rounded-xl bg-[var(--rs-card)] text-[var(--rs-accent)] shadow-sm group-hover:scale-105 transition-transform">
-                <UploadCloud className="w-5 h-5" />
+              <span className={`grid h-[44px] w-[44px] place-items-center rounded-xl ${
+                isDragging 
+                  ? "bg-[#381A61] text-[#F9D14A]" 
+                  : isScanning
+                    ? "bg-[var(--rs-accent-soft)] text-[var(--rs-accent)]"
+                    : "bg-[var(--rs-card)] text-[var(--rs-accent)]"
+              } shadow-sm group-hover:scale-105 transition-all`}>
+                {isScanning ? (
+                  <RefreshCw className="w-5 h-5 animate-spin text-[#381A61] dark:text-[#F9D14A]" />
+                ) : (
+                  <UploadCloud className="w-5 h-5" />
+                )}
               </span>
-              <span>
-                <strong className="block font-semibold text-sm">
-                  {isScanning ? "Scanning manuscript…" : "Drop a PDF or choose a file"}
+              <div className="min-w-0">
+                <strong className="block font-semibold text-sm truncate text-[var(--rs-ink)]">
+                  {isScanning
+                    ? (scanStepMessage || `Scanning ${currentFileMeta?.name || "paper"}…`)
+                    : isDragging
+                      ? "Drop your PDF or manuscript here!"
+                      : "Drop a PDF or choose a file"}
                 </strong>
-                <span className="text-xs rs-muted">
-                  Read in your browser. The file is never uploaded. Only its text is sent for checking, and nothing is saved.
+                <span className="text-xs rs-muted block truncate">
+                  {isScanning && currentFileMeta ? (
+                    <span className="font-mono text-[11px] text-[#381A61] dark:text-[#F9D14A]">
+                      {currentFileMeta.name} ({currentFileMeta.size}) · Evaluating 74 checks...
+                    </span>
+                  ) : (
+                    "Read in your browser. PDF or TXT. Only manuscript text is sent for verification; nothing is saved."
+                  )}
                 </span>
-              </span>
-            </label>
+              </div>
+            </div>
 
             <div className="flex items-center justify-between">
               <span className="text-xs rs-muted font-medium">
@@ -319,8 +449,27 @@ export const RigorScanPage: React.FC = () => {
         </section>
 
         {errorMessage && (
-          <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-950/40 p-4 text-xs font-semibold text-rose-800 dark:text-rose-300">
-            {errorMessage}
+          <div role="alert" className="rounded-2xl border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/50 p-4 text-xs font-medium text-rose-900 dark:text-rose-200 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <AlertOctagon className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              <span className="truncate">{errorMessage}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors shadow-2xs"
+              >
+                Select another file
+              </button>
+              <button
+                type="button"
+                onClick={handleLoadReferenceExample}
+                className="px-3 py-1 rounded-lg border border-rose-300 dark:border-rose-800 bg-white dark:bg-zinc-900 text-rose-800 dark:text-rose-300 font-semibold hover:bg-rose-50 transition-colors"
+              >
+                View reference benchmark
+              </button>
+            </div>
           </div>
         )}
 

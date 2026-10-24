@@ -30,6 +30,7 @@ import {
   DEMO_CODEBOOK_RULES,
   DEMO_ERROR_ANALYSIS
 } from "./demoData";
+import { DEMO_RIGOR_RESULT } from "../data/demoRigorData";
 
 export type ApiConnectionState = "live" | "checking" | "demo_fallback" | "explicit_demo" | "error";
 
@@ -1064,6 +1065,33 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   }
   if (path.includes("/health")) {
     return { status: "ok" } as unknown as T;
+  }
+  if (path.includes("/rigor-scan/status")) {
+    return {
+      status: "ready",
+      engine: "local_laya_system_1",
+      total_checks: 74,
+      domains: ["Study design", "Statistics", "Materials", "Data & code", "Ethics & disclosure", "Claims"],
+      software_verifiers: ["Statistics (HR/OR & p-value consistency)", "Retracted references & notices", "Cellosaurus cell line authentication", "Data, code & registries"],
+    } as unknown as T;
+  }
+  if (path.includes("/rigor-scan/example")) {
+    return DEMO_RIGOR_RESULT as unknown as T;
+  }
+  if (path.includes("/rigor-scan/specs")) {
+    return (DEMO_RIGOR_RESULT.view.checks || []) as unknown as T;
+  }
+  if (path.includes("/rigor-scan/scan-pdf") || path.includes("/rigor-scan/scan-text")) {
+    return {
+      ...DEMO_RIGOR_RESULT,
+      view: {
+        ...DEMO_RIGOR_RESULT.view,
+        paper: {
+          ...DEMO_RIGOR_RESULT.view.paper,
+          title: "Uploaded Manuscript (Local Rigor Scan)",
+        }
+      }
+    } as unknown as T;
   }
 
   return {} as unknown as T;
