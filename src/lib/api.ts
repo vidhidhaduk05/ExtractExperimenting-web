@@ -1081,7 +1081,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.includes("/rigor-scan/specs")) {
     return (DEMO_RIGOR_RESULT.view.checks || []) as unknown as T;
   }
-  if (path.includes("/rigor-scan/scan-pdf") || path.includes("/rigor-scan/scan-text")) {
+  if (path.includes("/rigor-scan/scan-pdf") || path.includes("/rigor-scan/scan-docx") || path.includes("/rigor-scan/scan-file") || path.includes("/rigor-scan/scan-text")) {
     return {
       ...DEMO_RIGOR_RESULT,
       view: {
@@ -3752,6 +3752,18 @@ export const api = {
     const formData = new FormData();
     formData.append("file", file);
     return request<any>("/rigor-scan/scan-pdf", { method: "POST", body: formData });
+  },
+
+  scanDocxRigor: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<any>("/rigor-scan/scan-docx", { method: "POST", body: formData });
+  },
+
+  scanFileRigor: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<any>("/rigor-scan/scan-file", { method: "POST", body: formData });
   },
 };
 

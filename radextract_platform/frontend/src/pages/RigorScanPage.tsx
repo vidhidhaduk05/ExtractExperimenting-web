@@ -209,10 +209,11 @@ export const RigorScanPage: React.FC = () => {
 
     const fileNameLower = file.name.toLowerCase();
     const isPdf = file.type === "application/pdf" || fileNameLower.endsWith(".pdf");
+    const isDocx = fileNameLower.endsWith(".docx") || file.type.includes("wordprocessingml") || file.type.includes("docx");
     const isText = fileNameLower.endsWith(".txt") || fileNameLower.endsWith(".text") || fileNameLower.endsWith(".md");
 
-    if (!isPdf && !isText) {
-      setErrorMessage(`Unsupported format. Please select a PDF (.pdf) or text manuscript (.txt, .md). Given: "${file.name}"`);
+    if (!isPdf && !isDocx && !isText) {
+      setErrorMessage(`Unsupported format. Please select a Word document (.docx), PDF (.pdf), or text manuscript (.txt, .md). Given: "${file.name}"`);
       return;
     }
 
@@ -230,7 +231,15 @@ export const RigorScanPage: React.FC = () => {
     try {
       let res: RigorScanResult | null = null;
 
-      if (isPdf) {
+      if (isDocx) {
+        setScanStepMessage("Parsing Word document (.docx) layout & extracting publication sections...");
+        try {
+          res = await api.scanDocxRigor(file);
+        } catch (docxErr: any) {
+          console.warn("scanDocxRigor error, falling back to scanPdfRigor / scanFileRigor:", docxErr);
+          res = await api.scanPdfRigor(file);
+        }
+      } else if (isPdf) {
         setScanStepMessage("Parsing PDF layout & extracting publication sections...");
         try {
           res = await api.scanPdfRigor(file);
@@ -381,7 +390,7 @@ export const RigorScanPage: React.FC = () => {
                   fileInputRef.current?.click();
                 }
               }}
-              aria-label="Upload PDF or text manuscript for Rigor Scan"
+              aria-label="Upload Word document (.docx), PDF, or text manuscript for Rigor Scan"
               className={`grid cursor-pointer grid-cols-[auto_1fr] items-center gap-3.5 rounded-2xl border-2 border-dashed px-5 py-4 transition-all ${
                 isDragging
                   ? "border-[#381A61] dark:border-[#F9D14A] bg-[#381A61]/10 dark:bg-[#F9D14A]/10 scale-[1.01] shadow-md ring-2 ring-[#381A61]/20 dark:ring-[#F9D14A]/30"
@@ -392,8 +401,8 @@ export const RigorScanPage: React.FC = () => {
                 id="rs-file"
                 ref={fileInputRef}
                 type="file"
-                accept="application/pdf,.pdf,.txt,.text,.md"
-                aria-label="Upload PDF or text for Rigor Scan"
+                accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt,.text,.md"
+                aria-label="Upload Word document (.docx), PDF, or text for Rigor Scan"
                 disabled={isScanning}
                 onChange={handleFileUpload}
                 className="sr-only"
@@ -416,8 +425,8 @@ export const RigorScanPage: React.FC = () => {
                   {isScanning
                     ? (scanStepMessage || `Scanning ${currentFileMeta?.name || "paper"}…`)
                     : isDragging
-                      ? "Drop your PDF or manuscript here!"
-                      : "Drop a PDF or choose a file"}
+                      ? "Drop your Word document (.docx) or PDF here!"
+                      : "Drop a Word document (.docx), PDF, or choose a file"}
                 </strong>
                 <span className="text-xs rs-muted block truncate">
                   {isScanning && currentFileMeta ? (
@@ -425,7 +434,7 @@ export const RigorScanPage: React.FC = () => {
                       {currentFileMeta.name} ({currentFileMeta.size}) · Evaluating 74 checks...
                     </span>
                   ) : (
-                    "Read in your browser. PDF or TXT. Only manuscript text is sent for verification; nothing is saved."
+                    "Read in your browser. Word (.docx), PDF, or TXT. Only manuscript text is sent for verification; nothing is saved."
                   )}
                 </span>
               </div>
