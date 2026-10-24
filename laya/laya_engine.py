@@ -99,8 +99,18 @@ class LayaModel:
 
         opts = ort.SessionOptions()
         opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        threads = int(os.environ.get("LAYA_NUM_THREADS", "0")) or min(8, os.cpu_count() or 4)
+        opts.intra_op_num_threads = threads
+        opts.inter_op_num_threads = 2
+
+        available = ort.get_available_providers()
+        preferred = []
+        if "CUDAExecutionProvider" in available and os.environ.get("LAYA_DEVICE", "cuda").lower() != "cpu":
+            preferred.append("CUDAExecutionProvider")
+        preferred.append("CPUExecutionProvider")
+
         model_onnx_path = os.path.join(model_dir, "laya.onnx")
-        self.session = ort.InferenceSession(model_onnx_path, sess_options=opts, providers=["CPUExecutionProvider"])
+        self.session = ort.InferenceSession(model_onnx_path, sess_options=opts, providers=preferred)
 
     def _encode(self, text: str) -> List[int]:
         return self.tokenizer.encode(text, add_special_tokens=False).ids
@@ -140,19 +150,39 @@ class LayaModel:
 
         return seq[:max_len], [m for m in markers if m < max_len]
 
-    def system_one(self, state: Any, questions: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-        qids = list(questions.keys())
-        if not qids:
-            raise ValueError("system_one requires at least one question")
+    def system_one_batch(
+        self, requests: List[Tuple[str, Any, Dict[str, Dict[str, Any]]]]
+    ) -> Dict[str, Dict[str, Any]]:
+        """Batched System One inference across multiple studies/states and questions in a single ONNX forward pass.
+
+        Args:
+            requests: List of tuples (study_id, state, questions_dict)
+
+        Returns:
+            Dict mapping study_id -> {qid: answer_dict}
+        """
+        if not requests:
+            return {}
 
         items = []
-        for qid in qids:
-            q = _to_internal(questions[qid])
-            seq, markers = self._build_sequence(state, q)
-            opts_count = len(_render_options(q))
-            if len(markers) != opts_count:
-                raise ValueError(f"Question {qid}: options do not fit in head_max_len")
-            items.append({"q": q, "ids": seq, "markers": markers, "qtype": QTYPES[q["t"]]})
+        for study_id, state, questions in requests:
+            for qid, q_def in questions.items():
+                q = _to_internal(q_def)
+                seq, markers = self._build_sequence(state, q)
+                opts_count = len(_render_options(q))
+                if len(markers) != opts_count:
+                    continue
+                items.append({
+                    "study_id": study_id,
+                    "qid": qid,
+                    "q": q,
+                    "ids": seq,
+                    "markers": markers,
+                    "qtype": QTYPES[q["t"]],
+                })
+
+        if not items:
+            return {r[0]: {} for r in requests}
 
         n = len(items)
         L = max(len(it["ids"]) for it in items)
@@ -186,12 +216,14 @@ class LayaModel:
         logits = outputs[0]  # shape: [n, K]
         act_probs = outputs[1]  # shape: [n, 2]
 
-        answers = {}
         temps_by_opt = self.config.get("temperature_by_options", {})
         default_temps = self.config.get("temperature", [1.0, 1.0, 1.0])
 
+        results: Dict[str, Dict[str, Any]] = {r[0]: {} for r in requests}
+
         for r, it in enumerate(items):
-            qid = qids[r]
+            study_id = it["study_id"]
+            qid = it["qid"]
             k = len(it["markers"])
             t_key = _temp_bucket(it["qtype"], k)
             temp = temps_by_opt.get(t_key, default_temps[it["qtype"]] if it["qtype"] < len(default_temps) else 1.0)
@@ -206,7 +238,7 @@ class LayaModel:
             if q["t"] == "choice":
                 keys = list(q.get("crit", {}).keys())
                 best_idx = int(np.argmax(p))
-                answers[qid] = {
+                results[study_id][qid] = {
                     "type": "choice",
                     "choice": keys[best_idx],
                     "probabilities": {k_name: round(float(p[idx]), 4) for idx, k_name in enumerate(keys)},
@@ -216,7 +248,7 @@ class LayaModel:
             elif q["t"] == "score":
                 crit_list = q.get("crit", [])
                 score_val = sum(i * float(p[i]) for i in range(len(p)))
-                answers[qid] = {
+                results[study_id][qid] = {
                     "type": "score",
                     "score": round(score_val, 4),
                     "legend": {str(i): c for i, c in enumerate(crit_list)},
@@ -225,10 +257,17 @@ class LayaModel:
                     "rl_agent": ext,
                 }
             else:  # noul
-                answers[qid] = {
+                results[study_id][qid] = {
                     "type": "noul",
                     "noul": round(float(p[1]), 4),
                     "rl_agent": ext,
                 }
 
-        return answers
+        return results
+
+    def system_one(self, state: Any, questions: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        """Single-item System One inference (calls system_one_batch for execution)."""
+        if not questions:
+            raise ValueError("system_one requires at least one question")
+        batch_res = self.system_one_batch([("single_item", state, questions)])
+        return batch_res.get("single_item", {})

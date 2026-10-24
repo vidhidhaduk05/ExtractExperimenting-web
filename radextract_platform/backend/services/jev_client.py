@@ -222,3 +222,44 @@ def ask(state: Any, questions: dict[str, dict[str, Any]]) -> dict[str, dict[str,
     return answers
 
 
+def _ask_laya_batch(
+    requests: list[tuple[str, Any, dict[str, dict[str, Any]]]]
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Execute Batched System One query via local Laya ONNX engine in a single forward pass."""
+    engine = _get_laya_engine()
+    if engine is None:
+        raise JevError("Local Laya ONNX engine unavailable")
+    try:
+        if hasattr(engine, "system_one_batch"):
+            return engine.system_one_batch(requests)
+        return {req[0]: engine.system_one(req[1], req[2]) for req in requests}
+    except Exception as e:
+        raise JevError(f"Local Laya batched inference failed: {e}")
+
+
+def ask_batch(
+    requests: list[tuple[str, Any, dict[str, dict[str, Any]]]]
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Execute batched System One requests across multiple studies in a single parallel run.
+
+    Args:
+        requests: list of (item_id, state, questions)
+
+    Returns:
+        Dict mapping item_id -> answers_dict
+    """
+    if not requests:
+        return {}
+    try:
+        return _ask_laya_batch(requests)
+    except Exception as exc:
+        logger.warning("Batched Laya failed (%s); falling back to sequential ask", exc)
+        results = {}
+        for item_id, state, questions in requests:
+            try:
+                results[item_id] = ask(state, questions)
+            except Exception:
+                results[item_id] = {}
+        return results
+
+

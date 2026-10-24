@@ -179,3 +179,84 @@ def test_circuit_breaker_opens_after_repeated_failures(monkeypatch):
         with pytest.raises(JevError):
             jev_client.ask("s", {})
     assert jev_client.is_jev_enabled() is False
+
+
+def test_tier1_search_string_exclusion(monkeypatch):
+    """Studies failing the search string are dropped instantly in Tier 1 without calling Jev."""
+    monkeypatch.setattr(settings, "jev_mode", "on")
+    jev_called = []
+
+    def mock_ask(*a, **k):
+        jev_called.append(True)
+        return _answers()
+
+    monkeypatch.setattr(jev_client, "ask", mock_ask)
+    search_str = '("metformin"[tiab]) AND (longevity OR lifespan)'
+    abstract_text = "This trial evaluates acetaminophen for acute migraine in adolescents."
+
+    res = jev_screener.screen(
+        "abstract",
+        title="Migraine treatment",
+        abstract=abstract_text,
+        pico=PICO,
+        search_string=search_str,
+    )
+    assert res is not None
+    assert res["decision"] == "exclude"
+    assert res["reason_code"] == "SEARCH_STRING_EXCLUSION"
+    assert res["engine"] == "search_string_tier1"
+    assert len(jev_called) == 0  # Jev was never invoked!
+
+
+def test_tier1_search_string_match_reaches_tier2(monkeypatch):
+    """Studies passing the search string proceed to Tier-2 Laya inference."""
+    monkeypatch.setattr(settings, "jev_mode", "on")
+    jev_called = []
+
+    def mock_ask(*a, **k):
+        jev_called.append(True)
+        return _answers(pop=0.92, inter=0.92)
+
+    monkeypatch.setattr(jev_client, "ask", mock_ask)
+    search_str = '("arterial malformation"[tiab]) AND (endovascular)'
+    abstract_text = "In this trial, adults with pure arterial malformation underwent endovascular treatment."
+
+    res = jev_screener.screen(
+        "abstract",
+        title="Pure Arterial Malformation Trial",
+        abstract=abstract_text,
+        pico=PICO,
+        search_string=search_str,
+        fast_mode=True,
+    )
+    assert res is not None
+    assert res["decision"] == "include"
+    assert len(jev_called) == 1  # Proceeded to Tier 2!
+
+
+def test_screen_batch_two_tier(monkeypatch):
+    """Batched screening applies Tier 1 filtering and evaluates remaining studies in one parallel pass."""
+    monkeypatch.setattr(settings, "jev_mode", "on")
+
+    def mock_ask_batch(requests):
+        return {req[0]: _answers(pop=0.9, inter=0.9) for req in requests}
+
+    monkeypatch.setattr(jev_client, "ask_batch", mock_ask_batch)
+
+    studies = [
+        {"study_id": "s1", "title": "Adults with pure arterial malformation", "abstract": "Endovascular treatment outcomes"},
+        {"study_id": "s2", "title": "Unrelated Pediatric Study", "abstract": "Antibiotics in pediatric otitis media"},
+    ]
+    search_str = '("arterial malformation") AND (endovascular)'
+
+    results = jev_screener.screen_batch(
+        studies,
+        pico=PICO,
+        search_string=search_str,
+        fast_mode=True,
+    )
+    assert len(results) == 2
+    assert results[0]["decision"] == "include"
+    assert results[1]["decision"] == "exclude"
+    assert results[1]["reason_code"] == "SEARCH_STRING_EXCLUSION"
+

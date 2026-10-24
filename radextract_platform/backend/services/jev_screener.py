@@ -17,6 +17,7 @@ from typing import Any, Optional
 from config import settings
 from services import jev_client
 from services.jev_client import JevError
+from services.search_string_matcher import match_search_string
 
 logger = logging.getLogger("jev_screener")
 
@@ -48,7 +49,18 @@ def _slug(label: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")[:60] or "excluded"
 
 
-def build_state(stage: str, title: str, abstract: str, full_text: str, fields: dict[str, str]) -> dict[str, Any]:
+def build_state(
+    stage: str, title: str, abstract: str, full_text: str, fields: dict[str, str], fast_mode: bool = False
+) -> dict[str, Any]:
+    if fast_mode or stage == "abstract":
+        # Fast Pipeline: Only map abstract (and title) with Population & Intervention
+        return {
+            "abstract": abstract,
+            "title": title,
+            "eligibility": {
+                k: v for k, v in fields.items() if k in ("population", "intervention") and v
+            },
+        }
     state: dict[str, Any] = {"eligibility": {k: v for k, v in fields.items() if v}, "title": title}
     if stage == "title":
         state["note"] = "Only the title is available. Absence of detail in a title is not evidence of a mismatch."
@@ -60,10 +72,10 @@ def build_state(stage: str, title: str, abstract: str, full_text: str, fields: d
 
 
 def build_questions(
-    stage: str, fields: dict[str, str], exclusion_reasons: Optional[list[str]]
+    stage: str, fields: dict[str, str], exclusion_reasons: Optional[list[str]], fast_mode: bool = False
 ) -> dict[str, dict[str, Any]]:
     q: dict[str, dict[str, Any]] = {}
-    if fields["population"]:
+    if fields.get("population"):
         q["population_match"] = {
             "type": "noul",
             "instructions": "Does the study population match `eligibility.population`?",
@@ -72,7 +84,7 @@ def build_questions(
                 "false": "The studied patients/subjects are clearly outside the eligible population",
             },
         }
-    if fields["intervention"]:
+    if fields.get("intervention"):
         q["intervention_match"] = {
             "type": "noul",
             "instructions": "Does the study assess the intervention or index test in `eligibility.intervention`?",
@@ -81,7 +93,20 @@ def build_questions(
                 "false": "The eligible intervention/index test is clearly not what the study is about",
             },
         }
-    if fields["outcome"]:
+
+    # In fast mode, return immediately with Population & Intervention to maximize ONNX throughput
+    if fast_mode:
+        if exclusion_reasons:
+            criteria = {_slug(r): r for r in exclusion_reasons[:200]}
+            criteria[NO_REASON] = "None of the listed exclusion reasons applies"
+            q["exclusion_reason"] = {
+                "type": "choice",
+                "instructions": "Which exclusion reason, if any, best describes why this study would not be eligible?",
+                "criteria": criteria,
+            }
+        return q
+
+    if fields.get("outcome") and stage != "abstract":
         q["outcome_reported"] = {
             "type": "noul",
             "instructions": "Does the study report or plausibly report the outcome in `eligibility.outcome`?",
@@ -105,7 +130,7 @@ def build_questions(
             "instructions": "Which exclusion reason, if any, best describes why this study would not be eligible?",
             "criteria": criteria,
         }
-    if stage != "title":
+    if stage == "fulltext":
         q["study_design"] = {
             "type": "choice",
             "instructions": "What is the study design?",
@@ -250,15 +275,19 @@ def screen(
     full_text: str = "",
     pico: Optional[dict[str, Any]] = None,
     exclusion_reasons: Optional[list[str]] = None,
+    search_string: Optional[str] = None,
+    fast_mode: bool = False,
 ) -> Optional[dict[str, Any]]:
-    """Screen one study with Jev. stage is "title", "abstract" or "fulltext".
+    """Screen one study with Jev/Laya. stage is "title", "abstract" or "fulltext".
 
-    Returns a result dict, or None when Jev is disabled, cannot screen (no PICO), or fails.
+    Includes:
+    - Tier-1 Deterministic Search String Filter (instant microsecond drop if criteria unmet)
+    - Tier-2 Focused PICO Abstract Laya ONNX Inference (Population + Intervention)
     """
     if not jev_client.is_jev_enabled():
         return None
     try:
-        return _screen(stage, title, abstract, full_text, pico, exclusion_reasons)
+        return _screen(stage, title, abstract, full_text, pico, exclusion_reasons, search_string, fast_mode)
     except Exception:  # never let Jev break the caller; the LLM path takes over
         logger.exception("Jev screening raised unexpectedly")
         return None
@@ -274,20 +303,47 @@ def _labels(exclusion_reasons: Optional[list[Any]]) -> list[str]:
     return out
 
 
-def _screen(stage, title, abstract, full_text, pico, exclusion_reasons) -> Optional[dict[str, Any]]:
+def _screen(
+    stage, title, abstract, full_text, pico, exclusion_reasons, search_string=None, fast_mode=False
+) -> Optional[dict[str, Any]]:
+    title, abstract = (title or "").strip(), (abstract or "").strip()
+
+    # ── Tier 1: Deterministic Boolean Search String Filter ──
+    if search_string and (title or abstract):
+        matched, reason_str = match_search_string(f"{title} {abstract}", search_string)
+        if not matched:
+            return {
+                "recommendation": "excluded",
+                "decision": "exclude",
+                "confidence": 0.99,
+                "reason_code": "SEARCH_STRING_EXCLUSION",
+                "reason_text": f"Search string filter excluded abstract: {reason_str}",
+                "reason": f"Search string filter excluded abstract: {reason_str}",
+                "rationale": reason_str,
+                "evidence_quote": "",
+                "quotes": [],
+                "include_keywords": [],
+                "exclude_keywords": [],
+                "matched_keywords": [],
+                "needs_clarification": False,
+                "engine": "search_string_tier1",
+                "jev_answers": {"search_string_match": False},
+            }
+
+    # ── Tier 2: Focused PICO Abstract Laya ONNX Inference ──
     exclusion_reasons = _labels(exclusion_reasons)
     fields = _pico_fields(pico)
     if not (fields["population"] or fields["intervention"]):
         return None  # nothing to judge against; let the existing path handle it
-    title, abstract = (title or "").strip(), (abstract or "").strip()
+
     if stage == "fulltext":
         if not (full_text or abstract or title):
             return None
     elif not (title or abstract):
         return None
 
-    state = build_state(stage, title, abstract, full_text or "", fields)
-    questions = build_questions(stage, fields, exclusion_reasons)
+    state = build_state(stage, title, abstract, full_text or "", fields, fast_mode=fast_mode)
+    questions = build_questions(stage, fields, exclusion_reasons, fast_mode=fast_mode)
     try:
         answers = jev_client.ask(state, questions)
     except JevError as e:
@@ -298,6 +354,92 @@ def _screen(stage, title, abstract, full_text, pico, exclusion_reasons) -> Optio
     except Exception:  # never let a composition bug break screening
         logger.exception("Jev answer composition failed")
         return None
+
+
+def screen_batch(
+    studies: list[dict[str, Any]],
+    pico: Optional[dict[str, Any]] = None,
+    search_string: Optional[str] = None,
+    exclusion_reasons: Optional[list[str]] = None,
+    stage: str = "abstract",
+    fast_mode: bool = True,
+) -> list[dict[str, Any]]:
+    """Screen a batch of studies in parallel with Tier-1 Boolean filtering and Tier-2 batched Laya ONNX inference."""
+    if not studies:
+        return []
+
+    fields = _pico_fields(pico)
+    labels = _labels(exclusion_reasons)
+    results: list[dict[str, Any]] = [{}] * len(studies)
+
+    to_infer_indices = []
+    to_infer_requests = []
+
+    for idx, study in enumerate(studies):
+        title = (study.get("title") or "").strip()
+        abstract = (study.get("abstract") or "").strip()
+        full_text = (study.get("full_text") or "").strip()
+        study_id = str(study.get("study_id") or f"study_{idx}")
+
+        # Tier-1 Search String Evaluation
+        if search_string and (title or abstract):
+            matched, reason_str = match_search_string(f"{title} {abstract}", search_string)
+            if not matched:
+                results[idx] = {
+                    "study_id": study_id,
+                    "recommendation": "excluded",
+                    "decision": "exclude",
+                    "confidence": 0.99,
+                    "reason_code": "SEARCH_STRING_EXCLUSION",
+                    "reason_text": f"Search string filter excluded abstract: {reason_str}",
+                    "reason": f"Search string filter excluded abstract: {reason_str}",
+                    "rationale": reason_str,
+                    "evidence_quote": "",
+                    "quotes": [],
+                    "include_keywords": [],
+                    "exclude_keywords": [],
+                    "matched_keywords": [],
+                    "needs_clarification": False,
+                    "engine": "search_string_tier1",
+                    "jev_answers": {"search_string_match": False},
+                }
+                continue
+
+        if not (fields["population"] or fields["intervention"]):
+            continue
+
+        state = build_state(stage, title, abstract, full_text, fields, fast_mode=fast_mode)
+        questions = build_questions(stage, fields, labels, fast_mode=fast_mode)
+
+        to_infer_indices.append(idx)
+        to_infer_requests.append((study_id, state, questions))
+
+    if to_infer_requests and jev_client.is_jev_enabled():
+        try:
+            batch_answers = jev_client.ask_batch(to_infer_requests)
+            for idx, (study_id, state, questions) in zip(to_infer_indices, to_infer_requests):
+                answers = batch_answers.get(study_id, {})
+                study = studies[idx]
+                abstract = study.get("abstract") or ""
+                res = compose(stage, answers, fields, labels, abstract)
+                res["study_id"] = study_id
+                results[idx] = res
+        except Exception as e:
+            logger.warning("Batch inference fallback to sequential: %s", e)
+            for idx in to_infer_indices:
+                study = studies[idx]
+                results[idx] = screen(
+                    stage,
+                    title=study.get("title", ""),
+                    abstract=study.get("abstract", ""),
+                    full_text=study.get("full_text", ""),
+                    pico=pico,
+                    exclusion_reasons=exclusion_reasons,
+                    search_string=search_string,
+                    fast_mode=fast_mode,
+                ) or {}
+
+    return results
 
 
 def to_clarification_shape(res: dict[str, Any]) -> dict[str, Any]:

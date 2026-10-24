@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Share2,
@@ -96,6 +96,19 @@ export const ClaimscapePage: React.FC = () => {
   const [resultSource, setResultSource] = useState("Evidence synthesis active · 300 publications analyzed across study designs");
   const [evalSpeed, setEvalSpeed] = useState<number | null>(null);
 
+  // Auto-scroll and progress bar states
+  const mapSectionRef = useRef<HTMLDivElement>(null);
+  const [scanProgress, setScanProgress] = useState<number>(0);
+  const [scanStepLabel, setScanStepLabel] = useState<string>("");
+  const progressIntervalRef = useRef<any>(null);
+
+  // Clear progress timer on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    };
+  }, []);
+
   // Handle claim changes: auto-build query if user hasn't typed custom query
   const handleClaimChange = (newClaim: string) => {
     setClaim(newClaim);
@@ -181,6 +194,14 @@ export const ClaimscapePage: React.FC = () => {
       });
   }, [processedPapers, directOnly, tableSearch]);
 
+  const scrollToMap = () => {
+    setTimeout(() => {
+      if (mapSectionRef.current) {
+        mapSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 150);
+  };
+
   const runEvidenceSearch = async (nextClaim: string, nextQuery: string) => {
     const activeClaim = nextClaim.trim();
     const activeQuery = nextQuery.trim() || buildPubMedQuery(activeClaim);
@@ -191,6 +212,28 @@ export const ClaimscapePage: React.FC = () => {
     setEvalSpeed(null);
     setResultSource("Synthesizing evidence across biomedical literature…");
 
+    // Initialize progress bar
+    setScanProgress(12);
+    setScanStepLabel("Querying PubMed & indexing matching studies...");
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    progressIntervalRef.current = setInterval(() => {
+      setScanProgress((prev) => {
+        if (prev < 35) {
+          setScanStepLabel("Retrieving publication abstracts & study designs...");
+          return prev + 6;
+        }
+        if (prev < 70) {
+          setScanStepLabel("Reading abstracts with Laya System-1 ONNX model...");
+          return prev + 4;
+        }
+        if (prev < 92) {
+          setScanStepLabel("Synthesizing stances & plotting evidence distribution...");
+          return prev + 1.5;
+        }
+        return prev;
+      });
+    }, 350);
+
     // Sync URL parameters without full page reload
     try {
       const newUrl = new URL(window.location.href);
@@ -199,6 +242,21 @@ export const ClaimscapePage: React.FC = () => {
       newUrl.searchParams.set("n", paperCount.toString());
       window.history.replaceState({}, "", newUrl.toString());
     } catch {}
+
+    const finishScan = (label = "Evidence mapped successfully") => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      setScanProgress(100);
+      setScanStepLabel(label);
+      setIsScanning(false);
+      scrollToMap();
+      setTimeout(() => {
+        setScanProgress(0);
+        setScanStepLabel("");
+      }, 2500);
+    };
 
     // Step 1: Try Local Backend API if available
     try {
@@ -214,7 +272,7 @@ export const ClaimscapePage: React.FC = () => {
         setSelectedPmid(res.papers[0]?.pmid || "");
         setEvalSpeed(res.elapsed_ms);
         setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: ${res.engine || "Laya System-1"}`);
-        setIsScanning(false);
+        finishScan();
         return;
       }
     } catch {
@@ -234,15 +292,21 @@ export const ClaimscapePage: React.FC = () => {
         });
         setSelectedPmid(liveRes.papers[0]?.pmid || "");
         setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Laya System-1`);
-        setIsScanning(false);
+        finishScan();
         return;
       } else {
+        if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+        setScanProgress(0);
+        setScanStepLabel("");
         setScanError(`No PubMed publications found matching "${activeQuery}". Try expanding or refining your claim terms.`);
         setIsScanning(false);
         return;
       }
     } catch (e: any) {
       console.warn("Live PubMed retrieval warning:", e);
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      setScanProgress(0);
+      setScanStepLabel("");
       setScanError(`PubMed live search failed: ${e?.message || "Please check connection"}`);
       setIsScanning(false);
       return;
@@ -434,6 +498,36 @@ export const ClaimscapePage: React.FC = () => {
               </label>
             </div>
           </form>
+
+          {/* Progress Bar under the Question Card */}
+          {(isScanning || scanProgress > 0) && (
+            <div className="overflow-hidden rounded-xl border border-[#381A61]/15 dark:border-white/15 bg-white dark:bg-[#1E1926] p-4 shadow-sm transition-all duration-300 animate-in fade-in">
+              <div className="flex items-center justify-between gap-3 text-xs font-semibold mb-2">
+                <div className="flex items-center gap-2">
+                  {isScanning ? (
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7C4B73] dark:bg-[#F9D14A] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#7C4B73] dark:bg-[#F9D14A]"></span>
+                    </span>
+                  ) : (
+                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  )}
+                  <span className="text-[#381A61] dark:text-[#F9D14A]">
+                    {scanStepLabel || "Analyzing evidence..."}
+                  </span>
+                </div>
+                <span className="font-mono text-[11px] text-[#6B665E] dark:text-[#968F84]">
+                  {Math.round(scanProgress)}%
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[#381A61]/10 dark:bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#7C4B73] via-[#88A0DC] to-[#F9D14A] transition-all duration-300 ease-out"
+                  style={{ width: `${scanProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Section 2: Dynamic Headline & Stat KPIs */}
@@ -502,7 +596,7 @@ export const ClaimscapePage: React.FC = () => {
           </dl>
 
           {/* Section 3: Interactive SVG Scatter Map */}
-          <div className="cs-card overflow-hidden shadow-sm">
+          <div ref={mapSectionRef} id="claimscape-map-section" className="cs-card overflow-hidden shadow-sm scroll-mt-6">
             {/* Map Header Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-[var(--cs-line)] px-5 py-3">
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
