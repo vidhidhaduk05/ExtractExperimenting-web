@@ -1,0 +1,8 @@
+{
+  "backend_url": "https://orlando-circulation-peripheral-only.trycloudflare.com",
+  "api_url": "https://orlando-circulation-peripheral-only.trycloudflare.com/api",
+  "health_url": "https://orlando-circulation-peripheral-only.trycloudflare.com/health",
+  "updated_at": "2026-10-24T06:16:51Z",
+  "status": "online",
+  "model": "biomni-r0"
+}
