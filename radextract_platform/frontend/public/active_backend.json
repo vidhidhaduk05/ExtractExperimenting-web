@@ -1,8 +1,8 @@
 {
-  "backend_url": "https://medical-sydney-tourist-analog.trycloudflare.com",
-  "api_url": "https://medical-sydney-tourist-analog.trycloudflare.com/api",
-  "health_url": "https://medical-sydney-tourist-analog.trycloudflare.com/health",
-  "updated_at": "2026-10-24T04:45:41Z",
+  "backend_url": "https://mechanics-solaris-recommendations-stronger.trycloudflare.com",
+  "api_url": "https://mechanics-solaris-recommendations-stronger.trycloudflare.com/api",
+  "health_url": "https://mechanics-solaris-recommendations-stronger.trycloudflare.com/health",
+  "updated_at": "2026-10-24T05:35:15Z",
   "status": "online",
   "model": "biomni-r0"
 }
