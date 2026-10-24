@@ -1,8 +1,8 @@
 {
-  "backend_url": "https://mechanics-solaris-recommendations-stronger.trycloudflare.com",
-  "api_url": "https://mechanics-solaris-recommendations-stronger.trycloudflare.com/api",
-  "health_url": "https://mechanics-solaris-recommendations-stronger.trycloudflare.com/health",
-  "updated_at": "2026-10-24T05:35:15Z",
+  "backend_url": "https://civilization-bob-seventh-experts.trycloudflare.com",
+  "api_url": "https://civilization-bob-seventh-experts.trycloudflare.com/api",
+  "health_url": "https://civilization-bob-seventh-experts.trycloudflare.com/health",
+  "updated_at": "2026-10-24T06:14:15Z",
   "status": "online",
   "model": "biomni-r0"
 }
