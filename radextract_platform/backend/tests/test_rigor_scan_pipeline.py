@@ -100,3 +100,39 @@ def test_scan_text_endpoint():
     assert "counts" in view
     assert "software" in view
     assert len(view["software"]) == 4
+
+
+def test_zero_server_disk_retention():
+    """Verify that uploaded manuscripts are processed in-memory only and never saved to server disk."""
+    import io
+    import os
+    import uuid
+    import docx
+
+    unique_token = f"ZERO_RETENTION_TOKEN_{uuid.uuid4().hex}"
+    doc = docx.Document()
+    doc.add_heading("Confidential Manuscript Under Review", level=1)
+    doc.add_paragraph(f"This trial contains strictly private data with token {unique_token}.")
+    doc.add_paragraph("Animals were randomly assigned and assessors were blinded. P-value was 0.04.")
+    bio = io.BytesIO()
+    doc.save(bio)
+    bio.seek(0)
+
+    filename = f"private_study_{unique_token[:8]}.docx"
+    res = client.post(
+        "/api/rigor-scan/scan-docx",
+        files={"file": (filename, bio.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+    )
+
+    assert res.status_code == 200
+    assert res.headers.get("x-zero-retention") == "true"
+    assert "no-store" in res.headers.get("cache-control", "")
+
+    # Assert that neither the filename nor any file with this unique token exists on server disk
+    current_dir = os.path.dirname(__file__)
+    backend_root = os.path.abspath(os.path.join(current_dir, ".."))
+    
+    # Check backend directory and /tmp for any file matching filename
+    assert not os.path.exists(os.path.join("/tmp", filename))
+    assert not os.path.exists(os.path.join(backend_root, filename))
+

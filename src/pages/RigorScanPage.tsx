@@ -445,8 +445,8 @@ export const RigorScanPage: React.FC = () => {
                 id="rs-file"
                 ref={fileInputRef}
                 type="file"
-                accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt,.text,.md"
-                aria-label="Upload Word document (.docx), PDF, or text for Rigor Scan"
+                accept=".docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/pdf,.pdf,.txt,.text,.md"
+                aria-label="Upload Word document (.docx, .doc), PDF, or text for Rigor Scan"
                 disabled={isScanning}
                 onChange={handleFileUpload}
                 className="sr-only"
@@ -478,15 +478,20 @@ export const RigorScanPage: React.FC = () => {
                       {currentFileMeta.name} ({currentFileMeta.size}) · Evaluating 74 checks...
                     </span>
                   ) : (
-                    "Read in your browser. Word (.docx), PDF, or TXT. Only manuscript text is sent for verification; nothing is saved."
+                    "Zero server retention: Evaluated strictly in volatile RAM. Files and text are never saved to disk or database."
                   )}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-xs rs-muted font-medium">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs rs-muted font-medium flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 Engine: <span className="font-mono font-bold text-[#381A61] dark:text-[#F9D14A]">Local Laya System-1 & Biomni-R0</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Zero Disk Retention · In-Memory Only
               </span>
               <button
                 type="button"
