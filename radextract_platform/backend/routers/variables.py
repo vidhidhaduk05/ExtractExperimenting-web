@@ -73,6 +73,7 @@ async def update_variable(variable_id: str, body: VariableUpdate, user: Optional
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Variable not found")
+    check_project_access(conn, row["project_id"], user, min_role="editor")
 
     updates = []
     params = []
@@ -109,12 +110,17 @@ async def update_variable(variable_id: str, body: VariableUpdate, user: Optional
 @router.delete("/variables/{variable_id}")
 async def delete_variable(variable_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
-    cursor = conn.execute(
+    row = conn.execute(
+        "SELECT project_id FROM variables WHERE variable_id = ?", (variable_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Variable not found")
+    check_project_access(conn, row["project_id"], user, min_role="editor")
+
+    conn.execute(
         "DELETE FROM variables WHERE variable_id = ?", (variable_id,)
     )
     conn.commit()
-    if cursor.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Variable not found")
     return {"deleted": True, "variable_id": variable_id}
 
 
