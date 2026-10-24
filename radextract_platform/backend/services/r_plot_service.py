@@ -10,12 +10,15 @@ Falls back to matplotlib if R is unavailable or script fails.
 """
 from __future__ import annotations
 import json
+import logging
 import os
 import shutil
 import subprocess
 import tempfile
 import hashlib
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 _CONDA_RSCRIPT = "/opt/conda/bin/Rscript"
 
@@ -84,7 +87,14 @@ def call_r_script(script_name: str, data: dict) -> Optional[str]:
     if not _is_r_available():
         return None
 
-    script_path = os.path.join(R_SCRIPTS_DIR, script_name)
+    script_path = os.path.abspath(os.path.join(R_SCRIPTS_DIR, script_name))
+    r_scripts_dir = os.path.abspath(R_SCRIPTS_DIR)
+    try:
+        if os.path.commonpath([r_scripts_dir, script_path]) != r_scripts_dir:
+            return None
+    except ValueError:
+        return None
+
     if not os.path.exists(script_path):
         return None
 
@@ -141,7 +151,14 @@ def call_r_script_bytes(script_name: str, data: dict, ext: str = ".png") -> Opti
     if not _is_r_available():
         return None
 
-    script_path = os.path.join(R_SCRIPTS_DIR, script_name)
+    script_path = os.path.abspath(os.path.join(R_SCRIPTS_DIR, script_name))
+    r_scripts_dir = os.path.abspath(R_SCRIPTS_DIR)
+    try:
+        if os.path.commonpath([r_scripts_dir, script_path]) != r_scripts_dir:
+            return None
+    except ValueError:
+        return None
+
     if not os.path.exists(script_path):
         return None
 
