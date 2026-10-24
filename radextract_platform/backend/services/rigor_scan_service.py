@@ -130,17 +130,19 @@ def verify_statistical_consistencies(text: str) -> List[Dict[str, Any]]:
     items = []
     # Match patterns like HR, 0.76; 95% CI, 0.63-0.92 or OR 1.25 (95% CI 1.05 to 1.50)
     pattern = re.compile(
-        r"(HR|OR|RR)[,\s:]+([0-9\.]+)[;\s,]+95%\s*CI[,\s:]+([0-9\.]+)\s*(?:-|ΓÇô|to)\s*([0-9\.]+)(?:[;\s,]+[pP]\s*([<=><]\s*[0-9\.]+))?",
+        r"(hazard\s+ratio|odds\s+ratio|relative\s+risk|HR|OR|RR)[,\s:]+([0-9\.]+)[;\s,]+(?:(?:95%\s*CI|\(95%\s*CI\))[,\s:]+)?([0-9\.]+)\s*(?:-|–|—|to)\s*([0-9\.]+)\)?(?:[;\s,]+[pP]\s*([<=><]\s*[0-9\.]+))?",
         re.IGNORECASE
     )
     matches = list(pattern.finditer(text))
     
     for m in matches:
-        metric_type = m.group(1).upper()
+        raw_type = m.group(1).upper()
+        metric_type = "HR" if "HAZARD" in raw_type or raw_type == "HR" else "OR" if "ODDS" in raw_type or raw_type == "OR" else "RR"
         estimate = float(m.group(2))
         ci_lower = float(m.group(3))
         ci_upper = float(m.group(4))
         p_val_str = m.group(5)
+
 
         # Implied standard error and z-score check:
         # ln(estimate) - ln(ci_lower) ~ 1.96 * SE
