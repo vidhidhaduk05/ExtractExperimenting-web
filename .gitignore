@@ -38,6 +38,8 @@ radextract_platform/backend/data/claimscape_cache/
 .env.production.local
 
 # Logs
+slurm*.out
+slurm*.err
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

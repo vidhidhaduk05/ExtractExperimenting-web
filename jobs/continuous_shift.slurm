@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=radextract_24h_shift
+#SBATCH --job-name=shift
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -9,8 +9,8 @@
 #SBATCH --time=24:00:00
 #SBATCH --mail-user=vidhidhaduk05@gmail.com
 #SBATCH --mail-type=BEGIN,END,FAIL,TIME_LIMIT_90
-#SBATCH --output=slurm_shift_%j.out
-#SBATCH --error=slurm_shift_%j.err
+#SBATCH --output=jobs/logs/slurm_shift_%j.out
+#SBATCH --error=jobs/logs/slurm_shift_%j.err
 
 # ==============================================================================
 # RadExtract 24/7 Continuous Autonomous Engine

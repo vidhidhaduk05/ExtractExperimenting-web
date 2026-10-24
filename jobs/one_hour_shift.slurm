@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=radextract_1h_shift
+#SBATCH --job-name=1h_shift
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

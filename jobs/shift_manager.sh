@@ -139,9 +139,13 @@ while true; do
             echo "[+] Persistent database synced prior to successor launch."
         fi
 
+        # Dynamic job name: strictly date and time (no 'radextract')
+        DYNAMIC_JOB_NAME="$(date +'%Y-%m-%d_%H-%M')"
+        echo "[*] Submitting replacement shift with dynamic timestamp name: ${DYNAMIC_JOB_NAME}"
+
         if [ "${TEST_DRY_RUN:-0}" = "1" ]; then
             echo "[TEST DRY RUN] Testing Slurm allocation with sbatch --test-only..."
-            TEST_OUT=$(sbatch --test-only "$SLURM_SCRIPT" 2>&1 || echo "ERROR")
+            TEST_OUT=$(sbatch --test-only --job-name="${DYNAMIC_JOB_NAME}" "$SLURM_SCRIPT" 2>&1 || echo "ERROR")
             echo "[*] Slurm test-only response: $TEST_OUT"
             if echo "$TEST_OUT" | grep -q "Job [0-9]\+ to start"; then
                 MOCK_ID=$(echo "$TEST_OUT" | grep -o "Job [0-9]\+" | awk '{print $2}')
@@ -150,7 +154,7 @@ while true; do
                 NEXT_JOB_OUT="$TEST_OUT"
             fi
         else
-            NEXT_JOB_OUT=$(sbatch "$SLURM_SCRIPT" 2>&1 || echo "ERROR")
+            NEXT_JOB_OUT=$(sbatch --job-name="${DYNAMIC_JOB_NAME}" "$SLURM_SCRIPT" 2>&1 || echo "ERROR")
         fi
         echo "[*] sbatch response: $NEXT_JOB_OUT"
 
