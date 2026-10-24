@@ -10,6 +10,7 @@ Combines:
 from __future__ import annotations
 
 import os
+import sys
 import re
 import json
 import time
@@ -18,6 +19,13 @@ import hashlib
 import logging
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Any, Optional, Tuple
+
+_workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _workspace_root not in sys.path:
+    sys.path.insert(0, _workspace_root)
+_backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _backend_root not in sys.path:
+    sys.path.insert(0, _backend_root)
 
 import httpx
 import numpy as np
@@ -46,18 +54,28 @@ def _get_http_client() -> httpx.Client:
     return _HTTP_CLIENT
 
 
-# Laya Model singleton with multi-threaded execution
+# Laya / Jev Model singleton with multi-threaded execution
 _laya_instance: Any = None
 _laya_failed = False
 
 
 def _get_laya_model():
-    """Get or initialize singleton Laya ONNX engine with multi-threaded parallel execution."""
+    """Get or initialize singleton Laya / Jev ONNX engine with multi-threaded parallel execution."""
     global _laya_instance, _laya_failed
     if _laya_instance is not None:
         return _laya_instance
     if _laya_failed:
         return None
+
+    # First attempt via jev_client if available
+    try:
+        from services.jev_client import _get_laya_engine
+        engine = _get_laya_engine()
+        if engine is not None:
+            _laya_instance = engine
+            return _laya_instance
+    except Exception as e:
+        logger.debug("jev_client._get_laya_engine failed: %s", e)
 
     try:
         from laya.laya_engine import LayaModel
@@ -154,6 +172,201 @@ def _classify_study_tier(pub_types: List[str], text: str) -> str:
     return "obs"
 
 
+_TENS = {
+    "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+    "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90
+}
+_ONES = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+    "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19
+}
+
+
+def _parse_english_number(s: str) -> Optional[int]:
+    """Parse integer from digits or common English count words/hyphenated words."""
+    if not s:
+        return None
+    s = s.lower().strip()
+    if s in _ONES:
+        return _ONES[s]
+    if s in _TENS:
+        return _TENS[s]
+    parts = s.replace("-", " ").split()
+    if len(parts) == 2 and parts[0] in _TENS and parts[1] in _ONES:
+        return _TENS[parts[0]] + _ONES[parts[1]]
+    clean = re.sub(r"[\s,]", "", s)
+    if clean.isdigit():
+        return int(clean)
+    return None
+
+
+def _normalize_claim_hypothesis(claim: str) -> str:
+    """Normalize interrogative claims to affirmative propositions for stance entailment."""
+    c = claim.strip().rstrip("?").strip()
+    m = re.match(r"^are\s+(.+?)\s+(more|less|likely|at\s+increased\s+risk|at\s+higher\s+risk|associated\s+with)\b(.*)$", c, re.I)
+    if m:
+        return f"{m.group(1)} are {m.group(2)}{m.group(3)}".strip()
+
+    m = re.match(r"^is\s+(.+?)\s+(associated\s+with|effective|beneficial|protective|safe|better|linked\s+to|indicated|superior)\b(.*)$", c, re.I)
+    if m:
+        return f"{m.group(1)} is {m.group(2)}{m.group(3)}".strip()
+
+    m = re.match(r"^does\s+(.+?)\s+(reduce|decrease|increase|improve|worsen|prevent|cause|lead\s+to|protect|lower|elevate|benefit|extend)\b(.*)$", c, re.I)
+    if m:
+        verb = m.group(2).lower()
+        verb_s = "leads to" if verb == "lead to" else (verb[:-1] + "ies" if verb.endswith("y") else (verb + "s" if verb.endswith("e") else verb + "s"))
+        return f"{m.group(1)} {verb_s}{m.group(3)}".strip()
+
+    m = re.match(r"^(?:do|can|will|should)\s+(.+?)\s+(reduce|decrease|increase|improve|worsen|prevent|cause|lead\s+to|protect|lower|elevate|benefit|extend)\b(.*)$", c, re.I)
+    if m:
+        return f"{m.group(1)} {m.group(2)}{m.group(3)}".strip()
+
+    return c
+
+
+def _extract_sample_size(abstract: str, title: str, tier: str, pub_types: List[str]) -> Dict[str, Any]:
+    """Extract participant count / sample size and contextual display string."""
+    text = (title + " " + abstract).strip()
+    text_lower = text.lower()
+    lower_pts = [p.lower() for p in (pub_types or [])]
+
+    # 1. Systematic Review / Meta-Analysis
+    is_meta = (
+        tier == "meta"
+        or any("meta-analysis" in pt or "systematic review" in pt for pt in lower_pts)
+        or "systematic review" in text_lower
+        or "meta-analysis" in text_lower
+    )
+    if is_meta:
+        n_studies = None
+        m_st = re.search(
+            r"\b(\d{1,4}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty(?:-\w+)?|thirty(?:-\w+)?|forty(?:-\w+)?|fifty(?:-\w+)?)\s+(?:eligible\s+|included\s+|relevant\s+|randomized\s+|observational\s+)?(?:studies|trials|articles|rcts|cohorts|publications)\b",
+            text_lower
+        )
+        if m_st:
+            n_studies = _parse_english_number(m_st.group(1))
+        if not n_studies:
+            m_st2 = re.search(r"(?:total of|included|analyzed|identified|pooled\s+from)\s+(\d{1,4})\s+(?:studies|trials|articles)", text_lower)
+            if m_st2:
+                n_studies = _parse_english_number(m_st2.group(1))
+
+        n_pts = None
+        m_pts = re.search(
+            r"(?:total of|comprising|including|enrolling|analyzed|sample size of|pooled\s+(?:data\s+from)?|n\s*=\s*)\s*(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})\s*(?:patients|participants|individuals|subjects|cases|children|women|men|adults)?",
+            text_lower
+        )
+        if m_pts:
+            n_pts = _parse_english_number(m_pts.group(1))
+        if not n_pts:
+            m_pts2 = re.search(
+                r"(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})\s+(?:patients|participants|individuals|subjects)\s+(?:were\s+included|were\s+analyzed|across)",
+                text_lower
+            )
+            if m_pts2:
+                n_pts = _parse_english_number(m_pts2.group(1))
+
+        if n_studies and n_pts:
+            disp = f"{n_studies:,} studies, {n_pts:,} patients (Systematic Review)"
+        elif n_studies:
+            disp = f"{n_studies:,} studies (Systematic Review)"
+        elif n_pts:
+            disp = f"{n_pts:,} pooled patients (Systematic Review)"
+        else:
+            disp = "Systematic Review / Meta-Analysis"
+
+        return {
+            "sample_size": n_pts or n_studies,
+            "sample_size_display": disp,
+            "study_type_label": "Systematic Review & Meta-Analysis"
+        }
+
+    # 2. Case Report (Single Patient)
+    is_case_report = (
+        "case report" in title.lower()
+        or any("case reports" in pt for pt in lower_pts)
+        or (tier == "case" and "case series" not in text_lower and not re.search(r"\b(?:\d+|two|three|four|five|six|seven|eight|nine|ten)\s+cases\b", text_lower))
+    )
+    if is_case_report:
+        return {
+            "sample_size": 1,
+            "sample_size_display": "1 patient (Case Report)",
+            "study_type_label": "Case Report"
+        }
+
+    # 3. Case Series (Multiple Patients)
+    is_case_series = (
+        "case series" in text_lower
+        or (tier == "case" and ("case series" in text_lower or re.search(r"\b(?:\d+|two|three|four|five|six|seven|eight|nine|ten)\s+cases\b", text_lower)))
+    )
+    if is_case_series:
+        n_cases = None
+        m_cs = re.search(
+            r"(?:case series of|series of|in a series of|in|among)\s*(\d{1,4}|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty(?:-\w+)?)\s*(?:consecutive\s+)?(?:patients|cases|subjects)",
+            text_lower
+        )
+        if m_cs:
+            n_cases = _parse_english_number(m_cs.group(1))
+        if not n_cases:
+            m_cs2 = re.search(
+                r"\b(\d{1,4}|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty(?:-\w+)?)\s*(?:consecutive\s+)?(?:patients|cases|subjects)\b",
+                text_lower
+            )
+            if m_cs2:
+                n_cases = _parse_english_number(m_cs2.group(1))
+        disp = f"{n_cases:,} patients (Case Series)" if n_cases else "Case Series"
+        return {
+            "sample_size": n_cases,
+            "sample_size_display": disp,
+            "study_type_label": "Case Series"
+        }
+
+    # 4. Preclinical Models (Animal / In Vitro)
+    if tier == "animal":
+        return {
+            "sample_size": None,
+            "sample_size_display": "Animal Model (Preclinical)",
+            "study_type_label": "Animal Study"
+        }
+    if tier == "in_vitro":
+        return {
+            "sample_size": None,
+            "sample_size_display": "In Vitro / Cell Model",
+            "study_type_label": "In Vitro Study"
+        }
+
+    # 5. RCTs, Cohorts, and Clinical Studies
+    patterns = [
+        r"(?:total of|enrolled|included|randomized|recruited|analyzed|evaluated|cohort of|comprising)\s+(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})\s*(?:patients|participants|individuals|subjects|children|adults|women|men)?",
+        r"among\s+(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})\s+(?:patients|participants|individuals|children|women|men|adults|subjects)",
+        r"(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})\s+(?:patients|participants|individuals|subjects|women|men|children|adults)\s*(?:were\s+enrolled|were\s+included|were\s+randomized|underwent|received|were\s+evaluated)",
+        r"(?:sample size|sample size of|n\s*=\s*)\s*(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})",
+    ]
+    for pat in patterns:
+        m = re.search(pat, text_lower)
+        if m:
+            val = _parse_english_number(m.group(1))
+            if val and 1 < val < 50_000_000:
+                tier_label = (
+                    "RCT" if tier == "rct"
+                    else "Clinical Trial" if tier == "trial"
+                    else "Cohort" if "cohort" in text_lower
+                    else "Observational"
+                )
+                return {
+                    "sample_size": val,
+                    "sample_size_display": f"{val:,} participants ({tier_label})",
+                    "study_type_label": tier_label
+                }
+
+    tier_label = "Randomized Trial" if tier == "rct" else "Observational Study" if tier == "obs" else "Review" if tier == "review" else "Study"
+    return {
+        "sample_size": None,
+        "sample_size_display": None,
+        "study_type_label": tier_label
+    }
+
+
 def _parse_efetch_xml(xml_text: str) -> List[Dict[str, Any]]:
     """Single-pass parser extracting article metadata and structured abstract in one pass."""
     articles = []
@@ -222,6 +435,7 @@ def _parse_efetch_xml(xml_text: str) -> List[Dict[str, Any]]:
 
             sentences = _split_sentences(abstract_str)
             tier = _classify_study_tier(pub_types, title + " " + abstract_str)
+            sample_info = _extract_sample_size(abstract_str, title, tier, pub_types)
 
             articles.append({
                 "pmid": pmid,
@@ -234,6 +448,9 @@ def _parse_efetch_xml(xml_text: str) -> List[Dict[str, Any]]:
                 "abstract": abstract_str,
                 "sentences": sentences,
                 "tier": tier,
+                "sample_size": sample_info.get("sample_size"),
+                "sample_size_display": sample_info.get("sample_size_display"),
+                "study_type_label": sample_info.get("study_type_label"),
             })
     except ET.ParseError as e:
         raise RuntimeError("PubMed returned invalid article XML") from e
@@ -331,9 +548,27 @@ def _batch_eval_laya(laya_model: Any, articles: List[Dict[str, Any]], clean_clai
             ans = paper_answers.get(p_idx, {})
             on_topic_p = ans.get("onTopic", {}).get("yes", 0.92)
             st_p = ans.get("stance", {})
-            supports_p = float(st_p.get("supports", 0.5))
-            contradicts_p = float(st_p.get("contradicts", 0.5))
-            direct_p = 0.94 if art.get("tier") in ("meta", "rct", "trial", "obs") else 0.45
+            st_check_p = ans.get("stanceCheck", st_p)
+
+            supports_p = float(st_p.get("supports", 0.33))
+            contradicts_p = float(st_p.get("contradicts", 0.33))
+            no_result_p = float(st_p.get("no_result", 0.34))
+            mixed_p = float(st_p.get("mixed", 0.0))
+
+            chk_supports = float(st_check_p.get("supports", supports_p))
+            chk_contradicts = float(st_check_p.get("contradicts", contradicts_p))
+            chk_no_result = float(st_check_p.get("no_result", no_result_p))
+            chk_mixed = float(st_check_p.get("mixed", mixed_p))
+
+            tier = art.get("tier", "obs")
+            if tier in ("meta", "rct", "trial", "obs"):
+                direct_p = min(0.96, max(0.55, round(float(on_topic_p) * 0.95, 2)))
+            elif tier == "case":
+                direct_p = 0.45
+            elif tier in ("animal", "in_vitro"):
+                direct_p = 0.20
+            else:
+                direct_p = 0.35
 
             # Extractive finding sentence selection
             sents = art.get("sentences", [])
@@ -359,10 +594,14 @@ def _batch_eval_laya(laya_model: Any, articles: List[Dict[str, Any]], clean_clai
                 "stance": {
                     "supports": supports_p,
                     "contradicts": contradicts_p,
+                    "no_result": no_result_p,
+                    "mixed": mixed_p,
                 },
                 "stanceCheck": {
-                    "supports": supports_p,
-                    "contradicts": contradicts_p,
+                    "supports": chk_supports,
+                    "contradicts": chk_contradicts,
+                    "no_result": chk_no_result,
+                    "mixed": chk_mixed,
                 },
                 "findingSentence": finding,
             })
@@ -490,22 +729,39 @@ def evaluate_claim_fast(
 
     # 3. High-Throughput Batched Laya System-1 Tensor Inference
     laya = _get_laya_model()
+    hypothesis = _normalize_claim_hypothesis(clean_claim)
     q_defs = {
         "onTopic": {
             "type": "choice",
-            "criteria": {"yes": "investigates relationship", "no": "does not"},
-            "instructions": "Does the paper investigate the relationship described in the claim?"
+            "criteria": {
+                "yes": "study investigates or reports on this relationship/outcome",
+                "no": "study does not investigate or report on this relationship"
+            },
+            "instructions": "Does the paper investigate or report on the relationship described in the claim?"
         },
         "stance": {
             "type": "choice",
-            "criteria": {"supports": "agrees with claim", "contradicts": "disagrees with claim"},
-            "instructions": "What do the results say about the claim?"
+            "criteria": {
+                "supports": "findings support the claim assertion or confirm benefit/association",
+                "contradicts": "findings contradict the claim assertion, show harm, or refute relationship",
+                "no_result": "findings show no significant association, null result, or no difference"
+            },
+            "instructions": "What do the empirical findings say about the claim?"
+        },
+        "stanceCheck": {
+            "type": "choice",
+            "criteria": {
+                "supports": "evidence agrees with the claim assertion",
+                "contradicts": "evidence refutes or disagrees with the claim assertion",
+                "no_result": "evidence is inconclusive, neutral, or reports no difference"
+            },
+            "instructions": "Does the evidence in this study agree with the claim assertion?"
         }
     }
 
     if laya is not None and articles:
         try:
-            judgments = _batch_eval_laya(laya, articles, clean_claim, q_defs)
+            judgments = _batch_eval_laya(laya, articles, hypothesis, q_defs)
         except Exception as e:
             logger.warning("Batched Laya evaluation encountered exception, falling back: %s", e)
             judgments = []
@@ -522,14 +778,24 @@ def evaluate_claim_fast(
             if art["pmid"] in existing_pmids:
                 continue
             text = (art.get("title", "") + " " + art.get("abstract", "")).lower()
-            sup = 0.78 if any(w in text for w in ["reduced", "decreased risk", "benefit", "protective", "efficacy"]) else 0.22 if any(w in text for w in ["increased risk", "harm", "no significant"]) else 0.5
+            if any(w in text for w in ["reduced", "decreased risk", "benefit", "protective", "efficacy", "effective", "improved"]):
+                sup, con, nr = 0.75, 0.15, 0.10
+            elif any(w in text for w in ["increased risk", "harm", "worse", "ineffective", "failed to"]):
+                sup, con, nr = 0.15, 0.75, 0.10
+            elif any(w in text for w in ["no significant", "no association", "not observed", "no difference"]):
+                sup, con, nr = 0.10, 0.20, 0.70
+            else:
+                sup, con, nr = 0.33, 0.33, 0.34
+
             sents = art.get("sentences", [])
+            tier = art.get("tier", "obs")
+            direct_p = 0.90 if tier in ("meta", "rct", "trial", "obs") else 0.45 if tier == "case" else 0.20
             judgments.append({
                 "pmid": art["pmid"],
                 "onTopic": 0.92,
-                "direct": 0.88,
-                "stance": {"supports": sup, "contradicts": round(1.0 - sup, 4)},
-                "stanceCheck": {"supports": sup, "contradicts": round(1.0 - sup, 4)},
+                "direct": direct_p,
+                "stance": {"supports": sup, "contradicts": con, "no_result": nr},
+                "stanceCheck": {"supports": sup, "contradicts": con, "no_result": nr},
                 "findingSentence": sents[0] if sents else None,
             })
 

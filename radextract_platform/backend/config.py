@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     #   shadow -> runs alongside and is logged for comparison; the LLM result is still returned
     #   on     -> Jev / Laya result is returned; any failure falls back to the LLM path
     jev_mode: str = os.environ.get("RADEXTRACT_JEV_MODE") or os.environ.get("JEV_MODE") or "on"
-    jev_provider: str = os.environ.get("RADEXTRACT_JEV_PROVIDER") or os.environ.get("JEV_PROVIDER") or "typesafe"  # "typesafe" (remote cloud API) with "laya" (local ONNX) backup
+    jev_provider: str = os.environ.get("RADEXTRACT_JEV_PROVIDER") or os.environ.get("JEV_PROVIDER") or ("typesafe" if (os.environ.get("RADEXTRACT_JEV_API_KEY") or os.environ.get("TYPESAFE_API_KEY") or os.environ.get("JEV_API_KEY")) else "laya")  # "typesafe" (remote cloud API) or "laya" (local ONNX)
     laya_model_dir: str = os.environ.get("LAYA_MODEL_DIR") or ""    # Path to local Laya ONNX bundle; defaults to <project_root>/laya/models
     jev_api_key: str = os.environ.get("RADEXTRACT_JEV_API_KEY") or os.environ.get("TYPESAFE_API_KEY") or os.environ.get("JEV_API_KEY") or ""       # For "typesafe" provider
     jev_api_url: str = os.environ.get("JEV_API_URL") or "https://api.typesafe.ai/v1/systemone"

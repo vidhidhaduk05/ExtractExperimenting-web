@@ -469,7 +469,38 @@ function StudyRow({
         </div>
       </td>
       <td className="px-4 py-3.5 font-mono text-xs text-[#6B665E]">{study.publication_year || "—"}</td>
-      <td className="px-4 py-3.5 text-xs text-[#6B665E]">{study.study_design || "—"}</td>
+      <td className="px-4 py-3.5 text-xs text-[#6B665E]">
+        <div className="font-medium text-[#141413]">{study.study_design || "—"}</div>
+        {(() => {
+          let sampleStr: string | null = null;
+          if (study.metadata_json) {
+            try {
+              const meta = JSON.parse(study.metadata_json);
+              if (meta.sample_size_display) sampleStr = meta.sample_size_display;
+              else if (meta.sample_size) sampleStr = `${meta.sample_size.toLocaleString()} participants`;
+            } catch {}
+          }
+          if (!sampleStr && study.study_design) {
+            const desLower = study.study_design.toLowerCase();
+            if (desLower.includes("case report") && !desLower.includes("series")) {
+              sampleStr = "1 patient (Case Report)";
+            }
+          }
+          if (!sampleStr && study.abstract) {
+            const absLower = study.abstract.toLowerCase();
+            const m = absLower.match(/(?:total of|enrolled|included|randomized|comprising|n\s*=\s*)\s*(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})/);
+            if (m) {
+              const num = m[1].replace(/[\s,]/g, "");
+              if (num.length >= 2) sampleStr = `${parseInt(num, 10).toLocaleString()} participants`;
+            }
+          }
+          return sampleStr ? (
+            <span className="inline-flex items-center gap-1 text-[10.5px] font-mono text-[#381A61] dark:text-[#EAAA00] mt-0.5">
+              👥 {sampleStr}
+            </span>
+          ) : null;
+        })()}
+      </td>
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${screeningBadge(study.screening_status)}`}>

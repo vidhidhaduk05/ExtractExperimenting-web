@@ -25,6 +25,8 @@ exports/
 .venv/
 env/
 venv/
+claimscape_cache/
+radextract_platform/backend/data/claimscape_cache/
 
 # Environment variables
 .env

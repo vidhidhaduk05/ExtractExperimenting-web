@@ -665,9 +665,10 @@ export const ClaimscapePage: React.FC = () => {
                 <tr>
                   <th className="w-16">Year</th>
                   <th>Title & Publication</th>
-                  <th className="w-48">Study Design</th>
+                  <th className="w-44">Study Design</th>
+                  <th className="w-44">Sample Size</th>
                   <th className="w-36">Verdict</th>
-                  <th className="w-28">Type</th>
+                  <th className="w-24">Type</th>
                 </tr>
               </thead>
               <tbody>
@@ -695,6 +696,19 @@ export const ClaimscapePage: React.FC = () => {
                         <span className="text-[12.5px] font-medium text-[var(--cs-ink)]">
                           {tier?.label || "Unclassified"}
                         </span>
+                      </td>
+                      <td>
+                        {p.paper.sample_size_display ? (
+                          <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#381A61] dark:text-[#F9D14A] bg-[#F2F1EB] dark:bg-[#1A1622] px-2 py-0.5 rounded border border-[#381A61]/10 dark:border-white/10">
+                            👥 {p.paper.sample_size_display}
+                          </span>
+                        ) : p.paper.sample_size ? (
+                          <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#381A61] dark:text-[#F9D14A] bg-[#F2F1EB] dark:bg-[#1A1622] px-2 py-0.5 rounded">
+                            👥 {p.paper.sample_size.toLocaleString()} participants
+                          </span>
+                        ) : (
+                          <span className="text-[11.5px] cs-muted">—</span>
+                        )}
                       </td>
                       <td>
                         <span

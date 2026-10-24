@@ -5,9 +5,13 @@ export interface Paper {
   date: number; // e.g. 2025.875
   pubTypes: string[];
   doi?: string;
+  authors?: string;
   findingText?: string;
   sentences?: string[];
   abstract?: string;
+  sample_size?: number | null;
+  sample_size_display?: string | null;
+  study_type_label?: string | null;
 }
 
 export interface Judgment {
@@ -40,6 +44,9 @@ export interface ProcessedPaper {
   category: "supports" | "contradicts" | "mixed" | "no_result" | "unclear";
   strength: number;
   finding: string | null;
+  sample_size?: number | null;
+  sample_size_display?: string | null;
+  study_type_label?: string | null;
 }
 
 export interface TierSummary {
@@ -232,7 +239,10 @@ export function classifyPaper(paper: Paper, judgment: Judgment): ProcessedPaper 
     agree,
     category,
     strength: avgProb,
-    finding: findingSentence
+    finding: findingSentence,
+    sample_size: paper.sample_size,
+    sample_size_display: paper.sample_size_display,
+    study_type_label: paper.study_type_label
   };
 }
 
