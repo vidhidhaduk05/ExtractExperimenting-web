@@ -428,80 +428,139 @@ export const ClaimscapePage: React.FC = () => {
       )}
 
       {/* Main Container */}
-      <main className="mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-8 px-4 pb-20 pt-4 sm:px-6 lg:px-8">
+      <main className="mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-12 pt-2 sm:px-6 lg:px-8">
         
-        {/* Section 1: Hero & Question Card Harmonized with Editorial Velvet */}
-        <section className="flex flex-col items-center text-center pt-2 pb-6 max-w-[960px] mx-auto w-full">
-          {/* Eyebrow badge */}
-          <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 bg-[#ffdea6]/60 border border-[#7c5800]/20 text-[#7c5800] text-[11px] font-['Work_Sans'] font-semibold tracking-wider uppercase">
-            <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800] animate-pulse"></span>
-            From Evidence to the Bedside · ClaimScape Evidence Map
+        {/* Section 1: Hero & Question Card - Compact 2-Column Editorial Velvet Layout */}
+        <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10 pt-1 pb-2">
+          {/* Left Column: Headline, Restored Description & Legend Bullets */}
+          <div className="max-w-[580px] xl:pt-1">
+            <p className="text-[11px] font-['Work_Sans'] font-bold uppercase tracking-[0.12em] text-[#7c5800] mb-2 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
+              Evidence map for any research claim
+            </p>
+            <h1 className="font-['Bodoni_Moda'] text-[clamp(30px,3.5vw,44px)] font-normal leading-[1.08] text-[#3a0f34] tracking-tight">
+              Stay curious.<br />
+              <span className="italic font-normal text-[#814d75]">See what the evidence says.</span>
+            </h1>
+
+            {/* Restored Description Paragraph */}
+            <p className="mt-3 text-[15px] sm:text-[15.5px] text-[#4f444b] font-['Newsreader'] leading-[1.58]">
+              Type a claim and see where the literature stands on it. Up to 300 of the most relevant PubMed abstracts are read, sorted by study design and plotted by year, so you can see which kinds of evidence agree and how consensus shifted over time.
+            </p>
+
+            {/* Restored 3 Bullets with Legend Markers */}
+            <ul className="mt-4 grid gap-2.5 text-[13px] text-[#4f444b] font-['Work_Sans']">
+              <li className="flex items-center gap-2.5">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
+                  <circle r="6" fill="var(--cs-for)" stroke="var(--cs-surface)" strokeWidth="1.5" />
+                </svg>
+                <span>Each dot is a paper, colored by what its abstract reports</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
+                  <circle r="7.5" fill="var(--cs-surface)" />
+                  <path d="M0 -6 A 6 6 0 0 0 0 6 Z" fill="var(--cs-for)" />
+                  <path d="M0 -6 A 6 6 0 0 1 0 6 Z" fill="var(--cs-against)" />
+                </svg>
+                <span>Rows are study designs, each with a verdict and a 95% Wilson interval</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
+                  <circle r="6" fill="var(--cs-against)" stroke="var(--cs-surface)" strokeWidth="1.5" />
+                </svg>
+                <span>Every dot opens the sentence its verdict rests on</span>
+              </li>
+            </ul>
+
+            {/* Compact Technical Pillars Strip */}
+            <div className="mt-5 pt-3 border-t border-[#e4e2dd] flex flex-wrap items-center gap-3 text-[11px] font-['Work_Sans'] text-[#72636d]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#3a0f34]"></span>
+                PubMed Live Retrieval
+              </span>
+              <span className="w-px h-3 bg-[#d2c2cb]"></span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
+                Laya Fast Screening
+              </span>
+              <span className="w-px h-3 bg-[#d2c2cb]"></span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
+                Wilson 95% Confidence
+              </span>
+            </div>
           </div>
 
-          {/* Headline */}
-          <h1 className="font-['Bodoni_Moda'] text-[clamp(38px,5.2vw,64px)] font-normal leading-[1.08] text-[#3a0f34] tracking-[-0.02em]">
-            Stay curious.<br />
-            <span className="italic font-normal text-[#814d75]">See what the evidence says.</span>
-          </h1>
+          {/* Right Column: Search Card & Progress */}
+          <div className="w-full">
+            <form
+              onSubmit={handleMapEvidence}
+              className="bg-white border border-[#d2c2cb] p-5 sm:p-6 shadow-xs grid gap-3.5 transition-all focus-within:border-[#814d75] focus-within:ring-2 focus-within:ring-[#eadce6]"
+            >
+              {/* Claim statement label and helper */}
+              <div className="grid gap-1">
+                <div className="flex items-center justify-between text-[11px] font-['Work_Sans'] font-semibold text-[#62535d] uppercase tracking-wider">
+                  <label htmlFor="claim-textarea" className="text-[#3a0f34] cursor-pointer">
+                    Claim statement
+                  </label>
+                  <span className="hidden sm:inline normal-case tracking-normal text-[#81737b] font-normal">
+                    Enter to explore · Shift + Enter for a new line
+                  </span>
+                </div>
 
-          {/* Subhead */}
-          <p className="mt-3.5 text-[17px] sm:text-[19px] text-[#4f444b] font-['Newsreader'] italic leading-relaxed max-w-[68ch]">
-            Research begins with a patient, a careful observation, and a question worth asking. Type a claim to see where the biomedical literature stands across study designs and calendar time.
-          </p>
-
-          {/* Merged .rq-card Question Box */}
-          <div className="w-full mt-7 text-left bg-white border border-[#d2c2cb] p-6 sm:p-7 shadow-sm transition-all focus-within:border-[#814d75] focus-within:ring-2 focus-within:ring-[#eadce6]">
-            <form onSubmit={handleMapEvidence}>
-              {/* Card Heading */}
-              <div className="flex items-center justify-between text-[11px] font-['Work_Sans'] font-medium text-[#62535d] tracking-wider uppercase mb-2">
-                <label htmlFor="claim-textarea" className="font-semibold text-[#3a0f34]">
-                  Your research question / Claim
-                </label>
-                <span className="hidden sm:inline normal-case tracking-normal text-[#81737b]">
-                  Enter to explore · Shift + Enter for a new line
+                <textarea
+                  id="claim-textarea"
+                  value={claim}
+                  onChange={(e) => handleClaimChange(e.target.value)}
+                  onKeyDown={handleClaimKeyDown}
+                  className="w-full resize-none border border-[#d2c2cb] bg-[#fbf9f4] px-3.5 py-2.5 text-[#3a0f34] font-['Newsreader'] text-[16.5px] sm:text-[18px] font-medium leading-[1.35] focus:outline-none focus:border-[#3a0f34] placeholder:text-[#72636d]/65"
+                  rows={2}
+                  maxLength={300}
+                  placeholder={currentPlaceholder}
+                />
+                <span className="text-[11.5px] text-[#72636d] font-['Work_Sans']">
+                  One plain statement works best, phrased positively: “X reduces Y in Z”. Press Enter to map.
                 </span>
               </div>
 
-              {/* Large Question Input */}
-              <textarea
-                id="claim-textarea"
-                rows={2}
-                value={claim}
-                onChange={(e) => handleClaimChange(e.target.value)}
-                onKeyDown={handleClaimKeyDown}
-                placeholder={currentPlaceholder}
-                className="w-full resize-none border-0 bg-transparent py-2.5 text-[#3a0f34] font-['Newsreader'] text-[clamp(21px,2.6vw,28px)] font-medium leading-[1.35] focus:outline-none placeholder:text-[#72636d]/65"
-              />
-
-              {/* Toolbar */}
-              <div className="mt-3 pt-3.5 border-t border-[#e4e2dd] flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-['Work_Sans'] text-[12px] text-[#3a0f34] bg-[#fbf9f4] border border-[#d2c2cb] px-3 py-1.5 flex items-center gap-1.5 font-medium">
-                    <span className="w-2 h-2 rounded-none bg-emerald-600 inline-block"></span>
-                    PubMed
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="font-['Work_Sans'] text-[12px] text-[#3a0f34] bg-[#fbf9f4] border border-[#d2c2cb] hover:bg-[#ffdea6] px-3 py-1.5 transition-colors flex items-center gap-1 cursor-pointer font-medium"
-                  >
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#814d75]" />
-                    <span>Filters</span>
-                    <span className="font-bold text-xs">{showFilters ? "−" : "+"}</span>
-                  </button>
-
-                  <div className="flex items-center border border-[#d2c2cb] bg-[#fbf9f4] overflow-hidden">
-                    <span className="px-2 text-[11px] font-['Work_Sans'] text-[#72636d] uppercase tracking-wider font-semibold">
-                      Papers:
+              {/* Toolbar: PubMed query, papers pills, map button */}
+              <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+                <label className="grid gap-1">
+                  <span className="flex items-center justify-between text-[11px] font-semibold text-[#62535d] font-['Work_Sans']">
+                    <span className="flex items-center gap-1.5">
+                      <span>PubMed search query</span>
+                      <span className="text-[10.5px] font-normal text-[#81737b]">auto-built, edit to refine</span>
                     </span>
+                    {userEditedQuery && (
+                      <span className="text-[10px] text-amber-700 font-medium">Custom query</span>
+                    )}
+                  </span>
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setUserEditedQuery(true);
+                    }}
+                    onKeyDown={handleQueryKeyDown}
+                    placeholder="e.g. hormone replacement therapy coronary heart disease"
+                    className="border border-[#d2c2cb] bg-[#fbf9f4] text-[#3a0f34] px-3 py-1.5 text-[12px] font-mono font-medium focus:outline-none focus:border-[#3a0f34] h-[36px]"
+                  />
+                </label>
+
+                {/* Papers count pills */}
+                <div className="grid gap-1">
+                  <span className="text-[11px] font-semibold text-[#62535d] font-['Work_Sans']">
+                    Papers to read
+                  </span>
+                  <div className="flex items-center border border-[#d2c2cb] bg-[#fbf9f4] overflow-hidden h-[36px]">
                     {[100, 200, 300].map((cnt) => (
                       <button
                         key={cnt}
                         type="button"
                         aria-pressed={paperCount === cnt}
                         onClick={() => setPaperCount(cnt)}
-                        className={`px-2.5 py-1 text-[12px] font-['Work_Sans'] transition-colors ${
+                        className={`px-3 py-1 text-[12px] font-['Work_Sans'] transition-colors h-full ${
                           paperCount === cnt
                             ? "bg-[#3a0f34] text-[#fbf9f4] font-bold"
                             : "text-[#4f444b] hover:bg-[#f0eee9]"
@@ -517,199 +576,84 @@ export const ClaimscapePage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isScanning}
-                  className="font-['Work_Sans'] font-semibold text-[13.5px] bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] px-6 py-2.5 transition-all cursor-pointer flex items-center gap-2 shadow-xs group disabled:opacity-50"
+                  className="font-['Work_Sans'] font-semibold text-[13px] bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] px-4 py-2 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50 h-[36px] whitespace-nowrap"
                 >
                   {isScanning ? (
                     <>
-                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-none animate-spin" />
-                      <span>Synthesizing evidence...</span>
+                      <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-none animate-spin" />
+                      <span>Mapping...</span>
                     </>
                   ) : (
                     <>
+                      <Sparkles className="w-3.5 h-3.5 text-[#ffdea6]" />
                       <span>Map the evidence</span>
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                     </>
                   )}
                 </button>
               </div>
 
-              {/* Expandable Filters & PubMed Search String Drawer */}
-              {showFilters && (
-                <div className="mt-4 pt-4 border-t border-[#e4e2dd] grid gap-4 animate-in fade-in">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="grid gap-1 text-[11px] font-['Work_Sans'] uppercase tracking-wider text-[#62535d]">
-                      Study Type
-                      <select
-                        value={studyType}
-                        onChange={(e) => setStudyType(e.target.value)}
-                        className="border border-[#d2c2cb] bg-[#fbf9f4] text-[#3a0f34] p-2 text-[13px] font-normal"
-                      >
-                        <option value="">All study types</option>
-                        <option value="systematic review">Systematic reviews</option>
-                        <option value="randomized controlled trial">Randomized trials</option>
-                        <option value="case reports">Case reports</option>
-                      </select>
-                    </label>
-
-                    <label className="grid gap-1 text-[11px] font-['Work_Sans'] uppercase tracking-wider text-[#62535d]">
-                      Publication Date
-                      <select
-                        value={period}
-                        onChange={(e) => setPeriod(e.target.value)}
-                        className="border border-[#d2c2cb] bg-[#fbf9f4] text-[#3a0f34] p-2 text-[13px] font-normal"
-                      >
-                        <option value="">Any time</option>
-                        <option value="1">Past 1 year</option>
-                        <option value="2">Past 2 years</option>
-                        <option value="5">Past 5 years</option>
-                        <option value="10">Past 10 years</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  {/* Live Editable PubMed Query */}
-                  <label className="grid gap-1 text-[11px] font-['Work_Sans'] uppercase tracking-wider text-[#62535d]">
-                    <span className="flex items-center justify-between">
-                      <span>PubMed Search String (auto-built from claim, edit to refine)</span>
-                      {userEditedQuery && <span className="normal-case text-amber-700 font-medium">Custom query active</span>}
-                    </span>
-                    <input
-                      type="text"
-                      value={query}
-                      onChange={(e) => {
-                        setQuery(e.target.value);
-                        setUserEditedQuery(true);
-                      }}
-                      onKeyDown={handleQueryKeyDown}
-                      placeholder="e.g. (hormone replacement therapy OR estrogen) AND Alzheimer's"
-                      className="border border-[#d2c2cb] bg-[#fbf9f4] text-[#3a0f34] px-3 py-2 text-[13px] font-mono font-medium focus:outline-none focus:border-[#3a0f34]"
-                    />
-                  </label>
-
-                  <div className="flex items-center gap-2 pt-1">
-                    <label className="inline-flex items-center gap-2 cursor-pointer font-['Work_Sans'] text-[12px] text-[#4f444b]">
-                      <input
-                        type="checkbox"
-                        checked={includeCommentary}
-                        onChange={(e) => setIncludeCommentary(e.target.checked)}
-                        className="rounded-none border-[#d2c2cb] text-[#3a0f34] focus:ring-0"
-                      />
-                      <span>Include narrative reviews & commentary</span>
-                    </label>
-                  </div>
+              {/* Example Chips & Toggle Row */}
+              <div className="mt-1 pt-3 border-t border-[#e4e2dd] flex flex-wrap items-center justify-between gap-2.5 text-[11.5px] font-['Work_Sans']">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-semibold text-[#72636d]">Examples:</span>
+                  {[
+                    { label: "HRT and heart disease", claim: "Hormone replacement therapy reduces the risk of coronary heart disease in postmenopausal women" },
+                    { label: "Anesthesia and cancer recurrence", claim: "Regional anesthesia improves recurrence-free survival compared to general anesthesia in cancer surgery" },
+                    { label: "Vitamin D and fractures", claim: "Vitamin D supplementation reduces fracture risk in older adults" },
+                    { label: "Metformin and lifespan", claim: "Metformin extends lifespan in model organisms" },
+                  ].map((ex) => (
+                    <button
+                      key={ex.label}
+                      type="button"
+                      onClick={() => handleTopicClick(ex.claim)}
+                      className="px-2.5 py-1 bg-[#f0eee9] hover:bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb] transition-colors cursor-pointer text-[11px]"
+                    >
+                      {ex.label}
+                    </button>
+                  ))}
                 </div>
-              )}
-            </form>
-          </div>
 
-          {/* Progress Bar under the Question Card */}
-          {(isScanning || scanProgress > 0) && (
-            <div className="w-full mt-4 border border-[#d2c2cb] bg-white p-4 shadow-sm transition-all duration-300 animate-in fade-in text-left">
-              <div className="flex items-center justify-between gap-3 text-xs font-semibold mb-2 font-['Work_Sans']">
-                <div className="flex items-center gap-2">
-                  {isScanning ? (
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-[#814d75] opacity-75"></span>
-                      <span className="relative inline-flex rounded-none h-2.5 w-2.5 bg-[#814d75]"></span>
+                <label className="inline-flex items-center gap-2 cursor-pointer text-[#4f444b] text-[11.5px]">
+                  <input
+                    type="checkbox"
+                    checked={includeCommentary}
+                    onChange={(e) => setIncludeCommentary(e.target.checked)}
+                    className="rounded-none border-[#d2c2cb] text-[#3a0f34] focus:ring-0"
+                  />
+                  <span>Include narrative reviews & commentary</span>
+                </label>
+              </div>
+            </form>
+
+            {/* Progress Bar under the Question Card */}
+            {(isScanning || scanProgress > 0) && (
+              <div className="w-full mt-3 border border-[#d2c2cb] bg-white p-3 shadow-xs transition-all duration-300 animate-in fade-in text-left">
+                <div className="flex items-center justify-between gap-3 text-xs font-semibold mb-1.5 font-['Work_Sans']">
+                  <div className="flex items-center gap-2">
+                    {isScanning ? (
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-[#814d75] opacity-75"></span>
+                        <span className="relative inline-flex rounded-none h-2.5 w-2.5 bg-[#814d75]"></span>
+                      </span>
+                    ) : (
+                      <Check className="w-3.5 h-3.5 text-emerald-700" />
+                    )}
+                    <span className="text-[#3a0f34] font-medium text-[12px]">
+                      {scanStepLabel || "Analyzing evidence..."}
                     </span>
-                  ) : (
-                    <Check className="w-3.5 h-3.5 text-emerald-700" />
-                  )}
-                  <span className="text-[#3a0f34] font-medium">
-                    {scanStepLabel || "Analyzing evidence..."}
+                  </div>
+                  <span className="font-mono text-[11px] text-[#72636d]">
+                    {Math.round(scanProgress)}%
                   </span>
                 </div>
-                <span className="font-mono text-[11px] text-[#72636d]">
-                  {Math.round(scanProgress)}%
-                </span>
+                <div className="h-1.5 w-full overflow-hidden bg-[#e4e2dd]">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#3a0f34] via-[#814d75] to-[#7c5800] transition-all duration-300 ease-out"
+                    style={{ width: `${scanProgress}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 w-full overflow-hidden bg-[#e4e2dd]">
-                <div
-                  className="h-full bg-gradient-to-r from-[#3a0f34] via-[#814d75] to-[#7c5800] transition-all duration-300 ease-out"
-                  style={{ width: `${scanProgress}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Quick Suggested Topics Strip */}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 font-['Work_Sans'] text-[12px] text-[#62535d]">
-            <span className="font-semibold text-[#72636d]">Try a topic:</span>
-            {[
-              { label: "Sleep & memory ↗", q: "How does sleep deprivation affect memory consolidation?" },
-              { label: "Cardiovascular health ↗", q: "What are the cardiovascular outcomes of GLP-1 receptor agonists?" },
-              { label: "Mental health ↗", q: "What does the evidence say about treatments for treatment-resistant depression?" },
-              { label: "Cancer vaccines ↗", q: "What are the clinical outcomes of therapeutic cancer vaccines?" },
-              { label: "HRT & Alzheimer's ↗", q: "Hormone replacement therapy reduces the risk of Alzheimer's disease" },
-              { label: "Metformin & longevity ↗", q: "Metformin extends lifespan in model organisms" },
-              { label: "Statins primary prevention ↗", q: "Statins reduce all-cause mortality in primary prevention" },
-            ].map((t) => (
-              <button
-                key={t.label}
-                type="button"
-                onClick={() => handleTopicClick(t.q)}
-                className="px-2.5 py-1 bg-transparent hover:bg-[#ffdea6] border border-[#d2c2cb] hover:border-[#7c5800] text-[#3a0f34] transition-colors cursor-pointer"
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Proof Strip */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-[12px] font-['Work_Sans'] text-[#72636d]">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-none bg-[#66365c] inline-block"></span>
-              Careful observation
-            </span>
-            <span className="w-px h-3 bg-[#d2c2cb]"></span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800] inline-block"></span>
-              Transparent methods
-            </span>
-            <span className="w-px h-3 bg-[#d2c2cb]"></span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-none bg-[#814d75] inline-block"></span>
-              Honest interpretation
-            </span>
-          </div>
-
-          {/* Details of What We Do (3-Pillar Editorial Cards) */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 w-full text-left font-['Work_Sans']">
-            <div className="p-4 bg-[#f0eee9] border border-[#d2c2cb]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-[#66365c] block mb-1">
-                01 // Screen with intention
-              </span>
-              <h4 className="font-['Bodoni_Moda'] text-[15px] font-medium text-[#3a0f34] mb-1">
-                Abstract-Level Stance
-              </h4>
-              <p className="text-[12px] text-[#4f444b] font-['Newsreader'] leading-relaxed">
-                Each dot represents a peer-reviewed publication, categorized into supports, contradicts, or neutral stance.
-              </p>
-            </div>
-
-            <div className="p-4 bg-[#f0eee9] border border-[#d2c2cb]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-[#7c5800] block mb-1">
-                02 // Extract with structure
-              </span>
-              <h4 className="font-['Bodoni_Moda'] text-[15px] font-medium text-[#3a0f34] mb-1">
-                Evidence Hierarchy
-              </h4>
-              <p className="text-[12px] text-[#4f444b] font-['Newsreader'] leading-relaxed">
-                Studies sorted by causal inference strength (Meta-analyses down to Observational) with 95% Wilson confidence intervals.
-              </p>
-            </div>
-
-            <div className="p-4 bg-[#f0eee9] border border-[#d2c2cb]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-[#814d75] block mb-1">
-                03 // Verify at the source
-              </span>
-              <h4 className="font-['Bodoni_Moda'] text-[15px] font-medium text-[#3a0f34] mb-1">
-                Verbatim Sentence Quote
-              </h4>
-              <p className="text-[12px] text-[#4f444b] font-['Newsreader'] leading-relaxed">
-                Click any citation dot to inspect the exact sentence from the abstract that justifies its verdict and view on PubMed.
-              </p>
-            </div>
+            )}
           </div>
         </section>
 

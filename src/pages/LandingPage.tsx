@@ -137,26 +137,26 @@ export const LandingPage: React.FC = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative px-6 pt-12 pb-16 md:pt-16 md:pb-24 max-w-[1200px] mx-auto text-center flex flex-col items-center">
+      <section className="relative px-6 pt-6 pb-10 md:pt-8 md:pb-12 max-w-[1100px] mx-auto text-center flex flex-col items-center">
         {/* Eyebrow badge */}
-        <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 bg-[#ffdea6]/60 border border-[#7c5800]/20 text-[#7c5800] text-[11px] font-['Work_Sans'] font-semibold tracking-wider uppercase">
+        <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 bg-[#ffdea6]/60 border border-[#7c5800]/20 text-[#7c5800] text-[11px] font-['Work_Sans'] font-semibold tracking-wider uppercase">
           <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800] animate-pulse"></span>
           From Evidence to the Bedside
         </div>
 
         {/* Hero Headline */}
-        <h1 className="font-['Bodoni_Moda'] text-[clamp(40px,5.8vw,72px)] font-normal leading-[1.1] text-[#3a0f34] max-w-[920px] tracking-[-0.02em]">
+        <h1 className="font-['Bodoni_Moda'] text-[clamp(36px,5.2vw,64px)] font-semibold leading-[1.08] text-[#3a0f34] max-w-[920px] tracking-[-0.02em]">
           Stay curious.<br />
-          <span className="italic font-normal text-[#814d75]">See what the evidence says.</span>
+          <span className="italic text-[#66365c]">See what the evidence says.</span>
         </h1>
 
         {/* Hero Subhead */}
-        <p className="mt-4 max-w-[62ch] text-[18px] md:text-[20px] text-[#4f444b] font-['Newsreader'] italic leading-relaxed">
+        <p className="mt-2.5 max-w-[62ch] text-[17px] md:text-[19px] text-[#4f444b] font-['Newsreader'] italic leading-relaxed">
           Research begins with a patient, a careful observation, and a question worth asking.
         </p>
 
         {/* The .rq-card Question Box */}
-        <div className="w-full max-w-[860px] mt-8 text-left bg-white border border-[#d2c2cb] p-6 sm:p-8 shadow-sm transition-all focus-within:border-[#814d75] focus-within:ring-2 focus-within:ring-[#eadce6]">
+        <div className="w-full max-w-[860px] mt-5 text-left bg-white border border-[#d2c2cb] p-5 sm:p-6 shadow-xs transition-all focus-within:border-[#814d75] focus-within:ring-2 focus-within:ring-[#eadce6]">
           <form onSubmit={handleSubmit}>
             {/* Card Heading */}
             <div className="flex items-center justify-between text-[11px] font-['Work_Sans'] font-medium text-[#62535d] tracking-wider uppercase mb-2">
