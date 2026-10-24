@@ -27,7 +27,9 @@ echo ""
 echo "[*] [TIER 1] Verifying GPU Biomni-R0 & Ollama on compute node..."
 OLLAMA_BIN="/home/vd00026/.local/bin/ollama"
 if ! curl -s --max-time 3 http://127.0.0.1:11434/api/tags | grep -q 'models'; then
-    echo "[*] Starting Ollama GPU daemon on port 11434..."
+    echo "[*] Starting Ollama GPU daemon on port 11434 (parallel=4, 40 CPUs)..."
+    export OLLAMA_NUM_PARALLEL=4
+    export OLLAMA_MAX_LOADED_MODELS=2
     if [ -x "$OLLAMA_BIN" ]; then
         nohup "$OLLAMA_BIN" serve > "$LOG_DIR/ollama_serve.log" 2>&1 & disown
         for i in {1..15}; do
@@ -76,7 +78,7 @@ if ! curl -s http://127.0.0.1:8000/health | grep -q '"status":"healthy"'; then
     nohup "$PYTHON_BIN" -m uvicorn main:app \
         --host 0.0.0.0 \
         --port 8000 \
-        --workers 2 \
+        --workers 4 \
         --timeout-keep-alive 120 \
         > "$LOG_DIR/fastapi_platform.log" 2>&1 & disown
 
