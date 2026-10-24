@@ -366,9 +366,9 @@
     "semantic_hash": "d3327fbdf4184cb26a8c13f46880e191"
   },
   "radextract_platform/backend/routers/screening.py": {
-    "mtime": 1792776271.2905042,
-    "seen": 1792777002.0570834,
-    "ast_hash": "cfba29a96373e642cedbc7be3f96cee1",
+    "mtime": 1792823432.0779016,
+    "seen": 1792823691.675703,
+    "ast_hash": "59b3f23a0afbc987af7c97b809cd8edb",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/statistics.py": {
@@ -378,9 +378,9 @@
     "semantic_hash": "00702c0f804b51e9fe1af3cf813f76ff"
   },
   "radextract_platform/backend/routers/studies.py": {
-    "mtime": 1792813304.9163194,
-    "seen": 1792813577.7876854,
-    "ast_hash": "e1ea2009db39dca65bf52a4fdf042596",
+    "mtime": 1792823398.3145835,
+    "seen": 1792823691.676712,
+    "ast_hash": "368e674bc53947fe21a5924fb845af1c",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/variables.py": {
@@ -468,9 +468,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/llm_extractor.py": {
-    "mtime": 1791664521.0758078,
-    "seen": 1791664941.925462,
-    "ast_hash": "c647abe607bf7e6827098550753fdd63",
+    "mtime": 1792823351.8423474,
+    "seen": 1792823691.6941445,
+    "ast_hash": "96c0dfeb9f5b07f3e1a844e89a11c95e",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/manuscript_drafter.py": {
@@ -1134,9 +1134,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/clarification_generator.py": {
-    "mtime": 1791664521.059836,
-    "seen": 1791664941.925462,
-    "ast_hash": "aeb92231de4ff2c1c590348a9d36819b",
+    "mtime": 1792823324.088987,
+    "seen": 1792823691.6858933,
+    "ast_hash": "dd860e66d1563f303894e88dc7be4f6f",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/clarification_resolver.py": {
@@ -1158,9 +1158,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/ai_screening_pipeline.py": {
-    "mtime": 1791925342.7140303,
-    "seen": 1791927525.4387226,
-    "ast_hash": "0e0ea40fad55dad04608474118e1d428",
+    "mtime": 1792823385.2549262,
+    "seen": 1792823691.680704,
+    "ast_hash": "9ee750fa01b61f7da7f19be840046bac",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/keyword_highlight_service.py": {
