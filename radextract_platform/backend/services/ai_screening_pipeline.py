@@ -64,6 +64,21 @@ class AIScreeningPipeline:
         if inclusion:
             pico = dict(pico)
             pico["inclusion_criteria"] = inclusion
+
+        search_str = ""
+        if proj.get("search_strings_json"):
+            try:
+                s_dict = json.loads(proj["search_strings_json"])
+                if isinstance(s_dict, dict):
+                    search_str = s_dict.get("pubmed") or s_dict.get("default") or next(iter(s_dict.values()), "")
+                elif isinstance(s_dict, str):
+                    search_str = s_dict
+            except Exception:
+                search_str = ""
+        if search_str:
+            pico = dict(pico)
+            pico["search_string"] = search_str
+
         return pico, exclusions
 
     def run_full_pipeline(

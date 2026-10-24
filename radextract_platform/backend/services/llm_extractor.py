@@ -246,9 +246,12 @@ def _jev_args_title(a: Dict[str, Any]):
 
 
 def _jev_args_abstract(a: Dict[str, Any]):
+    pico = a.get("pico_criteria") or {}
+    search_str = a.get("search_string") or (pico.get("search_string") if isinstance(pico, dict) else "")
     return "abstract", {
         "title": a.get("title"), "abstract": a.get("abstract"),
-        "pico": a.get("pico_criteria"), "exclusion_reasons": a.get("exclusion_reasons"),
+        "pico": pico, "exclusion_reasons": a.get("exclusion_reasons"),
+        "search_string": search_str,
     }
 
 
@@ -465,6 +468,7 @@ def screen_title_abstract_with_llm(
     api_url: Optional[str] = None,
     api_key: Optional[str] = None,
     client: Optional[ToolCallingClient] = None,
+    search_string: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Run AI title/abstract screening against PICO eligibility criteria.
 

@@ -1443,47 +1443,85 @@ async def batch_ai_screen(
     from services.pdf_service import get_pdf_data
 
     pico = json.loads(proj["pico_json"]) if proj["pico_json"] else {}
+
+    # Parse project search string
+    search_str = ""
+    if proj.get("search_strings_json"):
+        try:
+            s_dict = json.loads(proj["search_strings_json"])
+            if isinstance(s_dict, dict):
+                search_str = s_dict.get("pubmed") or s_dict.get("default") or next(iter(s_dict.values()), "")
+            elif isinstance(s_dict, str):
+                search_str = s_dict
+        except Exception:
+            search_str = ""
+    if search_str:
+        pico = dict(pico)
+        pico["search_string"] = search_str
+
+    reasons_raw = proj["exclusion_reasons_json"] if proj["exclusion_reasons_json"] else "[]"
+    try:
+        reasons_data = json.loads(reasons_raw) if reasons_raw else []
+    except json.JSONDecodeError:
+        reasons_data = []
+    reason_labels = []
+    for reason in reasons_data:
+        if isinstance(reason, dict) and reason.get("label"):
+            reason_labels.append(reason["label"])
+        elif isinstance(reason, str):
+            reason_labels.append(reason)
+
+    try:
+        inclusion_data = json.loads(proj["inclusion_criteria_json"]) if proj["inclusion_criteria_json"] else []
+    except (json.JSONDecodeError, KeyError, TypeError):
+        inclusion_data = []
+    inclusion_labels = []
+    for item in inclusion_data:
+        if isinstance(item, dict) and item.get("text"):
+            inclusion_labels.append(item["text"])
+        elif isinstance(item, str):
+            inclusion_labels.append(item)
+    if inclusion_labels:
+        pico = dict(pico)
+        pico["inclusion_criteria"] = inclusion_labels
+
+    from services import jev_client, jev_screener
+    batch_jev_results = None
+    if stage == "ta" and jev_client.is_jev_enabled() and jev_client.jev_mode() == "on":
+        study_payloads = [
+            {"title": (s["title"] or "").strip(), "abstract": (s["abstract"] or "").strip()}
+            for s in studies
+        ]
+        batch_jev_results = jev_screener.screen_batch(
+            stage="abstract",
+            studies=study_payloads,
+            pico=pico,
+            exclusion_reasons=reason_labels,
+            search_string=search_str,
+            fast_mode=True,
+        )
+
     clarifications_generated = 0
 
-    for s in studies:
+    for i, s in enumerate(studies):
         sid = s["study_id"]
         title = (s["title"] or "").strip()
         abstract = (s["abstract"] or "").strip()
 
         if stage == "ta":
             pre = prefilter_study(title=title, abstract=abstract, signals=signals, stage="ta")
-            reasons_raw = proj["exclusion_reasons_json"] if proj["exclusion_reasons_json"] else "[]"
-            try:
-                reasons_data = json.loads(reasons_raw) if reasons_raw else []
-            except json.JSONDecodeError:
-                reasons_data = []
-            reason_labels = []
-            for reason in reasons_data:
-                if isinstance(reason, dict) and reason.get("label"):
-                    reason_labels.append(reason["label"])
-                elif isinstance(reason, str):
-                    reason_labels.append(reason)
-            try:
-                inclusion_data = json.loads(proj["inclusion_criteria_json"]) if proj["inclusion_criteria_json"] else []
-            except (json.JSONDecodeError, KeyError, TypeError):
-                inclusion_data = []
-            inclusion_labels = []
-            for item in inclusion_data:
-                if isinstance(item, dict) and item.get("text"):
-                    inclusion_labels.append(item["text"])
-                elif isinstance(item, str):
-                    inclusion_labels.append(item)
-            if inclusion_labels:
-                pico = dict(pico)
-                pico["inclusion_criteria"] = inclusion_labels
-            llm_res = screen_with_clarification(
-                title=title,
-                abstract=abstract,
-                pico_criteria=pico,
-                exclusion_reasons=reason_labels,
-                stage="ta",
-                signals=signals,
-            )
+            if batch_jev_results and i < len(batch_jev_results) and batch_jev_results[i]:
+                llm_res = jev_screener.to_clarification_shape(batch_jev_results[i])
+            else:
+                llm_res = screen_with_clarification(
+                    title=title,
+                    abstract=abstract,
+                    pico_criteria=pico,
+                    exclusion_reasons=reason_labels,
+                    stage="ta",
+                    signals=signals,
+                    search_string=search_str,
+                )
             final_res = apply_overrides(llm_res, pre, signals=signals, stage="ta", pdf_text_available=True)
             if llm_res.get("recommendation") == "needs_clarification" and final_res.get("recommendation") == "needs_clarification":
                 final_res["clarification"] = llm_res.get("clarification")

@@ -15,9 +15,12 @@ from services.jev_screener import jev_gate, to_clarification_shape
 def _jev_args(a: dict[str, Any]):
     if (a.get("stage") or "ta") != "ta":
         return None
+    pico = a.get("pico_criteria") or {}
+    search_str = a.get("search_string") or (pico.get("search_string") if isinstance(pico, dict) else "")
     return "abstract", {
         "title": a.get("title"), "abstract": a.get("abstract"),
-        "pico": a.get("pico_criteria"), "exclusion_reasons": a.get("exclusion_reasons"),
+        "pico": pico, "exclusion_reasons": a.get("exclusion_reasons"),
+        "search_string": search_str,
     }
 
 CLARIFICATION_SCREENING_PROMPT = """PICO Eligibility Criteria:
@@ -88,6 +91,7 @@ def screen_with_clarification(
     stage: str = "ta",
     signals: Optional[dict[str, Any]] = None,
     client: Optional[ToolCallingClient] = None,
+    search_string: Optional[str] = None,
 ) -> dict[str, Any]:
     """Screen a study with mid-pipeline clarification generation for specific ambiguities."""
     title = (title or "").strip()

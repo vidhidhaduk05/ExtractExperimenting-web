@@ -369,6 +369,15 @@ async def ai_screen_title_abstract(
     project_id = study["project_id"]
     project = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
     pico = json.loads(project["pico_json"]) if project and project["pico_json"] else {}
+    if project and project["search_strings_json"]:
+        try:
+            s_dict = json.loads(project["search_strings_json"])
+            if isinstance(s_dict, dict):
+                pico["search_string"] = s_dict.get("pubmed") or s_dict.get("default") or next(iter(s_dict.values()), "")
+            elif isinstance(s_dict, str):
+                pico["search_string"] = s_dict
+        except Exception:
+            pass
 
     # Load signals
     sig_res = generate_signals(project_id, db=conn, force=False)
