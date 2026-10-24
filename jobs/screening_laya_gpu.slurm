@@ -7,6 +7,8 @@
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32G
 #SBATCH --time=04:00:00
+#SBATCH --mail-user=vidhidhaduk05@gmail.com
+#SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --output=slurm_laya_screening_%j.out
 #SBATCH --error=slurm_laya_screening_%j.err
 

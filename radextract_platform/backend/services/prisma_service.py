@@ -13,6 +13,7 @@ Implements the official PRISMA 2020 flow diagram protocol:
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Dict, List, Optional
 
 from services.jev_client import ask, is_jev_enabled
@@ -58,10 +59,26 @@ def get_prisma_2020_data(project_id: str, db) -> Dict[str, Any]:
         (project_id,),
     ).fetchall()
 
-    ta_excluded_reasons = [
-        {"reason": r["screening_reason"] or "Not specified", "count": r["c"]}
-        for r in ta_reasons_rows
-    ]
+    def _aggregate_reasons(raw_rows):
+        aggregated = {}
+        for r in raw_rows:
+            raw_r = r["screening_reason"] or "Not specified"
+            clean = " ".join(raw_r.strip().replace("_", " ").split())
+            clean = re.sub(r"\s*[\(\[]\s*(?:[pP](?:robability)?|conf(?:idence)?|score)?\s*[:=><]\s*\d+(?:\.\d+)?%?\s*[\)\]]\s*$", "", clean, flags=re.IGNORECASE)
+            clean = re.sub(r"\s*\([pP]\s*=\s*[\d\.]+\)\s*$", "", clean)
+            clean = clean.rstrip(" :;.-").strip()
+            clean = " ".join(clean.split())
+            if not clean:
+                clean = "Not specified"
+            key = clean.lower()
+            if key in aggregated:
+                aggregated[key]["count"] += r["c"]
+            else:
+                display = clean.capitalize() if clean.islower() else clean
+                aggregated[key] = {"reason": display, "count": r["c"]}
+        return sorted(aggregated.values(), key=lambda x: -x["count"])
+
+    ta_excluded_reasons = _aggregate_reasons(ta_reasons_rows)
 
     # 3. Eligibility phase (Full-Text)
     ft_assessed = db.execute(
@@ -86,10 +103,7 @@ def get_prisma_2020_data(project_id: str, db) -> Dict[str, Any]:
         (project_id,),
     ).fetchall()
 
-    ft_excluded_reasons = [
-        {"reason": r["screening_reason"] or "Not specified", "count": r["c"]}
-        for r in ft_reasons_rows
-    ]
+    ft_excluded_reasons = _aggregate_reasons(ft_reasons_rows)
 
     # 4. Included phase
     included_review = db.execute(
@@ -213,11 +227,11 @@ def generate_prisma_2020_svg(flow_data: Dict[str, Any]) -> str:
 
     # Format exclusion reason strings
     ta_reasons = scr_data.get("excluded_with_reasons", [])
-    ta_reasons_lines = [f"{r['reason']}: {r['count']}" for r in ta_reasons[:4]]
+    ta_reasons_lines = [f"{r['reason']} (n = {r['count']})" for r in ta_reasons[:4]]
     ta_reasons_text = "\n".join(ta_reasons_lines) if ta_reasons_lines else "None specified"
 
     ft_reasons = elig_data.get("excluded_reasons", [])
-    ft_reasons_lines = [f"{r['reason']}: {r['count']}" for r in ft_reasons[:5]]
+    ft_reasons_lines = [f"{r['reason']} (n = {r['count']})" for r in ft_reasons[:5]]
     ft_reasons_text = "\n".join(ft_reasons_lines) if ft_reasons_lines else "None specified"
 
     # SVG layout

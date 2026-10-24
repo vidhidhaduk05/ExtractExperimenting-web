@@ -3,6 +3,7 @@ import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags } from "../lib/recordCollaboration";
 import { RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
+import { cleanDoi, cleanPmid, getDoiUrl, getPmidUrl, getStudySourceUrl, openStudySource } from "../lib/studyUtils";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
@@ -1449,6 +1450,12 @@ export function ScreeningPage() {
                   <div
                     key={study.study_id}
                     onClick={() => setSelectedStudyId(study.study_id)}
+                    onDoubleClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.closest("button, a, input")) return;
+                      openStudySource(study);
+                    }}
+                    title="Click to select · Double-click to open in PubMed / DOI"
                     className={`p-3 rounded-lg cursor-pointer transition-all border ${
                       isCurrent
                         ? "bg-indigo-50 border-indigo-400 ring-2 ring-indigo-300 animate-pulse"
@@ -1610,14 +1617,37 @@ export function ScreeningPage() {
                 <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
                   <span><span className="font-semibold">Journal:</span> {selectedStudy.journal || "N/A"}</span>
                   <span><span className="font-semibold">Year:</span> {selectedStudy.publication_year || "N/A"}</span>
-                  {selectedStudy.doi && (
+                  {selectedStudy.pmid && (
                     <a
-                      href={`https://doi.org/${selectedStudy.doi}`}
+                      href={getPmidUrl(selectedStudy.pmid) || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-indigo-600 hover:underline flex items-center gap-0.5"
+                      className="text-sky-700 dark:text-sky-400 hover:underline flex items-center gap-1 font-mono text-[11px]"
+                      title="Open in PubMed"
                     >
-                      DOI: {selectedStudy.doi} <ExternalLink className="w-3 h-3" />
+                      PMID: {cleanPmid(selectedStudy.pmid)} <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                  {selectedStudy.doi && (
+                    <a
+                      href={getDoiUrl(selectedStudy.doi) || `https://doi.org/${selectedStudy.doi}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-mono text-[11px]"
+                      title="Open DOI source"
+                    >
+                      DOI: {cleanDoi(selectedStudy.doi)} <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                  {!selectedStudy.pmid && !selectedStudy.doi && selectedStudy.title && (
+                    <a
+                      href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(selectedStudy.title)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-slate-500 hover:underline flex items-center gap-1 font-mono text-[11px]"
+                      title="Search on PubMed"
+                    >
+                      PubMed Search <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
                 </div>

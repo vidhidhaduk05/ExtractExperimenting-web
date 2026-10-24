@@ -2,7 +2,18 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Prisma2020Sync, type PrismaFlow } from "../lib/api";
-import { ArrowLeft, GitBranch, Loader2, Download, FileText, Code2, Copy, ExternalLink, RefreshCw } from "lucide-react";
+import {
+  ArrowLeft,
+  GitBranch,
+  Loader2,
+  Download,
+  FileText,
+  Code2,
+  Copy,
+  ExternalLink,
+  RefreshCw,
+  Layers,
+} from "lucide-react";
 import { sanitizeSvg } from "../lib/utils";
 
 /** Fetch a URL as a blob and trigger a browser download. */
@@ -17,17 +28,57 @@ async function downloadFile(url: string, filename: string) {
   URL.revokeObjectURL(a.href);
 }
 
+export interface ReasonCount {
+  reason: string;
+  count: number;
+}
+
+/**
+ * Aggregates exclusion reasons case-insensitively and collapses whitespace/formatting.
+ * Identical reasons are summed into a single line rather than listed separately.
+ */
+export function aggregateReasons(reasons?: ReasonCount[] | null): ReasonCount[] {
+  if (!reasons || !Array.isArray(reasons) || reasons.length === 0) return [];
+
+  const map = new Map<string, { display: string; count: number }>();
+
+  for (const item of reasons) {
+    if (!item || !item.reason) continue;
+    let raw = String(item.reason).trim().replace(/_/g, " ").replace(/\s+/g, " ");
+    if (!raw) continue;
+    // Strip trailing probability/confidence scores like (P=0.88), [P: 0.93], (confidence: 90%)
+    raw = raw.replace(/\s*[\(\[]\s*(?:[pP](?:robability)?|conf(?:idence)?|score)?\s*[:=><]\s*\d+(?:\.\d+)?%?\s*[\)\]]\s*$/i, "");
+    raw = raw.replace(/\s*\([pP]\s*=\s*[\d\.]+\)\s*$/i, "");
+    raw = raw.replace(/[ :;.-]+$/, "").trim();
+    if (!raw) continue;
+
+    const key = raw.toLowerCase();
+    const count = typeof item.count === "number" && !isNaN(item.count) ? item.count : 1;
+
+    if (map.has(key)) {
+      map.get(key)!.count += count;
+    } else {
+      const display = raw === raw.toLowerCase() ? raw.charAt(0).toUpperCase() + raw.slice(1) : raw;
+      map.set(key, { display, count });
+    }
+  }
+
+  return Array.from(map.values())
+    .map((v) => ({ reason: v.display, count: v.count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 export function PrismaFlowPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [useRSvg, setUseRSvg] = useState(true);
   const [rSvg, setRSvg] = useState<string | null>(null);
   const [rSvgLoading, setRSvgLoading] = useState(false);
   const [rSvgError, setRSvgError] = useState(false);
-  const [downloading, setDownloading] = useState<"png" | "docx" | null>(null);
+  const [downloading, setDownloading] = useState<"png" | "docx" | "svg" | null>(null);
 
   // Mermaid Modal State
   const [mermaidModalOpen, setMermaidModalOpen] = useState(false);
-  const [mermaidText, setMermaidText] = useState<string>('');
+  const [mermaidText, setMermaidText] = useState<string>("");
   const [mermaidLoading, setMermaidLoading] = useState(false);
 
   const handleMermaidSyntax = async () => {
@@ -38,7 +89,7 @@ export function PrismaFlowPage() {
       const data = await api.prismaMermaid({ project_id: projectId });
       if (data.mermaid) setMermaidText(data.mermaid);
     } catch (err) {
-      console.error('Error fetching Mermaid syntax:', err);
+      console.error("Error fetching Mermaid syntax:", err);
     } finally {
       setMermaidLoading(false);
     }
@@ -57,7 +108,23 @@ export function PrismaFlowPage() {
     }
   };
 
-  const { data: flow, isLoading } = useQuery({
+  const handleDownloadSvg = () => {
+    if (!projectId) return;
+    if (rSvg) {
+      const blob = new Blob([rSvg], { type: "image/svg+xml;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `prisma_flow_${projectId}.svg`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } else {
+      downloadFile(api.prismaSvgUrl(projectId), `prisma_flow_${projectId}.svg`).catch((e: any) => {
+        alert(e.message || "Download failed");
+      });
+    }
+  };
+
+  const { data: flow, isLoading, refetch: refetchFlow } = useQuery({
     queryKey: ["prisma-flow", projectId],
     queryFn: () => api.prismaFlow(projectId!),
     enabled: !!projectId,
@@ -69,16 +136,6 @@ export function PrismaFlowPage() {
     enabled: !!projectId,
     refetchInterval: 20000,
   });
-
-  const [officialFrameUrl, setOfficialFrameUrl] = useState<string | null>(null);
-  useEffect(() => {
-    setOfficialFrameUrl(null);
-  }, [projectId]);
-  useEffect(() => {
-    if (official?.shiny_url && officialFrameUrl === null) {
-      setOfficialFrameUrl(official.shiny_url);
-    }
-  }, [official?.shiny_url, officialFrameUrl]);
 
   // Fetch R-generated SVG
   useEffect(() => {
@@ -105,24 +162,47 @@ export function PrismaFlowPage() {
       .finally(() => setRSvgLoading(false));
   }, [projectId, useRSvg]);
 
+  const reloadDiagram = () => {
+    refetchFlow();
+    if (useRSvg && projectId) {
+      setRSvgLoading(true);
+      fetch(api.prismaSvgUrl(projectId))
+        .then((res) => (res.ok ? res.text() : ""))
+        .then((svg) => {
+          if (svg && svg.trim()) setRSvg(svg);
+        })
+        .finally(() => setRSvgLoading(false));
+    }
+  };
+
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
+    <div className="p-8 max-w-5xl mx-auto space-y-6">
+      <Link
+        to={`/projects/${projectId}`}
+        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+      >
         <ArrowLeft className="h-3 w-3" /> Back to project
       </Link>
 
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <GitBranch className="h-5 w-5 text-phylo-blue" />
-          <h1 className="text-2xl font-bold">PRISMA 2020 Flow Diagram</h1>
+      {/* Header & Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <GitBranch className="h-6 w-6 text-phylo-blue" />
+            <h1 className="text-2xl font-bold text-slate-900">PRISMA 2020 Flow Diagram</h1>
+          </div>
+          <p className="text-gray-500 text-sm mt-1">
+            Native R-generated publication flow diagram with automatic deduplication and aggregated exclusion reasons.
+          </p>
         </div>
-        {/* Download buttons + R/built-in toggle */}
-        <div className="flex items-center gap-2">
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => handleDownload("png")}
             disabled={downloading !== null}
-            className="text-xs px-3 py-1.5 rounded-md font-medium bg-phylo-green text-white hover:opacity-90 disabled:opacity-50 flex items-center gap-1"
-            title="Download the diagram as a PNG image"
+            className="text-xs px-3 py-1.5 rounded-md font-medium bg-phylo-green text-white hover:opacity-90 disabled:opacity-50 flex items-center gap-1 shadow-sm transition-all"
+            title="Download high-resolution 2200x1600 PNG diagram generated via R"
           >
             {downloading === "png" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
             PNG
@@ -130,61 +210,67 @@ export function PrismaFlowPage() {
           <button
             onClick={() => handleDownload("docx")}
             disabled={downloading !== null}
-            className="text-xs px-3 py-1.5 rounded-md font-medium bg-phylo-blue text-white hover:opacity-90 disabled:opacity-50 flex items-center gap-1"
-            title="Download an editable Word document (diagram + editable count tables)"
+            className="text-xs px-3 py-1.5 rounded-md font-medium bg-phylo-blue text-white hover:opacity-90 disabled:opacity-50 flex items-center gap-1 shadow-sm transition-all"
+            title="Download editable Word document (embedded diagram + editable count tables)"
           >
             {downloading === "docx" ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
             Word (editable)
           </button>
+          <button
+            onClick={handleDownloadSvg}
+            className="text-xs px-3 py-1.5 rounded-md font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center gap-1 transition-all"
+            title="Download SVG vector file"
+          >
+            <Download className="h-3 w-3" />
+            SVG
+          </button>
+
           <span className="w-px h-5 bg-gray-200 mx-1" />
+
           <button
             onClick={() => setUseRSvg(true)}
             className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
-              useRSvg ? "bg-phylo-blue text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              useRSvg ? "bg-phylo-blue text-white shadow-sm" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
+            title="Render using native R graphics"
           >
             R Plot
           </button>
           <button
             onClick={() => setUseRSvg(false)}
             className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
-              !useRSvg ? "bg-phylo-blue text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              !useRSvg ? "bg-phylo-blue text-white shadow-sm" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
+            title="Render using built-in interactive SVG"
           >
             Built-in
           </button>
+
           <span className="w-px h-5 bg-gray-200 mx-1" />
+
           <button
             onClick={handleMermaidSyntax}
-            className="text-xs px-3 py-1.5 rounded-md font-medium bg-gray-800 text-white hover:bg-gray-900 transition-colors flex items-center gap-1"
+            className="text-xs px-3 py-1.5 rounded-md font-medium bg-gray-800 text-white hover:bg-gray-900 transition-colors flex items-center gap-1 shadow-sm"
             title="View Mermaid Syntax"
           >
             <Code2 className="h-3 w-3" />
-            Mermaid Syntax
+            Mermaid
+          </button>
+
+          <button
+            onClick={reloadDiagram}
+            className="text-xs px-2.5 py-1.5 rounded-md font-medium text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+            title="Refresh flow counts"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
-      <p className="text-gray-500 text-sm mb-4">
-        Screening counts sync into the official PRISMA2020 flow diagram and stay available in the built-in view.
-      </p>
 
-      {official && (
-        <OfficialPrismaPanel
-          sync={official}
-          frameUrl={officialFrameUrl}
-          onRefreshFrame={() => official.shiny_url && setOfficialFrameUrl(official.shiny_url)}
-          onDownloadCsv={() => {
-            if (!projectId) return;
-            downloadFile(api.prisma2020CsvUrl(projectId), `PRISMA2020_${projectId}.csv`).catch((e: any) => {
-              alert(e.message || "Download failed");
-            });
-          }}
-        />
-      )}
-
+      {/* Decision Audit Card */}
       {flow?.audit && (
-        <div className="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-6 text-sm">
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-6 text-sm">
             <div>
               <span className="text-xs text-slate-500 block font-medium">TOTAL SCREENING DECISIONS</span>
               <span className="text-base font-bold text-slate-900">{flow.audit.total_decisions}</span>
@@ -207,25 +293,30 @@ export function PrismaFlowPage() {
         </div>
       )}
 
-      {isLoading && <p className="text-gray-400">Loading flow data...</p>}
-
-      {/* R-generated SVG */}
-      {useRSvg && rSvgLoading && (
+      {isLoading && (
         <div className="card p-12 flex items-center justify-center gap-2 text-gray-400">
-          <Loader2 className="h-5 w-5 animate-spin" /> Generating R plot...
+          <Loader2 className="h-5 w-5 animate-spin" /> Loading PRISMA flow data...
+        </div>
+      )}
+
+      {/* Primary Diagram: R-generated SVG */}
+      {useRSvg && rSvgLoading && (
+        <div className="card p-16 flex flex-col items-center justify-center gap-3 text-slate-500">
+          <Loader2 className="h-8 w-8 text-phylo-blue animate-spin" />
+          <p className="text-sm font-medium">Generating official PRISMA 2020 diagram via R...</p>
         </div>
       )}
 
       {useRSvg && rSvg && !rSvgLoading && (
-        <div className="card p-6">
-          <div dangerouslySetInnerHTML={{ __html: sanitizeSvg(rSvg) }} />
+        <div className="card p-6 bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden">
+          <div className="w-full flex justify-center" dangerouslySetInnerHTML={{ __html: sanitizeSvg(rSvg) }} />
         </div>
       )}
 
       {useRSvg && rSvgError && !rSvgLoading && flow && (
         <>
-          <div className="card p-3 mb-4 text-sm text-gray-500 bg-gray-50">
-            R-generated SVG unavailable, showing built-in diagram.
+          <div className="p-3 rounded-lg text-xs text-amber-800 bg-amber-50 border border-amber-200">
+            R-generated SVG unavailable, displaying built-in interactive vector diagram.
           </div>
           <PrismaDiagram flow={flow} />
         </>
@@ -234,16 +325,33 @@ export function PrismaFlowPage() {
       {/* Built-in SVG */}
       {!useRSvg && flow && <PrismaDiagram flow={flow} />}
 
-      {/* Exclusion reasons tables (always show) */}
+      {/* Exclusion Reasons Tables (Identical reasons added together) */}
       {flow && (flow.screening.excluded_with_reasons.length > 0 || flow.eligibility.excluded_reasons.length > 0) && (
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          {flow.screening.excluded_with_reasons.length > 0 && (
-            <ReasonTable title="Title/Abstract Exclusion Reasons" reasons={flow.screening.excluded_with_reasons} />
-          )}
-          {flow.eligibility.excluded_reasons.length > 0 && (
-            <ReasonTable title="Full-text Exclusion Reasons" reasons={flow.eligibility.excluded_reasons} />
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ReasonTable
+            title="Title/Abstract Exclusion Reasons"
+            subtitle="Aggregated counts for identical reasons"
+            reasons={flow.screening.excluded_with_reasons}
+          />
+          <ReasonTable
+            title="Full-text Exclusion Reasons"
+            subtitle="Aggregated counts for identical reasons"
+            reasons={flow.eligibility.excluded_reasons}
+          />
         </div>
+      )}
+
+      {/* Official PRISMA2020 Reference Panel (Without Embedded Website Iframe) */}
+      {official && (
+        <OfficialPrismaPanel
+          sync={official}
+          onDownloadCsv={() => {
+            if (!projectId) return;
+            downloadFile(api.prisma2020CsvUrl(projectId), `PRISMA2020_${projectId}.csv`).catch((e: any) => {
+              alert(e.message || "Download failed");
+            });
+          }}
+        />
       )}
 
       {/* Mermaid Syntax Modal */}
@@ -255,7 +363,12 @@ export function PrismaFlowPage() {
                 <Code2 className="w-5 h-5 text-gray-800" />
                 PRISMA 2020 Mermaid Syntax
               </h3>
-              <button onClick={() => setMermaidModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">✕</button>
+              <button
+                onClick={() => setMermaidModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="flex-1 overflow-auto bg-slate-50 p-4 rounded-xl border font-mono text-sm text-slate-800 whitespace-pre-wrap leading-relaxed relative">
@@ -264,7 +377,7 @@ export function PrismaFlowPage() {
                 <button
                   type="button"
                   onClick={() => navigator.clipboard.writeText(mermaidText)}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-indigo-600 p-1 rounded bg-white"
+                  className="absolute top-4 right-4 text-gray-400 hover:text-indigo-600 p-1.5 rounded bg-white shadow-sm border border-slate-200"
                   title="Copy Mermaid syntax"
                 >
                   <Copy className="h-4 w-4" />
@@ -273,26 +386,32 @@ export function PrismaFlowPage() {
             </div>
 
             <div className="flex justify-end pt-4 border-t mt-4">
-              <button onClick={() => setMermaidModalOpen(false)} className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Close</button>
+              <button
+                onClick={() => setMermaidModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
 
+/**
+ * Official PRISMA 2020 Reference Panel
+ * Displays synchronized count breakdown without embedding the external Shiny app website.
+ */
 function OfficialPrismaPanel({
-  sync, frameUrl, onRefreshFrame, onDownloadCsv,
+  sync,
+  onDownloadCsv,
 }: {
   sync: Prisma2020Sync;
-  frameUrl: string | null;
-  onRefreshFrame: () => void;
   onDownloadCsv: () => void;
 }) {
   const counts = sync.counts;
-  const stale = Boolean(frameUrl && sync.shiny_url && frameUrl !== sync.shiny_url);
   const databaseBoxes: [string, number][] = [
     ["Databases", counts.database_results],
     ["Registers", counts.register_results],
@@ -318,12 +437,15 @@ function OfficialPrismaPanel({
   ];
 
   return (
-    <div className="card p-4 mb-6">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+    <div className="card p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4 border-b pb-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Official PRISMA2020 diagram</h2>
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-phylo-blue" />
+            <h2 className="text-sm font-semibold text-slate-900">Official PRISMA 2020 Field Mapping</h2>
+          </div>
           <p className="text-xs text-slate-500 mt-1 max-w-xl">
-            Counts below are filled into the Haddaway PRISMA2020 app. Inside that app, open Create flow diagram.
+            Live database counts mapped directly to official PRISMA 2020 specification variables.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -331,70 +453,50 @@ function OfficialPrismaPanel({
             href={sync.shiny_url}
             target="_blank"
             rel="noreferrer"
-            className="text-xs px-3 py-1.5 rounded-md font-medium bg-phylo-blue text-white hover:opacity-90 flex items-center gap-1"
+            className="text-xs px-3 py-1.5 rounded-md font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center gap-1.5 border border-slate-200 transition-colors"
           >
             <ExternalLink className="h-3 w-3" />
-            Open PRISMA2020
+            Open Haddaway Web App
           </a>
           <button
             type="button"
             onClick={onDownloadCsv}
-            className="text-xs px-3 py-1.5 rounded-md font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-1"
+            className="text-xs px-3 py-1.5 rounded-md font-medium bg-phylo-blue text-white hover:opacity-90 flex items-center gap-1.5 shadow-sm transition-colors"
           >
             <Download className="h-3 w-3" />
-            PRISMA2020 CSV
-          </button>
-          <button
-            type="button"
-            onClick={onRefreshFrame}
-            className="text-xs px-3 py-1.5 rounded-md font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-1"
-          >
-            <RefreshCw className="h-3 w-3" />
-            Refresh diagram
+            Download PRISMA2020 CSV
           </button>
         </div>
       </div>
-
-      {stale && (
-        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          Screening counts changed. Refresh the official diagram to load the latest numbers.
-        </div>
-      )}
 
       <div className={`grid gap-4 ${sync.options.other ? "md:grid-cols-2" : "grid-cols-1"}`}>
         <CountGrid title="Databases and registers" rows={databaseBoxes} />
         {sync.options.other === 1 && <CountGrid title="Other methods" rows={otherBoxes} />}
       </div>
-      <p className="mt-3 text-xs text-slate-600">
-        Total studies included: <span className="font-semibold">{counts.total_studies}</span>
-        {sync.options.metaAnalysis === 1 && (
-          <> · In meta-analysis: <span className="font-semibold">{counts.total_studies_ma}</span></>
-        )}
-      </p>
-      {sync.fields.dbr_excluded !== "0" && (
-        <p className="mt-1 text-xs text-slate-500">Full-text exclusions: {sync.fields.dbr_excluded}</p>
-      )}
-      {sync.options.other === 1 && sync.fields.other_excluded !== "0" && (
-        <p className="mt-1 text-xs text-slate-500">Other-method exclusions: {sync.fields.other_excluded}</p>
-      )}
-      {sync.notes.map((note) => (
-        <p key={note} className="mt-2 text-xs text-slate-500">{note}</p>
-      ))}
-      <p className="mt-2 text-[11px] text-slate-400">
-        <a className="underline" href="https://doi.org/10.1002/cl2.1230" target="_blank" rel="noreferrer">
-          Haddaway et al., 2022
-        </a>
-      </p>
 
-      {frameUrl && (
-        <iframe
-          key={frameUrl}
-          title="Official PRISMA2020 flow diagram"
-          src={frameUrl}
-          className="mt-4 w-full rounded-lg border border-slate-200 bg-white"
-          style={{ height: "820px" }}
-        />
-      )}
+      <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-600 gap-2">
+        <div>
+          Total studies included: <span className="font-semibold text-slate-900">{counts.total_studies}</span>
+          {sync.options.metaAnalysis === 1 && (
+            <>
+              {" "}
+              · In meta-analysis:{" "}
+              <span className="font-semibold text-slate-900">{counts.total_studies_ma}</span>
+            </>
+          )}
+        </div>
+        <div className="text-[11px] text-slate-400">
+          PRISMA 2020 specification ·{" "}
+          <a
+            className="underline hover:text-slate-600"
+            href="https://doi.org/10.1002/cl2.1230"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Haddaway et al., 2022
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
@@ -421,8 +523,11 @@ function PrismaDiagram({ flow }: { flow: PrismaFlow }) {
   const elig = flow.eligibility;
   const incl = flow.included;
 
+  const taReasonsAggregated = aggregateReasons(scr.excluded_with_reasons);
+  const ftReasonsAggregated = aggregateReasons(elig.excluded_reasons);
+
   return (
-    <div className="card p-6">
+    <div className="card p-6 bg-white border border-slate-200 rounded-xl shadow-sm">
       <svg viewBox="0 0 800 620" className="w-full h-auto" style={{ maxHeight: "620px" }}>
         {/* Phase labels (left column) */}
         <PhaseLabel x={10} y={50} text="Identification" />
@@ -432,7 +537,10 @@ function PrismaDiagram({ flow }: { flow: PrismaFlow }) {
 
         {/* Identification box */}
         <FlowBox
-          x={250} y={20} w={300} h={70}
+          x={250}
+          y={20}
+          w={300}
+          h={70}
           title="Records identified from databases"
           value={id.database_records}
           subtitle={`Registers: ${id.registers} | Other: ${id.other_sources}`}
@@ -442,29 +550,25 @@ function PrismaDiagram({ flow }: { flow: PrismaFlow }) {
         <FlowArrow x1={400} y1={90} x2={400} y2={170} />
 
         {/* Screening: records screened */}
-        <FlowBox
-          x={250} y={170} w={300} h={55}
-          title="Records screened"
-          value={scr.records_screened}
-        />
+        <FlowBox x={250} y={170} w={300} h={55} title="Records screened" value={scr.records_screened} />
 
         {/* Arrow right to excluded */}
         <FlowArrow x1={550} y1={197} x2={620} y2={197} />
 
         {/* Screening: excluded */}
         <FlowBox
-          x={620} y={170} w={170} h={55}
+          x={620}
+          y={170}
+          w={170}
+          h={55}
           title="Records excluded"
           value={scr.records_excluded}
           color="#E94444"
         />
 
-        {/* Exclusion reasons (TA) */}
-        {scr.excluded_with_reasons.length > 0 && (
-          <ReasonList
-            x={620} y={235}
-            reasons={scr.excluded_with_reasons.slice(0, 4)}
-          />
+        {/* Exclusion reasons (TA) with aggregated duplicate reasons */}
+        {taReasonsAggregated.length > 0 && (
+          <ReasonList x={620} y={235} reasons={taReasonsAggregated.slice(0, 4)} />
         )}
 
         {/* Arrow down from screening to eligibility */}
@@ -472,7 +576,10 @@ function PrismaDiagram({ flow }: { flow: PrismaFlow }) {
 
         {/* Eligibility: full-text assessed */}
         <FlowBox
-          x={250} y={320} w={300} h={55}
+          x={250}
+          y={320}
+          w={300}
+          h={55}
           title="Full-text articles assessed for eligibility"
           value={elig.full_text_assessed}
         />
@@ -482,18 +589,18 @@ function PrismaDiagram({ flow }: { flow: PrismaFlow }) {
 
         {/* Eligibility: excluded */}
         <FlowBox
-          x={620} y={320} w={170} h={55}
+          x={620}
+          y={320}
+          w={170}
+          h={55}
           title="Full-text excluded"
           value={elig.full_text_excluded}
           color="#E94444"
         />
 
-        {/* Exclusion reasons (FT) */}
-        {elig.excluded_reasons.length > 0 && (
-          <ReasonList
-            x={620} y={385}
-            reasons={elig.excluded_reasons.slice(0, 4)}
-          />
+        {/* Exclusion reasons (FT) with aggregated duplicate reasons */}
+        {ftReasonsAggregated.length > 0 && (
+          <ReasonList x={620} y={385} reasons={ftReasonsAggregated.slice(0, 4)} />
         )}
 
         {/* Arrow down from eligibility to included */}
@@ -501,7 +608,10 @@ function PrismaDiagram({ flow }: { flow: PrismaFlow }) {
 
         {/* Included box */}
         <FlowBox
-          x={250} y={470} w={300} h={70}
+          x={250}
+          y={470}
+          w={300}
+          h={70}
           title="Studies included in review"
           value={incl.studies_in_review}
           subtitle={`In meta-analysis: ${incl.studies_in_meta_analysis}`}
@@ -511,8 +621,16 @@ function PrismaDiagram({ flow }: { flow: PrismaFlow }) {
         {/* Pending note */}
         {flow.pending > 0 && (
           <g>
-            <rect x={250} y={560} width={300} height={30} rx={6}
-              fill="#FF940015" stroke="#FF9400" strokeWidth={1} />
+            <rect
+              x={250}
+              y={560}
+              width={300}
+              height={30}
+              rx={6}
+              fill="#FF940015"
+              stroke="#FF9400"
+              strokeWidth={1}
+            />
             <text x={400} y={580} textAnchor="middle" fontSize={11} fill="#FF9400" fontWeight="600">
               {flow.pending} records pending screening
             </text>
@@ -526,10 +644,25 @@ function PrismaDiagram({ flow }: { flow: PrismaFlow }) {
 function PhaseLabel({ x, y, text }: { x: number; y: number; text: string }) {
   return (
     <g>
-      <rect x={x} y={y - 15} width={100} height={30} rx={4}
-        fill="#0279EE10" stroke="#0279EE" strokeWidth={0.5} />
-      <text x={x + 50} y={y + 4} textAnchor="middle" fontSize={10}
-        fontWeight="700" fill="#0279EE" fontFamily="Liberation Sans, sans-serif">
+      <rect
+        x={x}
+        y={y - 15}
+        width={100}
+        height={30}
+        rx={4}
+        fill="#0279EE10"
+        stroke="#0279EE"
+        strokeWidth={0.5}
+      />
+      <text
+        x={x + 50}
+        y={y + 4}
+        textAnchor="middle"
+        fontSize={10}
+        fontWeight="700"
+        fill="#0279EE"
+        fontFamily="Liberation Sans, sans-serif"
+      >
         {text}
       </text>
     </g>
@@ -537,26 +670,57 @@ function PhaseLabel({ x, y, text }: { x: number; y: number; text: string }) {
 }
 
 function FlowBox({
-  x, y, w, h, title, value, subtitle, color = "#0279EE",
+  x,
+  y,
+  w,
+  h,
+  title,
+  value,
+  subtitle,
+  color = "#0279EE",
 }: {
-  x: number; y: number; w: number; h: number;
-  title: string; value: number; subtitle?: string; color?: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  title: string;
+  value: number;
+  subtitle?: string;
+  color?: string;
 }) {
   return (
     <g>
-      <rect x={x} y={y} width={w} height={h} rx={8}
-        fill="white" stroke={color} strokeWidth={1.5} />
-      <text x={x + w / 2} y={y + 18} textAnchor="middle" fontSize={10}
-        fill="#666" fontFamily="Liberation Sans, sans-serif">
+      <rect x={x} y={y} width={w} height={h} rx={8} fill="white" stroke={color} strokeWidth={1.5} />
+      <text
+        x={x + w / 2}
+        y={y + 18}
+        textAnchor="middle"
+        fontSize={10}
+        fill="#666"
+        fontFamily="Liberation Sans, sans-serif"
+      >
         {title}
       </text>
-      <text x={x + w / 2} y={y + 40} textAnchor="middle" fontSize={22}
-        fontWeight="700" fill={color} fontFamily="Liberation Sans, sans-serif">
+      <text
+        x={x + w / 2}
+        y={y + 40}
+        textAnchor="middle"
+        fontSize={22}
+        fontWeight="700"
+        fill={color}
+        fontFamily="Liberation Sans, sans-serif"
+      >
         {value}
       </text>
       {subtitle && (
-        <text x={x + w / 2} y={y + h - 8} textAnchor="middle" fontSize={9}
-          fill="#999" fontFamily="Liberation Sans, sans-serif">
+        <text
+          x={x + w / 2}
+          y={y + h - 8}
+          textAnchor="middle"
+          fontSize={9}
+          fill="#999"
+          fontFamily="Liberation Sans, sans-serif"
+        >
           {subtitle}
         </text>
       )}
@@ -568,8 +732,14 @@ function FlowArrow({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2:
   const isHorizontal = y1 === y2;
   return (
     <g>
-      <line x1={x1} y1={y1} x2={x2 - (isHorizontal ? 6 : 0)} y2={y2 - (isHorizontal ? 0 : 6)}
-        stroke="#999" strokeWidth={1.5} />
+      <line
+        x1={x1}
+        y1={y1}
+        x2={x2 - (isHorizontal ? 6 : 0)}
+        y2={y2 - (isHorizontal ? 0 : 6)}
+        stroke="#999"
+        strokeWidth={1.5}
+      />
       {isHorizontal ? (
         <polygon points={`${x2},${y2} ${x2 - 6},${y2 - 4} ${x2 - 6},${y2 + 4}`} fill="#999" />
       ) : (
@@ -579,44 +749,78 @@ function FlowArrow({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2:
   );
 }
 
-function ReasonList({ x, y, reasons }: { x: number; y: number; reasons: { reason: string; count: number }[] }) {
+function ReasonList({
+  x,
+  y,
+  reasons,
+}: {
+  x: number;
+  y: number;
+  reasons: { reason: string; count: number }[];
+}) {
+  const aggregated = aggregateReasons(reasons);
   return (
     <g>
-      {reasons.map((r, i) => (
-        <text key={i} x={x} y={y + i * 14} fontSize={9} fill="#888"
-          fontFamily="Liberation Sans, sans-serif">
-          {r.reason.length > 22 ? r.reason.slice(0, 20) + "..." : r.reason} ({r.count})
+      {aggregated.map((r, i) => (
+        <text
+          key={i}
+          x={x}
+          y={y + i * 14}
+          fontSize={9}
+          fill="#888"
+          fontFamily="Liberation Sans, sans-serif"
+        >
+          {r.reason.length > 22 ? r.reason.slice(0, 20) + "..." : r.reason} (n = {r.count})
         </text>
       ))}
     </g>
   );
 }
 
-function ReasonTable({ title, reasons }: { title: string; reasons: { reason: string; count: number }[] }) {
-  const total = reasons.reduce((s, r) => s + r.count, 0);
+function ReasonTable({
+  title,
+  subtitle,
+  reasons,
+}: {
+  title: string;
+  subtitle?: string;
+  reasons: { reason: string; count: number }[];
+}) {
+  const aggregated = aggregateReasons(reasons);
+  const total = aggregated.reduce((s, r) => s + r.count, 0);
+
   return (
-    <div className="card p-4">
-      <h3 className="text-sm font-semibold mb-2">{title}</h3>
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="border-b border-gray-200">
-            <th className="text-left py-1 font-medium text-gray-500">Reason</th>
-            <th className="text-right py-1 font-medium text-gray-500">Count</th>
-            <th className="text-right py-1 font-medium text-gray-500">%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reasons.map((r, i) => (
-            <tr key={i} className="border-b border-gray-50">
-              <td className="py-1 text-gray-700">{r.reason}</td>
-              <td className="py-1 text-right font-medium">{r.count}</td>
-              <td className="py-1 text-right text-gray-400">
-                {total > 0 ? Math.round((r.count / total) * 100) : 0}%
-              </td>
+    <div className="card p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        <span className="text-xs text-slate-500 font-medium">Total: {total}</span>
+      </div>
+      {subtitle && <p className="text-xs text-slate-400 mb-2">{subtitle}</p>}
+
+      {aggregated.length === 0 ? (
+        <p className="text-xs text-slate-400 py-3 text-center">No exclusion reasons recorded.</p>
+      ) : (
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-1.5 font-medium text-gray-500">Reason</th>
+              <th className="text-right py-1.5 font-medium text-gray-500">Count</th>
+              <th className="text-right py-1.5 font-medium text-gray-500">%</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {aggregated.map((r, i) => (
+              <tr key={i} className="border-b border-gray-50 hover:bg-slate-50 transition-colors">
+                <td className="py-1.5 text-gray-700 font-medium">{r.reason}</td>
+                <td className="py-1.5 text-right font-semibold text-slate-900">{r.count}</td>
+                <td className="py-1.5 text-right text-gray-400">
+                  {total > 0 ? Math.round((r.count / total) * 100) : 0}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

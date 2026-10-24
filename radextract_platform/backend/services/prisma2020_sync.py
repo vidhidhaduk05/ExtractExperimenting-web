@@ -15,6 +15,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 from urllib.parse import quote, urlencode
@@ -124,17 +125,26 @@ def _format_pairs(pairs: Sequence[Tuple[str, int]], fallback: str, limit: int) -
 
 def _reason_pairs(rows: Iterable[Mapping[str, Any]], prefix_ta: bool) -> List[Tuple[str, int]]:
     counts: Dict[str, int] = {}
-    order: List[str] = []
+    display_names: Dict[str, str] = {}
     for row in rows:
-        reason = _text(row.get("screening_reason")) or "Not specified"
+        raw_reason = _text(row.get("screening_reason")) or "Not specified"
         stage = _text(row.get("screening_stage")).lower()
+        clean = " ".join(raw_reason.strip().replace("_", " ").split())
+        clean = re.sub(r"\s*[\(\[]\s*(?:[pP](?:robability)?|conf(?:idence)?|score)?\s*[:=><]\s*\d+(?:\.\d+)?%?\s*[\)\]]\s*$", "", clean, flags=re.IGNORECASE)
+        clean = re.sub(r"\s*\([pP]\s*=\s*[\d\.]+\)\s*$", "", clean)
+        clean = clean.rstrip(" :;.-").strip()
+        clean = " ".join(clean.split())
+        if not clean:
+            clean = "Not specified"
         if prefix_ta and stage != "ft":
-            reason = f"Title/abstract: {reason}"
-        if reason not in counts:
-            order.append(reason)
-        counts[reason] = counts.get(reason, 0) + 1
-    ranked = sorted(order, key=lambda name: (-counts[name], name.lower()))
-    return [(name, counts[name]) for name in ranked]
+            clean = f"Title/abstract: {clean}"
+        key = clean.lower()
+        display = clean.capitalize() if clean.islower() else clean
+        if key not in display_names:
+            display_names[key] = display
+        counts[key] = counts.get(key, 0) + 1
+    ranked = sorted(counts.keys(), key=lambda k: (-counts[k], display_names[k].lower()))
+    return [(display_names[k], counts[k]) for k in ranked]
 
 
 def _source_pairs(rows: Iterable[Mapping[str, Any]]) -> List[Tuple[str, int]]:

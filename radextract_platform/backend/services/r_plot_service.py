@@ -44,6 +44,9 @@ def _resolve_rscript() -> str:
     env_path = os.environ.get("RADEXTRACT_RSCRIPT")
     if env_path and os.path.isfile(env_path):
         return env_path
+    hpc_conda_r = "/cm/shared/anaconda/envs/qiime2-amplicon-2026.1/bin/Rscript"
+    if os.path.isfile(hpc_conda_r):
+        return hpc_conda_r
     if os.path.isfile(_CONDA_RSCRIPT):
         return _CONDA_RSCRIPT
     found = shutil.which("Rscript")

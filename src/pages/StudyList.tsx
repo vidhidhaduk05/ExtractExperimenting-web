@@ -5,7 +5,7 @@ import { autoIdentifyPdf } from "../lib/pdfAutoIdentifier";
 import {
   Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2,
   Highlighter, FileSpreadsheet, ArrowRight, CheckCircle2, X,
-  RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy
+  RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy, ExternalLink
 } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
 import { useRef, useState, useMemo } from "react";
@@ -14,6 +14,7 @@ import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags, type TagIndex } from "../lib/recordCollaboration";
 import { CollaborationDialog, RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
+import { cleanDoi, cleanPmid, getDoiUrl, getPmidUrl, getStudySourceUrl, openStudySource } from "../lib/studyUtils";
 
 
 export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean }) {
@@ -459,13 +460,78 @@ function StudyRow({
     return styles[status] || styles.pending;
   };
 
+  const handleRowDoubleClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, input, [role='button']")) return;
+    openStudySource(study);
+  };
+
+  const pmidUrl = getPmidUrl(study.pmid);
+  const doiUrl = getDoiUrl(study.doi);
+  const primarySourceUrl = getStudySourceUrl(study);
+
   return (
-    <tr className="hover:bg-black/[0.015] transition-colors">
+    <tr
+      onDoubleClick={handleRowDoubleClick}
+      className="hover:bg-black/[0.025] transition-colors cursor-pointer group"
+      title="Double-click to open in PubMed / DOI source"
+    >
       <td className="px-5 py-3.5">
-        <div className="flex items-start gap-2">{bookmark}<div className="font-serif font-medium text-sm text-[#141413] line-clamp-1">{study.title}</div></div>
+        <div className="flex items-start gap-2">
+          {bookmark}
+          <div
+            className="font-serif font-medium text-sm text-[#141413] group-hover:text-blue-900 transition-colors line-clamp-1"
+            title="Double-click row to open primary source in PubMed / DOI"
+          >
+            {study.title}
+          </div>
+        </div>
         <TagBadges index={tags} studyId={study.study_id} />
         <div className="text-xs font-sans text-[#8A817A] mt-0.5 line-clamp-1">
           {study.authors || "Unknown Authors"} {study.journal ? `— ${study.journal}` : ""}
+        </div>
+
+        {/* Clickable DOI / PubMed Source Links */}
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          {study.pmid && (
+            <a
+              href={pmidUrl || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 transition-colors shadow-2xs"
+              title={`Open PubMed PMID ${study.pmid}`}
+            >
+              <span>PMID {cleanPmid(study.pmid)}</span>
+              <ExternalLink className="h-2.5 w-2.5 opacity-70" />
+            </a>
+          )}
+          {study.doi && (
+            <a
+              href={doiUrl || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 transition-colors truncate max-w-[220px] shadow-2xs"
+              title={`Open DOI: ${study.doi}`}
+            >
+              <span>DOI: {cleanDoi(study.doi)}</span>
+              <ExternalLink className="h-2.5 w-2.5 opacity-70" />
+            </a>
+          )}
+          {!study.pmid && !study.doi && study.title && (
+            <a
+              href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(study.title)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-[10px] font-mono text-[#8A817A] hover:text-[#141413] hover:underline"
+              title="Search this article title on PubMed"
+            >
+              <span>PubMed Search</span>
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+          )}
         </div>
       </td>
       <td className="px-4 py-3.5 font-mono text-xs text-[#6B665E]">{study.publication_year || "—"}</td>
@@ -531,6 +597,19 @@ function StudyRow({
       </td>
       <td className="px-5 py-3.5 text-right">
         <div className="flex items-center justify-end gap-2">
+          {primarySourceUrl && (
+            <a
+              href={primarySourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-white hover:bg-black/5 text-[#141413] border border-black/15 transition-all shadow-2xs"
+              title="Open primary study source in new tab (or double-click row)"
+            >
+              <ExternalLink className="h-3 w-3 text-blue-600" />
+              <span>Source</span>
+            </a>
+          )}
           <button type="button" onClick={onComments} className="rounded-full border border-black/15 bg-white px-3 py-1 text-xs hover:bg-black/5" aria-label={`Comments and tags for ${study.title}`}>Comments & tags</button>
           <Link
             to={`/projects/${projectId}/studies/${study.study_id}/pdf`}

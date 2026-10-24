@@ -6,6 +6,8 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --time=08:00:00
+#SBATCH --mail-user=vidhidhaduk05@gmail.com
+#SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --output=slurm_radextract_web_%j.out
 #SBATCH --error=slurm_radextract_web_%j.err
 
