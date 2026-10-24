@@ -404,3 +404,23 @@ un_full_pipeline) verify pause and cancellation cleanly between individual studi
   - Fast-forward merged into `main` and pushed to `origin/main`.
   - Deployed latest distribution to `origin/gh-pages`.
   - Verified all remote PRs on GitHub are successfully merged and closed.
+
+## 2026-10-24 — Two-Tier Fast Abstract Screening & Claimscape Progress UX
+
+- **Problem & Root Cause**:
+  - Laya ONNX inference was previously executed sequentially (1 study at a time, evaluating 6 full PICO questions including full-text, comparator, and outcome) on single CPU threads, causing screening latency for large study review sets.
+- **Architectural Solutions**:
+  1. **Tier-1 Deterministic Search String Fast-Drop Filter**:
+     - Built [`services/search_string_matcher.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/search_string_matcher.py) with recursive-descent boolean parser (`AND`, `OR`, `NOT`, wildcards, quoted phrases, field tags `[tiab]`).
+     - Non-matching abstracts are excluded in < 0.1 ms with `SEARCH_STRING_EXCLUSION` (confidence 0.99) without calling neural ONNX inference.
+  2. **Focused Abstract-Only PICO Questions**:
+     - During abstract screening (`stage == "abstract"` or `"ta"`), only Population and Intervention questions are evaluated against the abstract text.
+     - Full-text, comparator, outcome, and study design questions are stripped out, reducing ONNX token sequence processing by ~67%.
+  3. **Batched Laya ONNX Inference & CUDA Acceleration**:
+     - Added `system_one_batch()` in [`laya/laya_engine.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/laya/laya_engine.py) and `screen_batch()` in [`services/jev_screener.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/jev_screener.py) for parallel multi-study inference.
+     - Enabled `CUDAExecutionProvider` prioritization for GPU acceleration (e.g. Tesla V100S on HPC) with multi-threaded CPU fallback (`intra_op_num_threads`).
+     - Connected `screen_batch()` into `batch_ai_screen()` in [`routers/screening.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/routers/screening.py), `ai_screen_title_abstract()` in [`routers/studies.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/routers/studies.py), and `AIScreeningPipeline` in [`services/ai_screening_pipeline.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/ai_screening_pipeline.py).
+  4. **Claimscape UX**:
+     - Added dynamic animated progress bar under the Claimscape question card with active scan percentages and stage descriptions ("Querying PubMed...", "Retrieving abstracts...", "Reading abstracts with Laya System-1 ONNX...", "Synthesizing stances...").
+     - Added smooth auto-scroll to `#claimscape-map-section` when evidence evaluation results are loaded.
+
