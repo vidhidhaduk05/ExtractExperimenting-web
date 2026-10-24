@@ -27,9 +27,20 @@ fi
 
 echo "[*] Active Tunnel URL: $TUNNEL_URL"
 
-# Verify that the URL actually responds with healthy
-if ! curl -s --max-time 8 "$TUNNEL_URL/health" | grep -q '"status":"healthy"'; then
-    echo "[-] Warning: Tunnel $TUNNEL_URL did not respond healthy. Aborting publish."
+# Verify that the URL actually responds with healthy (retry up to 24s for edge routing)
+echo "[*] Verifying Cloudflare edge routing for $TUNNEL_URL..."
+TUNNEL_READY=0
+for i in {1..12}; do
+    if curl -s --max-time 5 "$TUNNEL_URL/health" | grep -q '"status":"healthy"'; then
+        TUNNEL_READY=1
+        echo "[+] Cloudflare edge routing confirmed healthy."
+        break
+    fi
+    sleep 2
+done
+
+if [ "$TUNNEL_READY" -eq 0 ]; then
+    echo "[-] Warning: Tunnel $TUNNEL_URL did not respond healthy after 24s. Aborting publish."
     exit 1
 fi
 

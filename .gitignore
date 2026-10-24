@@ -59,3 +59,8 @@ node_modules
 *.onnx.data
 laya/models/
 scratch/ai_ich_lvo/
+
+# RadExtract HPC runtime state
+jobs/logs/
+jobs/.shift_state.json
+*.log

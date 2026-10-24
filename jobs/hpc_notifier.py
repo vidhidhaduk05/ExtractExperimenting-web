@@ -219,42 +219,71 @@ def notify_troubleshoot_event(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        action = sys.argv[1].lower()
-        if action == "test":
-            print(f"Sending test notification to {RECIPIENT_EMAIL}...")
-            ok = send_email(
-                "🧪 [RadExtract HPC] Test Notification",
-                "This is a test notification confirming that the automated scheduler email system is working.",
-                build_status_card(
-                    "🧪 Scheduler Email Test",
-                    "#6366f1",
-                    {
-                        "Recipient": RECIPIENT_EMAIL,
-                        "Status": "System Ready",
-                        "Cluster": "WVU CTSI HPC (ctsi-hpc.hsc.wvu.edu)",
-                        "Node": socket.gethostname(),
-                    },
-                ),
-            )
-            sys.exit(0 if ok else 1)
-        elif action == "start":
-            job = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("SLURM_JOB_ID", "local")
-            node = sys.argv[3] if len(sys.argv) > 3 else socket.gethostname()
-            url = sys.argv[4] if len(sys.argv) > 4 else ""
-            notify_shift_started(job, node, 24, url)
-        elif action == "handover":
-            old_j = sys.argv[2] if len(sys.argv) > 2 else "previous"
-            new_j = sys.argv[3] if len(sys.argv) > 3 else os.environ.get("SLURM_JOB_ID", "current")
-            node = sys.argv[4] if len(sys.argv) > 4 else socket.gethostname()
-            url = sys.argv[5] if len(sys.argv) > 5 else ""
-            notify_shift_handover_success(old_j, new_j, node, url)
-        elif action == "end":
-            job = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("SLURM_JOB_ID", "local")
-            node = sys.argv[3] if len(sys.argv) > 3 else socket.gethostname()
-            notify_shift_ended(job, node)
-        elif action == "troubleshoot":
-            comp = sys.argv[2] if len(sys.argv) > 2 else "Service"
-            issue = sys.argv[3] if len(sys.argv) > 3 else "Unresponsive"
-            action_desc = sys.argv[4] if len(sys.argv) > 4 else "Restarted"
-            notify_troubleshoot_event(comp, issue, action_desc)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="RadExtract HPC Continuous Shift Notifier")
+    parser.add_argument("positional_action", nargs="?", default=None, help="Action: test, start, handover, end, troubleshoot")
+    parser.add_argument("--event", "--action", dest="flag_action", default=None, help="Action name")
+    parser.add_argument("args", nargs="*", help="Positional arguments for action")
+    parser.add_argument("--job", dest="job", default=None)
+    parser.add_argument("--node", dest="node", default=None)
+    parser.add_argument("--url", dest="url", default=None)
+    parser.add_argument("--details", dest="details", default=None)
+    parser.add_argument("--status", dest="status", default="RESOLVED")
+
+    parsed, unknown = parser.parse_known_args()
+    action = (parsed.flag_action or parsed.positional_action or "").lower().strip()
+
+    if not action and len(sys.argv) > 1:
+        first = sys.argv[1].lower().strip()
+        if not first.startswith("-"):
+            action = first
+
+    if action == "test":
+        print(f"[Notifier] Sending test notification to {RECIPIENT_EMAIL}...")
+        details = parsed.details or (parsed.args[0] if parsed.args else "Test notification confirming scheduler alert channel.")
+        ok = send_email(
+            "🧪 [RadExtract HPC] Test Notification",
+            f"This is a test notification confirming that the automated scheduler email system is working.\n\nDetails: {details}",
+            build_status_card(
+                "🧪 Scheduler Email Test",
+                "#6366f1",
+                {
+                    "Recipient": RECIPIENT_EMAIL,
+                    "Status": "System Ready",
+                    "Cluster": "WVU CTSI HPC (ctsi-hpc.hsc.wvu.edu)",
+                    "Node": socket.gethostname(),
+                    "Details": details,
+                },
+            ),
+        )
+        sys.exit(0 if ok else 1)
+    elif action == "start":
+        job = parsed.job or (parsed.args[0] if len(parsed.args) > 0 else os.environ.get("SLURM_JOB_ID", "local"))
+        node = parsed.node or (parsed.args[1] if len(parsed.args) > 1 else socket.gethostname())
+        url = parsed.url or (parsed.args[2] if len(parsed.args) > 2 else "")
+        ok = notify_shift_started(job, node, 24, url)
+        sys.exit(0 if ok else 1)
+    elif action == "handover":
+        old_j = parsed.args[0] if len(parsed.args) > 0 else "previous"
+        new_j = parsed.job or (parsed.args[1] if len(parsed.args) > 1 else os.environ.get("SLURM_JOB_ID", "current"))
+        node = parsed.node or (parsed.args[2] if len(parsed.args) > 2 else socket.gethostname())
+        url = parsed.url or (parsed.args[3] if len(parsed.args) > 3 else "")
+        ok = notify_shift_handover_success(old_j, new_j, node, url)
+        sys.exit(0 if ok else 1)
+    elif action == "end":
+        job = parsed.job or (parsed.args[0] if len(parsed.args) > 0 else os.environ.get("SLURM_JOB_ID", "local"))
+        node = parsed.node or (parsed.args[1] if len(parsed.args) > 1 else socket.gethostname())
+        reason = parsed.details or (parsed.args[2] if len(parsed.args) > 2 else "Completed 24-hour cycle cleanly")
+        ok = notify_shift_ended(job, node, reason)
+        sys.exit(0 if ok else 1)
+    elif action == "troubleshoot":
+        comp = parsed.args[0] if len(parsed.args) > 0 else "Service"
+        issue = parsed.args[1] if len(parsed.args) > 1 else "Unresponsive"
+        action_desc = parsed.details or (parsed.args[2] if len(parsed.args) > 2 else "Restarted")
+        status = parsed.status or (parsed.args[3] if len(parsed.args) > 3 else "RESOLVED")
+        ok = notify_troubleshoot_event(comp, issue, action_desc, status)
+        sys.exit(0 if ok else 1)
+    else:
+        print(f"Unknown action: '{action}'. Usage: hpc_notifier.py [test|start|handover|end|troubleshoot]")
+        sys.exit(1)

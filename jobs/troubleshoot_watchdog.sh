@@ -11,7 +11,7 @@ REPO_DIR="/home/vd00026/Desktop/Software"
 PYTHON_BIN="$REPO_DIR/.venv/bin/python"
 CLOUDFLARED="/home/vd00026/.local/bin/cloudflared"
 NOTIFIER="$REPO_DIR/jobs/hpc_notifier.py"
-LOG_FILE="/home/vd00026/troubleshoot_watchdog.log"
+LOG_FILE="$REPO_DIR/jobs/logs/troubleshoot_watchdog.log"
 CURRENT_JOB="${SLURM_JOB_ID:-local}"
 
 exec >> "$LOG_FILE" 2>&1
@@ -25,7 +25,9 @@ if ! curl -s --max-time 5 http://127.0.0.1:18000/health | grep -q '"status":"ok"
     echo "[!] Tier 1 Biomni-R0 on port 18000 is UNRESPONSIVE. Initiating auto-recovery..."
     pkill -f "biomni_bridge_service.py" 2>/dev/null || true
     sleep 2
-    nohup "$PYTHON_BIN" "$REPO_DIR/jobs/biomni_bridge_service.py" > /home/vd00026/biomni_bridge.log 2>&1 & disown
+    LOG_DIR="$REPO_DIR/jobs/logs"
+    mkdir -p "$LOG_DIR"
+    nohup "$PYTHON_BIN" "$REPO_DIR/jobs/biomni_bridge_service.py" > "$LOG_DIR/biomni_bridge.log" 2>&1 & disown
 
     # Verify recovery
     RECOVERED=0
@@ -63,12 +65,15 @@ if ! curl -s --max-time 5 http://127.0.0.1:8000/health | grep -q '"status":"heal
     export LLM_API_KEY="sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
     export PYTHONPATH="$REPO_DIR/radextract_platform/backend"
 
+    LOG_DIR="$REPO_DIR/jobs/logs"
+    mkdir -p "$LOG_DIR"
     nohup "$PYTHON_BIN" -m uvicorn main:app \
+        --app-dir "$REPO_DIR/radextract_platform/backend" \
         --host 0.0.0.0 \
         --port 8000 \
         --workers 2 \
         --timeout-keep-alive 120 \
-        > /home/vd00026/fastapi_platform.log 2>&1 & disown
+        > "$LOG_DIR/fastapi_platform.log" 2>&1 & disown
 
     RECOVERED=0
     for i in {1..25}; do
@@ -97,37 +102,49 @@ CURRENT_URL=$(cat "$REPO_DIR/public/active_backend.json" 2>/dev/null | grep -o '
 TUNNEL_HEALTHY=0
 
 if [ -n "$CURRENT_URL" ]; then
-    if curl -s --max-time 8 "$CURRENT_URL/health" | grep -q '"status":"healthy"'; then
-        TUNNEL_HEALTHY=1
-        echo "[+] Tier 3 (Cloudflare Gateway): Healthy at $CURRENT_URL"
-    fi
+    for attempt in 1 2 3; do
+        if curl -s --max-time 8 "$CURRENT_URL/health" | grep -q '"status":"healthy"'; then
+            TUNNEL_HEALTHY=1
+            echo "[+] Tier 3 (Cloudflare Gateway): Healthy at $CURRENT_URL"
+            break
+        fi
+        if pgrep -f "cloudflared.*8000" > /dev/null; then
+            sleep 3
+        fi
+    done
 fi
 
 if [ "$TUNNEL_HEALTHY" -eq 0 ]; then
-    echo "[!] Cloudflare Ingress is OFFLINE or severed. Re-establishing fresh tunnel..."
-    pkill -f "cloudflared.*8000" 2>/dev/null || true
-    sleep 2
-
-    nohup "$CLOUDFLARED" tunnel --protocol http2 --url http://127.0.0.1:8000 > /home/vd00026/cloudflared_8000.log 2>&1 & disown
-
-    NEW_URL=""
-    for i in {1..30}; do
-        NEW_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /home/vd00026/cloudflared_8000.log 2>/dev/null | tail -n 1 || true)
-        if [ -n "$NEW_URL" ]; then
-            if curl -s --max-time 6 "$NEW_URL/health" | grep -q '"status":"healthy"'; then
-                break
-            fi
-        fi
-        sleep 1
-    done
-
-    if [ -n "$NEW_URL" ]; then
-        echo "[+] Fresh tunnel active at $NEW_URL. Auto-publishing to GitHub..."
-        bash "$REPO_DIR/jobs/publish_active_tunnel.sh" "$NEW_URL" || true
-        "$PYTHON_BIN" "$NOTIFIER" troubleshoot "Tier 3: Public Ingress Gateway" "Tunnel connection severed" "Launched fresh tunnel ($NEW_URL) and published to GitHub Pages" || true
+    if [ "${STANDBY_MODE:-0}" = "1" ]; then
+        echo "[*] [STANDBY MODE] Successor shift manages public ingress. Retiring node will not re-launch tunnel."
     else
-        echo "[-] Cloudflare tunnel recovery failed."
-        "$PYTHON_BIN" "$NOTIFIER" troubleshoot "Tier 3: Public Ingress Gateway" "Tunnel connection severed" "Cloudflared could not establish public endpoint" "FAILED" || true
+        echo "[!] Cloudflare Ingress is OFFLINE or severed. Re-establishing fresh tunnel..."
+        pkill -f "cloudflared.*8000" 2>/dev/null || true
+        sleep 2
+
+        LOG_DIR="$REPO_DIR/jobs/logs"
+        mkdir -p "$LOG_DIR"
+        nohup "$CLOUDFLARED" tunnel --protocol http2 --url http://127.0.0.1:8000 > "$LOG_DIR/cloudflared_8000.log" 2>&1 & disown
+
+        NEW_URL=""
+        for i in {1..30}; do
+            NEW_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' "$LOG_DIR/cloudflared_8000.log" 2>/dev/null | tail -n 1 || true)
+            if [ -n "$NEW_URL" ]; then
+                if curl -s --max-time 6 "$NEW_URL/health" | grep -q '"status":"healthy"'; then
+                    break
+                fi
+            fi
+            sleep 1
+        done
+
+        if [ -n "$NEW_URL" ]; then
+            echo "[+] Fresh tunnel active at $NEW_URL. Auto-publishing to GitHub..."
+            bash "$REPO_DIR/jobs/publish_active_tunnel.sh" "$NEW_URL" || true
+            "$PYTHON_BIN" "$NOTIFIER" troubleshoot "Tier 3: Public Ingress Gateway" "Tunnel connection severed" "Launched fresh tunnel ($NEW_URL) and published to GitHub Pages" || true
+        else
+            echo "[-] Cloudflare tunnel recovery failed."
+            "$PYTHON_BIN" "$NOTIFIER" troubleshoot "Tier 3: Public Ingress Gateway" "Tunnel connection severed" "Cloudflared could not establish public endpoint" "FAILED" || true
+        fi
     fi
 fi
 

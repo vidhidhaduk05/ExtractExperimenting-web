@@ -11,7 +11,9 @@ set -euo pipefail
 PYTHON_BIN="/home/vd00026/Desktop/Software/.venv/bin/python"
 CLOUDFLARED="/home/vd00026/.local/bin/cloudflared"
 JOBS_DIR="/home/vd00026/Desktop/Software/jobs"
+LOG_DIR="$JOBS_DIR/logs"
 BACKEND_DIR="/home/vd00026/Desktop/Software/radextract_platform/backend"
+mkdir -p "$LOG_DIR"
 
 echo "====================================================================="
 echo "   STARTING 3-TIER ALWAYS-ON HPC AGENT ARCHITECTURE"
@@ -24,7 +26,7 @@ echo ""
 echo "[*] [TIER 1] Verifying GPU Biomni-R0 on Port 18000..."
 if ! curl -s http://127.0.0.1:18000/health | grep -q '"status":"ok"'; then
     echo "[*] Launching Tier 1 Biomni Bridge on port 18000..."
-    nohup "$PYTHON_BIN" "$JOBS_DIR/biomni_bridge_service.py" > /home/vd00026/biomni_bridge.log 2>&1 & disown
+    nohup "$PYTHON_BIN" "$JOBS_DIR/biomni_bridge_service.py" > "$LOG_DIR/biomni_bridge.log" 2>&1 & disown
     for i in {1..20}; do
         if curl -s http://127.0.0.1:18000/health | grep -q '"status":"ok"'; then
             break
@@ -60,7 +62,7 @@ if ! curl -s http://127.0.0.1:8000/health | grep -q '"status":"healthy"'; then
         --port 8000 \
         --workers 2 \
         --timeout-keep-alive 120 \
-        > /home/vd00026/fastapi_platform.log 2>&1 & disown
+        > "$LOG_DIR/fastapi_platform.log" 2>&1 & disown
 
     for i in {1..30}; do
         if curl -s http://127.0.0.1:8000/health | grep -q '"status":"healthy"'; then
@@ -75,7 +77,7 @@ if echo "$T2_HEALTH" | grep -q '"status":"healthy"'; then
     echo "[+] [TIER 2 VERIFIED] FastAPI platform is ONLINE and healthy on http://127.0.0.1:8000"
 else
     echo "[-] [TIER 2 ERROR] FastAPI platform failed to start on port 8000."
-    tail -n 25 /home/vd00026/fastapi_platform.log
+    tail -n 25 "$LOG_DIR/fastapi_platform.log"
     exit 1
 fi
 
@@ -84,24 +86,43 @@ fi
 # ------------------------------------------------------------------------------
 echo ""
 echo "[*] [TIER 3] Checking Public Cloudflare Ingress Gateway for Port 8000..."
-TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /home/vd00026/.gemini/antigravity-ide/brain/65bbfb7d-9393-497f-8a3c-cb980a561ce1/.system_generated/tasks/task-280.log 2>/dev/null | tail -n 1 || true)
-
+TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' "$REPO_DIR/public/active_backend.json" 2>/dev/null | head -n 1 || true)
 if [ -z "$TUNNEL_URL" ]; then
-    TUNNEL_URL="https://thesaurus-algorithms-exterior-estimates.trycloudflare.com"
+    TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' "$LOG_DIR/cloudflared_8000.log" 2>/dev/null | tail -n 1 || true)
 fi
 
-echo "[*] Active Ingress Gateway URL: $TUNNEL_URL"
-echo "[*] Testing external health check through ingress gateway..."
-INGRESS_CHECK=$(curl -s "$TUNNEL_URL/health" || echo "")
+TUNNEL_HEALTHY=0
+if [ -n "$TUNNEL_URL" ]; then
+    echo "[*] Testing active tunnel: $TUNNEL_URL..."
+    if curl -s --max-time 6 "$TUNNEL_URL/health" | grep -q '"status":"healthy"'; then
+        TUNNEL_HEALTHY=1
+        echo "[+] [TIER 3 VERIFIED] Public Ingress is reachable from external internet: $TUNNEL_URL"
+    fi
+fi
 
-if echo "$INGRESS_CHECK" | grep -q '"status":"healthy"'; then
-    echo "[+] [TIER 3 VERIFIED] Public Ingress is reachable from external internet!"
-else
+if [ "$TUNNEL_HEALTHY" -eq 0 ]; then
     echo "[*] Refreshing public tunnel..."
     pkill -f "cloudflared.*8000" 2>/dev/null || true
-    nohup "$CLOUDFLARED" tunnel --protocol http2 --url http://127.0.0.1:8000 > /home/vd00026/cloudflared_8000.log 2>&1 & disown
-    sleep 5
-    TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /home/vd00026/cloudflared_8000.log | tail -n 1 || true)
+    sleep 2
+    nohup "$CLOUDFLARED" tunnel --protocol http2 --url http://127.0.0.1:8000 > "$LOG_DIR/cloudflared_8000.log" 2>&1 & disown
+    
+    TUNNEL_URL=""
+    for i in {1..30}; do
+        TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' "$LOG_DIR/cloudflared_8000.log" 2>/dev/null | tail -n 1 || true)
+        if [ -n "$TUNNEL_URL" ]; then
+            if curl -s --max-time 5 "$TUNNEL_URL/health" | grep -q '"status":"healthy"'; then
+                break
+            fi
+        fi
+        sleep 1
+    done
+
+    if [ -n "$TUNNEL_URL" ]; then
+        echo "[+] Fresh tunnel active at $TUNNEL_URL. Auto-publishing to GitHub..."
+        bash "$REPO_DIR/jobs/publish_active_tunnel.sh" "$TUNNEL_URL" || true
+    else
+        echo "[-] Warning: Cloudflare tunnel could not be verified within 30s."
+    fi
 fi
 
 echo ""

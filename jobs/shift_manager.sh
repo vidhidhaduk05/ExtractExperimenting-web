@@ -20,17 +20,23 @@ SLURM_SCRIPT="$REPO_DIR/jobs/continuous_shift.slurm"
 CURRENT_JOB="${SLURM_JOB_ID:-manual_$(date +%s)}"
 CURRENT_NODE="$(hostname)"
 START_TIME="$(date +%s)"
-TOTAL_RUNTIME_SECS=$((24 * 3600))       # 24 Hours
-TRIGGER_NEXT_SECS=$((23 * 3600))        # Trigger next shift 1 hour before expiration
+TOTAL_RUNTIME_SECS="${TEST_TOTAL_RUNTIME_SECS:-$(( (23 * 3600) + (55 * 60) ))}" # 23h 55m default
+TRIGGER_NEXT_SECS="${TEST_TRIGGER_NEXT_SECS:-$((23 * 3600))}"                   # 23h default
+WATCHDOG_INTERVAL="${TEST_WATCHDOG_INTERVAL:-180}"                             # 3m default
 
 echo "========================================================================"
 echo " Starting 24-Hour Continuous Shift Manager"
 echo " Job ID:       ${CURRENT_JOB}"
 echo " Node:         ${CURRENT_NODE}"
 echo " Start Time:   $(date)"
-echo " Handover At:  Hour 23 (1-Hour Zero-Downtime Overlap)"
+echo " Handover At:  Hour 23 (Zero-Downtime Overlap)"
+echo " Retirement:   Hour 23:55 (Graceful exit before 24h limit)"
 echo " Recipient:    vidhidhaduk05@gmail.com"
 echo "========================================================================"
+
+NEXT_SHIFT_SUBMITTED=0
+NEXT_SHIFT_CONFIRMED=0
+NEXT_JOB_ID=""
 
 # Read previous job ID if present
 PREV_JOB="None"
@@ -41,20 +47,25 @@ fi
 # Trap signals for graceful shutdown & WAL flush
 cleanup() {
     echo "[*] [CLEANUP TRAP] Performing graceful shutdown and database flush..."
-    pkill -f "uvicorn main:app.*8000" 2>/dev/null || true
-    pkill -f "biomni_bridge_service.py" 2>/dev/null || true
-    pkill -f "cloudflared.*8000" 2>/dev/null || true
+    if [ "${SKIP_KILL_ON_CLEANUP:-0}" != "1" ]; then
+        pkill -f "uvicorn main:app.*8000" 2>/dev/null || true
+        pkill -f "biomni_bridge_service.py" 2>/dev/null || true
+        pkill -f "cloudflared.*8000" 2>/dev/null || true
+    else
+        echo "[*] SKIP_KILL_ON_CLEANUP is set. Preserving active platform processes."
+    fi
 
-    # Sync scratch SQLite DB to persistent storage
-    if [ -f "/tmp/radextract.db" ]; then
+    # Only sync scratch SQLite DB if successor has not taken over active writing
+    if [ "$NEXT_SHIFT_CONFIRMED" -eq 0 ] && [ -f "/tmp/radextract.db" ]; then
+        sqlite3 /tmp/radextract.db "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
         cp "/tmp/radextract.db" "${REPO_DIR}/radextract_platform/backend/radextract.db"
-        echo "[+] SQLite database successfully synced to persistent storage."
+        echo "[+] Final SQLite database successfully synced to persistent storage."
     fi
 
     "$PYTHON_BIN" "$NOTIFIER" end "${CURRENT_JOB}" "${CURRENT_NODE}" || true
     echo "[*] Shift ${CURRENT_JOB} cleanup complete."
 }
-trap cleanup EXIT ERR TERM
+trap cleanup EXIT TERM INT
 
 # ------------------------------------------------------------------------------
 # STEP 1: INITIALIZE STACK (TIER 1, TIER 2, TIER 3)
@@ -95,14 +106,21 @@ fi
 # ------------------------------------------------------------------------------
 echo "[*] Entering active watchdog loop. Next shift will be launched at hour 23..."
 
-NEXT_SHIFT_SUBMITTED=0
-
 while true; do
     NOW="$(date +%s)"
     ELAPSED=$((NOW - START_TIME))
 
-    # Run health & troubleshooting scan
-    bash "$WATCHDOG" || true
+    # Run health & troubleshooting scan (pass standby status if successor active)
+    STANDBY_MODE="$NEXT_SHIFT_CONFIRMED" bash "$WATCHDOG" || true
+
+    # Check if successor has taken over active shift
+    if [ "$NEXT_SHIFT_SUBMITTED" -eq 1 ] && [ "$NEXT_SHIFT_CONFIRMED" -eq 0 ]; then
+        ACTIVE_ID=$("$PYTHON_BIN" -c "import json; print(json.load(open('$STATE_FILE')).get('current_job_id', ''))" 2>/dev/null || echo "")
+        if [ "$ACTIVE_ID" = "$NEXT_JOB_ID" ]; then
+            echo "[+] Successor shift (Job #${NEXT_JOB_ID}) confirmed active! This node entering hot-standby."
+            NEXT_SHIFT_CONFIRMED=1
+        fi
+    fi
 
     # Check if we reached hour 23 (1-hour overlap window)
     if [ "$ELAPSED" -ge "$TRIGGER_NEXT_SECS" ] && [ "$NEXT_SHIFT_SUBMITTED" -eq 0 ]; then
@@ -112,7 +130,27 @@ while true; do
         echo " Submitting replacement shift for 1-hour seamless overlap..."
         echo "========================================================================"
 
-        NEXT_JOB_OUT=$(sbatch "$SLURM_SCRIPT" 2>&1 || echo "ERROR")
+        # Flush & checkpoint local SQLite DB so incoming job starts with latest state
+        if [ -f "/tmp/radextract.db" ]; then
+            echo "[*] Checkpointing SQLite WAL and syncing to persistent storage..."
+            sqlite3 /tmp/radextract.db "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
+            cp "/tmp/radextract.db" "${REPO_DIR}/radextract_platform/backend/radextract.db"
+            echo "[+] Persistent database synced prior to successor launch."
+        fi
+
+        if [ "${TEST_DRY_RUN:-0}" = "1" ]; then
+            echo "[TEST DRY RUN] Testing Slurm allocation with sbatch --test-only..."
+            TEST_OUT=$(sbatch --test-only "$SLURM_SCRIPT" 2>&1 || echo "ERROR")
+            echo "[*] Slurm test-only response: $TEST_OUT"
+            if echo "$TEST_OUT" | grep -q "Job [0-9]\+ to start"; then
+                MOCK_ID=$(echo "$TEST_OUT" | grep -o "Job [0-9]\+" | awk '{print $2}')
+                NEXT_JOB_OUT="Submitted batch job ${MOCK_ID}"
+            else
+                NEXT_JOB_OUT="$TEST_OUT"
+            fi
+        else
+            NEXT_JOB_OUT=$(sbatch "$SLURM_SCRIPT" 2>&1 || echo "ERROR")
+        fi
         echo "[*] sbatch response: $NEXT_JOB_OUT"
 
         if echo "$NEXT_JOB_OUT" | grep -q "Submitted batch job"; then
@@ -139,14 +177,14 @@ with open('${STATE_FILE}', 'w') as f:
         fi
     fi
 
-    # Check if 24 hours have elapsed (end of shift)
+    # Check if 23h 55m have elapsed (end of shift cycle)
     if [ "$ELAPSED" -ge "$TOTAL_RUNTIME_SECS" ]; then
-        echo "[*] 24-hour shift cycle complete. Initiating graceful retirement..."
+        echo "[*] 24-hour shift cycle complete (Hour 23:55). Initiating graceful retirement..."
         break
     fi
 
-    # Sleep 180 seconds between watchdog checks
-    sleep 180
+    # Sleep between watchdog checks
+    sleep "${WATCHDOG_INTERVAL}"
 done
 
 echo "[*] Shift manager loop finished naturally."

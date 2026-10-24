@@ -34,6 +34,7 @@ export RADEXTRACT_LLM_MODEL="biomni-r0"
 export STAGE_DB_SCRATCH="1"
 export ENVIRONMENT="production"
 export PYTHONPATH="$BACKEND_DIR"
+cd "$BACKEND_DIR"
 
 # 3. Launch uvicorn with 2 workers on 0.0.0.0:8000
 echo "[*] Starting uvicorn with 2 workers on 0.0.0.0:8000..."
@@ -42,7 +43,7 @@ nohup "$PYTHON_BIN" -m uvicorn main:app \
   --port 8000 \
   --workers 2 \
   --timeout-keep-alive 120 \
-  > "$LOG_FILE" 2>&1 &
+  > "$LOG_FILE" 2>&1 & disown
 
 # 4. Wait for /health to become available
 echo "[*] Waiting for FastAPI to initialize..."
