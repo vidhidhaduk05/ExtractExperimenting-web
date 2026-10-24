@@ -1,8 +1,8 @@
 {
-  "backend_url": "https://antique-das-providers-feature.trycloudflare.com",
-  "api_url": "https://antique-das-providers-feature.trycloudflare.com/api",
-  "health_url": "https://antique-das-providers-feature.trycloudflare.com/health",
-  "updated_at": "2026-10-24T04:36:26Z",
+  "backend_url": "https://medical-sydney-tourist-analog.trycloudflare.com",
+  "api_url": "https://medical-sydney-tourist-analog.trycloudflare.com/api",
+  "health_url": "https://medical-sydney-tourist-analog.trycloudflare.com/health",
+  "updated_at": "2026-10-24T04:45:41Z",
   "status": "online",
   "model": "biomni-r0"
 }
