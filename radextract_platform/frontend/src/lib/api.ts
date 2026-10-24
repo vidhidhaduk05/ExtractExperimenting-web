@@ -70,6 +70,7 @@ export async function autoDiscoverBackend(): Promise<string | null> {
       updateApiState({ apiBase: API_BASE, state: "live" });
       return API_BASE;
     }
+    // Stale or dead custom URL; remove it so auto-discovery can take over
     localStorage.removeItem("custom_api_base");
   }
 
@@ -88,20 +89,31 @@ export async function autoDiscoverBackend(): Promise<string | null> {
         const check = await testBackendConnection(url);
         if (check.ok) {
           API_BASE = url.endsWith("/api") ? url : `${url}/api`;
-          localStorage.setItem("custom_api_base", API_BASE);
           updateApiState({ apiBase: API_BASE, state: "live" });
           return API_BASE;
         }
       }
     }
   } catch (e) {}
+
+  // Hardcoded fallback to current known HPC active tunnel
+  const hpcFallback = PERMANENT_HPC_BACKEND;
+  try {
+    const checkFallback = await testBackendConnection(hpcFallback);
+    if (checkFallback.ok) {
+      API_BASE = `${hpcFallback}/api`;
+      updateApiState({ apiBase: API_BASE, state: "live" });
+      return API_BASE;
+    }
+  } catch (e) {}
+
   return null;
 }
 
 if (typeof window !== "undefined") {
   setTimeout(() => {
     autoDiscoverBackend().catch(() => {});
-  }, 100);
+  }, 50);
 }
 
 export function isDemoModeEnabled(): boolean {

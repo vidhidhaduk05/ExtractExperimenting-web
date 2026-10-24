@@ -7,6 +7,8 @@ interface RigorReaderProps {
   selectedCheck?: RigorCheckItem | null;
   targetPage?: number;
   onPageChange?: (page: number) => void;
+  pagesText?: string[];
+  paperTitle?: string;
 }
 
 export const RigorReader: React.FC<RigorReaderProps> = ({
@@ -14,6 +16,8 @@ export const RigorReader: React.FC<RigorReaderProps> = ({
   selectedCheck,
   targetPage,
   onPageChange,
+  pagesText,
+  paperTitle,
 }) => {
   const [zoom, setZoom] = useState<number>(100);
   const [activePage, setActivePage] = useState<number>(selectedCheck?.page || 1);
@@ -42,14 +46,67 @@ export const RigorReader: React.FC<RigorReaderProps> = ({
   // Scientific manuscript typesetting simulation
   const renderPageContent = (pageNum: number) => {
     const isCurrentPage = selectedCheck?.page === pageNum;
+    const hasCustomText = pagesText && pagesText.length > 0;
+    const pageRawText = hasCustomText ? (pagesText[pageNum - 1] || "") : "";
+    const isUploadedDoc = hasCustomText && pageRawText.trim().length > 0;
 
     return (
       <div className="relative p-6 sm:p-8 text-[11px] leading-relaxed text-zinc-700 dark:text-zinc-300 font-serif select-none space-y-3.5">
-        {/* Academic Journal Header */}
-        <div className="flex justify-between items-center border-b pb-1.5 text-[8.5px] font-mono text-zinc-400">
-          <span>PLOS ONE | https://doi.org/10.1371/journal.pone.0293905</span>
-          <span>November 2023 | Volume 18 | Issue 11</span>
-        </div>
+        {isUploadedDoc ? (
+          <>
+            {/* Academic Journal Header */}
+            <div className="flex justify-between items-center border-b pb-1.5 text-[8.5px] font-mono text-zinc-400">
+              <span className="truncate max-w-[70%]">{paperTitle || "Uploaded Manuscript"}</span>
+              <span>Page {pageNum} of {totalPages}</span>
+            </div>
+
+            {pageNum === 1 && (
+              <div className="space-y-2 pb-2 border-b border-zinc-200 dark:border-zinc-800">
+                <div className="inline-block px-2 py-0.5 rounded text-[8.5px] font-mono font-bold uppercase tracking-wider bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
+                  SCANNED MANUSCRIPT · RIGOR SCAN VERIFIED
+                </div>
+                <h1 className="text-base sm:text-lg font-bold font-sans tracking-tight text-zinc-900 dark:text-zinc-100 leading-snug">
+                  {paperTitle || "Uploaded Manuscript"}
+                </h1>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {pageRawText
+                .split(/\n\s*\n|\n(?=[A-Z0-9\s]{3,}:)/g)
+                .map((p) => p.trim())
+                .filter((p) => p.length > 0)
+                .map((para, pIdx) => {
+                  const quoteClean = (selectedCheck?.quote || "").toLowerCase().slice(0, 35);
+                  const isMatch = isCurrentPage && quoteClean && para.toLowerCase().includes(quoteClean);
+                  return (
+                    <p
+                      key={pIdx}
+                      className={`text-[11.5px] leading-relaxed text-zinc-800 dark:text-zinc-200 font-serif transition-colors ${
+                        isMatch ? "p-2.5 rounded-lg border-l-4 shadow-sm" : ""
+                      }`}
+                      style={
+                        isMatch
+                          ? {
+                              borderColor: selectedCheck?.color || "var(--rs-good)",
+                              backgroundColor: "color-mix(in srgb, var(--rs-good) 8%, transparent)",
+                            }
+                          : undefined
+                      }
+                    >
+                      {para}
+                    </p>
+                  );
+                })}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Academic Journal Header */}
+            <div className="flex justify-between items-center border-b pb-1.5 text-[8.5px] font-mono text-zinc-400">
+              <span>PLOS ONE | https://doi.org/10.1371/journal.pone.0293905</span>
+              <span>November 2023 | Volume 18 | Issue 11</span>
+            </div>
 
         {pageNum === 1 && (
           <div className="space-y-3">
@@ -173,6 +230,8 @@ export const RigorReader: React.FC<RigorReaderProps> = ({
               </p>
             </div>
           </div>
+        )}
+          </>
         )}
 
         {/* Dynamic Visual Highlight Overlays */}

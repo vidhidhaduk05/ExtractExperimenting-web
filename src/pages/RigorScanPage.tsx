@@ -128,6 +128,7 @@ export const RigorScanPage: React.FC = () => {
           doi: v.paper?.doi || "Local evaluation",
           license: "Open Access",
           pages: v.paper?.pages || 16,
+          pages_text: v.paper?.pages_text || (v.paper as any)?.pagesText,
         },
         completenessIndex: v.index || 50,
         counts: {
@@ -209,11 +210,17 @@ export const RigorScanPage: React.FC = () => {
 
     const fileNameLower = file.name.toLowerCase();
     const isPdf = file.type === "application/pdf" || fileNameLower.endsWith(".pdf");
-    const isDocx = fileNameLower.endsWith(".docx") || file.type.includes("wordprocessingml") || file.type.includes("docx");
+    const isDocx =
+      fileNameLower.endsWith(".docx") ||
+      fileNameLower.endsWith(".doc") ||
+      file.type.includes("wordprocessingml") ||
+      file.type.includes("msword") ||
+      file.type.includes("docx") ||
+      file.type.includes("officedocument");
     const isText = fileNameLower.endsWith(".txt") || fileNameLower.endsWith(".text") || fileNameLower.endsWith(".md");
 
     if (!isPdf && !isDocx && !isText) {
-      setErrorMessage(`Unsupported format. Please select a Word document (.docx), PDF (.pdf), or text manuscript (.txt, .md). Given: "${file.name}"`);
+      setErrorMessage(`Unsupported format. Please select a Word document (.docx, .doc), PDF (.pdf), or text manuscript (.txt, .md). Given: "${file.name}"`);
       return;
     }
 
@@ -236,8 +243,32 @@ export const RigorScanPage: React.FC = () => {
         try {
           res = await api.scanDocxRigor(file);
         } catch (docxErr: any) {
-          console.warn("scanDocxRigor error, falling back to scanPdfRigor / scanFileRigor:", docxErr);
-          res = await api.scanPdfRigor(file);
+          console.warn("scanDocxRigor backend error; attempting client-side extraction:", docxErr);
+          setScanStepMessage("Extracting text from Word document in browser...");
+          try {
+            const mammoth = await import("mammoth");
+            const arrayBuffer = await file.arrayBuffer();
+            const extractResult = await mammoth.extractRawText({ arrayBuffer });
+            const docxText = extractResult.value || "";
+            if (docxText.trim().length > 30) {
+              setScanStepMessage("Scanning extracted manuscript with local Laya System-1...");
+              res = await api.scanTextRigor(docxText, file.name.replace(/\.[^/.]+$/, ""));
+              const chunks: string[] = [];
+              const words = docxText.split(/\s+/);
+              for (let i = 0; i < words.length; i += 350) {
+                chunks.push(words.slice(i, i + 350).join(" "));
+              }
+              if (res?.view?.paper) {
+                res.view.paper.pages_text = chunks;
+                res.view.paper.pages = Math.max(1, chunks.length);
+              }
+            } else {
+              throw docxErr;
+            }
+          } catch (mErr) {
+            console.warn("Client mammoth extraction failed:", mErr);
+            throw docxErr;
+          }
         }
       } else if (isPdf) {
         setScanStepMessage("Parsing PDF layout & extracting publication sections...");
@@ -262,6 +293,10 @@ export const RigorScanPage: React.FC = () => {
             if (fullText.trim().length > 50) {
               setScanStepMessage("Scanning extracted text with local Laya System-1...");
               res = await api.scanTextRigor(fullText, file.name.replace(/\.[^/.]+$/, ""));
+              if (res?.view?.paper) {
+                res.view.paper.pages_text = pagesText;
+                res.view.paper.pages = pagesText.length;
+              }
             } else {
               throw pdfUploadErr;
             }
@@ -274,6 +309,15 @@ export const RigorScanPage: React.FC = () => {
         const textContent = await file.text();
         setScanStepMessage("Scanning manuscript with local Laya System-1...");
         res = await api.scanTextRigor(textContent, file.name.replace(/\.[^/.]+$/, ""));
+        if (res?.view?.paper && !res.view.paper.pages_text) {
+          const chunks: string[] = [];
+          const words = textContent.split(/\s+/);
+          for (let i = 0; i < words.length; i += 350) {
+            chunks.push(words.slice(i, i + 350).join(" "));
+          }
+          res.view.paper.pages_text = chunks;
+          res.view.paper.pages = Math.max(1, chunks.length);
+        }
       }
 
       if (!res?.view?.checks || res.view.checks.length === 0) {
@@ -671,6 +715,8 @@ export const RigorScanPage: React.FC = () => {
           <div className="lg:col-span-5 order-2 lg:order-1">
             <RigorReader
               totalPages={activeDataset.paper.pages}
+              pagesText={(activeDataset.paper as any)?.pages_text || (activeDataset.paper as any)?.pagesText}
+              paperTitle={activeDataset.paper.title}
               selectedCheck={selectedCheck}
               targetPage={targetPage}
               onPageChange={(p) => setTargetPage(p)}

@@ -651,6 +651,7 @@ def run_full_rigor_scan(
                 "title": paper_title,
                 "doi": doi,
                 "pages": page_count,
+                "pages_text": page_texts,
             },
             "checks": all_checks,
             "index": overall_index,
