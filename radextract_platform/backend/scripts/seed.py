@@ -44,7 +44,7 @@ def seed_database():
     # ── 1. Admin User ──
     admin_username = os.environ.get("ADMIN_USERNAME", "admin").strip()
     admin_password = os.environ.get("ADMIN_PASSWORD", "admin123").strip()
-    admin_email = os.environ.get("ADMIN_EMAIL", "admin@radextract.local").strip()
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com").strip()
     
     existing_admin = db.query("users", {"username": admin_username})
     

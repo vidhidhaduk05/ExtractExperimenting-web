@@ -186,9 +186,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/radextract_core/radextract/document_processor.py": {
-    "mtime": 1791925161.5094159,
-    "seen": 1791927525.419781,
-    "ast_hash": "c76d36e6a684dba1e5638b769d3c1182",
+    "mtime": 1792813238.2431264,
+    "seen": 1792813577.7790477,
+    "ast_hash": "a98704b07e0b169fd8cbba121ae80f75",
     "semantic_hash": ""
   },
   "radextract_platform/backend/radextract_core/radextract/dual_writer.py": {
@@ -378,9 +378,9 @@
     "semantic_hash": "00702c0f804b51e9fe1af3cf813f76ff"
   },
   "radextract_platform/backend/routers/studies.py": {
-    "mtime": 1792279735.8648274,
-    "seen": 1792279857.3635619,
-    "ast_hash": "ca69e338b8c153abf1ddfe1892e7dbb3",
+    "mtime": 1792813304.9163194,
+    "seen": 1792813577.7876854,
+    "ast_hash": "e1ea2009db39dca65bf52a4fdf042596",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/variables.py": {
@@ -492,9 +492,9 @@
     "semantic_hash": "8dff25674e6c148fbc78136da018232a"
   },
   "radextract_platform/backend/services/pdf_service.py": {
-    "mtime": 1792775917.3096578,
-    "seen": 1792777002.0855596,
-    "ast_hash": "b412ea931a1d52d9ef41b0b55f69cf43",
+    "mtime": 1792813270.6581707,
+    "seen": 1792813577.7988353,
+    "ast_hash": "b657445eeb4abeff44bbb5a1e226173f",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/pico_extractor.py": {
@@ -780,15 +780,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/layout/AppLayout.tsx": {
-    "mtime": 1792349182.8979688,
-    "seen": 1792349706.8281097,
-    "ast_hash": "4c91272c6a938357df9038d2202acc62",
+    "mtime": 1792798842.7590423,
+    "seen": 1792799941.554352,
+    "ast_hash": "7422832b2b0176b25c18f4120cce9332",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1792351832.2486634,
-    "seen": 1792352101.6869712,
-    "ast_hash": "67ad9a68ea3fcea939c6132214642532",
+    "mtime": 1792819243.4568794,
+    "seen": 1792819442.8508227,
+    "ast_hash": "efe9e7234458cb75e7843a213ebe1d9a",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -1884,9 +1884,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/ApiSettingsModal.tsx": {
-    "mtime": 1792279735.9168267,
-    "seen": 1792279857.498571,
-    "ast_hash": "a70ece2a7f70c9ab705e3718d4cd9a36",
+    "mtime": 1792798406.2873333,
+    "seen": 1792799941.5523481,
+    "ast_hash": "480c352cedf96c07fdb58db26bc251fd",
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
@@ -2112,9 +2112,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/scripts/seed.py": {
-    "mtime": 1791664521.0421264,
-    "seen": 1791664941.925462,
-    "ast_hash": "b3c0c02686773859260a33e6b6debe87",
+    "mtime": 1792819223.507908,
+    "seen": 1792819442.8086412,
+    "ast_hash": "87f985fda68a2958a10e25a4beb822a0",
     "semantic_hash": ""
   },
   "radextract_platform/backend/scripts/seed_example_study.py": {
@@ -3879,6 +3879,24 @@
     "mtime": 1792770010.5022552,
     "seen": 1792777002.2748404,
     "ast_hash": "860c5cde90fa4d54d024c65b1ea45cae",
+    "semantic_hash": ""
+  },
+  "PLANS/HPC_AI_AGENT_DEPLOYMENT_PLAN.md": {
+    "mtime": 1792813399.9251924,
+    "seen": 1792813577.8538144,
+    "ast_hash": "65b4e991cde673c9fe1d26b4334c6282",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/public/active_backend.json": {
+    "mtime": 1792797855.0505137,
+    "seen": 1792799941.5503483,
+    "ast_hash": "da0b1b802e841733a7c27343cbef3c83",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/scripts/convert_pdfs_to_docling.py": {
+    "mtime": 1792813339.9403133,
+    "seen": 1792813577.7876854,
+    "ast_hash": "d0d88c6bf06e39115b29f46ead9f33ae",
     "semantic_hash": ""
   }
 }
