@@ -44,7 +44,7 @@ export interface ApiConnectionInfo {
 type ApiListener = (info: ApiConnectionInfo) => void;
 const apiListeners: Set<ApiListener> = new Set();
 
-export const PERMANENT_HPC_BACKEND = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
+export const PERMANENT_HPC_BACKEND = "https://facilitate-aging-television-videos.trycloudflare.com";
 
 export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
