@@ -119,6 +119,7 @@ while true; do
         if [ "$ACTIVE_ID" = "$NEXT_JOB_ID" ]; then
             echo "[+] Successor shift (Job #${NEXT_JOB_ID}) confirmed active! This node entering hot-standby."
             NEXT_SHIFT_CONFIRMED=1
+            "$PYTHON_BIN" "$NOTIFIER" success "${CURRENT_JOB}" "${NEXT_JOB_ID}" "${CURRENT_NODE}" "${PUBLIC_URL}" || true
         fi
     fi
 
@@ -171,9 +172,11 @@ s['handover_triggered_at'] = ${NOW}
 with open('${STATE_FILE}', 'w') as f:
     json.dump(s, f, indent=2)
 "
+            # Send shifting notification to vidhidhaduk05@gmail.com
+            "$PYTHON_BIN" "$NOTIFIER" shifting "${CURRENT_JOB}" "${NEXT_JOB_ID}" "${CURRENT_NODE}" "${PUBLIC_URL}" || true
         else
             echo "[-] Error submitting next shift: $NEXT_JOB_OUT"
-            "$PYTHON_BIN" "$NOTIFIER" troubleshoot "Scheduler Handover" "sbatch failed to submit next shift" "$NEXT_JOB_OUT" "CRITICAL" || true
+            "$PYTHON_BIN" "$NOTIFIER" failure "Scheduler Handover" "sbatch failed: $NEXT_JOB_OUT" || true
         fi
     fi
 
