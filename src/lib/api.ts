@@ -50,6 +50,7 @@ export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
   const custom = localStorage.getItem("custom_api_base");
   if (custom && custom.trim()) return custom.trim().replace(/\/+$/, "");
+  if (API_BASE && API_BASE !== "/api") return API_BASE;
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") return "/api";

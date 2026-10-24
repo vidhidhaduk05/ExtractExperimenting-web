@@ -1,13 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { api } from "../lib/api";
+import { api, subscribeApiConnection } from "../lib/api";
 import { Plus, Folder, Calendar } from "lucide-react";
+import { useEffect } from "react";
 
 export function ProjectList() {
   const { data: projects, isLoading, error, refetch } = useQuery({
     queryKey: ["projects"],
     queryFn: api.listProjects,
+    retry: 2,
+    retryDelay: 1000,
   });
+
+  useEffect(() => {
+    const unsub = subscribeApiConnection((info) => {
+      if (info.state === "live") {
+        refetch();
+      }
+    });
+    return unsub;
+  }, [refetch]);
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
