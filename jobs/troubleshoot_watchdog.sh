@@ -124,11 +124,12 @@ if [ "$TUNNEL_HEALTHY" -eq 0 ]; then
 
         LOG_DIR="$REPO_DIR/jobs/logs"
         mkdir -p "$LOG_DIR"
-        nohup "$CLOUDFLARED" tunnel --protocol http2 --url http://127.0.0.1:8000 > "$LOG_DIR/cloudflared_8000.log" 2>&1 & disown
+        CLOUDFLARED_LOG="$LOG_DIR/cloudflared_$(hostname)_8000.log"
+        nohup "$CLOUDFLARED" tunnel --protocol http2 --url http://127.0.0.1:8000 > "$CLOUDFLARED_LOG" 2>&1 & disown
 
         NEW_URL=""
         for i in {1..30}; do
-            NEW_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' "$LOG_DIR/cloudflared_8000.log" 2>/dev/null | tail -n 1 || true)
+            NEW_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' "$CLOUDFLARED_LOG" 2>/dev/null | tail -n 1 || true)
             if [ -n "$NEW_URL" ]; then
                 if curl -s --max-time 6 "$NEW_URL/health" | grep -q '"status":"healthy"'; then
                     break

@@ -28,9 +28,9 @@ module load shared DefaultModules gcc/10.2.0 cuda11.2/toolkit/11.2.2 slurm/slurm
 REPO_DIR="/home/vd00026/Desktop/Software"
 cd "$REPO_DIR"
 
-# Activate environment
-source "${REPO_DIR}/.venv/bin/activate"
+# Set environment PATH
 export PATH="${REPO_DIR}/.venv/bin:${PATH}"
+export VIRTUAL_ENV="${REPO_DIR}/.venv"
 
 # Hand execution to Shift Manager
 exec bash "${REPO_DIR}/jobs/shift_manager.sh"

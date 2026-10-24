@@ -13,8 +13,14 @@ TUNNEL_URL="${1:-}"
 cd "$REPO_DIR"
 
 if [ -z "$TUNNEL_URL" ]; then
-    # Auto-detect from running task log or cloudflared log
-    TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /home/vd00026/.gemini/antigravity-ide/brain/65bbfb7d-9393-497f-8a3c-cb980a561ce1/.system_generated/tasks/task-280.log 2>/dev/null | tail -n 1 || true)
+    # Auto-detect from node-specific cloudflared log
+    NODE_LOG="$REPO_DIR/jobs/logs/cloudflared_$(hostname)_8000.log"
+    if [ -f "$NODE_LOG" ]; then
+        TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' "$NODE_LOG" 2>/dev/null | tail -n 1 || true)
+    fi
+    if [ -z "$TUNNEL_URL" ]; then
+        TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' "$REPO_DIR/jobs/logs/cloudflared_8000.log" 2>/dev/null | tail -n 1 || true)
+    fi
     if [ -z "$TUNNEL_URL" ]; then
         TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /home/vd00026/cloudflared_8000.log 2>/dev/null | tail -n 1 || true)
     fi
