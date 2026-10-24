@@ -1,18 +1,16 @@
 import React from "react";
-import { TraceStep, VERDICT_BADGE_STYLES } from "../../lib/citationTelephoneMethod";
-import { ArrowDown, CheckCircle2, AlertTriangle, HelpCircle, BookOpen, ExternalLink, ChevronRight, Share2, Layers } from "lucide-react";
+import { TraceStep, CitationTelephoneData, VERDICT_BADGE_STYLES } from "../../lib/citationTelephoneMethod";
+import { AlertTriangle, HelpCircle, ExternalLink, Quote } from "lucide-react";
 
-interface TrailViewerProps {
+interface StepListProps {
   steps: TraceStep[];
-  selectedStepId: string;
+  selectedStepId?: string;
   onSelectStep: (step: TraceStep) => void;
 }
 
-export const TrailViewer: React.FC<TrailViewerProps> = ({
-  steps,
-  selectedStepId,
-  onSelectStep,
-}) => {
+const TrailStepList: React.FC<StepListProps> = ({ steps, selectedStepId, onSelectStep }) => {
+  if (!steps || steps.length === 0) return null;
+
   return (
     <ol className="ct-tree">
       {steps.map((step) => {
@@ -25,13 +23,21 @@ export const TrailViewer: React.FC<TrailViewerProps> = ({
             {/* Edge Link */}
             <div className="ct-edge">
               <span>
-                cited as <span className="font-mono text-[#381A61] dark:text-[#F9D14A] font-bold">{step.citedAs || `[hop ${step.hop}]`}</span>
+                cited as{" "}
+                <span className="font-mono text-[#381A61] dark:text-[#F9D14A] font-bold">
+                  {step.citedAs || `[hop ${step.hop}]`}
+                </span>
               </span>
               <span
                 className="ct-pill"
                 style={{
                   // @ts-expect-error CSS variable
-                  "--c": step.verdict === "different" ? "var(--ct-different)" : "var(--ct-same)",
+                  "--c":
+                    step.verdict === "different" || step.verdict === "not_found"
+                      ? "var(--ct-different)"
+                      : step.verdict === "stronger"
+                      ? "#E78429"
+                      : "var(--ct-same)",
                 }}
               >
                 {badge.label}
@@ -61,7 +67,18 @@ export const TrailViewer: React.FC<TrailViewerProps> = ({
                 >
                   {isOrigin ? (
                     <>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none">
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                        className="flex-none"
+                      >
                         <circle cx="12" cy="12" r="8"></circle>
                         <circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"></circle>
                       </svg>
@@ -69,7 +86,18 @@ export const TrailViewer: React.FC<TrailViewerProps> = ({
                     </>
                   ) : (
                     <>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none">
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                        className="flex-none"
+                      >
                         <path d="M5 5v6a4 4 0 0 0 4 4h10M15 11l4 4-4 4"></path>
                       </svg>
                       <span>Passes it on</span>
@@ -77,7 +105,9 @@ export const TrailViewer: React.FC<TrailViewerProps> = ({
                   )}
                 </span>
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[#6B665E] dark:text-[#968F84]">
-                  <span>{step.journal} · {step.year}</span>
+                  <span>
+                    {step.journal} · {step.year}
+                  </span>
                 </span>
               </div>
 
@@ -97,9 +127,9 @@ export const TrailViewer: React.FC<TrailViewerProps> = ({
               )}
             </button>
 
-            {/* Recursive nested steps */}
+            {/* Recursive nested child steps */}
             {step.nextSteps && step.nextSteps.length > 0 && (
-              <TrailViewer
+              <TrailStepList
                 steps={step.nextSteps}
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
@@ -112,3 +142,83 @@ export const TrailViewer: React.FC<TrailViewerProps> = ({
   );
 };
 
+export interface TrailViewerProps {
+  data: CitationTelephoneData;
+  selectedStep: TraceStep | null;
+  onSelectStep: (step: TraceStep) => void;
+}
+
+export const TrailViewer: React.FC<TrailViewerProps> = ({
+  data,
+  selectedStep,
+  onSelectStep,
+}) => {
+  return (
+    <div className="space-y-4">
+      {/* Root Claim Card */}
+      <div className="rounded-2xl border border-[#381A61]/15 dark:border-white/10 bg-white dark:bg-[#1E1928] p-5 shadow-xs relative overflow-hidden">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#7C4B73] dark:text-[#F9D14A] flex items-center gap-1.5">
+            <Quote className="w-3.5 h-3.5" />
+            The claim you started with
+          </span>
+          <span className="text-xs font-mono text-zinc-500">
+            {data.rootPaper.journal} · {data.rootPaper.year}
+          </span>
+        </div>
+
+        <blockquote className="font-serif text-[16px] sm:text-[17px] font-bold leading-snug text-[#381A61] dark:text-[#FAF9F3] my-2">
+          “{data.claim}”
+        </blockquote>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 pt-2.5 border-t border-[var(--ct-line)]">
+          <span className="font-medium text-zinc-700 dark:text-zinc-300">
+            {data.rootPaper.authors}
+          </span>
+          <div className="flex items-center gap-3">
+            {data.rootPaper.pmcid && (
+              <a
+                href={`https://europepmc.org/article/PMC/${data.rootPaper.pmcid.replace("PMC", "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-[#381A61] dark:hover:text-[#F9D14A] flex items-center gap-1"
+              >
+                PMC{data.rootPaper.pmcid.replace("PMC", "")}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+            {data.rootPaper.pmid && (
+              <a
+                href={`https://pubmed.ncbi.nlm.nih.gov/${data.rootPaper.pmid}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-[#381A61] dark:hover:text-[#F9D14A] flex items-center gap-1"
+              >
+                PMID {data.rootPaper.pmid}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+            {data.rootPaper.doi && (
+              <a
+                href={`https://doi.org/${data.rootPaper.doi}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-[#381A61] dark:hover:text-[#F9D14A] flex items-center gap-1"
+              >
+                DOI
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Recursive Hop Stepper Tree */}
+      <TrailStepList
+        steps={data.steps}
+        selectedStepId={selectedStep?.id}
+        onSelectStep={onSelectStep}
+      />
+    </div>
+  );
+};

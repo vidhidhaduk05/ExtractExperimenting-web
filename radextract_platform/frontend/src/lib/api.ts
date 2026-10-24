@@ -47,11 +47,13 @@ const apiListeners: Set<ApiListener> = new Set();
 
 export const PERMANENT_HPC_BACKEND = "https://facilitate-aging-television-videos.trycloudflare.com";
 
+let _apiBaseOverride: string | null = null;
+
 export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
   const custom = localStorage.getItem("custom_api_base");
   if (custom && custom.trim()) return custom.trim().replace(/\/+$/, "");
-  if (API_BASE && API_BASE !== "/api") return API_BASE;
+  if (_apiBaseOverride && _apiBaseOverride !== "/api") return _apiBaseOverride;
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") return "/api";
@@ -66,7 +68,8 @@ export async function autoDiscoverBackend(): Promise<string | null> {
   if (custom && custom.trim()) {
     const checkCustom = await testBackendConnection(custom.trim()).catch(() => null);
     if (checkCustom && checkCustom.ok) {
-      API_BASE = custom.trim().replace(/\/+$/, "");
+      _apiBaseOverride = custom.trim().replace(/\/+$/, "");
+      API_BASE = _apiBaseOverride;
       updateApiState({ apiBase: API_BASE, state: "live" });
       return API_BASE;
     }
@@ -88,7 +91,8 @@ export async function autoDiscoverBackend(): Promise<string | null> {
         const url = String(data.backend_url).replace(/\/+$/, "");
         const check = await testBackendConnection(url);
         if (check.ok) {
-          API_BASE = url.endsWith("/api") ? url : `${url}/api`;
+          _apiBaseOverride = url.endsWith("/api") ? url : `${url}/api`;
+          API_BASE = _apiBaseOverride;
           updateApiState({ apiBase: API_BASE, state: "live" });
           return API_BASE;
         }
@@ -101,7 +105,8 @@ export async function autoDiscoverBackend(): Promise<string | null> {
   try {
     const checkFallback = await testBackendConnection(hpcFallback);
     if (checkFallback.ok) {
-      API_BASE = `${hpcFallback}/api`;
+      _apiBaseOverride = `${hpcFallback}/api`;
+      API_BASE = _apiBaseOverride;
       updateApiState({ apiBase: API_BASE, state: "live" });
       return API_BASE;
     }
