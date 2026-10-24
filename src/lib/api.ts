@@ -1064,7 +1064,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     return {
       user_id: "demo_user_1",
       username: "admin",
-      email: "admin@radextract.local",
+      email: "admin@example.com",
       role: "owner"
     } as unknown as T;
   }
