@@ -43,6 +43,15 @@ def process_pdf(study_id: str, db: Optional[DBBackend] = None) -> dict:
     # Convert with graceful fallback
     doc = convert_with_fallback(pdf_path, doc_id=study_id, prefer_docling=True)
 
+    # Persist .docling.json alongside source PDF on disk
+    docling_json_path = os.path.splitext(pdf_path)[0] + ".docling.json"
+    try:
+        with open(docling_json_path, "w", encoding="utf-8") as f:
+            json.dump(doc.as_dict(), f, ensure_ascii=False, indent=2)
+        logger.info(f"[PDF] Persisted Docling JSON: {docling_json_path}")
+    except Exception as e_json:
+        logger.warning(f"[PDF] Failed to write {docling_json_path}: {e_json}")
+
     # Build storage dict
     doc_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -239,3 +248,39 @@ def extract_pdf_metadata(pdf_bytes: bytes) -> dict:
         authors = authors[:200]
 
     return {"title": title, "authors": authors}
+
+
+def get_docling_json(study_id: str, db: Optional[DBBackend] = None) -> Optional[dict]:
+    """Retrieve raw Docling JSON document structure for a study.
+
+    Checks for <pdf_basename>.docling.json on disk first, then falls back
+    to reconstructing the document representation from stored DB fields.
+    """
+    db = db or get_db_backend()
+    study = db.get("studies", study_id)
+    if study:
+        pdf_path = resolve_pdf_path(study.get("pdf_path", ""))
+        if pdf_path:
+            docling_json_path = os.path.splitext(pdf_path)[0] + ".docling.json"
+            if os.path.isfile(docling_json_path):
+                try:
+                    with open(docling_json_path, "r", encoding="utf-8") as f:
+                        return json.load(f)
+                except Exception as e:
+                    logger.warning(f"[PDF] Could not read {docling_json_path}: {e}")
+
+    # Fallback to stored fields in pdf_documents table
+    doc_data = get_pdf_data(study_id, db=db)
+    if not doc_data:
+        return None
+    return {
+        "doc_id": doc_data.get("doc_id"),
+        "study_id": doc_data.get("study_id"),
+        "processor_engine": doc_data.get("processor_engine"),
+        "pages": doc_data.get("pages", []),
+        "tables": doc_data.get("tables", []),
+        "annotations": doc_data.get("annotations", {}),
+        "metadata": doc_data.get("metadata", {}),
+        "full_text": doc_data.get("full_text", ""),
+    }
+

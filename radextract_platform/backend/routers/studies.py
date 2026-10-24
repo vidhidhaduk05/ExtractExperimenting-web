@@ -830,6 +830,23 @@ async def get_pdf_summary(
     return pdf_service.get_pdf_summary(study_id)
 
 
+@router.get("/studies/{study_id}/docling-json")
+async def get_docling_json(
+    study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Get the raw Docling JSON structure for a study's PDF."""
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid:
+        check_project_access(conn, _pid["project_id"], user)
+    data = pdf_service.get_docling_json(study_id, db=conn)
+    if not data:
+        raise HTTPException(status_code=404, detail="No Docling JSON found for this study. Process the PDF first.")
+    return data
+
+
+
 @router.delete("/studies/{study_id}/pdf-data")
 async def delete_pdf_data(
     study_id: str,

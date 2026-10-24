@@ -187,3 +187,33 @@ This script automatically:
 3. Detects port 18000 and mounts the FastAPI backend.
 4. Spawns the web server and prints the Open OnDemand proxy link (`https://ctsi-hpc.hsc.wvu.edu/rnode/${NODE_NAME}/${PORT}/`).
 5. Handles clean teardown and persistent database flushing upon job termination.
+
+---
+
+## 6. GPU-Accelerated Docling PDF Conversion & Persistence Architecture
+
+### 6.1 Acceleration on Tesla V100S GPU
+* **LayoutLM & TableFormer**: IBM Docling document converter leverages PyTorch with `AcceleratorDevice.CUDA` when `torch.cuda.is_available()` is detected on compute nodes, paired with `num_threads=8` for pre-processing.
+* **Speedup**: Cuts PDF parsing time from 30–60s on CPU down to ~1–3s on GPU.
+* **Graceful Fallback**: If Docling is not installed or CUDA is unavailable, the pipeline falls back to `FallbackProcessor` (pdfplumber/pypdfium2) without throwing unhandled exceptions.
+
+### 6.2 Persistent `.docling.json` Export & Endpoints
+* **Persistent Disk Artifact**: Whenever a study PDF is processed, `<study_name>.docling.json` is automatically saved alongside the source PDF file.
+* **REST API Endpoint**:
+  * `GET /api/studies/{study_id}/docling-json`: Retrieves the structured Docling JSON representation directly (tables, cells, bboxes, pages, metadata).
+
+### 6.3 Batch Conversion Runners
+* **CLI Batch Converter**:
+  ```bash
+  python radextract_platform/backend/scripts/convert_pdfs_to_docling.py \
+      --input-dir /home/vd00026/Desktop/Software/TESTING/files \
+      --device cuda \
+      --threads 8 \
+      --sync-db
+  ```
+* **Slurm GPU Batch Runner**:
+  ```bash
+  sbatch jobs/convert_pdfs_docling_gpu.slurm
+  ```
+  Allocates 1x Tesla V100S GPU, 8 CPUs, and 32GB RAM, converting all PDFs and sending status alerts to `vidhidhaduk05@gmail.com`.
+

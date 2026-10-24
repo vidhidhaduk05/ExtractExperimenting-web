@@ -155,8 +155,35 @@ class DoclingProcessor:
     def _get_converter(self):
         if self._converter is None and self._available:
             gc.collect()
-            from docling.document_converter import DocumentConverter
-            self._converter = DocumentConverter()
+            try:
+                from docling.document_converter import DocumentConverter, PdfFormatOption
+                from docling.datamodel.pipeline_options import PdfPipelineOptions, AcceleratorOptions, AcceleratorDevice
+
+                pipeline_options = PdfPipelineOptions()
+                pipeline_options.do_table_structure = True
+                pipeline_options.do_ocr = False
+
+                device = AcceleratorDevice.CPU
+                try:
+                    import torch
+                    if torch.cuda.is_available():
+                        device = AcceleratorDevice.CUDA
+                except Exception:
+                    pass
+
+                pipeline_options.accelerator_options = AcceleratorOptions(
+                    device=device,
+                    num_threads=8
+                )
+
+                self._converter = DocumentConverter(
+                    format_options={
+                        "pdf": PdfFormatOption(pipeline_options=pipeline_options)
+                    }
+                )
+            except Exception:
+                from docling.document_converter import DocumentConverter
+                self._converter = DocumentConverter()
         return self._converter
 
     def convert(self, pdf_path: str, *, doc_id: Optional[str] = None) -> ProcessedDocument:
