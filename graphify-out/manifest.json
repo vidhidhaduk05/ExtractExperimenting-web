@@ -774,9 +774,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/App.tsx": {
-    "mtime": 1792433583.2431798,
-    "seen": 1792434522.9414487,
-    "ast_hash": "2e61a0003606bffc0d590be9473e155b",
+    "mtime": 1792867420.716658,
+    "seen": 1792868717.5623114,
+    "ast_hash": "12e74ad05afd33bc98b1dd258cd04fd2",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/layout/AppLayout.tsx": {
@@ -1506,9 +1506,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/index.html": {
-    "mtime": 1791664521.2095337,
-    "seen": 1791664941.925462,
-    "ast_hash": "085eabe3bb31c381ace07802412d8b1c",
+    "mtime": 1792867110.0523427,
+    "seen": 1792868717.6095648,
+    "ast_hash": "2ef5266ca080adb576e597df88d9bba6",
     "semantic_hash": ""
   },
   "radextract_platform/mcp_server/README.md": {
@@ -1890,9 +1890,9 @@
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1792291664.123834,
-    "seen": 1792299450.34484,
-    "ast_hash": "8e963ecf2e1dfe2a2e89d3e1220b7f89",
+    "mtime": 1792824091.0176747,
+    "seen": 1792868717.5781999,
+    "ast_hash": "a1270d9b9daaccdc42822ac32d7528a6",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {
@@ -2592,9 +2592,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ClaimscapePage.tsx": {
-    "mtime": 1792821025.655372,
-    "seen": 1792822762.51746,
-    "ast_hash": "5934f98f8a0c10fdc912848df216151e",
+    "mtime": 1792868086.4796736,
+    "seen": 1792868717.5781999,
+    "ast_hash": "69580fa23d8275397865271f84d780fe",
     "semantic_hash": ""
   },
   ".agents/rules/gravitas-invariants.md": {
@@ -3909,6 +3909,24 @@
     "mtime": 1792822052.3449893,
     "seen": 1792822762.4925365,
     "ast_hash": "edd29746e698bc6acfc8e192b1766f2c",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/pages/LandingPage.tsx": {
+    "mtime": 1792868160.6258786,
+    "seen": 1792868717.5781999,
+    "ast_hash": "3225bb1578e346a2abeb209d35d7fb24",
+    "semantic_hash": ""
+  },
+  "Website for software/10.24.26_Website_landing_page.html": {
+    "mtime": 1792868612.973741,
+    "seen": 1792868717.5939174,
+    "ast_hash": "af3767d63ca29cac7885890c563ee1bf",
+    "semantic_hash": ""
+  },
+  "Website for software/lenis/Editorial Velvet.md": {
+    "mtime": 1792692205.7360146,
+    "seen": 1792868717.5939174,
+    "ast_hash": "c5e54ca5890812a5ab1b282fcffe8e86",
     "semantic_hash": ""
   }
 }

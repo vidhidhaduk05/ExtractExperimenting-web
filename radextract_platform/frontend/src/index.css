@@ -4,14 +4,14 @@
 
 @layer base {
   :root {
-    --background: #FAF9F3;
-    --foreground: #141413;
+    --background: #fbf9f4;
+    --foreground: #1b1c19;
     --card: #FFFFFF;
     --card-surface: #F2F1EB;
     --border: rgba(56, 26, 97, 0.08);
     --muted: #F2F1EB;
     --muted-foreground: #6B665E;
-    --primary: #381A61;
+    --primary: #3a0f34;
     --primary-foreground: #FAF9F3;
     --palette-periwinkle: #88A0DC;
     --palette-amethyst: #381A61;
@@ -122,25 +122,25 @@
    ========================================================================= */
 
 .cs {
-  --cs-panel: #F2F1EB;
-  --cs-card: #FFFFFF;
-  --cs-surface: #FFFFFF;
-  --cs-background: #FAF9F3;
-  --cs-line: rgba(56, 26, 97, 0.10);
-  --cs-line-soft: rgba(56, 26, 97, 0.05);
-  --cs-grid: #E5E1D5;
-  --cs-track: #E8E4D8;
-  --cs-ink: #141413;
-  --cs-ink-2: #4A453E;
-  --cs-ink-3: #6B665E;
-  --cs-accent: #381A61;
-  --cs-accent-ink: #381A61;
-  --cs-accent-soft: rgba(249, 209, 74, 0.22);
-  --cs-for: #3B64B8;
-  --cs-against: #AB3329;
-  --cs-neutral: #7C4B73;
-  --cs-amber: #E78429;
-  --cs-gold: #F9D14A;
+  --cs-panel: #f0eee9;
+  --cs-card: #ffffff;
+  --cs-surface: #fbf9f4;
+  --cs-background: #fbf9f4;
+  --cs-line: #d2c2cb;
+  --cs-line-soft: rgba(210, 194, 203, 0.45);
+  --cs-grid: #eae8e3;
+  --cs-track: #e4e2dd;
+  --cs-ink: #1b1c19;
+  --cs-ink-2: #4f444b;
+  --cs-ink-3: #72636d;
+  --cs-accent: #3a0f34;
+  --cs-accent-ink: #3a0f34;
+  --cs-accent-soft: rgba(255, 222, 166, 0.35);
+  --cs-for: #3b64b8;
+  --cs-against: #ab3329;
+  --cs-neutral: #814d75;
+  --cs-amber: #7c5800;
+  --cs-gold: #ffdea6;
   --cs-for-soft: rgba(59, 100, 184, 0.12);
   --cs-against-soft: rgba(171, 51, 41, 0.12);
   --cs-shadow: 0 1px 3px rgba(56, 26, 97, 0.06), 0 0 0 1px rgba(56, 26, 97, 0.06);
@@ -195,7 +195,7 @@
 .cs .cs-card {
   background: var(--cs-card);
   border: 1px solid var(--cs-line);
-  border-radius: 16px;
+  border-radius: 0px;
 }
 
 .cs .cs-panel {
@@ -227,7 +227,7 @@
   border: 1px solid var(--cs-line);
   background: var(--cs-card);
   color: var(--cs-ink-2);
-  border-radius: 999px;
+  border-radius: 0px;
   align-items: center;
   gap: 6px;
   padding: 5px 13px;
@@ -248,9 +248,9 @@
 }
 
 .cs .cs-chip[aria-pressed="true"] {
-  background: #381A61;
-  color: #FAF9F3;
-  border-color: #381A61;
+  background: #3a0f34;
+  color: #fbf9f4;
+  border-color: #3a0f34;
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(56, 26, 97, 0.18);
 }
@@ -267,7 +267,7 @@
   border: 1px solid var(--cs-line);
   width: 100%;
   color: var(--cs-ink);
-  border-radius: 12px;
+  border-radius: 0px;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -285,7 +285,7 @@
 .cs .cs-seg {
   border: 1px solid var(--cs-line);
   background: var(--cs-card);
-  border-radius: 10px;
+  border-radius: 0px;
   display: inline-flex;
   overflow: hidden;
 }
@@ -328,7 +328,7 @@
   appearance: none;
   background: var(--cs-track);
   cursor: pointer;
-  border-radius: 999px;
+  border-radius: 0px;
   flex: none;
   width: 32px;
   height: 18px;
@@ -535,7 +535,7 @@
   max-width: 340px;
   color: var(--cs-ink);
   box-shadow: var(--cs-tip);
-  border-radius: 12px;
+  border-radius: 0px;
   padding: 10px 14px;
   font-size: 13px;
   line-height: 1.4;

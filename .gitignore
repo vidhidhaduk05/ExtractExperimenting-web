@@ -98,3 +98,6 @@ scratch/
 .tmp_pytest/
 
 
+
+*.png
+*.code-search

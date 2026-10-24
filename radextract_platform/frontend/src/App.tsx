@@ -22,12 +22,13 @@ import { ReviewGraphPage } from "./pages/ReviewGraphPage";
 import { ClaimscapePage } from "./pages/ClaimscapePage";
 import { CitationTelephonePage } from "./pages/CitationTelephonePage";
 import { RigorScanPage } from "./pages/RigorScanPage";
+import { LandingPage } from "./pages/LandingPage";
 
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route element={<AppLayout />}>
-        <Route path="/" element={<Navigate to="/projects" replace />} />
         <Route path="/claimscape" element={<ClaimscapePage />} />
         <Route path="/tools/claimscape" element={<Navigate to="/claimscape" replace />} />
         <Route path="/evidence-map" element={<Navigate to="/claimscape" replace />} />

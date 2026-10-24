@@ -1,0 +1,3636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stellar Labs — From Evidence to the Bedside</title>
+  <meta name="description" content="An approach to genuine clinical research: careful observation, critical appraisal, transparent methods, and better bedside judgment.">
+  <meta name="theme-color" content="#fbf9f4">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Stellar Labs — From Evidence to the Bedside">
+  <meta property="og:description" content="From evidence to the bedside. Research grounded in meaningful questions and honest interpretation.">
+  <link rel="canonical" href="https://synthai.app/">
+
+  <!-- Fonts stack -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;0,6..96,700;1,6..96,400;1,6..96,500;1,6..96,600;1,6..96,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,600&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       DESIGN TOKENS
+       ============================================================ */
+    :root {
+      --beige-bg:    #fbf9f4;
+      --beige-card:  #f0eee9;
+      --beige-hover: #e4e2dd;
+      --beige-deep:  #d2c2cb;
+      --ink-black:   #3a0f34;
+      --ink-mid:     #4f444b;
+      --ink-light:   #62535d;
+      --ink-muted:   #72636d;
+      --ink-faint:   #81737b;
+      --divider:     #d2c2cb;
+      --border-soft: rgba(0,0,0,0.08);
+      --border-mid:  rgba(0,0,0,0.12);
+      --border-firm: rgba(0,0,0,0.20);
+
+      /* accent colours (earthy) */
+      --sage:    #66365c;
+      --ochre:   #7c5800;
+      --plum:    #814d75;
+      --amber:   #7c5800;
+
+      /* sticky note colours */
+      --note-sage:  #dde3e8;
+      --note-ochre: #ffdea6;
+      --note-plum:  #eadce6;
+      --note-cream: #e4e2dd;
+
+      --radius-sm: 0px;
+      --radius-md: 0px;
+      --radius-lg: 0px;
+      --radius-xl: 0px;
+      --radius-2xl: 0px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: 'Newsreader', 'Newsreader', Georgia, serif;
+      background-color: var(--beige-bg);
+      color: var(--ink-black);
+      overflow-x: hidden;
+      zoom: 0.9;
+    }
+
+    ::selection { background: rgba(102,54,92,0.18); }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--beige-bg); }
+    ::-webkit-scrollbar-thumb { background: var(--divider); border-radius: 0; }
+
+    /* ============================================================
+       TYPOGRAPHY HELPERS
+       ============================================================ */
+    .font-heading { font-family: 'Bodoni Moda', Georgia, serif; }
+    .font-body    { font-family: 'Newsreader', 'Newsreader', Georgia, serif; }
+    .font-mono    { font-family: 'Work Sans', system-ui, sans-serif; }
+    .font-sans    { font-family: 'Work Sans', system-ui, sans-serif; }
+    .italic       { font-style: italic; }
+
+    /* ============================================================
+       SITE HEADER
+       ============================================================ */
+    .site-header {
+      position: relative;
+      z-index: 40;
+      background-color: var(--beige-bg);
+    }
+
+    .site-header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 18px 24px;
+    }
+    @media (min-width: 640px)  { .site-header-inner { padding: 20px 32px; } }
+    @media (min-width: 1024px) { .site-header-inner { padding: 22px 64px; } }
+
+    .site-header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+      flex-shrink: 0;
+    }
+    .site-header-logo:hover { opacity: 0.7; }
+
+    .logo-mark {
+      width: 32px;
+      height: 32px;
+      background: var(--ink-black);
+      border-radius: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-mark-inner {
+      font-family: 'Bodoni Moda', serif;
+      font-style: italic;
+      font-size: 18px;
+      color: var(--beige-bg);
+      line-height: 1;
+    }
+
+    .logo-wordmark {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--ink-black);
+      letter-spacing: -0.3px;
+    }
+
+    .site-header-nav {
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+    @media (min-width: 768px) { .site-header-nav { display: flex; } }
+
+    .site-header-link {
+      color: var(--ink-black);
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: 0;
+      transition: background-color 0.15s;
+    }
+    .site-header-link:hover { background-color: rgba(0,0,0,0.05); }
+
+    .site-header-actions {
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+    @media (min-width: 768px) { .site-header-actions { display: flex; } }
+
+    /* Pill button styling */
+    .btn-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 0;
+      padding: 7px 16px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      background: transparent;
+      color: var(--ink-black);
+      transition: border-color 0.2s, background-color 0.2s;
+      white-space: nowrap;
+      letter-spacing: -0.01em;
+    }
+    .btn-pill:hover { background-color: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.3); }
+
+    .btn-solid {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background-color: var(--ink-black);
+      color: var(--beige-bg);
+      border: none;
+      border-radius: 0;
+      padding: 14px 32px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .btn-solid:hover {
+      transform: scale(1.02);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    }
+    .btn-solid:active { transform: scale(0.98); }
+
+    .btn-solid-lg {
+      padding: 16px 40px;
+      font-size: 1.15rem;
+      border-radius: 0;
+    }
+
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 0;
+      padding: 14px 28px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--ink-black);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .btn-outline:hover { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.25); }
+
+    .site-header-hamburger {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 40px;
+      height: 40px;
+      background: none;
+      border: none;
+      border-radius: 0;
+      cursor: pointer;
+      color: var(--ink-black);
+      transition: background-color 0.15s;
+    }
+    .site-header-hamburger:hover { background-color: rgba(0,0,0,0.05); }
+    @media (min-width: 768px) { .site-header-hamburger { display: none; } }
+
+    .site-header-mobile-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 2;
+      background-color: var(--beige-bg);
+      border-top: 1px solid var(--divider);
+      display: flex;
+      flex-direction: column;
+      padding: 8px 24px 24px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-8px);
+      transition: opacity 0.25s, transform 0.25s;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+    }
+    .site-header-mobile-menu.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .site-header-mobile-link {
+      color: var(--ink-black);
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 15px;
+      text-decoration: none;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--divider);
+      transition: opacity 0.15s;
+    }
+    .site-header-mobile-link:hover { opacity: 0.6; }
+    @media (min-width: 768px) { .site-header-mobile-menu { display: none; } }
+
+    .header-divider { height: 1px; background: var(--divider); }
+
+    /* ============================================================
+       HERO
+       ============================================================ */
+    .hero {
+      display: flex;
+      min-height: 100svh;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 60px 20px 60px;
+      position: relative;
+    }
+    @media (min-width: 640px)  { .hero { padding: 80px 32px 80px; } }
+    @media (min-width: 1024px) { .hero { padding: 80px 64px 80px; flex-direction: row; gap: 80px; align-items: center; justify-content: space-between; } }
+
+    .hero-content {
+      z-index: 10;
+      max-width: 560px;
+    }
+    @media (min-width: 1024px) { .hero-content { flex: 1; } }
+
+    /* Eyebrow tag */
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--sage);
+      background: rgba(102,54,92,0.08);
+      border: 1px solid rgba(102,54,92,0.2);
+      padding: 5px 12px;
+      border-radius: 0;
+      margin-bottom: 28px;
+    }
+
+    .eyebrow-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 0;
+      background: var(--sage);
+      animation: pulse-slow 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 0.5; }
+      50%       { opacity: 1; }
+    }
+
+    .hero-headline {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-size: clamp(2.5rem, 7vw, 4.5rem);
+      font-weight: 400;
+      line-height: 0.9;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+      color: var(--ink-black);
+    }
+
+    .hero-headline .italic-line {
+      display: block;
+      font-style: italic;
+      color: var(--plum);
+    }
+
+    .hero-sub {
+      color: var(--ink-mid);
+      font-family: 'Newsreader', serif;
+      font-size: 1.1rem;
+      line-height: 1.5;
+      letter-spacing: -0.3px;
+      margin-bottom: 8px;
+    }
+
+    .hero-sub-small {
+      color: var(--ink-light);
+      font-family: 'Newsreader', serif;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      margin-bottom: 32px;
+    }
+
+    .hero-cta-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+
+    /* Social proof row */
+    .hero-proof {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .proof-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 0.8rem;
+      color: var(--ink-light);
+    }
+
+    .proof-divider { width: 1px; height: 12px; background: var(--divider); }
+
+    /* Stats mini-grid */
+    .hero-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 380px;
+    }
+
+    .hero-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hero-stat-label {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--ink-muted);
+    }
+
+    .hero-stat-value {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 0.8rem;
+      color: var(--ink-black);
+    }
+
+    /* Hero right — 3D computer column */
+    .hero-product-col {
+      display: none;
+      position: relative;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (min-width: 1024px) {
+      .hero-product-col { display: flex; flex: 1.2; perspective: 2000px; }
+    }
+
+    /* ============================================================
+       SECTION COMMON
+       ============================================================ */
+    .section-divider { border-top: 1px solid var(--divider); }
+
+    .section-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 56px 20px;
+    }
+    @media (min-width: 640px)  { .section-inner { padding: 96px 32px; } }
+    @media (min-width: 768px)  { .section-inner { padding: 96px 40px; } }
+
+    /* Section eyebrow */
+    .section-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--ink-muted);
+      margin-bottom: 32px;
+    }
+
+    .eyebrow-line { width: 32px; height: 1px; background: var(--divider); }
+
+    /* Section heading */
+    .section-h2 {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-size: clamp(2.5rem, 8vw, 6rem);
+      font-weight: 400;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      color: var(--ink-black);
+    }
+
+    .section-h2 .italic { color: var(--plum); }
+
+    /* Features header row */
+    .features-header-row {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid rgba(0,0,0,0.12);
+      margin-bottom: 20px;
+    }
+    @media (min-width: 768px) {
+      .features-header-row {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+      }
+    }
+
+    .features-desc {
+      max-width: 340px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--ink-light);
+    }
+    @media (min-width: 768px) { .features-desc { text-align: right; } }
+
+    /* ============================================================
+       BENTO GRID
+       ============================================================ */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-auto-rows: minmax(320px, auto);
+      gap: 4px;
+      width: 100%;
+      margin-top: 60px;
+      position: relative;
+    }
+
+    .feature-card {
+      appearance: none;
+      cursor: pointer;
+      text-align: left;
+      z-index: 10;
+      touch-action: manipulation;
+      background-color: var(--beige-card);
+      border: 1px solid rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 100%;
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.5s cubic-bezier(0.215, 0.61, 0.355, 1), box-shadow 0.5s cubic-bezier(0.215, 0.61, 0.355, 1), border-color 0.5s cubic-bezier(0.215, 0.61, 0.355, 1);
+      box-shadow: inset 1px 1px 4px rgba(255,255,255,0.6), inset -1px -1px 4px rgba(0,0,0,0.04);
+      text-decoration: none;
+      color: var(--ink-black);
+    }
+
+    .feature-card:hover {
+      z-index: 20;
+      border-color: rgba(0,0,0,0.18);
+      transform: scale(1.01);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.12), inset 2px 2px 5px rgba(255,255,255,0.7);
+    }
+
+    .feature-card:hover .card-content { transform: translateY(-10px); }
+
+    /* Grid spans */
+    .span-12 { grid-column: span 12; }
+    .span-8  { grid-column: span 12; }
+    .span-4  { grid-column: span 12; }
+    .row-2   { grid-row: span 1; }
+
+    @media (min-width: 1024px) {
+      .span-8 { grid-column: span 8; }
+      .span-4 { grid-column: span 4; }
+      .row-2  { grid-row: span 2; }
+    }
+
+    .card-content {
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      position: relative;
+      transition: transform 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+    }
+
+    .mono-label {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .card-header h3 {
+      font-family: 'Bodoni Moda', serif;
+      font-size: 32px;
+      font-weight: 400;
+      font-style: italic;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .card-header p {
+      color: var(--ink-mid);
+      font-family: 'Newsreader', serif;
+      font-size: 15px;
+      line-height: 1.55;
+      letter-spacing: -0.01em;
+      max-width: 90%;
+    }
+
+    .tag-pill {
+      display: inline-block;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 0;
+      padding: 2px 8px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+
+    /* Bracket corners */
+    .bracket-corner {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-style: solid;
+      opacity: 0;
+      transition: background-color 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+    }
+    .feature-card:hover .bracket-corner { opacity: 1; width: 24px; height: 24px; }
+    .bl-tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+    .bl-tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+    .bl-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+    .bl-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+
+    /* Large dashboard screenshot in card */
+    .card-screenshot {
+      border-radius: 0;
+      overflow: hidden;
+      border: 1px solid var(--border-soft);
+      margin-top: 24px;
+      flex: 1;
+    }
+    .card-screenshot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+      display: block;
+    }
+
+    /* Code block in card */
+    .card-code {
+      background: rgba(0,0,0,0.04);
+      border: 1px solid var(--border-soft);
+      border-radius: 0;
+      padding: 14px 16px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 11px;
+      line-height: 1.9;
+      margin-top: 20px;
+      color: var(--ink-mid);
+    }
+
+    .code-key   { color: var(--sage); }
+    .code-val   { color: var(--ochre); }
+    .code-dim   { color: var(--ink-faint); }
+
+    /* Metric bars in card */
+    .metric-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+    .metric-row  { display: flex; align-items: center; gap: 12px; }
+    .metric-label { font-family: 'Work Sans', system-ui, sans-serif; font-size: 10px; color: var(--ink-muted); min-width: 60px; }
+    .metric-track { flex: 1; height: 3px; background: rgba(0,0,0,0.08); border-radius: 0; overflow: hidden; }
+    .metric-fill  { height: 100%; border-radius: 0; background: var(--sage); transition: width 1.5s ease; }
+    .metric-pct   { font-family: 'Work Sans', system-ui, sans-serif; font-size: 10px; color: var(--ink-black); min-width: 32px; text-align: right; }
+
+    /* Export pills in card */
+    .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+    .card-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 0;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 10px;
+      color: var(--ink-mid);
+    }
+
+    /* ============================================================
+       STICKY NOTES
+       ============================================================ */
+    .sticky-wrapper {
+      pointer-events: none;
+      z-index: 30;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      grid-template-rows: repeat(3, minmax(320px, auto));
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 4px;
+      display: none;
+    }
+    @media (min-width: 1024px) { .sticky-wrapper { display: grid; } }
+
+    .sticky-note {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 2px;
+      width: clamp(164px, 16vw, 200px);
+      padding: 22px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.2;
+      color: #1b1c19;
+      pointer-events: none;
+      box-shadow: 2px 4px 12px rgba(0,0,0,0.15), inset 1px 1px 3px rgba(255,255,255,0.5);
+    }
+
+    .note-pin { width: 12px; height: 12px; border-radius: 0; background: rgba(0,0,0,0.1); align-self: center; margin-bottom: 12px; }
+    .note-sub { font-size: 10px; margin-top: 8px; opacity: 0.6; }
+
+    /* ============================================================
+       USE CASES SECTION (dark, Charcoal Black)
+       ============================================================ */
+    .use-cases-section {
+      background-color: var(--ink-black);
+      border-top: 1px solid var(--divider);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .use-cases-section .section-eyebrow { color: #62535d; }
+    .use-cases-section .eyebrow-line { background: #333; }
+
+    .use-cases-h2 {
+      font-family: 'Bodoni Moda', serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 400;
+      line-height: 0.95;
+      letter-spacing: -2px;
+      color: white;
+      margin-bottom: 8px;
+    }
+    .use-cases-h2 .italic { font-style: italic; display: block; }
+
+    .use-cases-desc { font-family: 'Newsreader', serif; font-size: 1.05rem; color: #72636d; line-height: 1.4; letter-spacing: -0.3px; }
+
+    /* 3D Use Cases Carousel styling */
+    .use-cases-carousel-container {
+      position: relative;
+      margin: 56px auto 0;
+      width: 100%;
+      height: clamp(380px, 50vw, 520px);
+      perspective: 1200px;
+      cursor: grab;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: pan-y;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    
+    .use-cases-carousel-container:active {
+      cursor: grabbing;
+    }
+
+    .use-cases-carousel-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+    }
+
+    .carousel-card-wrapper {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: clamp(260px, 70vw, 320px);
+      height: clamp(360px, 50vw, 440px);
+      margin-left: clamp(-160px, -35vw, -130px);
+      margin-top: clamp(-220px, -25vw, -180px);
+      transform-style: preserve-3d;
+      will-change: transform, opacity;
+    }
+
+    .use-case-card {
+      width: 100%;
+      height: 100%;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 0;
+    }
+
+    .use-case-card .uc-category {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      opacity: 0.7;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 0;
+    }
+
+    .uc-dot { width: 8px; height: 8px; border-radius: 0; }
+
+    .use-case-card h3 {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: clamp(1.5rem, 5vw, 2.3rem);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      line-height: 0.95;
+      margin: 12px 0 0 0;
+    }
+
+    .use-case-card p {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-size: 1.15rem;
+      line-height: 1.4;
+      opacity: 0.9;
+      margin: 0;
+    }
+
+    .uc-watermark {
+      position: absolute;
+      bottom: -20px;
+      right: -20px;
+      opacity: 0.08;
+      transform: rotate(-15deg);
+      width: 14rem;
+      height: 14rem;
+      pointer-events: none;
+    }
+
+    .carousel-drag-hint-row {
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .carousel-drag-hint-text {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       HOW IT WORKS — 3 steps
+       ============================================================ */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1px;
+      background: var(--divider);
+      border-radius: 0;
+      overflow: hidden;
+      margin-top: 48px;
+    }
+    @media (min-width: 768px) { .steps-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .step-card {
+      background: var(--beige-bg);
+      padding: 40px 36px;
+      transition: background 0.2s;
+    }
+    .step-card:hover { background: var(--beige-card); }
+
+    .step-num {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 11px;
+      color: var(--ink-muted);
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    .step-icon { font-size: 28px; margin-bottom: 16px; display: block; }
+
+    .step-title {
+      font-family: 'Bodoni Moda', serif;
+      font-size: 24px;
+      font-weight: 400;
+      font-style: italic;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .step-desc {
+      font-family: 'Newsreader', serif;
+      font-size: 14px;
+      color: var(--ink-mid);
+      line-height: 1.65;
+    }
+
+    /* ============================================================
+       PRECISION ROWS — alternating
+       ============================================================ */
+    .precision-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 48px;
+      align-items: center;
+      padding: 64px 0;
+      border-bottom: 1px solid var(--divider);
+    }
+    @media (min-width: 768px) { .precision-row { grid-template-columns: 1fr 1fr; gap: 80px; } }
+    .precision-row:last-child { border-bottom: none; }
+
+    .precision-eyebrow {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--sage);
+      margin-bottom: 12px;
+    }
+
+    .precision-title {
+      font-family: 'Bodoni Moda', serif;
+      font-size: clamp(26px, 3vw, 38px);
+      font-weight: 400;
+      font-style: italic;
+      letter-spacing: -1.5px;
+      line-height: 1.05;
+      margin-bottom: 16px;
+    }
+
+    .precision-desc {
+      font-family: 'Newsreader', serif;
+      font-size: 15px;
+      color: var(--ink-mid);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .feature-checklist { display: flex; flex-direction: column; gap: 10px; list-style: none; }
+    .feature-checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-family: 'Newsreader', serif;
+      font-size: 13.5px;
+      color: var(--ink-mid);
+      line-height: 1.5;
+    }
+    .check-mark {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      background: rgba(102,54,92,0.1);
+      border: 1px solid rgba(102,54,92,0.3);
+      border-radius: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      font-size: 9px;
+      color: var(--sage);
+    }
+
+    .precision-visual {
+      background: var(--beige-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 0;
+      padding: 20px;
+      box-shadow: inset 1px 1px 4px rgba(255,255,255,0.6);
+    }
+    .precision-visual img { width: 100%; border-radius: 0; border: 1px solid var(--border-soft); }
+
+    /* ============================================================
+       PRICING
+       ============================================================ */
+    .pricing-section { background: var(--beige-card); border-top: 1px solid var(--divider); }
+
+    .pricing-header { margin-bottom: 56px; }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 768px) { .pricing-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .pricing-card {
+      background: var(--beige-bg);
+      border: 1px solid var(--border-soft);
+      padding: 36px 32px;
+      position: relative;
+      transition: background-color 0.3s ease;
+      box-shadow: inset 1px 1px 4px rgba(255,255,255,0.6);
+    }
+
+    .pricing-card:hover {
+      border-color: rgba(0,0,0,0.18);
+      transform: translateY(-3px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.1), inset 1px 1px 4px rgba(255,255,255,0.6);
+    }
+
+    .pricing-card.featured {
+      background: var(--ink-black);
+      border-color: var(--ink-black);
+      color: var(--beige-bg);
+    }
+    .pricing-card.featured .pricing-desc,
+    .pricing-card.featured .price-features li { color: rgba(251,249,244,0.65); }
+    .pricing-card.featured .price-check { color: rgba(251,249,244,0.9); }
+
+    .pricing-badge {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      background: var(--beige-bg);
+      color: var(--ink-black);
+      padding: 4px 10px;
+      border-radius: 0;
+    }
+
+    .pricing-tier {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--ink-muted);
+      margin-bottom: 12px;
+    }
+    .pricing-card.featured .pricing-tier { color: rgba(251,249,244,0.5); }
+
+    .pricing-amount {
+      font-family: 'Bodoni Moda', serif;
+      font-size: 52px;
+      font-weight: 400;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+
+    .pricing-period {
+      font-family: 'Newsreader', serif;
+      font-size: 15px;
+      color: var(--ink-muted);
+    }
+    .pricing-card.featured .pricing-period { color: rgba(251,249,244,0.5); }
+
+    .pricing-desc {
+      font-family: 'Newsreader', serif;
+      font-size: 14px;
+      color: var(--ink-mid);
+      line-height: 1.5;
+      margin: 16px 0 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .pricing-card.featured .pricing-desc { border-color: rgba(251,249,244,0.1); }
+
+    .price-features { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+    .price-features li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Newsreader', serif;
+      font-size: 14px;
+      color: var(--ink-mid);
+    }
+    .price-check { color: var(--sage); font-size: 14px; }
+    .price-dim   { color: var(--ink-faint); }
+
+    .btn-pricing-ghost {
+      display: block;
+      width: 100%;
+      text-align: center;
+      padding: 12px 20px;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 0;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink-black);
+      text-decoration: none;
+      cursor: pointer;
+      background: transparent;
+      transition: background-color 0.2s ease;
+    }
+    .btn-pricing-ghost:hover { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.25); }
+
+    .btn-pricing-solid {
+      display: block;
+      width: 100%;
+      text-align: center;
+      padding: 12px 20px;
+      background: var(--beige-bg);
+      border: none;
+      border-radius: 0;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink-black);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .btn-pricing-solid:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ============================================================
+       TESTIMONIALS
+       ============================================================ */
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 48px;
+    }
+    @media (min-width: 640px) { .testimonials-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .testimonials-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .testimonial-card {
+      background: var(--beige-card);
+      border: 1px solid var(--border-soft);
+      padding: 28px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+      box-shadow: inset 1px 1px 3px rgba(255,255,255,0.5);
+    }
+    .testimonial-card:hover {
+      border-color: rgba(0,0,0,0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08), inset 1px 1px 3px rgba(255,255,255,0.5);
+    }
+
+    .t-stars { color: #7c5800; font-size: 13px; margin-bottom: 16px; }
+
+    .t-quote {
+      font-family: 'Bodoni Moda', serif;
+      font-size: 1.05rem;
+      font-style: italic;
+      line-height: 1.55;
+      color: var(--ink-mid);
+      margin-bottom: 24px;
+    }
+
+    .t-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .author-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bodoni Moda', serif;
+      font-size: 16px;
+      font-style: italic;
+      flex-shrink: 0;
+    }
+
+    .author-name { font-family: 'Work Sans', system-ui, sans-serif; font-size: 13px; font-weight: 600; color: var(--ink-black); }
+    .author-role { font-family: 'Newsreader', serif; font-size: 12px; color: var(--ink-muted); }
+
+    /* ============================================================
+       FAQ
+       ============================================================ */
+    .faq-section { background: var(--beige-card); border-top: 1px solid var(--divider); }
+
+    .faq-list { max-width: 760px; margin: 0 auto; }
+
+    .faq-item { border-bottom: 1px solid var(--divider); }
+
+    .faq-q {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 24px 0;
+      background: none;
+      border: none;
+      font-family: 'Newsreader', serif;
+      font-size: 16px;
+      color: var(--ink-black);
+      text-align: left;
+      cursor: pointer;
+      transition: color 0.15s;
+      letter-spacing: -0.3px;
+    }
+    .faq-q:hover { color: var(--ink-mid); }
+
+    .faq-chevron {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border: 1px solid var(--border-mid);
+      border-radius: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--ink-muted);
+      font-family: 'Work Sans', system-ui, sans-serif;
+      transition: background-color 0.3s ease;
+    }
+
+    .faq-item.open .faq-chevron { transform: rotate(45deg); border-color: var(--sage); color: var(--sage); }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.3s ease;
+    }
+    .faq-item.open .faq-answer { max-height: 280px; padding-bottom: 24px; }
+
+    .faq-answer p {
+      font-family: 'Newsreader', serif;
+      font-size: 14.5px;
+      color: var(--ink-mid);
+      line-height: 1.7;
+    }
+
+    /* ============================================================
+       CTA / WAITLIST
+       ============================================================ */
+    .cta-section { text-align: center; }
+
+    .cta-headline {
+      font-family: 'Bodoni Moda', serif;
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 400;
+      letter-spacing: -2px;
+      line-height: 0.95;
+      margin-bottom: 20px;
+    }
+
+    .cta-sub {
+      font-family: 'Newsreader', serif;
+      font-size: 1.05rem;
+      color: var(--ink-mid);
+      line-height: 1.5;
+      margin-bottom: 36px;
+      max-width: 460px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .email-form {
+      display: flex;
+      gap: 8px;
+      max-width: 440px;
+      margin: 0 auto 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .email-input {
+      flex: 1;
+      min-width: 220px;
+      padding: 14px 20px;
+      background: white;
+      border: 1px solid var(--border-mid);
+      border-radius: 0;
+      font-family: 'Newsreader', serif;
+      font-size: 15px;
+      color: var(--ink-black);
+      outline: none;
+      transition: background-color 0.2s ease;
+    }
+    .email-input::placeholder { color: #81737b; }
+    .email-input:focus {
+      border-color: rgba(102,54,92,0.4);
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 0 3px rgba(102,54,92,0.08);
+    }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    .footer {
+      background: var(--ink-black);
+      color: var(--beige-bg);
+      padding: 64px 24px 40px;
+    }
+    @media (min-width: 640px) { .footer { padding: 64px 40px 40px; } }
+
+    .footer-inner { max-width: 1400px; margin: 0 auto; }
+
+    .footer-top {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 40px;
+      margin-bottom: 56px;
+    }
+    @media (min-width: 640px) { .footer-top { grid-template-columns: 2fr 1fr 1fr 1fr; gap: 56px; } }
+
+    .footer-brand-desc {
+      font-family: 'Newsreader', serif;
+      font-size: 13.5px;
+      color: rgba(251,249,244,0.45);
+      line-height: 1.6;
+      margin-top: 14px;
+      max-width: 260px;
+    }
+
+    .footer-col-title {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(251,249,244,0.35);
+      margin-bottom: 20px;
+    }
+
+    .footer-links { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .footer-links a {
+      font-family: 'Newsreader', serif;
+      font-size: 13.5px;
+      color: rgba(251,249,244,0.55);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: rgba(251,249,244,0.9); }
+
+    .footer-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-copy {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 11px;
+      color: rgba(251,249,244,0.3);
+    }
+
+    .footer-legal { display: flex; gap: 20px; }
+    .footer-legal a {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 11px;
+      color: rgba(251,249,244,0.3);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-legal a:hover { color: rgba(251,249,244,0.6); }
+
+    /* ============================================================
+       FADE-UP ANIMATION
+       ============================================================ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-up {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+    .d1 { transition-delay: 0.08s; }
+    .d2 { transition-delay: 0.16s; }
+    .d3 { transition-delay: 0.24s; }
+    .d4 { transition-delay: 0.32s; }
+    .d5 { transition-delay: 0.40s; }
+
+    /* Hero immediate animations */
+    .hero-eyebrow  { animation: fadeUp 0.55s ease both; }
+    .hero-headline { animation: fadeUp 0.6s  ease 0.08s both; }
+    .hero-sub      { animation: fadeUp 0.65s ease 0.16s both; }
+    .hero-sub-small{ animation: fadeUp 0.65s ease 0.2s  both; }
+    .hero-cta-group{ animation: fadeUp 0.65s ease 0.26s both; }
+    .hero-proof    { animation: fadeUp 0.65s ease 0.32s both; }
+    .hero-stats-grid{ animation: fadeUp 0.65s ease 0.38s both; }
+    /* ============================================================
+       RESEARCH BOARD — Draggable sticky notes corkboard
+       ============================================================ */
+
+    /* === Board container === */
+    .research-board {
+      position: relative;
+      width: 100%;
+      height: 680px;
+      margin-top: 40px;
+      overflow: hidden;
+      background: var(--beige-card);
+      border-top: 1px solid var(--divider);
+      border-bottom: 1px solid var(--divider);
+      cursor: default;
+      /* Subtle corkboard texture via gradient */
+      background-image:
+        radial-gradient(ellipse at 20% 30%, rgba(180,160,130,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 70%, rgba(180,160,130,0.07) 0%, transparent 60%);
+    }
+
+    @media (max-width: 767px) {
+      .research-board { height: 1400px; }
+    }
+
+    /* Dot-grid pattern */
+    .board-grid-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, rgba(0,0,0,0.12) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    /* Board legend bar */
+    .board-legend {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: rgba(251,249,244,0.85);
+      border: 1px solid var(--divider);
+      border-radius: 0;
+      padding: 7px 20px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      color: var(--ink-muted);
+      white-space: nowrap;
+      backdrop-filter: blur(6px);
+      z-index: 50;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .bl-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .bl-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 0;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .bl-drag-hint {
+      color: var(--ink-faint);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-left: 4px;
+      opacity: 0.7;
+    }
+
+    /* === Sticky note base === */
+    .rn-note {
+      position: absolute;
+      width: clamp(220px, 22vw, 250px);
+      min-height: 220px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      border-radius: 0;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      transition:
+        box-shadow 0.25s cubic-bezier(0.215,0.61,0.355,1),
+        transform 0.25s cubic-bezier(0.215,0.61,0.355,1),
+        z-index 0s;
+      will-change: transform;
+      touch-action: none;
+    }
+
+    .rn-note:focus-visible {
+      outline: 2px solid var(--sage);
+      outline-offset: 3px;
+    }
+
+    /* Resting shadow — looks pinned */
+    .rn-note {
+      box-shadow:
+        2px 4px 6px rgba(0,0,0,0.10),
+        4px 8px 20px rgba(0,0,0,0.08),
+        inset 1px 1px 0 rgba(255,255,255,0.55);
+    }
+
+    /* Lifted state — when being dragged */
+    .rn-note.lifting {
+      cursor: grabbing;
+      transition: box-shadow 0.18s ease, transform 0.18s ease;
+      box-shadow:
+        8px 24px 48px rgba(0,0,0,0.25),
+        16px 32px 64px rgba(0,0,0,0.15),
+        0 2px 6px rgba(0,0,0,0.08),
+        inset 1px 1px 0 rgba(255,255,255,0.7);
+      z-index: 999 !important;
+    }
+
+    /* Paper curl at bottom-right */
+    .rn-note::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 22px;
+      height: 22px;
+      background: linear-gradient(
+        -45deg,
+        rgba(0,0,0,0.12) 0%,
+        rgba(0,0,0,0.04) 40%,
+        transparent 60%
+      );
+      border-radius: 0;
+      pointer-events: none;
+    }
+
+    /* === Note colour variants === */
+    .rn-note[data-color="sage"]  { background: #dde3e8; }
+    .rn-note[data-color="ochre"] { background: #ffdea6; }
+    .rn-note[data-color="plum"]  { background: #eadce6; }
+    .rn-note[data-color="cream"] { background: #e4e2dd; }
+    .rn-note[data-color="rose"]  { background: #f2e7ed; }
+    .rn-note[data-color="amber"] { background: #ffdea6; }
+
+    /* Subtle vertical gradient to give paper depth */
+    .rn-note::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 50%);
+      pointer-events: none;
+      border-radius: 0;
+    }
+
+    /* === Pushpin === */
+    .rn-pin {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 20px;
+      border-radius: 0;
+      z-index: 10;
+      box-shadow:
+        0 2px 4px rgba(0,0,0,0.3),
+        inset 0 1px 2px rgba(255,255,255,0.6),
+        inset 0 -1px 2px rgba(0,0,0,0.2);
+      transition: transform 0.2s ease;
+    }
+
+    .rn-note.lifting .rn-pin {
+      transform: translateX(-50%) scale(1.15) translateY(-2px);
+    }
+
+    /* Pin needle */
+    .rn-pin::after {
+      content: '';
+      position: absolute;
+      bottom: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 3px;
+      height: 14px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.1));
+      border-radius: 0;
+    }
+
+    /* Pin shine */
+    .rn-pin::before {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 4px;
+      width: 5px;
+      height: 5px;
+      border-radius: 0;
+      background: rgba(255,255,255,0.5);
+    }
+
+    .rn-pin--teal   { background: radial-gradient(circle at 35% 30%, #7ecec4, #2d9e94); }
+    .rn-pin--amber  { background: radial-gradient(circle at 35% 30%, #f0c060, #7c5800); }
+    .rn-pin--plum   { background: radial-gradient(circle at 35% 30%, #c4a8d4, #8b6a9b); }
+
+    /* === Note inner layout === */
+    .rn-note-inner {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 28px 22px 18px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Build inner layout directly on children for simplicity */
+    .rn-note > .rn-tag,
+    .rn-note > .rn-title,
+    .rn-note > .rn-body,
+    .rn-note > .rn-footer {
+      position: relative;
+      z-index: 2;
+    }
+
+    .rn-tag {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: rgba(15,15,15,0.45);
+      margin: 28px 22px 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .rn-tag::before {
+      content: '●';
+      font-size: 7px;
+      color: rgba(15,15,15,0.3);
+    }
+
+    .rn-title {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-size: clamp(18px, 2.2vw, 22px);
+      font-weight: 400;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      color: #1b1c19;
+      margin: 0 22px 10px;
+    }
+
+    .rn-body {
+      font-family: 'Newsreader', serif;
+      font-size: 12px;
+      line-height: 1.6;
+      color: rgba(15,15,15,0.6);
+      margin: 0 22px;
+      flex: 1;
+    }
+
+    .rn-body em { font-style: italic; }
+    .rn-body strong { font-weight: 600; color: rgba(15,15,15,0.8); }
+
+    .rn-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 12px 22px 18px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .rn-meta {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(15,15,15,0.4);
+    }
+
+    .rn-link {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--sage);
+      text-decoration: none;
+      transition: opacity 0.2s;
+      pointer-events: all;
+      cursor: pointer;
+    }
+    .rn-link:hover { opacity: 0.7; text-decoration: underline; }
+
+    /* Prevent link from being grabbed */
+    .rn-note .rn-link { pointer-events: all; }
+
+    /* Landing wobble animation */
+    @keyframes noteWobble {
+      0%   { transform: var(--note-transform) scale(1.04) rotate(calc(var(--rot) + 1.5deg)); }
+      30%  { transform: var(--note-transform) scale(1.01) rotate(calc(var(--rot) - 0.8deg)); }
+      60%  { transform: var(--note-transform) scale(1.005) rotate(calc(var(--rot) + 0.3deg)); }
+      100% { transform: var(--note-transform) scale(1) rotate(var(--rot)); }
+    }
+
+    .rn-note.landing {
+      animation: noteWobble 0.5s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+    }
+
+    /* Mobile: stack vertically */
+    @media (max-width: 767px) {
+      .research-board {
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      .rn-note {
+        cursor: grab;
+      }
+      .board-legend {
+        top: 12px;
+        font-size: 9px;
+        padding: 5px 14px;
+        gap: 12px;
+      }
+      .bl-drag-hint { display: none; }
+    }
+
+    @media (min-width: 1024px) {
+      .lg-hidden { display: none !important; }
+    }
+
+  
+    /* ============================================================
+       NEW: trust band, beta pill, collaboration section
+       Added by v2 pass. Reuses existing design tokens only.
+       ============================================================ */
+    .trust-band {
+      background: var(--beige-bg);
+      border-top: 1px solid var(--divider);
+      border-bottom: 1px solid var(--divider);
+    }
+    .trust-band em { font-style: italic; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border-mid);
+      border-radius: 0;
+      padding: 3px 10px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+      background: var(--beige-card);
+      margin-left: 10px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 0;
+      background: var(--sage);
+      animation: pulse-slow 2s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    .collab-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 40px;
+      margin-top: 40px;
+      align-items: start;
+    }
+    @media (min-width: 1024px) {
+      .collab-grid {
+        grid-template-columns: 1fr 1.2fr;
+        gap: 56px;
+      }
+    }
+    .collab-left h3 {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-size: 22px;
+      font-weight: 400;
+      font-style: italic;
+      color: var(--plum);
+      margin: 0 0 16px 0;
+      line-height: 1.3;
+    }
+    .collab-bullets {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .collab-bullets li {
+      font-family: 'Newsreader', serif;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--ink-mid);
+      padding-left: 22px;
+      position: relative;
+      margin-bottom: 14px;
+      letter-spacing: -0.01em;
+    }
+    .collab-bullets li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 6px;
+      height: 6px;
+      border-radius: 0;
+      background: var(--sage);
+    }
+    .collab-form {
+      background: var(--beige-bg);
+      border: 1px solid var(--border-mid);
+      border-radius: 0;
+      padding: 28px;
+      box-shadow: 0 2px 12px rgba(15, 15, 15, 0.05),
+                  0 1px 3px rgba(15, 15, 15, 0.04);
+    }
+    @media (min-width: 768px) {
+      .collab-form { padding: 32px; }
+    }
+    .collab-field { margin-bottom: 18px; }
+    .collab-label {
+      display: block;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 6px;
+    }
+    .collab-input,
+    .collab-select,
+    .collab-textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--border-firm);
+      border-radius: 0;
+      padding: 11px 14px;
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 14px;
+      color: var(--ink-black);
+      background: #ffffff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .collab-input::placeholder,
+    .collab-textarea::placeholder {
+      color: var(--ink-faint);
+    }
+    .collab-input:focus,
+    .collab-select:focus,
+    .collab-textarea:focus {
+      outline: none;
+      border-color: var(--sage);
+      box-shadow: 0 0 0 3px rgba(91, 117, 83, 0.15);
+    }
+    .collab-textarea {
+      resize: vertical;
+      min-height: 96px;
+      font-family: 'Newsreader', serif;
+    }
+    .collab-submit-row {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    @media (min-width: 640px) {
+      .collab-submit-row {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+    }
+    .collab-fineprint {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      color: var(--ink-faint);
+      margin: 0;
+    }
+    .collab-fineprint a { color: var(--sage); text-decoration: none; }
+    .collab-fineprint a:hover { text-decoration: underline; }
+    /* ============================================================
+       END NEW STYLES
+       ============================================================ */
+
+    /* Editorial Velvet: theme roles and component refinements. */
+    :root {
+      --surface: #fbf9f4;
+      --on-surface: #1b1c19;
+      --primary: #3a0f34;
+      --secondary: #febb21;
+      --outline: #d2c2cb;
+    }
+    body { font-size: 15px; line-height: 1.6; }
+    h1, h2, h3, .hero-headline, .section-headline, .cta-headline {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.12;
+    }
+    .hero-headline { font-size: clamp(36px, 4.5vw, 56px); line-height: 1.08; }
+    .hero-sub { font-size: 18px; line-height: 28px; letter-spacing: 0; }
+    .hero-sub-small { font-size: 15px; line-height: 24px; }
+    .site-header-link, .btn-solid, .btn-outline, .btn-pill {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      letter-spacing: 0.05em;
+      font-weight: 500;
+      font-size: 14px;
+      min-height: 44px;
+    }
+    .section-eyebrow, .hero-eyebrow, .uc-category, .footer-col-title {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 500;
+    }
+    .btn-solid { background: var(--primary); color: var(--surface); box-shadow: none; }
+    .btn-outline, .btn-pill { border-color: var(--primary); }
+    .btn-solid:hover, .btn-outline:hover, .btn-pill:hover {
+      background: var(--secondary); color: #271900;
+      border-color: #7c5800; box-shadow: none; transform: none;
+    }
+    :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+      outline: 2px solid #7c5800; outline-offset: 4px;
+    }
+    .email-input { background: transparent; border: 0; border-bottom: 1px solid var(--primary); font-family: 'Newsreader', Georgia, serif; }
+    .email-input:focus { border-color: var(--primary); box-shadow: none; }
+    .footer { background: #1a0017; }
+    .footer-brand-desc, .footer-links a { color: #ded0da; }
+    .footer-col-title, .footer-copy, .footer-legal a { color: #c5b0bf; }
+    #hero-mockup { box-shadow: 0 12px 32px rgba(58,15,52,0.08) !important; border-color: var(--outline) !important; }
+    .rn-pin--teal, .rn-pin--plum { background: #814d75; }
+    .rn-pin--amber { background: #febb21; }
+    @media (min-width: 1024px) {
+      .site-header-inner { padding-left: 48px; padding-right: 48px; }
+      .hero { padding-left: 48px; padding-right: 48px; gap: 48px; }
+    }
+    @media (max-width: 639px) {
+      .hero { padding-left: 16px; padding-right: 16px; }
+      .site-header-inner { padding-left: 16px; padding-right: 16px; }
+      .hero-headline { font-size: 36px; line-height: 40px; letter-spacing: -0.01em; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+      .fade-up { opacity: 1; transform: none; }
+    }
+
+    /* Silver Editorial reference: use the original face when installed,
+       with Bodoni Moda as the available high-contrast editorial fallback. */
+    @font-face {
+      font-family: 'Silver Editorial';
+      src: local('The Silver Editorial'), local('Silver Editorial');
+      font-weight: 400 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Silver Editorial';
+      src: local('The Silver Editorial Italic'), local('Silver Editorial Italic');
+      font-weight: 400 700;
+      font-style: italic;
+      font-display: swap;
+    }
+/* One typography system for the entire Editorial Velvet page. */
+:root {
+  --font-display: 'Silver Editorial', 'Bodoni Moda', Georgia, serif;
+  --font-reading: 'Newsreader', Georgia, serif;
+  --font-ui: 'Work Sans', system-ui, sans-serif;
+  --ink-muted: #62535d;
+  --ink-faint: #62535d;
+}
+body { font-size: 17px; line-height: 1.6; font-kerning: normal; text-rendering: optimizeLegibility; }
+::selection { background: #ffdea6; color: #3a0f34; }
+h1, h2, h3, .font-heading, .hero-headline, .section-h2, .cta-headline,
+.use-cases-h2, .precision-title, .card-header h3, .step-title, .rn-title, .uc-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-optical-sizing: none;
+  font-variation-settings: 'opsz' 24;
+  letter-spacing: -0.025em;
+  line-height: 1.13;
+  text-wrap: balance;
+  -webkit-text-stroke: 0;
+}
+.hero-headline { font-size: clamp(44px, 5.1vw, 68px); line-height: 1.1; }
+.hero-headline .italic-line, .section-h2 .italic,
+#evidence .section-h2 .italic { font-weight: 600; color: #66365c !important; }
+.section-h2, .cta-headline { font-size: clamp(36px, 4.4vw, 58px); }
+.use-cases-h2 { font-size: clamp(36px, 4vw, 54px); color: #fbf9f4; }
+.card-header h3, .step-title, .precision-title, .uc-title, .collab-left h3 {
+  font-family: var(--font-reading);
+  font-size: clamp(26px, 2.3vw, 34px);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.card-header h3 { font-style: normal; }
+.hero-sub { font-size: 20px; line-height: 1.5; }
+.hero-sub-small, .card-header p, .features-desc, .precision-desc,
+.step-desc, .collab-bullets li, .cta-sub, .use-cases-desc {
+  font-family: var(--font-reading);
+  font-size: 17px;
+  line-height: 1.6;
+  letter-spacing: 0;
+  max-width: 62ch;
+}
+.card-header p { max-width: 100%; }
+.section-eyebrow, .mono-label, .collab-label, .precision-eyebrow,
+.hero-stat-label, .placeholder-label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  color: #62535d;
+}
+.section-inner { padding-top: 88px; padding-bottom: 88px; }
+.features-header-row { gap: 32px; align-items: end; margin-bottom: 40px; }
+.hero { min-height: auto; padding-top: 80px; padding-bottom: 88px; }
+.hero-content { min-width: 0; }
+.hero-stats-grid { gap: 24px; }
+.hero-stat-value { font-size: 24px; }
+.feature-card { padding: 32px; box-shadow: none; }
+.use-case-card { box-shadow: none; }
+.step-icon { color: #66365c; }
+.step-icon svg { width: 28px; height: 28px; }
+.board-legend { backdrop-filter: none; box-shadow: none; }
+.collab-form { box-shadow: none; }
+.collab-input, .collab-select, .collab-textarea, .email-input { font-size: 16px; min-height: 48px; }
+.collab-fineprint { font-size: 12px; line-height: 1.6; letter-spacing: 0; }
+.collab-input:focus, .collab-select:focus, .collab-textarea:focus { border-color: #66365c; box-shadow: 0 0 0 2px #ffdea6; }
+.btn-solid, .btn-outline, .btn-pill { min-height: 48px; }
+.site-header-hamburger { width: 44px; height: 44px; }
+.testimonial-card, .content-placeholder { background-color: #eef0f1; }
+.t-quote { font-family: var(--font-reading); font-size: 22px; font-style: normal; font-weight: 500; line-height: 1.45; }
+.placeholder-panel { display: grid; gap: 14px; padding: 24px; margin-top: 24px; border: 1px solid #c1c7cc; background: #dde3e8; }
+.placeholder-panel span { display: block; height: 8px; background: #c1c7cc; width: 85%; }
+.placeholder-panel span:nth-child(2) { width: 65%; }
+.placeholder-panel span:nth-child(3) { width: 75%; }
+.metric-fill { visibility: hidden; }
+.metric-label, .metric-pct { font-size: 12px; }
+.metric-row { flex-wrap: wrap; }
+.metric-track { min-width: 32px; }
+.use-cases-section .section-eyebrow, .use-cases-desc { color: #ded0da; }
+.research-board { height: 920px; background-image: none; }
+.rn-note { width: clamp(240px, 22vw, 280px); min-height: 290px; }
+.rn-title { font-family: var(--font-reading); font-size: 26px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.18; }
+.rn-body { font-size: 16px; color: #4f444b; line-height: 1.45; }
+.rn-body strong { color: #3a0f34; }
+.rn-tag, .rn-meta, .rn-link { font-size: 11px; color: #62535d; letter-spacing: 0.06em; }
+.rn-link { color: #66365c; padding-top: 10px; padding-bottom: 10px; }
+.rn-footer { gap: 12px; flex-wrap: wrap; }
+.board-legend { font-size: 11px; max-width: calc(100% - 32px); flex-wrap: wrap; white-space: normal; justify-content: center; }
+#research-board .rn-note.quote-note { background: #dde3e8; color: #3a0f34; padding: 36px 14px; justify-content: center; text-align: center; }
+.sticky-quote { margin: 0; font-family: var(--font-display); font-optical-sizing: none; font-variation-settings: 'opsz' 24; font-weight: 500; line-height: 1.2; letter-spacing: -0.045em; }
+#note-quote .sticky-quote { font-size: 27px; }
+.sticky-quote > span { display: block; white-space: nowrap; }
+.sticky-quote em { font-weight: 700; font-style: italic; }
+.sticky-quote cite { display: block; margin-top: 22px; font-size: 11px; font-weight: 600; font-style: normal; letter-spacing: 0.1em; }
+#note-quote .rn-pin { position: absolute; top: 10px; left: calc(50% - 6px); }
+.footer-brand-desc, .footer-links a { font-size: 15px; line-height: 1.6; }
+.footer-col-title, .footer-copy, .footer-legal a { font-size: 12px; }
+@media (max-width: 767px) {
+  .section-inner { padding: 56px 20px; }
+  .hero { padding: 56px 20px 64px; }
+  .hero-headline { font-size: clamp(40px, 8vw, 50px); }
+  .section-h2, .cta-headline, .use-cases-h2 { font-size: clamp(34px, 7.2vw, 44px); }
+  .features-header-row { flex-direction: column; align-items: flex-start; gap: 20px; }
+  #evidence .features-desc { text-align: left !important; }
+  .feature-card { padding: 26px; }
+  .research-board { height: 1600px; }
+  .rn-note { width: min(280px, calc(100vw - 52px)); }
+  .board-legend { width: calc(100% - 32px); gap: 10px 14px; }
+  .hero-product-col { margin-top: 36px; }
+  .collab-form { padding: 24px; }
+}
+
+/* Centered question entry, scoped to the landing section. */
+.hero { flex-direction: column; align-items: center; justify-content: flex-start; gap: 40px; }
+.hero-content { width: 100%; max-width: 900px; text-align: center; }
+.hero-headline { max-width: 900px; margin-left: auto; margin-right: auto; }
+.hero-sub, .hero-sub-small { margin-left: auto; margin-right: auto; max-width: 62ch; }
+.hero-cta-group, .hero-proof { justify-content: center; }
+.hero-stats-grid { max-width: 700px; margin-left: auto; margin-right: auto; }
+.hero-product-col { width: 100%; max-width: 680px; display: flex; justify-content: center; }
+.rq-card { margin: 36px auto 0; padding: 24px 28px 18px; width: 100%; max-width: 840px; background: #fff; border: 1px solid #d2c2cb; text-align: left; transition: border-color .2s ease, box-shadow .2s ease; }
+.rq-card:focus-within { border-color: #814d75; box-shadow: 0 0 0 3px #eadce6; }
+.rq-heading, .rq-toolbar, .rq-tools { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.rq-heading { font: 500 12px/1.5 'Work Sans',system-ui,sans-serif; letter-spacing: .04em; color: #62535d; }
+.rq-heading > span { font-size: 11px; letter-spacing: 0; }
+#research-question { width: 100%; display: block; resize: vertical; min-height: 112px; max-height: 300px; padding: 22px 0; margin: 0; border: 0; border-radius: 0; background: transparent; color: #3a0f34; font: 500 clamp(24px,2.7vw,30px)/1.4 'Newsreader',Georgia,serif; }
+#research-question::placeholder { color: #72636d; opacity: 1; }
+#research-question:focus { outline: none; }
+.rq-toolbar { flex-wrap: wrap; padding-top: 16px; border-top: 1px solid #e4e2dd; }
+.rq-tools { justify-content: flex-start; flex-wrap: wrap; gap: 10px; }
+.rq-source-label, .rq-tools select, .rq-filter-toggle, .rq-filters label, .rq-topics, .rq-status { font: 400 12px/1.5 'Work Sans',system-ui,sans-serif; }
+.rq-tools select, .rq-filter-toggle, .rq-filters select { min-height: 44px; padding: 8px 12px; border: 1px solid #d2c2cb; border-radius: 0; color: #3a0f34; background: #fbf9f4; cursor: pointer; }
+.rq-filter-toggle:hover { background: #ffdea6; }
+.rq-filters { padding-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; }
+.rq-filters[hidden] { display: none; }
+.rq-filters label { display: grid; gap: 6px; color: #4f444b; flex: 1; min-width: 160px; }
+.rq-status { color: #62535d; margin: 14px 0 0; max-width: none; font-size: 11px; }
+.rq-topics { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 18px auto 30px; color: #62535d; }
+.rq-topics button { background: transparent; border: 1px solid #d2c2cb; border-radius: 0; padding: 10px 12px; min-height: 44px; color: #3a0f34; font: inherit; cursor: pointer; transition: background-color .2s ease, border-color .2s ease; }
+.rq-topics button:hover { background: #ffdea6; border-color: #7c5800; }
+@media (min-width: 1024px) { .hero { flex-direction: column; gap: 40px; } }
+@media (max-width: 639px) {
+  .rq-card { padding: 20px 16px 16px; margin-top: 28px; }
+  .rq-heading > span { display: none; }
+  .rq-toolbar { align-items: stretch; }
+  .rq-toolbar > .btn-solid { width: 100%; }
+  .rq-source-label { display: none; }
+  .rq-tools { width: 100%; }
+  .rq-tools select { flex: 1; }
+}
+
+/* Compact header and higher landing-page question entry. */
+.site-header-inner { max-width: 1200px; padding-top: 10px; padding-bottom: 10px; }
+.hero { padding-top: clamp(18px, 3vh, 32px); }
+.hero-content { display: flex; flex-direction: column; align-items: center; }
+.hero-content > .hero-headline { order: 0; margin-bottom: 0; }
+.hero-content > .rq-card { order: 1; margin-top: 20px; }
+.hero-content > .rq-topics { order: 2; }
+.hero-content > .hero-sub { order: 3; margin-bottom: 24px; }
+.hero-content > .hero-cta-group { order: 4; }
+.hero-content > .hero-proof { order: 5; }
+.hero-content > .hero-stats-grid { order: 6; width: 100%; }
+  </style>
+
+</head>
+<body>
+
+  <!-- ============================================================
+       SITE HEADER
+       ============================================================ -->
+  <header class="site-header" id="site-header">
+    <div class="site-header-inner">
+      <!-- Logo -->
+      <a href="#" class="site-header-logo" aria-label="Stellar Labs home">
+        <div class="logo-mark" aria-hidden="true">
+          <span class="logo-mark-inner">S</span>
+        </div>
+        <span class="logo-wordmark">Stellar Labs</span>
+      </a>
+
+      <!-- Nav -->
+      <nav class="site-header-nav" aria-label="Main navigation">
+        <a href="#features"    class="site-header-link">The Approach</a>
+        <a href="#evidence"    class="site-header-link">Evidence</a>
+        <a href="#how-it-works" class="site-header-link">The Process</a>
+        <a href="#collaboration" class="site-header-link">Collaborate</a>
+        <a href="#faq"         class="site-header-link">FAQ</a>
+      </nav>
+
+      <!-- Actions -->
+      <div class="site-header-actions">
+        <a href="#" class="btn-pill" id="sign-in-btn">Read the approach</a>
+        <a href="#waitlist" class="btn-solid" style="padding: 8px 20px; font-size: 14px; border-radius: 0;" id="get-started-btn">
+          Get in touch
+          <span style="display:inline-block;transition:transform 0.3s;" class="arrow">→</span>
+        </a>
+      </div>
+
+      <!-- Hamburger -->
+      <button class="site-header-hamburger" aria-label="Open menu" id="hamburger">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 5h14M3 10h14M3 15h14" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mobile menu -->
+    <div class="site-header-mobile-menu" id="mobile-menu" role="menu">
+      <a href="#features"     class="site-header-mobile-link">The Approach</a>
+      <a href="#how-it-works" class="site-header-mobile-link">The Process</a>
+      <a href="#testimonials" class="site-header-mobile-link">Research</a>
+      <a href="#collaboration" class="site-header-mobile-link">Collaborate</a>
+      <a href="#faq"          class="site-header-mobile-link">FAQ</a>
+      <a href="#waitlist"     class="site-header-mobile-link">Get in touch</a>
+    </div>
+  </header>
+
+  <div class="header-divider"></div>
+
+  <!-- ============================================================
+       HERO
+       ============================================================ -->
+  <main>
+    <section class="hero" aria-label="Hero">
+      <!-- Left content -->
+      <div class="hero-content">
+        
+
+        <h1 class="hero-headline font-heading">
+          Stay curious.<br>
+          <span class="italic-line">See what the evidence says.</span>
+        </h1>
+
+        <p class="hero-sub">
+          Research begins with a patient, a careful observation, and a question worth asking.
+        </p>
+        
+        <form class="rq-card" id="research-question-form" action="https://vidhidhaduk05.github.io/ExtractExperimenting-web/#/claimscape" method="get">
+          <div class="rq-heading"><label for="research-question">Your research question</label><span>Enter to explore · Shift + Enter for a new line</span></div>
+          <textarea id="research-question" name="term" rows="2" required maxlength="1500" placeholder="What does the evidence say about…"></textarea>
+          <div class="rq-toolbar">
+            <div class="rq-tools">
+              <span id="rq-source" style="font: 400 12px/1.5 'Work Sans', system-ui, sans-serif; color: #3a0f34; padding: 8px 12px;">PubMed</span>
+              <button type="button" class="rq-filter-toggle" id="rq-filter-toggle" aria-expanded="false" aria-controls="rq-filters">Filters <span aria-hidden="true">+</span></button>
+            </div>
+            <button class="btn-solid" type="submit">Search papers <span aria-hidden="true">→</span></button>
+          </div>
+          <div id="rq-filters" class="rq-filters" hidden>
+            <label for="rq-study-type">Study type<select id="rq-study-type"><option value="">All study types</option><option value="systematic review">Systematic reviews</option><option value="randomized controlled trial">Randomized trials</option><option value="case reports">Case reports</option></select></label>
+            <label for="rq-period">Publication date<select id="rq-period"><option value="">Any time</option><option value="5">Past 5 years</option><option value="1">Past year</option></select></label>
+          </div>
+          <p class="rq-status" id="rq-status" role="status">Your question opens in ClaimScape, where the evidence search begins.</p>
+        </form>
+        <div class="rq-topics" aria-label="Suggested research questions"><span>Try a topic:</span>
+          <button type="button" data-research-question="How does sleep deprivation affect memory consolidation?">Sleep &amp; memory ↗</button>
+          <button type="button" data-research-question="What are the cardiovascular outcomes of GLP-1 receptor agonists?">Cardiovascular health ↗</button>
+          <button type="button" data-research-question="What does the evidence say about treatments for treatment-resistant depression?">Mental health ↗</button>
+          <button type="button" data-research-question="What are the clinical outcomes of therapeutic cancer vaccines?">Cancer vaccines ↗</button>
+        </div>
+
+
+        <div class="hero-cta-group">
+          <a href="#features" class="btn-solid btn-solid-lg" id="hero-cta-primary">
+            Explore the approach
+            <span style="display:inline-block;transition:transform 0.3s;">→</span>
+          </a>
+          <a href="#collaboration" class="btn-outline" id="hero-cta-secondary">Start a conversation</a>
+        </div>
+
+        <!-- Proof strip -->
+        <div class="hero-proof">
+          <span class="proof-item font-sans">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--sage);display:inline-block;"></span>
+            Careful observation
+          </span>
+          <span class="proof-divider"></span>
+          <span class="proof-item font-sans">
+            Transparent methods
+          </span>
+          <span class="proof-divider"></span>
+          <span class="proof-item font-sans">
+            Honest interpretation
+          </span>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="hero-stats-grid">
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right — Dashboard screenshot -->
+      <div class="hero-product-col" style="perspective:2000px">
+        <div style="transform:rotateY(-6deg) rotateX(3deg); transition: transform 0.5s ease; border-radius: 0; overflow: hidden; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04); max-width: 560px; width: 100%;" id="hero-mockup">
+          <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAuMCI+PHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMC4wIiBmaWxsPSIjZmJmOWY0Ii8+PHJlY3QgeD0iMjgiIHk9IjI4IiB3aWR0aD0iOTQ0IiBoZWlnaHQ9Ijk0NC4wIiBmaWxsPSJub25lIiBzdHJva2U9IiNkMmMyY2IiLz48dGV4dCB4PSI3NiIgeT0iMTc1LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBsZXR0ZXItc3BhY2luZz0iMyIgZmlsbD0iIzY2MzY1YyI+RlJPTSBFVklERU5DRSBUTyBUSEUgQkVEU0lERTwvdGV4dD48dGV4dCB4PSI3NiIgeT0iMjU3LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjQ4IiBmaWxsPSIjM2EwZjM0Ij5BIHF1ZXN0aW9uIHdvcnRoIGFza2luZy48L3RleHQ+PHJlY3QgeD0iNzYiIHk9IjMyNS4wIiB3aWR0aD0iODQ4IiBoZWlnaHQ9IjgyIiBmaWxsPSIjZGRlM2U4Ii8+PHRleHQgeD0iMTAwIiB5PSIzNTYuMCIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxldHRlci1zcGFjaW5nPSIyIiBmaWxsPSIjNjI1MzVkIj5PQlNFUlZFPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iMzg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5UaGUgaW5kaXZpZHVhbCBwYXRpZW50PC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI0MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2YwZWVlOSIvPjx0ZXh0IHg9IjEwMCIgeT0iNDU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+U1lOVEhFU0laRTwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjQ4Ni4wIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzNhMGYzNCI+VGhlIGZ1bGwgYm9keSBvZiBldmlkZW5jZTwvdGV4dD48cmVjdCB4PSI3NiIgeT0iNTI1LjAiIHdpZHRoPSI4NDgiIGhlaWdodD0iODIiIGZpbGw9IiNlYWRjZTYiLz48dGV4dCB4PSIxMDAiIHk9IjU1Ni4wIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGV0dGVyLXNwYWNpbmc9IjIiIGZpbGw9IiM2MjUzNWQiPlFVRVNUSU9OPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNTg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5UaGUgbWV0aG9kcyBhbmQgdGhlaXIgbGltaXRzPC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI2MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2ZmZGVhNiIvPjx0ZXh0IHg9IjEwMCIgeT0iNjU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+SU5URVJQUkVUPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNjg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5GaW5kaW5ncyBpbiBjbGluaWNhbCBjb250ZXh0PC90ZXh0Pjx0ZXh0IHg9Ijc2IiB5PSI3ODUuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzY2MzY1YyI+Q2FyZWZ1bCByZXNlYXJjaC4gQ2xlYXJlciB0aGlua2luZy48L3RleHQ+PC9zdmc+" alt="From Evidence To The Bedside: A question worth asking." style="width:100%;display:block;">
+        </div>
+      </div>
+    </section>
+
+  <!-- BEGIN: trust band (used in published research) -->
+  
+
+
+
+    <!-- Trust strip -->
+    <div class="header-divider"></div>
+    <div style="padding: 40px 40px; max-width: 1440px; margin: 0 auto;">
+      <div style="display:flex; align-items:center; gap: 40px; flex-wrap:wrap; justify-content:center;">
+        <span class="font-mono" style="font-size:10px; text-transform:uppercase; letter-spacing:0.15em; color:var(--ink-faint);">Reading across the evidence</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">Cochrane</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">PubMed</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">PROSPERO</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">Elsevier</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">JBI</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">BMJ</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">WHO</span>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         FEATURES — BENTO GRID
+         ============================================================ -->
+    <section class="section-divider" id="features" aria-label="Features">
+      <div class="section-inner">
+        <div class="section-eyebrow">
+          <span>[ 01 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>The Approach</span>
+        </div>
+
+        <header class="features-header-row">
+          <h2 class="section-h2">
+            Observe.<br>
+            <span class="italic" style="color:var(--plum);">Question.</span><br>
+            Understand.
+          </h2>
+          <p class="features-desc">
+            Different methods. A shared commitment to careful research.<br>
+            The purpose is clearer thinking for the patient in front of us.
+          </p>
+        </header>
+
+        <!-- Mobile sticky notes (small screens) -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;" class="lg-hidden">
+          <div style="padding:16px; background:var(--note-sage); font-family:'Work Sans',system-ui,sans-serif; font-size:12px; font-weight:700; transform:rotate(-1deg); box-shadow:2px 4px 12px rgba(0,0,0,0.12);">OBSERVE CLOSELY</div>
+          <div style="padding:16px; background:var(--note-ochre); font-family:'Work Sans',system-ui,sans-serif; font-size:12px; font-weight:700; transform:rotate(1deg); box-shadow:2px 4px 12px rgba(0,0,0,0.12);">QUESTION THE METHOD</div>
+          <div style="padding:16px; background:var(--note-plum); font-family:'Work Sans',system-ui,sans-serif; font-size:12px; font-weight:700; transform:rotate(-2deg); box-shadow:2px 4px 12px rgba(0,0,0,0.12);">RESEARCHER-LED</div>
+          <div style="padding:16px; background:var(--note-cream); font-family:'Work Sans',system-ui,sans-serif; font-size:12px; font-weight:700; transform:rotate(2deg); box-shadow:2px 4px 12px rgba(0,0,0,0.12);">REPORT TRANSPARENTLY</div>
+        </div>
+
+        <div class="bento-grid fade-up visible">
+          <!-- Desktop sticky notes overlay -->
+          <div class="sticky-wrapper" aria-hidden="true">
+            <div class="sticky-note" style="background:var(--note-sage); grid-column:1/span 3; grid-row:1; justify-self:start; align-self:start; transform:translate(-6%,-32%) rotate(-4deg);">
+              <div class="note-pin"></div>
+              <p>OBSERVE CLOSELY</p>
+              <span class="note-sub">DETAIL · CONTEXT · TIMELINE</span>
+            </div>
+            <div class="sticky-note" style="background:var(--note-ochre); grid-column:8/span 3; grid-row:1/span 2; justify-self:center; align-self:start; transform:translate(12%,24%) rotate(3deg);">
+              <div class="note-pin"></div>
+              <p>QUESTION THE METHOD</p>
+              <span class="note-sub">ASSUMPTIONS AND LIMITS</span>
+            </div>
+            <div class="sticky-note" style="background:var(--note-plum); grid-column:1/span 3; grid-row:3; justify-self:start; align-self:end; width:clamp(164px,16vw,200px); transform:translate(-16%,70%) rotate(-3deg);">
+              <div class="note-pin"></div>
+              <p>CLINICAL JUDGMENT</p>
+              <span class="note-sub">EVIDENCE IN CONTEXT</span>
+            </div>
+            <div class="sticky-note" style="background:var(--note-cream); grid-column:10/span 3; grid-row:3; justify-self:end; align-self:end; width:clamp(164px,16vw,200px); transform:translate(8%,72%) rotate(2deg);">
+              <div class="note-pin"></div>
+              <p>CLEAR REPORTING</p>
+              <span class="note-sub">METHODS · FINDINGS · LIMITATIONS</span>
+            </div>
+          </div>
+
+          <!-- Card 1: Main feature (research Extraction) -->
+          <div class="feature-card span-8 row-2" tabindex="0" role="article">
+            <div class="bracket-corner bl-tl" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-tr" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-br" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-bl" style="border-color:var(--sage)"></div>
+            <div class="card-content">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+                <span class="mono-label" style="color:var(--sage);">01 // OBSERVE</span>
+              </div>
+              <div class="card-header" style="margin-top:auto;">
+                <h3>Every detail matters</h3>
+                <p>Case reports call for careful observation, verified timelines, and complete documentation. When a condition is rare, a carefully reported case can become a useful point of reference.</p>
+                <div style="margin-top:24px; display:flex; gap:8px; flex-wrap:wrap;">
+                  <span class="tag-pill">Clinical detail</span>
+                  <span class="tag-pill">Verified timelines</span>
+                  <span class="tag-pill">Clear documentation</span>
+                </div>
+              </div>
+              <div class="card-screenshot" style="flex:1; min-height:200px;">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAuMCI+PHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMC4wIiBmaWxsPSIjZmJmOWY0Ii8+PHJlY3QgeD0iMjgiIHk9IjI4IiB3aWR0aD0iOTQ0IiBoZWlnaHQ9Ijk0NC4wIiBmaWxsPSJub25lIiBzdHJva2U9IiNkMmMyY2IiLz48dGV4dCB4PSI3NiIgeT0iMTc1LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBsZXR0ZXItc3BhY2luZz0iMyIgZmlsbD0iIzY2MzY1YyI+Q0FTRSBSRVBPUlRTPC90ZXh0Pjx0ZXh0IHg9Ijc2IiB5PSIyNTcuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iNDgiIGZpbGw9IiMzYTBmMzQiPkV2ZXJ5IGRldGFpbCBtYXR0ZXJzLjwvdGV4dD48cmVjdCB4PSI3NiIgeT0iMzI1LjAiIHdpZHRoPSI4NDgiIGhlaWdodD0iODIiIGZpbGw9IiNkZGUzZTgiLz48dGV4dCB4PSIxMDAiIHk9IjM1Ni4wIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGV0dGVyLXNwYWNpbmc9IjIiIGZpbGw9IiM2MjUzNWQiPlBSRVNFTlRBVElPTjwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjM4Ni4wIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzNhMGYzNCI+T2JzZXJ2ZSBjbG9zZWx5PC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI0MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2YwZWVlOSIvPjx0ZXh0IHg9IjEwMCIgeT0iNDU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+VElNRUxJTkU8L3RleHQ+PHRleHQgeD0iMTAwIiB5PSI0ODYuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiMzYTBmMzQiPlZlcmlmeSB0aGUgc2VxdWVuY2U8L3RleHQ+PHJlY3QgeD0iNzYiIHk9IjUyNS4wIiB3aWR0aD0iODQ4IiBoZWlnaHQ9IjgyIiBmaWxsPSIjZWFkY2U2Ii8+PHRleHQgeD0iMTAwIiB5PSI1NTYuMCIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxldHRlci1zcGFjaW5nPSIyIiBmaWxsPSIjNjI1MzVkIj5GSU5ESU5HUzwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjU4Ni4wIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzNhMGYzNCI+RG9jdW1lbnQgd2l0aG91dCBnYXBzPC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI2MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2ZmZGVhNiIvPjx0ZXh0IHg9IjEwMCIgeT0iNjU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+UkVGTEVDVElPTjwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjY4Ni4wIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzNhMGYzNCI+RXhwbGFpbiB0aGUgY2xpbmljYWwgcmVhc29uaW5nPC90ZXh0Pjx0ZXh0IHg9Ijc2IiB5PSI3ODUuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzY2MzY1YyI+VGhlIGluZGl2aWR1YWwgcGF0aWVudCBpcyB0aGUgc3RhcnRpbmcgcG9pbnQuPC90ZXh0Pjwvc3ZnPg==" alt="Case Reports: Every detail matters." loading="lazy">
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature placeholder -->
+          <div class="feature-card span-4 row-2 content-placeholder" role="article" aria-label="Feature placeholder">
+            <div class="card-content">
+              <span class="mono-label">02 // PLACEHOLDER</span>
+              <div class="card-header" style="margin-top:auto;">
+                <h3>Feature placeholder</h3>
+                <p>Feature details to be added.</p>
+                <div class="placeholder-panel" aria-hidden="true"><span></span><span></span><span></span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Validation metrics -->
+          <div class="feature-card span-4" tabindex="0" role="article">
+            <div class="bracket-corner bl-tl" style="border-color:var(--ochre)"></div>
+            <div class="bracket-corner bl-tr" style="border-color:var(--ochre)"></div>
+            <div class="bracket-corner bl-br" style="border-color:var(--ochre)"></div>
+            <div class="bracket-corner bl-bl" style="border-color:var(--ochre)"></div>
+            <div class="card-content">
+              <span class="mono-label" style="color:var(--ochre);">03 // QUESTION</span>
+              <div class="card-header" style="margin-top:auto;">
+                <h3>Know what evidence can show</h3>
+                <p>A conclusion deserves scrutiny. How were the data collected? What was measured? Which sources of bias remain?</p>
+                <div class="metric-list" id="metric-list">
+                  <div class="metric-row">
+                    <span class="metric-label">Evidence</span>
+                    <div class="metric-track"><div class="metric-fill" id="m1" style="width:0%"></div></div>
+                    <span class="metric-pct">[percentage]</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Methods</span>
+                    <div class="metric-track"><div class="metric-fill" id="m2" style="width:0%"></div></div>
+                    <span class="metric-pct">[score]</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Context</span>
+                    <div class="metric-track"><div class="metric-fill" id="m3" style="width:0%"></div></div>
+                    <span class="metric-pct">[percentage]</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Bias</span>
+                    <div class="metric-track"><div class="metric-fill" id="m4" style="width:0%"></div></div>
+                    <span class="metric-pct">[percentage]</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Uncertainty</span>
+                    <div class="metric-track"><div class="metric-fill" id="m5" style="width:0%"></div></div>
+                    <span class="metric-pct">[score]</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Standards-compliant exports -->
+          <div class="feature-card span-4" tabindex="0" role="article">
+            <div class="bracket-corner bl-tl" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-tr" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-br" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-bl" style="border-color:var(--sage)"></div>
+            <div class="card-content">
+              <span class="mono-label" style="color:var(--sage);">04 // REPORT</span>
+              <div class="card-header" style="margin-top:auto;">
+                <h3>Make the reasoning visible</h3>
+                <p>Clear reporting lets another reader follow the question, inspect the methods, and understand the limits of the findings.</p>
+                <div class="pill-row">
+                  <span class="card-pill">PRISMA 2020</span>
+                  <span class="card-pill">Transparent reporting</span>
+                  <span class="card-pill">Bias assessment</span>
+                  <span class="card-pill">Limitations</span>
+                  <span class="card-pill">BibTeX / RIS</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5: Human in the loop -->
+          <div class="feature-card span-4" tabindex="0" role="article">
+            <div class="bracket-corner bl-tl" style="border-color:var(--plum)"></div>
+            <div class="bracket-corner bl-tr" style="border-color:var(--plum)"></div>
+            <div class="bracket-corner bl-br" style="border-color:var(--plum)"></div>
+            <div class="bracket-corner bl-bl" style="border-color:var(--plum)"></div>
+            <div class="card-content">
+              <span class="mono-label" style="color:var(--plum);">05 // INTERPRET</span>
+              <div class="card-header" style="margin-top:auto;">
+                <h3>Judgment stays at the bedside</h3>
+                <p class="card5-desc">Evidence informs a clinical decision. It still needs to be read in the context of the individual patient, competing explanations, and uncertainty.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         RESEARCH BOARD — Draggable sticky notes
+         ============================================================ -->
+    <section class="section-divider" id="evidence" aria-label="Published research evidence" style="background:var(--beige-bg); overflow:hidden;">
+      <div class="section-inner" style="padding-bottom: 0;">
+        <div class="section-eyebrow fade-up">
+          <span>[ 02 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>Research Notebook</span>
+        </div>
+
+        <div class="features-header-row fade-up d1">
+          <div>
+            <h2 class="section-h2">
+              Research principles.<br>
+              <span class="italic" style="color:var(--plum);">Lift &amp; explore.</span>
+            </h2>
+          </div>
+          <p class="features-desc" style="text-align:right;">
+            Research principles that connect evidence to the bedside. Drag the notes to explore the questions behind the work.
+          </p>
+        </div>
+      </div>
+
+      <!-- The Board itself — full-width, fixed height -->
+      <div class="research-board" id="research-board" aria-label="Research evidence board. Notes are draggable." role="region">
+        <!-- Dot-grid background drawn by CSS -->
+        <div class="board-grid-bg" aria-hidden="true"></div>
+
+        <!-- Board legend -->
+        <div class="board-legend" aria-hidden="true">
+          <span class="bl-item"><span class="bl-dot" style="background:#dde3e8;"></span> Observation</span>
+          <span class="bl-item"><span class="bl-dot" style="background:#ffdea6;"></span> Critical appraisal</span>
+          <span class="bl-item"><span class="bl-dot" style="background:#eadce6;"></span> Methods</span>
+          <span class="bl-item"><span class="bl-dot" style="background:#e4e2dd;"></span> Interpretation</span>
+          <span class="bl-drag-hint">← Drag notes to rearrange →</span>
+        </div>
+
+        <!-- ====== STICKY NOTES ====== -->
+
+        <!-- Note 1: Konet 2025 -->
+        <div class="rn-note" id="note-1" data-color="sage" data-x="4" data-y="10" data-rot="-3" tabindex="0" role="article" aria-label="Research note: Case reports">
+          <div class="rn-pin rn-pin--teal" aria-hidden="true"></div>
+          <div class="rn-tag">Observation</div>
+          <h3 class="rn-title">Every detail<br>counts</h3>
+          <p class="rn-body">A carefully documented case can offer a point of reference when a condition is rare. Close observation starts with a complete clinical account.</p>
+          <div class="rn-footer"><span class="rn-meta">Case reports</span></div>
+        </div>
+
+        <!-- Note 2: Helms Andersen 2025 -->
+        <div class="rn-note" id="note-2" data-color="ochre" data-x="30" data-y="5" data-rot="2.5" tabindex="0" role="article" aria-label="Research note: Systematic reviews">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <div class="rn-tag">Evidence synthesis</div>
+          <h3 class="rn-title">Read beyond<br>one paper</h3>
+          <p class="rn-body">Individual studies can conflict. Weigh the body of literature, assess its quality, and resist a conclusion built on a single striking result.</p>
+          <div class="rn-footer"><span class="rn-meta">Systematic reviews</span></div>
+        </div>
+
+        <!-- Note 3: Sun 2024 -->
+        <div class="rn-note" id="note-3" data-color="plum" data-x="57" data-y="8" data-rot="-1.5" tabindex="0" role="article" aria-label="Research note: Read the methods">
+          <div class="rn-pin rn-pin--plum" aria-hidden="true"></div>
+          <div class="rn-tag">Critical appraisal</div>
+          <h3 class="rn-title">Question the<br>evidence</h3>
+          <p class="rn-body">Ask how evidence was collected, how outcomes were assessed, and which biases could change the interpretation.</p>
+          <div class="rn-footer"><span class="rn-meta">Read the methods</span></div>
+        </div>
+
+        <!-- Note 4: Khraisha 2024 -->
+        <div class="rn-note" id="note-4" data-color="cream" data-x="6" data-y="48" data-rot="4" tabindex="0" role="article" aria-label="Research note: Respect the limits">
+          <div class="rn-pin rn-pin--teal" aria-hidden="true"></div>
+          <div class="rn-tag">Observational research</div>
+          <h3 class="rn-title">Comparable groups.<br>Remaining uncertainty.</h3>
+          <p class="rn-body">Propensity matching balances measured characteristics. Unmeasured confounding and selection bias can still affect the findings.</p>
+          <div class="rn-footer"><span class="rn-meta">Respect the limits</span></div>
+        </div>
+
+        <!-- Note 5: Reason 2024 -->
+        <div class="rn-note" id="note-5" data-color="rose" data-x="31" data-y="50" data-rot="-2" tabindex="0" role="article" aria-label="Research note: Question the inference">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <div class="rn-tag">Causal reasoning</div>
+          <h3 class="rn-title">Association is<br>not causation.</h3>
+          <p class="rn-body">A relationship in the data does not, by itself, establish cause. Look for competing explanations before attributing an outcome to a treatment.</p>
+          <div class="rn-footer"><span class="rn-meta">Question the inference</span></div>
+        </div>
+
+        <!-- Note 6: Gargari 2025 -->
+        <div class="rn-note" id="note-6" data-color="sage" data-x="58" data-y="48" data-rot="3" tabindex="0" role="article" aria-label="Research note: Interpret with care">
+          <div class="rn-pin rn-pin--plum" aria-hidden="true"></div>
+          <div class="rn-tag">Statistics</div>
+          <h3 class="rn-title">Make uncertainty<br>visible</h3>
+          <p class="rn-body">Mathematics helps examine complex clinical relationships. The assumptions and the quality of the underlying data still shape what a model can tell us.</p>
+          <div class="rn-footer"><span class="rn-meta">Interpret with care</span></div>
+        </div>
+
+        <!-- Note 7: López-Pineda 2025 -->
+        <div class="rn-note" id="note-7" data-color="ochre" data-x="78" data-y="10" data-rot="-4" tabindex="0" role="article" aria-label="Research note: Beyond recall">
+          <div class="rn-pin rn-pin--teal" aria-hidden="true"></div>
+          <div class="rn-tag">Clinical judgment</div>
+          <h3 class="rn-title">Memory has<br>its limits</h3>
+          <p class="rn-body">Structured analysis can help examine relationships that memory alone cannot track. It supports clinical reasoning while leaving room for context.</p>
+          <div class="rn-footer"><span class="rn-meta">Beyond recall</span></div>
+        </div>
+
+        <!-- Note 8: Landschaft – abstract screening κ -->
+        <div class="rn-note" id="note-8" data-color="plum" data-x="77" data-y="50" data-rot="2" tabindex="0" role="article" aria-label="Research note: From data to bedside">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <div class="rn-tag">Evidence in context</div>
+          <h3 class="rn-title">Return to<br>the patient</h3>
+          <p class="rn-body">A method answers a question. Its value in practice depends on what it helps us understand about the patient in front of us.</p>
+          <div class="rn-footer"><span class="rn-meta">From data to bedside</span></div>
+        </div>
+
+        <!-- Note 9: RAISE Guidelines -->
+        <div class="rn-note" id="note-9" data-color="cream" data-x="42" data-y="28" data-rot="-1" tabindex="0" role="article" aria-label="Research note: Honest interpretation">
+          <div class="rn-pin rn-pin--plum" aria-hidden="true"></div>
+          <div class="rn-tag">Research integrity</div>
+          <h3 class="rn-title">Report the limits.<br>Keep questioning.</h3>
+          <p class="rn-body">Genuine research makes its reasoning visible. Describe what the findings support, what they cannot establish, and what remains unresolved.</p>
+          <div class="rn-footer"><span class="rn-meta">Honest interpretation</span></div>
+        </div>
+
+      
+
+        <!-- Inspirational quote: draggable alongside the research notes. -->
+        <div class="rn-note quote-note" id="note-quote" data-x="43" data-y="30" data-rot="-5" tabindex="0" role="article" aria-label="Quote by Theodore Roosevelt. Drag to rearrange.">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <blockquote class="sticky-quote">
+            <span><em>“Believe</em> YOU CAN,</span>
+            <span>AND <em>you’re</em></span>
+            <span><em>halfway</em> THERE.”</span>
+            <cite>THEODORE ROOSEVELT</cite>
+          </blockquote>
+        </div>
+      </div><!-- /research-board -->
+    </section>
+
+    <!-- ============================================================
+         USE CASES — DARK SECTION
+         ============================================================ -->
+    <section class="use-cases-section section-divider" id="use-cases" aria-label="Use cases">
+      <div class="section-inner">
+        <div class="section-eyebrow">
+          <span>[ 03 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>Research in Practice</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:24px; max-width:600px; margin-bottom:16px;" class="fade-up">
+          <h2 class="use-cases-h2">
+            Different questions.<span class="italic"> Shared purpose.</span>
+          </h2>
+          <p class="use-cases-desc">Each approach asks something different. Together, they support critical appraisal and thoughtful clinical care.</p>
+        </div>
+
+        <!-- 3D Use Cases Carousel -->
+        <div class="use-cases-carousel-container" id="use-cases-carousel-container" aria-label="Use cases 3D carousel. Drag to explore." role="region">
+          <div class="use-cases-carousel-inner" id="use-cases-carousel-inner">
+            
+            <!-- Card 1: Reviewers -->
+            <div class="carousel-card-wrapper" data-index="0">
+              <div class="use-case-card" style="background:#f5f3ee; color:#1b1c19; transform:rotate(-2.5deg)">
+                <div style="position:relative; z-index:10">
+                  <div class="uc-category font-mono"><span class="uc-dot" style="background-color:currentColor; opacity:0.5; display:inline-block"></span> Case reports</div>
+                  <h3>Observe</h3>
+                </div>
+                <div style="position:relative; z-index:10">
+                  <p class="font-heading">Record the individual patient carefully. Verify the timeline, describe the findings, and make the clinical reasoning visible.</p>
+                </div>
+                <!-- Document magnifier watermark SVG -->
+                <svg aria-hidden="true" class="uc-watermark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Card 2: Methodologists -->
+            <div class="carousel-card-wrapper" data-index="1">
+              <div class="use-case-card" style="background:#dde3e8; color:#1b1c19; transform:rotate(1.8deg)">
+                <div style="position:relative; z-index:10">
+                  <div class="uc-category font-mono"><span class="uc-dot" style="background-color:currentColor; opacity:0.5; display:inline-block"></span> Systematic reviews</div>
+                  <h3>Synthesize</h3>
+                </div>
+                <div style="position:relative; z-index:10">
+                  <p class="font-heading">Read beyond a headline paper. Bring the literature together, assess study quality, and make room for conflicting findings.</p>
+                </div>
+                <!-- Graph watermark SVG -->
+                <svg aria-hidden="true" class="uc-watermark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Card 3: Librarians -->
+            <div class="carousel-card-wrapper" data-index="2">
+              <div class="use-case-card" style="background:#ffdea6; color:#1b1c19; transform:rotate(-1.2deg)">
+                <div style="position:relative; z-index:10">
+                  <div class="uc-category font-mono"><span class="uc-dot" style="background-color:currentColor; opacity:0.5; display:inline-block"></span> Observational studies</div>
+                  <h3>Compare</h3>
+                </div>
+                <div style="position:relative; z-index:10">
+                  <p class="font-heading">Compare clinical groups thoughtfully. Matching measured characteristics can help, but unmeasured confounding still matters.</p>
+                </div>
+                <!-- Book watermark SVG -->
+                <svg aria-hidden="true" class="uc-watermark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Card 4: Regulators -->
+            <div class="carousel-card-wrapper" data-index="3">
+              <div class="use-case-card" style="background:#eadce6; color:#1b1c19; transform:rotate(2.0deg)">
+                <div style="position:relative; z-index:10">
+                  <div class="uc-category font-mono"><span class="uc-dot" style="background-color:currentColor; opacity:0.5; display:inline-block"></span> Statistics</div>
+                  <h3>Quantify</h3>
+                </div>
+                <div style="position:relative; z-index:10">
+                  <p class="font-heading">Use mathematics to examine relationships that memory alone cannot hold. State the assumptions and interpret the uncertainty.</p>
+                </div>
+                <!-- Shield/Verification watermark SVG -->
+                <svg aria-hidden="true" class="uc-watermark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Card 5: Clinicians -->
+            <div class="carousel-card-wrapper" data-index="4">
+              <div class="use-case-card" style="background:#f2e7ed; color:#1b1c19; transform:rotate(-1.8deg)">
+                <div style="position:relative; z-index:10">
+                  <div class="uc-category font-mono"><span class="uc-dot" style="background-color:currentColor; opacity:0.5; display:inline-block"></span> At the bedside</div>
+                  <h3>Apply</h3>
+                </div>
+                <div style="position:relative; z-index:10">
+                  <p class="font-heading">Return to the patient with a more disciplined question, a clearer reading of the evidence, and an awareness of its limits.</p>
+                </div>
+                <!-- Heartbeat/Clinical watermark SVG -->
+                <svg aria-hidden="true" class="uc-watermark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Carousel drag indicator hint -->
+        <div class="carousel-drag-hint-row">
+          <span class="carousel-drag-hint-text">← Drag to explore →</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         HOW IT WORKS
+         ============================================================ -->
+    <section class="section-divider" id="how-it-works" aria-label="How it works" style="background:var(--beige-bg);">
+      <div class="section-inner">
+        <div class="section-eyebrow fade-up">
+          <span>[ 04 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>The Process</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:24px; margin-bottom:16px; max-width:600px;">
+          <h2 class="section-h2 fade-up">From a question<br><span class="italic" style="color:var(--plum);">to understanding.</span></h2>
+          <p class="font-space" style="font-size:12px; color:var(--ink-light); line-height:1.65; max-width:360px;" class="fade-up d1">Begin with a clinical question. Choose a method that fits. Interpret what the evidence can support.</p>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-card fade-up">
+            <div class="step-num">01 / Ask</div>
+            <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6v20h14V8z M14 2v6h6 M9 13h8 M9 17h6"/></svg></span>
+            <h3 class="step-title">Start with the patient</h3>
+            <p class="step-desc">A rare presentation, an unexpected outcome, or an unresolved treatment question can be the beginning of useful research.</p>
+          </div>
+          <div class="step-card fade-up d1">
+            <div class="step-num">02 / Investigate</div>
+            <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2 4 14h7l-1 8 10-12h-7z"/></svg></span>
+            <h3 class="step-title">Choose the right method</h3>
+            <p class="step-desc">A case report, an evidence synthesis, or an observational comparison answers a different kind of question. The method should follow the question.</p>
+          </div>
+          <div class="step-card fade-up d2">
+            <div class="step-num">03 / Reflect</div>
+            <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m5 12 4 4L19 6"/></svg></span>
+            <h3 class="step-title">Interpret with care</h3>
+            <p class="step-desc">Explain the findings, look for alternative explanations, and report what remains uncertain. Bring that discipline back to clinical practice.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PRECISION FEATURES
+         ============================================================ -->
+    <section class="section-divider" style="background:var(--beige-card);">
+      <div class="section-inner">
+        <div class="section-eyebrow fade-up">
+          <span>[ 05 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>Context</span>
+        </div>
+
+        <div class="precision-row fade-up">
+          <div class="precision-content">
+            <div class="precision-eyebrow">Evidence and uncertainty</div>
+            <h3 class="precision-title">A finding is only as useful as its interpretation</h3>
+            <p class="precision-desc">Critical appraisal looks beyond a published conclusion to examine how it was reached. Good interpretation includes the assumptions, the missing information, and the possibility of another explanation.</p>
+            <ul class="feature-checklist">
+              <li><span class="check-mark">✓</span> A clearly defined research question</li>
+              <li><span class="check-mark">✓</span> Appropriate methods and explicit assumptions</li>
+              <li><span class="check-mark">✓</span> Careful assessment of bias</li>
+              <li><span class="check-mark">✓</span> Transparent reporting of limitations</li>
+              <li><span class="check-mark">✓</span> Conclusions proportionate to the evidence</li>
+            </ul>
+          </div>
+          <div class="precision-visual">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAuMCI+PHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMC4wIiBmaWxsPSIjZmJmOWY0Ii8+PHJlY3QgeD0iMjgiIHk9IjI4IiB3aWR0aD0iOTQ0IiBoZWlnaHQ9Ijk0NC4wIiBmaWxsPSJub25lIiBzdHJva2U9IiNkMmMyY2IiLz48dGV4dCB4PSI3NiIgeT0iMTc1LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBsZXR0ZXItc3BhY2luZz0iMyIgZmlsbD0iIzY2MzY1YyI+Q1JJVElDQUwgQVBQUkFJU0FMPC90ZXh0Pjx0ZXh0IHg9Ijc2IiB5PSIyNTcuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iNDgiIGZpbGw9IiMzYTBmMzQiPkxvb2sgYmV5b25kIHRoZSBjb25jbHVzaW9uLjwvdGV4dD48cmVjdCB4PSI3NiIgeT0iMzI1LjAiIHdpZHRoPSI4NDgiIGhlaWdodD0iODIiIGZpbGw9IiNkZGUzZTgiLz48dGV4dCB4PSIxMDAiIHk9IjM1Ni4wIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGV0dGVyLXNwYWNpbmc9IjIiIGZpbGw9IiM2MjUzNWQiPlFVRVNUSU9OPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iMzg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5XaGF0IHdhcyB0aGUgc3R1ZHkgZGVzaWduZWQgdG8gYW5zd2VyPzwvdGV4dD48cmVjdCB4PSI3NiIgeT0iNDI1LjAiIHdpZHRoPSI4NDgiIGhlaWdodD0iODIiIGZpbGw9IiNmMGVlZTkiLz48dGV4dCB4PSIxMDAiIHk9IjQ1Ni4wIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGV0dGVyLXNwYWNpbmc9IjIiIGZpbGw9IiM2MjUzNWQiPk1FVEhPRFM8L3RleHQ+PHRleHQgeD0iMTAwIiB5PSI0ODYuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiMzYTBmMzQiPkhvdyB3ZXJlIHRoZSBkYXRhIGNvbGxlY3RlZD88L3RleHQ+PHJlY3QgeD0iNzYiIHk9IjUyNS4wIiB3aWR0aD0iODQ4IiBoZWlnaHQ9IjgyIiBmaWxsPSIjZWFkY2U2Ii8+PHRleHQgeD0iMTAwIiB5PSI1NTYuMCIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxldHRlci1zcGFjaW5nPSIyIiBmaWxsPSIjNjI1MzVkIj5CSUFTPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNTg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5XaGF0IGNvdWxkIGNoYW5nZSB0aGUgaW50ZXJwcmV0YXRpb24/PC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI2MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2ZmZGVhNiIvPjx0ZXh0IHg9IjEwMCIgeT0iNjU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+TElNSVRTPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNjg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5XaGF0IHJlbWFpbnMgdW5jZXJ0YWluPzwvdGV4dD48dGV4dCB4PSI3NiIgeT0iNzg1LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXN0eWxlPSJpdGFsaWMiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiM2NjM2NWMiPkFzc29jaWF0aW9uIGlzIG5vdCBjYXVzYXRpb24uPC90ZXh0Pjwvc3ZnPg==" alt="Critical Appraisal: Look beyond the conclusion." loading="lazy">
+          </div>
+        </div>
+
+        <div class="precision-row fade-up">
+          <div class="precision-visual" style="order:-1;">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAuMCI+PHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMC4wIiBmaWxsPSIjZmJmOWY0Ii8+PHJlY3QgeD0iMjgiIHk9IjI4IiB3aWR0aD0iOTQ0IiBoZWlnaHQ9Ijk0NC4wIiBmaWxsPSJub25lIiBzdHJva2U9IiNkMmMyY2IiLz48dGV4dCB4PSI3NiIgeT0iMTc1LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBsZXR0ZXItc3BhY2luZz0iMyIgZmlsbD0iIzY2MzY1YyI+UkVTRUFSQ0ggQU5EIFBSQUNUSUNFPC90ZXh0Pjx0ZXh0IHg9Ijc2IiB5PSIyNTcuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iNDgiIGZpbGw9IiMzYTBmMzQiPkEgY29udGludW91cyBjb252ZXJzYXRpb24uPC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSIzMjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2RkZTNlOCIvPjx0ZXh0IHg9IjEwMCIgeT0iMzU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+Q0xJTklDQUwgUVVFU1RJT048L3RleHQ+PHRleHQgeD0iMTAwIiB5PSIzODYuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiMzYTBmMzQiPkJlZ2luIGF0IHRoZSBiZWRzaWRlPC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI0MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2YwZWVlOSIvPjx0ZXh0IHg9IjEwMCIgeT0iNDU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+SU5WRVNUSUdBVElPTjwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjQ4Ni4wIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzNhMGYzNCI+Q2hvb3NlIGFuIGFwcHJvcHJpYXRlIG1ldGhvZDwvdGV4dD48cmVjdCB4PSI3NiIgeT0iNTI1LjAiIHdpZHRoPSI4NDgiIGhlaWdodD0iODIiIGZpbGw9IiNlYWRjZTYiLz48dGV4dCB4PSIxMDAiIHk9IjU1Ni4wIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGV0dGVyLXNwYWNpbmc9IjIiIGZpbGw9IiM2MjUzNWQiPklOVEVSUFJFVEFUSU9OPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNTg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5XZWlnaCBldmlkZW5jZSBhbmQgdW5jZXJ0YWludHk8L3RleHQ+PHJlY3QgeD0iNzYiIHk9IjYyNS4wIiB3aWR0aD0iODQ4IiBoZWlnaHQ9IjgyIiBmaWxsPSIjZmZkZWE2Ii8+PHRleHQgeD0iMTAwIiB5PSI2NTYuMCIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxldHRlci1zcGFjaW5nPSIyIiBmaWxsPSIjNjI1MzVkIj5SRUZMRUNUSU9OPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNjg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5SZXR1cm4gd2l0aCBhIGJldHRlciBxdWVzdGlvbjwvdGV4dD48dGV4dCB4PSI3NiIgeT0iNzg1LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXN0eWxlPSJpdGFsaWMiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiM2NjM2NWMiPkRpZmZlcmVudCBtZXRob2RzLiBBIHNoYXJlZCBjb21taXRtZW50IHRvIGNhcmUuPC90ZXh0Pjwvc3ZnPg==" alt="Research And Practice: A continuous conversation." loading="lazy">
+          </div>
+          <div class="precision-content">
+            <div class="precision-eyebrow">From evidence to care</div>
+            <h3 class="precision-title">Research and clinical practice inform each other</h3>
+            <p class="precision-desc">The habits learned through research travel back to the clinic: closer observation, better questions, and greater care in deciding what a finding means for an individual patient.</p>
+            <ul class="feature-checklist">
+              <li><span class="check-mark">✓</span> Observe the individual patient</li>
+              <li><span class="check-mark">✓</span> Weigh the full body of evidence</li>
+              <li><span class="check-mark">✓</span> Consider competing explanations</li>
+              <li><span class="check-mark">✓</span> Recognize what the data cannot establish</li>
+              <li><span class="check-mark">✓</span> Keep clinical judgment in context</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PRICING
+         ============================================================ -->
+    
+
+    <!-- ============================================================
+         TESTIMONIALS
+         ============================================================ -->
+    <section class="section-divider" id="testimonials" aria-label="Testimonials" style="background:var(--beige-bg);">
+      <div class="section-inner">
+        <div class="section-eyebrow fade-up">
+          <span>[ 07 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>Researchers</span>
+        </div>
+
+        <h2 class="section-h2 fade-up d1">Researcher<br><span class="italic" style="color:var(--plum);">feedback.</span></h2>
+
+        <div class="testimonials-grid">
+          <div class="testimonial-card fade-up d1">
+            <div class="placeholder-label">Review placeholder</div>
+            <p class="t-quote">Reviewer feedback to be added.</p>
+            <div class="t-author">
+              <div class="author-avatar" style="background:var(--note-sage);">—</div>
+              <div>
+                <div class="author-name">Reviewer name</div>
+                <div class="author-role">Role and institution</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card fade-up d2">
+            <div class="placeholder-label">Review placeholder</div>
+            <p class="t-quote">Reviewer feedback to be added.</p>
+            <div class="t-author">
+              <div class="author-avatar" style="background:var(--note-plum);">—</div>
+              <div>
+                <div class="author-name">Reviewer name</div>
+                <div class="author-role">Role and institution</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card fade-up d3">
+            <div class="placeholder-label">Review placeholder</div>
+            <p class="t-quote">Reviewer feedback to be added.</p>
+            <div class="t-author">
+              <div class="author-avatar" style="background:var(--note-ochre);">—</div>
+              <div>
+                <div class="author-name">Reviewer name</div>
+                <div class="author-role">Role and institution</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- BEGIN: collaboration section -->
+  <section class="section-divider" id="collaboration" aria-label="Collaboration and inquiry" style="background:var(--beige-card);">
+    <div class="section-inner">
+      <div class="section-eyebrow fade-up">
+        <span>[ 08 ]</span>
+        <span class="eyebrow-line"></span>
+        <span>Collaboration</span>
+      </div>
+
+      <h2 class="section-h2 fade-up d1">
+        A conversation<br>
+        <span class="italic" style="color:var(--plum);">about meaningful research.</span>
+      </h2>
+
+      <p class="font-body fade-up d2" style="margin-top:24px; max-width:720px;">
+        Meaningful research starts with a real clinical question, careful methods, and honest interpretation. Start a conversation about a question worth exploring.
+      </p>
+
+      <div class="collab-grid">
+        <!-- Left column: pitch + bullets -->
+        <div class="collab-left fade-up d2">
+          <h3>What matters in the work.</h3>
+          <ul class="collab-bullets">
+            <li>A question worth asking, grounded in clinical practice.</li>
+            <li>Methods chosen for the question and explained clearly.</li>
+            <li>Open discussion of bias, uncertainty, and alternative explanations.</li>
+            <li>A shared commitment to careful reporting and useful evidence.</li>
+          </ul>
+        </div>
+
+        <!-- Right column: inquiry form -->
+        <form class="collab-form fade-up d3" action="[[FORM_ENDPOINT]]" method="POST">
+          <div class="collab-field">
+            <label class="collab-label" for="collab-name">Name</label>
+            <input class="collab-input" type="text" id="collab-name" name="name" required autocomplete="name">
+          </div>
+          <div class="collab-field">
+            <label class="collab-label" for="collab-institution">Institution</label>
+            <input class="collab-input" type="text" id="collab-institution" name="institution" required autocomplete="organization">
+          </div>
+          <div class="collab-field">
+            <label class="collab-label" for="collab-email">Email</label>
+            <input class="collab-input" type="email" id="collab-email" name="email" required autocomplete="email">
+          </div>
+          <div class="collab-field">
+            <label class="collab-label" for="collab-interest">Area of interest</label>
+            <select class="collab-select" id="collab-interest" name="interest">
+              <option>Collaborate on a systematic review</option>
+              <option>Methodological consultation</option>
+              <option>Discuss a research question</option>
+              <option>General research inquiry</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="collab-field">
+            <label class="collab-label" for="collab-message">Tell us about your project</label>
+            <textarea class="collab-textarea" id="collab-message" name="message" rows="4" placeholder="A short description of your review, lab, or research question."></textarea>
+          </div>
+
+          <div class="collab-submit-row">
+            <button type="submit" class="btn-solid" style="padding: 12px 28px; font-size: 14px; border-radius: 0;">
+              Send inquiry
+              <span style="display:inline-block;transition:transform 0.3s;" class="arrow">→</span>
+            </button>
+            <p class="collab-fineprint">
+              Response time: [response time] business days. Or email <a href="mailto:[[CONTACT_EMAIL]]">[[CONTACT_EMAIL]]</a> directly.
+            </p>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+  <!-- END: collaboration section -->
+
+
+
+    <!-- ============================================================
+         FAQ
+         ============================================================ -->
+    <section class="faq-section section-divider" id="faq" aria-label="FAQ">
+      <div class="section-inner">
+        <div class="section-eyebrow fade-up" style="justify-content:center;">
+          <span>[ 09 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>FAQ</span>
+        </div>
+
+        <h2 class="section-h2 fade-up d1" style="text-align:center; margin-bottom:56px;">
+          Common <span class="italic" style="color:var(--plum);">questions.</span>
+        </h2>
+
+        <div class="faq-list" id="faq-list">
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q1">
+            What does genuine research mean here?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>A clinically meaningful question, methods appropriate to that question, and conclusions that acknowledge uncertainty. The aim is to understand something useful, with reasoning that another reader can inspect.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q2">
+            How does research influence clinical practice?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>Research strengthens habits that matter at the bedside: observing carefully, documenting precisely, weighing conflicting evidence, and questioning the limits of a conclusion.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q3">
+            Why do case reports matter?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>When a condition is rare, a well-documented case may offer useful context. Accurate timelines, complete findings, and transparent reasoning make that account more useful to another clinician.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q4">
+            What can propensity matching tell us?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>It can help compare groups with similar measured characteristics. It does not eliminate unmeasured confounding or turn an observational study into a randomized trial.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q5">
+            What role do statistics play?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>Statistics provide a way to examine relationships and express uncertainty. Interpretation still depends on study design, assumptions, and the quality of the data.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q6">
+            What connects these approaches?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>They ask different questions, but each encourages more disciplined thinking. That discipline connects the research process to the care of the next patient.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         CTA / WAITLIST
+         ============================================================ -->
+    <section class="section-divider cta-section" id="waitlist" aria-label="Join waitlist" style="background:var(--beige-bg);">
+      <div class="section-inner">
+        <div class="section-eyebrow fade-up" style="justify-content:center;">
+          <span>[ 10 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>Stay in Conversation</span>
+        </div>
+
+        <h2 class="cta-headline font-heading fade-up d1">
+          Start with<br>
+          <span class="italic" style="color:var(--plum);">a genuine question.</span>
+        </h2>
+        <p class="cta-sub fade-up d2">A clinical question, a methodological challenge, or an idea worth exploring. Let’s talk.</p>
+
+        <form class="email-form fade-up d3" id="waitlist-form" aria-label="Join waitlist">
+          <input type="email" class="email-input" placeholder="your@university.edu" aria-label="Email address" id="waitlist-email" required>
+          <button type="submit" class="btn-solid" style="white-space:nowrap;" id="waitlist-btn">Get in touch →</button>
+        </form>
+
+        <p class="font-mono fade-up d4" style="font-size:11px; color:var(--ink-faint); text-align:center; text-transform:uppercase; letter-spacing:0.1em;">
+          Thoughtful questions. Careful methods. Honest conclusions.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="footer" aria-label="Site footer">
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div>
+          <a href="#" class="site-header-logo" style="color:var(--beige-bg);" aria-label="Stellar Labs">
+            <div style="background:var(--beige-bg); border-radius: 0; width:32px; height:32px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <span class="logo-mark-inner" style="color:var(--ink-black);">S</span>
+            </div>
+            <span style="font-family:'Bodoni Moda',serif; font-size:20px; font-weight:600; color:var(--beige-bg); letter-spacing:-0.3px;">Stellar Labs</span>
+          </a>
+          <p class="footer-brand-desc">Research grounded in careful methods: observe closely, question the evidence, and bring clearer thinking back to the bedside.</p>
+        </div>
+
+        <div>
+          <div class="footer-col-title">Approach</div>
+          <ul class="footer-links">
+            <li><a href="#features">The Approach</a></li>
+            <li><a href="#how-it-works">The Process</a></li>
+            <li><a href="#">Changelog</a></li>
+            <li><a href="#">Documentation</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer-col-title">Research</div>
+          <ul class="footer-links">
+            <li><a href="#">Research Principles</a></li>
+            <li><a href="#">Reporting Principles</a></li>
+            <li><a href="#">PRISMA Compliance</a></li>
+            <li><a href="#">About the Approach</a></li>
+            <li><a href="#">Blog</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer-col-title">Company</div>
+          <ul class="footer-links">
+            <li><a href="#">About</a></li>
+            <li><a href="#">Careers</a></li>
+            <li><a href="#">Contact</a></li>
+            <li><a href="#collaboration">Collaborate</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span class="footer-copy">© 2026 Stellar Labs. All rights reserved.</span>
+        <div class="footer-legal">
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">DPDP Compliance</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT
+       ============================================================ -->
+  <script>
+    /* ---- Mobile hamburger ---- */
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobile-menu');
+    hamburger?.addEventListener('click', () => {
+      mobileMenu.classList.toggle('open');
+    });
+
+    /* ---- Scroll-triggered fade-up ---- */
+    const fadeEls = document.querySelectorAll('.fade-up:not(.visible)');
+    const fadeObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          fadeObserver.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    fadeEls.forEach(el => fadeObserver.observe(el));
+
+    /* ---- Metric bars animation ---- */
+    const metricVals = [92, 94, 91, 88, 90];
+    const metricBars = [document.getElementById('m1'), document.getElementById('m2'), document.getElementById('m3'), document.getElementById('m4'), document.getElementById('m5')];
+    const metricContainer = document.getElementById('metric-list');
+    if (metricContainer) {
+      const barObs = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          metricBars.forEach((bar, i) => {
+            if (bar) {
+              setTimeout(() => { bar.style.width = metricVals[i] + '%'; }, i * 120);
+            }
+          });
+          barObs.unobserve(metricContainer);
+        }
+      }, { threshold: 0.3 });
+      barObs.observe(metricContainer);
+    }
+
+    /* ---- FAQ accordion ---- */
+    document.querySelectorAll('.faq-q').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = btn.closest('.faq-item');
+        const isOpen = item.classList.contains('open');
+        document.querySelectorAll('.faq-item').forEach(i => {
+          i.classList.remove('open');
+          i.querySelector('.faq-q')?.setAttribute('aria-expanded', 'false');
+        });
+        if (!isOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    /* ---- Waitlist form ---- */
+    const form = document.getElementById('waitlist-form');
+    const wBtn = document.getElementById('waitlist-btn');
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('waitlist-email').value;
+      if (email) {
+        wBtn.textContent = '✓ You\'re on the list!';
+        wBtn.style.background = 'var(--sage)';
+        wBtn.disabled = true;
+        form.querySelector('.email-input').disabled = true;
+      }
+    });
+
+    /* ---- Smooth anchor scroll ---- */
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        if (href && href.length > 1) {
+          const target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+          }
+        }
+      });
+    });
+
+    /* ---- Hero mockup parallax tilt ---- */
+    const heroMockup = document.getElementById('hero-mockup');
+    document.addEventListener('mousemove', (e) => {
+      if (!heroMockup) return;
+      const x = (e.clientX / window.innerWidth - 0.5) * 12;
+      const y = (e.clientY / window.innerHeight - 0.5) * 8;
+      heroMockup.style.transform = `rotateY(${-6 + x * 0.4}deg) rotateX(${3 - y * 0.4}deg)`;
+    }, { passive: true });
+
+    /* ---- Btn arrow hover ---- */
+    document.querySelectorAll('[class*="btn-solid"]').forEach(btn => {
+      const arrow = btn.querySelector('.arrow');
+      if (arrow) {
+        btn.addEventListener('mouseenter', () => arrow.style.transform = 'translateX(4px)');
+        btn.addEventListener('mouseleave', () => arrow.style.transform = 'translateX(0)');
+      }
+    });
+
+    /* ============================================================
+       RESEARCH BOARD — Draggable sticky notes
+       ============================================================ */
+    (function initBoard() {
+      const board = document.getElementById('research-board');
+      if (!board) return;
+
+      const notes = board.querySelectorAll('.rn-note');
+      let zCounter = 100;
+      let activeNote = null;
+      let dragOffset  = { x: 0, y: 0 };
+
+      /* ---------- Position notes from data-x / data-y (%) + data-rot ---------- */
+      function placeNote(note) {
+        const bW = board.clientWidth;
+        const bH = board.clientHeight;
+        const nW = note.offsetWidth  || 240;
+        const nH = note.offsetHeight || 260;
+
+        const pctX = parseFloat(note.dataset.x) || 5;
+        const pctY = parseFloat(note.dataset.y) || 10;
+        const rot  = parseFloat(note.dataset.rot) || 0;
+
+        // Convert percentage to px, clamp inside board
+        let left = Math.max(16, Math.min(bW - nW - 16, (pctX / 100) * bW));
+        let top  = Math.max(60, Math.min(bH - nH - 16, (pctY / 100) * bH));
+
+        note.style.left = left + 'px';
+        note.style.top  = top  + 'px';
+        note.style.transform = `rotate(${rot}deg)`;
+        note.style.setProperty('--rot', rot + 'deg');
+        note.style.zIndex = zCounter++;
+      }
+
+      // Lay out all notes once fonts are loaded
+      if (document.fonts) {
+        document.fonts.ready.then(() => notes.forEach(placeNote));
+      } else {
+        setTimeout(() => notes.forEach(placeNote), 100);
+      }
+
+      // Re-layout on resize
+      let resizeTimer;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => notes.forEach(placeNote), 200);
+      }, { passive: true });
+
+      /* ---------- Pointer start ---------- */
+      function onPointerDown(e) {
+        // Don't drag if clicking a link
+        if (e.target.closest('.rn-link')) return;
+
+        const note = e.currentTarget;
+        e.preventDefault();
+
+        activeNote = note;
+        note.classList.add('lifting');
+        note.classList.remove('landing');
+        note.style.zIndex = ++zCounter;
+
+        // Capture for smooth drag, including outside window
+        note.setPointerCapture(e.pointerId);
+
+        const rect = note.getBoundingClientRect();
+        const boardRect = board.getBoundingClientRect();
+        dragOffset.x = e.clientX - rect.left;
+        dragOffset.y = e.clientY - rect.top;
+
+        // Store board rect for move handler
+        note._boardRect = boardRect;
+      }
+
+      /* ---------- Pointer move ---------- */
+      function onPointerMove(e) {
+        if (!activeNote) return;
+        e.preventDefault();
+
+        const bRect = activeNote._boardRect || board.getBoundingClientRect();
+        const nW = activeNote.offsetWidth;
+        const nH = activeNote.offsetHeight;
+        const bW = bRect.width;
+        const bH = bRect.height;
+
+        let newLeft = e.clientX - bRect.left - dragOffset.x;
+        let newTop  = e.clientY - bRect.top  - dragOffset.y;
+
+        // Clamp to board bounds
+        newLeft = Math.max(0, Math.min(bW - nW, newLeft));
+        newTop  = Math.max(0, Math.min(bH - nH, newTop));
+
+        activeNote.style.left = newLeft + 'px';
+        activeNote.style.top  = newTop  + 'px';
+
+        // Slight rotation based on horizontal velocity for feel
+        const rot  = parseFloat(activeNote.dataset.rot) || 0;
+        const velX = (e.movementX || 0) * 0.08;
+        activeNote.style.transform = `rotate(${rot + velX}deg) scale(1.04)`;
+      }
+
+      /* ---------- Pointer end ---------- */
+      function onPointerUp(e) {
+        if (!activeNote) return;
+
+        const note   = activeNote;
+        const rot    = parseFloat(note.dataset.rot) || 0;
+
+        // Save new position to data attributes as percentages
+        const bW = board.clientWidth;
+        const bH = board.clientHeight;
+        const curLeft = parseFloat(note.style.left) || 0;
+        const curTop  = parseFloat(note.style.top)  || 0;
+        note.dataset.x = ((curLeft / bW) * 100).toFixed(1);
+        note.dataset.y = ((curTop  / bH) * 100).toFixed(1);
+
+        // Settle transform back
+        note.style.setProperty('--note-transform', `translate(0,0)`);
+        note.style.transform = `rotate(${rot}deg)`;
+
+        note.classList.remove('lifting');
+        note.classList.add('landing');
+        setTimeout(() => note.classList.remove('landing'), 520);
+
+        activeNote = null;
+      }
+
+      /* ---------- Attach events to each note ---------- */
+      notes.forEach(note => {
+        note.addEventListener('pointerdown', onPointerDown);
+        note.addEventListener('pointermove', onPointerMove);
+        note.addEventListener('pointerup',   onPointerUp);
+        note.addEventListener('pointercancel', onPointerUp);
+
+        // Keyboard accessibility — arrow keys
+        note.addEventListener('keydown', (e) => {
+          const step = e.shiftKey ? 20 : 5;
+          let left = parseFloat(note.style.left) || 0;
+          let top  = parseFloat(note.style.top)  || 0;
+          const bW = board.clientWidth;
+          const bH = board.clientHeight;
+          const nW = note.offsetWidth;
+          const nH = note.offsetHeight;
+
+          if (e.key === 'ArrowLeft')  { left -= step; e.preventDefault(); }
+          if (e.key === 'ArrowRight') { left += step; e.preventDefault(); }
+          if (e.key === 'ArrowUp')    { top  -= step; e.preventDefault(); }
+          if (e.key === 'ArrowDown')  { top  += step; e.preventDefault(); }
+
+          left = Math.max(0, Math.min(bW - nW, left));
+          top  = Math.max(0, Math.min(bH - nH, top));
+
+          note.style.left = left + 'px';
+          note.style.top  = top  + 'px';
+          note.style.zIndex = ++zCounter;
+        });
+      });
+
+    })();
+
+    /* ============================================================
+       USE CASES — 3D Carousel Slider
+       ============================================================ */
+    (function initUseCasesCarousel() {
+      const container = document.getElementById('use-cases-carousel-container');
+      const inner = document.getElementById('use-cases-carousel-inner');
+      if (!container || !inner) return;
+
+      const wrappers = inner.querySelectorAll('.carousel-card-wrapper');
+      const total = wrappers.length;
+      if (total === 0) return;
+
+      let rotationProgress = 0;
+      let targetProgress = 0;
+      let isDragging = false;
+      let startX = 0;
+      let currentProgressOffset = 0;
+      let animFrameId = null;
+
+      // Configs responsive variables
+      let xStep = 300;
+      let zStep = 180;
+      let dragScale = 600;
+      let angleStep = 32;
+
+      function updateResponsiveParams() {
+        const width = window.innerWidth;
+        if (width < 768) {
+          xStep = 160;
+          zStep = 110;
+          dragScale = 400;
+          angleStep = 28;
+        } else if (width < 1024) {
+          xStep = 240;
+          zStep = 150;
+          dragScale = 500;
+          angleStep = 30;
+        } else {
+          xStep = 300;
+          zStep = 180;
+          dragScale = 600;
+          angleStep = 32;
+        }
+      }
+
+      function updateCarousel() {
+        // Wrap rotationProgress between 0 and total
+        let wrappedProgress = rotationProgress;
+        while (wrappedProgress < 0) wrappedProgress += total;
+        while (wrappedProgress >= total) wrappedProgress -= total;
+
+        wrappers.forEach((wrapper, index) => {
+          let diff = index - wrappedProgress;
+
+          // Circular wrapping to range [-total/2, total/2]
+          const halfT = total / 2;
+          while (diff > halfT) diff -= total;
+          while (diff < -halfT) diff += total;
+
+          const angle = -diff * angleStep;
+          const tx = diff * xStep;
+          const tz = -Math.abs(diff) * zStep;
+          const opacity = Math.max(0, 1 - Math.abs(diff) * 0.38);
+          const zIndex = Math.round(100 - Math.abs(diff) * 20);
+
+          wrapper.style.transform = `translateX(${tx}px) translateZ(${tz}px) rotateY(${angle}deg)`;
+          wrapper.style.opacity = opacity;
+          wrapper.style.zIndex = zIndex;
+
+          if (opacity <= 0.05) {
+            wrapper.style.display = 'none';
+            wrapper.style.pointerEvents = 'none';
+          } else {
+            wrapper.style.display = 'block';
+            // Only active card (diff close to 0) gets pointer events
+            wrapper.style.pointerEvents = Math.abs(diff) < 0.4 ? 'auto' : 'none';
+          }
+        });
+      }
+
+      function animate() {
+        if (!isDragging) {
+          const diff = targetProgress - rotationProgress;
+          rotationProgress += diff * 0.15;
+          if (Math.abs(diff) < 0.001) {
+            rotationProgress = targetProgress;
+            updateCarousel();
+            animFrameId = null;
+            return;
+          }
+        }
+        updateCarousel();
+        animFrameId = requestAnimationFrame(animate);
+      }
+
+      function startAnimIfNeeded() {
+        if (!animFrameId) {
+          animFrameId = requestAnimationFrame(animate);
+        }
+      }
+
+      // Pointer Event Handlers
+      function onPointerDown(e) {
+        isDragging = true;
+        startX = e.clientX;
+        currentProgressOffset = 0;
+        container.setPointerCapture(e.pointerId);
+      }
+
+      function onPointerMove(e) {
+        if (!isDragging) return;
+        const deltaX = e.clientX - startX;
+        currentProgressOffset = -deltaX / dragScale;
+        rotationProgress = targetProgress + currentProgressOffset;
+        startAnimIfNeeded();
+      }
+
+      function onPointerUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        container.releasePointerCapture(e.pointerId);
+
+        // Update target progress to current progress, then round
+        targetProgress = Math.round(rotationProgress);
+        
+        // Wrap target index inside bounds [0, total - 1]
+        while (targetProgress < 0) targetProgress += total;
+        while (targetProgress >= total) targetProgress -= total;
+        
+        // Match rotationProgress to wrapped scale if needed
+        let wrapped = rotationProgress;
+        while (wrapped < 0) wrapped += total;
+        while (wrapped >= total) wrapped -= total;
+        rotationProgress = wrapped;
+
+        startAnimIfNeeded();
+      }
+
+      container.addEventListener('pointerdown', onPointerDown);
+      container.addEventListener('pointermove', onPointerMove);
+      container.addEventListener('pointerup', onPointerUp);
+      container.addEventListener('pointercancel', onPointerUp);
+
+      // Support swipe keys (Left / Right)
+      window.addEventListener('keydown', (e) => {
+        // Only trigger if carousel is partially visible
+        const rect = container.getBoundingClientRect();
+        const isVisible = (rect.top < window.innerHeight && rect.bottom > 0);
+        if (!isVisible) return;
+
+        if (e.key === 'ArrowLeft') {
+          targetProgress = Math.round(targetProgress - 1);
+          startAnimIfNeeded();
+        } else if (e.key === 'ArrowRight') {
+          targetProgress = Math.round(targetProgress + 1);
+          startAnimIfNeeded();
+        }
+      });
+
+      // Init
+      updateResponsiveParams();
+      window.addEventListener('resize', () => {
+        updateResponsiveParams();
+        updateCarousel();
+      }, { passive: true });
+
+      // First layout
+      updateCarousel();
+    })();
+  </script>
+<script>
+/* Question entry is independent of the existing page's animation handlers. */
+(() => {
+  const form = document.getElementById('research-question-form');
+  if (!form) return;
+  const input = document.getElementById('research-question');
+  const source = document.getElementById('rq-source');
+  const study = document.getElementById('rq-study-type');
+  const period = document.getElementById('rq-period');
+  const status = document.getElementById('rq-status');
+  const toggle = document.getElementById('rq-filter-toggle');
+  const filters = document.getElementById('rq-filters');
+  toggle.addEventListener('click', () => {
+    filters.hidden = !filters.hidden;
+    toggle.setAttribute('aria-expanded', String(!filters.hidden));
+    toggle.querySelector('span').textContent = filters.hidden ? '+' : '−';
+  });
+  document.querySelectorAll('[data-research-question]').forEach(button => {
+    button.addEventListener('click', () => {
+      input.value = button.dataset.researchQuestion;
+      input.setCustomValidity('');
+      input.focus();
+    });
+  });
+  input.addEventListener('input', () => input.setCustomValidity(''));
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const query = input.value.trim();
+    if (!query) {
+      input.setCustomValidity('Please enter a research question.');
+      input.reportValidity();
+      return;
+    }
+    let term = query;
+    if (study.value) term = `(${term}) AND "${study.value}"[Publication Type]`;
+    if (period.value) term = `(${term}) AND "last ${period.value === '1' ? 'year' : period.value + ' years'}"[Publication Date]`;
+    // ClaimScape consumes these route parameters and starts its own search on mount.
+    const params = new URLSearchParams({ claim: query, q: term, n: 300 });
+    const destination = 'https://vidhidhaduk05.github.io/ExtractExperimenting-web/#/claimscape?' + params.toString();
+    status.textContent = 'Opening your question in ClaimScape…';
+    form.setAttribute('aria-busy', 'true');
+    form.querySelector('button[type="submit"]').disabled = true;
+    window.location.assign(destination);
+  });
+  // Animate suggestions in the placeholder; never overwrite a visitor's input.
+  const suggestions = Array.from(document.querySelectorAll('[data-research-question]'), b => b.dataset.researchQuestion);
+  let timer, index = 0, count = 0, deleting = false;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  function tick() {
+    if (document.activeElement === input || input.value || reduced.matches || document.hidden) return;
+    const suggestion = suggestions[index];
+    count += deleting ? -1 : 1;
+    input.placeholder = suggestion.slice(0, count) || 'What does the evidence say about…';
+    let delay = deleting ? 22 : 45;
+    if (count >= suggestion.length) { deleting = true; delay = 2400; }
+    if (count <= 0) { deleting = false; index = (index + 1) % suggestions.length; delay = 600; }
+    timer = setTimeout(tick, delay);
+  }
+  function stop() { clearTimeout(timer); }
+  function restart() { stop(); if (!input.value && !reduced.matches) timer = setTimeout(tick, 900); }
+  input.addEventListener('focus', stop);
+  input.addEventListener('blur', restart);
+  document.addEventListener('visibilitychange', () => document.hidden ? stop() : restart());
+  reduced.addEventListener('change', () => { stop(); input.placeholder = 'What does the evidence say about…'; restart(); });
+  restart();
+})();
+
+</script>
+</body>
+</html>
