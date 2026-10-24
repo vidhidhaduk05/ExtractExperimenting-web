@@ -1,8 +1,8 @@
 {
-  "backend_url": "https://taste-indirect-west-aerial.trycloudflare.com",
-  "api_url": "https://taste-indirect-west-aerial.trycloudflare.com/api",
-  "health_url": "https://taste-indirect-west-aerial.trycloudflare.com/health",
-  "updated_at": "2026-10-24T04:17:19Z",
+  "backend_url": "https://antique-das-providers-feature.trycloudflare.com",
+  "api_url": "https://antique-das-providers-feature.trycloudflare.com/api",
+  "health_url": "https://antique-das-providers-feature.trycloudflare.com/health",
+  "updated_at": "2026-10-24T04:36:26Z",
   "status": "online",
   "model": "biomni-r0"
 }
