@@ -9,7 +9,7 @@ import {
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
   Sparkles, ExternalLink, RefreshCw, CheckCheck, ChevronRight,
   TrendingUp, Award, Layers, ShieldCheck, Tag, FolderPlus, Upload,
-  Lock, Unlock, Plus, ChevronDown, ChevronUp, FileUp, Database, Save, Loader2
+  Lock, Unlock, Plus, ChevronDown, ChevronUp, FileUp, Database, Save, Loader2, Table
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { cn } from "../lib/utils";
