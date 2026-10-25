@@ -501,6 +501,8 @@ def _check_and_record_conflict(
     if latest_decision:
         decisions_set.add(latest_decision)
 
+    reviewers = {d.get("reviewer_id") for d in all_decisions if d.get("reviewer_id")}
+
     if len(decisions_set) > 1 and len(all_decisions) >= 1:
         conflict_detected = True
         existing_conflict = conn.execute(
@@ -524,8 +526,8 @@ def _check_and_record_conflict(
                 (str(uuid.uuid4()), study_id, project_id, stage,
                  r1_id, r1_dec, r2_id, r2_dec),
             )
-    elif len(all_decisions) >= 2 and len(decisions_set) == 1:
-        # All agree — resolve any existing conflict and update study status
+    elif len(reviewers) >= 2 and len(decisions_set) == 1:
+        # All distinct reviewers agree — resolve any existing conflict and update study status
         decision = latest_decision or all_decisions[0]["decision"]
         conn.execute(
             """UPDATE screening_conflicts SET
@@ -534,15 +536,21 @@ def _check_and_record_conflict(
                WHERE study_id = ? AND stage = ? AND status = 'unresolved'""",
             (decision, study_id, stage),
         )
-        # Update study screening status
-        reason_val = reason_text or all_decisions[0].get("reason_text") or all_decisions[0].get("reason_code") or ""
-        conn.execute(
-            """UPDATE studies SET
-               screening_status = ?, screening_stage = ?,
-               screening_reason = ?
-               WHERE study_id = ?""",
-            (decision, stage, reason_val, study_id),
-        )
+        # Update study screening status if not currently awaiting clarification
+        current_study = conn.execute(
+            "SELECT screening_status FROM studies WHERE study_id = ?",
+            (study_id,),
+        ).fetchone()
+        curr_status = dict(current_study).get("screening_status") if current_study else ""
+        if curr_status != "awaiting_clarification":
+            reason_val = reason_text or all_decisions[0].get("reason_text") or all_decisions[0].get("reason_code") or ""
+            conn.execute(
+                """UPDATE studies SET
+                   screening_status = ?, screening_stage = ?,
+                   screening_reason = ?
+                   WHERE study_id = ?""",
+                (decision, stage, reason_val, study_id),
+            )
 
     if hasattr(conn, "commit"):
         conn.commit()

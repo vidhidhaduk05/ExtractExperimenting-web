@@ -178,6 +178,8 @@ def trace_all_extractions(
                 noul_val = res.get("verify", {}).get("noul", 0.0)
                 item["laya_verified"] = bool(noul_val >= 0.50)
                 item["laya_confidence"] = round(float(noul_val), 4)
+                if noul_val >= 0.70:
+                    item["confidence_tag"] = "[DS]"
                 continue
             except Exception:
                 pass

@@ -289,7 +289,7 @@ async def ai_screen_fulltext(
 
     # Check human decision
     human_row = conn.execute(
-        "SELECT decision FROM screening_decisions WHERE study_id = ? AND reviewer_id != 'ai_reviewer' AND stage = 'ft' ORDER BY created_at DESC",
+        "SELECT decision FROM screening_decisions WHERE study_id = ? AND reviewer_id NOT IN ('ai_reviewer', 'ai_screener', 'ai') AND stage = 'ft' ORDER BY created_at DESC",
         (study_id,),
     ).fetchone()
     human_decision = human_row["decision"] if human_row else None
@@ -298,7 +298,7 @@ async def ai_screen_fulltext(
     if record_decision:
         dec_id = str(uuid.uuid4())
         existing_dec = conn.execute(
-            "SELECT * FROM screening_decisions WHERE study_id = ? AND reviewer_id = 'ai_reviewer' AND stage = 'ft'",
+            "SELECT * FROM screening_decisions WHERE study_id = ? AND reviewer_id IN ('ai_reviewer', 'ai_screener') AND stage = 'ft'",
             (study_id,),
         ).fetchone()
         if existing_dec:
@@ -408,7 +408,7 @@ async def ai_screen_title_abstract(
 
     # Check human decision
     human_row = conn.execute(
-        "SELECT decision FROM screening_decisions WHERE study_id = ? AND reviewer_id != 'ai_reviewer' AND stage = 'ta' ORDER BY created_at DESC",
+        "SELECT decision FROM screening_decisions WHERE study_id = ? AND reviewer_id NOT IN ('ai_reviewer', 'ai_screener', 'ai') AND stage = 'ta' ORDER BY created_at DESC",
         (study_id,),
     ).fetchone()
     human_decision = human_row["decision"] if human_row else None
@@ -445,7 +445,7 @@ async def ai_screen_title_abstract(
         else:
             dec_id = str(uuid.uuid4())
             existing_dec = conn.execute(
-                "SELECT * FROM screening_decisions WHERE study_id = ? AND reviewer_id = 'ai_reviewer' AND stage = 'ta'",
+                "SELECT * FROM screening_decisions WHERE study_id = ? AND reviewer_id IN ('ai_reviewer', 'ai_screener') AND stage = 'ta'",
                 (study_id,),
             ).fetchone()
             if existing_dec:

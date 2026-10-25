@@ -191,6 +191,18 @@ class AIScreeningPipeline:
                     now_str,
                 ),
             )
+            try:
+                from routers.screening import _check_and_record_conflict
+                _check_and_record_conflict(
+                    conn,
+                    study_id,
+                    project_id,
+                    "ta",
+                    latest_decision=new_status if new_status in ("ta_included", "excluded") else "uncertain",
+                    reason_text=reason,
+                )
+            except Exception:
+                pass
 
             results.append({
                 "study_id": study_id,
@@ -344,6 +356,18 @@ class AIScreeningPipeline:
                     now_str,
                 ),
             )
+            try:
+                from routers.screening import _check_and_record_conflict
+                _check_and_record_conflict(
+                    conn,
+                    study_id,
+                    project_id,
+                    "ta",
+                    latest_decision=new_status if new_status in ("ta_included", "excluded") else "uncertain",
+                    reason_text=reason,
+                )
+            except Exception:
+                pass
 
             results.append({
                 "study_id": study_id,
@@ -418,13 +442,22 @@ class AIScreeningPipeline:
             if pdf_doc:
                 full_text = (dict(pdf_doc).get("full_text") or "").strip()
 
-            if not full_text and not pdf_path:
-                # No PDF uploaded -> pause at awaiting_pdf
+            if not full_text and pdf_path:
+                try:
+                    from services import pdf_service
+                    p_data = pdf_service.process_pdf(study_id, file_path=pdf_path, db=conn)
+                    if p_data:
+                        full_text = (p_data.get("full_text") or "").strip()
+                except Exception as e:
+                    logger.warning(f"Could not extract text from {pdf_path}: {e}")
+
+            if not full_text:
+                # No full text -> pause at awaiting_pdf per Safety Net S3
                 conn.execute(
                     """UPDATE studies SET
                        screening_status = 'awaiting_pdf',
                        screening_stage = 'ft',
-                       screening_reason = 'Awaiting PDF upload for full-text screening'
+                       screening_reason = 'Awaiting PDF upload or text extraction for full-text screening'
                        WHERE study_id = ?""",
                     (study_id,),
                 )
@@ -434,13 +467,13 @@ class AIScreeningPipeline:
                     "decision": "awaiting_pdf",
                     "screening_status": "awaiting_pdf",
                     "confidence": 0.0,
-                    "reason": "Awaiting PDF upload",
+                    "reason": "Awaiting PDF text",
                 })
                 progress.mark_done(project_id, study_id)
                 continue
 
             # Full text screening with LLM
-            study_text = full_text or s.get("abstract") or s.get("title") or ""
+            study_text = full_text
             res = screen_fulltext_with_llm(
                 study_text=study_text,
                 pico_criteria=pico,
@@ -507,6 +540,18 @@ class AIScreeningPipeline:
                     now_str,
                 ),
             )
+            try:
+                from routers.screening import _check_and_record_conflict
+                _check_and_record_conflict(
+                    conn,
+                    study_id,
+                    project_id,
+                    "ft",
+                    latest_decision=new_status,
+                    reason_text=reason,
+                )
+            except Exception:
+                pass
 
             results.append({
                 "study_id": study_id,
