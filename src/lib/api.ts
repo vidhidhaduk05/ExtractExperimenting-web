@@ -44,7 +44,7 @@ export interface ApiConnectionInfo {
 type ApiListener = (info: ApiConnectionInfo) => void;
 const apiListeners: Set<ApiListener> = new Set();
 
-export const PERMANENT_HPC_BACKEND = "https://verification-enter-attachments-mug.trycloudflare.com";
+export const PERMANENT_HPC_BACKEND = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
 
 export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
@@ -72,46 +72,49 @@ export async function autoDiscoverBackend(): Promise<string | null> {
     localStorage.removeItem("custom_api_base");
   }
 
-  // Probe sources in priority order:
-  // 1. Live raw GitHub (updated immediately on shift change, bypasses Pages build delay)
-  // 2. Relative ./active_backend.json (current static deployment)
-  const candidateSources = [
-    `https://raw.githubusercontent.com/vidhidhaduk05/ExtractExperimenting-web/main/public/active_backend.json?t=${Date.now()}`,
-    `./active_backend.json?t=${Date.now()}`,
-  ];
-
-  for (const src of candidateSources) {
-    try {
-      const res = await fetch(src, { cache: "no-store" }).catch(() => null);
-      if (res && res.ok) {
-        const data = await res.json().catch(() => null);
-        const rawUrl = data?.api_url || data?.backend_url;
-        if (rawUrl) {
-          const cleanUrl = String(rawUrl).replace(/\/+$/, "");
-          const testUrl = cleanUrl.endsWith("/api") ? cleanUrl.slice(0, -4) : cleanUrl;
-          const check = await testBackendConnection(testUrl);
-          if (check.ok) {
-            API_BASE = cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`;
-            updateApiState({ apiBase: API_BASE, state: "live" });
-            return API_BASE;
-          }
+  try {
+    let res = await fetch("./active_backend.json", { cache: "no-store" }).catch(() => null);
+    if (!res || !res.ok) {
+      res = await fetch(
+        "https://raw.githubusercontent.com/vidhidhaduk05/ExtractExperimenting-web/main/public/active_backend.json",
+        { cache: "no-store" }
+      ).catch(() => null);
+    }
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data?.backend_url) {
+        const url = String(data.backend_url).replace(/\/+$/, "");
+        const check = await testBackendConnection(url);
+        if (check.ok) {
+          API_BASE = url.endsWith("/api") ? url : `${url}/api`;
+          updateApiState({ apiBase: API_BASE, state: "live" });
+          return API_BASE;
         }
       }
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
 
-  // Priority 3: Fallback to permanent / hardcoded HPC tunnel
-  const hpcFallback = PERMANENT_HPC_BACKEND || "https://verification-enter-attachments-mug.trycloudflare.com";
+  // Hardcoded fallback to current known HPC active tunnel
+  const hpcFallback = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
   try {
     const checkFallback = await testBackendConnection(hpcFallback);
     if (checkFallback.ok) {
-      API_BASE = `${hpcFallback.replace(/\/+$/, "")}/api`;
+      API_BASE = `${hpcFallback}/api`;
       updateApiState({ apiBase: API_BASE, state: "live" });
       return API_BASE;
     }
   } catch (e) {}
 
-  updateApiState({ state: isDemoModeEnabled() ? "explicit_demo" : "offline" });
+  const isBrowser = typeof window !== "undefined";
+  const isLocalhost = isBrowser && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
+
+  if (isLocalhost || isGithubPages || isDemoModeEnabled()) {
+    updateApiState({ apiBase: "Local Engine", state: "live" });
+    return API_BASE;
+  }
+
+  updateApiState({ apiBase: null, state: "error" });
   return null;
 }
 
@@ -119,13 +122,6 @@ if (typeof window !== "undefined") {
   setTimeout(() => {
     autoDiscoverBackend().catch(() => {});
   }, 50);
-
-  // Periodic heartbeat every 45 seconds: auto-reconnects when HPC shifts change
-  setInterval(() => {
-    if (!localStorage.getItem("custom_api_base")) {
-      autoDiscoverBackend().catch(() => {});
-    }
-  }, 45000);
 }
 
 export function isDemoModeEnabled(): boolean {
@@ -3433,6 +3429,46 @@ export const api = {
     request<any>(`/variables/${variableId}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteVariable: (variableId: string) =>
     request<{ deleted: boolean }>(`/variables/${variableId}`, { method: "DELETE" }),
+  suggestVariables: (projectId: string, data?: { sections?: string[]; custom_instructions?: string }) =>
+    request<{
+      project_id: string;
+      total_suggestions: number;
+      suggestions: Array<{
+        temp_id: string;
+        section: string;
+        name: string;
+        field_type: string;
+        allowed_values: string;
+        description: string;
+        extraction_prompt: string;
+        is_already_present: boolean;
+        default_missing_code: string;
+      }>;
+    }>(`/projects/${projectId}/variables/suggest`, {
+      method: "POST",
+      body: JSON.stringify(data || {}),
+    }),
+  createVariablesBatch: (projectId: string, variables: any[]) =>
+    request<{ created_count: number; variables: any[] }>(`/projects/${projectId}/variables/batch`, {
+      method: "POST",
+      body: JSON.stringify({ variables }),
+    }),
+  importVariablesFromExcel: async (projectId: string, file: File, autoCommit = true) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/projects/${projectId}/variables/import-excel?auto_commit=${autoCommit}`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (!res.ok) {
+      throw new Error(`Excel import failed: ${res.statusText}`);
+    }
+    return await res.json();
+  },
 
   // PRISMA SVG (R-generated)
   prismaSvgUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/svg`,

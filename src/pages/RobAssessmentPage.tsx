@@ -41,7 +41,7 @@ interface UndoRecord {
   answerId: string;
   previousAnswer: string;
   previousVerified: number;
-  previousNeedsReview: number;
+  previousNeedsReview?: number;
 }
 
 export function RobAssessmentPage() {
@@ -117,12 +117,13 @@ export function RobAssessmentPage() {
   // Compute PDF URL for the current study
   const currentPdfUrl = useMemo(() => {
     if (customPdfUrl) return customPdfUrl;
-    const currentStudyId = assessment?.study_id || "study_birua_2022";
+    const currentStudyId = assessment?.study_id || (projectId === "demo" ? "study_birua_2022" : (allStudies[0]?.study_id || ""));
     const paper = allStudies.find((p: any) => p.study_id === currentStudyId || p.id === currentStudyId) || allStudies[0];
+    if (!paper) return "";
     const base = import.meta.env.BASE_URL || "/";
     const cleanBase = base.endsWith("/") ? base : base + "/";
-    return cleanBase + "papers/" + (paper?.filename || paper?.title + ".pdf" || "Birua_2022.pdf");
-  }, [customPdfUrl, assessment?.study_id, allStudies]);
+    return paper.pdf_path || cleanBase + "papers/" + (paper.filename || (projectId === "demo" ? "Birua_2022.pdf" : ""));
+  }, [customPdfUrl, assessment?.study_id, allStudies, projectId]);
 
   useEffect(() => {
     if (assessment?.tool && !selectedNewTool) {

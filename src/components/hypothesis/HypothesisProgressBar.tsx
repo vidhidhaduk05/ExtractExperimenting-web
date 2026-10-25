@@ -25,11 +25,11 @@ export function HypothesisProgressBar({ isPending, isSuccess }: HypothesisProgre
     setElapsed(0);
 
     const timer = setInterval(() => {
-      setElapsed((prev) => prev + 1);
+      setElapsed((prev: number) => prev + 1);
     }, 1000);
 
     const pTimer = setInterval(() => {
-      setProgress((prev) => {
+      setProgress((prev: number) => {
         if (prev < 38) {
           setStage("Synthesizing directional primary alternative (H1)...");
           return prev + 5;

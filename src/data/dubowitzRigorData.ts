@@ -24,16 +24,22 @@ export interface RigorCheckItem {
   id: string;
   label: string;
   domain: string;
-  guideline: string;
+  guideline: string | null;
   outcome: "good" | "mid" | "bad" | "na";
   evidence: number;
   color: string;
   question: string;
-  quote: string;
-  location: string;
+  quote?: string;
+  location?: string;
   page: number;
-  highlights: RigorHighlight[];
-  spoke: RigorSpoke;
+  highlights?: RigorHighlight[];
+  spoke?: RigorSpoke;
+  spokeId?: string;
+  polarity?: "good" | "bad";
+  applies?: boolean;
+  p?: number;
+  status?: string;
+  ev?: any;
 }
 
 export interface RigorDomain {
@@ -42,6 +48,7 @@ export interface RigorDomain {
   score: number;
   good: number;
   total: number;
+  answered?: number;
 }
 
 export interface RigorGate {
@@ -49,6 +56,8 @@ export interface RigorGate {
   label: string;
   on: boolean;
 }
+
+export type RigorDataset = typeof DUBOWITZ_RIGOR_DATA;
 
 export const DUBOWITZ_RIGOR_DATA = {
   "paper": {

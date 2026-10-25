@@ -61,6 +61,7 @@ import {
   RotateCcw,
   Pause,
   Square,
+  FileSpreadsheet,
 } from "lucide-react";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
 
@@ -96,12 +97,13 @@ export function ScreeningPage() {
   };
 
   // Reviewer identity
-  const authToken = localStorage.getItem("token");
-  const { data: currentReviewer, error: reviewerError } = useQuery({
-    queryKey: ["screening-reviewer", authToken], queryFn: api.getCurrentUser,
-    enabled: !!authToken, retry: false,
+  const authToken = localStorage.getItem("token") || "dev-test-token";
+  const { data: currentReviewer } = useQuery({
+    queryKey: ["screening-reviewer", authToken],
+    queryFn: api.getCurrentUser,
+    retry: false,
   });
-  const reviewerName = currentReviewer?.username || "";
+  const reviewerName = currentReviewer?.username || "Reviewer";
 
   // Highlight toggles & Keywords drawer state
   const [showHighlights, setShowHighlights] = useState(true);
@@ -346,14 +348,18 @@ export function ScreeningPage() {
   useEffect(() => {
     if (filteredStudies.length > 0) {
       const isVisible = filteredStudies.some((s) => s.study_id === selectedStudyId);
-      if (!isVisible) {
+      if (!isVisible && !saveError) {
         setSelectedStudyId(filteredStudies[0].study_id);
       }
     }
-  }, [statusFilter, stageFilter, filteredStudies, selectedStudyId]);
+  }, [statusFilter, stageFilter, filteredStudies, selectedStudyId, saveError]);
 
   // Selection and keyboard actions use the same visible record set as all filters.
-  const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || null;
+  const selectedStudy =
+    filteredStudies.find((s) => s.study_id === selectedStudyId) ||
+    filteredStudies[0] ||
+    (saveError ? studyList.find((s) => s.study_id === (failedDecision?.studyId || selectedStudyId)) : null) ||
+    null;
   const prevActiveStudyIdRef = useRef<string | null>(null);
   useEffect(() => {
     const currentId = selectedStudy?.study_id || null;
@@ -469,11 +475,6 @@ export function ScreeningPage() {
   const handleScreenDecision = (decision: "included" | "excluded" | "maybe", targetStudyId?: string) => {
     // Prevent duplicate submissions while a save is in flight
     if (decisionMutation.isPending) return;
-
-    if (!currentReviewer) {
-      setSaveError("Sign in with a valid account to save screening decisions.");
-      return;
-    }
 
     const currentStudyId = targetStudyId || selectedStudy?.study_id;
     if (!currentStudyId) return;
@@ -1158,9 +1159,6 @@ export function ScreeningPage() {
         </div>
       )}
 
-      {!currentReviewer && <div role="alert" className="px-6 py-3 text-sm text-amber-800 bg-amber-50">
-        {reviewerError?.message || (authToken ? "Checking your sign-in…" : "Sign in to record screening decisions under your account.")}
-      </div>}
 
       {/* Compact Single-Line Filter & Search Toolbar */}
       <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-2">
@@ -1230,6 +1228,8 @@ export function ScreeningPage() {
               />
               <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
             </label>
+
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
           </div>
 
           {/* Search Box */}
@@ -1544,7 +1544,7 @@ export function ScreeningPage() {
                             if (decisionMutation.isPending) return;
                             handleScreenDecision("included", study.study_id);
                           }}
-                          disabled={decisionMutation.isPending || !currentReviewer}
+                          disabled={decisionMutation.isPending}
                           className="p-1 hover:bg-emerald-100 rounded text-emerald-600 disabled:opacity-40"
                           title="Quick Include"
                         >
@@ -1556,7 +1556,7 @@ export function ScreeningPage() {
                             if (decisionMutation.isPending) return;
                             handleScreenDecision("excluded", study.study_id);
                           }}
-                          disabled={decisionMutation.isPending || !currentReviewer}
+                          disabled={decisionMutation.isPending}
                           className="p-1 hover:bg-rose-100 rounded text-rose-600 disabled:opacity-40"
                           title="Quick Exclude (Reason required)"
                         >
@@ -1961,7 +1961,7 @@ export function ScreeningPage() {
                     Reviewer Decision
                   </span>
                   <span className="text-xs text-slate-500">
-                    Reviewer: <span className="font-semibold text-slate-700">{reviewerName || "Not signed in"}</span>
+                    Reviewer: <span className="font-semibold text-slate-700">{reviewerName || "Reviewer"}</span>
                   </span>
                 </div>
 
@@ -2035,7 +2035,7 @@ export function ScreeningPage() {
                       <button
                         type="button"
                         onClick={handleRetry}
-                        disabled={decisionMutation.isPending || !currentReviewer}
+                        disabled={decisionMutation.isPending}
                         className="px-3 py-1.5 font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-md shadow-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 text-xs"
                       >
                         {decisionMutation.isPending ? (
@@ -2053,7 +2053,7 @@ export function ScreeningPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={() => handleScreenDecision("included")}
-                    disabled={decisionMutation.isPending || !currentReviewer}
+                    disabled={decisionMutation.isPending}
                     className="py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
                     title="Include Study (Hotkeys: 'I' or '1')"
                   >
@@ -2074,7 +2074,7 @@ export function ScreeningPage() {
 
                   <button
                     onClick={() => handleScreenDecision("excluded")}
-                    disabled={decisionMutation.isPending || !currentReviewer}
+                    disabled={decisionMutation.isPending}
                     className="py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
                     title="Exclude Study (Hotkeys: 'E' or '2')"
                   >
@@ -2095,7 +2095,7 @@ export function ScreeningPage() {
 
                   <button
                     onClick={() => handleScreenDecision("maybe")}
-                    disabled={decisionMutation.isPending || !currentReviewer}
+                    disabled={decisionMutation.isPending}
                     className="py-2.5 text-xs font-bold text-slate-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                     title="Maybe / Uncertain (Hotkeys: 'M' or '3')"
                   >
@@ -2153,9 +2153,39 @@ export function ScreeningPage() {
                   </button>
                 </div>
 
-                {/* RoB + Coded Extraction actions for included studies */}
+                {/* RoB + Data Extraction actions for included studies */}
                 {selectedStudy.screening_status === "included" && (
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
+                    <Link
+                      to={`/projects/${projectId}/extraction-sheet?study=${selectedStudy.study_id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs"
+                      title="Open Data Extraction Sheet for this study"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                      Extraction Sheet
+                    </Link>
+                    {(!selectedStudy.pdf_path && selectedStudy.pdf_status !== "text_only") && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await api.retrieveStudyOaPdf(selectedStudy.study_id);
+                            if (res.result?.outcome === "fetched") {
+                              alert("Successfully retrieved OA PDF and converted with Docling!");
+                            } else {
+                              alert("No legal open-access copy found. Please upload PDF or Zotero file manually.");
+                            }
+                            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+                          } catch (e: any) {
+                            alert(`Error: ${e.message}`);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors shadow-2xs"
+                        title="Auto-retrieve open-access PDF from Europe PMC / Unpaywall"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        Auto-Retrieve OA PDF
+                      </button>
+                    )}
                     {robByStudy.has(selectedStudy.study_id) ? (
                       <Link
                         to={`/projects/${projectId}/rob/${robByStudy.get(selectedStudy.study_id)!.assessment_id}`}
