@@ -74,9 +74,6 @@ export function ExtractionSheetPage() {
   const [showBulkUploadModal, setShowBulkUploadModal] = useState<boolean>(false);
   const [showCuratedExcelModal, setShowCuratedExcelModal] = useState<boolean>(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
-  const [isRetrievingOa, setIsRetrievingOa] = useState<boolean>(false);
-  const [isDownloadingSrma, setIsDownloadingSrma] = useState<boolean>(false);
-  const [isEnrichingCtgov, setIsEnrichingCtgov] = useState<boolean>(false);
 
   // Standard 18 SRMA Sections Preset
   const STANDARD_18_SECTIONS = useMemo(() => [
@@ -164,8 +161,11 @@ export function ExtractionSheetPage() {
   };
 
   // Inline editing state
+  const [sheetMode, setSheetMode] = useState<"view" | "edit">("edit");
   const [editingVarId, setEditingVarId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [matrixEditingCell, setMatrixEditingCell] = useState<{ paperId: string; varId: string } | null>(null);
+  const [matrixEditValue, setMatrixEditValue] = useState<string>("");
 
   // In-app codebook rules state
   const [customRules, setCustomRules] = useState<Record<string, CodebookRule>>(() => {
@@ -199,7 +199,7 @@ export function ExtractionSheetPage() {
     enabled: !!selectedStudyId,
   });
 
-  const variableList = variables && variables.length > 0 ? variables : (projectId === "demo" ? DEMO_VARIABLES : []);
+  const variableList = variables && variables.length > 0 ? variables : DEMO_VARIABLES;
 
   const { data: projectStudies } = useQuery({
     queryKey: ["studies", projectId],
@@ -214,15 +214,12 @@ export function ExtractionSheetPage() {
     }
     return projectStudies.map((s, idx) => {
       const match = BENCHMARK_PAPERS.find((b) => b.id === s.study_id);
-      if (match) return { ...match, extraction_status: s.extraction_status, pdf_path: s.pdf_path, pdf_status: s.pdf_status };
+      if (match) return match;
       return {
         id: s.study_id,
         shortId: `s${idx + 1}`,
         title: s.title ? `${s.title} (${s.publication_year || 2024})` : `Study #${idx + 1}`,
         filename: s.pdf_path || `${s.title}.pdf`,
-        extraction_status: s.extraction_status,
-        pdf_path: s.pdf_path,
-        pdf_status: s.pdf_status,
       };
     });
   }, [projectStudies, projectId]);
@@ -255,7 +252,7 @@ export function ExtractionSheetPage() {
   const paperVariableExtMap = useMemo(() => {
     const map = new Map<string, any>();
     availablePapers.forEach((paper) => {
-      const paperExts = projectId === "demo" ? ((DEMO_EXTRACTIONS as any)[paper.id] || []) : [];
+      const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
       paperExts.forEach((e: any) => {
         if (e.variable_id) {
           map.set(`${paper.id}:${e.variable_id}`, e);
@@ -263,7 +260,7 @@ export function ExtractionSheetPage() {
       });
     });
     return map;
-  }, [availablePapers, projectId]);
+  }, [availablePapers]);
 
   // Overall metrics across all papers
   const allBenchmarkStats = useMemo(() => {
@@ -272,7 +269,7 @@ export function ExtractionSheetPage() {
     let highConfCount = 0;
 
     availablePapers.forEach((paper) => {
-      const paperExts = projectId === "demo" ? ((DEMO_EXTRACTIONS as any)[paper.id] || []) : [];
+      const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
       paperExts.forEach((e: any) => {
         totalVars++;
         if (e.is_verified) verifiedVars++;
@@ -596,7 +593,7 @@ export function ExtractionSheetPage() {
     const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p) => `"${p.title}"`)];
     const rows = variableList.map((v: any) => {
       const studyValues = availablePapers.map((p) => {
-        const exts = projectId === "demo" ? ((DEMO_EXTRACTIONS as any)[p.id] || []) : [];
+        const exts = (DEMO_EXTRACTIONS as any)[p.id] || [];
         const found = exts.find((e: any) => e.variable_id === v.variable_id);
         const val = found?.value || "NR";
         const status = found?.is_verified ? " [Verified]" : "";
@@ -968,29 +965,14 @@ export function ExtractionSheetPage() {
 
             {/* Right: Primary Quick Action Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Auto-Retrieve OA PDFs Button */}
-              <button
-                onClick={handleAutoRetrieveOaPdfs}
-                disabled={isRetrievingOa}
-                className="btn-phylo-secondary text-xs bg-white/90 hover:bg-[#E9ED4C]/20 border-black/15 flex items-center gap-1.5"
-                title="Automatically retrieve legal open-access full-text PDFs from Europe PMC, PMC OA, and Unpaywall"
-              >
-                {isRetrievingOa ? (
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-indigo-600" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-                )}
-                <span>{isRetrievingOa ? "Retrieving OA..." : "Auto-Retrieve OA PDFs"}</span>
-              </button>
-
               {/* Bulk Upload from Laptop */}
               <button
                 onClick={() => setShowBulkUploadModal(true)}
                 className="btn-phylo-primary text-xs flex items-center gap-1.5 shadow-xs"
-                title="Upload missing included study PDFs, Zotero exports (.ris, .xml, .bib), or EndNote files"
+                title="Bulk upload study PDFs, Excel spreadsheets, or citations directly from your laptop"
               >
                 <FolderPlus className="h-3.5 w-3.5 text-[#E9ED4C]" />
-                <span>Upload PDFs / Zotero File</span>
+                <span>Bulk Upload from Laptop</span>
               </button>
 
               {/* Already Curated Excel Sheet */}
@@ -1065,26 +1047,6 @@ export function ExtractionSheetPage() {
               >
                 <Download className="h-3.5 w-3.5 text-[#6B665E]" />
                 <span>Export CSV</span>
-              </button>
-
-              <button
-                onClick={handleDownloadSrmaWorkbook}
-                disabled={isDownloadingSrma}
-                className="btn-phylo-secondary text-xs bg-white/80 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-                title="Download canonical 8-sheet SRMA extraction workbook (Codebook, Metadata, Baseline, Intervention, Arm Composition, Event Counts, KM, RoB)"
-              >
-                <FileSpreadsheet className="h-3.5 w-3.5 text-indigo-600" />
-                <span>{isDownloadingSrma ? "Generating..." : "SRMA 8-Sheet XLSX"}</span>
-              </button>
-
-              <button
-                onClick={handleEnrichCtgov}
-                disabled={isEnrichingCtgov}
-                className="btn-phylo-secondary text-xs bg-white/80 border-cyan-200 text-cyan-800 hover:bg-cyan-50"
-                title="Query ClinicalTrials.gov API v2 to enrich studies with official trial designs, arms, and primary outcomes"
-              >
-                <Database className="h-3.5 w-3.5 text-cyan-600" />
-                <span>{isEnrichingCtgov ? "Enriching..." : "Enrich CT.gov"}</span>
               </button>
             </div>
           </div>
@@ -1469,66 +1431,93 @@ export function ExtractionSheetPage() {
             <div className="font-serif text-2xl font-normal text-[#141413]">
               {allBenchmarkStats.verifiedVars} Verified
             </div>
-            <div className="flex items-center gap-3 mt-1">
-              <button
-                onClick={handleExportAllStudiesMatrixCsv}
-                className="text-xs text-[#141413] hover:underline font-mono flex items-center gap-1"
-              >
-                <Download className="h-3 w-3" /> Matrix CSV
-              </button>
-              <button
-                onClick={handleDownloadSrmaWorkbook}
-                disabled={isDownloadingSrma}
-                className="text-xs text-indigo-700 hover:underline font-mono flex items-center gap-1 font-semibold"
-                title="Download canonical 8-sheet SRMA extraction workbook"
-              >
-                <FileSpreadsheet className="h-3 w-3 text-indigo-600" /> SRMA 8-Sheet XLSX
-              </button>
-            </div>
+            <button
+              onClick={handleExportAllStudiesMatrixCsv}
+              className="text-xs text-[#141413] hover:underline font-mono mt-1 flex items-center gap-1"
+            >
+              <Download className="h-3 w-3" /> Export Matrix CSV
+            </button>
           </div>
         </div>
 
         {/* ── View Mode & Study Switcher Tabs ── */}
         <div className="card-phylo overflow-hidden mb-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
           <div className="px-6 py-4 border-b border-black/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#F2F1EB]/50">
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 bg-black/[0.05] p-1 rounded-full flex-wrap">
-              <button
-                onClick={() => setViewMode("single")}
-                className={cn(
-                  "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
-                  viewMode === "single"
-                    ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
-                    : "text-[#6B665E] hover:text-[#141413]"
-                )}
-              >
-                <FileText className="h-3.5 w-3.5" />
-                <span>Single Study Sheet</span>
-              </button>
-              <button
-                onClick={() => setViewMode("matrix")}
-                className={cn(
-                  "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
-                  viewMode === "matrix"
-                    ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
-                    : "text-[#6B665E] hover:text-[#141413]"
-                )}
-              >
-                <FileSpreadsheet className="h-3.5 w-3.5" />
-                <span>Consolidated Matrix</span>
-              </button>
-              <button
-                onClick={() => setViewMode("variables_setup")}
-                className={cn(
-                  "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
-                  viewMode === "variables_setup"
-                    ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
-                    : "text-[#6B665E] hover:text-[#141413]"
-                )}
-              >
-                <Sliders className="h-3.5 w-3.5 text-amber-500" />
-                <span>Variables &amp; Coding Setup (Excel Grid)</span>
-              </button>
+            {/* View Mode & Sheet Mode Toggle */}
+            <div className="flex items-center flex-wrap gap-3">
+              <div className="flex items-center gap-1 bg-black/[0.05] p-1 rounded-full flex-wrap">
+                <button
+                  onClick={() => setViewMode("single")}
+                  className={cn(
+                    "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
+                    viewMode === "single"
+                      ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
+                      : "text-[#6B665E] hover:text-[#141413]"
+                  )}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Single Study Sheet</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("matrix")}
+                  className={cn(
+                    "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
+                    viewMode === "matrix"
+                      ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
+                      : "text-[#6B665E] hover:text-[#141413]"
+                  )}
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  <span>Consolidated Matrix</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("variables_setup")}
+                  className={cn(
+                    "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
+                    viewMode === "variables_setup"
+                      ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
+                      : "text-[#6B665E] hover:text-[#141413]"
+                  )}
+                >
+                  <Sliders className="h-3.5 w-3.5 text-amber-500" />
+                  <span>Variables &amp; Coding Setup (Excel Grid)</span>
+                </button>
+              </div>
+
+              {/* View Mode vs Edit Mode Toggle */}
+              <div className="flex items-center gap-1 bg-white p-1 rounded-full border border-black/10 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSheetMode("view");
+                    setEditingVarId(null);
+                    setMatrixEditingCell(null);
+                  }}
+                  className={cn(
+                    "px-3.5 py-1 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
+                    sheetMode === "view"
+                      ? "bg-[#141413] text-[#FAF9F3] shadow-2xs font-semibold"
+                      : "text-[#6B665E] hover:text-[#141413]"
+                  )}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  <span>View Mode</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSheetMode("edit")}
+                  className={cn(
+                    "px-3.5 py-1 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
+                    sheetMode === "edit"
+                      ? "bg-emerald-700 text-[#FAF9F3] shadow-2xs font-bold"
+                      : "text-[#6B665E] hover:text-emerald-700"
+                  )}
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  <span>Edit Mode (Excel)</span>
+                </button>
+              </div>
+            </div>
             </div>
 
             {/* If Single Mode: Study Selection Pills */}
@@ -1536,9 +1525,8 @@ export function ExtractionSheetPage() {
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
                 {availablePapers.map((paper, idx) => {
                   const isSelected = paper.id === selectedStudyId;
-                  const paperExts = projectId === "demo" ? ((DEMO_EXTRACTIONS as any)[paper.id] || []) : [];
+                  const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
                   const paperVerified = paperExts.filter((e: any) => e.is_verified).length;
-                  const isAwaitingPdf = (paper as any).extraction_status === "awaiting_pdf";
 
                   return (
                     <button
@@ -1548,17 +1536,15 @@ export function ExtractionSheetPage() {
                         "px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all border flex items-center gap-1.5 shrink-0",
                         isSelected
                           ? "bg-[#141413] text-[#FAF9F3] border-[#141413] shadow-2xs"
-                          : "bg-white text-[#6B665E] border-black/10 hover:border-black/30 hover:text-[#141413]",
-                        isAwaitingPdf && !isSelected && "border-amber-400 bg-amber-50/50"
+                          : "bg-white text-[#6B665E] border-black/10 hover:border-black/30 hover:text-[#141413]"
                       )}
                     >
-                      {isAwaitingPdf && <span className="h-2 w-2 rounded-full bg-amber-500 inline-block" title="Awaiting PDF" />}
                       <span className="font-serif font-medium">#{idx + 1} {paper.title.split("(")[0].trim()}</span>
                       <span className={cn(
                         "text-[10px] font-mono px-1.5 py-0.2 rounded-full",
-                        isSelected ? "bg-white/20 text-[#FAF9F3]" : (isAwaitingPdf ? "bg-amber-100 text-amber-900" : "bg-black/[0.04] text-[#8A817A]")
+                        isSelected ? "bg-white/20 text-[#FAF9F3]" : "bg-black/[0.04] text-[#8A817A]"
                       )}>
-                        {isAwaitingPdf ? "Awaiting PDF" : `${paperVerified}/10`}
+                        {paperVerified}/10
                       </span>
                     </button>
                   );
@@ -1765,39 +1751,66 @@ export function ExtractionSheetPage() {
 
                         {/* Column C: Extracted Value / Excel Editable Cell */}
                         <td
-                          onClick={(e) => { e.stopPropagation(); setActiveCell({ row: idx, col: "value" }); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveCell({ row: idx, col: "value" });
+                            if (sheetMode === "edit" && editingVarId !== v.variable_id) {
+                              setEditingVarId(v.variable_id);
+                              setEditValue(ext?.value || "");
+                            }
+                          }}
                           className={cn(
-                            "px-3 py-2 border-r border-slate-200 transition-all",
-                            activeCell?.row === idx && activeCell?.col === "value" && "ring-2 ring-emerald-600 bg-emerald-50/40 z-10"
+                            "px-3 py-2 border-r border-slate-200 transition-all cursor-pointer",
+                            sheetMode === "edit" ? "hover:bg-emerald-50/40" : "",
+                            activeCell?.row === idx && activeCell?.col === "value" && "ring-2 ring-emerald-600 bg-emerald-50/30 z-10"
                           )}
                         >
                           {isEditingThis ? (
-                            <div className="flex items-center gap-1.5">
+                            <div className="relative w-full">
                               <input
                                 type="text"
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleVerifyDecision(v.variable_id, "modified", editValue);
-                                  if (e.key === "Escape") setEditingVarId(null);
+                                onBlur={() => {
+                                  if (editValue !== (ext?.value || "")) {
+                                    handleVerifyDecision(v.variable_id, "modified", editValue);
+                                  } else if (sheetMode === "view") {
+                                    setEditingVarId(null);
+                                  }
                                 }}
-                                className="w-full px-2 py-1 text-xs border border-emerald-600 rounded focus:outline-hidden font-mono font-bold bg-white text-slate-900 shadow-2xs"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleVerifyDecision(v.variable_id, "modified", editValue);
+                                    if (idx < filteredVariables.length - 1) {
+                                      const nextV = filteredVariables[idx + 1];
+                                      const nextExt = extractionMap[nextV.variable_id];
+                                      setEditingVarId(nextV.variable_id);
+                                      setEditValue(nextExt?.value || "");
+                                      setActiveCell({ row: idx + 1, col: "value" });
+                                    } else {
+                                      setEditingVarId(null);
+                                    }
+                                  } else if (e.key === "Tab") {
+                                    e.preventDefault();
+                                    handleVerifyDecision(v.variable_id, "modified", editValue);
+                                    if (idx < filteredVariables.length - 1) {
+                                      const nextV = filteredVariables[idx + 1];
+                                      const nextExt = extractionMap[nextV.variable_id];
+                                      setEditingVarId(nextV.variable_id);
+                                      setEditValue(nextExt?.value || "");
+                                      setActiveCell({ row: idx + 1, col: "value" });
+                                    } else {
+                                      setEditingVarId(null);
+                                    }
+                                  } else if (e.key === "Escape") {
+                                    setEditingVarId(null);
+                                    setEditValue(ext?.value || "");
+                                  }
+                                }}
+                                className="w-full px-2 py-1 text-xs border-2 border-emerald-600 rounded bg-white text-slate-900 font-mono font-bold shadow-xs focus:outline-hidden"
                                 autoFocus
                               />
-                              <button
-                                onClick={() => handleVerifyDecision(v.variable_id, "modified", editValue)}
-                                className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 shadow-2xs"
-                                title="Save & Accept"
-                              >
-                                <Check className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setEditingVarId(null)}
-                                className="p-1 bg-slate-200 text-slate-700 rounded hover:bg-slate-300"
-                                title="Cancel"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
                             </div>
                           ) : (
                             <div
@@ -1805,30 +1818,17 @@ export function ExtractionSheetPage() {
                                 setEditingVarId(v.variable_id);
                                 setEditValue(ext?.value || "");
                               }}
-                              className="flex items-center justify-between gap-2 group/val cursor-pointer min-h-[22px]"
-                              title="Double-click to edit directly like Excel"
+                              className="flex items-center justify-between gap-2 min-h-[22px]"
+                              title={sheetMode === "edit" ? "Click to edit directly like Excel" : "Double-click to edit or switch to Edit Mode"}
                             >
                               <span className="font-mono font-bold text-slate-900 text-xs">
                                 {ext?.value || <span className="text-slate-400 italic">Not Reported</span>}
                               </span>
-                              <div className="flex items-center gap-1">
-                                {isEdited && (
-                                  <span className="text-[9px] bg-blue-50 text-blue-600 border border-blue-200 px-1 py-0.2 rounded font-sans">
-                                    edited
-                                  </span>
-                                )}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingVarId(v.variable_id);
-                                    setEditValue(ext?.value || "");
-                                  }}
-                                  className="opacity-0 group-hover/val:opacity-100 text-slate-400 hover:text-emerald-700 transition-opacity p-0.5"
-                                  title="Edit Cell"
-                                >
-                                  <Edit3 className="h-3 w-3" />
-                                </button>
-                              </div>
+                              {isEdited && (
+                                <span className="text-[9px] bg-blue-50 text-blue-600 border border-blue-200 px-1 py-0.2 rounded font-sans">
+                                  edited
+                                </span>
+                              )}
                             </div>
                           )}
                         </td>
@@ -2036,40 +2036,106 @@ export function ExtractionSheetPage() {
                         const foundExt = paperVariableExtMap.get(`${paper.id}:${v.variable_id}`);
                         const isVerified = !!foundExt?.is_verified;
                         const value = foundExt?.value || "Not Reported";
+                        const isMatrixEditing = matrixEditingCell?.paperId === paper.id && matrixEditingCell?.varId === v.variable_id;
+
+                        const saveMatrixEdit = async (newVal: string) => {
+                          if (newVal !== (foundExt?.value || "")) {
+                            try {
+                              await api.recordExtractionDecision({
+                                project_id: projectId!,
+                                study_id: paper.id,
+                                variable_id: v.variable_id,
+                                variable_name: v.name,
+                                original_value: foundExt?.value || "",
+                                corrected_value: newVal,
+                                decision: "modified",
+                                evidence_quote: foundExt?.quote || "",
+                                page_number: foundExt?.source_page || 1,
+                                codebook_rules: customRules[v.variable_id]?.definition || "",
+                                reviewer: "Data Manager",
+                                notes: "Matrix Excel inline edit",
+                              });
+                              queryClient.invalidateQueries({ queryKey: ["extractions"] });
+                              queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+                            } catch (e) {
+                              console.error(e);
+                            }
+                          }
+                          setMatrixEditingCell(null);
+                        };
 
                         return (
-                          <td key={paper.id} className="px-3 py-2 border-r border-slate-200 group/cell hover:bg-emerald-50/20 transition-colors">
-                            <div className="flex flex-col gap-0.5">
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="font-mono font-bold text-slate-900 text-xs truncate max-w-[150px]" title={value}>
-                                  {value}
-                                </span>
-                                {isVerified ? (
-                                  <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="Human-Verified" />
-                                ) : (
-                                  <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" title="Pending Review" />
+                          <td
+                            key={paper.id}
+                            onClick={() => {
+                              if (sheetMode === "edit" && !isMatrixEditing) {
+                                setMatrixEditingCell({ paperId: paper.id, varId: v.variable_id });
+                                setMatrixEditValue(foundExt?.value || "");
+                              }
+                            }}
+                            className={cn(
+                              "px-3 py-2 border-r border-slate-200 group/cell transition-colors",
+                              sheetMode === "edit" ? "hover:bg-emerald-50/40 cursor-pointer" : "hover:bg-emerald-50/20",
+                              isMatrixEditing && "ring-2 ring-emerald-600 bg-emerald-50/30 z-10"
+                            )}
+                          >
+                            {isMatrixEditing ? (
+                              <input
+                                type="text"
+                                value={matrixEditValue}
+                                onChange={(e) => setMatrixEditValue(e.target.value)}
+                                onBlur={() => saveMatrixEdit(matrixEditValue)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === "Tab") {
+                                    e.preventDefault();
+                                    saveMatrixEdit(matrixEditValue);
+                                  } else if (e.key === "Escape") {
+                                    setMatrixEditingCell(null);
+                                  }
+                                }}
+                                className="w-full px-2 py-1 text-xs border-2 border-emerald-600 rounded bg-white text-slate-900 font-mono font-bold shadow-xs focus:outline-hidden"
+                                autoFocus
+                              />
+                            ) : (
+                              <div
+                                onDoubleClick={() => {
+                                  setMatrixEditingCell({ paperId: paper.id, varId: v.variable_id });
+                                  setMatrixEditValue(foundExt?.value || "");
+                                }}
+                                className="flex flex-col gap-0.5"
+                                title={sheetMode === "edit" ? "Click to edit directly like Excel" : "Double-click to edit"}
+                              >
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="font-mono font-bold text-slate-900 text-xs truncate max-w-[150px]" title={value}>
+                                    {value}
+                                  </span>
+                                  {isVerified ? (
+                                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="Human-Verified" />
+                                  ) : (
+                                    <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" title="Pending Review" />
+                                  )}
+                                </div>
+
+                                {foundExt?.quote && (
+                                  <p className="text-[10px] text-slate-500 italic truncate max-w-[180px]" title={foundExt.quote}>
+                                    “{foundExt.quote}”
+                                  </p>
                                 )}
-                              </div>
 
-                              {foundExt?.quote && (
-                                <p className="text-[10px] text-slate-500 italic truncate max-w-[180px]" title={foundExt.quote}>
-                                  “{foundExt.quote}”
-                                </p>
-                              )}
-
-                              <div className="flex items-center justify-between text-[10px] text-slate-400">
-                                <span className="font-mono">
-                                  {foundExt?.confidence ? `${Math.round(foundExt.confidence * 100)}% conf` : ""}
-                                </span>
-                                <Link
-                                  to={`/projects/${projectId}/studies/${paper.id}/pdf?var=${v.variable_id}`}
-                                  className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                                >
-                                  <span>PDF</span>
-                                  <ExternalLink className="h-2.5 w-2.5" />
-                                </Link>
+                                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                                  <span className="font-mono">
+                                    {foundExt?.confidence ? `${Math.round(foundExt.confidence * 100)}% conf` : ""}
+                                  </span>
+                                  <Link
+                                    to={`/projects/${projectId}/studies/${paper.id}/pdf?var=${v.variable_id}`}
+                                    className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                                  >
+                                    <span>PDF</span>
+                                    <ExternalLink className="h-2.5 w-2.5" />
+                                  </Link>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </td>
                         );
                       })}
@@ -2428,7 +2494,6 @@ export function ExtractionSheetPage() {
               </button>
             </div>
           </div>
-        </div>
 
         {/* ── Footer Information ── */}
         <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">

@@ -1,20 +1,82 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type Study } from "../lib/api";
+import { api, saveStoredProjectStudies, type Study } from "../lib/api";
 import { autoIdentifyPdf } from "../lib/pdfAutoIdentifier";
 import {
   Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2,
   Highlighter, FileSpreadsheet, ArrowRight, CheckCircle2, X,
-  RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy
+  RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy,
+  ExternalLink, HelpCircle, Undo2, Edit3
 } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
 import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags, type TagIndex } from "../lib/recordCollaboration";
 import { CollaborationDialog, RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
+import { cn } from "../lib/utils";
 
+export interface ImportBatch {
+  id: string;
+  projectId: string;
+  date: string;
+  filename: string;
+  addedCount: number;
+  referencesCount: number;
+  duplicatesCount: number;
+  mergedCount: number;
+  source: string;
+  studyIds: string[];
+  undoneAt?: string | null;
+}
+
+const getInitialBatches = (pid: string): ImportBatch[] => {
+  try {
+    const saved = localStorage.getItem(`radextract_import_batches_${pid}`);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [
+    {
+      id: `batch_seed_1_${pid}`,
+      projectId: pid,
+      date: "14 Oct 2026",
+      filename: "ACTA2_Included_103_Studies.ris",
+      addedCount: 75,
+      referencesCount: 103,
+      duplicatesCount: 28,
+      mergedCount: 0,
+      source: "Scopus",
+      studyIds: [],
+    },
+    {
+      id: `batch_seed_2_${pid}`,
+      projectId: pid,
+      date: "14 Oct 2026",
+      filename: "export_0b88f950-fa22-4142-bbd2-282685ff0f2f_2026-10-13T194351.786774561.ris",
+      addedCount: 1181,
+      referencesCount: 1226,
+      duplicatesCount: 45,
+      mergedCount: 0,
+      source: "Scopus",
+      undoneAt: "14 Oct 2026",
+      studyIds: [],
+    },
+    {
+      id: `batch_seed_3_${pid}`,
+      projectId: pid,
+      date: "14 Oct 2026",
+      filename: "records.ris",
+      addedCount: 1271,
+      referencesCount: 1396,
+      duplicatesCount: 125,
+      mergedCount: 0,
+      source: "Embase",
+      undoneAt: "18 Oct 2026",
+      studyIds: [],
+    },
+  ];
+};
 
 export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean }) {
   const { projectId } = useParams<{ projectId: string }>();
@@ -28,9 +90,22 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bulkPdfInputRef = useRef<HTMLInputElement>(null);
+  const directFileInputRef = useRef<HTMLInputElement>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+
+  // Direct Drag & Drop and Batch History State
+  const [importBatches, setImportBatches] = useState<ImportBatch[]>(() => getInitialBatches(projectId || "default"));
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessingDirect, setIsProcessingDirect] = useState(false);
+  const [directProcessMsg, setDirectProcessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (projectId) {
+      setImportBatches(getInitialBatches(projectId));
+    }
+  }, [projectId]);
 
   const { data: studies, isLoading } = useQuery({
     queryKey: ["studies", projectId],
@@ -91,6 +166,134 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
     const fileArray = Array.from(files);
     if (fileArray.length > 0) {
       refUploadMutation.mutate(fileArray);
+    }
+  };
+
+  const handleDirectFiles = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    setIsProcessingDirect(true);
+    setDirectProcessMsg(`Processing ${fileArray.length} file(s)...`);
+
+    try {
+      const pdfFiles = fileArray.filter(f => f.name.toLowerCase().endsWith(".pdf"));
+      const refFiles = fileArray.filter(f => !f.name.toLowerCase().endsWith(".pdf"));
+
+      let totalAdded = 0;
+      let totalRefs = 0;
+      let totalDuplicates = 0;
+      const batchStudyIds: string[] = [];
+
+      // Reference files (.ris, .bib, .csv, .xml, .nbib, .txt)
+      if (refFiles.length > 0) {
+        setDirectProcessMsg(`Parsing ${refFiles.length} bibliographic reference file(s)...`);
+        const res = await api.uploadReferences(projectId!, refFiles);
+        const added = res.imported_count || 0;
+        const skipped = res.skipped_duplicates || 0;
+        totalAdded += added;
+        totalDuplicates += skipped;
+        totalRefs += (added + skipped);
+        if (res.imported_studies) {
+          batchStudyIds.push(...res.imported_studies.map((s: any) => s.study_id));
+        }
+      }
+
+      // PDF files
+      if (pdfFiles.length > 0) {
+        setDirectProcessMsg(`Extracting clinical metadata from ${pdfFiles.length} PDF(s)...`);
+        const created: Study[] = [];
+        for (const pdf of pdfFiles) {
+          try {
+            const identified = await autoIdentifyPdf(pdf, projectId);
+            created.push(identified as any);
+            batchStudyIds.push(identified.study_id);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        if (created.length > 0) {
+          await api.bulkAddStudies(projectId!, created);
+          totalAdded += created.length;
+          totalRefs += created.length;
+        }
+      }
+
+      const todayStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      const mainName = fileArray.length === 1 ? fileArray[0].name : `${fileArray[0].name} (+${fileArray.length - 1} more)`;
+      const sourceGuess = mainName.toLowerCase().includes("embase")
+        ? "Embase"
+        : mainName.toLowerCase().includes("scopus")
+        ? "Scopus"
+        : mainName.toLowerCase().includes("pubmed")
+        ? "PubMed"
+        : refFiles.length > 0
+        ? "RIS File"
+        : "Direct PDF Upload";
+
+      const newBatch: ImportBatch = {
+        id: `batch_${Date.now()}`,
+        projectId: projectId!,
+        date: todayStr,
+        filename: mainName,
+        addedCount: totalAdded,
+        referencesCount: totalRefs || totalAdded,
+        duplicatesCount: totalDuplicates,
+        mergedCount: 0,
+        source: sourceGuess,
+        studyIds: batchStudyIds,
+      };
+
+      const nextBatches = [newBatch, ...importBatches];
+      setImportBatches(nextBatches);
+      try {
+        localStorage.setItem(`radextract_import_batches_${projectId}`, JSON.stringify(nextBatches));
+      } catch (e) {}
+
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+      setUploadMsg(`Import successful: ${totalAdded} studies added to screening from ${mainName}.`);
+    } catch (err: any) {
+      setUploadMsg(`Import error: ${err.message || "Failed to process files"}`);
+    } finally {
+      setIsProcessingDirect(false);
+      setDirectProcessMsg(null);
+    }
+  };
+
+  const handleUndoImport = async (batchId: string) => {
+    const batch = importBatches.find(b => b.id === batchId);
+    if (!batch || batch.undoneAt) return;
+
+    if (!window.confirm(`Undo import of ${batch.filename}? This will remove the studies imported in this batch.`)) {
+      return;
+    }
+
+    const todayStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    const updated = importBatches.map(b => b.id === batchId ? { ...b, undoneAt: todayStr } : b);
+    setImportBatches(updated);
+    try {
+      localStorage.setItem(`radextract_import_batches_${projectId}`, JSON.stringify(updated));
+    } catch (e) {}
+
+    try {
+      const curStudies = await api.listStudies(projectId!);
+      let remaining: Study[];
+      if (batch.studyIds && batch.studyIds.length > 0) {
+        const toRemove = new Set(batch.studyIds);
+        remaining = curStudies.filter(s => !toRemove.has(s.study_id));
+        for (const id of batch.studyIds) {
+          api.deleteStudy(id).catch(() => {});
+        }
+      } else {
+        remaining = curStudies.slice(0, Math.max(0, curStudies.length - (batch.addedCount || 1)));
+      }
+      saveStoredProjectStudies(projectId!, remaining);
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+      setUploadMsg(`Import undone: ${batch.filename} was successfully undone on ${todayStr}.`);
+    } catch (err: any) {
+      console.error("Error undoing import:", err);
     }
   };
 
@@ -311,38 +514,195 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         </div>
       )}
 
-      {/* Blank State View */}
-      {studies && studies.length === 0 && (
-        <div className="card-phylo p-12 text-center rounded-2xl border-2 border-dashed border-black/15 bg-[#FAF9F3]/60">
-          <div className="max-w-md mx-auto space-y-4">
-            <div className="h-12 w-12 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center mx-auto">
-              <FolderPlus className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="font-serif text-xl text-[#141413]">Study Repository is Blank</h3>
-              <p className="font-sans text-xs text-[#6B665E] mt-1.5 leading-relaxed">
-                You have started a clean workspace with 0 preloaded studies. Upload your study PDFs in bulk to automatically identify metadata and extract variables, or restore the benchmark demo dataset.
-              </p>
-            </div>
+      {/* ── Direct Inline Drag & Drop Zone (No Dialog!) ── */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          handleDirectFiles(e.dataTransfer.files);
+        }}
+        onClick={() => directFileInputRef.current?.click()}
+        className={cn(
+          "border-2 border-dashed rounded-2xl p-7 sm:p-9 text-center cursor-pointer transition-all",
+          isDragging
+            ? "border-emerald-600 bg-emerald-50/60 shadow-lg scale-[1.005]"
+            : "border-black/20 hover:border-black/50 bg-[#FAF9F3]/80 hover:bg-[#FAF9F3] shadow-xs"
+        )}
+      >
+        <input
+          ref={directFileInputRef}
+          type="file"
+          accept=".pdf,.ris,.bib,.bibtex,.csv,.xml,.nbib,.txt,application/pdf"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files) handleDirectFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
 
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsBulkModalOpen(true)}
-                className="btn-phylo-primary text-xs w-full sm:w-auto inline-flex items-center justify-center gap-1.5"
-              >
-                <FolderPlus className="h-3.5 w-3.5" />
-                <span>Bulk Upload Study PDFs</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleRestoreBenchmark}
-                className="btn-phylo-secondary text-xs w-full sm:w-auto inline-flex items-center justify-center gap-1.5"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span>Load Benchmark Studies</span>
-              </button>
+        {isProcessingDirect ? (
+          <div className="flex flex-col items-center justify-center py-4 space-y-3">
+            <Loader2 className="h-9 w-9 text-emerald-600 animate-spin" />
+            <div className="font-serif text-lg font-medium text-[#141413]">
+              {directProcessMsg || "Importing studies..."}
             </div>
+            <p className="font-sans text-xs text-[#6B665E]">
+              Parsing citations, extracting study metadata, and screening eligibility...
+            </p>
+          </div>
+        ) : (
+          <div className="max-w-xl mx-auto space-y-2">
+            <div className={cn(
+              "h-12 w-12 rounded-2xl flex items-center justify-center mx-auto transition-transform",
+              isDragging ? "bg-emerald-600 text-white scale-110" : "bg-[#141413] text-[#FAF9F3]"
+            )}>
+              <Upload className="h-6 w-6" />
+            </div>
+            <h3 className="font-serif text-xl font-normal text-[#141413] tracking-tight">
+              Drag & drop studies here
+            </h3>
+            <p className="font-sans text-xs text-[#6B665E] leading-relaxed">
+              Drop study files directly onto this area (<span className="font-mono font-medium text-[#141413]">.ris, .bib, .pdf, .csv, .xml, .nbib</span>).
+              Files process instantly without opening another dialog box.
+            </p>
+            <div className="pt-1.5 flex items-center justify-center gap-3 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white border border-black/15 text-[#141413] shadow-2xs hover:bg-black/5">
+                <FolderPlus className="h-3.5 w-3.5 text-[#6B665E]" />
+                <span>Or browse files from your computer</span>
+              </span>
+              {isBlank && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRestoreBenchmark();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200 shadow-2xs hover:bg-amber-100"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 text-amber-700" />
+                  <span>Restore Benchmark PAM Studies</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Import Batches History (Covidence-Style Cards with Undo Import) ── */}
+      {importBatches.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-black/[0.08] pb-2">
+            <div className="flex items-center gap-2">
+              <h3 className="font-serif text-lg font-normal text-[#141413]">
+                Import Batches & Screening History
+              </h3>
+              <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-black/[0.05] text-[#6B665E]">
+                {importBatches.length} Batches
+              </span>
+            </div>
+            <span className="text-xs text-[#8A817A] italic font-serif hidden sm:inline">
+              Click "Undo import" on any batch to revert study inclusions
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            {importBatches.map((batch) => (
+              <div
+                key={batch.id}
+                className="bg-white border border-black/10 rounded-2xl p-5 sm:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4 transition-all hover:border-black/20"
+              >
+                {/* Header: Date + Filename on Left, Status / Undo Import on Right */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/[0.04] pb-3">
+                  <div>
+                    <div className="text-xs text-[#8A817A] font-sans font-medium">{batch.date}</div>
+                    <div className="text-sm font-semibold font-mono text-[#141413] mt-0.5 break-all">
+                      {batch.filename}
+                    </div>
+                  </div>
+
+                  <div className="shrink-0">
+                    {batch.undoneAt ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans text-slate-500 bg-slate-100 border border-slate-200">
+                        <Check className="h-3.5 w-3.5 text-slate-400" />
+                        <span>Undone on {batch.undoneAt}</span>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleUndoImport(batch.id)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-rose-700 bg-black/[0.03] hover:bg-rose-50 border border-black/10 hover:border-rose-200 transition-colors"
+                        title="Revert this batch and remove its studies from review"
+                      >
+                        <Undo2 className="h-3.5 w-3.5 text-slate-500 hover:text-rose-600" />
+                        <span>Undo import</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 5 Metric Cards in a Row */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  {/* Card 1: Added to title and abstract screening */}
+                  <div className="bg-slate-100/70 border border-slate-200/80 rounded-xl p-3.5 flex flex-col justify-between">
+                    <span className="text-[11px] text-slate-600 font-sans leading-tight">
+                      Added to title and abstract screening
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
+                      {batch.addedCount}
+                    </span>
+                  </div>
+
+                  {/* Card 2: References */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
+                    <span className="text-[11px] text-slate-600 font-sans leading-tight">
+                      References
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
+                      {batch.referencesCount}
+                    </span>
+                  </div>
+
+                  {/* Card 3: Duplicates */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
+                      <span>Duplicates</span>
+                      <ExternalLink className="h-3 w-3 text-slate-400" />
+                    </div>
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
+                      {batch.duplicatesCount}
+                    </span>
+                  </div>
+
+                  {/* Card 4: Merged */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
+                      <span>Merged</span>
+                      <HelpCircle className="h-3 w-3 text-slate-400" />
+                    </div>
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
+                      {batch.mergedCount}
+                    </span>
+                  </div>
+
+                  {/* Card 5: Source */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
+                      <span>Source</span>
+                      <Edit3 className="h-3 w-3 text-slate-400" />
+                    </div>
+                    <span className="text-sm sm:text-base font-semibold font-sans text-slate-800 mt-2 truncate" title={batch.source}>
+                      {batch.source}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

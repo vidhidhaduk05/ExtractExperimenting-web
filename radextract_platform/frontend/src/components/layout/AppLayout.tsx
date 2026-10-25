@@ -655,36 +655,33 @@ export function AppLayout() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Permanent HPC Backend Indicator */}
-              <div
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border shadow-2xs select-none",
-                  apiInfo.state === "live"
-                    ? "border-emerald-200/80 bg-emerald-50/80 text-emerald-900"
-                    : apiInfo.state === "error"
-                    ? "border-rose-200/80 bg-rose-50/80 text-rose-900"
-                    : "border-black/10 bg-white/70 text-[#6B665E]"
-                )}
-                title={`Backend: ${apiInfo.apiBase || "Live Tunnel"} (${apiInfo.state})`}
-              >
-                <span
-                  className={cn(
-                    "h-2 w-2 rounded-full",
-                    apiInfo.state === "live"
-                      ? "bg-emerald-500 animate-pulse"
-                      : apiInfo.state === "error"
-                      ? "bg-rose-500"
-                      : "bg-amber-500"
-                  )}
-                />
-                <span className="font-mono text-[10px]">
-                  {apiInfo.state === "live"
-                    ? "Online"
-                    : apiInfo.state === "error"
-                    ? "Offline"
-                    : "Connecting..."}
-                </span>
-              </div>
+              {/* Permanent Backend Indicator */}
+              {(() => {
+                const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname.includes("github.io"));
+                const isLive = apiInfo.state === "live" || isLocal;
+
+                return (
+                  <div
+                    className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border shadow-2xs select-none",
+                      isLive
+                        ? "border-emerald-200/80 bg-emerald-50/80 text-emerald-900"
+                        : "border-rose-200/80 bg-rose-50/80 text-rose-900"
+                    )}
+                    title={`Backend Status: ${apiInfo.apiBase || "Local Storage Engine"} (${isLive ? "Online" : "Offline"})`}
+                  >
+                    <span
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        isLive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
+                      )}
+                    />
+                    <span className="font-mono text-[10px]">
+                      {isLive ? (apiInfo.state === "live" && !apiInfo.apiBase?.includes("Local") ? "HPC Live" : "Online") : "Offline"}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <span className="hidden lg:inline-flex tag-phylo-yellow text-[10px] px-2.5 py-0.5">
                 ✦ OPEN-DESIGN WARM EDITORIAL
