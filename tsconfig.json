@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "Bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": false
+  },
+  "include": [
+    "src",
+    "radextract_platform/frontend/src"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/setupTests.ts",
+    "radextract_platform/frontend/src/**/*.test.ts",
+    "radextract_platform/frontend/src/**/*.test.tsx",
+    "radextract_platform/frontend/src/setupTests.ts",
+    "node_modules",
+    "radextract_platform/frontend/node_modules"
+  ]
+}

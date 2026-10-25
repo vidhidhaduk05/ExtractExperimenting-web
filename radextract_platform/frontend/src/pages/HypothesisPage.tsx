@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type SecondaryHypothesis } from "../lib/api";
-import { ArrowLeft, Lightbulb, HelpCircle, Plus, Trash2, Loader2, CheckCircle } from "lucide-react";
+import { ArrowLeft, Lightbulb, HelpCircle, Plus, Trash2, Loader2, CheckCircle, Sparkles } from "lucide-react";
+import { HypothesisProgressBar } from "../components/hypothesis/HypothesisProgressBar";
 
 export function HypothesisPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -35,6 +36,20 @@ export function HypothesisPage() {
         secondary_hypotheses: secondary,
       }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    },
+  });
+
+  const generateHypMutation = useMutation({
+    mutationFn: () => api.generateHypothesis(projectId!),
+    onSuccess: (data) => {
+      if (data.hypothesis) setHypothesis(data.hypothesis);
+      if (data.secondary_hypotheses && data.secondary_hypotheses.length > 0) {
+        setSecondary(data.secondary_hypotheses);
+      }
       queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       setSaved(true);
@@ -93,12 +108,34 @@ export function HypothesisPage() {
             />
           </div>
 
+          {/* Real-time AI Reasoning Progress Bar */}
+          <HypothesisProgressBar isPending={generateHypMutation.isPending} isSuccess={saved} />
+
           {/* Primary Hypothesis */}
           <div className="card p-5">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <Lightbulb className="h-4 w-4 text-phylo-orange" />
-              Primary Hypothesis
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Lightbulb className="h-4 w-4 text-phylo-orange" />
+                Primary Hypothesis
+              </label>
+              <button
+                type="button"
+                onClick={() => generateHypMutation.mutate()}
+                disabled={generateHypMutation.isPending}
+                className="text-xs text-phylo-blue hover:text-blue-700 font-medium flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors border border-blue-200"
+                title="Synthesize directional primary and null hypotheses from your PICO elements"
+              >
+                {generateHypMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Synthesizing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5 text-phylo-blue" /> Auto-Formulate with AI
+                  </>
+                )}
+              </button>
+            </div>
             <textarea
               className="input min-h-[80px]"
               value={hypothesis}

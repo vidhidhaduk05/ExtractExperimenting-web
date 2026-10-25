@@ -41,7 +41,7 @@ echo "[*] Starting uvicorn with 2 workers on 0.0.0.0:8000..."
 nohup "$PYTHON_BIN" -m uvicorn main:app \
   --host 0.0.0.0 \
   --port 8000 \
-  --workers 2 \
+  --workers 4 \
   --timeout-keep-alive 120 \
   > "$LOG_FILE" 2>&1 & disown
 

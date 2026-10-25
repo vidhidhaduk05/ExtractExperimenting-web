@@ -9,8 +9,6 @@ Concise, short alerts with subjects:
   - shift manager - failure
 """
 
-from __future__ import annotations
-
 import os
 import sys
 import socket
@@ -206,15 +204,10 @@ if __name__ == "__main__":
     parser.add_argument("--node", dest="node", default=None)
     parser.add_argument("--url", dest="url", default=None)
     parser.add_argument("--details", dest="details", default=None)
-    parser.add_argument("--status", dest="status", default="RESOLVED")
+    parser.add_argument("--status", dest="status", default=None)
 
-    parsed, unknown = parser.parse_known_args()
+    parsed, _ = parser.parse_known_args()
     action = (parsed.flag_action or parsed.positional_action or "").lower().strip()
-
-    if not action and len(sys.argv) > 1:
-        first = sys.argv[1].lower().strip()
-        if not first.startswith("-"):
-            action = first
 
     if action == "start":
         job = parsed.job or (parsed.args[0] if len(parsed.args) > 0 else os.environ.get("SLURM_JOB_ID", "local"))

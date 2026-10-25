@@ -44,6 +44,21 @@ export function StudyImport() {
       api.searchMultiDatabase({ query, sources: ['PubMed', 'OpenAlex'], max_per_source: 5 }),
   });
 
+  const handleSelectSearchResult = (item: any) => {
+    setForm((prev) => ({
+      ...prev,
+      title: item.title || prev.title,
+      authors: Array.isArray(item.authors) ? item.authors.join(", ") : (item.authors || prev.authors),
+      journal: item.journal || prev.journal,
+      doi: item.doi || prev.doi,
+      pmid: item.pmid || prev.pmid,
+      publication_year: item.year ? String(item.year) : prev.publication_year,
+      source: item.source || "Multi-Database Search",
+      abstract: item.abstract || prev.abstract,
+    }));
+    setAutoIdentifiedBadge(`Loaded from ${item.source}: "${item.title}"`);
+  };
+
   // PMID lookup
   const pmidLookupMutation = useMutation({
     mutationFn: (pmid: string) => api.pubmedLookup(pmid),
@@ -266,6 +281,92 @@ export function StudyImport() {
             <div className="space-y-0.5">
               <span className="font-semibold block">{autoIdentifiedBadge}</span>
               <span className="text-[11px] text-emerald-700 block">Form fields below have been pre-filled automatically. You can review them or submit directly.</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Multi-Database Literature Discovery (PubMed & OpenAlex) */}
+      <div className="card-phylo-warm p-6 rounded-2xl border border-black/10">
+        <div className="flex items-center justify-between mb-2">
+          <label className="flex items-center gap-2 text-sm font-serif font-semibold text-[#141413]">
+            <Search className="h-4 w-4 text-indigo-600" />
+            Multi-Database Literature Discovery (PubMed &amp; OpenAlex)
+          </label>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-mono font-medium">
+            LIVE DISCOVERY
+          </span>
+        </div>
+        <p className="text-xs text-[#6B665E] mb-3">
+          Search across PubMed and OpenAlex by topic, disease, or clinical trial keywords to preview and import study metadata directly into this project.
+        </p>
+
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="e.g. glioblastoma immunotherapy, cerebral arteriovenous malformation..."
+              value={previewQuery}
+              onChange={(e) => setPreviewQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && previewQuery.trim()) {
+                  e.preventDefault();
+                  previewMutation.mutate(previewQuery.trim());
+                }
+              }}
+              className="input pl-9 text-xs w-full"
+            />
+          </div>
+          <button
+            type="button"
+            disabled={previewMutation.isPending || !previewQuery.trim()}
+            onClick={() => previewMutation.mutate(previewQuery.trim())}
+            className="btn-phylo-primary text-xs px-4 flex items-center gap-1.5 shrink-0"
+          >
+            {previewMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+            <span>Search</span>
+          </button>
+        </div>
+
+        {previewMutation.isError && (
+          <div className="mt-3 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
+            Search failed: {(previewMutation.error as Error).message}
+          </div>
+        )}
+
+        {previewMutation.isSuccess && (
+          <div className="mt-4 space-y-2.5">
+            <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+              <span>Found {previewMutation.data?.total_found ?? previewMutation.data?.results?.length ?? 0} matching publications</span>
+              <span className="text-[11px] text-slate-400">Click a record to auto-fill the import form</span>
+            </div>
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+              {(previewMutation.data?.results || []).map((item: any, idx: number) => (
+                <div
+                  key={idx}
+                  onClick={() => handleSelectSearchResult(item)}
+                  className="p-3 bg-white hover:bg-slate-50 border border-black/10 hover:border-indigo-400 rounded-xl cursor-pointer transition-all shadow-2xs group"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="text-xs font-semibold text-slate-900 group-hover:text-indigo-600 line-clamp-2">
+                      {item.title}
+                    </h4>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono shrink-0">
+                      {item.source}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                    {item.authors && (
+                      <span>{Array.isArray(item.authors) ? item.authors.slice(0, 3).join(", ") : item.authors}</span>
+                    )}
+                    {item.year && <span>• {item.year}</span>}
+                    {item.journal && <span>• {item.journal}</span>}
+                    {item.pmid && <span className="font-mono text-[10px] text-indigo-600">PMID:{item.pmid}</span>}
+                    {item.doi && <span className="font-mono text-[10px] text-slate-400">DOI:{item.doi}</span>}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

@@ -135,6 +135,8 @@ class ResearchQuestionResponse(BaseModel):
     project_id: str
     pico: dict
     strings: dict = {}
+    hypothesis: str = ""
+    secondary_hypotheses: list[str] = Field(default_factory=list)
 
 
 # ── PICO Extraction ──

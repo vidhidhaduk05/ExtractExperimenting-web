@@ -23,6 +23,7 @@ import { ClaimscapePage } from "./pages/ClaimscapePage";
 import { CitationTelephonePage } from "./pages/CitationTelephonePage";
 import { RigorScanPage } from "./pages/RigorScanPage";
 import { LandingPage } from "./pages/LandingPage";
+import { BlindReviewPage } from "./pages/BlindReviewPage";
 
 export default function App() {
   return (
@@ -52,6 +53,8 @@ export default function App() {
         <Route path="/projects/:projectId/extraction-sheet" element={<ExtractionSheetPage />} />
         <Route path="/projects/:projectId/extraction-sheet/:studyId" element={<ExtractionSheetPage />} />
         <Route path="/projects/:projectId/screening" element={<ScreeningPage />} />
+        <Route path="/projects/:projectId/screening/blind-review" element={<BlindReviewPage />} />
+        <Route path="/projects/:projectId/blind-review" element={<BlindReviewPage />} />
         <Route path="/projects/:projectId/prisma" element={<PrismaFlowPage />} />
         <Route path="/projects/:projectId/rob" element={<RobSummaryPage />} />
         <Route path="/projects/:projectId/rob/:assessmentId" element={<RobAssessmentPage />} />

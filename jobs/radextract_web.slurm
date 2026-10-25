@@ -3,7 +3,7 @@
 #SBATCH --partition=defq
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=5
 #SBATCH --mem=16G
 #SBATCH --time=08:00:00
 #SBATCH --mail-user=vidhidhaduk05@gmail.com

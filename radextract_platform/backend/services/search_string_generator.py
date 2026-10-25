@@ -376,6 +376,40 @@ MESH_MAPPING = {
     "disease-free survival": {"mesh": "disease-free survival", "emtree": "disease free survival", "cinahl": "disease-free survival"},
     "biomarker": {"mesh": "biomarkers", "emtree": "biomarker", "cinahl": "biomarkers"},
     "biomarkers": {"mesh": "biomarkers", "emtree": "biomarker", "cinahl": "biomarkers"},
+
+    # ── Cardiometabolic / Pharmacotherapy ──
+    "sglt2 inhibitor": {"mesh": "sodium-glucose transporter 2 inhibitors", "emtree": "sodium glucose cotransporter 2 inhibitor", "cinahl": "sodium-glucose transporter 2 inhibitors"},
+    "sglt2 inhibitors": {"mesh": "sodium-glucose transporter 2 inhibitors", "emtree": "sodium glucose cotransporter 2 inhibitor", "cinahl": "sodium-glucose transporter 2 inhibitors"},
+    "sodium-glucose cotransporter-2": {"mesh": "sodium-glucose transporter 2 inhibitors", "emtree": "sodium glucose cotransporter 2 inhibitor", "cinahl": "sodium-glucose transporter 2 inhibitors"},
+    "empagliflozin": {"mesh": "empagliflozin", "emtree": "empagliflozin", "cinahl": "empagliflozin"},
+    "dapagliflozin": {"mesh": "dapagliflozin", "emtree": "dapagliflozin", "cinahl": "dapagliflozin"},
+    "hfpef": {"mesh": "heart failure", "emtree": "heart failure with preserved ejection fraction", "cinahl": "heart failure with preserved ejection fraction"},
+    "heart failure with preserved ejection fraction": {"mesh": "heart failure", "emtree": "heart failure with preserved ejection fraction", "cinahl": "heart failure with preserved ejection fraction"},
+    "diastolic heart failure": {"mesh": "heart failure, diastolic", "emtree": "diastolic heart failure", "cinahl": "heart failure, diastolic"},
+    "cardiovascular death": {"mesh": "cardiovascular diseases", "emtree": "cardiovascular mortality", "cinahl": "cardiovascular mortality"},
+    "cardiovascular mortality": {"mesh": "cardiovascular diseases", "emtree": "cardiovascular mortality", "cinahl": "cardiovascular mortality"},
+
+    # ── Psychiatry / Behavioral interventions ──
+    "cognitive behavioral therapy": {"mesh": "cognitive behavioral therapy", "emtree": "cognitive behavioral therapy", "cinahl": "cognitive behavioral therapy"},
+    "cognitive behavior therapy": {"mesh": "cognitive behavioral therapy", "emtree": "cognitive behavioral therapy", "cinahl": "cognitive behavioral therapy"},
+    "cbt": {"mesh": "cognitive behavioral therapy", "emtree": "cognitive behavioral therapy", "cinahl": "cognitive behavioral therapy"},
+    "internet-delivered cognitive behavioral therapy": {"mesh": "cognitive behavioral therapy", "emtree": "internet-based cognitive behavioral therapy", "cinahl": "cognitive behavioral therapy"},
+    "icbt": {"mesh": "cognitive behavioral therapy", "emtree": "internet-based cognitive behavioral therapy", "cinahl": "cognitive behavioral therapy"},
+    "major depressive disorder": {"mesh": "depressive disorder, major", "emtree": "major depression", "cinahl": "depression, reactive"},
+    "depressive symptoms": {"mesh": "depression", "emtree": "depression", "cinahl": "depression"},
+    "adolescents": {"mesh": "adolescent", "emtree": "adolescent", "cinahl": "adolescence"},
+    "adolescent": {"mesh": "adolescent", "emtree": "adolescent", "cinahl": "adolescence"},
+
+    # ── Remote Sensing / Computer Vision / Machine Learning ──
+    "vision transformer": {"mesh": "deep learning", "emtree": "artificial intelligence", "cinahl": "artificial intelligence"},
+    "vision transformers": {"mesh": "deep learning", "emtree": "artificial intelligence", "cinahl": "artificial intelligence"},
+    "convolutional neural network": {"mesh": "neural networks, computer", "emtree": "convolutional neural network", "cinahl": "neural networks, computer"},
+    "convolutional neural networks": {"mesh": "neural networks, computer", "emtree": "convolutional neural network", "cinahl": "neural networks, computer"},
+    "cnn": {"mesh": "neural networks, computer", "emtree": "convolutional neural network", "cinahl": "neural networks, computer"},
+    "remote sensing": {"mesh": "remote sensing technology", "emtree": "remote sensing", "cinahl": "remote sensing technology"},
+    "satellite imagery": {"mesh": "satellite imagery", "emtree": "satellite imagery", "cinahl": "satellite imagery"},
+    "crop classification": {"mesh": "crops, agricultural", "emtree": "agriculture", "cinahl": "agriculture"},
+    "semantic segmentation": {"mesh": "image processing, computer-assisted", "emtree": "image segmentation", "cinahl": "image processing, computer-assisted"},
 }
 
 # ── Synonym expansion for terms not in the mapping ──
@@ -408,6 +442,13 @@ SYNONYM_MAP = {
     "pregnancy": ["pregnant", "gestation", "prenatal"],
     "mental health": ["psychiatric", "psychological"],
     "substance abuse": ["substance use disorder", "addiction", "drug abuse"],
+    "sglt2 inhibitor": ["sodium-glucose transporter 2 inhibitor", "dapagliflozin", "empagliflozin"],
+    "hfpef": ["heart failure with preserved ejection fraction", "diastolic heart failure"],
+    "cognitive behavioral therapy": ["cbt", "cognitive behavior therapy", "psychotherapy"],
+    "icbt": ["internet-delivered cognitive behavioral therapy", "online cbt", "digital therapy"],
+    "vision transformer": ["vit", "transformer architecture", "attention mechanism"],
+    "convolutional neural network": ["cnn", "deep learning", "convolutional network"],
+    "remote sensing": ["satellite imagery", "optical satellite data", "earth observation"],
 }
 
 # Stopwords to filter out when extracting key phrases.
@@ -434,6 +475,19 @@ STOPWORDS = {
 }
 
 
+def _clean_phrase(phrase: str) -> str:
+    """Clean unbalanced parentheses, quotes, and punctuation from search phrases."""
+    phrase = phrase.strip().strip("\"'.,;:")
+    # Balance parentheses if truncation cut across them
+    open_count = phrase.count("(")
+    close_count = phrase.count(")")
+    if open_count > close_count:
+        phrase = re.sub(r"\([^)]*$", "", phrase).strip()
+    elif close_count > open_count:
+        phrase = re.sub(r"^[^(]*\)", "", phrase).strip()
+    return phrase.strip().strip("\"'.,;:")
+
+
 def _extract_key_phrases(text: str) -> list[str]:
     """Extract key phrases from a PICO field text.
 
@@ -449,7 +503,7 @@ def _extract_key_phrases(text: str) -> list[str]:
 
     phrases = []
     for part in parts:
-        part = part.strip().strip(".()[]{}\"'")
+        part = _clean_phrase(part)
         if not part or len(part) < 3:
             continue
         # Skip if it's entirely stopwords
@@ -457,18 +511,15 @@ def _extract_key_phrases(text: str) -> list[str]:
         content_words = [w for w in words if w not in STOPWORDS]
         if not content_words:
             continue
-        # Keep the phrase as-is (preserving multi-word medical terms)
         # Only strip leading/trailing stopwords
         while content_words and content_words[0] in ("the", "a", "an", "of", "in", "on", "at", "for", "with", "by", "from"):
             content_words.pop(0)
         while content_words and content_words[-1] in ("the", "a", "an", "of", "in", "on", "at", "for", "with", "by", "from"):
             content_words.pop()
         if content_words:
-            # Reconstruct the phrase from remaining words (preserving original case)
-            remaining_phrase = " ".join(part.split()[len(part.split()) - len(content_words):]
-                                        if len(content_words) < len(words) else part.split())
-            # Simpler: just use the original part, since we already validated it has content words
-            phrases.append(part)
+            clean_part = _clean_phrase(part)
+            if clean_part and clean_part not in phrases:
+                phrases.append(clean_part)
 
     return phrases
 
@@ -971,21 +1022,116 @@ def generate_criteria_from_pico(pico: dict) -> dict:
     return {"inclusion": inclusion, "exclusion": exclusion}
 
 
+def generate_hypothesis_from_pico(pico: dict, research_question: str = "") -> dict:
+    """Generate falsifiable primary, null, and secondary hypotheses from PICO elements.
+
+    Produces:
+      - primary_hypothesis (H1): Directional alternative hypothesis with clear polarity
+      - null_hypothesis (H0): Rigorous null hypothesis of no difference or inferiority
+      - secondary_hypotheses: List of secondary, subgroup, or safety hypotheses
+    """
+    hypotheses = {
+        "primary_hypothesis": "",
+        "null_hypothesis": "",
+        "secondary_hypotheses": [],
+    }
+
+    # 1. Attempt generation via ToolCallingClient (Biomni or local LLM)
+    try:
+        from services.tool_calling_client import ToolCallingClient
+        client = ToolCallingClient()
+
+        prompt = f"""You are a senior scientific methodologist. Formulate rigorous, falsifiable research hypotheses based on this PICO framework across ANY domain:
+Population (P): {pico.get('population', '')}
+Intervention / Index Test (I): {pico.get('index_test', '')}
+Comparator / Control (C): {pico.get('comparator', '')}
+Outcome (O): {pico.get('outcome', '')}
+Study Design: {pico.get('study_design', '')}
+Research Question: {research_question}
+
+Derive:
+1. primary_hypothesis (H1): Directional, testable alternative hypothesis stating expected direction of effect.
+2. null_hypothesis (H0): Rigorous null hypothesis of no difference, no effect, or inferiority.
+3. secondary_hypotheses: 2-3 specific secondary, subgroup, or safety hypotheses."""
+
+        result = client.call_with_tool(
+            tool_name="generate_hypothesis",
+            prompt=prompt,
+            system_prompt="You are an expert research methodologist specializing in scientific hypothesis formulation, directional falsifiability, and study design.",
+            temperature=0.1,
+            max_tokens=1024,
+        )
+
+        if result and isinstance(result, dict):
+            if result.get("primary_hypothesis"):
+                hypotheses["primary_hypothesis"] = str(result["primary_hypothesis"]).strip()
+            if result.get("null_hypothesis"):
+                hypotheses["null_hypothesis"] = str(result["null_hypothesis"]).strip()
+            if result.get("secondary_hypotheses") and isinstance(result["secondary_hypotheses"], list):
+                hypotheses["secondary_hypotheses"] = [str(s).strip() for s in result["secondary_hypotheses"] if str(s).strip()]
+    except Exception:
+        pass
+
+    # 2. Deterministic directional fallback if AI is unavailable or missed keys
+    if not hypotheses["primary_hypothesis"]:
+        pop = (pico.get("population") or "").strip()
+        idx = (pico.get("index_test") or "").strip()
+        comp = (pico.get("comparator") or "").strip()
+        out = (pico.get("outcome") or "").strip()
+        design = (pico.get("study_design") or "").lower()
+
+        # Clean trailing punctuation
+        pop_str = f" in {pop}" if pop else ""
+        comp_str = f" compared to {comp}" if comp else ""
+        out_str = f" regarding {out}" if out else ""
+
+        if "non-inferior" in design or "non-inferior" in research_question.lower():
+            hypotheses["primary_hypothesis"] = (
+                f"{idx or 'The evaluated intervention'} is non-inferior to {comp or 'standard control'}"
+                f"{out_str}{pop_str}."
+            )
+            hypotheses["null_hypothesis"] = (
+                f"{idx or 'The evaluated intervention'} is inferior to {comp or 'standard control'}"
+                f"{out_str}{pop_str}."
+            )
+            hypotheses["secondary_hypotheses"] = [
+                f"{idx or 'The evaluated intervention'} and {comp or 'standard control'} will exhibit comparable adherence, completion, and safety profiles.",
+                f"Treatment equivalence is consistent across demographic and baseline severity subgroups{pop_str}.",
+            ]
+        else:
+            hypotheses["primary_hypothesis"] = (
+                f"{idx or 'The evaluated intervention'} demonstrates superior/significant effect on {out or 'target outcomes'}"
+                f"{comp_str}{pop_str}."
+            )
+            hypotheses["null_hypothesis"] = (
+                f"{idx or 'The evaluated intervention'} does not demonstrate significant difference on {out or 'target outcomes'}"
+                f"{comp_str}{pop_str}."
+            )
+            hypotheses["secondary_hypotheses"] = [
+                f"{idx or 'The evaluated intervention'} maintains an acceptable safety profile{comp_str}.",
+                f"The magnitude of effect on {out or 'target outcomes'} is consistent across prespecified baseline subgroups{pop_str}.",
+            ]
+
+    return hypotheses
+
+
 def extract_pico_from_question(research_question: str) -> dict:
-    """Extract PICO elements from a plain-language research question using LLM.
+    """Extract PICO elements and hypotheses from a plain-language research question.
 
-    Takes a research question like "Is MRI better than CT for detecting liver
-    metastases in colorectal cancer patients?" and extracts PICO elements,
-    then generates database-specific search strings.
-
-    Falls back to simple keyword extraction if LLM is unavailable.
+    Supports universal topics across clinical, behavioral, social, environmental,
+    and technological domains. Uses LLM with structured function calling, falling
+    back to comprehensive multi-domain heuristics if unavailable.
 
     Args:
         research_question: A plain-language research question.
 
     Returns:
-        dict with keys: pico (dict with population, index_test, comparator,
-        outcome, study_design), strings (dict of database-specific search strings)
+        dict with keys:
+          - pico: dict (population, index_test, comparator, outcome, study_design)
+          - strings: dict of database-specific search queries
+          - hypothesis: primary alternative hypothesis (H1)
+          - null_hypothesis: null hypothesis (H0)
+          - secondary_hypotheses: list of secondary hypotheses
     """
     pico = {
         "population": "",
@@ -995,29 +1141,29 @@ def extract_pico_from_question(research_question: str) -> dict:
         "study_design": "",
     }
 
-    # Try LLM extraction
+    # Try LLM extraction via ToolCallingClient
     try:
         from services.tool_calling_client import ToolCallingClient
         client = ToolCallingClient()
 
-        prompt = f"""You are a clinical systematic review expert. Analyze the following research question and extract the PICO framework elements.
+        prompt = f"""You are a systematic review methodology expert. Analyze the following research question across ANY universal domain (clinical, behavioral, social, engineering, or computing) and extract the PICO framework elements.
 
 Research Question:
 {research_question}
 
 Return JSON with exact keys:
 {{
-  "population": "description of target patients/participants (P)",
-  "index_test": "description of intervention or index test (I)",
-  "comparator": "description of control, comparator, or reference standard (C)",
-  "outcome": "primary outcomes assessed (O)",
-  "study_design": "suggested study design (e.g. diagnostic accuracy study, RCT, cohort study)"
+  "population": "description of target patients/participants/subjects/data (P)",
+  "index_test": "description of intervention, index test, model, or exposure (I)",
+  "comparator": "description of control, comparator, reference standard, or baseline (C)",
+  "outcome": "primary and secondary outcomes assessed (O)",
+  "study_design": "suggested study design (e.g. diagnostic accuracy study, RCT, non-inferiority trial, comparative study)"
 }}"""
 
         result = client.call_with_tool(
             tool_name="extract_pico",
             prompt=prompt,
-            system_prompt="You are a clinical research methodology expert specializing in systematic reviews and the PICO framework.",
+            system_prompt="You are a clinical and universal research methodology expert specializing in systematic reviews and the PICO framework.",
             temperature=0.1,
             max_tokens=1024,
         )
@@ -1029,23 +1175,36 @@ Return JSON with exact keys:
     except Exception:
         pass
 
-    # Fallback: if LLM didn't produce results, try simple extraction
+    # Fallback: if LLM didn't produce results, try improved multi-domain extraction
     if not any(pico.values()):
         pico = _simple_pico_extraction(research_question)
 
-    # Generate search strings from the extracted PICO
-    strings = generate_ai_search_strings(pico, research_question)
+    # Formulate falsifiable research hypotheses
+    hypotheses = generate_hypothesis_from_pico(pico, research_question)
 
-    return {"pico": pico, "strings": strings}
+    # Generate search strings from the extracted PICO
+    try:
+        strings = generate_ai_search_strings(pico, research_question)
+    except Exception:
+        strings = generate_search_strings(pico)
+
+    return {
+        "pico": pico,
+        "strings": strings,
+        "hypothesis": hypotheses.get("primary_hypothesis", ""),
+        "null_hypothesis": hypotheses.get("null_hypothesis", ""),
+        "secondary_hypotheses": hypotheses.get("secondary_hypotheses", []),
+    }
 
 
 def _simple_pico_extraction(question: str) -> dict:
-    """Simple rule-based PICO extraction from a research question.
+    """Robust rule-based PICO extraction from a research question.
 
-    This is a fallback when the LLM is unavailable. It uses basic heuristics
-    to identify PICO elements from the question structure.
+    Parses universal topics (clinical, behavioral, diagnostic, and technical)
+    by identifying leading/trailing population boundaries, comparative verbs,
+    non-inferiority markers, and outcome structures.
     """
-    q = question.lower().strip()
+    q = question.strip().rstrip("?., ")
     pico = {
         "population": "",
         "index_test": "",
@@ -1054,29 +1213,87 @@ def _simple_pico_extraction(question: str) -> dict:
         "study_design": "",
     }
 
-    # Look for "in patients with X" or "for patients with X" → population
-    pop_match = re.search(r"(?:in|for|among)\s+(?:patients?\s+with|people\s+with|individuals?\s+with|subjects?\s+with)\s+(.+?)(?:[,?.]|$)", q)
-    if pop_match:
-        pico["population"] = f"patients with {pop_match.group(1).strip()}"
-
-    # Look for "Is X better than Y" or "X versus Y" or "X compared to Y" → index_test + comparator
-    vs_match = re.search(r"(?:is\s+)?(.+?)\s+(?:versus|vs\.?|compared\s+to|better\s+than|more\s+accurate\s+than)\s+(.+?)(?:\s+(?:for|in|to|at|detecting|diagnosing|identifying)|[,?.]|$)", q)
-    if vs_match:
-        pico["index_test"] = vs_match.group(1).strip()
-        pico["comparator"] = vs_match.group(2).strip()
+    # 1. Leading population clause: "In/Among/For <population>, <question>?"
+    lead_match = re.match(r"^(?:in|among|for)\s+(.+?),\s*(?:does|do|can|is|are|will|could)\s+(.+)$", q, re.IGNORECASE)
+    rest = q
+    if lead_match:
+        pico["population"] = _clean_phrase(lead_match.group(1))
+        rest = lead_match.group(2).strip()
     else:
-        # Try "Does X detect/diagnose/identify Y"
-        detect_match = re.search(r"(?:does|can|could)\s+(.+?)\s+(?:detect|diagnose|identify|detecting|diagnosing|identifying)\s+(.+?)(?:\s+(?:in|for|among)|[,?.]|$)", q)
-        if detect_match:
-            pico["index_test"] = detect_match.group(1).strip()
+        # Check trailing population clause: "... in/among/for <population>"
+        pop_trailing = re.search(r"\s+(?:in|among|for)\s+([a-zA-Z0-9\s\-_()]+)$", q, re.IGNORECASE)
+        if pop_trailing:
+            pico["population"] = _clean_phrase(pop_trailing.group(1))
+            rest = q[:pop_trailing.start()].strip()
+            rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
+        else:
+            rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
 
-    # Look for "for detecting/diagnosing X" → outcome
-    outcome_match = re.search(r"(?:for\s+)?(?:detecting|diagnosing|identifying|screening\s+for|assessing|evaluating)\s+(.+?)(?:\s+(?:in|for|among)|[,?.]|$)", q)
-    if outcome_match:
-        pico["outcome"] = f"detection of {outcome_match.group(1).strip()}"
+    # 2. Pattern A: Non-inferiority: "X is non-inferior to Y in/for Z"
+    non_inf_match = re.search(
+        r"^(.+?)\s+(?:is|are\s+)?(?:non-inferior|equivalent|comparable)\s+to\s+(.+?)(?:\s+(?:in|for|at|regarding)\s+(.+))?$",
+        rest, re.IGNORECASE
+    )
+    if non_inf_match:
+        pico["index_test"] = _clean_phrase(non_inf_match.group(1))
+        pico["comparator"] = _clean_phrase(non_inf_match.group(2))
+        if non_inf_match.group(3):
+            pico["outcome"] = _clean_phrase(non_inf_match.group(3))
+        pico["study_design"] = "Non-inferiority randomized trial"
+        return pico
 
-    # If we still don't have population, use the whole question as population
-    if not pico["population"] and not pico["index_test"]:
-        pico["population"] = question.strip()
+    # 3. Pattern B: Comparative action verb: "X (reduce|improve|outperform|achieve higher) Y (compared to|versus|than) Z"
+    action_match = re.search(
+        r"^(.+?)\s+(?:demonstrate|show|achieve|provide)?\s*(superior|better|higher|greater|reduce|decrease|improve|increase|outperform)\s+(?:detection of|accuracy for|performance in)?\s*(.+?)\s+(?:compared\s+(?:to|with)|versus|vs\.?|than)\s+(.+)$",
+        rest, re.IGNORECASE
+    )
+    if action_match:
+        pico["index_test"] = _clean_phrase(action_match.group(1))
+        verb = action_match.group(2).strip().lower()
+        outcome_core = _clean_phrase(action_match.group(3))
+        raw_comp = action_match.group(4).strip()
+
+        # Split trailing scope from comparator if present (e.g. "CNNs for crop classification across...")
+        comp_split = re.split(r"\s+(?:for|across|in)\s+", raw_comp, maxsplit=1, flags=re.IGNORECASE)
+        if len(comp_split) == 2 and not pico["population"]:
+            pico["comparator"] = _clean_phrase(comp_split[0])
+            pico["population"] = _clean_phrase(comp_split[1])
+        else:
+            pico["comparator"] = _clean_phrase(raw_comp)
+
+        if verb in ("reduce", "decrease"):
+            pico["outcome"] = f"reduction in {outcome_core}"
+        elif verb in ("superior", "better", "higher", "greater"):
+            pico["outcome"] = f"superior {outcome_core}"
+        else:
+            pico["outcome"] = outcome_core
+        return pico
+
+    # 4. Pattern C: Direct comparison: "X compared to/versus/better than Y for/in Z"
+    comp_match = re.search(
+        r"^(.+?)\s+(?:versus|vs\.?|compared\s+(?:to|with)|better\s+than|more\s+accurate\s+than)\s+(.+?)(?:\s+(?:for|in|to|detecting|diagnosing|identifying)\s+(.+))?$",
+        rest, re.IGNORECASE
+    )
+    if comp_match:
+        pico["index_test"] = _clean_phrase(comp_match.group(1))
+        pico["comparator"] = _clean_phrase(comp_match.group(2))
+        if comp_match.group(3):
+            pico["outcome"] = _clean_phrase(comp_match.group(3))
+        return pico
+
+    # 5. Pattern D: "Does X detect/diagnose/identify Y"
+    detect_match = re.search(
+        r"(?:does|can|could)\s+(.+?)\s+(?:detect|diagnose|identify|detecting|diagnosing|identifying)\s+(.+?)(?:\s+(?:in|for|among)|[,?.]|$)",
+        q, re.IGNORECASE
+    )
+    if detect_match:
+        pico["index_test"] = _clean_phrase(detect_match.group(1))
+        pico["outcome"] = f"detection of {_clean_phrase(detect_match.group(2))}"
+        return pico
+
+    # Fallback assignment
+    pico["index_test"] = _clean_phrase(rest)
+    if not pico["population"]:
+        pico["population"] = _clean_phrase(question)
 
     return pico

@@ -124,7 +124,7 @@ export const RigorScanPage: React.FC = () => {
           title: v.paper?.title || "Uploaded Manuscript",
           authors: "Uploaded Manuscript",
           venue: "Rigor Scan Evaluation",
-          year: 2026,
+          year: "2026",
           doi: v.paper?.doi || "Local evaluation",
           license: "Open Access",
           pages: v.paper?.pages || 16,
@@ -177,11 +177,11 @@ export const RigorScanPage: React.FC = () => {
   }, [scanResult, isReferenceActive, includeRadiology]);
 
   const selectedCheck: RigorCheckItem = useMemo(() => {
-    return activeDataset.checks.find((c) => c.id === selectedCheckId) || activeDataset.checks[0];
+    return (activeDataset.checks.find((c: any) => c.id === selectedCheckId) || activeDataset.checks[0]) as RigorCheckItem;
   }, [activeDataset, selectedCheckId]);
 
   const filteredChecks = useMemo(() => {
-    return activeDataset.checks.filter((c) => {
+    return activeDataset.checks.filter((c: any) => {
       if (selectedDomain !== "all" && c.domain !== selectedDomain) return false;
       if (filterMode === "good" && c.outcome !== "good") return false;
       if (filterMode === "mid" && c.outcome !== "mid") return false;
@@ -199,7 +199,7 @@ export const RigorScanPage: React.FC = () => {
 
   const handleSelectCheck = (id: string) => {
     setSelectedCheckId(id);
-    const item = activeDataset.checks.find((c) => c.id === id);
+    const item = activeDataset.checks.find((c: any) => c.id === id);
     if (item) {
       setTargetPage(item.page);
     }
@@ -233,7 +233,7 @@ export const RigorScanPage: React.FC = () => {
     setErrorMessage(null);
     setScanResult(null);
     setIsReferenceActive(false);
-    setScanStepMessage("Connecting to local Laya System-1 & Biomni pipeline...");
+    setScanStepMessage("Initializing manuscript analysis pipeline...");
 
     try {
       let res: RigorScanResult | null = null;
@@ -251,7 +251,7 @@ export const RigorScanPage: React.FC = () => {
             const extractResult = await mammoth.extractRawText({ arrayBuffer });
             const docxText = extractResult.value || "";
             if (docxText.trim().length > 30) {
-              setScanStepMessage("Scanning extracted manuscript with local Laya System-1...");
+              setScanStepMessage("Scanning extracted manuscript...");
               res = await api.scanTextRigor(docxText, file.name.replace(/\.[^/.]+$/, ""));
               const chunks: string[] = [];
               const words = docxText.split(/\s+/);
@@ -291,7 +291,7 @@ export const RigorScanPage: React.FC = () => {
             }
             const fullText = pagesText.join("\n\n");
             if (fullText.trim().length > 50) {
-              setScanStepMessage("Scanning extracted text with local Laya System-1...");
+              setScanStepMessage("Scanning extracted text...");
               res = await api.scanTextRigor(fullText, file.name.replace(/\.[^/.]+$/, ""));
               if (res?.view?.paper) {
                 res.view.paper.pages_text = pagesText;
@@ -307,7 +307,7 @@ export const RigorScanPage: React.FC = () => {
       } else {
         setScanStepMessage("Reading manuscript text...");
         const textContent = await file.text();
-        setScanStepMessage("Scanning manuscript with local Laya System-1...");
+        setScanStepMessage("Scanning manuscript...");
         res = await api.scanTextRigor(textContent, file.name.replace(/\.[^/.]+$/, ""));
         if (res?.view?.paper && !res.view.paper.pages_text) {
           const chunks: string[] = [];
@@ -371,10 +371,10 @@ export const RigorScanPage: React.FC = () => {
   };
 
   const checksByDomain = useMemo(() => {
-    return activeDataset.domains.map((dom) => ({
+    return activeDataset.domains.map((dom: any) => ({
       domain: dom,
-      checks: filteredChecks.filter((c) => c.domain === dom.id),
-    })).filter((group) => group.checks.length > 0);
+      checks: filteredChecks.filter((c: any) => c.domain === dom.id),
+    })).filter((group: any) => group.checks.length > 0);
   }, [activeDataset, filteredChecks]);
 
   return (
@@ -558,7 +558,7 @@ export const RigorScanPage: React.FC = () => {
 
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
               <span className="mr-0.5 text-xs font-semibold rs-muted">Study type</span>
-              {activeDataset.gates.map((g) => (
+              {activeDataset.gates.map((g: any) => (
                 <span
                   key={g.id}
                   title={g.on ? "Detected in this paper" : "Not detected"}
@@ -886,7 +886,7 @@ export const RigorScanPage: React.FC = () => {
 
               {/* Grouped Checks Rows */}
               <div className="max-h-[640px] overflow-y-auto divide-y divide-[var(--rs-line-soft)]">
-                {checksByDomain.map(({ domain, checks }) => (
+                {checksByDomain.map(({ domain, checks }: { domain: any; checks: any[] }) => (
                   <div key={domain.id}>
                     {/* Domain Sticky Header */}
                     <div className="sticky top-[47px] z-[5] flex items-baseline justify-between gap-2 border-b border-[var(--rs-line-soft)] bg-[var(--rs-card)]/95 px-4 py-2 backdrop-blur">
@@ -899,7 +899,7 @@ export const RigorScanPage: React.FC = () => {
                     </div>
 
                     {/* Check items in this domain */}
-                    {checks.map((c) => {
+                    {checks.map((c: any) => {
                       const isSelected = selectedCheck && c.id === selectedCheck.id;
                       return (
                         <button

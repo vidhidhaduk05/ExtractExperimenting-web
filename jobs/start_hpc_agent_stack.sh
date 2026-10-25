@@ -27,9 +27,11 @@ echo ""
 echo "[*] [TIER 1] Verifying GPU Biomni-R0 & Ollama on compute node..."
 OLLAMA_BIN="/home/vd00026/.local/bin/ollama"
 if ! curl -s --max-time 3 http://127.0.0.1:11434/api/tags | grep -q 'models'; then
-    echo "[*] Starting Ollama GPU daemon on port 11434 (parallel=4, 40 CPUs)..."
+    echo "[*] Starting Ollama GPU daemon on port 11434 (parallel=4, max_queue=1024, 40 CPUs)..."
     export OLLAMA_NUM_PARALLEL=4
     export OLLAMA_MAX_LOADED_MODELS=2
+    export OLLAMA_MAX_QUEUE=1024
+    export OLLAMA_KEEP_ALIVE="24h"
     if [ -x "$OLLAMA_BIN" ]; then
         nohup "$OLLAMA_BIN" serve > "$LOG_DIR/ollama_serve.log" 2>&1 & disown
         for i in {1..15}; do

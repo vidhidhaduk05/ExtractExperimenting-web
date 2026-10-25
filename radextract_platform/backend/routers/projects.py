@@ -775,13 +775,20 @@ async def search_from_question(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     pico = result["pico"]
     strings = result["strings"]
+    hypothesis = result.get("hypothesis", "")
+    secondary = result.get("secondary_hypotheses", [])
+    secondary_objs = [
+        {"text": txt, "type": "alternative", "status": "pending"}
+        for txt in secondary
+    ]
+    secondary_json = json.dumps(secondary_objs)
 
-    # Save PICO to project
+    # Save PICO and hypothesis to project
     pico_json = json.dumps(pico)
     strings_json = json.dumps(strings)
     conn.execute(
-        "UPDATE projects SET pico_json = ?, search_strings_json = ?, research_question = ? WHERE project_id = ?",
-        (pico_json, strings_json, body.question.strip(), project_id),
+        "UPDATE projects SET pico_json = ?, search_strings_json = ?, research_question = ?, hypothesis = ?, secondary_hypotheses_json = ? WHERE project_id = ?",
+        (pico_json, strings_json, body.question.strip(), hypothesis, secondary_json, project_id),
     )
     conn.commit()
 
@@ -789,6 +796,52 @@ async def search_from_question(
         project_id=project_id,
         pico=pico,
         strings=strings,
+        hypothesis=hypothesis,
+        secondary_hypotheses=secondary,
+    )
+
+
+@router.post("/projects/{project_id}/generate-hypothesis", response_model=HypothesisResponse)
+async def generate_project_hypothesis(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Generate or re-generate directional scientific hypotheses from project PICO."""
+    from services import search_string_generator
+
+    row = conn.execute(
+        "SELECT * FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_access(conn, project_id, user, min_role="editor")
+
+    pico = json.loads(row["pico_json"]) if row["pico_json"] else {}
+    question = row["research_question"] or ""
+
+    hypo_result = await run_in_threadpool(
+        search_string_generator.generate_hypothesis_from_pico, pico, question
+    )
+    primary = hypo_result.get("primary_hypothesis", "")
+    secondary_texts = hypo_result.get("secondary_hypotheses", [])
+    secondary_objs = [
+        {"text": txt, "type": "alternative", "status": "pending"}
+        for txt in secondary_texts
+    ]
+    secondary_json = json.dumps(secondary_objs)
+
+    conn.execute(
+        "UPDATE projects SET hypothesis = ?, secondary_hypotheses_json = ? WHERE project_id = ?",
+        (primary, secondary_json, project_id),
+    )
+    conn.commit()
+
+    return HypothesisResponse(
+        project_id=project_id,
+        hypothesis=primary,
+        research_question=question,
+        secondary_hypotheses=[SecondaryHypothesis(**h) for h in secondary_objs],
     )
 
 

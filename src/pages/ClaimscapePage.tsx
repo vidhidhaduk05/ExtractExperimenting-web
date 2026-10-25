@@ -273,7 +273,7 @@ export const ClaimscapePage: React.FC = () => {
           return prev + 6;
         }
         if (prev < 70) {
-          setScanStepLabel("Reading abstracts with Laya System-1 ONNX model...");
+          setScanStepLabel("Reading abstracts & analyzing semantic stances...");
           return prev + 4;
         }
         if (prev < 92) {

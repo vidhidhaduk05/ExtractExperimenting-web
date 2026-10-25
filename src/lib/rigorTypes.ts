@@ -1,4 +1,4 @@
-﻿export interface RigorEvidence {
+export interface RigorEvidence {
   kind: "sentence" | "paragraph" | "table" | "figure";
   text: string;
   section: string;
@@ -20,6 +20,7 @@ export interface RigorCheck {
   outcome: "good" | "mid" | "bad";
   status: string;
   ev?: RigorEvidence | null;
+  page?: number;
 }
 
 export interface RigorDomain {
@@ -71,6 +72,7 @@ export interface RigorScanView {
     title: string;
     doi?: string;
     pages: number;
+    pages_text?: string[];
   };
   checks: RigorCheck[];
   index: number;

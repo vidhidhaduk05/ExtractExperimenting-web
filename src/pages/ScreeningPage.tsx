@@ -62,8 +62,10 @@ import {
   RotateCcw,
   Pause,
   Square,
+  Scale,
 } from "lucide-react";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
+import { DualBlindedDashboard } from "../components/screening/DualBlindedDashboard";
 
 
 export function ScreeningPage() {
@@ -136,10 +138,19 @@ export function ScreeningPage() {
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Bulk Upload & Hotkeys state
+  // Bulk Upload, Hotkeys & Dual-Blind state
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showHotkeysModal, setShowHotkeysModal] = useState(false);
+  const [showDualBlindModal, setShowDualBlindModal] = useState(false);
   const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
+
+  // Conflicts query for badge
+  const { data: screeningConflicts } = useQuery({
+    queryKey: ["screening-conflicts", projectId],
+    queryFn: () => api.listScreeningConflicts(projectId!),
+    enabled: !!projectId,
+  });
+  const unresolvedConflictsCount = (screeningConflicts || []).filter((c) => c.status === "unresolved").length;
 
 
   // While an AI screening run is in flight, poll so each screened study appears as soon as it is saved
@@ -324,13 +335,15 @@ export function ScreeningPage() {
         }
       }
 
-      // Search query filter
+      // Search query filter (matches title, authors, abstract, DOI, and PMID)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesTitle = (s.title || "").toLowerCase().includes(q);
         const matchesAuthors = (s.authors || "").toLowerCase().includes(q);
         const matchesAbstract = (s.abstract || "").toLowerCase().includes(q);
-        if (!matchesTitle && !matchesAuthors && !matchesAbstract) return false;
+        const matchesDoi = (s.doi || "").toLowerCase().includes(q);
+        const matchesPmid = (s.pmid || "").toLowerCase().includes(q);
+        if (!matchesTitle && !matchesAuthors && !matchesAbstract && !matchesDoi && !matchesPmid) return false;
       }
       // Confidence filter
       if (confidenceFilter !== "all") {
@@ -576,11 +589,12 @@ export function ScreeningPage() {
         return;
       }
 
-      if (showKeywordsDrawer || showBulkUploadModal || showHotkeysModal) {
+      if (showKeywordsDrawer || showBulkUploadModal || showHotkeysModal || showDualBlindModal) {
         if (e.key === "Escape") {
           setShowBulkUploadModal(false);
           setShowHotkeysModal(false);
           setShowKeywordsDrawer(false);
+          setShowDualBlindModal(false);
         }
         return;
       }
@@ -620,6 +634,7 @@ export function ScreeningPage() {
     showKeywordsDrawer,
     showBulkUploadModal,
     showHotkeysModal,
+    showDualBlindModal,
   ]);
 
   const addKeywordMutation = useMutation({
@@ -865,6 +880,21 @@ export function ScreeningPage() {
             >
               <Tag className="w-3.5 h-3.5 text-indigo-600" />
               Keywords & Highlighting ({keywords.length})
+            </button>
+
+            {/* Dual-Blinded Review & Consensus Button */}
+            <button
+              onClick={() => setShowDualBlindModal(true)}
+              className="px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-lg flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              title="Dual-Blind Review Dashboard: Cohen's Kappa, Inter-Rater Agreement & Disagreement Adjudication"
+            >
+              <Scale className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Dual-Blind &amp; Consensus</span>
+              {unresolvedConflictsCount > 0 && (
+                <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px] font-mono font-bold">
+                  {unresolvedConflictsCount}
+                </span>
+              )}
             </button>
 
             {progress?.active ? (
@@ -2528,6 +2558,20 @@ export function ScreeningPage() {
             }
           }}
         />
+      )}
+
+      {/* ── Dual-Blinded Review & Consensus Modal ── */}
+      {showDualBlindModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs font-sans animate-in fade-in duration-150">
+          <DualBlindedDashboard
+            projectId={projectId!}
+            onClose={() => setShowDualBlindModal(false)}
+            onSelectStudy={(id) => {
+              setSelectedStudyId(id);
+              setShowDualBlindModal(false);
+            }}
+          />
+        </div>
       )}
     </div>
   );

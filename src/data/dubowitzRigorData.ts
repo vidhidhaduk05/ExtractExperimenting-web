@@ -24,7 +24,7 @@ export interface RigorCheckItem {
   id: string;
   label: string;
   domain: string;
-  guideline: string;
+  guideline?: string | null;
   outcome: "good" | "mid" | "bad" | "na";
   evidence: number;
   color: string;
@@ -34,6 +34,12 @@ export interface RigorCheckItem {
   page: number;
   highlights: RigorHighlight[];
   spoke: RigorSpoke;
+  spokeId?: string;
+  polarity?: "good" | "bad";
+  applies?: boolean;
+  p?: number;
+  status?: string;
+  ev?: any;
 }
 
 export interface RigorDomain {
@@ -50,7 +56,33 @@ export interface RigorGate {
   on: boolean;
 }
 
-export const DUBOWITZ_RIGOR_DATA = {
+export interface RigorDataset {
+  paper: {
+    authors?: string;
+    venue?: string;
+    year?: string | number;
+    doi?: string;
+    license?: string;
+    title: string;
+    pages: number;
+    pages_text?: string[];
+  };
+  completenessIndex: number;
+  counts: {
+    good: number;
+    mid: number;
+    bad: number;
+    na?: number;
+    applicable?: number;
+    total?: number;
+    skipped?: number;
+  };
+  domains: RigorDomain[];
+  gates: RigorGate[];
+  checks: RigorCheckItem[];
+}
+
+export const DUBOWITZ_RIGOR_DATA: RigorDataset = {
   "paper": {
     "authors": "Dubowitz et al.",
     "venue": "PLOS ONE 18(11)",

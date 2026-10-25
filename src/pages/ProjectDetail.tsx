@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { FileText, CheckSquare, ShieldCheck, Table, Download, Plus, GitBranch, BarChart3, Award, Highlighter, FileSpreadsheet, Sparkles, ArrowRight } from "lucide-react";
+import { FileText, CheckSquare, ShieldCheck, Table, Download, Plus, GitBranch, BarChart3, Award, Highlighter, FileSpreadsheet, Sparkles, ArrowRight, Scale } from "lucide-react";
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -52,6 +52,7 @@ export function ProjectDetail() {
     { label: "Extraction Sheet", value: "Matrix", to: `/projects/${projectId}/extraction-sheet`, icon: FileSpreadsheet, color: "text-emerald-600" },
     { label: "Studies", value: studyCount, to: `/projects/${projectId}/studies`, icon: FileText, color: "text-phylo-blue" },
     { label: "Screened In", value: includedCount, to: `/projects/${projectId}/screening`, icon: CheckSquare, color: "text-phylo-green" },
+    { label: "Dual-Blind Review", value: "Consensus", to: `/projects/${projectId}/screening/blind-review`, icon: Scale, color: "text-indigo-600" },
     { label: "PRISMA Flow", value: "View", to: `/projects/${projectId}/prisma`, icon: GitBranch, color: "text-phylo-pink" },
     { label: "RoB Assessments", value: robCount, to: `/projects/${projectId}/rob`, icon: ShieldCheck, color: "text-phylo-orange" },
     { label: "Data Review", value: "—", to: `/projects/${projectId}/review`, icon: Table, color: "text-phylo-pink" },

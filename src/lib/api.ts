@@ -1198,6 +1198,7 @@ export interface Study {
   ai_reason_code?: string | null;
   ai_screened_at?: string | null;
   ai_stage?: string | null;
+  metadata_json?: string | null;
 }
 
 export interface RobToolDef {
@@ -3056,6 +3057,8 @@ export const api = {
     request<HypothesisResponse>(`/projects/${projectId}/hypothesis`),
   updateHypothesis: (projectId: string, data: HypothesisUpdate) =>
     request<HypothesisResponse>(`/projects/${projectId}/hypothesis`, { method: "PUT", body: JSON.stringify(data) }),
+  generateHypothesis: (projectId: string) =>
+    request<HypothesisResponse>(`/projects/${projectId}/generate-hypothesis`, { method: "POST" }),
 
   // Criteria
   getCriteria: (projectId: string) =>
