@@ -850,6 +850,18 @@ def evaluate_claim_fast(
                 "findingSentence": sents[0] if sents else None,
             })
 
+    # 4. Attach Laya Fast Triage Flaw Risk & Specialty Lens to each article
+    try:
+        from services.clinical_storm_service import run_laya_fast_triage
+        for art in articles:
+            triage = run_laya_fast_triage(art.get("title", ""), art.get("abstract", ""), clean_claim)
+            art["laya_flaw_probability"] = triage.get("flaw_probability", 0.15)
+            art["laya_primary_specialty"] = triage.get("primary_specialty", "interventional")
+            art["laya_bias_risk"] = triage.get("rob_level", "low")
+            art["has_flaw_warning"] = triage.get("has_flaw_warning", False)
+    except Exception as e:
+        logger.warning("Could not pre-score articles with Laya triage: %s", e)
+
     elapsed = round((time.perf_counter() - t0) * 1000, 1)
     logger.info("ClaimScape Fast Pipeline evaluated %d papers in %.1f ms", len(articles), elapsed)
 

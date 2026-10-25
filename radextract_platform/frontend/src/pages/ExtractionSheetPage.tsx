@@ -1831,10 +1831,31 @@ export function ExtractionSheetPage() {
                   </div>
 
                   {stormDeliberation?.design_flaws?.length > 0 && (
-                    <div className="flex items-center gap-1.5 text-amber-300 text-[11px] bg-amber-500/15 px-2.5 py-0.5 rounded border border-amber-500/30">
+                    <div className="flex items-center gap-2 text-amber-300 text-[11px] bg-amber-500/15 px-2.5 py-0.5 rounded border border-amber-500/30">
                       <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                       <span className="font-semibold">{stormDeliberation.design_flaws[0].title}</span>
                       <span className="text-slate-400 hidden md:inline">({stormDeliberation.design_flaws[0].description.slice(0, 65)}...)</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const activeVar = filteredVariables[activeCell?.row ?? 0];
+                          if (activeVar) {
+                            const currentVal = extractionMap[activeVar.variable_id]?.value ?? "";
+                            const flawNote = `[Flaw Detected: ${stormDeliberation.design_flaws[0].title}]`;
+                            const nextVal = currentVal ? `${currentVal} | ${flawNote}` : flawNote;
+                            handleCellChange(activeVar.variable_id, nextVal);
+                            setFeedbackToast(`Annotated flaw "${stormDeliberation.design_flaws[0].title}" into active cell.`);
+                            setTimeout(() => setFeedbackToast(null), 3500);
+                          } else {
+                            setFeedbackToast(`Flaw flagged: ${stormDeliberation.design_flaws[0].title}`);
+                            setTimeout(() => setFeedbackToast(null), 3000);
+                          }
+                        }}
+                        className="ml-auto px-2 py-0.5 rounded bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 border border-amber-400/40 font-bold text-[10px] cursor-pointer whitespace-nowrap transition-colors"
+                        title="Document this methodological flaw directly into your extraction sheet"
+                      >
+                        + Document Flaw Caveat
+                      </button>
                     </div>
                   )}
                 </div>
