@@ -536,3 +536,32 @@ async def export_extraction_training_data(
     from services import error_analysis_service as eas
     check_project_access(conn, project_id, user)
     return eas.export_training_dataset(conn, project_id)
+
+
+@router.get("/projects/{project_id}/extraction/srma-workbook")
+async def download_srma_workbook(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Download the canonical 8-sheet SRMA extraction workbook."""
+    from fastapi.responses import Response
+    from services.srma_sheet_generator import generate_srma_extraction_workbook
+    check_project_access(conn, project_id, user)
+    xlsx_bytes = generate_srma_extraction_workbook(project_id, conn)
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="srma_extraction_{project_id}.xlsx"'},
+    )
+
+
+@router.get("/extraction/srma-workbook")
+async def download_srma_workbook_query(
+    project_id: str = Query(...),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Download the canonical 8-sheet SRMA extraction workbook via query param."""
+    return await download_srma_workbook(project_id, user, conn)
+

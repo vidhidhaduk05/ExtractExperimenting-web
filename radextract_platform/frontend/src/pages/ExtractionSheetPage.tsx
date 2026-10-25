@@ -74,6 +74,8 @@ export function ExtractionSheetPage() {
   const [showCuratedExcelModal, setShowCuratedExcelModal] = useState<boolean>(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
   const [isRetrievingOa, setIsRetrievingOa] = useState<boolean>(false);
+  const [isDownloadingSrma, setIsDownloadingSrma] = useState<boolean>(false);
+  const [isEnrichingCtgov, setIsEnrichingCtgov] = useState<boolean>(false);
 
   // Double-blind extraction config state
   const [isExtractionBlinded, setIsExtractionBlinded] = useState(() => {
@@ -580,6 +582,50 @@ export function ExtractionSheetPage() {
     }
   };
 
+  const handleDownloadSrmaWorkbook = async () => {
+    if (!projectId) return;
+    setIsDownloadingSrma(true);
+    try {
+      setFeedbackToast("Generating canonical 8-sheet SRMA extraction workbook...");
+      const res = await fetch(`/api/projects/${projectId}/export/srma-workbook`);
+      if (!res.ok) throw new Error("Failed to generate workbook");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `srma_extraction_workbook_${projectId}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setFeedbackToast("Downloaded canonical 8-sheet SRMA extraction sheet!");
+      setTimeout(() => setFeedbackToast(null), 3500);
+    } catch (e: any) {
+      setFeedbackToast("SRMA export failed: " + (e?.message || "Unknown error"));
+      setTimeout(() => setFeedbackToast(null), 4000);
+    } finally {
+      setIsDownloadingSrma(false);
+    }
+  };
+
+  const handleEnrichCtgov = async () => {
+    if (!projectId) return;
+    setIsEnrichingCtgov(true);
+    try {
+      setFeedbackToast("Querying ClinicalTrials.gov API v2 for trial designs, official arms, & primary outcomes...");
+      const res = await fetch(`/api/projects/${projectId}/studies/enrich-ctgov`, { method: "POST" });
+      const data = await res.json();
+      setFeedbackToast(`ClinicalTrials.gov: Enriched ${data.enriched_count || 0} studies with verified trial metadata.`);
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      setTimeout(() => setFeedbackToast(null), 3500);
+    } catch (e: any) {
+      setFeedbackToast("CT.gov enrichment failed: " + (e?.message || "Unknown error"));
+      setTimeout(() => setFeedbackToast(null), 4000);
+    } finally {
+      setIsEnrichingCtgov(false);
+    }
+  };
+
   const activeStudyVerifiedCount = variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
   const activeStudyPercent = variableList.length > 0 ? Math.round((activeStudyVerifiedCount / variableList.length) * 100) : 0;
 
@@ -714,6 +760,26 @@ export function ExtractionSheetPage() {
               >
                 <Download className="h-3.5 w-3.5 text-[#6B665E]" />
                 <span>Export CSV</span>
+              </button>
+
+              <button
+                onClick={handleDownloadSrmaWorkbook}
+                disabled={isDownloadingSrma}
+                className="btn-phylo-secondary text-xs bg-white/80 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                title="Download canonical 8-sheet SRMA extraction workbook (Codebook, Metadata, Baseline, Intervention, Arm Composition, Event Counts, KM, RoB)"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 text-indigo-600" />
+                <span>{isDownloadingSrma ? "Generating..." : "SRMA 8-Sheet XLSX"}</span>
+              </button>
+
+              <button
+                onClick={handleEnrichCtgov}
+                disabled={isEnrichingCtgov}
+                className="btn-phylo-secondary text-xs bg-white/80 border-cyan-200 text-cyan-800 hover:bg-cyan-50"
+                title="Query ClinicalTrials.gov API v2 to enrich studies with official trial designs, arms, and primary outcomes"
+              >
+                <Database className="h-3.5 w-3.5 text-cyan-600" />
+                <span>{isEnrichingCtgov ? "Enriching..." : "Enrich CT.gov"}</span>
               </button>
             </div>
           </div>
@@ -1042,12 +1108,22 @@ export function ExtractionSheetPage() {
             <div className="font-serif text-2xl font-normal text-[#141413]">
               {allBenchmarkStats.verifiedVars} Verified
             </div>
-            <button
-              onClick={handleExportAllStudiesMatrixCsv}
-              className="text-xs text-[#141413] hover:underline font-mono mt-1 flex items-center gap-1"
-            >
-              <Download className="h-3 w-3" /> Export Matrix CSV
-            </button>
+            <div className="flex items-center gap-3 mt-1">
+              <button
+                onClick={handleExportAllStudiesMatrixCsv}
+                className="text-xs text-[#141413] hover:underline font-mono flex items-center gap-1"
+              >
+                <Download className="h-3 w-3" /> Matrix CSV
+              </button>
+              <button
+                onClick={handleDownloadSrmaWorkbook}
+                disabled={isDownloadingSrma}
+                className="text-xs text-indigo-700 hover:underline font-mono flex items-center gap-1 font-semibold"
+                title="Download canonical 8-sheet SRMA extraction workbook"
+              >
+                <FileSpreadsheet className="h-3 w-3 text-indigo-600" /> SRMA 8-Sheet XLSX
+              </button>
+            </div>
           </div>
         </div>
 

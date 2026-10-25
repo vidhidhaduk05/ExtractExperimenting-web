@@ -1465,10 +1465,13 @@ async def batch_ai_screen(
     pico = json.loads(proj["pico_json"]) if proj["pico_json"] else {}
     clarifications_generated = 0
 
+    from services.ctgov_service import enrich_study_with_ctgov
+
     for s in studies:
         sid = s["study_id"]
-        title = (s["title"] or "").strip()
-        abstract = (s["abstract"] or "").strip()
+        s_dict = enrich_study_with_ctgov(dict(s))
+        title = (s_dict.get("title") or "").strip()
+        abstract = (s_dict.get("abstract") or "").strip()
 
         if stage == "ta":
             pre = prefilter_study(title=title, abstract=abstract, signals=signals, stage="ta")

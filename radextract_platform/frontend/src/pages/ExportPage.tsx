@@ -30,7 +30,8 @@ export function ExportPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${projectName}_${endpoint}.${format === 'csv' ? 'csv' : format === 'excel' ? 'xlsx' : 'json'}`;
+      const ext = format === 'csv' ? 'csv' : (format === 'excel' || format === 'srma-workbook') ? 'xlsx' : 'json';
+      a.download = `${projectName}_${endpoint}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -153,7 +154,15 @@ export function ExportPage() {
               disabled={downloading === 'excel'}
               className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs flex items-center justify-center gap-2 transition"
             >
-              {downloading === 'excel' ? 'Exporting...' : <><Download className="w-4 h-4" /> Export XLSX</>}
+              {downloading === 'excel' ? 'Exporting...' : <><Download className="w-4 h-4" /> Export Simple XLSX</>}
+            </button>
+            <button
+              onClick={() => handleDownload('srma-workbook', 'srma-workbook')}
+              disabled={downloading === 'srma-workbook'}
+              className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center justify-center gap-2 transition shadow-sm"
+              title="Export complete 8-sheet canonical SRMA extraction sheet (Codebook, Metadata, Baseline, Intervention, Composition, Event Counts, KM, RoB)"
+            >
+              {downloading === 'srma-workbook' ? 'Generating 8-Sheet...' : <><FileSpreadsheet className="w-4 h-4" /> Canonical SRMA 8-Sheet XLSX</>}
             </button>
           </div>
         </div>

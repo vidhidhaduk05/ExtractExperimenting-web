@@ -309,6 +309,79 @@ async def get_project_oa_pdfs_status(
     return fulltext_retrieval.get_job(project_id)
 
 
+@router.post("/studies/{study_id}/enrich-ctgov")
+async def enrich_single_study_ctgov(
+    study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Enrich study with ClinicalTrials.gov API v2 metadata if NCT number is present."""
+    row = conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Study not found")
+    check_project_access(conn, row["project_id"], user)
+    from services.ctgov_service import enrich_study_with_ctgov
+    enriched = enrich_study_with_ctgov(dict(row))
+    if enriched.get("ct_enriched"):
+        import json
+        meta = {}
+        if row.get("metadata_json"):
+            try:
+                meta = json.loads(row["metadata_json"])
+            except Exception:
+                meta = {}
+        meta["ctgov"] = {
+            "nct_id": enriched.get("nct_id"),
+            "status": enriched.get("ct_status"),
+            "phase": enriched.get("ct_phase"),
+            "design": enriched.get("ct_design"),
+        }
+        conn.execute(
+            "UPDATE studies SET abstract = ?, metadata_json = ? WHERE study_id = ?",
+            (enriched.get("abstract", row["abstract"]), json.dumps(meta), study_id),
+        )
+        conn.commit()
+    return {"study_id": study_id, "enriched": bool(enriched.get("ct_enriched")), "study": enriched}
+
+
+@router.post("/projects/{project_id}/studies/enrich-ctgov")
+async def enrich_project_studies_ctgov(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Scan all studies in project and enrich any study with NCT identifier via ClinicalTrials.gov API v2."""
+    check_project_access(conn, project_id, user)
+    from services.ctgov_service import enrich_study_with_ctgov
+    import json
+    rows = conn.execute("SELECT * FROM studies WHERE project_id = ?", (project_id,)).fetchall()
+    enriched_count = 0
+    for r in rows:
+        study_dict = dict(r)
+        enriched = enrich_study_with_ctgov(study_dict)
+        if enriched.get("ct_enriched"):
+            meta = {}
+            if study_dict.get("metadata_json"):
+                try:
+                    meta = json.loads(study_dict["metadata_json"])
+                except Exception:
+                    meta = {}
+            meta["ctgov"] = {
+                "nct_id": enriched.get("nct_id"),
+                "status": enriched.get("ct_status"),
+                "phase": enriched.get("ct_phase"),
+                "design": enriched.get("ct_design"),
+            }
+            conn.execute(
+                "UPDATE studies SET abstract = ?, metadata_json = ? WHERE study_id = ?",
+                (enriched.get("abstract", study_dict["abstract"]), json.dumps(meta), study_dict["study_id"]),
+            )
+            enriched_count += 1
+    if enriched_count > 0:
+        conn.commit()
+    return {"project_id": project_id, "total_studies": len(rows), "enriched_count": enriched_count}
+
+
 @router.post("/projects/{project_id}/studies/upload-included-files")
 async def upload_included_files(
     project_id: str,
@@ -693,8 +766,10 @@ async def ai_screen_title_abstract(
     sig_res = generate_signals(project_id, db=conn, force=False)
     signals = sig_res.get("signals", {})
 
-    title = (study["title"] or "").strip()
-    abstract = (study["abstract"] or "").strip()
+    from services.ctgov_service import enrich_study_with_ctgov
+    enriched_study = enrich_study_with_ctgov(dict(study))
+    title = (enriched_study.get("title") or "").strip()
+    abstract = (enriched_study.get("abstract") or "").strip()
     text = f"Title: {title}\nAbstract: {abstract}".strip()
 
     from services.clarification_generator import screen_with_clarification

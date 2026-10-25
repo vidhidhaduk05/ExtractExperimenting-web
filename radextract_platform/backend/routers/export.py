@@ -18,6 +18,7 @@ router = APIRouter(prefix="/api", tags=["export"])
 
 
 @router.get("/projects/{project_id}/export/csv")
+@router.get("/export/{project_id}/csv")
 async def export_project_csv_alias(
     project_id: str,
     include_rob: bool = Query(True, description="Include RoB data in export"),
@@ -29,6 +30,8 @@ async def export_project_csv_alias(
 
 
 @router.get("/projects/{project_id}/export/xlsx")
+@router.get("/export/{project_id}/xlsx")
+@router.get("/export/{project_id}/excel")
 async def export_project_xlsx_alias(
     project_id: str,
     include_rob: bool = Query(True, description="Include RoB data in export"),
@@ -37,6 +40,29 @@ async def export_project_xlsx_alias(
 ):
     """Alias for GET /projects/{id}/export?format=xlsx."""
     return await export_project(project_id, format="xlsx", include_rob=include_rob, user=user, db=db)
+
+
+@router.get("/projects/{project_id}/export/srma-workbook")
+@router.get("/projects/{project_id}/export/canonical-srma")
+@router.get("/export/{project_id}/srma-workbook")
+async def export_canonical_srma_workbook(
+    project_id: str,
+    user: dict = Depends(get_current_user_optional),
+    db: DBBackend = Depends(get_db),
+):
+    """Export the canonical 8-sheet SRMA data extraction workbook."""
+    check_project_access(db, project_id, user)
+    from services.srma_sheet_generator import generate_srma_extraction_workbook
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    xlsx_bytes = generate_srma_extraction_workbook(project_id, db)
+    filename = f"srma_extraction_workbook_{project_id}_{timestamp}.xlsx"
+    storage = get_storage("export")
+    storage.save_bytes(filename, xlsx_bytes)
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/projects/{project_id}/export")

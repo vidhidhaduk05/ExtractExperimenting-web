@@ -248,10 +248,12 @@ class AIScreeningPipeline:
         results: list[dict[str, Any]] = []
         now_str = datetime.now(timezone.utc).isoformat()
 
+        from services.ctgov_service import enrich_study_with_ctgov
+
         for s_row in studies:
             if not progress.check_pause_or_cancel(project_id):
                 break
-            s = dict(s_row)
+            s = enrich_study_with_ctgov(dict(s_row))
             study_id = s["study_id"]
             progress.set_current(project_id, study_id, s.get("title") or "")
             title = (s.get("title") or "").strip()
