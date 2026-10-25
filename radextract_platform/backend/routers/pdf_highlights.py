@@ -132,6 +132,9 @@ async def update_highlight(highlight_id: str, body: HighlightUpdate, user: Optio
     if not existing:
         raise HTTPException(status_code=404, detail="Highlight not found")
 
+    # Security check: Ensure requesting user has access to project
+    check_project_access(conn, existing["project_id"], user)
+
     now = datetime.utcnow().isoformat()
     updates = []
     params = []
@@ -175,12 +178,19 @@ async def update_highlight(highlight_id: str, body: HighlightUpdate, user: Optio
 async def delete_highlight(highlight_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
     """Delete a PDF highlight."""
+    existing = conn.execute(
+        "SELECT project_id FROM pdf_highlights WHERE highlight_id = ?", (highlight_id,)
+    ).fetchone()
+    if not existing:
+        raise HTTPException(status_code=404, detail="Highlight not found")
+
+    # Security check: Ensure requesting user has access to project
+    check_project_access(conn, existing["project_id"], user)
+
     cursor = conn.execute(
         "DELETE FROM pdf_highlights WHERE highlight_id = ?", (highlight_id,)
     )
     conn.commit()
-    if cursor.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Highlight not found")
     return {"deleted": True, "highlight_id": highlight_id}
 
 

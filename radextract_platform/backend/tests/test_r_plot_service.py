@@ -155,3 +155,15 @@ class TestCallRScript:
         """Non-existent script should return None."""
         result = r_plot_service.call_r_script("nonexistent.R", {})
         assert result is None
+
+    def test_path_traversal_returns_none(self):
+        """Path traversal attempts should return None and not execute outside R_SCRIPTS_DIR."""
+        result = r_plot_service.call_r_script("../r_plot_service.py", {})
+        assert result is None
+        result_bytes = r_plot_service.call_r_script_bytes("../r_plot_service.py", {})
+        assert result_bytes is None
+
+        result_abs = r_plot_service.call_r_script("/etc/passwd", {})
+        assert result_abs is None
+        result_abs_bytes = r_plot_service.call_r_script_bytes("/etc/passwd", {})
+        assert result_abs_bytes is None
