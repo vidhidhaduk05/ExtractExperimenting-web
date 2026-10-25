@@ -1,4 +1,4 @@
-export interface TraceStep {
+﻿export interface TraceStep {
   hop: number;
   id: string; // e.g. "root", "hop1", "hop2"
   paperId: string; // e.g. "PMC11571110", "PMID:37934012", "PMID:34923044"
@@ -137,7 +137,7 @@ export const PRESET_TELEPHONE_EXAMPLES: {
           isOrigin: false,
           citedAs: "[9]",
           citingSentence: "More importantly, nuclear PD-L1 can promote cell proliferation in an immune-dependent manner without interacting with PD-1. [9]",
-          foundPassage: "nPD-L1 can also serve as a key nuclear protein that promotes immune-independent cell proliferation without binding to PD-1. [36]",
+          foundPassage: "nPDΓÇÉL1 can also serve as a key nuclear protein that promotes immuneΓÇÉindependent cell proliferation without binding to PDΓÇÉ1. [36]",
           passageSource: "full_text",
           paragraphId: "P009",
           sentenceIndex: 2,
@@ -174,7 +174,7 @@ export const PRESET_TELEPHONE_EXAMPLES: {
               year: 2022,
               isOrigin: true,
               citedAs: "[36]",
-              citingSentence: "nPD-L1 can also serve as a key nuclear protein that promotes immune-independent cell proliferation without binding to PD-1. [36]",
+              citingSentence: "nPDΓÇÉL1 can also serve as a key nuclear protein that promotes immuneΓÇÉindependent cell proliferation without binding to PDΓÇÉ1. [36]",
               foundPassage: "These findings reveal a novel role of nPD-L1, which promotes cell cycle progression in an immune-independent manner in BRAF V600E-mutated CRC.",
               passageSource: "abstract",
               paragraphId: "Abstract",
@@ -345,150 +345,6 @@ export const PRESET_TELEPHONE_EXAMPLES: {
             entropyScore: 0.68,
             reason: "Close probability distribution between 'matches' (38%) and 'partly matches' (42%). Scientific consensus distinguishes net vs uniform downscaling.",
             recommendation: "manual_audit_advised"
-          }
-        }
-      ]
-    }
-  },
-  {
-    id: "post-hoc-power",
-    label: "Post hoc power",
-    paperId: "10.1198/000313001300339897",
-    claim: "Because the primary comparison did not achieve significance (p=0.14), post hoc power calculations were conducted to confirm the study was adequately powered. [18]",
-    data: {
-      claim: "Because the primary comparison did not achieve significance (p=0.14), post hoc power calculations were conducted to confirm the study was adequately powered. [18]",
-      rootPaper: {
-        id: "PMC7891234",
-        title: "Clinical Evaluation of Novel Therapeutic Interventions in Chronic Disease",
-        authors: "Smith JA, Jones RK et al.",
-        journal: "Ann Intern Med",
-        year: 2023,
-        doi: "10.7326/M22-1200",
-        pmid: "36789123"
-      },
-      totalPapersRead: 2,
-      originsFound: 1,
-      maxHops: 1,
-      changesFound: 1,
-      auditSummary: {
-        headline: "Traced to origin 1 hop back: Hoenig & Heisey, 2001 (Am Stat).",
-        subheadline: "Direct Inversion: The cited classic paper proves that post hoc power is a mathematical fallacy and argues against ever calculating it, yet the citing paper cited it as procedural justification to do so.",
-        criticalWarning: "Fallacy Inversion: Hoenig & Heisey (2001) demonstrated that observed power is merely a 1:1 transformation of the p-value and provides zero additional evidential information.",
-        unsurenessMatrixSummary: {
-          totalAnalyzed: 1,
-          highConfidence: 1,
-          genuinelyUnsure: 0,
-          semanticDiscrepancies: 1
-        }
-      } as any,
-      steps: [
-        {
-          hop: 1,
-          id: "power_hop1",
-          paperId: "10.1198/000313001300339897",
-          doi: "10.1198/000313001300339897",
-          title: "The Abuse of Power: The Pervasive Fallacy of Power Calculations for Data Analysis",
-          authors: "Hoenig JM, Heisey DM",
-          journal: "Am Stat",
-          year: 2001,
-          isOrigin: true,
-          citedAs: "[18]",
-          citingSentence: "Because the primary comparison did not achieve significance (p=0.14), post hoc power calculations were conducted to confirm the study was adequately powered. [18]",
-          foundPassage: "We show that calculating power after a study is completed is a pervasive fallacy. Observed power is completely determined by the p-value and conveys no additional information about the true effect size or study adequacy.",
-          passageSource: "abstract",
-          paragraphId: "Abstract",
-          sentenceIndex: 2,
-          verdict: "different",
-          verdictLabel: "Changed (Opposite Meaning)",
-          verdictDescription: "The citing paper cites this work to justify computing post hoc power, but the cited paper explicitly warns against this practice as a mathematical error.",
-          supportScore: 0.94,
-          ownResultScore: 0.98,
-          probabilities: {
-            matches: 0.04,
-            partlyMatches: 0.08,
-            goesFurther: 0.02,
-            moreCautious: 0.01,
-            changed: 0.85,
-            notThere: 0.00
-          },
-          unsureness: {
-            isGenuinelyUnsure: false,
-            margin: 0.77,
-            entropyScore: 0.18,
-            reason: "Definitive normative contradiction: cited paper advises against the action performed by the citing paper.",
-            recommendation: "contradiction_flagged"
-          }
-        }
-      ]
-    }
-  },
-  {
-    id: "radiology-stroke-ai",
-    label: "+ Radiology AI: Distal Occlusion",
-    paperId: "PMC10294812",
-    claim: "Deep learning automated CTA algorithms achieve over 95% sensitivity for detecting intracranial occlusions in acute ischemic stroke triage. [12]",
-    data: {
-      claim: "Deep learning automated CTA algorithms achieve over 95% sensitivity for detecting intracranial occlusions in acute ischemic stroke triage. [12]",
-      rootPaper: {
-        id: "PMC10294812",
-        title: "Artificial Intelligence in Acute Ischemic Stroke Neuroimaging: A Practical Diagnostic Review",
-        authors: "Patel AR, Kumar S, Chen M et al.",
-        journal: "Radiology: Artificial Intelligence",
-        year: 2024,
-        doi: "10.1148/ryai.2024230112",
-        pmcid: "PMC10294812"
-      },
-      totalPapersRead: 2,
-      originsFound: 1,
-      maxHops: 1,
-      changesFound: 1,
-      auditSummary: {
-        headline: "Traced to origin 1 hop back: Murray et al., 2022 (AJNR).",
-        subheadline: "Overgeneralization: 95%+ sensitivity applies ONLY to proximal M1 large vessel occlusions; sensitivity drops to 54% in distal M2/M3 branches.",
-        criticalWarning: "Generalization Drift: The citing paper dropped anatomical qualifiers, claiming 95% across all intracranial occlusions, masking severe distal blind spots.",
-        unsurenessMatrixSummary: {
-          totalAnalyzed: 1,
-          highConfidence: 1,
-          genuinelyUnsure: 0,
-          semanticDiscrepancies: 1
-        }
-      } as any,
-      steps: [
-        {
-          hop: 1,
-          id: "stroke_hop1",
-          paperId: "AJNR.2022.045",
-          doi: "10.3174/ajnr.A7450",
-          title: "Multicenter Diagnostic Validation of Automated Intracranial Vessel Occlusion Detection on Head CT Angiography",
-          authors: "Murray NM, Unberath M, Hager GD, Hui FK",
-          journal: "AJNR Am J Neuroradiol",
-          year: 2022,
-          isOrigin: true,
-          citedAs: "[12]",
-          citingSentence: "Deep learning automated CTA algorithms achieve over 95% sensitivity for detecting intracranial occlusions in acute ischemic stroke triage. [12]",
-          foundPassage: "The automated deep learning algorithm exhibited 96.2% sensitivity for proximal M1 occlusions, whereas sensitivity for distal medium vessel occlusions (M2/M3, A2, P2) was significantly lower at 54.1% (p < 0.001).",
-          passageSource: "abstract",
-          paragraphId: "Abstract",
-          sentenceIndex: 5,
-          verdict: "stronger",
-          verdictLabel: "Goes Further (Overclaimed)",
-          verdictDescription: "Citing author omitted the distal anatomical limitation, asserting high sensitivity across all intracranial occlusions.",
-          supportScore: 0.70,
-          ownResultScore: 0.96,
-          probabilities: {
-            matches: 0.18,
-            partlyMatches: 0.24,
-            goesFurther: 0.54,
-            moreCautious: 0.02,
-            changed: 0.02,
-            notThere: 0.00
-          },
-          unsureness: {
-            isGenuinelyUnsure: false,
-            margin: 0.30,
-            entropyScore: 0.32,
-            reason: "Subgroup performance limitation omitted from secondary generalization.",
-            recommendation: "contradiction_flagged"
           }
         }
       ]

@@ -1,0 +1,65 @@
+/* User-approved prototype sections only. No global rules or application overrides. */
+.approved-landing-hero{max-width:1200px;padding-top:46px;padding-bottom:44px;color:#3a0f34}
+.approved-landing-hero h1{font-size:clamp(29px,5.2vw,66px);line-height:1.08;letter-spacing:-.025em}
+.approved-landing-hero .approved-hero-context{font-family:'Work Sans',sans-serif;font-size:15px;line-height:1.5;color:#66365c;margin-top:20px}
+.approved-landing-hero>h1+ .approved-hero-context+p{margin-top:10px;font-size:20px}
+.approved-landing-hero form label{font-size:13px}
+.approved-landing-hero textarea{font-size:28px;line-height:1.35;min-height:112px}
+.approved-hero-examples{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:20px;font-family:'Work Sans',sans-serif;font-size:13px}
+.approved-hero-examples button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;background:#f0eee9;color:#3a0f34;transition:background .2s,transform .25s}
+.approved-hero-examples button:hover,.approved-hero-examples button:focus-visible{background:#ffdea6;transform:translateY(-2px)}
+.approved-landing-usecases{background:#eee6eb;color:#3a0f34;padding:82px 32px 94px}
+.approved-usecases-inner{width:100%;max-width:1200px;margin:0 auto}
+.approved-usecases-header{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:end;margin-bottom:40px}
+.approved-usecases-header h2,.approved-landing-collaboration h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:600;font-size:clamp(32px,4vw,52px);line-height:1.12;letter-spacing:-.025em;color:#3a0f34}
+.approved-usecases-header p{font-size:20px;line-height:1.55;color:#58434f;max-width:46ch}
+.approved-usecase{display:grid;grid-template-columns:.48fr 1fr 1fr;gap:38px;align-items:start;padding:34px 0}
+.approved-usecase-field{font-family:'Work Sans',sans-serif;font-size:13px;line-height:1.5;color:#66365c;padding-top:5px}
+.approved-usecase h3{font-family:'Bodoni Moda',Georgia,serif;font-size:28px;font-weight:600;line-height:1.2;letter-spacing:-.025em;color:#3a0f34}
+.approved-usecase p{font-size:18px;line-height:1.55;color:#58434f;margin-top:12px}
+.approved-usecase .approved-usecase-question{font-size:24px;font-style:italic;line-height:1.5;color:#3a0f34;margin-top:0}
+.approved-usecase button{display:inline-flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;margin-top:18px;padding:12px 16px;text-align:left;background:#fbf9f4;color:#3a0f34;font-family:'Work Sans',sans-serif;font-size:13px;line-height:1.5;transition:background .2s,transform .3s}
+.approved-usecase button:hover,.approved-usecase button:focus-visible{background:#ffdea6;transform:translateX(4px)}
+.approved-usecase button:focus-visible,.approved-hero-examples button:focus-visible{outline:3px solid #9b6500;outline-offset:4px}
+.approved-landing-collaboration{border-top:0;padding:104px 32px}
+.approved-landing-collaboration>div{display:grid;grid-template-columns:1.1fr 1fr;gap:0 80px;max-width:1200px;text-align:left;align-items:start}
+.approved-landing-collaboration>div>span{grid-column:1;grid-row:1;margin-bottom:20px;font-size:13px}
+.approved-landing-collaboration h2{grid-column:1;grid-row:2 / span 2;max-width:16ch;margin:0}
+.approved-landing-collaboration>div>p{grid-column:2;grid-row:2;font-size:21px;line-height:1.55;color:#58434f;max-width:42ch;margin:0 0 26px}
+.approved-landing-collaboration>div>a{grid-column:2;grid-row:3;justify-self:start;background:transparent;border:0;border-radius:0;padding:0;min-height:44px;text-decoration:underline;text-underline-offset:5px;font-size:14px;font-weight:500}
+.approved-landing-collaboration>div>a:hover{color:#66365c;background:transparent}
+.approved-landing-footer{padding:42px 32px 24px}
+.approved-landing-footer>div{display:grid;grid-template-columns:1fr auto;gap:30px;max-width:1200px;align-items:center}
+.approved-landing-footer>div>div:first-child{grid-column:1 / -1;justify-content:flex-start;gap:20px}
+.approved-landing-footer>div>div:first-child>span{font-size:clamp(48px,10vw,142px);font-weight:600;line-height:1.12;letter-spacing:-.04em}
+.approved-landing-footer>div>div:nth-child(2){grid-column:2;grid-row:2;flex-wrap:wrap;gap:24px;color:#eee4eb}
+.approved-landing-footer>div>div:nth-child(2)>a{display:inline-flex;align-items:center;min-height:44px}
+.approved-landing-footer>div>p{grid-column:1;grid-row:2;color:#eee4eb;font-size:13px;line-height:1.5}
+@media(max-width:1000px){.approved-usecases-header{gap:40px}.approved-usecase{gap:26px}.approved-landing-collaboration>div{gap:0 40px}}
+@media(max-width:800px){
+  .approved-landing-hero{padding-top:30px;padding-bottom:38px}
+  .approved-landing-hero .approved-hero-context{font-size:14px;max-width:30ch;margin-top:16px}
+  .approved-landing-hero>h1+.approved-hero-context+p{font-size:18px;margin-top:12px}
+  .approved-landing-hero textarea{font-size:23px}
+  .approved-hero-examples{gap:8px}
+  .approved-landing-usecases{padding:58px 20px 40px}
+  .approved-usecases-header{grid-template-columns:1fr;gap:24px;margin-bottom:30px}
+  .approved-usecases-header p{font-size:18px}
+  .approved-usecase{grid-template-columns:1fr;gap:12px;padding:28px 0}
+  .approved-usecase h3{font-size:26px}
+  .approved-usecase .approved-usecase-question{font-size:23px;margin-top:5px}
+  .approved-usecase button{margin-top:14px}
+  .approved-landing-collaboration{padding:64px 20px}
+  .approved-landing-collaboration>div{grid-template-columns:1fr;gap:24px}
+  .approved-landing-collaboration>div>span,.approved-landing-collaboration h2,.approved-landing-collaboration>div>p,.approved-landing-collaboration>div>a{grid-column:auto;grid-row:auto}
+  .approved-landing-collaboration>div>span{margin:0}
+  .approved-landing-collaboration h2{max-width:18ch}
+  .approved-landing-collaboration>div>p{font-size:19px;margin:0}
+  .approved-landing-footer{padding:32px 20px 24px}
+  .approved-landing-footer>div{grid-template-columns:1fr;gap:20px}
+  .approved-landing-footer>div>div:nth-child(2),.approved-landing-footer>div>p{grid-column:1;grid-row:auto}
+  .approved-landing-footer>div>div:first-child{gap:12px}
+  .approved-landing-footer>div>div:nth-child(2){justify-content:flex-start;gap:20px}
+}
+@media(max-width:480px){.approved-landing-hero form>div.mt-3.pt-4>button{width:100%;justify-content:center}.approved-landing-footer>div>div:first-child>div{flex-shrink:0}}
+@media(prefers-reduced-motion:reduce){.approved-hero-examples button,.approved-usecase button{transition:none;transform:none!important}}

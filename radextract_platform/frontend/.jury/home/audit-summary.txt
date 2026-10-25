@@ -1,0 +1,6 @@
+Production frontend audit observed 2026-10-25; one page, built Vite output.
+3 FAIL, 35 WARN.
+FAIL: missing meta description; initial HTML has 0 h1; initial HTML has no main landmark.
+WARN: missing canonical, og:title, og:description, og:image, twitter:card, robots.txt, sitemap; missing h1 in 404 response.
+Initial HTML has 0 visible words. Check rendered browser before interpreting heading findings: client rendering can explain initial HTML absence.
+Estimated JavaScript 890 KB gzip; fonts 1948 KB; total estimated page weight 2863 KB. Font warnings mention TTF delivery.

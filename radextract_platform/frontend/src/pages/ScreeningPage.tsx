@@ -3,7 +3,6 @@ import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags } from "../lib/recordCollaboration";
 import { RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
-import { cleanDoi, cleanPmid, getDoiUrl, getPmidUrl, getStudySourceUrl, openStudySource } from "../lib/studyUtils";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
@@ -20,6 +19,7 @@ import {
   type ClarificationOption,
   type ClarificationAnswerResponse,
   type BatchUploadResult,
+  type ScreeningDecision,
 } from "../lib/api";
 import {
   ArrowLeft,
@@ -62,10 +62,12 @@ import {
   RotateCcw,
   Pause,
   Square,
-  Scale,
+  Lock,
+  Unlock,
+  Users,
+  Settings2,
 } from "lucide-react";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
-import { DualBlindedDashboard } from "../components/screening/DualBlindedDashboard";
 
 
 export function ScreeningPage() {
@@ -98,13 +100,55 @@ export function ScreeningPage() {
     }
   };
 
+  // Double-Blind Screening & Quota Configuration
+  const [doubleBlindConfig, setDoubleBlindConfig] = useState<{
+    enabled: boolean;
+    extractionBlinded: boolean;
+    reviewer1Name: string;
+    reviewer1Id: string;
+    reviewer1Quota: number;
+    reviewer2Name: string;
+    reviewer2Id: string;
+    reviewer2Quota: number;
+    blindMode: boolean;
+  }>(() => {
+    try {
+      const saved = localStorage.getItem(`radextract_double_blind_${projectId}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      enabled: true,
+      extractionBlinded: false,
+      reviewer1Name: "Reviewer 1 (Lead)",
+      reviewer1Id: "reviewer_1",
+      reviewer1Quota: 0,
+      reviewer2Name: "Reviewer 2 (Associate)",
+      reviewer2Id: "reviewer_2",
+      reviewer2Quota: 0,
+      blindMode: true,
+    };
+  });
+
+  const [activeReviewerId, setActiveReviewerId] = useState<"reviewer_1" | "reviewer_2">("reviewer_1");
+  const [showQuotaModal, setShowQuotaModal] = useState(false);
+
+  // Form states for the Quota / Blinding Modal
+  const [modalEnabled, setModalEnabled] = useState(doubleBlindConfig.enabled);
+  const [modalExtractionBlinded, setModalExtractionBlinded] = useState(doubleBlindConfig.extractionBlinded);
+  const [modalR1Name, setModalR1Name] = useState(doubleBlindConfig.reviewer1Name);
+  const [modalR1Quota, setModalR1Quota] = useState(doubleBlindConfig.reviewer1Quota);
+  const [modalR2Name, setModalR2Name] = useState(doubleBlindConfig.reviewer2Name);
+  const [modalR2Quota, setModalR2Quota] = useState(doubleBlindConfig.reviewer2Quota);
+  const [modalBlindMode, setModalBlindMode] = useState(doubleBlindConfig.blindMode);
+
   // Reviewer identity
   const authToken = localStorage.getItem("token");
   const { data: currentReviewer, error: reviewerError } = useQuery({
     queryKey: ["screening-reviewer", authToken], queryFn: api.getCurrentUser,
     enabled: !!authToken, retry: false,
   });
-  const reviewerName = currentReviewer?.username || "";
+  const activeReviewerName = activeReviewerId === "reviewer_1" ? doubleBlindConfig.reviewer1Name : doubleBlindConfig.reviewer2Name;
+  const reviewerName = currentReviewer?.username || activeReviewerName || "Reviewer";
 
   // Highlight toggles & Keywords drawer state
   const [showHighlights, setShowHighlights] = useState(true);
@@ -138,19 +182,10 @@ export function ScreeningPage() {
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Bulk Upload, Hotkeys & Dual-Blind state
+  // Bulk Upload & Hotkeys state
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showHotkeysModal, setShowHotkeysModal] = useState(false);
-  const [showDualBlindModal, setShowDualBlindModal] = useState(false);
   const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
-
-  // Conflicts query for badge
-  const { data: screeningConflicts } = useQuery({
-    queryKey: ["screening-conflicts", projectId],
-    queryFn: () => api.listScreeningConflicts(projectId!),
-    enabled: !!projectId,
-  });
-  const unresolvedConflictsCount = (screeningConflicts || []).filter((c) => c.status === "unresolved").length;
 
 
   // While an AI screening run is in flight, poll so each screened study appears as soon as it is saved
@@ -181,6 +216,13 @@ export function ScreeningPage() {
     queryFn: () => api.screeningSummary(projectId!),
     enabled: !!projectId,
     refetchInterval: isRunning ? 3000 : false,
+  });
+
+  const { data: screeningDecisions = [] } = useQuery<ScreeningDecision[]>({
+    queryKey: ["screening-decisions", projectId],
+    queryFn: () => api.listScreeningDecisions(projectId!),
+    enabled: !!projectId,
+    refetchInterval: isRunning ? 3000 : 5000,
   });
 
   const { data: exclusionReasonsData } = useQuery({
@@ -288,18 +330,171 @@ export function ScreeningPage() {
     }
   };
 
-  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
+  const studyList = Array.isArray(studies) ? studies : [];
 
-  // Optimize O(1) bookmark lookups and count memoization to avoid O(N*M) linear scans during renders
-  const bookmarkedIdsSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids]);
-  const savedCount = useMemo(() => {
-    return studyList.reduce((acc, s) => (bookmarkedIdsSet.has(s.study_id) ? acc + 1 : acc), 0);
-  }, [studyList, bookmarkedIdsSet]);
+  // Synchronize Quota Modal inputs when opening
+  useEffect(() => {
+    if (showQuotaModal) {
+      setModalEnabled(doubleBlindConfig.enabled);
+      setModalExtractionBlinded(doubleBlindConfig.extractionBlinded);
+      setModalR1Name(doubleBlindConfig.reviewer1Name);
+      setModalR1Quota(doubleBlindConfig.reviewer1Quota || (studyList.length > 0 ? Math.ceil(studyList.length / 2) : 10));
+      setModalR2Name(doubleBlindConfig.reviewer2Name);
+      setModalR2Quota(doubleBlindConfig.reviewer2Quota || (studyList.length > 0 ? Math.floor(studyList.length / 2) : 10));
+      setModalBlindMode(doubleBlindConfig.blindMode);
+    }
+  }, [showQuotaModal, doubleBlindConfig, studyList.length]);
+
+  const saveDoubleBlindConfig = (newCfg: typeof doubleBlindConfig) => {
+    setDoubleBlindConfig(newCfg);
+    try {
+      localStorage.setItem(`radextract_double_blind_${projectId}`, JSON.stringify(newCfg));
+    } catch (e) {}
+    setShowQuotaModal(false);
+  };
+
+  // Reviewer Progress and Concordance Statistics
+  const reviewerStats = useMemo(() => {
+    const total = studyList.length;
+    const r1Quota = doubleBlindConfig.reviewer1Quota > 0 ? doubleBlindConfig.reviewer1Quota : (total > 0 ? total : 1);
+    const r2Quota = doubleBlindConfig.reviewer2Quota > 0 ? doubleBlindConfig.reviewer2Quota : (total > 0 ? total : 1);
+
+    const r1Decisions = screeningDecisions.filter(d => d.reviewer_id === "reviewer_1");
+    const r2Decisions = screeningDecisions.filter(d => d.reviewer_id === "reviewer_2");
+
+    const r1Count = r1Decisions.length;
+    const r2Count = r2Decisions.length;
+
+    const r1Pct = r1Quota > 0 ? Math.min(100, Math.round((r1Count / r1Quota) * 100)) : 0;
+    const r2Pct = r2Quota > 0 ? Math.min(100, Math.round((r2Count / r2Quota) * 100)) : 0;
+
+    // Dual screened studies (both Reviewer 1 and Reviewer 2 have a decision record)
+    const dualStudies = studyList.filter(s => {
+      const has1 = r1Decisions.some(d => d.study_id === s.study_id);
+      const has2 = r2Decisions.some(d => d.study_id === s.study_id);
+      return has1 && has2;
+    });
+
+    let concordantCount = 0;
+    let conflictCount = 0;
+
+    dualStudies.forEach(s => {
+      const d1 = r1Decisions.find(d => d.study_id === s.study_id)?.decision;
+      const d2 = r2Decisions.find(d => d.study_id === s.study_id)?.decision;
+      const isInc1 = d1 === "included" || d1 === "ta_included";
+      const isInc2 = d2 === "included" || d2 === "ta_included";
+      const isExc1 = d1 === "excluded";
+      const isExc2 = d2 === "excluded";
+
+      if ((isInc1 && isInc2) || (isExc1 && isExc2)) {
+        concordantCount++;
+      } else {
+        conflictCount++;
+      }
+    });
+
+    const concordanceRate = dualStudies.length > 0 ? Math.round((concordantCount / dualStudies.length) * 100) : 100;
+
+    return {
+      total,
+      r1Quota,
+      r2Quota,
+      r1Count,
+      r2Count,
+      r1Pct,
+      r2Pct,
+      dualCount: dualStudies.length,
+      concordantCount,
+      conflictCount,
+      concordanceRate,
+    };
+  }, [studyList, screeningDecisions, doubleBlindConfig]);
+
+  // Blinded decision status helper for a specific study
+  const getStudyBlindedStatus = (studyId: string) => {
+    const r1 = screeningDecisions.find(d => d.study_id === studyId && d.reviewer_id === "reviewer_1");
+    const r2 = screeningDecisions.find(d => d.study_id === studyId && d.reviewer_id === "reviewer_2");
+    const myVote = activeReviewerId === "reviewer_1" ? r1 : r2;
+    const partnerVote = activeReviewerId === "reviewer_1" ? r2 : r1;
+    const partnerName = activeReviewerId === "reviewer_1" ? doubleBlindConfig.reviewer2Name : doubleBlindConfig.reviewer1Name;
+
+    const isBlinded = doubleBlindConfig.enabled && doubleBlindConfig.blindMode;
+
+    if (!isBlinded) {
+      const both = !!r1 && !!r2;
+      const isConcordant = both && r1.decision === r2.decision;
+      return {
+        isBlinded: false,
+        myVote,
+        partnerVote,
+        partnerName,
+        bothVoted: both,
+        isConcordant,
+        conflict: both && !isConcordant,
+        statusText: both ? (isConcordant ? `Concordant (${r1.decision})` : "Conflict") : (myVote ? "Voted" : partnerVote ? "Partner Voted" : "Pending"),
+      };
+    }
+
+    if (myVote && partnerVote) {
+      // Both voted: unblinded!
+      const isInc1 = r1?.decision === "included" || r1?.decision === "ta_included";
+      const isInc2 = r2?.decision === "included" || r2?.decision === "ta_included";
+      const isExc1 = r1?.decision === "excluded";
+      const isExc2 = r2?.decision === "excluded";
+      const isConcordant = (isInc1 && isInc2) || (isExc1 && isExc2);
+      return {
+        isBlinded: false,
+        myVote,
+        partnerVote,
+        partnerName,
+        bothVoted: true,
+        isConcordant,
+        conflict: !isConcordant,
+        statusText: isConcordant ? `Concordant (${myVote.decision})` : `Conflict: R1 (${r1?.decision}) vs R2 (${r2?.decision})`,
+      };
+    }
+
+    if (!myVote && partnerVote) {
+      // Partner voted, I have not: BLINDED!
+      return {
+        isBlinded: true,
+        myVote: null,
+        partnerVote: null, // masked
+        partnerName,
+        partnerHasVoted: true,
+        bothVoted: false,
+        conflict: false,
+        statusText: "Partner voted (Blinded)",
+      };
+    }
+
+    if (myVote && !partnerVote) {
+      return {
+        isBlinded: false,
+        myVote,
+        partnerVote: null,
+        partnerName,
+        bothVoted: false,
+        conflict: false,
+        statusText: `Waiting for ${partnerName}`,
+      };
+    }
+
+    return {
+      isBlinded: false,
+      myVote: null,
+      partnerVote: null,
+      partnerName,
+      bothVoted: false,
+      conflict: false,
+      statusText: "Pending both reviewers",
+    };
+  };
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
-      if (savedOnly && !bookmarkedIdsSet.has(s.study_id)) return false;
+      if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
 
       // Stage filter
@@ -341,15 +536,13 @@ export function ScreeningPage() {
         }
       }
 
-      // Search query filter (matches title, authors, abstract, DOI, and PMID)
+      // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesTitle = (s.title || "").toLowerCase().includes(q);
         const matchesAuthors = (s.authors || "").toLowerCase().includes(q);
         const matchesAbstract = (s.abstract || "").toLowerCase().includes(q);
-        const matchesDoi = (s.doi || "").toLowerCase().includes(q);
-        const matchesPmid = (s.pmid || "").toLowerCase().includes(q);
-        if (!matchesTitle && !matchesAuthors && !matchesAbstract && !matchesDoi && !matchesPmid) return false;
+        if (!matchesTitle && !matchesAuthors && !matchesAbstract) return false;
       }
       // Confidence filter
       if (confidenceFilter !== "all") {
@@ -360,7 +553,7 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarkedIdsSet, tagIndex.data, tagFilter]);
+  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
 
   // Auto-select first study in filtered set if current selectedStudyId is filtered out
   useEffect(() => {
@@ -439,12 +632,16 @@ export function ScreeningPage() {
     decision: "included" | "excluded" | "maybe";
     reasonCode?: string;
     reasonText?: string;
+    reviewerId?: string;
+    reviewerName?: string;
   };
 
   const decisionMutation = useMutation({
     mutationFn: (data: DecisionPayload) =>
       api.screeningDecision(data.studyId, {
         project_id: projectId!,
+        reviewer_id: data.reviewerId || activeReviewerId,
+        reviewer_name: data.reviewerName || activeReviewerName,
         decision: data.decision,
         stage: data.stage,
         reason_code: data.reasonCode,
@@ -458,6 +655,7 @@ export function ScreeningPage() {
 
       queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
       queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-decisions", projectId] });
 
       // Clear the reason selector for the next record ONLY after successful save
       if (variables.decision === "excluded") {
@@ -490,11 +688,6 @@ export function ScreeningPage() {
     // Prevent duplicate submissions while a save is in flight
     if (decisionMutation.isPending) return;
 
-    if (!currentReviewer) {
-      setSaveError("Sign in with a valid account to save screening decisions.");
-      return;
-    }
-
     const currentStudyId = targetStudyId || selectedStudy?.study_id;
     if (!currentStudyId) return;
     const targetStudy = studyList.find(study => study.study_id === currentStudyId);
@@ -508,7 +701,6 @@ export function ScreeningPage() {
       setSaveError(error instanceof Error ? error.message : "Screening stage could not be determined.");
       return;
     }
-
 
     if (decision === "excluded") {
       // Must have a valid exclusion reason selected (Task 27)
@@ -537,6 +729,8 @@ export function ScreeningPage() {
         decision: "excluded",
         reasonCode: excludeReasonCode,
         reasonText: excludeReasonText.trim() || reasonLabel || "Ineligible based on criteria",
+        reviewerId: activeReviewerId,
+        reviewerName: activeReviewerName,
       });
       return;
     }
@@ -552,6 +746,8 @@ export function ScreeningPage() {
         stage,
         decision: "included",
         reasonText: "Eligible under PICO criteria",
+        reviewerId: activeReviewerId,
+        reviewerName: activeReviewerName,
       });
     } else if (decision === "maybe") {
       decisionMutation.mutate({
@@ -559,7 +755,10 @@ export function ScreeningPage() {
         stage,
         decision: "maybe",
         reasonText: "Uncertain - requires further assessment",
+        reviewerId: activeReviewerId,
+        reviewerName: activeReviewerName,
       });
+    }
     }
   };
 
@@ -595,12 +794,11 @@ export function ScreeningPage() {
         return;
       }
 
-      if (showKeywordsDrawer || showBulkUploadModal || showHotkeysModal || showDualBlindModal) {
+      if (showKeywordsDrawer || showBulkUploadModal || showHotkeysModal) {
         if (e.key === "Escape") {
           setShowBulkUploadModal(false);
           setShowHotkeysModal(false);
           setShowKeywordsDrawer(false);
-          setShowDualBlindModal(false);
         }
         return;
       }
@@ -640,7 +838,6 @@ export function ScreeningPage() {
     showKeywordsDrawer,
     showBulkUploadModal,
     showHotkeysModal,
-    showDualBlindModal,
   ]);
 
   const addKeywordMutation = useMutation({
@@ -708,7 +905,7 @@ export function ScreeningPage() {
     }
 
     // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-    const activeSpans = [...spans];
+    let activeSpans = [...spans];
     if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
       fallbackKeywordsList.forEach((kw) => {
         const word = kw.keyword.trim();
@@ -886,21 +1083,6 @@ export function ScreeningPage() {
             >
               <Tag className="w-3.5 h-3.5 text-indigo-600" />
               Keywords & Highlighting ({keywords.length})
-            </button>
-
-            {/* Dual-Blinded Review & Consensus Button */}
-            <button
-              onClick={() => setShowDualBlindModal(true)}
-              className="px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-lg flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-              title="Dual-Blind Review Dashboard: Cohen's Kappa, Inter-Rater Agreement & Disagreement Adjudication"
-            >
-              <Scale className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Dual-Blind &amp; Consensus</span>
-              {unresolvedConflictsCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px] font-mono font-bold">
-                  {unresolvedConflictsCount}
-                </span>
-              )}
             </button>
 
             {progress?.active ? (
@@ -1121,6 +1303,127 @@ export function ScreeningPage() {
         )}
       </header>
 
+      {/* ── DUAL REVIEWER DOUBLE-BLIND TEAM DASHBOARD BANNER ── */}
+      <div className="bg-white border-b border-slate-200 shadow-2xs px-6 py-2.5">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+          
+          {/* Left: Active Reviewer Switcher & Blinding Mode Tag */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+              <Users className="w-4 h-4 text-indigo-600" />
+              <span>Screening Team:</span>
+            </div>
+
+            {/* Reviewer Switcher Pill */}
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setActiveReviewerId("reviewer_1")}
+                className={`px-3 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeReviewerId === "reviewer_1"
+                    ? "bg-white text-indigo-900 font-bold shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+                title="Switch active session to Reviewer 1"
+              >
+                <span className={`w-2 h-2 rounded-full ${activeReviewerId === "reviewer_1" ? "bg-indigo-600 animate-pulse" : "bg-slate-300"}`} />
+                <span>{doubleBlindConfig.reviewer1Name}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveReviewerId("reviewer_2")}
+                className={`px-3 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeReviewerId === "reviewer_2"
+                    ? "bg-white text-purple-900 font-bold shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+                title="Switch active session to Reviewer 2"
+              >
+                <span className={`w-2 h-2 rounded-full ${activeReviewerId === "reviewer_2" ? "bg-purple-600 animate-pulse" : "bg-slate-300"}`} />
+                <span>{doubleBlindConfig.reviewer2Name}</span>
+              </button>
+            </div>
+
+            {/* Blinding indicator pill */}
+            {doubleBlindConfig.enabled ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                <Lock className="w-3 h-3 text-amber-600" />
+                Double-Blinded Mode Active
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-300">
+                <Unlock className="w-3 h-3 text-slate-500" />
+                Open Review (Unblinded)
+              </span>
+            )}
+          </div>
+
+          {/* Center: Dual Progress Bars for Reviewer 1 and Reviewer 2 */}
+          <div className="flex-1 max-w-xl grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Reviewer 1 Progress Bar */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs">
+              <div className="flex items-center justify-between text-[11px] mb-1">
+                <span className="font-semibold text-slate-700 truncate max-w-[120px]" title={doubleBlindConfig.reviewer1Name}>
+                  {doubleBlindConfig.reviewer1Name}
+                </span>
+                <span className="font-mono text-indigo-700 font-bold">
+                  {reviewerStats.r1Count} / {reviewerStats.r1Quota} ({reviewerStats.r1Pct}%)
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${reviewerStats.r1Pct}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Reviewer 2 Progress Bar */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs">
+              <div className="flex items-center justify-between text-[11px] mb-1">
+                <span className="font-semibold text-slate-700 truncate max-w-[120px]" title={doubleBlindConfig.reviewer2Name}>
+                  {doubleBlindConfig.reviewer2Name}
+                </span>
+                <span className="font-mono text-purple-700 font-bold">
+                  {reviewerStats.r2Count} / {reviewerStats.r2Quota} ({reviewerStats.r2Pct}%)
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-purple-600 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${reviewerStats.r2Pct}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Agreement Metrics & Settings Button */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-slate-500 text-[11px]">Concordance:</span>
+              <span className="font-bold text-slate-800">{reviewerStats.concordanceRate}%</span>
+              {reviewerStats.conflictCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 animate-pulse">
+                  {reviewerStats.conflictCount} conflict{reviewerStats.conflictCount === 1 ? "" : "s"}
+                </span>
+              )}
+            </div>
+
+            {/* Open Team Quota & Blinding Settings */}
+            <button
+              type="button"
+              onClick={() => setShowQuotaModal(true)}
+              className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+              title="Assign study quotas and configure double-blind protocol parameters"
+            >
+              <Settings2 className="w-3.5 h-3.5 text-slate-600" />
+              <span>Team Quotas</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
       {/* Live AI screening progress & controls */}
       {progress?.active && (
         <div className={`border-b px-6 py-2.5 transition-colors ${
@@ -1265,7 +1568,7 @@ export function ScreeningPage() {
                 onChange={(e) => setSavedOnly(e.target.checked)}
                 className="rounded text-indigo-600 focus:ring-indigo-500"
               />
-              <span className="font-medium">Saved ({savedCount})</span>
+              <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
             </label>
           </div>
 
@@ -1470,6 +1773,28 @@ export function ScreeningPage() {
                 <Loader2 className="w-6 h-6 animate-spin mb-2" />
                 <span className="text-xs">Loading studies...</span>
               </div>
+            ) : studyList.length === 0 ? (
+              <div className="text-center py-12 px-4 space-y-3">
+                <ShieldCheck className="w-10 h-10 text-slate-300 mx-auto" />
+                <h4 className="text-xs font-bold text-slate-800">No Studies in this Project</h4>
+                <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                  New projects start with a clean slate. Import studies directly from your laptop or generate search strings to retrieve PubMed records.
+                </p>
+                <div className="flex flex-col gap-2 pt-2">
+                  <button
+                    onClick={() => setShowBulkUploadModal(true)}
+                    className="px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs cursor-pointer"
+                  >
+                    Bulk Upload Studies / PDFs
+                  </button>
+                  <Link
+                    to={`/projects/${projectId}/pico`}
+                    className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg text-center cursor-pointer"
+                  >
+                    Go to PICO & Search Strings
+                  </Link>
+                </div>
+              </div>
             ) : filteredStudies.length === 0 ? (
               <div className="text-center py-12 text-slate-400 text-xs">
                 No studies match the selected filters.
@@ -1481,17 +1806,12 @@ export function ScreeningPage() {
                 const isCurrent = !!progress?.active && progress.current_study_id === study.study_id;
                 const isQueued = !isCurrent && queuedIds.has(study.study_id);
                 const isJustDone = doneIds.has(study.study_id);
+                const bStatus = getStudyBlindedStatus(study.study_id);
 
                 return (
                   <div
                     key={study.study_id}
                     onClick={() => setSelectedStudyId(study.study_id)}
-                    onDoubleClick={(e) => {
-                      const target = e.target as HTMLElement;
-                      if (target.closest("button, a, input")) return;
-                      openStudySource(study);
-                    }}
-                    title="Click to select · Double-click to open in PubMed / DOI"
                     className={`p-3 rounded-lg cursor-pointer transition-all border ${
                       isCurrent
                         ? "bg-indigo-50 border-indigo-400 ring-2 ring-indigo-300 animate-pulse"
@@ -1504,7 +1824,7 @@ export function ScreeningPage() {
                       <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 leading-snug">
                         {study.title}
                       </h3>
-                      <BookmarkButton saved={bookmarkedIdsSet.has(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
+                      <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
                       {conf !== null && (
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap animate-tag-pop ${
@@ -1527,22 +1847,45 @@ export function ScreeningPage() {
 
                     <div className="flex items-center justify-between gap-2 flex-wrap text-[10px]">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {/* Status Badge with pop-up animation */}
-                        <span
-                          className={`px-2 py-0.5 rounded font-medium animate-tag-pop ${
-                            study.screening_status === "included" || study.screening_status === "ta_included"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : study.screening_status === "excluded"
-                              ? "bg-rose-50 text-rose-700 border border-rose-200"
-                              : study.screening_status === "awaiting_clarification"
-                              ? "bg-purple-50 text-purple-700 border border-purple-200"
-                              : study.screening_status === "awaiting_pdf"
-                              ? "bg-blue-50 text-blue-700 border border-blue-200"
-                              : "bg-slate-100 text-slate-700 border border-slate-200"
-                          }`}
-                        >
-                          {study.screening_status.replace("_", " ")}
-                        </span>
+                        {/* Blinded Review Team Badges */}
+                        {bStatus.myVote ? (
+                          <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${
+                            bStatus.myVote.decision === "included" || bStatus.myVote.decision === "ta_included"
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : bStatus.myVote.decision === "excluded"
+                              ? "bg-rose-100 text-rose-800 border border-rose-200"
+                              : "bg-amber-100 text-amber-800 border border-amber-200"
+                          }`}>
+                            You: {bStatus.myVote.decision}
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                            You: Unscreened
+                          </span>
+                        )}
+
+                        {bStatus.isBlinded ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-0.5" title="Partner has voted. Hidden until you submit your decision.">
+                            <Lock className="w-2.5 h-2.5 text-amber-600" />
+                            Partner: Blinded
+                          </span>
+                        ) : bStatus.bothVoted ? (
+                          bStatus.isConcordant ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-0.5">
+                              <CheckCircle className="w-2.5 h-2.5 text-emerald-600" />
+                              Concordant
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-0.5 animate-pulse">
+                              <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
+                              Conflict
+                            </span>
+                          )
+                        ) : bStatus.partnerVote ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 border border-slate-200">
+                            Partner: {bStatus.partnerVote.decision}
+                          </span>
+                        ) : null}
 
                         {isCurrent && (
                           <span className="px-2 py-0.5 rounded font-semibold bg-indigo-600 text-white flex items-center gap-1 animate-tag-pop">
@@ -1568,13 +1911,7 @@ export function ScreeningPage() {
                             title={isJustDone ? "Screened in the current run" : "Screened by AI"}
                           >
                             <CheckCircle className="w-3 h-3" />
-                            AI screened: {study.ai_decision}
-                          </span>
-                        )}
-
-                        {study.ai_stage && (
-                          <span className="text-slate-400 capitalize">
-                            stage: {study.ai_stage}
+                            AI: {study.ai_decision}
                           </span>
                         )}
                       </div>
@@ -1587,8 +1924,8 @@ export function ScreeningPage() {
                             if (decisionMutation.isPending) return;
                             handleScreenDecision("included", study.study_id);
                           }}
-                          disabled={decisionMutation.isPending || !currentReviewer}
-                          className="p-1 hover:bg-emerald-100 rounded text-emerald-600 disabled:opacity-40"
+                          disabled={decisionMutation.isPending}
+                          className="p-1 hover:bg-emerald-100 rounded text-emerald-600 disabled:opacity-40 cursor-pointer"
                           title="Quick Include"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
@@ -1599,8 +1936,8 @@ export function ScreeningPage() {
                             if (decisionMutation.isPending) return;
                             handleScreenDecision("excluded", study.study_id);
                           }}
-                          disabled={decisionMutation.isPending || !currentReviewer}
-                          className="p-1 hover:bg-rose-100 rounded text-rose-600 disabled:opacity-40"
+                          disabled={decisionMutation.isPending}
+                          className="p-1 hover:bg-rose-100 rounded text-rose-600 disabled:opacity-40 cursor-pointer"
                           title="Quick Exclude (Reason required)"
                         >
                           <XCircle className="w-3.5 h-3.5" />
@@ -1629,7 +1966,7 @@ export function ScreeningPage() {
                       true
                     )}
                   </h2>
-                  <BookmarkButton saved={bookmarkedIdsSet.has(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
+                  <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
                   <span
                     className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap animate-tag-pop ${
                       selectedStudy.screening_status === "included" || selectedStudy.screening_status === "ta_included"
@@ -1653,37 +1990,14 @@ export function ScreeningPage() {
                 <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
                   <span><span className="font-semibold">Journal:</span> {selectedStudy.journal || "N/A"}</span>
                   <span><span className="font-semibold">Year:</span> {selectedStudy.publication_year || "N/A"}</span>
-                  {selectedStudy.pmid && (
-                    <a
-                      href={getPmidUrl(selectedStudy.pmid) || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sky-700 dark:text-sky-400 hover:underline flex items-center gap-1 font-mono text-[11px]"
-                      title="Open in PubMed"
-                    >
-                      PMID: {cleanPmid(selectedStudy.pmid)} <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
                   {selectedStudy.doi && (
                     <a
-                      href={getDoiUrl(selectedStudy.doi) || `https://doi.org/${selectedStudy.doi}`}
+                      href={`https://doi.org/${selectedStudy.doi}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-mono text-[11px]"
-                      title="Open DOI source"
+                      className="text-indigo-600 hover:underline flex items-center gap-0.5"
                     >
-                      DOI: {cleanDoi(selectedStudy.doi)} <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                  {!selectedStudy.pmid && !selectedStudy.doi && selectedStudy.title && (
-                    <a
-                      href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(selectedStudy.title)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-slate-500 hover:underline flex items-center gap-1 font-mono text-[11px]"
-                      title="Search on PubMed"
-                    >
-                      PubMed Search <ExternalLink className="w-3 h-3" />
+                      DOI: {selectedStudy.doi} <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
                 </div>
@@ -1731,9 +2045,19 @@ export function ScreeningPage() {
               )}
 
               <TagBadges index={tagIndex.data} studyId={selectedStudy.study_id} />
-              <details className="rounded-lg border border-slate-200">
-                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-800">Comments & tags</summary>
-                <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
+              
+              {/* Shared Team Notes & Collaboration Panel */}
+              <details className="rounded-lg border border-indigo-200 bg-indigo-50/20 overflow-hidden shadow-2xs" open>
+                <summary className="cursor-pointer px-4 py-2.5 text-xs font-bold text-indigo-900 bg-indigo-50/80 hover:bg-indigo-100/70 transition-colors flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
+                    Shared Team Notes & Tags (Visible to All Reviewers)
+                  </span>
+                  <span className="text-[10px] text-indigo-600 font-semibold uppercase tracking-wider">Shared across team</span>
+                </summary>
+                <div className="p-3 bg-white">
+                  <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
+                </div>
               </details>
 
               {/* Biomni Clarification Questions Panel */}
@@ -2022,12 +2346,129 @@ export function ScreeningPage() {
 
               {/* Reviewer Action Bar */}
               <div className="border-t border-slate-200 pt-4 space-y-3">
-                <div className="flex items-center justify-between">
+                {/* ── TEAM SCREENING STATUS & BLINDING PANEL ── */}
+                {(() => {
+                  const r1Dec = screeningDecisions.find(d => d.study_id === selectedStudy.study_id && d.reviewer_id === "reviewer_1");
+                  const r2Dec = screeningDecisions.find(d => d.study_id === selectedStudy.study_id && d.reviewer_id === "reviewer_2");
+                  const bStatusDetail = getStudyBlindedStatus(selectedStudy.study_id);
+
+                  return (
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2.5 shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-4 h-4 text-indigo-600" />
+                          <span className="text-xs font-bold text-slate-800">Team Screening Status</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px]">
+                          <span className="text-slate-500">Voting as:</span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveReviewerId(activeReviewerId === "reviewer_1" ? "reviewer_2" : "reviewer_1")}
+                            className="font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
+                            title="Click to toggle active reviewer"
+                          >
+                            {activeReviewerName} (Switch)
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {/* Reviewer 1 card */}
+                        <div className="bg-white border border-slate-200 rounded-md p-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-slate-700 text-[11px] truncate">{doubleBlindConfig.reviewer1Name}</span>
+                            {activeReviewerId === "reviewer_1" && (
+                              <span className="text-[9px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1 rounded">YOU</span>
+                            )}
+                          </div>
+                          {r1Dec ? (
+                            activeReviewerId === "reviewer_1" || (activeReviewerId === "reviewer_2" && (r2Dec || !doubleBlindConfig.blindMode)) ? (
+                              <div>
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  r1Dec.decision === "included" ? "bg-emerald-100 text-emerald-800" : r1Dec.decision === "excluded" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"
+                                }`}>
+                                  {r1Dec.decision === "included" ? <CheckCircle className="w-2.5 h-2.5" /> : r1Dec.decision === "excluded" ? <XCircle className="w-2.5 h-2.5" /> : <HelpCircle className="w-2.5 h-2.5" />}
+                                  {r1Dec.decision.toUpperCase()}
+                                </span>
+                                {r1Dec.reason_text && (
+                                  <p className="text-[10px] text-slate-500 mt-1 line-clamp-1 italic">"{r1Dec.reason_text}"</p>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[10px]">
+                                <Lock className="w-3 h-3 text-amber-600 shrink-0" />
+                                <span className="font-medium">Blinded until you vote</span>
+                              </div>
+                            )
+                          ) : (
+                            <span className="text-slate-400 text-[10px] italic">No vote submitted yet</span>
+                          )}
+                        </div>
+
+                        {/* Reviewer 2 card */}
+                        <div className="bg-white border border-slate-200 rounded-md p-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-slate-700 text-[11px] truncate">{doubleBlindConfig.reviewer2Name}</span>
+                            {activeReviewerId === "reviewer_2" && (
+                              <span className="text-[9px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-1 rounded">YOU</span>
+                            )}
+                          </div>
+                          {r2Dec ? (
+                            activeReviewerId === "reviewer_2" || (activeReviewerId === "reviewer_1" && (r1Dec || !doubleBlindConfig.blindMode)) ? (
+                              <div>
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  r2Dec.decision === "included" ? "bg-emerald-100 text-emerald-800" : r2Dec.decision === "excluded" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"
+                                }`}>
+                                  {r2Dec.decision === "included" ? <CheckCircle className="w-2.5 h-2.5" /> : r2Dec.decision === "excluded" ? <XCircle className="w-2.5 h-2.5" /> : <HelpCircle className="w-2.5 h-2.5" />}
+                                  {r2Dec.decision.toUpperCase()}
+                                </span>
+                                {r2Dec.reason_text && (
+                                  <p className="text-[10px] text-slate-500 mt-1 line-clamp-1 italic">"{r2Dec.reason_text}"</p>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[10px]">
+                                <Lock className="w-3 h-3 text-amber-600 shrink-0" />
+                                <span className="font-medium">Blinded until you vote</span>
+                              </div>
+                            )
+                          ) : (
+                            <span className="text-slate-400 text-[10px] italic">No vote submitted yet</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Consensus / Conflict Banner if both voted */}
+                      {r1Dec && r2Dec && (
+                        <div className={`p-2 rounded-md border flex items-center justify-between text-xs ${
+                          r1Dec.decision === r2Dec.decision
+                            ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                            : "bg-rose-50 border-rose-300 text-rose-900"
+                        }`}>
+                          <div className="flex items-center gap-1.5">
+                            {r1Dec.decision === r2Dec.decision ? (
+                              <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            ) : (
+                              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                            )}
+                            <span className="font-semibold text-[11px]">
+                              {r1Dec.decision === r2Dec.decision
+                                ? `Concordant: Both reviewers decided ${r1Dec.decision}`
+                                : `Screening Conflict: ${doubleBlindConfig.reviewer1Name} (${r1Dec.decision}) vs ${doubleBlindConfig.reviewer2Name} (${r2Dec.decision})`}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div className="flex items-center justify-between pt-1">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Reviewer Decision
+                    Your Screening Action
                   </span>
                   <span className="text-xs text-slate-500">
-                    Reviewer: <span className="font-semibold text-slate-700">{reviewerName || "Not signed in"}</span>
+                    Active: <span className="font-semibold text-slate-700">{activeReviewerName}</span>
                   </span>
                 </div>
 
@@ -2101,8 +2542,8 @@ export function ScreeningPage() {
                       <button
                         type="button"
                         onClick={handleRetry}
-                        disabled={decisionMutation.isPending || !currentReviewer}
-                        className="px-3 py-1.5 font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-md shadow-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 text-xs"
+                        disabled={decisionMutation.isPending}
+                        className="px-3 py-1.5 font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-md shadow-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 text-xs cursor-pointer"
                       >
                         {decisionMutation.isPending ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -2119,8 +2560,8 @@ export function ScreeningPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={() => handleScreenDecision("included")}
-                    disabled={decisionMutation.isPending || !currentReviewer}
-                    className="py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    disabled={decisionMutation.isPending}
+                    className="py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
                     title="Include Study (Hotkeys: 'I' or '1')"
                   >
                     {decisionMutation.isPending && decisionMutation.variables?.decision === "included" ? (
@@ -2140,8 +2581,8 @@ export function ScreeningPage() {
 
                   <button
                     onClick={() => handleScreenDecision("excluded")}
-                    disabled={decisionMutation.isPending || !currentReviewer}
-                    className="py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    disabled={decisionMutation.isPending}
+                    className="py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
                     title="Exclude Study (Hotkeys: 'E' or '2')"
                   >
                     {decisionMutation.isPending && decisionMutation.variables?.decision === "excluded" ? (
@@ -2161,8 +2602,8 @@ export function ScreeningPage() {
 
                   <button
                     onClick={() => handleScreenDecision("maybe")}
-                    disabled={decisionMutation.isPending || !currentReviewer}
-                    className="py-2.5 text-xs font-bold text-slate-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                    disabled={decisionMutation.isPending}
+                    className="py-2.5 text-xs font-bold text-slate-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
                     title="Maybe / Uncertain (Hotkeys: 'M' or '3')"
                   >
                     {decisionMutation.isPending && decisionMutation.variables?.decision === "maybe" ? (
@@ -2566,17 +3007,216 @@ export function ScreeningPage() {
         />
       )}
 
-      {/* ── Dual-Blinded Review & Consensus Modal ── */}
-      {showDualBlindModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs font-sans animate-in fade-in duration-150">
-          <DualBlindedDashboard
-            projectId={projectId!}
-            onClose={() => setShowDualBlindModal(false)}
-            onSelectStudy={(id) => {
-              setSelectedStudyId(id);
-              setShowDualBlindModal(false);
-            }}
-          />
+      {/* ── Team Quota Assignment & Double-Blind Settings Modal ── */}
+      {showQuotaModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-tag-pop">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-xs">
+                  <Users className="w-5 h-5 text-indigo-100" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold tracking-tight">Team Quotas &amp; Double-Blind Settings</h3>
+                  <p className="text-xs text-indigo-200">Workload distribution and blinding protocol</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowQuotaModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+              {/* Screening Blinding Toggle */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={modalEnabled}
+                    onChange={(e) => setModalEnabled(e.target.checked)}
+                    className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                  />
+                  <div>
+                    <span className="font-bold text-slate-900 text-xs block">
+                      Enforce Double-Blind Screening
+                    </span>
+                    <span className="text-[11px] text-slate-500 leading-relaxed block mt-0.5">
+                      When enabled, individual reviewer votes remain strictly masked (🔒) until both reviewers have cast their decisions or consensus mode is unblocked.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Workload Presets */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-bold text-slate-700 text-xs uppercase tracking-wider">
+                    Workload Allocation Presets
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Total Studies: <span className="font-bold text-slate-800">{studyList.length}</span>
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const half = Math.ceil(studyList.length / 2);
+                      setModalR1Quota(half);
+                      setModalR2Quota(studyList.length - half);
+                    }}
+                    className="p-2.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/70 text-indigo-900 font-semibold text-center transition-all cursor-pointer"
+                  >
+                    <span className="block font-bold text-xs">50% / 50% Split</span>
+                    <span className="text-[10px] text-indigo-600 font-normal">Divide studies equally</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalR1Quota(studyList.length);
+                      setModalR2Quota(studyList.length);
+                    }}
+                    className="p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/70 text-emerald-900 font-semibold text-center transition-all cursor-pointer"
+                  >
+                    <span className="block font-bold text-xs">100% Full Dual Screening</span>
+                    <span className="text-[10px] text-emerald-600 font-normal">Complete pair review</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Reviewer Workloads Assignment */}
+              <div className="space-y-3 pt-1">
+                <span className="font-bold text-slate-700 text-xs uppercase tracking-wider block">
+                  Reviewer Assignments &amp; Quotas
+                </span>
+
+                {/* Reviewer 1 */}
+                <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+                    <span>Reviewer 1</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <label className="text-[10px] text-slate-500 font-medium block mb-1">Display Name</label>
+                      <input
+                        type="text"
+                        value={modalR1Name}
+                        onChange={(e) => setModalR1Name(e.target.value)}
+                        placeholder="e.g., Dr. Alex (Lead)"
+                        className="w-full text-xs p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-medium block mb-1">Assigned Quota</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10000"
+                        value={modalR1Quota}
+                        onChange={(e) => setModalR1Quota(Number(e.target.value))}
+                        className="w-full text-xs p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reviewer 2 */}
+                <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
+                    <span>Reviewer 2</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <label className="text-[10px] text-slate-500 font-medium block mb-1">Display Name</label>
+                      <input
+                        type="text"
+                        value={modalR2Name}
+                        onChange={(e) => setModalR2Name(e.target.value)}
+                        placeholder="e.g., Dr. Jordan (Associate)"
+                        className="w-full text-xs p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-medium block mb-1">Assigned Quota</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10000"
+                        value={modalR2Quota}
+                        onChange={(e) => setModalR2Quota(Number(e.target.value))}
+                        className="w-full text-xs p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 font-bold font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Extraction Blinding Option */}
+              <div className="p-3.5 bg-purple-50/60 border border-purple-200 rounded-xl space-y-1.5">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={modalExtractionBlinded}
+                    onChange={(e) => setModalExtractionBlinded(e.target.checked)}
+                    className="mt-0.5 rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
+                  />
+                  <div>
+                    <span className="font-bold text-purple-950 text-xs block">
+                      Enable Double-Blind Data Extraction Phase
+                    </span>
+                    <span className="text-[11px] text-purple-800 leading-relaxed block mt-0.5">
+                      Standard protocol: generally only one person performs data extraction. Toggle this on if your systematic review protocol mandates independent dual data extraction with blind verification.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Shared Team Features Notice */}
+              <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 text-[11px] flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p>
+                  <span className="font-bold">Team Transparency:</span> Individual screening votes are masked until both have voted, but progress bars, bookmarks, and collaborative notes remain visible to everyone on the team.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowQuotaModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  saveDoubleBlindConfig({
+                    enabled: modalEnabled,
+                    extractionBlinded: modalExtractionBlinded,
+                    reviewer1Name: modalR1Name.trim() || "Reviewer 1 (Lead)",
+                    reviewer1Id: "reviewer_1",
+                    reviewer1Quota: Number(modalR1Quota) || 0,
+                    reviewer2Name: modalR2Name.trim() || "Reviewer 2 (Associate)",
+                    reviewer2Id: "reviewer_2",
+                    reviewer2Quota: Number(modalR2Quota) || 0,
+                    blindMode: modalBlindMode,
+                  });
+                }}
+                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all cursor-pointer"
+              >
+                Save Quotas &amp; Settings
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

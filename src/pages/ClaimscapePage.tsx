@@ -38,12 +38,11 @@ export const ClaimscapePage: React.FC = () => {
   const urlQ = searchParams.get("q");
   const urlN = searchParams.get("n");
 
-  const isCustomClaim = !!(urlClaim && urlClaim !== hrtDataRaw.claim);
   const initialClaim = urlClaim || hrtDataRaw.claim;
   const initialQuery = urlQ || (urlClaim ? urlClaim.split("+").join(" ") : hrtDataRaw.query);
-  const initialCount = urlN ? parseInt(urlN, 10) || 200 : 200;
+  const initialCount = urlN ? parseInt(urlN, 10) || 300 : 300;
 
-  // Active dataset state: start empty if custom claim URL so HRT data does not flash
+  // Active dataset state (initialized with 300 publications so the map renders immediately)
   const [dataset, setDataset] = useState<{
     claim: string;
     query: string;
@@ -53,9 +52,9 @@ export const ClaimscapePage: React.FC = () => {
   }>({
     claim: initialClaim,
     query: initialQuery,
-    total: isCustomClaim ? 0 : (hrtDataRaw.total || 594),
-    papers: isCustomClaim ? [] : (hrtDataRaw.papers as Paper[]),
-    judgments: isCustomClaim ? [] : ((hrtDataRaw as any).judgments || []),
+    total: hrtDataRaw.total || 594,
+    papers: hrtDataRaw.papers as Paper[],
+    judgments: (hrtDataRaw as any).judgments || [],
   });
 
   // Helper to build neutral PubMed query from claim statement
@@ -93,14 +92,11 @@ export const ClaimscapePage: React.FC = () => {
   const [includeCommentary, setIncludeCommentary] = useState<boolean>(false);
   const [directOnly, setDirectOnly] = useState<boolean>(false);
   const [showReviews, setShowReviews] = useState<boolean>(true);
-  const [isScanning, setIsScanning] = useState<boolean>(isCustomClaim);
+  const [selectedExample, setSelectedExample] = useState<string>("hrt");
+  const [isScanning, setIsScanning] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [scanError, setScanError] = useState("");
-  const [resultSource, setResultSource] = useState(
-    isCustomClaim
-      ? "Synthesizing evidence across biomedical literature…"
-      : "Evidence synthesis active · 300 publications analyzed across study designs"
-  );
+  const [resultSource, setResultSource] = useState("Evidence synthesis active · 300 publications analyzed across study designs");
   const [evalSpeed, setEvalSpeed] = useState<number | null>(null);
 
   // Typewriter suggestions when input is empty
@@ -216,7 +212,7 @@ export const ClaimscapePage: React.FC = () => {
     );
 
     return {
-      totalMatches: dataset.total ?? 0,
+      totalMatches: dataset.total || 594,
       read: Math.min(paperCount, processedPapers.length),
       onTopic: onTopicList.length,
       onMap: mappedList.length,
@@ -248,14 +244,10 @@ export const ClaimscapePage: React.FC = () => {
     }, 200);
   };
 
-  const runEvidenceSearch = async (nextClaim: string, nextQuery: string, nextCount?: number) => {
+  const runEvidenceSearch = async (nextClaim: string, nextQuery: string) => {
     const activeClaim = nextClaim.trim();
     let activeQuery = nextQuery.trim() || buildPubMedQuery(activeClaim);
     if (!activeClaim) return;
-    const targetCount = nextCount ?? paperCount;
-    if (nextCount && nextCount !== paperCount) {
-      setPaperCount(nextCount);
-    }
 
     // Apply studyType and period to query if user toggled them
     if (studyType && !activeQuery.includes(studyType)) {
@@ -281,7 +273,7 @@ export const ClaimscapePage: React.FC = () => {
           return prev + 6;
         }
         if (prev < 70) {
-          setScanStepLabel("Reading abstracts & analyzing semantic stances...");
+          setScanStepLabel("Reading abstracts with Laya System-1 ONNX model...");
           return prev + 4;
         }
         if (prev < 92) {
@@ -297,7 +289,7 @@ export const ClaimscapePage: React.FC = () => {
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.set("claim", activeClaim);
       if (activeQuery) newUrl.searchParams.set("q", activeQuery);
-      newUrl.searchParams.set("n", targetCount.toString());
+      newUrl.searchParams.set("n", paperCount.toString());
       window.history.replaceState({}, "", newUrl.toString());
     } catch {}
 
@@ -318,7 +310,7 @@ export const ClaimscapePage: React.FC = () => {
 
     // Step 1: Try Local Backend API if available
     try {
-      const res = await api.evaluateClaimscape(activeClaim, activeQuery, targetCount);
+      const res = await api.evaluateClaimscape(activeClaim, activeQuery, paperCount);
       if (Array.isArray(res?.papers) && res.papers.length > 0 && Array.isArray(res?.judgments)) {
         setDataset({
           claim: res.claim || activeClaim,
@@ -329,7 +321,7 @@ export const ClaimscapePage: React.FC = () => {
         });
         setSelectedPmid(res.papers[0]?.pmid || "");
         setEvalSpeed(res.elapsed_ms);
-        setResultSource(`Live PubMed search · ${res.papers.length} publications indexed · Engine: ${res.engine || "ClaimScape Engine"}`);
+        setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: ${res.engine || "Laya System-1"}`);
         finishScan();
         return;
       }
@@ -339,7 +331,7 @@ export const ClaimscapePage: React.FC = () => {
 
     // Step 2: Query Live PubMed directly via NCBI E-Utilities with Laya System-1 Inference
     try {
-      const liveRes = await fetchLivePubMedEvidence(activeClaim, activeQuery, targetCount);
+      const liveRes = await fetchLivePubMedEvidence(activeClaim, activeQuery, paperCount);
       if (Array.isArray(liveRes?.papers) && liveRes.papers.length > 0) {
         setDataset({
           claim: activeClaim,
@@ -349,7 +341,7 @@ export const ClaimscapePage: React.FC = () => {
           judgments: liveRes.judgments,
         });
         setSelectedPmid(liveRes.papers[0]?.pmid || "");
-        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · ClaimScape Engine`);
+        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Laya System-1`);
         finishScan();
         return;
       } else {
@@ -372,13 +364,11 @@ export const ClaimscapePage: React.FC = () => {
   };
 
   // Run search on initial load if URL contains a custom claim
-  const initialSearchRanRef = useRef(false);
   useEffect(() => {
-    if (urlClaim && urlClaim !== hrtDataRaw.claim && !initialSearchRanRef.current) {
-      initialSearchRanRef.current = true;
-      void runEvidenceSearch(urlClaim, urlQ || buildPubMedQuery(urlClaim), initialCount);
+    if (urlClaim && urlClaim !== hrtDataRaw.claim) {
+      void runEvidenceSearch(urlClaim, urlQ || buildPubMedQuery(urlClaim));
     }
-  }, [urlClaim, urlQ, urlN]);
+  }, [urlClaim, urlQ]);
 
   const handleSelectExample = (ex: typeof PRESET_EXAMPLES[0]) => {
     if (isScanning) return;

@@ -9,7 +9,6 @@ import {
   ChevronDown, ChevronRight, AlertCircle, AlertTriangle, FileUp,
 } from "lucide-react";
 import { ReferenceImportModal } from "../components/common/ReferenceImportModal";
-import { HypothesisProgressBar } from "../components/hypothesis/HypothesisProgressBar";
 
 
 const DATABASES = [
@@ -110,20 +109,6 @@ export function PicoHypothesisPage() {
         secondary_hypotheses: secondary,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      setHypSaved(true);
-      setTimeout(() => setHypSaved(false), 2500);
-    },
-  });
-
-  const generateHypMutation = useMutation({
-    mutationFn: () => api.generateHypothesis(projectId!),
-    onSuccess: (data) => {
-      if (data.hypothesis) setHypothesis(data.hypothesis);
-      if (data.secondary_hypotheses && data.secondary_hypotheses.length > 0) {
-        setSecondary(data.secondary_hypotheses);
-      }
       queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       setHypSaved(true);
@@ -664,34 +649,12 @@ export function PicoHypothesisPage() {
             />
           </div>
 
-          {/* Real-time AI Reasoning Progress Bar */}
-          <HypothesisProgressBar isPending={generateHypMutation.isPending} isSuccess={hypSaved} />
-
           {/* Primary Hypothesis */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Lightbulb className="h-4 w-4 text-phylo-orange" />
-                Primary Hypothesis
-              </label>
-              <button
-                type="button"
-                onClick={() => generateHypMutation.mutate()}
-                disabled={generateHypMutation.isPending}
-                className="text-xs text-phylo-blue hover:text-blue-700 font-medium flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors border border-blue-200"
-                title="Synthesize directional primary and null hypotheses from your PICO elements"
-              >
-                {generateHypMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Synthesizing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3.5 w-3.5 text-phylo-blue" /> Auto-Formulate with AI
-                  </>
-                )}
-              </button>
-            </div>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
+              <Lightbulb className="h-4 w-4 text-phylo-orange" />
+              Primary Hypothesis
+            </label>
             <textarea
               className="input min-h-[80px]"
               value={hypothesis}
@@ -986,6 +949,15 @@ export function PicoHypothesisPage() {
                   </pre>
                 </div>
 
+                {/* User-requested verification notice under search string */}
+                <div className="flex items-center gap-2.5 p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs text-amber-900 dark:text-amber-200 font-medium shadow-2xs">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div>
+                    <span className="font-bold uppercase tracking-wider text-[11px] text-amber-700 dark:text-amber-300 block">Verify before moving forward</span>
+                    <span>Review Boolean operators, MeSH syntax, and concept synonyms above before querying PubMed or initiating batch reference ingestion.</span>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Copy button */}
                   <button
@@ -1000,6 +972,19 @@ export function PicoHypothesisPage() {
                     )}
                     {copiedDb === activeDb ? "Copied" : "Copy"}
                   </button>
+
+                  {/* Direct Test in PubMed */}
+                  {activeDb === "pubmed" && (
+                    <a
+                      href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(currentDbString)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-secondary flex items-center gap-1.5 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>Test in PubMed</span>
+                    </a>
+                  )}
 
                   {/* AutoFetch button (PubMed only) */}
                   {DATABASES.find((d) => d.key === activeDb)?.hasAutoFetch && (

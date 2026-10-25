@@ -1,60 +1,12 @@
 import React from "react";
-import { CheckCircle2, AlertTriangle, XCircle, AlertOctagon } from "lucide-react";
-import { RigorCheckItem, RigorDomain, RigorSpoke } from "../../data/dubowitzRigorData";
-
-export function computeSpoke(
-  index: number,
-  total: number,
-  evidence: number,
-  outcome: "good" | "mid" | "bad" | "na"
-): RigorSpoke {
-  const cx = 400;
-  const cy = 325;
-  const rInner = 96;
-  const rOuter = 246;
-  const startAngleDeg = -75;
-  const angleDeg = startAngleDeg + (index / Math.max(total, 1)) * 360;
-  const rad = (angleDeg * Math.PI) / 180;
-  const x1 = Math.round((cx + rInner * Math.cos(rad)) * 100) / 100;
-  const y1 = Math.round((cy + rInner * Math.sin(rad)) * 100) / 100;
-  const x2 = Math.round((cx + rOuter * Math.cos(rad)) * 100) / 100;
-  const y2 = Math.round((cy + rOuter * Math.sin(rad)) * 100) / 100;
-  const dashOffset = Math.max(0, Math.min(1, Math.round((1 - evidence / 100) * 100) / 100));
-  const color =
-    outcome === "good"
-      ? "var(--rs-good)"
-      : outcome === "mid"
-      ? "var(--rs-warn)"
-      : outcome === "bad"
-      ? "var(--rs-crit)"
-      : "var(--rs-na)";
-  const verdict =
-    outcome === "good"
-      ? "Reported"
-      : outcome === "mid"
-      ? "Unclear"
-      : outcome === "bad"
-      ? (evidence < 30 ? "Warning sign found" : "Missing")
-      : "Not applicable";
-
-  return {
-    name: `spoke-${index}`,
-    verdict,
-    evidence,
-    x1,
-    y1,
-    x2,
-    y2,
-    dashOffset,
-    color,
-  };
-}
+import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, AlertOctagon } from "lucide-react";
+import { RigorCheckItem, RigorDomain } from "../../data/dubowitzRigorData";
 
 interface RigorFingerprintProps {
   completenessIndex: number;
   checks: RigorCheckItem[];
   domains: RigorDomain[];
-  selectedCheck?: RigorCheckItem;
+  selectedCheck: RigorCheckItem;
   onSelectCheck: (id: string) => void;
   selectedDomain: string;
   onSelectDomain: (domainId: string) => void;
@@ -71,16 +23,14 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
   onSelectDomain,
   onShowOnPage,
 }) => {
-  // Safe fallback if selectedCheck is undefined
-  const currentCheck = selectedCheck || checks[0];
-  const selectedSpoke = currentCheck?.spoke || (currentCheck ? computeSpoke(0, checks.length, currentCheck.evidence, currentCheck.outcome) : undefined);
+  const selectedSpoke = selectedCheck.spoke;
 
-  // Dynamic domain arc geometry
+  // Domain arc SVG definitions matching the published geometry
   const domainArcs = [
     {
       id: "design",
       label: "Study design",
-      score: domains.find(d => d.id === "design")?.score ?? 67,
+      score: 67,
       path: "M437.78 67.76 A260 260 0 0 1 644.24 235.85",
       textX: 576.78,
       textY: 79.86,
@@ -89,7 +39,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
     {
       id: "stats",
       label: "Statistics",
-      score: domains.find(d => d.id === "stats")?.score ?? 80,
+      score: 80,
       path: "M656.75 284.01 A260 260 0 0 1 617.01 468.21",
       textX: 673.7,
       textY: 388.05,
@@ -98,7 +48,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
     {
       id: "materials",
       label: "Materials",
-      score: domains.find(d => d.id === "materials")?.score ?? 89,
+      score: 89,
       path: "M585.75 506.92 A260 260 0 0 1 349.41 580.03",
       textX: 482.74,
       textY: 606.49,
@@ -107,7 +57,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
     {
       id: "openness",
       label: "Data & code",
-      score: domains.find(d => d.id === "openness")?.score ?? 62,
+      score: 62,
       path: "M301.75 565.72 A260 260 0 0 1 164.95 436.13",
       textX: 207.44,
       textY: 542.28,
@@ -116,7 +66,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
     {
       id: "ethics",
       label: "Ethics & disclosure",
-      score: domains.find(d => d.id === "ethics")?.score ?? 89,
+      score: 89,
       path: "M148.08 389.32 A260 260 0 0 1 181.81 183.61",
       textX: 123.69,
       textY: 283.7,
@@ -125,7 +75,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
     {
       id: "claims",
       label: "Claims",
-      score: domains.find(d => d.id === "claims")?.score ?? 87,
+      score: 87,
       path: "M212.74 144.63 A260 260 0 0 1 362.22 67.76",
       textX: 271.95,
       textY: 48,
@@ -146,7 +96,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
           className="rs-ring"
           viewBox="-70 0 940 650"
           role="img"
-          aria-label={`Rigor fingerprint: ${checks.length} reporting checks in ${domains.length} domains, completeness index ${completenessIndex}`}
+          aria-label={`Rigor fingerprint: ${checks.length} reporting checks in 6 domains, completeness index ${completenessIndex}`}
         >
           {/* Concentric Guide Circles */}
           <circle cx="400" cy="325" r="96" fill="none" stroke="var(--rs-line-soft)" strokeWidth="1" />
@@ -161,11 +111,12 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
           <text x="400" y="83" textAnchor="middle" className="axis">100%</text>
 
           {/* Radial Spokes */}
-          {checks.map((c, idx) => {
-            const sp = c.spoke || computeSpoke(idx, checks.length, c.evidence, c.outcome);
-            const isSelected = currentCheck && c.id === currentCheck.id;
+          {checks.map((c) => {
+            const sp = c.spoke;
+            if (!sp) return null;
+            const isSelected = c.id === selectedCheck.id;
             return (
-              <g key={c.id || idx}>
+              <g key={c.id}>
                 {/* Background Spoke Track */}
                 <line
                   x1={sp.x1}
@@ -213,7 +164,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
               r={7}
               fill="none"
               stroke="var(--rs-ink)"
-              strokeWidth={2.5}
+              strokeWidth={2}
               pointerEvents="none"
             />
           )}
@@ -251,7 +202,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
       </div>
 
       {/* Legend & Details */}
-      <div className="grid gap-3.5 px-4 sm:px-5 pb-5 pt-1">
+      <div className="grid gap-3.5 px-5 pb-5 pt-1">
         {/* Legend */}
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs rs-soft">
           <span className="inline-flex items-center gap-1.5">
@@ -276,56 +227,52 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
         </div>
 
         {/* Selected Check Card */}
-        {currentCheck && (
-          <div className="overflow-hidden rounded-xl border border-[var(--rs-line)] rs-panel p-4 space-y-2.5">
-            <div className="flex flex-wrap items-baseline gap-2">
-              <span className="rs-mono text-[10px] font-bold uppercase tracking-wider rs-muted">Selected</span>
-              <b className="text-sm font-semibold">{currentCheck.label}</b>
-              {currentCheck.guideline && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-zinc-300">
-                  {currentCheck.guideline}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 text-xs font-semibold">
-              {currentCheck.outcome === "good" ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              ) : currentCheck.outcome === "mid" ? (
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
-              ) : (
-                <XCircle className="w-4 h-4 text-rose-500" />
-              )}
-              <span>{currentCheck.spoke?.verdict || "Reported"}</span>
-              <span className="rs-mono font-normal rs-muted">
-                evidence {currentCheck.evidence}%
+        <div className="overflow-hidden rounded-xl border border-[var(--rs-line)] rs-panel p-4 space-y-2.5">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="rs-mono text-[10px] font-bold uppercase tracking-wider rs-muted">Selected</span>
+            <b className="text-sm font-semibold">{selectedCheck.label}</b>
+            {selectedCheck.guideline && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-zinc-300">
+                {selectedCheck.guideline}
               </span>
-            </div>
-
-            <p className="text-xs rs-soft leading-relaxed">{currentCheck.question}</p>
-
-            {currentCheck.quote && (
-              <blockquote className="rs-quote text-xs leading-relaxed" style={{ "--c": currentCheck.color } as any}>
-                “{currentCheck.quote}”
-              </blockquote>
             )}
-
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] rs-muted rs-mono pt-1">
-              <span>{currentCheck.location || `Page ${currentCheck.page}`}</span>
-              {onShowOnPage && (
-                <button
-                  type="button"
-                  onClick={() => onShowOnPage(currentCheck.page)}
-                  className="font-sans text-xs underline text-blue-600 dark:text-blue-400 hover:text-blue-700 font-semibold"
-                >
-                  Show on page {currentCheck.page} →
-                </button>
-              )}
-            </div>
           </div>
-        )}
 
-        {/* Domain Score Action Cards */}
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            {selectedCheck.outcome === "good" ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            ) : selectedCheck.outcome === "mid" ? (
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+            ) : (
+              <XCircle className="w-4 h-4 text-rose-500" />
+            )}
+            <span>{selectedCheck.spoke?.verdict || "Evaluated"}</span>
+            <span className="rs-mono font-normal rs-muted">
+              evidence {selectedCheck.evidence}%
+            </span>
+          </div>
+
+          <p className="text-xs rs-soft leading-relaxed">{selectedCheck.question}</p>
+
+          <blockquote className="rs-quote text-xs leading-relaxed" style={{ "--c": selectedCheck.color } as any}>
+            “{selectedCheck.quote}”
+          </blockquote>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] rs-muted rs-mono pt-1">
+            <span>{selectedCheck.location}</span>
+            {onShowOnPage && (
+              <button
+                type="button"
+                onClick={() => onShowOnPage(selectedCheck.page)}
+                className="font-sans text-xs underline text-blue-600 dark:text-blue-400 hover:text-blue-700 font-semibold"
+              >
+                Show on page {selectedCheck.page} →
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 6 Domain Score Action Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {domains.map((dom) => (
             <button

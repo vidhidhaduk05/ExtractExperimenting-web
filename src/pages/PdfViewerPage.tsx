@@ -89,14 +89,17 @@ export function PdfViewerPage() {
         filename: s.pdf_path || `${s.title}.pdf`,
       }));
     }
-    return BENCHMARK_PAPERS.map((b) => ({
-      ...b,
-      study_id: b.id,
-      authors: b.title.split("(")[0].trim(),
-      publication_year: 2024,
-      journal: "Journal of NeuroInterventional Surgery",
-    }));
-  }, [dynamicStudies]);
+    if (projectId === "demo") {
+      return BENCHMARK_PAPERS.map((b) => ({
+        ...b,
+        study_id: b.id,
+        authors: b.title.split("(")[0].trim(),
+        publication_year: 2024,
+        journal: "Journal of NeuroInterventional Surgery",
+      }));
+    }
+    return [];
+  }, [dynamicStudies, projectId]);
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -115,11 +118,11 @@ export function PdfViewerPage() {
   const [pdfZoom, setPdfZoom] = useState<number>(100);
   const [selectedPaperId, setSelectedPaperId] = useState<string>(() => {
     const match = allStudies?.find((p: any) => p.study_id === rawTargetStudy || p.shortId === rawTargetStudy);
-    return match ? match.study_id : "study_birua_2022";
+    return match ? match.study_id : (allStudies[0]?.study_id || "");
   });
   const [customPdfUrl, setCustomPdfUrl] = useState<string | null>(null);
 
-  const activeStudyId = selectedPaperId || (rawTargetStudy ? (allStudies.find((p: any) => p.study_id === rawTargetStudy || p.shortId === rawTargetStudy)?.study_id || rawTargetStudy) : "study_birua_2022");
+  const activeStudyId = selectedPaperId || (rawTargetStudy ? (allStudies.find((p: any) => p.study_id === rawTargetStudy || p.shortId === rawTargetStudy)?.study_id || rawTargetStudy) : (allStudies[0]?.study_id || ""));
 
   // Synchronize selected paper with route parameter or query
   useEffect(() => {
@@ -875,6 +878,41 @@ export function PdfViewerPage() {
 
     return elements;
   }, [variableList, extractionMap, selectedVarId, documentSearch]);
+
+  if (allStudies.length === 0 && !studyLoading) {
+    return (
+      <div className="flex flex-col h-screen bg-[#ECE9E2] font-sans items-center justify-center p-6 text-center">
+        <div className="max-w-md bg-white border border-[#d2c2cb] p-8 shadow-xs rounded-none">
+          <FileText className="w-12 h-12 text-[#814d75] mx-auto mb-3" />
+          <h2 className="text-xl font-['Bodoni_Moda'] font-medium text-[#3a0f34] mb-2">No studies in this project yet</h2>
+          <p className="text-sm text-[#4f444b] font-['Newsreader'] mb-6 leading-relaxed">
+            This project has no literature records or uploaded manuscripts yet. Import studies from PubMed or upload PDF files to begin data extraction.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to={`/projects/${projectId}/studies`}
+              className="px-4 py-2 bg-[#3a0f34] text-[#fbf9f4] font-['Work_Sans'] text-xs font-semibold hover:bg-[#1a0017] transition-all"
+            >
+              Go to Studies / Import
+            </Link>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-4 py-2 bg-[#f0eee9] text-[#3a0f34] border border-[#d2c2cb] font-['Work_Sans'] text-xs font-semibold hover:bg-[#ffdea6] transition-all"
+            >
+              Upload PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-[#ECE9E2] overflow-hidden font-sans">

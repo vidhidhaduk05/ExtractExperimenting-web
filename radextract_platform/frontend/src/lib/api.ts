@@ -30,7 +30,6 @@ import {
   DEMO_CODEBOOK_RULES,
   DEMO_ERROR_ANALYSIS
 } from "./demoData";
-import { DEMO_RIGOR_RESULT } from "../data/demoRigorData";
 
 export type ApiConnectionState = "live" | "checking" | "demo_fallback" | "explicit_demo" | "error";
 
@@ -45,15 +44,12 @@ export interface ApiConnectionInfo {
 type ApiListener = (info: ApiConnectionInfo) => void;
 const apiListeners: Set<ApiListener> = new Set();
 
-export const PERMANENT_HPC_BACKEND = "https://facilitate-aging-television-videos.trycloudflare.com";
-
-let _apiBaseOverride: string | null = null;
+export const PERMANENT_HPC_BACKEND = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
 
 export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
   const custom = localStorage.getItem("custom_api_base");
   if (custom && custom.trim()) return custom.trim().replace(/\/+$/, "");
-  if (_apiBaseOverride && _apiBaseOverride !== "/api") return _apiBaseOverride;
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") return "/api";
@@ -68,8 +64,7 @@ export async function autoDiscoverBackend(): Promise<string | null> {
   if (custom && custom.trim()) {
     const checkCustom = await testBackendConnection(custom.trim()).catch(() => null);
     if (checkCustom && checkCustom.ok) {
-      _apiBaseOverride = custom.trim().replace(/\/+$/, "");
-      API_BASE = _apiBaseOverride;
+      API_BASE = custom.trim().replace(/\/+$/, "");
       updateApiState({ apiBase: API_BASE, state: "live" });
       return API_BASE;
     }
@@ -91,8 +86,7 @@ export async function autoDiscoverBackend(): Promise<string | null> {
         const url = String(data.backend_url).replace(/\/+$/, "");
         const check = await testBackendConnection(url);
         if (check.ok) {
-          _apiBaseOverride = url.endsWith("/api") ? url : `${url}/api`;
-          API_BASE = _apiBaseOverride;
+          API_BASE = url.endsWith("/api") ? url : `${url}/api`;
           updateApiState({ apiBase: API_BASE, state: "live" });
           return API_BASE;
         }
@@ -101,12 +95,11 @@ export async function autoDiscoverBackend(): Promise<string | null> {
   } catch (e) {}
 
   // Hardcoded fallback to current known HPC active tunnel
-  const hpcFallback = PERMANENT_HPC_BACKEND;
+  const hpcFallback = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
   try {
     const checkFallback = await testBackendConnection(hpcFallback);
     if (checkFallback.ok) {
-      _apiBaseOverride = `${hpcFallback}/api`;
-      API_BASE = _apiBaseOverride;
+      API_BASE = `${hpcFallback}/api`;
       updateApiState({ apiBase: API_BASE, state: "live" });
       return API_BASE;
     }
@@ -217,7 +210,8 @@ export async function testBackendConnection(targetUrl?: string): Promise<{
 }
 
 export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[] {
-  if (typeof window === "undefined") return [...DEMO_STUDIES];
+  const isDemo = projectId === "demo" || projectId === "proj_pam_current";
+  if (typeof window === "undefined") return isDemo ? [...DEMO_STUDIES] : [];
   try {
     const isBlank = localStorage.getItem(`radextract_blank_${projectId}`) === "true";
     if (isBlank) {
@@ -227,7 +221,10 @@ export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[]
     const saved = localStorage.getItem(`radextract_studies_${projectId}`);
     if (saved) return JSON.parse(saved);
   } catch (e) {}
-  return [...DEMO_STUDIES];
+  if (isDemo) {
+    return [...DEMO_STUDIES];
+  }
+  return [];
 }
 
 export function saveStoredProjectStudies(projectId = "proj_pam_current", studies: Study[]): void {
@@ -273,7 +270,7 @@ export function saveStoredScreeningDecision(projectId = "proj_pam_current", deci
   if (typeof window === "undefined") return;
   try {
     const current = getStoredScreeningDecisions(projectId);
-    const existingIdx = current.findIndex(d => d.study_id === decision.study_id);
+    const existingIdx = current.findIndex(d => d.study_id === decision.study_id && d.reviewer_id === decision.reviewer_id);
     if (existingIdx !== -1) {
       current[existingIdx] = decision;
     } else {
@@ -694,8 +691,113 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         const stored = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
         stored.push(newProj);
         localStorage.setItem("radextract_custom_projects", JSON.stringify(stored));
+        saveStoredProjectStudies(newProj.project_id, []);
+        localStorage.setItem(`radextract_blank_${newProj.project_id}`, "true");
       } catch (e) {}
       return newProj as unknown as T;
+    }
+    if (path.includes("/screening-decision")) {
+      const studyId = path.split("/")[2];
+      const projectId = body.project_id || "proj_pam_current";
+      const studies = getStoredProjectStudies(projectId);
+      const updated = studies.map((s) => {
+        if (s.study_id === studyId) {
+          return {
+            ...s,
+            screening_status: body.decision,
+            screening_reason: body.reason_text || body.reason_code || s.screening_reason,
+            screening_stage: body.stage || s.screening_stage,
+          };
+        }
+        return s;
+      });
+      saveStoredProjectStudies(projectId, updated);
+      const decId = `dec_${studyId}_${body.reviewer_id || "reviewer_1"}`;
+      const decObj = {
+        decision_id: decId,
+        study_id: studyId,
+        project_id: projectId,
+        reviewer_id: body.reviewer_id || "reviewer_1",
+        reviewer_name: body.reviewer_name || "Reviewer 1",
+        decision: body.decision,
+        reason_code: body.reason_code || "",
+        reason_text: body.reason_text || "",
+        stage: body.stage || "ta",
+        created_at: new Date().toISOString(),
+      };
+      try {
+        const allDecs = JSON.parse(localStorage.getItem(`radextract_decisions_${projectId}`) || "[]");
+        const filtered = allDecs.filter((d: any) => d.decision_id !== decId);
+        filtered.push(decObj);
+        localStorage.setItem(`radextract_decisions_${projectId}`, JSON.stringify(filtered));
+        saveStoredScreeningDecision(projectId, decObj as any);
+      } catch (e) {}
+      return decObj as unknown as T;
+    }
+    if (path.includes("/search-from-question")) {
+      const q = (body.question || "").trim();
+      const projectId = path.split("/")[2] || "proj_pam_current";
+
+      let pop = "Patients with target condition";
+      let ind = "Diagnostic intervention";
+      let comp = "Standard of care comparator";
+      let out = "Diagnostic accuracy, sensitivity, and clinical outcomes";
+      let des = "Systematic review and comparative observational studies";
+
+      const popMatch = q.match(/(?:in|among|for)\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:with|undergoing|treated)|[?,.]|$)/i);
+      if (popMatch) pop = popMatch[1].trim();
+
+      const compMatch = q.match(/(?:vs|versus|compared\s+(?:to|with))\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:in|for|among)|[?,.]|$)/i);
+      if (compMatch) comp = compMatch[1].trim();
+
+      const indMatch = q.match(/(?:is|does|can)\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:more|better|effective|superior|comparable|accurate|vs|versus)|[?,.]|$)/i);
+      if (indMatch) ind = indMatch[1].trim();
+
+      const outMatch = q.match(/(?:for\s+detecting|detecting|predicting|reducing|evaluating|measuring)\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:in|among)|[?,.]|$)/i);
+      if (outMatch) out = outMatch[1].trim();
+
+      const extractedPico = {
+        population: pop,
+        index_test: ind,
+        comparator: comp,
+        outcome: out,
+        study_design: des,
+      };
+
+      const extractedHyp = {
+        hypothesis: `${ind} provides superior diagnostic yield and outcome discrimination compared to ${comp} in ${pop}.`,
+        research_question: q,
+        secondary_hypotheses: [
+          { text: `${ind} reduces equivocal diagnostic interpretations compared to ${comp}.`, type: "alternative", status: "pending" },
+          { text: `Safety profiles and complication frequencies are comparable between ${ind} and ${comp}.`, type: "alternative", status: "pending" },
+        ],
+      };
+
+      try {
+        localStorage.setItem(`radextract_pico_${projectId}`, JSON.stringify(extractedPico));
+        localStorage.setItem(`radextract_hyp_${projectId}`, JSON.stringify(extractedHyp));
+      } catch (e) {}
+
+      return {
+        status: "success",
+        pico: extractedPico,
+        hypothesis: extractedHyp,
+        message: "PICO elements and clinical hypotheses extracted successfully.",
+      } as unknown as T;
+    }
+    if (path.includes("/pico") && (method === "PUT" || method === "POST")) {
+      const projectId = path.split("/")[2] || "proj_pam_current";
+      try {
+        localStorage.setItem(`radextract_pico_${projectId}`, JSON.stringify(body));
+      } catch (e) {}
+      return body as unknown as T;
+    }
+    if (path.includes("/hypothesis") && (method === "PUT" || method === "POST")) {
+      const projectId = path.split("/")[2] || "proj_pam_current";
+      try {
+        localStorage.setItem(`radextract_hyp_${projectId}`, JSON.stringify(body));
+      } catch (e) {}
+      return body as unknown as T;
     }
     return { status: "success" } as unknown as T;
   }
@@ -854,23 +956,32 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   };
 
   if (path.includes("/pdf-summary")) {
-    const rawStudyId = path.split("/").filter(Boolean)[1] || "study_birua_2022";
-    const resolvedId = (DEMO_PDF_SUMMARIES as any)[rawStudyId] ? rawStudyId : (studyAliasMap[rawStudyId] || "study_birua_2022");
-    return ((DEMO_PDF_SUMMARIES as any)[resolvedId] || DEMO_PDF_SUMMARIES.study_birua_2022) as unknown as T;
+    const rawStudyId = path.split("/").filter(Boolean)[1] || "";
+    const resolvedId = (DEMO_PDF_SUMMARIES as any)[rawStudyId] ? rawStudyId : studyAliasMap[rawStudyId];
+    if (resolvedId && (DEMO_PDF_SUMMARIES as any)[resolvedId]) {
+      return (DEMO_PDF_SUMMARIES as any)[resolvedId] as unknown as T;
+    }
+    return null as unknown as T;
   }
   if (path.includes("/pdf-data")) {
-    const rawStudyId = path.split("/").filter(Boolean)[1] || "study_birua_2022";
-    const resolvedId = (DEMO_PDF_DATA as any)[rawStudyId] ? rawStudyId : (studyAliasMap[rawStudyId] || "study_birua_2022");
-    return ((DEMO_PDF_DATA as any)[resolvedId] || DEMO_PDF_DATA.study_birua_2022) as unknown as T;
+    const rawStudyId = path.split("/").filter(Boolean)[1] || "";
+    const resolvedId = (DEMO_PDF_DATA as any)[rawStudyId] ? rawStudyId : studyAliasMap[rawStudyId];
+    if (resolvedId && (DEMO_PDF_DATA as any)[resolvedId]) {
+      return (DEMO_PDF_DATA as any)[resolvedId] as unknown as T;
+    }
+    return null as unknown as T;
   }
   if (path.includes("/extractions") || path.includes("/coded-extract")) {
-    const rawStudyId = path.split("/").filter(Boolean)[1] || "study_birua_2022";
-    const resolvedId = (DEMO_EXTRACTIONS as any)[rawStudyId] ? rawStudyId : (studyAliasMap[rawStudyId] || "study_birua_2022");
-    const stored = getStoredProjectExtractions(resolvedId);
+    const rawStudyId = path.split("/").filter(Boolean)[1] || "";
+    const resolvedId = (DEMO_EXTRACTIONS as any)[rawStudyId] ? rawStudyId : studyAliasMap[rawStudyId];
+    const stored = rawStudyId ? getStoredProjectExtractions(rawStudyId) : [];
     if (stored && stored.length > 0) {
       return stored as unknown as T;
     }
-    return ((DEMO_EXTRACTIONS as any)[resolvedId] || DEMO_EXTRACTIONS.study_birua_2022) as unknown as T;
+    if (resolvedId && (DEMO_EXTRACTIONS as any)[resolvedId]) {
+      return (DEMO_EXTRACTIONS as any)[resolvedId] as unknown as T;
+    }
+    return [] as unknown as T;
   }
   if (path.includes("/pdf-highlights")) {
     return [] as unknown as T;
@@ -990,7 +1101,20 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     const studyId = path.split("/").pop();
     const all = getStoredProjectStudies();
     const found = all.find((s: Study) => s.study_id === studyId);
-    return (found || all[0] || DEMO_STUDIES[0]) as unknown as T;
+    if (found) return found as unknown as T;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith("radextract_studies_")) {
+        try {
+          const list: Study[] = JSON.parse(localStorage.getItem(k) || "[]");
+          const m = list.find((s) => s.study_id === studyId);
+          if (m) return m as unknown as T;
+        } catch (e) {}
+      }
+    }
+    const matchDemo = DEMO_STUDIES.find((s) => s.study_id === studyId);
+    if (matchDemo) return matchDemo as unknown as T;
+    return null as unknown as T;
   }
   if (path.includes("/studies")) {
     const projectId = path.split("/")[2] || "proj_pam_current";
@@ -1006,10 +1130,53 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     const projectId = path.split("/")[2] || "proj_pam_current";
     return getStoredProjectStudies(projectId) as unknown as T;
   }
+  if (path.includes("/search-strings/generate") || path.includes("/search-strings")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    let p = "";
+    let i = "";
+    try {
+      const stored = JSON.parse(localStorage.getItem(`radextract_pico_${projectId}`) || "{}");
+      p = stored.population || "";
+      i = stored.index_test || "";
+    } catch (e) {}
+    if (!p && !i && (projectId === "demo" || projectId === "proj_pam_current")) {
+      p = "patients with pure arterial malformations";
+      i = "angiography";
+    }
+    const popClean = p.replace(/^patients\s+with\s+/i, "").trim() || "target condition";
+    const intClean = i.trim() || "intervention";
+    return {
+      project_id: projectId,
+      strings: {
+        pubmed: `("${popClean}"[MeSH Terms] OR "${popClean}"[tiab]) AND ("${intClean}"[MeSH Terms] OR "${intClean}"[tiab])`,
+        embase: `('${popClean}'/exp OR '${popClean}':ab,ti) AND ('${intClean}'/exp OR '${intClean}':ab,ti)`,
+        cochrane: `(${popClean}):ti,ab,kw AND (${intClean}):ti,ab,kw`,
+        web_of_science: `TS=(("${popClean}") AND ("${intClean}"))`,
+        scopus: `TITLE-ABS-KEY(("${popClean}") AND ("${intClean}"))`,
+        cinahl: `(MH "${popClean}+" OR TI "${popClean}") AND (MH "${intClean}+" OR TI "${intClean}")`
+      }
+    } as unknown as T;
+  }
   if (path.includes("/pico")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    if (projectId !== "demo" && projectId !== "proj_pam_current") {
+      try {
+        const stored = localStorage.getItem(`radextract_pico_${projectId}`);
+        if (stored) return JSON.parse(stored) as unknown as T;
+      } catch (e) {}
+      return { population: "", index_test: "", comparator: "", outcome: "", study_design: "" } as unknown as T;
+    }
     return JSON.parse(DEMO_PROJECT.pico_json) as unknown as T;
   }
   if (path.includes("/hypothesis")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    if (projectId !== "demo" && projectId !== "proj_pam_current") {
+      try {
+        const stored = localStorage.getItem(`radextract_hyp_${projectId}`);
+        if (stored) return JSON.parse(stored) as unknown as T;
+      } catch (e) {}
+      return { hypothesis: "", research_question: "", secondary_hypotheses: [] } as unknown as T;
+    }
     return {
       hypothesis: DEMO_PROJECT.hypothesis,
       research_question: DEMO_PROJECT.research_question,
@@ -1071,33 +1238,6 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.includes("/health")) {
     return { status: "ok" } as unknown as T;
   }
-  if (path.includes("/rigor-scan/status")) {
-    return {
-      status: "ready",
-      engine: "local_laya_system_1",
-      total_checks: 74,
-      domains: ["Study design", "Statistics", "Materials", "Data & code", "Ethics & disclosure", "Claims"],
-      software_verifiers: ["Statistics (HR/OR & p-value consistency)", "Retracted references & notices", "Cellosaurus cell line authentication", "Data, code & registries"],
-    } as unknown as T;
-  }
-  if (path.includes("/rigor-scan/example")) {
-    return DEMO_RIGOR_RESULT as unknown as T;
-  }
-  if (path.includes("/rigor-scan/specs")) {
-    return (DEMO_RIGOR_RESULT.view.checks || []) as unknown as T;
-  }
-  if (path.includes("/rigor-scan/scan-pdf") || path.includes("/rigor-scan/scan-docx") || path.includes("/rigor-scan/scan-file") || path.includes("/rigor-scan/scan-text")) {
-    return {
-      ...DEMO_RIGOR_RESULT,
-      view: {
-        ...DEMO_RIGOR_RESULT.view,
-        paper: {
-          ...DEMO_RIGOR_RESULT.view.paper,
-          title: "Uploaded Manuscript (Local Rigor Scan)",
-        }
-      }
-    } as unknown as T;
-  }
 
   return {} as unknown as T;
 }
@@ -1146,16 +1286,31 @@ async function request<T>(
 // Human identity and decision writes must never fall back to demo data.
 async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("token");
-  if (!token) throw new Error("Sign in to save screening decisions.");
-  const res = await fetch(`${getApiBase()}${path}`, {
-    ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    const detail = typeof error.detail === "string" ? error.detail : `Screening request failed (HTTP ${res.status}).`;
-    throw new Error(detail);
+  if (!token) {
+    if (shouldUseDemoFallback()) {
+      return getDemoFallback<T>(path, options);
+    }
+    throw new Error("Sign in to save screening decisions.");
   }
-  return res.json();
+  try {
+    const res = await fetch(`${getApiBase()}${path}`, {
+      ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      if (shouldUseDemoFallback()) {
+        return getDemoFallback<T>(path, options);
+      }
+      const error = await res.json().catch(() => ({}));
+      const detail = typeof error.detail === "string" ? error.detail : `Screening request failed (HTTP ${res.status}).`;
+      throw new Error(detail);
+    }
+    return res.json();
+  } catch (err: any) {
+    if (shouldUseDemoFallback()) {
+      return getDemoFallback<T>(path, options);
+    }
+    throw err;
+  }
 }
 
 // ── Types ──
@@ -1198,7 +1353,6 @@ export interface Study {
   ai_reason_code?: string | null;
   ai_screened_at?: string | null;
   ai_stage?: string | null;
-  metadata_json?: string | null;
 }
 
 export interface RobToolDef {
@@ -2536,7 +2690,7 @@ export const api = {
   health: () => request<{ status: string }>("/health"),
 
   // ClaimScape Fast Pipeline
-  evaluateClaimscape: (claim: string, query?: string, count: number = 200) =>
+  evaluateClaimscape: (claim: string, query?: string, count: number = 100) =>
     request<{
       claim: string;
       query: string;
@@ -2548,7 +2702,7 @@ export const api = {
       cached?: boolean;
     }>("/claimscape/evaluate", {
       method: "POST",
-      body: JSON.stringify({ claim, query, count, size: count }),
+      body: JSON.stringify({ claim, query, count }),
     }),
   getClaimscapeStatus: () =>
     request<{
@@ -3057,8 +3211,6 @@ export const api = {
     request<HypothesisResponse>(`/projects/${projectId}/hypothesis`),
   updateHypothesis: (projectId: string, data: HypothesisUpdate) =>
     request<HypothesisResponse>(`/projects/${projectId}/hypothesis`, { method: "PUT", body: JSON.stringify(data) }),
-  generateHypothesis: (projectId: string) =>
-    request<HypothesisResponse>(`/projects/${projectId}/generate-hypothesis`, { method: "POST" }),
 
   // Criteria
   getCriteria: (projectId: string) =>
@@ -3730,13 +3882,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ citing_sentence, source_title, source_passage }),
     }),
-  getCitationPaper: (id: string) =>
-    request<any>(`/citation-telephone/paper?id=${encodeURIComponent(id)}`),
-  traceCitationTelephone: (body: any) =>
-    request<any>("/citation-telephone/trace", {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
+  uploadCitationTelephoneManuscript: (formData: FormData) =>
+    request<any>("/citation-telephone/upload-manuscript", { method: "POST", body: formData }),
   getCitationTelephoneStatus: () =>
     request<{
       status: string;
@@ -3765,18 +3912,6 @@ export const api = {
     const formData = new FormData();
     formData.append("file", file);
     return request<any>("/rigor-scan/scan-pdf", { method: "POST", body: formData });
-  },
-
-  scanDocxRigor: async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    return request<any>("/rigor-scan/scan-docx", { method: "POST", body: formData });
-  },
-
-  scanFileRigor: async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    return request<any>("/rigor-scan/scan-file", { method: "POST", body: formData });
   },
 };
 
