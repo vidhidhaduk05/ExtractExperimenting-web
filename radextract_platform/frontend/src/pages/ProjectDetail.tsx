@@ -48,8 +48,8 @@ export function ProjectDetail() {
   const gradeCount = gradeList?.length || 0;
 
   const cards = [
-    { label: "Data Extraction (PDF)", value: "6 Papers", to: `/projects/${projectId}/extraction`, icon: Highlighter, color: "text-blue-600" },
     { label: "Extraction Sheet", value: "Matrix", to: `/projects/${projectId}/extraction-sheet`, icon: FileSpreadsheet, color: "text-emerald-600" },
+    { label: "Data Extraction (PDF)", value: "6 Papers", to: `/projects/${projectId}/extraction`, icon: Highlighter, color: "text-blue-600" },
     { label: "Studies", value: studyCount, to: `/projects/${projectId}/studies`, icon: FileText, color: "text-phylo-blue" },
     { label: "Screened In", value: includedCount, to: `/projects/${projectId}/screening`, icon: CheckSquare, color: "text-phylo-green" },
     { label: "PRISMA Flow", value: "View", to: `/projects/${projectId}/prisma`, icon: GitBranch, color: "text-phylo-pink" },

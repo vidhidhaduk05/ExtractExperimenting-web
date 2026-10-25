@@ -552,9 +552,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/search_string_generator.py": {
-    "mtime": 1792291128.6202202,
-    "seen": 1792291212.5145206,
-    "ast_hash": "6c4a0c2230769e7b4d638f95add6303c",
+    "mtime": 1792882002.665915,
+    "seen": 1792886070.068915,
+    "ast_hash": "9e6cae73f4cb263aa5b599013db1b980",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/stats_engine.py": {
@@ -780,15 +780,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/layout/AppLayout.tsx": {
-    "mtime": 1792798842.7590423,
-    "seen": 1792799941.554352,
-    "ast_hash": "7422832b2b0176b25c18f4120cce9332",
+    "mtime": 1792950192.9940217,
+    "seen": 1792951085.2279685,
+    "ast_hash": "392bad49830ec4a0ecc2c0830289e096",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1792819243.4568794,
-    "seen": 1792819442.8508227,
-    "ast_hash": "efe9e7234458cb75e7843a213ebe1d9a",
+    "mtime": 1792882250.4834602,
+    "seen": 1792886070.133042,
+    "ast_hash": "47af6162d9723c2dd16e425604180721",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -840,15 +840,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PdfViewerPage.tsx": {
-    "mtime": 1791664521.695212,
-    "seen": 1791664941.925462,
-    "ast_hash": "206a98be460ed4f08b9dca6831aea2b9",
+    "mtime": 1792880640.12318,
+    "seen": 1792886070.1477387,
+    "ast_hash": "934586e355e4561989de10d46acaae6d",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PicoHypothesisPage.tsx": {
-    "mtime": 1791709241.5149622,
-    "seen": 1791709318.9786,
-    "ast_hash": "323c29f2186e0c40d4eff3aee1f90d6f",
+    "mtime": 1792882092.0132568,
+    "seen": 1792886070.1477387,
+    "ast_hash": "1053d8bb9185b0783088db9907e625be",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PicoPage.tsx": {
@@ -870,9 +870,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ProjectDetail.tsx": {
-    "mtime": 1791664521.700141,
-    "seen": 1791664941.925462,
-    "ast_hash": "77ceb3ba0887ee7c7267bd8630870bb9",
+    "mtime": 1792950202.2058573,
+    "seen": 1792951085.2436671,
+    "ast_hash": "59507b1c824b8948f8cbb4ddad08a05f",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ProjectList.tsx": {
@@ -894,9 +894,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/RobAssessmentPage.tsx": {
-    "mtime": 1792330532.0756297,
-    "seen": 1792330597.7375567,
-    "ast_hash": "0a8382626291d642b707a9360262e9fa",
+    "mtime": 1792880640.139832,
+    "seen": 1792886070.1520286,
+    "ast_hash": "4cb654417b7cd3e9b4187073341f2426",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/RobSummaryPage.tsx": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
-    "mtime": 1792331971.0347743,
-    "seen": 1792332330.4655685,
-    "ast_hash": "57a0f17f6c435c0d68e558c0d8888f80",
+    "mtime": 1792883317.3558757,
+    "seen": 1792886070.15303,
+    "ast_hash": "2df98998a837b74ca55c5eba0e8f589d",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyImport.tsx": {
@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ExtractionSheetPage.tsx": {
-    "mtime": 1792279735.941968,
-    "seen": 1792279857.5165656,
-    "ast_hash": "b7fd827ae84a7b341f3379ead61a3d4d",
+    "mtime": 1792950779.7607632,
+    "seen": 1792951085.2436671,
+    "ast_hash": "a86b4e17280649fa0b750ccc36b685a4",
     "semantic_hash": ""
   },
   ".jules/bolt.md": {
@@ -1890,9 +1890,9 @@
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1792824091.0176747,
-    "seen": 1792868717.5781999,
-    "ast_hash": "a1270d9b9daaccdc42822ac32d7528a6",
+    "mtime": 1792893263.3523135,
+    "seen": 1792893276.6020784,
+    "ast_hash": "beeb37933aa8391b975c78b4aa272a19",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {
@@ -3913,7 +3913,7 @@
   },
   "radextract_platform/frontend/src/pages/LandingPage.tsx": {
     "mtime": 1792877736.4322636,
-    "seen": 1792879245.1194067,
+    "seen": 1792890382.5693922,
     "ast_hash": "1c65fd0dbd4e76f9314939d6a517c300",
     "semantic_hash": ""
   },
@@ -4869,6 +4869,318 @@
     "mtime": 1792877632.7192338,
     "seen": 1792879245.132635,
     "ast_hash": "91bea9fa98db4bf79cd2fcbd9de0afa2",
+    "semantic_hash": ""
+  },
+  "fix_demo_studies_leak.py": {
+    "mtime": 1792880544.8164182,
+    "seen": 1792886069.9510221,
+    "ast_hash": "fe36c7d64d385239f6dbd7d1f16c93ab",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/home/shots/report.json": {
+    "mtime": 1792885530.7966168,
+    "seen": 1792886070.1154397,
+    "ast_hash": "536a4c9dca6024d3027ad12ad80261cf",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/phylo-reference/shots/report.json": {
+    "mtime": 1792885785.5901618,
+    "seen": 1792886070.1154397,
+    "ast_hash": "37ff94c7bf46e8ae0a4919749a0c22f5",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/home/audit-summary.txt": {
+    "mtime": 1792885479.0668657,
+    "seen": 1792886070.259832,
+    "ast_hash": "c65c634d79dcbe64aa92c9f9cf4c1d4c",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/home/scorecard.md": {
+    "mtime": 1792885718.1120503,
+    "seen": 1792886070.259832,
+    "ast_hash": "562ee88219d378ba2f3bc789a2a07bb0",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/DESIGN.md": {
+    "mtime": 1792890552.3519652,
+    "seen": 1792890911.2326787,
+    "ast_hash": "c555256f1ac607b2d0da5edde0ef67a5",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/motion-preview.html": {
+    "mtime": 1792887765.4284794,
+    "seen": 1792887909.37747,
+    "ast_hash": "1e9ff3eaf08490db19e2eae9e97d4fe6",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/verification/results.json": {
+    "mtime": 1792887844.8306515,
+    "seen": 1792887909.208459,
+    "ast_hash": "60411dbe632c8c95c3a5c04adf9df706",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/verify.mjs": {
+    "mtime": 1792887185.301045,
+    "seen": 1792887317.683632,
+    "ast_hash": "f83cd4bd132859c7a9996cdb7ae090ee",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/direction.json": {
+    "mtime": 1792886841.5752623,
+    "seen": 1792887317.683632,
+    "ast_hash": "bd0ba3c4b3955f610cb5a7dc0565884a",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/inspect/report.json": {
+    "mtime": 1792887452.5473585,
+    "seen": 1792887909.208459,
+    "ast_hash": "4e0d3d974d9ad4bdb594b2b4fade7fa2",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/inspect/desktop-fold.jpg": {
+    "mtime": 1792887421.8346484,
+    "seen": 1792887909.3920813,
+    "ast_hash": "723222eb63b772284d77859ae38b9ab3",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/inspect/desktop-page-01.jpg": {
+    "mtime": 1792887428.8031175,
+    "seen": 1792887909.3920813,
+    "ast_hash": "893c29c9a05168ab0414e84819698066",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/inspect/desktop-page-02.jpg": {
+    "mtime": 1792887428.941306,
+    "seen": 1792887909.3920813,
+    "ast_hash": "83f77ab9cba73912cf0861d0498a8fe5",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/inspect/tablet-fold.jpg": {
+    "mtime": 1792887431.8440466,
+    "seen": 1792887909.3920813,
+    "ast_hash": "8557b7ab448659e01354ad0c52daaf5d",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/REVIEW.md": {
+    "mtime": 1792887401.121526,
+    "seen": 1792887909.37747,
+    "ast_hash": "55a1d105db55a923e0544601d32f4c5b",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/inspect/mobile-fold.jpg": {
+    "mtime": 1792887441.4967716,
+    "seen": 1792887909.3920813,
+    "ast_hash": "f6de1de23e68aa589d158d3097413e66",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/inspect/mobile-page-01.jpg": {
+    "mtime": 1792887449.6901548,
+    "seen": 1792887909.3920813,
+    "ast_hash": "b999a67956bb7fe6c76fecc1a3f0cf58",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/inspect/mobile-page-02.jpg": {
+    "mtime": 1792887449.785297,
+    "seen": 1792887909.3920813,
+    "ast_hash": "728f296e5ddbada40eca237bddc34ae0",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/inspect/tablet-page-01.jpg": {
+    "mtime": 1792887438.6051183,
+    "seen": 1792887909.3920813,
+    "ast_hash": "1f6e287832e621128e853ee378e10bc7",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/.taste-skill/inspect/tablet-page-02.jpg": {
+    "mtime": 1792887438.722344,
+    "seen": 1792887909.3920813,
+    "ast_hash": "f02afb0ae369ac7fe8eefa9ff231576d",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/prototypes/verification/notebook-results.json": {
+    "mtime": 1792887895.4253898,
+    "seen": 1792887909.208459,
+    "ast_hash": "7d2355ce6e24fc56b3f6fb74f7f2b7c8",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/approved-sections/browser-results.json": {
+    "mtime": 1792888425.0461707,
+    "seen": 1792890382.5415046,
+    "ast_hash": "0a2eb3b8f0adb2a960c47a0267178c8b",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/approved-sections/landing-check.tsx": {
+    "mtime": 1792888321.350742,
+    "seen": 1792888410.8694968,
+    "ast_hash": "ac204b737b8f448aa2ff456b04716ab7",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/approved-sections/preservation.json": {
+    "mtime": 1792888253.4148707,
+    "seen": 1792888410.8694968,
+    "ast_hash": "57d34fc528c16c621594779e5de6bb64",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/approved-sections/verify.mjs": {
+    "mtime": 1792888321.3777258,
+    "seen": 1792888410.8694968,
+    "ast_hash": "d6a99eb0b3c0ac62c0589be416d39db3",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/approved-sections/vite.check.config.mjs": {
+    "mtime": 1792888321.376726,
+    "seen": 1792888410.8694968,
+    "ast_hash": "10ff6c136ae3cb2d1b35bdf52dcdff70",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/approved-sections/before-LandingPage.txt": {
+    "mtime": 1792877736.4322636,
+    "seen": 1792888411.021809,
+    "ast_hash": "1c65fd0dbd4e76f9314939d6a517c300",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/.jury/approved-sections/landing-check.html": {
+    "mtime": 1792888321.3394818,
+    "seen": 1792888411.021809,
+    "ast_hash": "7e889ed83d47de36e7dab5a28608015f",
+    "semantic_hash": ""
+  },
+  "Website for software/Stellar_Labs_landing_working_copy.html": {
+    "mtime": 1792868612.973741,
+    "seen": 1792890911.2078452,
+    "ast_hash": "af3767d63ca29cac7885890c563ee1bf",
+    "semantic_hash": ""
+  },
+  ".tmp-radiology-update.py": {
+    "mtime": 1792891795.7809315,
+    "seen": 1792891868.4974895,
+    "ast_hash": "95ae3525af5225bffd21830f802ee3b1",
+    "semantic_hash": ""
+  },
+  ".tmp-verify-radiology.mjs": {
+    "mtime": 1792891809.4126983,
+    "seen": 1792891868.4974895,
+    "ast_hash": "79f85b2f53467405a67b94e9e254815d",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/app.tsx": {
+    "mtime": 1792892794.093776,
+    "seen": 1792892822.491734,
+    "ast_hash": "e750eebbe65a9dfb09dbd98702bc820b",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/build.cjs": {
+    "mtime": 1792892794.094775,
+    "seen": 1792892822.491734,
+    "ast_hash": "292cbd3f09f5b763769a7a4c4b14a78b",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/package.json": {
+    "mtime": 1792892794.0957744,
+    "seen": 1792892822.491734,
+    "ast_hash": "c741513ddebe136a0eea42581a6eb5cc",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/src/components/claimscape/ClaimscapeMap.tsx": {
+    "mtime": 1792291128.6252205,
+    "seen": 1792892822.491734,
+    "ast_hash": "b402a2f3b85ce1edd0be45bde0217f15",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/src/components/claimscape/MethodologySection.tsx": {
+    "mtime": 1792351747.332652,
+    "seen": 1792892822.491734,
+    "ast_hash": "4331da9c95247043f46361e65ac15667",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/src/components/claimscape/PaperInspector.tsx": {
+    "mtime": 1792279735.9148262,
+    "seen": 1792892822.491734,
+    "ast_hash": "05627a11a75312999846e813cbf4ad05",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/src/data/hrt_example.json": {
+    "mtime": 1792291128.6328902,
+    "seen": 1792892822.491734,
+    "ast_hash": "38e1aa3e5e58651de48faa76c986a880",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/src/lib/api.ts": {
+    "mtime": 1792882250.4834602,
+    "seen": 1792892822.491734,
+    "ast_hash": "47af6162d9723c2dd16e425604180721",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/src/lib/claimscapeMethod.ts": {
+    "mtime": 1792279735.928977,
+    "seen": 1792892822.491734,
+    "ast_hash": "28361fa490cb03ea8b5045739bad7964",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/src/lib/demoData.ts": {
+    "mtime": 1792279735.9319866,
+    "seen": 1792892822.491734,
+    "ast_hash": "920a78c1a78cf6335171e1512d65e237",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/src/lib/pubmedLiveClient.ts": {
+    "mtime": 1792361887.952581,
+    "seen": 1792892822.491734,
+    "ast_hash": "f6651dc1ec0db3c863646dfca5ae6c9a",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/src/pages/ClaimscapePage.tsx": {
+    "mtime": 1792877599.6203249,
+    "seen": 1792892822.491734,
+    "ast_hash": "0e6e12d23b8c31a1e3df60acbf265628",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/tailwind.config.js": {
+    "mtime": 1791664521.710002,
+    "seen": 1792892822.491734,
+    "ast_hash": "698606e21e3abe3fe35ed0773637f1cb",
+    "semantic_hash": ""
+  },
+  ".tmp-export-claimscape.cjs": {
+    "mtime": 1792892792.7566626,
+    "seen": 1792892822.491734,
+    "ast_hash": "e8f39888bd3a7a3a7edc3d99499893ad",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/README.md": {
+    "mtime": 1792892794.0967746,
+    "seen": 1792892822.9186735,
+    "ast_hash": "987ac2e64a8c46e040a3f73574414f05",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape/template.html": {
+    "mtime": 1792892794.094775,
+    "seen": 1792892822.9186735,
+    "ast_hash": "3988d163d2f46147b42808daa5808f09",
+    "semantic_hash": ""
+  },
+  ".claimscape-export/ClaimScape_working_copy.html": {
+    "mtime": 1792892796.0120144,
+    "seen": 1792892822.9186735,
+    "ast_hash": "18cda2ca30f182af8578d8a64a072af0",
+    "semantic_hash": ""
+  },
+  ".tmp-integrate-question-options.py": {
+    "mtime": 1792893191.5656195,
+    "seen": 1792893276.3022363,
+    "ast_hash": "7b48cd6e3f05cf2976db3a6a088798d1",
+    "semantic_hash": ""
+  },
+  ".tmp-verify-question-options.mjs": {
+    "mtime": 1792893216.6987538,
+    "seen": 1792893276.3022363,
+    "ast_hash": "919636e49ff570387a1afaaac75e4377",
+    "semantic_hash": ""
+  },
+  ".tmp-match-question-controls.py": {
+    "mtime": 1792893513.791762,
+    "seen": 1792893582.5478115,
+    "ast_hash": "8f80bb71f5aa1c7670ee285f35622857",
     "semantic_hash": ""
   }
 }
