@@ -66,8 +66,14 @@ export const LandingPage: React.FC = () => {
       if (reducedMotion.matches) return;
       lenis = new Lenis({
         autoRaf: true,
-        lerp: 0.1,
+        duration: 1.15,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        orientation: "vertical",
+        gestureOrientation: "vertical",
         smoothWheel: true,
+        wheelMultiplier: 1.0,
+        touchMultiplier: 1.5,
+        infinite: false,
         syncTouch: false,
         anchors: false,
         prevent: (node) =>
@@ -173,6 +179,11 @@ export const LandingPage: React.FC = () => {
         const beat = parseTimeMs(computed.getPropertyValue("--motion-reveal-stagger"), 90);
         const distance = computed.getPropertyValue("--motion-reveal-distance").trim() || "26px";
         const ease = computed.getPropertyValue("--motion-reveal-ease").trim() || "cubic-bezier(.22,1,.36,1)";
+        const cachedLiftFrames = springRevealFrames(parseFloat(distance), duration);
+        const cachedPaperFrames: Keyframe[] = [
+          { opacity: 0, translate: "0 0" },
+          { opacity: 1, translate: "0 0" },
+        ];
 
         rhythmObserver = new IntersectionObserver(
           (entries) => {
@@ -199,10 +210,7 @@ export const LandingPage: React.FC = () => {
               const isPaper = node.dataset.rhythmKind === "paper";
               node.dataset.rhythmMotion = isPaper ? "fade" : "spring";
               const animation = node.animate(
-                isPaper ? [
-                  { opacity: 0, translate: "0 0" },
-                  { opacity: 1, translate: "0 0" },
-                ] : springRevealFrames(parseFloat(distance), duration),
+                isPaper ? cachedPaperFrames : cachedLiftFrames,
                 {
                   duration: isPaper ? duration * 0.85 : duration,
                   delay: Math.min(index, 3) * beat,
@@ -221,7 +229,7 @@ export const LandingPage: React.FC = () => {
                 .catch(() => {});
             });
           },
-          { threshold: 0.04, rootMargin: "0px 0px -5% 0px" }
+          { threshold: 0.02, rootMargin: "0px 0px 40px 0px" }
         );
 
         rhythmTargets.forEach((n) => rhythmObserver?.observe(n));

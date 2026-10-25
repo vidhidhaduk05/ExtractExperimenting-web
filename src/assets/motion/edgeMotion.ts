@@ -66,13 +66,7 @@ export function initializeEdgeMotion(container: HTMLElement, reduced: MediaQuery
 
   function bypass(target: EventTarget | null) {
     if (!(target instanceof Element) || !container.contains(target)) return true;
-    if (target.closest('input,textarea,select,button,a,[contenteditable="true"],#research-board,#use-cases-carousel-container,[data-lenis-prevent]')) return true;
-    let node: Element | null = target;
-    while (node && node !== container) {
-      if (node.scrollHeight > node.clientHeight + 2 && /auto|scroll/.test(getComputedStyle(node).overflowY)) return true;
-      node = node.parentElement;
-    }
-    return false;
+    return !!target.closest('input,textarea,select,button,a,[contenteditable="true"],#research-board,#use-cases-carousel-container,[data-lenis-prevent]');
   }
 
   function onWheel(event: WheelEvent) {
@@ -82,16 +76,30 @@ export function initializeEdgeMotion(container: HTMLElement, reduced: MediaQuery
       event.metaKey ||
       !event.cancelable ||
       event.defaultPrevented ||
-      Math.abs(event.deltaX) > Math.abs(event.deltaY) ||
-      bypass(event.target)
+      Math.abs(event.deltaX) > Math.abs(event.deltaY)
     ) {
       release();
       return;
     }
+
+    const y = window.scrollY;
+    // Fast path: if user is scrolling inside document bounds and not actively in an overscroll pull,
+    // exit immediately so wheel events scroll at silky 120fps with zero latency.
+    if (pull === 0 && y > 10) {
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      if (y < max - 10) {
+        return;
+      }
+    }
+
+    if (bypass(event.target)) {
+      release();
+      return;
+    }
+
     initialize();
     if (!spring || !boundary || !surface) return;
     const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
-    const y = Math.max(0, scrollY);
     const top = y <= 1 && event.deltaY < 0;
     const bottom = y >= max - 1 && event.deltaY > 0;
     if (!top && !bottom) {

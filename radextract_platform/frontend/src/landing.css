@@ -39,8 +39,9 @@
 
     .stellar-labs-landing-root *,.stellar-labs-landing-root  *::before,.stellar-labs-landing-root  *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html.stellar-landing-active {
-      scroll-behavior: smooth;
+    html.stellar-landing-active,
+    html.stellar-landing-active body {
+      scroll-behavior: auto !important;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
@@ -2289,10 +2290,10 @@ html.stellar-landing-active.sl-rhythm .fade-up { opacity: 1; transform: none; tr
 html.sl-rhythm :is(.hero-eyebrow,.hero-headline,.hero-sub,.hero-sub-small,.hero-cta-group,.hero-proof,.hero-stats-grid),
 html.stellar-landing-active.sl-rhythm :is(.hero-eyebrow,.hero-headline,.hero-sub,.hero-sub-small,.hero-cta-group,.hero-proof,.hero-stats-grid) { animation: none; }
 html.sl-rhythm [data-rhythm-state="pending"],
-html.stellar-landing-active.sl-rhythm [data-rhythm-state="pending"] { opacity: 0; translate: 0 var(--motion-reveal-distance); }
 html.sl-rhythm [data-rhythm-state="entering"],
+html.stellar-landing-active.sl-rhythm [data-rhythm-state="pending"],
+html.stellar-landing-active.sl-rhythm [data-rhythm-state="entering"] { opacity: 0; translate: 0 var(--motion-reveal-distance); }
 html.sl-rhythm [data-rhythm-state="shown"],
-html.stellar-landing-active.sl-rhythm [data-rhythm-state="entering"],
 html.stellar-landing-active.sl-rhythm [data-rhythm-state="shown"] { opacity: 1; translate: none; }
 html.sl-rhythm [data-rhythm-kind="paper"][data-rhythm-state="pending"],
 html.stellar-landing-active.sl-rhythm [data-rhythm-kind="paper"][data-rhythm-state="pending"] { translate: none; }
