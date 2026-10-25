@@ -107,6 +107,10 @@ async def update_screening(
             rob_service.auto_assess_study, study_id, row["project_id"],
         )
 
+    if body.status == "included":
+        from services.fulltext_retrieval import transition_study_to_extraction
+        transition_study_to_extraction(study_id, conn, background_tasks)
+
     row = conn.execute(
         "SELECT * FROM studies WHERE study_id = ?", (study_id,)
     ).fetchone()
@@ -551,6 +555,9 @@ def _check_and_record_conflict(
                    WHERE study_id = ?""",
                 (decision, stage, reason_val, study_id),
             )
+            if decision == "included":
+                from services.fulltext_retrieval import transition_study_to_extraction
+                transition_study_to_extraction(study_id, conn, None)
 
     if hasattr(conn, "commit"):
         conn.commit()
@@ -592,8 +599,8 @@ async def create_screening_decision(
     if body.stage != record_stage:
         raise HTTPException(status_code=409, detail="Screening stage changed or does not match this record. Refresh before saving.")
 
-    reviewer_id = user["user_id"]
-    reviewer_name = user["username"]
+    reviewer_id = user.get("user_id", "")
+    reviewer_name = user.get("username") or user.get("email") or "reviewer"
 
     # Get screening config for blind mode
     proj = conn.execute(
@@ -661,6 +668,11 @@ async def create_screening_decision(
         background_tasks.add_task(
             rob_service.auto_assess_study, study_id, body.project_id,
         )
+
+    # Auto-move included study to data extraction stage & trigger OA retrieval if PDF missing
+    if body.decision == "included":
+        from services.fulltext_retrieval import transition_study_to_extraction
+        transition_study_to_extraction(study_id, conn, background_tasks)
 
     # Laya background verification of exclusion reason for PRISMA audit
     if body.decision == "excluded" and (body.reason_text or body.reason_code):

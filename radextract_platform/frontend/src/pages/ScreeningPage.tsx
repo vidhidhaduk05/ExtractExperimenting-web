@@ -63,6 +63,7 @@ import {
   Pause,
   Square,
   Scale,
+  FileSpreadsheet,
 } from "lucide-react";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
 import { DualBlindedDashboard } from "../components/screening/DualBlindedDashboard";
@@ -2219,9 +2220,39 @@ export function ScreeningPage() {
                   </button>
                 </div>
 
-                {/* RoB + Coded Extraction actions for included studies */}
+                {/* RoB + Data Extraction actions for included studies */}
                 {selectedStudy.screening_status === "included" && (
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
+                    <Link
+                      to={`/projects/${projectId}/extraction-sheet?study=${selectedStudy.study_id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs"
+                      title="Open Data Extraction Sheet for this study"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                      Extraction Sheet
+                    </Link>
+                    {(!selectedStudy.pdf_path && selectedStudy.pdf_status !== "text_only") && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await api.retrieveStudyOaPdf(selectedStudy.study_id);
+                            if (res.result?.outcome === "fetched") {
+                              alert("Successfully retrieved OA PDF and converted with Docling!");
+                            } else {
+                              alert("No legal open-access copy found. Please upload PDF or Zotero file manually.");
+                            }
+                            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+                          } catch (e: any) {
+                            alert(`Error: ${e.message}`);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors shadow-2xs"
+                        title="Auto-retrieve open-access PDF from Europe PMC / Unpaywall"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        Auto-Retrieve OA PDF
+                      </button>
+                    )}
                     {robByStudy.has(selectedStudy.study_id) ? (
                       <Link
                         to={`/projects/${projectId}/rob/${robByStudy.get(selectedStudy.study_id)!.assessment_id}`}

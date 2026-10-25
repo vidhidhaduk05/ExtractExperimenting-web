@@ -86,6 +86,11 @@ RIS_FIELD_MAP = {
     "EP": "end_page",      # End page
     "LA": "language",      # Language
     "PT": "publication_type",  # Publication type
+    "L1": "pdf_link",          # PDF link (Zotero, RefMan, EndNote)
+    "L2": "fulltext_link",     # Full text link
+    "L4": "figure_link",       # Figure link
+    "UR": "url",               # URL / web link
+    "LK": "file_link",         # File link
 }
 
 # RIS record type mapping
@@ -218,6 +223,8 @@ def _finalize_ris_record(record: dict) -> None:
     record.setdefault("abstract", "")
     record.setdefault("publication_year", None)
     record.setdefault("source", "RIS import")
+    record.setdefault("pdf_link", "")
+    record.setdefault("url", "")
 
     # Remove internal fields
     record.pop("_type", None)
@@ -395,6 +402,10 @@ def parse_bibtex(content: str) -> list[dict]:
                             record["pmid"] = pmid_clean
                     elif field_name == "keywords":
                         record["keywords"] = field_value
+                    elif field_name in ("file", "pdf"):
+                        record["pdf_link"] = field_value
+                    elif field_name in ("url", "link", "eprint"):
+                        record["url"] = field_value
 
                 # Only include records with a title
                 if record.get("title"):
@@ -875,6 +886,15 @@ def parse_endnote_xml(content: str) -> list[dict]:
             if pmid_clean and len(pmid_clean) >= 6:
                 record["pmid"] = pmid_clean
 
+        # URLs & PDF attachments from Zotero/EndNote
+        url_elem = rec.find(".//pdf-urls/url") or rec.find(".//url") or rec.find(".//related-urls/url")
+        if url_elem is not None:
+            u_text = "".join(url_elem.itertext()).strip()
+            if u_text.lower().endswith(".pdf") or "pdf" in u_text.lower():
+                record["pdf_link"] = u_text
+            else:
+                record["url"] = u_text
+
         if record.get("title"):
             _finalize_xml_record(record)
             records.append(record)
@@ -1010,6 +1030,9 @@ ENDNOTE_TAG_MAP = {
     "%N": "issue",
     "%P": "pages",
     "%0": "reference_type",
+    "%U": "url",
+    "%>": "pdf_link",
+    "%F": "file_attachment",
 }
 
 

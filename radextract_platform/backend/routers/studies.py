@@ -209,7 +209,22 @@ async def upload_pdf(
     )
     conn.commit()
 
-    # Always run Docling conversion + AI screening + Data Review auto-extraction in background
+    # Always process PDF into Docling structured JSON for data extraction
+    engine_used = "docling"
+    try:
+        proc_doc = pdf_service.process_pdf(study_id, conn)
+        engine_used = proc_doc.get("processor_engine", "docling")
+    except Exception as e_proc:
+        pass
+
+    # Advance extraction status to ready_for_extraction if study was awaiting_pdf or included
+    curr_ext = row["extraction_status"] or ""
+    curr_screen = row["screening_status"] or ""
+    if curr_ext in ("awaiting_pdf", "pending", "") or curr_screen == "included":
+        conn.execute("UPDATE studies SET extraction_status = 'ready_for_extraction' WHERE study_id = ?", (study_id,))
+        conn.commit()
+
+    # Run screening pipeline in background if auto_process is set
     if auto_process:
         background_tasks.add_task(run_pdf_screening_pipeline, study_id, project_id)
 
@@ -217,9 +232,314 @@ async def upload_pdf(
         "study_id": study_id,
         "project_id": project_id,
         "pdf_path": filepath,
-        "pdf_status": "uploaded",
-        "pipeline_status": "queued_in_background",
-        "message": "PDF uploaded. Docling IBM conversion, full-text screening, and Data Review extraction running in background.",
+        "pdf_status": "processed",
+        "processor_engine": engine_used,
+        "extraction_status": "ready_for_extraction",
+        "pipeline_status": "queued_in_background" if auto_process else "ready",
+        "message": "PDF uploaded and Docling JSON generated. Ready for extraction.",
+    }
+
+
+def _normalize_title_words(t: str) -> set[str]:
+    import re
+    clean = re.sub(r"[^a-zA-Z0-9\s]", " ", (t or "").lower())
+    words = clean.split()
+    stops = {"the", "a", "an", "and", "or", "of", "in", "on", "at", "to", "for", "with", "by", "from", "is", "was", "are", "pdf"}
+    return {w for w in words if w not in stops and len(w) > 2}
+
+
+def _titles_match(title1: str, title2: str) -> bool:
+    w1 = _normalize_title_words(title1)
+    w2 = _normalize_title_words(title2)
+    if not w1 or not w2:
+        return False
+    inter = len(w1 & w2)
+    union = len(w1 | w2)
+    return (inter / union) >= 0.60 or (inter / min(len(w1), len(w2))) >= 0.75
+
+
+@router.post("/studies/{study_id}/retrieve-oa-pdf")
+async def retrieve_study_oa_pdf(
+    study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Automatically retrieve and process open-access PDF/text for a single study."""
+    row = conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Study not found")
+    check_project_access(conn, row["project_id"], user)
+    from services.fulltext_retrieval import retrieve_and_process_oa_study
+    res = retrieve_and_process_oa_study(study_id, row["project_id"])
+    updated = conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    return {"result": res, "study": dict(updated)}
+
+
+@router.post("/projects/{project_id}/studies/retrieve-oa-pdfs")
+async def retrieve_project_oa_pdfs(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Batch retrieve open-access PDFs for all included studies in a project currently awaiting full-text."""
+    check_project_access(conn, project_id, user)
+    from services import fulltext_retrieval
+    studies = conn.execute(
+        """SELECT * FROM studies WHERE project_id = ?
+           AND (screening_status = 'included' OR screening_stage = 'ft' OR extraction_status IN ('awaiting_pdf', 'pending'))
+           AND (pdf_path IS NULL OR pdf_path = '')""",
+        (project_id,),
+    ).fetchall()
+    study_list = [dict(s) for s in studies]
+    if not study_list:
+        return {"message": "No studies currently awaiting OA PDF retrieval", "total": 0, "active": False}
+    job = fulltext_retrieval.start_job(project_id, study_list, screen=False)
+    return {"message": f"Started OA PDF retrieval for {len(study_list)} studies", "total": len(study_list), "job": job}
+
+
+@router.get("/projects/{project_id}/studies/retrieve-oa-pdfs/status")
+async def get_project_oa_pdfs_status(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Get the status of an ongoing or completed OA retrieval job for a project."""
+    check_project_access(conn, project_id, user)
+    from services import fulltext_retrieval
+    return fulltext_retrieval.get_job(project_id)
+
+
+@router.post("/projects/{project_id}/studies/upload-included-files")
+async def upload_included_files(
+    project_id: str,
+    background_tasks: BackgroundTasks,
+    files: list[UploadFile] = File(...),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Universal upload handler for remaining included files.
+
+    Accepts:
+      - PDF files (.pdf)
+      - Zip archives of PDFs (.zip)
+      - Reference manager exports (.ris, .xml, .enw, .bib, .ciw, .nbib)
+
+    Matches files against project studies needing PDFs by Study ID, DOI, PMID, or Title.
+    Converts attached PDFs using IBM Docling into structured JSON, updates pdf_documents,
+    and transitions extraction_status = 'ready_for_extraction'.
+    """
+    import io
+    import re
+    import zipfile
+    import logging
+    from services import reference_parser, pdf_service
+    from services.storage_backend import get_storage
+    from services.fulltext_retrieval import _download_pdf, retrieve_and_process_oa_study
+
+    logger = logging.getLogger("radextract.upload_included")
+    check_project_access(conn, project_id, user)
+
+    included_rows = conn.execute(
+        """SELECT * FROM studies WHERE project_id = ?
+           AND (screening_status = 'included' OR screening_stage = 'ft' OR extraction_status IN ('awaiting_pdf', 'pending'))""",
+        (project_id,),
+    ).fetchall()
+    included_studies = [dict(r) for r in included_rows]
+
+    all_rows = conn.execute("SELECT * FROM studies WHERE project_id = ?", (project_id,)).fetchall()
+    all_studies = [dict(r) for r in all_rows]
+
+    storage = get_storage("upload")
+    matched_results = []
+    unmatched_files = []
+    processed_docling_count = 0
+
+    def match_study_for_pdf(filename: str, pdf_bytes: bytes) -> Optional[dict]:
+        fname_lower = filename.lower()
+        # 1. Match by study_id in filename
+        for s in included_studies:
+            if s["study_id"].lower() in fname_lower:
+                return s
+        # 2. Match by PMID in filename
+        for s in included_studies:
+            pmid = (s.get("pmid") or "").strip()
+            if pmid and pmid in fname_lower:
+                return s
+        # 3. Match by DOI in filename
+        for s in included_studies:
+            doi = (s.get("doi") or "").strip().lower()
+            if doi:
+                doi_slug = re.sub(r"[^\w]", "_", doi)
+                if doi in fname_lower or (len(doi_slug) > 6 and doi_slug in fname_lower):
+                    return s
+        # 4. Match by title similarity
+        for s in included_studies:
+            title = s.get("title") or ""
+            if title and _titles_match(fname_lower, title):
+                return s
+        # Fallback: check among all project studies
+        for s in all_studies:
+            if s["study_id"].lower() in fname_lower or ((s.get("pmid") or "").strip() and (s.get("pmid") or "").strip() in fname_lower):
+                return s
+        return None
+
+    def attach_pdf_to_study(study: dict, pdf_bytes: bytes, source_note: str) -> bool:
+        nonlocal processed_docling_count
+        s_id = study["study_id"]
+        storage_key = f"{project_id}/{s_id}.pdf"
+        storage.save_bytes(storage_key, pdf_bytes)
+        conn.execute(
+            "UPDATE studies SET pdf_path = ?, pdf_status = 'uploaded', extraction_status = 'ready_for_extraction' WHERE study_id = ?",
+            (storage_key, s_id),
+        )
+        conn.commit()
+        try:
+            pdf_service.process_pdf(s_id, conn)
+            processed_docling_count += 1
+        except Exception as e_proc:
+            logger.warning("Docling processing failed for %s: %s", s_id, e_proc)
+        return True
+
+    for upload_file in files:
+        fname = upload_file.filename or "unknown"
+        ext = os.path.splitext(fname)[1].lower()
+        content = await upload_file.read()
+
+        if ext == ".pdf":
+            matched = match_study_for_pdf(fname, content)
+            if matched:
+                attach_pdf_to_study(matched, content, f"Direct PDF: {fname}")
+                matched_results.append({
+                    "study_id": matched["study_id"],
+                    "title": matched.get("title", ""),
+                    "file": fname,
+                    "matched_by": "filename/identifier",
+                    "status": "ready_for_extraction",
+                })
+            else:
+                unmatched_files.append(fname)
+
+        elif ext == ".zip":
+            try:
+                with zipfile.ZipFile(io.BytesIO(content)) as z:
+                    for zinfo in z.infolist():
+                        if zinfo.is_dir():
+                            continue
+                        zname = os.path.basename(zinfo.filename)
+                        zext = os.path.splitext(zname)[1].lower()
+                        if zext == ".pdf":
+                            pdf_bytes = z.read(zinfo)
+                            matched = match_study_for_pdf(zname, pdf_bytes)
+                            if matched:
+                                attach_pdf_to_study(matched, pdf_bytes, f"Zip archive: {zname}")
+                                matched_results.append({
+                                    "study_id": matched["study_id"],
+                                    "title": matched.get("title", ""),
+                                    "file": zname,
+                                    "matched_by": "zip_pdf",
+                                    "status": "ready_for_extraction",
+                                })
+                            else:
+                                unmatched_files.append(f"{fname}/{zname}")
+            except Exception as e_zip:
+                logger.warning("Error reading zip %s: %s", fname, e_zip)
+
+        elif ext in (".ris", ".xml", ".enw", ".bib", ".ciw", ".nbib", ".txt"):
+            try:
+                try:
+                    text_content = content.decode("utf-8")
+                except UnicodeDecodeError:
+                    text_content = content.decode("latin-1")
+
+                parse_res = reference_parser.parse_references_detailed(text_content, fname)
+                records = parse_res.get("records", [])
+
+                for rec in records:
+                    rec_doi = (rec.get("doi") or "").strip().lower()
+                    rec_pmid = (rec.get("pmid") or "").strip()
+                    rec_title = (rec.get("title") or "").strip()
+                    rec_pdf_link = (rec.get("pdf_link") or "").strip()
+                    rec_url = (rec.get("url") or "").strip()
+
+                    matched_study = None
+                    for s in included_studies:
+                        s_doi = (s.get("doi") or "").strip().lower()
+                        s_pmid = (s.get("pmid") or "").strip()
+                        s_title = (s.get("title") or "").strip()
+                        if rec_doi and s_doi and rec_doi == s_doi:
+                            matched_study = s
+                            break
+                        if rec_pmid and s_pmid and rec_pmid == s_pmid:
+                            matched_study = s
+                            break
+                        if rec_title and s_title and _titles_match(rec_title, s_title):
+                            matched_study = s
+                            break
+
+                    if matched_study:
+                        s_id = matched_study["study_id"]
+                        pdf_attached = False
+
+                        pdf_candidate_url = (
+                            rec_pdf_link if (rec_pdf_link.startswith("http://") or rec_pdf_link.startswith("https://"))
+                            else (rec_url if rec_url.lower().endswith(".pdf") else "")
+                        )
+                        if pdf_candidate_url:
+                            pdf_bytes = _download_pdf(pdf_candidate_url)
+                            if pdf_bytes:
+                                attach_pdf_to_study(matched_study, pdf_bytes, f"Reference URL: {pdf_candidate_url}")
+                                pdf_attached = True
+
+                        if not pdf_attached and rec_pdf_link:
+                            clean_path = rec_pdf_link.replace("file://", "").strip()
+                            if os.path.exists(clean_path) and os.path.isfile(clean_path):
+                                try:
+                                    with open(clean_path, "rb") as f_local:
+                                        local_bytes = f_local.read()
+                                    if len(local_bytes) >= 1000:
+                                        attach_pdf_to_study(matched_study, local_bytes, f"Local path: {clean_path}")
+                                        pdf_attached = True
+                                except Exception:
+                                    pass
+
+                        updates = {}
+                        if rec_doi and not matched_study.get("doi"):
+                            updates["doi"] = rec.get("doi")
+                        if rec_pmid and not matched_study.get("pmid"):
+                            updates["pmid"] = rec_pmid
+                        if updates:
+                            set_clause = ", ".join(f"{k} = ?" for k in updates.keys())
+                            conn.execute(f"UPDATE studies SET {set_clause} WHERE study_id = ?", (*updates.values(), s_id))
+                            conn.commit()
+                            if not pdf_attached and not matched_study.get("pdf_path"):
+                                background_tasks.add_task(retrieve_and_process_oa_study, s_id, project_id)
+
+                        matched_results.append({
+                            "study_id": s_id,
+                            "title": matched_study.get("title", ""),
+                            "matched_by": "reference_record",
+                            "status": "ready_for_extraction" if pdf_attached else "awaiting_pdf",
+                            "pdf_attached": pdf_attached,
+                        })
+            except Exception as e_ref:
+                logger.warning("Error parsing reference file %s: %s", fname, e_ref)
+
+    still_awaiting_rows = conn.execute(
+        """SELECT study_id, title, doi, pmid, screening_status, extraction_status FROM studies
+           WHERE project_id = ?
+           AND (screening_status = 'included' OR screening_stage = 'ft' OR extraction_status IN ('awaiting_pdf', 'pending'))
+           AND (pdf_path IS NULL OR pdf_path = '')""",
+        (project_id,),
+    ).fetchall()
+
+    return {
+        "project_id": project_id,
+        "total_files": len(files),
+        "matched_studies": matched_results,
+        "unmatched_files": unmatched_files,
+        "processed_with_docling": processed_docling_count,
+        "still_awaiting_pdf_count": len(still_awaiting_rows),
+        "still_awaiting_pdf": [dict(r) for r in still_awaiting_rows],
     }
 
 

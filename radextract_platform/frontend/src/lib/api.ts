@@ -3185,6 +3185,47 @@ export const api = {
     }
   },
 
+  // Upload Included Files (PDFs, ZIPs, Zotero RIS, EndNote XML, ENW, BibTeX)
+  uploadIncludedFiles: async (
+    projectId: string,
+    files: File | File[]
+  ) => {
+    const fileArray = Array.isArray(files) ? files : [files];
+    const base = getApiBase();
+    const formData = new FormData();
+    for (const f of fileArray) {
+      formData.append("files", f);
+    }
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${base}/projects/${projectId}/studies/upload-included-files`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(err.detail || "Failed to upload included files");
+    }
+    return await res.json();
+  },
+
+  // Batch Open-Access PDF Retrieval for Included Studies
+  retrieveProjectOaPdfs: async (projectId: string) =>
+    request<{ message: string; total: number; job?: any }>(`/projects/${projectId}/studies/retrieve-oa-pdfs`, {
+      method: "POST",
+    }),
+
+  getProjectOaPdfsStatus: async (projectId: string) =>
+    request<any>(`/projects/${projectId}/studies/retrieve-oa-pdfs/status`),
+
+  // Single study OA PDF Retrieval
+  retrieveStudyOaPdf: async (studyId: string) =>
+    request<{ result: any; study: any }>(`/studies/${studyId}/retrieve-oa-pdf`, {
+      method: "POST",
+    }),
+
   // Keyword Groups (customizable highlighting)
   listKeywordGroups: (projectId: string) =>
     request<KeywordGroup[]>(`/projects/${projectId}/keyword-groups`),

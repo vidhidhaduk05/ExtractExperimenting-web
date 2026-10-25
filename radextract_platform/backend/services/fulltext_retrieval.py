@@ -110,44 +110,257 @@ def _store(db, study: dict, pmcid: str, full_text: str) -> None:
         "processor_engine": "europepmc_xml",
         "processed_at": datetime.now(timezone.utc).isoformat(),
     })
-    if not (study.get("pdf_path") or "").strip():
-        db.update("studies", study["study_id"], {"pdf_status": "text_only"})
+    db.update("studies", study["study_id"], {
+        "pdf_status": "text_only",
+        "extraction_status": "ready_for_extraction",
+    })
     db.commit()
 
 
+def _download_pdf(url: str, timeout: int = 30) -> Optional[bytes]:
+    """Download PDF bytes with streaming and content-type / magic byte check."""
+    try:
+        resp = requests.get(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) RadExtract/1.0 (mailto:team@radextract.local)",
+                "Accept": "application/pdf,*/*",
+            },
+            timeout=timeout,
+            stream=True,
+            allow_redirects=True,
+        )
+        if resp.status_code == 200:
+            content = resp.content
+            if len(content) >= 1000 and (content.startswith(b"%PDF") or "pdf" in resp.headers.get("Content-Type", "").lower()):
+                return content
+    except Exception as e:
+        logger.debug("PDF download failed from %s: %s", url, e)
+    return None
+
+
+def _store_pdf(db, study: dict, pdf_bytes: bytes, source: str, source_url: str = "", pmcid: str = "") -> dict[str, Any]:
+    """Save downloaded PDF bytes, convert with Docling, and transition to ready_for_extraction."""
+    from services.storage_backend import get_storage
+    from services import pdf_service
+
+    study_id = study["study_id"]
+    project_id = study.get("project_id") or "default"
+    storage = get_storage("upload")
+    storage_key = f"{project_id}/{study_id}.pdf"
+    storage.save_bytes(storage_key, pdf_bytes)
+
+    db.update("studies", study_id, {
+        "pdf_path": storage_key,
+        "pdf_status": "uploaded",
+    })
+    db.commit()
+
+    # Convert with IBM Docling (persists .docling.json and structured tables/layout in pdf_documents)
+    proc_res = pdf_service.process_pdf(study_id, db)
+    db.update("studies", study_id, {
+        "extraction_status": "ready_for_extraction",
+    })
+    db.commit()
+
+    return {
+        "outcome": "fetched",
+        "pdf": True,
+        "pmcid": pmcid,
+        "source": source,
+        "chars": len(proc_res.get("full_text", "")),
+        "pages": proc_res.get("n_pages", 1),
+    }
+
+
 def fetch_one(db, study: dict) -> dict[str, Any]:
-    """Fetch and store the open-access text for one study. Never raises."""
+    """Fetch and store open-access PDF (preferred) or text for one study. Never raises."""
     res: dict[str, Any] = {
         "study_id": study.get("study_id"), "title": study.get("title") or "", "outcome": "error", "note": "",
     }
     try:
-        existing = db.query("pdf_documents", {"study_id": study["study_id"]})
+        study_id = study["study_id"]
+        # Check if study already has processed PDF or full text
+        existing = db.query("pdf_documents", {"study_id": study_id})
         if existing and (existing[0].get("full_text") or "").strip():
+            db.update("studies", study_id, {"extraction_status": "ready_for_extraction"})
+            db.commit()
             res["outcome"] = "already_has_text"
             return res
 
-        epmc = fa._europepmc((study.get("pmid") or "").strip(), fa._clean_doi(study.get("doi") or ""))
+        doi = fa._clean_doi(study.get("doi") or "")
+        pmid = (study.get("pmid") or "").strip()
+
+        # 1. Try Unpaywall direct PDF if DOI is available
+        if doi:
+            try:
+                from config import settings
+                email = getattr(settings, "contact_email", "") or "team@radextract.local"
+                up = fa._unpaywall(doi, email) or {}
+                if up.get("is_oa"):
+                    best = up.get("best_oa_location") or {}
+                    pdf_url = best.get("url_for_pdf") or next(
+                        (loc.get("url_for_pdf") for loc in up.get("oa_locations") or [] if loc.get("url_for_pdf")), ""
+                    )
+                    if pdf_url:
+                        pdf_bytes = _download_pdf(pdf_url)
+                        if pdf_bytes:
+                            stored = _store_pdf(db, study, pdf_bytes, source="Unpaywall", source_url=pdf_url)
+                            res.update(stored)
+                            return res
+            except Exception as e_up:
+                logger.debug("Unpaywall direct PDF attempt failed for %s: %s", study_id, e_up)
+
+        # 2. Check Europe PMC for open-access metadata
+        epmc = fa._europepmc(pmid, doi)
         pmcid = (epmc or {}).get("pmcid") or ""
-        if not epmc or not pmcid or epmc.get("isOpenAccess") != "Y":
-            res["outcome"], res["note"] = "not_open_access", "Not in the open-access subset"
-            return res
+        is_oa = (epmc or {}).get("isOpenAccess") == "Y"
 
-        xml_text = _fetch_xml(pmcid)
-        if xml_text is None:
-            res["outcome"], res["note"] = "not_open_access", "Europe PMC has no full-text XML"
-            return res
+        if epmc and pmcid and is_oa:
+            # 2a. Try direct Europe PMC PDF
+            try:
+                epmc_pdf_url = f"https://europepmc.org/backend/ptpmcrender.fcgi?accid={pmcid}&blobtype=pdf"
+                pdf_bytes = _download_pdf(epmc_pdf_url)
+                if pdf_bytes:
+                    stored = _store_pdf(db, study, pdf_bytes, source="Europe PMC OA PDF", source_url=epmc_pdf_url, pmcid=pmcid)
+                    res.update(stored)
+                    return res
+            except Exception as e_epmc_pdf:
+                logger.debug("Europe PMC direct PDF attempt failed for %s: %s", study_id, e_epmc_pdf)
 
-        full_text = parse_jats(xml_text)["full_text"]
-        if len(full_text) < MIN_TEXT_CHARS:
-            res["outcome"], res["note"] = "too_short", f"Only {len(full_text)} characters of text"
-            return res
+            # 2b. Fallback to Europe PMC JATS XML (full text)
+            xml_text = _fetch_xml(pmcid)
+            if xml_text is not None:
+                full_text = parse_jats(xml_text)["full_text"]
+                if len(full_text) >= MIN_TEXT_CHARS:
+                    _store(db, study, pmcid, full_text)
+                    res.update(outcome="fetched", pmcid=pmcid, chars=len(full_text), pdf=False)
+                    return res
+                else:
+                    res["outcome"], res["note"] = "too_short", f"Only {len(full_text)} characters of text"
+                    db.update("studies", study_id, {"extraction_status": "awaiting_pdf"})
+                    db.commit()
+                    return res
+            else:
+                res["outcome"], res["note"] = "not_open_access", "Europe PMC has no full-text XML"
+                db.update("studies", study_id, {"extraction_status": "awaiting_pdf"})
+                db.commit()
+                return res
 
-        _store(db, study, pmcid, full_text)
-        res.update(outcome="fetched", pmcid=pmcid, chars=len(full_text))
+        # Not open access or not found
+        res["outcome"], res["note"] = "not_open_access", "Not in the open-access subset"
+        db.update("studies", study_id, {"extraction_status": "awaiting_pdf"})
+        db.commit()
     except Exception as e:
         logger.warning("Full-text fetch failed for %s: %s", study.get("study_id"), e)
         res["outcome"], res["note"] = "error", str(e)[:200]
+        try:
+            db.update("studies", study.get("study_id"), {"extraction_status": "awaiting_pdf"})
+            db.commit()
+        except Exception:
+            pass
     return res
+
+
+def retrieve_and_process_oa_study(study_id: str, project_id: Optional[str] = None) -> dict[str, Any]:
+    """Retrieve and process OA PDF/text for a single study, running Docling conversion."""
+    from database import get_db_backend
+    db = get_db_backend()
+    try:
+        study = db.get("studies", study_id)
+        if not study:
+            return {"outcome": "error", "note": f"Study {study_id} not found"}
+
+        # If study already has a PDF file
+        pdf_path = (study.get("pdf_path") or "").strip()
+        pdf_status = study.get("pdf_status") or ""
+
+        if pdf_path and pdf_status == "processed":
+            db.update("studies", study_id, {"extraction_status": "ready_for_extraction"})
+            db.commit()
+            return {"outcome": "already_has_text", "note": "PDF already processed"}
+
+        if pdf_path and pdf_status == "uploaded":
+            from services import pdf_service
+            try:
+                pdf_service.process_pdf(study_id, db)
+                db.update("studies", study_id, {"extraction_status": "ready_for_extraction"})
+                db.commit()
+                return {"outcome": "processed_existing_pdf", "note": "Converted uploaded PDF with Docling"}
+            except Exception as e:
+                logger.warning("Failed converting existing PDF for %s: %s", study_id, e)
+
+        # Check existing pdf_documents text
+        existing = db.query("pdf_documents", {"study_id": study_id})
+        if existing and (existing[0].get("full_text") or "").strip():
+            db.update("studies", study_id, {"extraction_status": "ready_for_extraction"})
+            db.commit()
+            return {"outcome": "already_has_text"}
+
+        return fetch_one(db, study)
+    finally:
+        try:
+            if hasattr(db, "close"):
+                db.close()
+        except Exception:
+            pass
+
+
+def transition_study_to_extraction(study_id: str, conn: Any, background_tasks: Any = None) -> str:
+    """Automatically move an included study to the Data Extraction stage.
+
+    - If PDF is already processed: sets extraction_status = 'ready_for_extraction'.
+    - If PDF is uploaded but not processed: runs Docling processor -> 'ready_for_extraction'.
+    - If study has stored OA full text: sets extraction_status = 'ready_for_extraction'.
+    - If missing PDF: sets extraction_status = 'awaiting_pdf' and launches OA retrieval in background.
+    """
+    row = conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if not row:
+        return "not_found"
+
+    study = dict(row)
+    project_id = study.get("project_id", "")
+    pdf_path = (study.get("pdf_path") or "").strip()
+    pdf_status = study.get("pdf_status") or ""
+
+    # Check if doc exists in pdf_documents
+    doc_row = conn.execute("SELECT full_text FROM pdf_documents WHERE study_id = ?", (study_id,)).fetchone()
+    has_fulltext = bool(doc_row and (dict(doc_row).get("full_text") or "").strip())
+
+    if pdf_path and pdf_status == "processed":
+        conn.execute("UPDATE studies SET extraction_status = 'ready_for_extraction' WHERE study_id = ?", (study_id,))
+        if hasattr(conn, "commit"):
+            conn.commit()
+        return "ready_for_extraction"
+
+    if pdf_path and pdf_status == "uploaded":
+        from services import pdf_service
+        try:
+            pdf_service.process_pdf(study_id, conn)
+            conn.execute("UPDATE studies SET extraction_status = 'ready_for_extraction' WHERE study_id = ?", (study_id,))
+            if hasattr(conn, "commit"):
+                conn.commit()
+            return "ready_for_extraction"
+        except Exception as e:
+            logger.warning("Error processing uploaded PDF during transition: %s", e)
+
+    if has_fulltext:
+        conn.execute("UPDATE studies SET extraction_status = 'ready_for_extraction' WHERE study_id = ?", (study_id,))
+        if hasattr(conn, "commit"):
+            conn.commit()
+        return "ready_for_extraction"
+
+    # Missing PDF: set awaiting_pdf and trigger OA retrieval in background
+    conn.execute("UPDATE studies SET extraction_status = 'awaiting_pdf' WHERE study_id = ?", (study_id,))
+    if hasattr(conn, "commit"):
+        conn.commit()
+
+    if background_tasks is not None:
+        background_tasks.add_task(retrieve_and_process_oa_study, study_id, project_id)
+    else:
+        threading.Thread(target=retrieve_and_process_oa_study, args=(study_id, project_id), daemon=True).start()
+
+    return "awaiting_pdf"
 
 
 # ── Background job (in-memory) ──

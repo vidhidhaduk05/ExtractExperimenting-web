@@ -553,6 +553,13 @@ class AIScreeningPipeline:
             except Exception:
                 pass
 
+            if new_status == "included":
+                try:
+                    from services.fulltext_retrieval import transition_study_to_extraction
+                    transition_study_to_extraction(study_id, conn, None)
+                except Exception as e_trans:
+                    logger.warning("Error transitioning study %s to extraction: %s", study_id, e_trans)
+
             results.append({
                 "study_id": study_id,
                 "stage": "fulltext",

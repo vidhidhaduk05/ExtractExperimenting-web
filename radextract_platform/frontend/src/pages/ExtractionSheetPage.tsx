@@ -33,6 +33,7 @@ export function ExtractionSheetPage() {
   const [showBulkUploadModal, setShowBulkUploadModal] = useState<boolean>(false);
   const [showCuratedExcelModal, setShowCuratedExcelModal] = useState<boolean>(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+  const [isRetrievingOa, setIsRetrievingOa] = useState<boolean>(false);
 
   // Inline editing state
   const [editingVarId, setEditingVarId] = useState<string | null>(null);
@@ -79,12 +80,15 @@ export function ExtractionSheetPage() {
     if (projectStudies.length === 0) return [];
     return projectStudies.map((s, idx) => {
       const match = BENCHMARK_PAPERS.find((b) => b.id === s.study_id);
-      if (match) return match;
+      if (match) return { ...match, extraction_status: s.extraction_status, pdf_path: s.pdf_path, pdf_status: s.pdf_status };
       return {
         id: s.study_id,
         shortId: `s${idx + 1}`,
         title: s.title ? `${s.title} (${s.publication_year || 2024})` : `Study #${idx + 1}`,
         filename: s.pdf_path || `${s.title}.pdf`,
+        extraction_status: s.extraction_status,
+        pdf_path: s.pdf_path,
+        pdf_status: s.pdf_status,
       };
     });
   }, [projectStudies]);
@@ -310,6 +314,43 @@ export function ExtractionSheetPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Auto-retrieve OA PDFs
+  const handleAutoRetrieveOaPdfs = async () => {
+    if (!projectId) return;
+    setIsRetrievingOa(true);
+    try {
+      const res = await api.retrieveProjectOaPdfs(projectId);
+      setFeedbackToast(res.message || "Started auto-retrieval of OA PDFs");
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+    } catch (e: any) {
+      setFeedbackToast(`OA Retrieval: ${e.message}`);
+    } finally {
+      setIsRetrievingOa(false);
+    }
+  };
+
+  const handleSingleStudyRetrieveOa = async () => {
+    if (!selectedStudyId) return;
+    setIsRetrievingOa(true);
+    try {
+      const res = await api.retrieveStudyOaPdf(selectedStudyId);
+      const outcome = res.result?.outcome;
+      if (outcome === "fetched") {
+        setFeedbackToast("Retrieved open-access PDF & converted with Docling!");
+      } else if (outcome === "already_has_text") {
+        setFeedbackToast("Study already has full text or PDF processed.");
+      } else {
+        setFeedbackToast("No legal open-access copy found. Please upload manually.");
+      }
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      refetchExtractions();
+    } catch (e: any) {
+      setFeedbackToast(`OA Retrieval error: ${e.message}`);
+    } finally {
+      setIsRetrievingOa(false);
+    }
+  };
+
   const activeStudyVerifiedCount = variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
   const activeStudyPercent = variableList.length > 0 ? Math.round((activeStudyVerifiedCount / variableList.length) * 100) : 0;
 
@@ -347,14 +388,29 @@ export function ExtractionSheetPage() {
 
             {/* Right: Primary Quick Action Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Auto-Retrieve OA PDFs Button */}
+              <button
+                onClick={handleAutoRetrieveOaPdfs}
+                disabled={isRetrievingOa}
+                className="btn-phylo-secondary text-xs bg-white/90 hover:bg-[#E9ED4C]/20 border-black/15 flex items-center gap-1.5"
+                title="Automatically retrieve legal open-access full-text PDFs from Europe PMC, PMC OA, and Unpaywall"
+              >
+                {isRetrievingOa ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-indigo-600" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                )}
+                <span>{isRetrievingOa ? "Retrieving OA..." : "Auto-Retrieve OA PDFs"}</span>
+              </button>
+
               {/* Bulk Upload from Laptop */}
               <button
                 onClick={() => setShowBulkUploadModal(true)}
                 className="btn-phylo-primary text-xs flex items-center gap-1.5 shadow-xs"
-                title="Bulk upload study PDFs, Excel spreadsheets, or citations directly from your laptop"
+                title="Upload missing included study PDFs, Zotero exports (.ris, .xml, .bib), or EndNote files"
               >
                 <FolderPlus className="h-3.5 w-3.5 text-[#E9ED4C]" />
-                <span>Bulk Upload from Laptop</span>
+                <span>Upload PDFs / Zotero File</span>
               </button>
 
               {/* Already Curated Excel Sheet */}
@@ -412,6 +468,41 @@ export function ExtractionSheetPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        {/* ── Awaiting PDF Alert Banner ── */}
+        {(currentPaper as any).extraction_status === "awaiting_pdf" && (
+          <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50/90 p-4 text-amber-950 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-semibold font-serif">Full-Text PDF Awaiting Upload</h4>
+                <p className="text-xs text-amber-800 mt-0.5 font-sans">
+                  This study was included during screening, but no legal open-access copy was found automatically.
+                  Upload the full-text PDF, Zotero reference export (.ris, .xml, .bib), or EndNote file.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleSingleStudyRetrieveOa}
+                disabled={isRetrievingOa}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 transition-colors shadow-2xs flex items-center gap-1.5"
+                title="Retry automated open-access retrieval"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                <span>Retry OA Retrieval</span>
+              </button>
+              <button
+                onClick={() => setShowBulkUploadModal(true)}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#141413] text-[#FAF9F3] hover:bg-black transition-colors shadow-2xs flex items-center gap-1.5"
+                title="Upload PDF or reference export file"
+              >
+                <Upload className="h-3.5 w-3.5 text-[#E9ED4C]" />
+                <span>Upload PDF / Zotero File</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── Summary Metrics Bar (Serif numbers as per warm-editorial rules) ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="card-phylo p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
@@ -512,6 +603,7 @@ export function ExtractionSheetPage() {
                   const isSelected = paper.id === selectedStudyId;
                   const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
                   const paperVerified = paperExts.filter((e: any) => e.is_verified).length;
+                  const isAwaitingPdf = (paper as any).extraction_status === "awaiting_pdf";
 
                   return (
                     <button
@@ -521,15 +613,17 @@ export function ExtractionSheetPage() {
                         "px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all border flex items-center gap-1.5 shrink-0",
                         isSelected
                           ? "bg-[#141413] text-[#FAF9F3] border-[#141413] shadow-2xs"
-                          : "bg-white text-[#6B665E] border-black/10 hover:border-black/30 hover:text-[#141413]"
+                          : "bg-white text-[#6B665E] border-black/10 hover:border-black/30 hover:text-[#141413]",
+                        isAwaitingPdf && !isSelected && "border-amber-400 bg-amber-50/50"
                       )}
                     >
+                      {isAwaitingPdf && <span className="h-2 w-2 rounded-full bg-amber-500 inline-block" title="Awaiting PDF" />}
                       <span className="font-serif font-medium">#{idx + 1} {paper.title.split("(")[0].trim()}</span>
                       <span className={cn(
                         "text-[10px] font-mono px-1.5 py-0.2 rounded-full",
-                        isSelected ? "bg-white/20 text-[#FAF9F3]" : "bg-black/[0.04] text-[#8A817A]"
+                        isSelected ? "bg-white/20 text-[#FAF9F3]" : (isAwaitingPdf ? "bg-amber-100 text-amber-900" : "bg-black/[0.04] text-[#8A817A]")
                       )}>
-                        {paperVerified}/10
+                        {isAwaitingPdf ? "Awaiting PDF" : `${paperVerified}/10`}
                       </span>
                     </button>
                   );
