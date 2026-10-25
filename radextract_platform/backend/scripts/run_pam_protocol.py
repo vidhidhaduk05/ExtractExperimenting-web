@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -29,13 +30,23 @@ OPENALEX_MIN = "1960-01-01"
 OPENALEX_MAX = "2026-08-31"
 
 
-def _api(method: str, path: str, timeout: int = 120, **kwargs):
-    response = requests.request(method, f"{API}{path}", timeout=timeout, **kwargs)
-    if response.status_code >= 400:
-        raise RuntimeError(f"{method} {path} -> {response.status_code}: {response.text[:800]}")
-    if not response.content:
-        return {}
-    return response.json()
+def _api(method: str, path: str, timeout: int = 120, retries: int = 5, **kwargs):
+    for attempt in range(1, retries + 1):
+        try:
+            response = requests.request(method, f"{API}{path}", timeout=timeout, **kwargs)
+            if response.status_code in (502, 503, 504) and attempt < retries:
+                time.sleep(attempt * 2)
+                continue
+            if response.status_code >= 400:
+                raise RuntimeError(f"{method} {path} -> {response.status_code}: {response.text[:800]}")
+            if not response.content:
+                return {}
+            return response.json()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            if attempt < retries:
+                time.sleep(attempt * 2)
+                continue
+            raise
 
 
 def _store_pmc_text(conn, study_id: str, fulltext: str, source: str) -> None:

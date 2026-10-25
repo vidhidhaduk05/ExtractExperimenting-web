@@ -41,7 +41,7 @@ interface UndoRecord {
   answerId: string;
   previousAnswer: string;
   previousVerified: number;
-  previousNeedsReview: number;
+  previousNeedsReview?: number;
 }
 
 export function RobAssessmentPage() {

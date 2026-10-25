@@ -85,10 +85,22 @@ if git status --porcelain | grep -q "active_backend.json"; then
     echo "[*] Committing and pushing dynamic URL to GitHub..."
     git add "$REPO_DIR/public/active_backend.json" "$REPO_DIR/radextract_platform/frontend/public/active_backend.json"
     git commit -m "chore(tunnel): auto-publish dynamic backend URL $TUNNEL_URL"
-    git pull --rebase --autostash origin main || true
-    git push origin main
-    echo "[+] [SUCCESS] New dynamic URL published to GitHub!"
-    echo "[+] Web app will auto-discover it at: https://raw.githubusercontent.com/vidhidhaduk05/ExtractExperimenting-web/main/public/active_backend.json"
+    PUSHED=0
+    for push_attempt in 1 2 3 4 5; do
+        if git push origin main; then
+            PUSHED=1
+            break
+        fi
+        echo "[-] Push attempt $push_attempt failed. Rebasing with autostash and retrying in 3s..."
+        sleep 3
+        git pull --rebase --autostash origin main || true
+    done
+    if [ "$PUSHED" -eq 1 ]; then
+        echo "[+] [SUCCESS] New dynamic URL published to GitHub!"
+        echo "[+] Web app will auto-discover it at: https://raw.githubusercontent.com/vidhidhaduk05/ExtractExperimenting-web/main/public/active_backend.json"
+    else
+        echo "[-] Warning: Failed to push to GitHub after 5 attempts."
+    fi
 else
     echo "[*] active_backend.json already has current URL. Checking if remote is in sync..."
     git pull --rebase --autostash origin main || true

@@ -74,7 +74,7 @@ interface UndoRecord {
 export function PdfViewerPage() {
   const { projectId, studyId } = useParams<{ projectId: string; studyId?: string }>();
 
-  const { data: dynamicStudies } = useQuery({
+  const { data: dynamicStudies, isLoading: studyLoading } = useQuery({
     queryKey: ["studies", projectId],
     queryFn: () => api.listStudies(projectId!),
     enabled: !!projectId,
