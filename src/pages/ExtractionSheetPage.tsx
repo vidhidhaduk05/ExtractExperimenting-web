@@ -3,7 +3,45 @@ import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, DEMO_EXTRACTIONS, DEMO_VARIABLES, type CodebookRule } from "../lib/demoData";
-import { BENCHMARK_PAPERS } from "./PdfViewerPage";
+
+const BENCHMARK_PAPERS = [
+  {
+    id: "study_birua_2022",
+    shortId: "s1",
+    title: "Birua et al. 2022 (Pure Arterial Malformation PCA)",
+    filename: "Birua_2022.pdf",
+  },
+  {
+    id: "study_albina_2024",
+    shortId: "s2",
+    title: "Albina-Palmarola et al. 2024 (Accessory MCA)",
+    filename: "Albina-Palmarola_2024_A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery.pdf",
+  },
+  {
+    id: "study_brinjikji_2018",
+    shortId: "s3",
+    title: "Brinjikji et al. 2018 (Pure Arterial Malformations Review)",
+    filename: "Brinjikji_2018_Pure arterial malformations.pdf",
+  },
+  {
+    id: "study_chua_2021",
+    shortId: "s4",
+    title: "Chua et al. 2021 (Ruptured Posterior Fossa PAM)",
+    filename: "Chua_2021_Endovascular treatment of a ruptured posterior fossa pure arterial malformation illustrative case.pdf",
+  },
+  {
+    id: "study_deshmukh_2023",
+    shortId: "s5",
+    title: "Deshmukh et al. 2023 (PAM Case Report)",
+    filename: "Deshmukh_2023_Pure Arterial Malformation (PAM) Case Report and Review of Literature.pdf",
+  },
+  {
+    id: "study_feliciano_2014",
+    shortId: "s6",
+    title: "Feliciano et al. 2014 (Color-coded DSA MCA PAM)",
+    filename: "Feliciano_2014_Color-coded digital subtraction angiography in the management of a rare case of middle cerebral artery pure arterial malformation. A technical and case report.pdf",
+  },
+];
 import {
   FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
