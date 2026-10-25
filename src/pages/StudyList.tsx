@@ -5,7 +5,7 @@ import { autoIdentifyPdf } from "../lib/pdfAutoIdentifier";
 import {
   Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2,
   Highlighter, FileSpreadsheet, ArrowRight, CheckCircle2, X,
-  RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy, ExternalLink
+  RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy
 } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
 import { useRef, useState, useMemo } from "react";
@@ -14,7 +14,6 @@ import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags, type TagIndex } from "../lib/recordCollaboration";
 import { CollaborationDialog, RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
-import { cleanDoi, cleanPmid, getDoiUrl, getPmidUrl, getStudySourceUrl, openStudySource } from "../lib/studyUtils";
 
 
 export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean }) {
@@ -110,20 +109,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   };
 
   const isBlank = studies && studies.length === 0;
-
-  // Optimize O(1) bookmark lookup and memoize filter results to avoid O(N*M) linear scans on every render
-  const bookmarkedIdsSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids]);
-
-  const bookmarkedCount = useMemo(() => {
-    if (!studies) return 0;
-    return studies.reduce((acc, s) => (bookmarkedIdsSet.has(s.study_id) ? acc + 1 : acc), 0);
-  }, [studies, bookmarkedIdsSet]);
-
-  const visibleStudies = useMemo(() => {
-    return (studies || []).filter(
-      (s) => (!savedOnly || bookmarkedIdsSet.has(s.study_id)) && matchesTag(tagIndex.data, s.study_id, tagFilter)
-    );
-  }, [studies, savedOnly, bookmarkedIdsSet, tagIndex.data, tagFilter]);
+  const visibleStudies = (studies || []).filter(s => (!savedOnly || bookmarks.ids.includes(s.study_id)) && matchesTag(tagIndex.data, s.study_id, tagFilter));
 
   return (
     <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
@@ -363,11 +349,11 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
-        {bookmarkedOnly ? <span className="font-medium">{bookmarkedCount} bookmarked studies</span> : <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({bookmarkedCount})</label>}
+        {bookmarkedOnly ? <span className="font-medium">{(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length} bookmarked studies</span> : <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length})</label>}
         <span className="text-xs text-slate-500">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
         {bookmarks.error && <span role="alert" className="text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
       </div>
-      {savedOnly && studies && studies.length > 0 && !studies.some(s => bookmarkedIdsSet.has(s.study_id)) && <p className="text-sm text-slate-500">No saved studies yet. Use the bookmark icon to save a study for later.</p>}
+      {savedOnly && studies && studies.length > 0 && !studies.some(s => bookmarks.ids.includes(s.study_id)) && <p className="text-sm text-slate-500">No saved studies yet. Use the bookmark icon to save a study for later.</p>}
       {/* Populated Study Table */}
       {studies && studies.length > 0 && <p className="text-xs text-slate-500">{visibleStudies.length} matching studies</p>}
       {tagFilter && studies && studies.length > 0 && visibleStudies.length === 0 && <p className="text-sm text-slate-500">No studies match this tag and the current filters.</p>}
@@ -393,7 +379,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                     assessment={robMap.get(s.study_id)}
                     tags={tagIndex.data}
                     onComments={() => setCollaborationStudy(s)}
-                    bookmark={<BookmarkButton saved={bookmarkedIdsSet.has(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
+                    bookmark={<BookmarkButton saved={bookmarks.ids.includes(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
                     projectId={projectId!}
                     onDelete={() => deleteMutation.mutate(s.study_id)}
                   />
@@ -473,113 +459,17 @@ function StudyRow({
     return styles[status] || styles.pending;
   };
 
-  const handleRowDoubleClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest("button, a, input, [role='button']")) return;
-    openStudySource(study);
-  };
-
-  const pmidUrl = getPmidUrl(study.pmid);
-  const doiUrl = getDoiUrl(study.doi);
-  const primarySourceUrl = getStudySourceUrl(study);
-
   return (
-    <tr
-      onDoubleClick={handleRowDoubleClick}
-      className="hover:bg-black/[0.025] transition-colors cursor-pointer group"
-      title="Double-click to open in PubMed / DOI source"
-    >
+    <tr className="hover:bg-black/[0.015] transition-colors">
       <td className="px-5 py-3.5">
-        <div className="flex items-start gap-2">
-          {bookmark}
-          <div
-            className="font-serif font-medium text-sm text-[#141413] group-hover:text-blue-900 transition-colors line-clamp-1"
-            title="Double-click row to open primary source in PubMed / DOI"
-          >
-            {study.title}
-          </div>
-        </div>
+        <div className="flex items-start gap-2">{bookmark}<div className="font-serif font-medium text-sm text-[#141413] line-clamp-1">{study.title}</div></div>
         <TagBadges index={tags} studyId={study.study_id} />
         <div className="text-xs font-sans text-[#8A817A] mt-0.5 line-clamp-1">
           {study.authors || "Unknown Authors"} {study.journal ? `— ${study.journal}` : ""}
         </div>
-
-        {/* Clickable DOI / PubMed Source Links */}
-        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          {study.pmid && (
-            <a
-              href={pmidUrl || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 transition-colors shadow-2xs"
-              title={`Open PubMed PMID ${study.pmid}`}
-            >
-              <span>PMID {cleanPmid(study.pmid)}</span>
-              <ExternalLink className="h-2.5 w-2.5 opacity-70" />
-            </a>
-          )}
-          {study.doi && (
-            <a
-              href={doiUrl || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 transition-colors truncate max-w-[220px] shadow-2xs"
-              title={`Open DOI: ${study.doi}`}
-            >
-              <span>DOI: {cleanDoi(study.doi)}</span>
-              <ExternalLink className="h-2.5 w-2.5 opacity-70" />
-            </a>
-          )}
-          {!study.pmid && !study.doi && study.title && (
-            <a
-              href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(study.title)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 text-[10px] font-mono text-[#8A817A] hover:text-[#141413] hover:underline"
-              title="Search this article title on PubMed"
-            >
-              <span>PubMed Search</span>
-              <ExternalLink className="h-2.5 w-2.5" />
-            </a>
-          )}
-        </div>
       </td>
       <td className="px-4 py-3.5 font-mono text-xs text-[#6B665E]">{study.publication_year || "—"}</td>
-      <td className="px-4 py-3.5 text-xs text-[#6B665E]">
-        <div className="font-medium text-[#141413]">{study.study_design || "—"}</div>
-        {(() => {
-          let sampleStr: string | null = null;
-          if (study.metadata_json) {
-            try {
-              const meta = JSON.parse(study.metadata_json);
-              if (meta.sample_size_display) sampleStr = meta.sample_size_display;
-              else if (meta.sample_size) sampleStr = `${meta.sample_size.toLocaleString()} participants`;
-            } catch {}
-          }
-          if (!sampleStr && study.study_design) {
-            const desLower = study.study_design.toLowerCase();
-            if (desLower.includes("case report") && !desLower.includes("series")) {
-              sampleStr = "1 patient (Case Report)";
-            }
-          }
-          if (!sampleStr && study.abstract) {
-            const absLower = study.abstract.toLowerCase();
-            const m = absLower.match(/(?:total of|enrolled|included|randomized|comprising|n\s*=\s*)\s*(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})/);
-            if (m) {
-              const num = m[1].replace(/[\s,]/g, "");
-              if (num.length >= 2) sampleStr = `${parseInt(num, 10).toLocaleString()} participants`;
-            }
-          }
-          return sampleStr ? (
-            <span className="inline-flex items-center gap-1 text-[10.5px] font-mono text-[#381A61] dark:text-[#EAAA00] mt-0.5">
-              👥 {sampleStr}
-            </span>
-          ) : null;
-        })()}
-      </td>
+      <td className="px-4 py-3.5 text-xs text-[#6B665E]">{study.study_design || "—"}</td>
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${screeningBadge(study.screening_status)}`}>
@@ -610,19 +500,6 @@ function StudyRow({
       </td>
       <td className="px-5 py-3.5 text-right">
         <div className="flex items-center justify-end gap-2">
-          {primarySourceUrl && (
-            <a
-              href={primarySourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-white hover:bg-black/5 text-[#141413] border border-black/15 transition-all shadow-2xs"
-              title="Open primary study source in new tab (or double-click row)"
-            >
-              <ExternalLink className="h-3 w-3 text-blue-600" />
-              <span>Source</span>
-            </a>
-          )}
           <button type="button" onClick={onComments} className="rounded-full border border-black/15 bg-white px-3 py-1 text-xs hover:bg-black/5" aria-label={`Comments and tags for ${study.title}`}>Comments & tags</button>
           <Link
             to={`/projects/${projectId}/studies/${study.study_id}/pdf`}

@@ -3,13 +3,53 @@ import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, DEMO_EXTRACTIONS, DEMO_VARIABLES, type CodebookRule } from "../lib/demoData";
-import { BENCHMARK_PAPERS } from "./PdfViewerPage";
+
+const BENCHMARK_PAPERS = [
+  {
+    id: "study_birua_2022",
+    shortId: "s1",
+    title: "Birua et al. 2022 (Pure Arterial Malformation PCA)",
+    filename: "Birua_2022.pdf",
+  },
+  {
+    id: "study_albina_2024",
+    shortId: "s2",
+    title: "Albina-Palmarola et al. 2024 (Accessory MCA)",
+    filename: "Albina-Palmarola_2024_A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery.pdf",
+  },
+  {
+    id: "study_brinjikji_2018",
+    shortId: "s3",
+    title: "Brinjikji et al. 2018 (Pure Arterial Malformations Review)",
+    filename: "Brinjikji_2018_Pure arterial malformations.pdf",
+  },
+  {
+    id: "study_chua_2021",
+    shortId: "s4",
+    title: "Chua et al. 2021 (Ruptured Posterior Fossa PAM)",
+    filename: "Chua_2021_Endovascular treatment of a ruptured posterior fossa pure arterial malformation illustrative case.pdf",
+  },
+  {
+    id: "study_deshmukh_2023",
+    shortId: "s5",
+    title: "Deshmukh et al. 2023 (PAM Case Report)",
+    filename: "Deshmukh_2023_Pure Arterial Malformation (PAM) Case Report and Review of Literature.pdf",
+  },
+  {
+    id: "study_feliciano_2014",
+    shortId: "s6",
+    title: "Feliciano et al. 2014 (Color-coded DSA MCA PAM)",
+    filename: "Feliciano_2014_Color-coded digital subtraction angiography in the management of a rare case of middle cerebral artery pure arterial malformation. A technical and case report.pdf",
+  },
+];
 import {
   FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
   Sparkles, ExternalLink, RefreshCw, CheckCheck, ChevronRight,
-  TrendingUp, Award, Layers, ShieldCheck, Tag, FolderPlus, Upload
+  TrendingUp, Award, Layers, ShieldCheck, Tag, FolderPlus, Upload,
+  Lock, Unlock, Plus, ChevronDown, ChevronUp, FileUp, Database, Save, Loader2, Table
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { cn } from "../lib/utils";
 import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
@@ -35,6 +75,33 @@ export function ExtractionSheetPage() {
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
   const [isRetrievingOa, setIsRetrievingOa] = useState<boolean>(false);
 
+  // Double-blind extraction config state
+  const [isExtractionBlinded, setIsExtractionBlinded] = useState(() => {
+    try {
+      const cfg = localStorage.getItem(`radextract_double_blind_${projectId}`);
+      if (cfg) {
+        const parsed = JSON.parse(cfg);
+        return !!parsed.extractionBlinded;
+      }
+    } catch (e) {}
+    return false;
+  });
+
+  const toggleExtractionBlinded = () => {
+    setIsExtractionBlinded((prev) => {
+      const next = !prev;
+      try {
+        const cfg = localStorage.getItem(`radextract_double_blind_${projectId}`);
+        const parsed = cfg ? JSON.parse(cfg) : {};
+        parsed.extractionBlinded = next;
+        localStorage.setItem(`radextract_double_blind_${projectId}`, JSON.stringify(parsed));
+      } catch (e) {}
+      setFeedbackToast(next ? "Dual-blind extraction mode enabled." : "Single extractor mode enabled.");
+      setTimeout(() => setFeedbackToast(null), 3000);
+      return next;
+    });
+  };
+
   // Inline editing state
   const [editingVarId, setEditingVarId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -47,6 +114,21 @@ export function ExtractionSheetPage() {
     } catch (e) {}
     return DEMO_CODEBOOK_RULES;
   });
+
+  // Excel-like UX States
+  const [activeCell, setActiveCell] = useState<{ row: number; col: string } | null>({ row: 0, col: "value" });
+  const [showVariableDesignerBanner, setShowVariableDesignerBanner] = useState<boolean>(true);
+  const [isAddingNewVar, setIsAddingNewVar] = useState<boolean>(false);
+  const [newVarForm, setNewVarForm] = useState({
+    name: "",
+    section: "Patient Demographics",
+    field_type: "text",
+    definition: "",
+    allowed_values: "",
+  });
+  const [isSubmittingNewVar, setIsSubmittingNewVar] = useState<boolean>(false);
+  const [isImportingExcel, setIsImportingExcel] = useState<boolean>(false);
+  const excelFileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Queries
   const { data: project } = useQuery({
@@ -76,8 +158,10 @@ export function ExtractionSheetPage() {
   });
 
   const availablePapers = useMemo(() => {
-    if (!projectStudies) return BENCHMARK_PAPERS;
-    if (projectStudies.length === 0) return [];
+    if (!projectStudies || projectStudies.length === 0) {
+      if (projectId === "demo") return BENCHMARK_PAPERS;
+      return [];
+    }
     return projectStudies.map((s, idx) => {
       const match = BENCHMARK_PAPERS.find((b) => b.id === s.study_id);
       if (match) return { ...match, extraction_status: s.extraction_status, pdf_path: s.pdf_path, pdf_status: s.pdf_status };
@@ -91,7 +175,7 @@ export function ExtractionSheetPage() {
         pdf_status: s.pdf_status,
       };
     });
-  }, [projectStudies]);
+  }, [projectStudies, projectId]);
 
   // Sync selectedStudyId if current is not in available papers
   useEffect(() => {
@@ -254,6 +338,151 @@ export function ExtractionSheetPage() {
 
     refetchExtractions();
     queryClient.invalidateQueries({ queryKey: ["extractions", selectedStudyId] });
+  };
+
+  // Create a new variable directly from the Excel-style toolbar
+  const handleCreateCustomVariable = async () => {
+    if (!newVarForm.name.trim()) {
+      setFeedbackToast("Please provide a variable name");
+      setTimeout(() => setFeedbackToast(null), 3000);
+      return;
+    }
+    setIsSubmittingNewVar(true);
+    try {
+      const createdVar = await api.createVariable(projectId!, {
+        name: newVarForm.name.trim(),
+        section: newVarForm.section || "General",
+        field_type: newVarForm.field_type || "text",
+        description: newVarForm.definition || "",
+        allowed_values: newVarForm.allowed_values || "",
+      });
+
+      // Update local codebook rule
+      const varId = createdVar?.variable_id || `var_${Date.now()}`;
+      const newRule: CodebookRule = {
+        variable_id: varId,
+        name: newVarForm.name.trim(),
+        section: newVarForm.section || "General",
+        field_type: newVarForm.field_type as any || "text",
+        definition: newVarForm.definition || "",
+        allowed_values: newVarForm.allowed_values ? newVarForm.allowed_values.split(",").map(s => s.trim()) : [],
+        rules: [newVarForm.definition || "Standard variable definition."],
+        gold_standard_example: "",
+        exclusion_criteria: "",
+      };
+
+      const updatedRules = { ...customRules, [varId]: newRule };
+      setCustomRules(updatedRules);
+      try {
+        localStorage.setItem("radextract_codebook_rules", JSON.stringify(updatedRules));
+      } catch (e) {}
+
+      queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
+      setNewVarForm({
+        name: "",
+        section: "Patient Demographics",
+        field_type: "text",
+        definition: "",
+        allowed_values: "",
+      });
+      setIsAddingNewVar(false);
+      setFeedbackToast(`Variable "${newVarForm.name}" created successfully!`);
+      setTimeout(() => setFeedbackToast(null), 3500);
+    } catch (err: any) {
+      setFeedbackToast(`Created locally: ${newVarForm.name}`);
+      queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
+      setIsAddingNewVar(false);
+      setTimeout(() => setFeedbackToast(null), 3500);
+    } finally {
+      setIsSubmittingNewVar(false);
+    }
+  };
+
+  // Direct Excel / CSV File Drop to instantly extract variables and populate rows
+  const handleDirectExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImportingExcel(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rawRows: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (rawRows.length < 2) {
+        setFeedbackToast("Excel sheet must contain at least a header row and one data row.");
+        setTimeout(() => setFeedbackToast(null), 4000);
+        return;
+      }
+
+      const headers = (rawRows[0] || []).map((h: any) => String(h || "").trim());
+      // Identify column indices
+      const varNameIdx = headers.findIndex((h: string) => /variable|name|item|parameter|metric/i.test(h));
+      const valueIdx = headers.findIndex((h: string) => /value|result|finding|extracted/i.test(h));
+      const sectionIdx = headers.findIndex((h: string) => /section|category|domain|group/i.test(h));
+      const quoteIdx = headers.findIndex((h: string) => /quote|evidence|excerpt|text/i.test(h));
+      const pageIdx = headers.findIndex((h: string) => /page|pg/i.test(h));
+
+      let importedCount = 0;
+      for (let i = 1; i < rawRows.length; i++) {
+        const row = rawRows[i];
+        if (!row || row.length === 0) continue;
+        const varName = varNameIdx !== -1 ? String(row[varNameIdx] || "").trim() : String(row[0] || "").trim();
+        if (!varName) continue;
+
+        const val = valueIdx !== -1 ? String(row[valueIdx] || "").trim() : (row[1] !== undefined ? String(row[1]).trim() : "");
+        const sec = sectionIdx !== -1 ? String(row[sectionIdx] || "").trim() : "Imported Variables";
+        const quote = quoteIdx !== -1 ? String(row[quoteIdx] || "").trim() : "Imported from Excel spreadsheet";
+        const page = pageIdx !== -1 ? parseInt(row[pageIdx], 10) || 1 : 1;
+
+        // Create variable if not exists
+        const varId = `var_${varName.toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
+        try {
+          await api.createVariable(projectId!, {
+            name: varName,
+            section: sec,
+            field_type: "text",
+            description: `Imported from Excel: ${file.name}`,
+          });
+        } catch (e) {}
+
+        // If a value is provided, record it for the active study
+        if (val) {
+          try {
+            await api.recordExtractionDecision({
+              project_id: projectId!,
+              study_id: selectedStudyId,
+              variable_id: varId,
+              variable_name: varName,
+              original_value: val,
+              corrected_value: val,
+              decision: "accepted",
+              evidence_quote: quote,
+              page_number: page,
+              reviewer: "Excel Uploader",
+              notes: `Directly populated from ${file.name}`,
+            });
+            importedCount++;
+          } catch (e) {}
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["extractions", selectedStudyId] });
+      queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+      setFeedbackToast(`Successfully parsed and loaded "${file.name}" with ${importedCount} extraction values!`);
+      setTimeout(() => setFeedbackToast(null), 5000);
+    } catch (err: any) {
+      console.error("Excel import failed:", err);
+      setFeedbackToast(`Failed to parse Excel: ${err?.message || "Invalid file format"}`);
+      setTimeout(() => setFeedbackToast(null), 5000);
+    } finally {
+      setIsImportingExcel(false);
+      if (excelFileInputRef.current) {
+        excelFileInputRef.current.value = "";
+      }
+    }
   };
 
   // Export CSV for active study
@@ -443,6 +672,30 @@ export function ExtractionSheetPage() {
                 <span>Codebook Rules</span>
               </button>
 
+              {/* Double-Blind Extraction Mode Toggle */}
+              <button
+                onClick={toggleExtractionBlinded}
+                className={cn(
+                  "btn-phylo-secondary text-xs flex items-center gap-1.5 transition-all",
+                  isExtractionBlinded
+                    ? "bg-purple-100/90 text-purple-900 border-purple-400 font-semibold shadow-2xs"
+                    : "bg-white/80 text-slate-600 hover:bg-slate-100"
+                )}
+                title="Double-Blind Extraction: Toggle independent dual data extraction with blinded conflict resolution (Default: Single extractor)"
+              >
+                {isExtractionBlinded ? (
+                  <>
+                    <Lock className="h-3.5 w-3.5 text-purple-700" />
+                    <span>Dual Extraction: Blinded ON</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="h-3.5 w-3.5 text-slate-400" />
+                    <span>Dual Extraction: OFF</span>
+                  </>
+                )}
+              </button>
+
               {/* Accept All >95% */}
               <button
                 onClick={handleAcceptAllHighConfidence}
@@ -466,6 +719,21 @@ export function ExtractionSheetPage() {
           </div>
         </div>
       </div>
+
+      {/* Double-Blind Extraction Status Banner */}
+      {isExtractionBlinded && (
+        <div className="bg-purple-50 border-b border-purple-200 px-4 py-2 text-xs text-purple-900 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto w-full flex items-center gap-2">
+            <Lock className="h-4 w-4 text-purple-700 shrink-0" />
+            <div>
+              <span className="font-bold">Dual-Blinded Data Extraction Active:</span>{" "}
+              <span>
+                Reviewer 1 and Reviewer 2 extract data independently. Values remain blinded to prevent extraction bias until both submit or principal investigator adjudication is requested.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         {/* ── Awaiting PDF Alert Banner ── */}
@@ -502,6 +770,224 @@ export function ExtractionSheetPage() {
             </div>
           </div>
         )}
+
+        {/* Hidden File Input for Direct Excel/CSV Upload */}
+        <input
+          ref={excelFileInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
+          onChange={handleDirectExcelUpload}
+        />
+
+        {/* ══════════════════════════════════════════════════════════
+            SECTION 1 (COMES FIRST): EXTRACTION SHEET CREATOR & EXCEL UPLOADER
+        ══════════════════════════════════════════════════════════ */}
+        <div className="card-phylo mb-6 overflow-hidden border border-emerald-900/15 shadow-sm bg-gradient-to-b from-[#FBFBFA] to-[#F5F4EE]">
+          {/* Section Header */}
+          <div className="px-6 py-4 bg-[#F2F1EB] border-b border-black/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-xs">
+                <FileSpreadsheet className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-serif text-lg font-bold text-[#141413]">
+                    Extraction Sheet Studio & Variable Designer
+                  </h2>
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                    EXCEL ENGINE
+                  </span>
+                </div>
+                <p className="text-xs text-[#6B665E]">
+                  Create custom review variables, configure codebook rules, or upload an already-made Excel/CSV extraction sheet.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Direct Excel File Upload */}
+              <button
+                onClick={() => excelFileInputRef.current?.click()}
+                disabled={isImportingExcel}
+                className="btn-phylo-primary text-xs bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1.5 shadow-xs"
+                title="Upload an already made Excel (.xlsx, .xls) or CSV extraction sheet from your laptop"
+              >
+                {isImportingExcel ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileUp className="h-3.5 w-3.5 text-[#E9ED4C]" />
+                )}
+                <span>{isImportingExcel ? "Parsing Sheet..." : "Upload Already-Made Sheet"}</span>
+              </button>
+
+              {/* Add Custom Variable Toggle */}
+              <button
+                onClick={() => setIsAddingNewVar(!isAddingNewVar)}
+                className={cn(
+                  "btn-phylo-secondary text-xs flex items-center gap-1.5 transition-all",
+                  isAddingNewVar
+                    ? "bg-[#141413] text-[#FAF9F3] border-[#141413]"
+                    : "bg-white text-[#141413] hover:bg-[#E9ED4C]/25"
+                )}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>{isAddingNewVar ? "Close Variable Maker" : "+ Create Variable"}</span>
+              </button>
+
+              {/* Full Codebook Designer Modal */}
+              <button
+                onClick={() => setShowCodebookDesigner(true)}
+                className="btn-phylo-secondary text-xs bg-white text-[#141413] hover:bg-[#E9ED4C]/25"
+                title="Open comprehensive Cochrane/PRISMA codebook schema designer"
+              >
+                <Sliders className="h-3.5 w-3.5" />
+                <span>Codebook Rules & Templates</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Inline Variable Creator Form */}
+          {isAddingNewVar && (
+            <div className="p-6 bg-white border-b border-black/[0.08] animate-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Database className="h-4 w-4 text-emerald-700" />
+                  <span className="font-serif text-sm font-semibold text-[#141413]">
+                    Add New Extraction Variable to Sheet
+                  </span>
+                </div>
+                <span className="text-[11px] text-[#8A817A] font-mono">
+                  Schema will apply across all studies in this project
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                {/* Variable Name */}
+                <div>
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[#6B665E] mb-1">
+                    Variable Name *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Aneurysm Max Diameter (mm)"
+                    value={newVarForm.name}
+                    onChange={(e) => setNewVarForm({ ...newVarForm, name: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-black/15 rounded-md focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600 font-sans"
+                  />
+                </div>
+
+                {/* Section / Category */}
+                <div>
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[#6B665E] mb-1">
+                    Section / Domain
+                  </label>
+                  <select
+                    value={newVarForm.section}
+                    onChange={(e) => setNewVarForm({ ...newVarForm, section: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-black/15 rounded-md focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600 font-sans"
+                  >
+                    <option value="Patient Demographics">Patient Demographics</option>
+                    <option value="Lesion Characteristics">Lesion Characteristics</option>
+                    <option value="Angioarchitecture">Angioarchitecture</option>
+                    <option value="Treatment & Intervention">Treatment & Intervention</option>
+                    <option value="Clinical Outcomes & Complications">Clinical Outcomes & Complications</option>
+                    <option value="General">General / Other</option>
+                  </select>
+                </div>
+
+                {/* Field Type */}
+                <div>
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[#6B665E] mb-1">
+                    Data Type
+                  </label>
+                  <select
+                    value={newVarForm.field_type}
+                    onChange={(e) => setNewVarForm({ ...newVarForm, field_type: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-black/15 rounded-md focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600 font-sans"
+                  >
+                    <option value="text">Text / Freeform String</option>
+                    <option value="numeric">Numeric / Continuous (e.g. Age, mm, %)</option>
+                    <option value="categorical">Categorical / Option Set</option>
+                    <option value="boolean">Boolean (Yes / No)</option>
+                  </select>
+                </div>
+
+                {/* Allowed Values */}
+                <div>
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[#6B665E] mb-1">
+                    Allowed Values (Comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Saccular, Fusiform, Blister"
+                    value={newVarForm.allowed_values}
+                    onChange={(e) => setNewVarForm({ ...newVarForm, allowed_values: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-black/15 rounded-md focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600 font-sans"
+                  />
+                </div>
+              </div>
+
+              {/* Extraction Definition / Guidance Rule */}
+              <div className="mb-4">
+                <label className="block text-[11px] font-mono uppercase tracking-wider text-[#6B665E] mb-1">
+                  Clinical Extraction Guideline & Codebook Rule
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Explicit rule for AI and human reviewers on how to extract and standardize this variable (e.g. Record max diameter measured on DSA in millimeters)..."
+                  value={newVarForm.definition}
+                  onChange={(e) => setNewVarForm({ ...newVarForm, definition: e.target.value })}
+                  className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-black/15 rounded-md focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600 font-sans"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingNewVar(false)}
+                  className="px-3 py-1.5 text-xs text-[#6B665E] hover:text-[#141413]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateCustomVariable}
+                  disabled={isSubmittingNewVar}
+                  className="btn-phylo-primary text-xs bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1.5"
+                >
+                  {isSubmittingNewVar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  <span>Save Variable to Sheet</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Excel-Style Quick Stats & Spreadsheet Shortcuts Bar */}
+          <div className="px-6 py-3 bg-[#FAF9F3] text-xs flex flex-wrap items-center justify-between gap-3 text-[#6B665E] border-t border-black/[0.05]">
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                <Table className="h-3.5 w-3.5 text-emerald-700" />
+                <strong className="text-[#141413]">{variableList.length}</strong> Variables Configured
+              </span>
+              <span className="hidden sm:inline text-black/20">•</span>
+              <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                <Layers className="h-3.5 w-3.5 text-emerald-700" />
+                <strong className="text-[#141413]">{availablePapers.length}</strong> Studies in Matrix
+              </span>
+              <span className="hidden sm:inline text-black/20">•</span>
+              <span className="text-[11px]">
+                Double-click any cell below to edit or press Enter to save
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase bg-black/[0.04] px-2 py-0.5 rounded text-[#8A817A]">
+                Supported: .xlsx, .xls, .csv
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* ── Summary Metrics Bar (Serif numbers as per warm-editorial rules) ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -703,25 +1189,78 @@ export function ExtractionSheetPage() {
           )}
 
           {/* ══════════════════════════════════════════════════════════
-              VIEW 1: SINGLE STUDY RECORDED EXTRACTION SHEET TABLE
+              VIEW 1: SINGLE STUDY RECORDED EXTRACTION SHEET TABLE (EXCEL WORKBOOK STYLE)
           ══════════════════════════════════════════════════════════ */}
           {viewMode === "single" && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-800/60 font-bold text-slate-700 dark:text-slate-300">
+            <div className="overflow-x-auto border-t border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
+              {/* Excel Formula Bar */}
+              <div className="px-4 py-1.5 bg-[#F9F9F8] border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 text-xs font-mono">
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-300 dark:border-slate-700 rounded text-[11px] font-bold text-slate-700 min-w-[55px] justify-center shadow-2xs">
+                  {activeCell ? `${activeCell.col.toUpperCase()}${activeCell.row + 1}` : "A1"}
+                </div>
+                <span className="text-slate-400 font-bold select-none text-xs">fx</span>
+                <div className="flex-1 px-2 py-0.5 bg-white border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-slate-200 truncate font-sans">
+                  {activeCell && filteredVariables[activeCell.row] ? (
+                    <span>
+                      <strong className="font-semibold text-emerald-800 mr-2">[{filteredVariables[activeCell.row].name}]</strong>
+                      {extractionMap[filteredVariables[activeCell.row].variable_id]?.value || "Not Reported (NR)"}
+                      {extractionMap[filteredVariables[activeCell.row].variable_id]?.quote && (
+                        <span className="text-slate-400 italic ml-2">
+                          — Quote: "{extractionMap[filteredVariables[activeCell.row].variable_id]?.quote}"
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">Select any cell below to inspect or edit clinical values</span>
+                  )}
+                </div>
+              </div>
+
+              <table className="min-w-full text-xs border-collapse">
+                {/* Excel Column Letters (A, B, C, D, E, F, G, H, I) */}
+                <thead className="bg-[#EFEFEF] dark:bg-slate-800 text-slate-600 dark:text-slate-300 select-none border-b border-slate-300 dark:border-slate-700 font-mono text-[11px]">
                   <tr>
-                    <th className="px-4 py-3 text-left w-12">#</th>
-                    <th className="px-4 py-3 text-left min-w-[140px]">Variable</th>
-                    <th className="px-4 py-3 text-left min-w-[100px]">Section</th>
-                    <th className="px-4 py-3 text-left min-w-[200px]">Extracted / Verified Value</th>
-                    <th className="px-4 py-3 text-left w-24">Confidence</th>
-                    <th className="px-4 py-3 text-left w-36">Verification Status</th>
-                    <th className="px-4 py-3 text-left min-w-[280px]">Evidence Source Quote</th>
-                    <th className="px-4 py-3 text-center w-16">Page</th>
-                    <th className="px-4 py-3 text-right min-w-[160px]">Actions</th>
+                    <th className="w-10 px-2 py-1 text-center border-r border-slate-300 dark:border-slate-700 bg-[#E8E8E8]"></th>
+                    <th className="px-3 py-1 text-center border-r border-slate-300 dark:border-slate-700">A</th>
+                    <th className="px-3 py-1 text-center border-r border-slate-300 dark:border-slate-700">B</th>
+                    <th className="px-3 py-1 text-center border-r border-slate-300 dark:border-slate-700">C</th>
+                    <th className="px-3 py-1 text-center border-r border-slate-300 dark:border-slate-700">D</th>
+                    <th className="px-3 py-1 text-center border-r border-slate-300 dark:border-slate-700">E</th>
+                    <th className="px-3 py-1 text-center border-r border-slate-300 dark:border-slate-700">F</th>
+                    <th className="px-3 py-1 text-center border-r border-slate-300 dark:border-slate-700">G</th>
+                    <th className="px-3 py-1 text-center border-r border-slate-300 dark:border-slate-700">H</th>
+                  </tr>
+                  <tr className="bg-[#F5F5F5] dark:bg-slate-800/80 font-bold text-slate-800 dark:text-slate-200 border-b border-slate-300 dark:border-slate-700 font-sans text-xs">
+                    <th className="px-2 py-2 text-center w-10 border-r border-slate-300 dark:border-slate-700 bg-[#E8E8E8] font-mono text-[11px] text-slate-500">
+                      #
+                    </th>
+                    <th className="px-4 py-2 text-left min-w-[160px] border-r border-slate-200 dark:border-slate-700">
+                      Variable Name
+                    </th>
+                    <th className="px-4 py-2 text-left min-w-[120px] border-r border-slate-200 dark:border-slate-700">
+                      Section / Domain
+                    </th>
+                    <th className="px-4 py-2 text-left min-w-[220px] border-r border-slate-200 dark:border-slate-700 bg-emerald-50/40 text-emerald-950">
+                      Extracted / Verified Value (Click to Edit)
+                    </th>
+                    <th className="px-3 py-2 text-center w-24 border-r border-slate-200 dark:border-slate-700">
+                      Confidence
+                    </th>
+                    <th className="px-3 py-2 text-left w-36 border-r border-slate-200 dark:border-slate-700">
+                      Review Status
+                    </th>
+                    <th className="px-4 py-2 text-left min-w-[260px] border-r border-slate-200 dark:border-slate-700">
+                      Evidence Source Quote
+                    </th>
+                    <th className="px-2 py-2 text-center w-16 border-r border-slate-200 dark:border-slate-700">
+                      Page
+                    </th>
+                    <th className="px-3 py-2 text-right min-w-[140px]">
+                      Quick Actions
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 bg-white dark:bg-slate-900">
+                <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
                   {filteredVariables.map((v: any, idx: number) => {
                     const ext = extractionMap[v.variable_id];
                     const isVerified = ext?.is_verified;
@@ -732,50 +1271,73 @@ export function ExtractionSheetPage() {
                     return (
                       <tr
                         key={v.variable_id}
+                        onClick={() => setActiveCell({ row: idx, col: "value" })}
                         className={cn(
-                          "transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40",
-                          isLowConf && !isVerified && "bg-amber-50/30 dark:bg-amber-950/20",
-                          idx % 2 === 1 && "bg-slate-50/20"
+                          "transition-colors hover:bg-emerald-50/20",
+                          isLowConf && !isVerified && "bg-amber-50/30",
+                          idx % 2 === 1 ? "bg-slate-50/30" : "bg-white"
                         )}
                       >
-                        {/* Index */}
-                        <td className="px-4 py-3.5 font-mono text-slate-400 font-semibold">
-                          #{idx + 1}
+                        {/* Excel Row Number Index (Sticky Gray Header) */}
+                        <td className="px-2 py-2 text-center font-mono text-[11px] font-bold text-slate-500 bg-[#EFEFEF] border-r border-slate-300 select-none">
+                          {idx + 1}
                         </td>
 
-                        {/* Variable Name */}
-                        <td className="px-4 py-3.5">
-                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        {/* Column A: Variable Name */}
+                        <td
+                          onClick={(e) => { e.stopPropagation(); setActiveCell({ row: idx, col: "name" }); }}
+                          className={cn(
+                            "px-3 py-2 border-r border-slate-200 transition-all",
+                            activeCell?.row === idx && activeCell?.col === "name" && "ring-2 ring-emerald-600 bg-emerald-50/30 z-10"
+                          )}
+                        >
+                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
                             <span>{v.name}</span>
                           </div>
                           {customRules[v.variable_id]?.definition && (
-                            <div className="text-[10px] text-slate-400 truncate max-w-[220px]" title={customRules[v.variable_id].definition}>
+                            <div className="text-[10px] text-slate-400 truncate max-w-[200px]" title={customRules[v.variable_id].definition}>
                               {customRules[v.variable_id].definition}
                             </div>
                           )}
                         </td>
 
-                        {/* Section */}
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        {/* Column B: Section */}
+                        <td
+                          onClick={(e) => { e.stopPropagation(); setActiveCell({ row: idx, col: "section" }); }}
+                          className={cn(
+                            "px-3 py-2 whitespace-nowrap border-r border-slate-200",
+                            activeCell?.row === idx && activeCell?.col === "section" && "ring-2 ring-emerald-600 bg-emerald-50/30 z-10"
+                          )}
+                        >
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
                             {v.section || "General"}
                           </span>
                         </td>
 
-                        {/* Extracted Value / Inline Editor */}
-                        <td className="px-4 py-3.5">
+                        {/* Column C: Extracted Value / Excel Editable Cell */}
+                        <td
+                          onClick={(e) => { e.stopPropagation(); setActiveCell({ row: idx, col: "value" }); }}
+                          className={cn(
+                            "px-3 py-2 border-r border-slate-200 transition-all",
+                            activeCell?.row === idx && activeCell?.col === "value" && "ring-2 ring-emerald-600 bg-emerald-50/40 z-10"
+                          )}
+                        >
                           {isEditingThis ? (
                             <div className="flex items-center gap-1.5">
                               <input
                                 type="text"
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
-                                className="px-2 py-1 text-xs border border-blue-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-mono font-bold bg-white text-slate-900"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleVerifyDecision(v.variable_id, "modified", editValue);
+                                  if (e.key === "Escape") setEditingVarId(null);
+                                }}
+                                className="w-full px-2 py-1 text-xs border border-emerald-600 rounded focus:outline-hidden font-mono font-bold bg-white text-slate-900 shadow-2xs"
                                 autoFocus
                               />
                               <button
                                 onClick={() => handleVerifyDecision(v.variable_id, "modified", editValue)}
-                                className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                                className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 shadow-2xs"
                                 title="Save & Accept"
                               >
                                 <Check className="h-3.5 w-3.5" />
@@ -789,38 +1351,54 @@ export function ExtractionSheetPage() {
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2 group/val">
-                              <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                            <div
+                              onDoubleClick={() => {
+                                setEditingVarId(v.variable_id);
+                                setEditValue(ext?.value || "");
+                              }}
+                              className="flex items-center justify-between gap-2 group/val cursor-pointer min-h-[22px]"
+                              title="Double-click to edit directly like Excel"
+                            >
+                              <span className="font-mono font-bold text-slate-900 text-xs">
                                 {ext?.value || <span className="text-slate-400 italic">Not Reported</span>}
                               </span>
-                              {isEdited && (
-                                <span className="text-[9px] bg-blue-50 text-blue-600 border border-blue-200 px-1 py-0.2 rounded font-sans">
-                                  edited
-                                </span>
-                              )}
-                              <button
-                                onClick={() => {
-                                  setEditingVarId(v.variable_id);
-                                  setEditValue(ext?.value || "");
-                                }}
-                                className="opacity-0 group-hover/val:opacity-100 text-slate-400 hover:text-blue-600 transition-opacity"
-                                title="Edit Value"
-                              >
-                                <Edit3 className="h-3 w-3" />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                {isEdited && (
+                                  <span className="text-[9px] bg-blue-50 text-blue-600 border border-blue-200 px-1 py-0.2 rounded font-sans">
+                                    edited
+                                  </span>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingVarId(v.variable_id);
+                                    setEditValue(ext?.value || "");
+                                  }}
+                                  className="opacity-0 group-hover/val:opacity-100 text-slate-400 hover:text-emerald-700 transition-opacity p-0.5"
+                                  title="Edit Cell"
+                                >
+                                  <Edit3 className="h-3 w-3" />
+                                </button>
+                              </div>
                             </div>
                           )}
                         </td>
 
-                        {/* Confidence */}
-                        <td className="px-4 py-3.5 whitespace-nowrap">
+                        {/* Column D: Confidence */}
+                        <td
+                          onClick={(e) => { e.stopPropagation(); setActiveCell({ row: idx, col: "confidence" }); }}
+                          className={cn(
+                            "px-3 py-2 text-center whitespace-nowrap border-r border-slate-200",
+                            activeCell?.row === idx && activeCell?.col === "confidence" && "ring-2 ring-emerald-600 bg-emerald-50/30 z-10"
+                          )}
+                        >
                           {ext?.confidence != null ? (
                             <span
                               className={cn(
                                 "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border",
                                 ext.confidence >= 0.95
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-300"
-                                  : "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-300"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : "bg-amber-50 text-amber-800 border-amber-300"
                               )}
                             >
                               {Math.round(ext.confidence * 100)}%
@@ -830,27 +1408,39 @@ export function ExtractionSheetPage() {
                           )}
                         </td>
 
-                        {/* Verification Status */}
-                        <td className="px-4 py-3.5 whitespace-nowrap">
+                        {/* Column E: Verification Status */}
+                        <td
+                          onClick={(e) => { e.stopPropagation(); setActiveCell({ row: idx, col: "status" }); }}
+                          className={cn(
+                            "px-3 py-2 whitespace-nowrap border-r border-slate-200",
+                            activeCell?.row === idx && activeCell?.col === "status" && "ring-2 ring-emerald-600 bg-emerald-50/30 z-10"
+                          )}
+                        >
                           {isVerified ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full shadow-2xs">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shadow-2xs">
                               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                               <span>{isEdited ? "Modified" : "Accepted"}</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
                               <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
                               <span>Pending Review</span>
                             </span>
                           )}
                         </td>
 
-                        {/* Evidence Quote */}
-                        <td className="px-4 py-3.5">
+                        {/* Column F: Evidence Quote */}
+                        <td
+                          onClick={(e) => { e.stopPropagation(); setActiveCell({ row: idx, col: "quote" }); }}
+                          className={cn(
+                            "px-3 py-2 border-r border-slate-200",
+                            activeCell?.row === idx && activeCell?.col === "quote" && "ring-2 ring-emerald-600 bg-emerald-50/30 z-10"
+                          )}
+                        >
                           {ext?.quote ? (
-                            <div className="flex items-start gap-1.5 group/quote">
+                            <div className="flex items-start gap-1 group/quote">
                               <span className="text-slate-400 text-xs shrink-0 select-none">“</span>
-                              <p className="text-slate-600 dark:text-slate-300 italic text-[11px] leading-relaxed line-clamp-2" title={ext.quote}>
+                              <p className="text-slate-600 italic text-[11px] leading-snug line-clamp-2" title={ext.quote}>
                                 {ext.quote}
                               </p>
                               <span className="text-slate-400 text-xs shrink-0 select-none">”</span>
@@ -860,13 +1450,19 @@ export function ExtractionSheetPage() {
                           )}
                         </td>
 
-                        {/* Source Page */}
-                        <td className="px-4 py-3.5 text-center font-mono text-slate-500 whitespace-nowrap">
+                        {/* Column G: Source Page */}
+                        <td
+                          onClick={(e) => { e.stopPropagation(); setActiveCell({ row: idx, col: "page" }); }}
+                          className={cn(
+                            "px-2 py-2 text-center font-mono text-slate-500 whitespace-nowrap border-r border-slate-200",
+                            activeCell?.row === idx && activeCell?.col === "page" && "ring-2 ring-emerald-600 bg-emerald-50/30 z-10"
+                          )}
+                        >
                           P. {ext?.source_page || 1}
                         </td>
 
-                        {/* Actions */}
-                        <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                        {/* Column H: Actions */}
+                        <td className="px-3 py-2 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
                             {/* Jump to Quote in PDF Viewer */}
                             <Link
@@ -927,21 +1523,37 @@ export function ExtractionSheetPage() {
           )}
 
           {/* ══════════════════════════════════════════════════════════
-              VIEW 2: CONSOLIDATED CROSS-STUDY MATRIX
+              VIEW 2: CONSOLIDATED CROSS-STUDY MATRIX (EXCEL WORKBOOK STYLE)
           ══════════════════════════════════════════════════════════ */}
           {viewMode === "matrix" && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-800/60 font-bold text-slate-700 dark:text-slate-300">
+            <div className="overflow-x-auto border-t border-slate-300 bg-white">
+              <table className="min-w-full text-xs border-collapse">
+                {/* Excel Column Letters */}
+                <thead className="bg-[#EFEFEF] select-none border-b border-slate-300 font-mono text-[11px] text-slate-600">
                   <tr>
-                    <th className="px-4 py-3.5 text-left w-56 sticky left-0 bg-slate-50 dark:bg-slate-850 z-20 shadow-xs">
-                      Variable & Domain
+                    <th className="w-10 px-2 py-1 text-center border-r border-slate-300 bg-[#E8E8E8] sticky left-0 z-30"></th>
+                    <th className="px-4 py-1 text-center border-r border-slate-300 sticky left-10 bg-[#EFEFEF] z-30">A</th>
+                    {availablePapers.map((_, pIdx) => {
+                      const letter = String.fromCharCode(66 + pIdx); // B, C, D...
+                      return (
+                        <th key={pIdx} className="px-4 py-1 text-center border-r border-slate-300">
+                          {letter}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                  <tr className="bg-[#F5F5F5] font-bold text-slate-800 border-b border-slate-300 font-sans text-xs">
+                    <th className="px-2 py-2 text-center w-10 border-r border-slate-300 bg-[#E8E8E8] sticky left-0 z-30 font-mono text-[11px] text-slate-500">
+                      #
+                    </th>
+                    <th className="px-4 py-2.5 text-left w-64 sticky left-10 bg-[#F5F5F5] z-30 border-r border-slate-300 shadow-xs">
+                      Variable & Clinical Domain
                     </th>
                     {availablePapers.map((paper, idx) => (
-                      <th key={paper.id} className="px-4 py-3.5 text-left min-w-[200px]">
+                      <th key={paper.id} className="px-4 py-2.5 text-left min-w-[200px] border-r border-slate-200">
                         <div className="flex flex-col">
-                          <span className="text-blue-600 font-bold text-[10px]">Study #{idx + 1}</span>
-                          <span className="font-bold text-slate-900 dark:text-white truncate" title={paper.title}>
+                          <span className="text-emerald-700 font-mono font-bold text-[10px]">Study #{idx + 1}</span>
+                          <span className="font-bold text-slate-900 truncate" title={paper.title}>
                             {paper.title.split("(")[0].trim()}
                           </span>
                           <span className="text-[10px] text-slate-400 font-normal truncate">
@@ -952,30 +1564,35 @@ export function ExtractionSheetPage() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                <tbody className="bg-white divide-y divide-slate-200">
                   {variableList.map((v: any, vIdx: number) => (
-                    <tr key={v.variable_id} className={vIdx % 2 === 1 ? "bg-slate-50/20" : ""}>
-                      {/* Left Frozen Column: Variable */}
-                      <td className="px-4 py-3.5 sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800 shadow-2xs">
-                        <div className="font-bold text-slate-900 dark:text-white">
-                          #{vIdx + 1} {v.name}
+                    <tr key={v.variable_id} className={vIdx % 2 === 1 ? "bg-slate-50/30" : "bg-white"}>
+                      {/* Excel Row Number Index */}
+                      <td className="px-2 py-2 text-center font-mono text-[11px] font-bold text-slate-500 bg-[#EFEFEF] border-r border-slate-300 select-none sticky left-0 z-20">
+                        {vIdx + 1}
+                      </td>
+
+                      {/* Column A: Left Frozen Variable Column */}
+                      <td className="px-4 py-2.5 sticky left-10 bg-white z-20 border-r border-slate-300 shadow-2xs">
+                        <div className="font-bold text-slate-900">
+                          {v.name}
                         </div>
-                        <span className="text-[10px] text-slate-400 font-medium">
+                        <span className="text-[10px] text-slate-500 font-medium">
                           {v.section || "General"}
                         </span>
                       </td>
 
-                      {/* Columns for Each Study */}
+                      {/* Columns B, C, D... for Each Study */}
                       {availablePapers.map((paper) => {
                         const foundExt = paperVariableExtMap.get(`${paper.id}:${v.variable_id}`);
                         const isVerified = !!foundExt?.is_verified;
                         const value = foundExt?.value || "Not Reported";
 
                         return (
-                          <td key={paper.id} className="px-4 py-3.5 group/cell hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors">
-                            <div className="flex flex-col gap-1">
+                          <td key={paper.id} className="px-3 py-2 border-r border-slate-200 group/cell hover:bg-emerald-50/20 transition-colors">
+                            <div className="flex flex-col gap-0.5">
                               <div className="flex items-center justify-between gap-1">
-                                <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs truncate max-w-[150px]" title={value}>
+                                <span className="font-mono font-bold text-slate-900 text-xs truncate max-w-[150px]" title={value}>
                                   {value}
                                 </span>
                                 {isVerified ? (
@@ -986,20 +1603,20 @@ export function ExtractionSheetPage() {
                               </div>
 
                               {foundExt?.quote && (
-                                <p className="text-[10px] text-slate-400 italic truncate max-w-[180px]" title={foundExt.quote}>
+                                <p className="text-[10px] text-slate-500 italic truncate max-w-[180px]" title={foundExt.quote}>
                                   “{foundExt.quote}”
                                 </p>
                               )}
 
-                              <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100 dark:border-slate-800 text-[10px]">
-                                <span className="text-slate-400 font-mono">
+                              <div className="flex items-center justify-between text-[10px] text-slate-400">
+                                <span className="font-mono">
                                   {foundExt?.confidence ? `${Math.round(foundExt.confidence * 100)}% conf` : ""}
                                 </span>
                                 <Link
                                   to={`/projects/${projectId}/studies/${paper.id}/pdf?var=${v.variable_id}`}
-                                  className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                                  className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                                 >
-                                  <span>View PDF</span>
+                                  <span>PDF</span>
                                   <ExternalLink className="h-2.5 w-2.5" />
                                 </Link>
                               </div>

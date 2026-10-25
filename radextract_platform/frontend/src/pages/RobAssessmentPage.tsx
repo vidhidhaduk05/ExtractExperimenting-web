@@ -102,59 +102,27 @@ export function RobAssessmentPage() {
         filename: s.pdf_path || `${s.title}.pdf`,
       }));
     }
-    return BENCHMARK_PAPERS.map((b) => ({
-      ...b,
-      study_id: b.id,
-      authors: b.title.split("(")[0].trim(),
-      publication_year: 2024,
-      journal: "Journal of NeuroInterventional Surgery",
-    }));
-  }, [dynamicStudies]);
-
-  const toolDef = assessment?.tool_definition;
-
-  // ⚡ Performance Optimization (Bolt):
-  // Memoized O(1) lookup Maps to eliminate quadratic array .find() calls in render loops
-  const domainDefMap = useMemo(() => {
-    const map = new Map<string, any>();
-    if (toolDef?.domains) {
-      for (const d of toolDef.domains) {
-        map.set(d.key, d);
-      }
+    if (projectId === "demo") {
+      return BENCHMARK_PAPERS.map((b) => ({
+        ...b,
+        study_id: b.id,
+        authors: b.title.split("(")[0].trim(),
+        publication_year: 2024,
+        journal: "Journal of NeuroInterventional Surgery",
+      }));
     }
-    return map;
-  }, [toolDef]);
+    return [];
+  }, [dynamicStudies, projectId]);
 
-  const signalingAnswerMap = useMemo(() => {
-    const map = new Map<string, RobSignalingAnswer>();
-    if (assessment?.domain_judgments) {
-      for (const dj of assessment.domain_judgments) {
-        for (const sa of dj.signaling_answers) {
-          map.set(`${dj.domain_key}:${sa.question_key}`, sa);
-        }
-      }
-    }
-    return map;
-  }, [assessment]);
-
-  const studyMap = useMemo(() => {
-    const map = new Map<string, any>();
-    for (const p of allStudies) {
-      if (p.study_id) map.set(p.study_id, p);
-      if (p.id) map.set(p.id, p);
-    }
-    return map;
-  }, [allStudies]);
-
-  // Compute PDF URL for the current study using O(1) study lookup
+  // Compute PDF URL for the current study
   const currentPdfUrl = useMemo(() => {
     if (customPdfUrl) return customPdfUrl;
     const currentStudyId = assessment?.study_id || "study_birua_2022";
-    const paper = studyMap.get(currentStudyId) || allStudies[0];
+    const paper = allStudies.find((p: any) => p.study_id === currentStudyId || p.id === currentStudyId) || allStudies[0];
     const base = import.meta.env.BASE_URL || "/";
     const cleanBase = base.endsWith("/") ? base : base + "/";
     return cleanBase + "papers/" + (paper?.filename || paper?.title + ".pdf" || "Birua_2022.pdf");
-  }, [customPdfUrl, assessment?.study_id, studyMap, allStudies]);
+  }, [customPdfUrl, assessment?.study_id, allStudies]);
 
   useEffect(() => {
     if (assessment?.tool && !selectedNewTool) {
@@ -180,7 +148,7 @@ export function RobAssessmentPage() {
     }> = [];
     let idx = 1;
     for (const dj of assessment.domain_judgments) {
-      const domainDef = domainDefMap.get(dj.domain_key);
+      const domainDef = assessment.tool_definition?.domains.find((d) => d.key === dj.domain_key);
       for (const sa of dj.signaling_answers) {
         const sqDef = domainDef?.signaling_questions.find((q) => q.key === sa.question_key);
         list.push({
@@ -192,16 +160,7 @@ export function RobAssessmentPage() {
       }
     }
     return list;
-  }, [assessment, domainDefMap]);
-
-  // Fast O(1) lookup map for active question key
-  const signalingQuestionMap = useMemo(() => {
-    const map = new Map<string, typeof allSignalingQuestions[0]>();
-    for (const q of allSignalingQuestions) {
-      map.set(q.answer.question_key, q);
-    }
-    return map;
-  }, [allSignalingQuestions]);
+  }, [assessment]);
 
   // Map RoB signaling questions to spatial PDF highlight items for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -437,7 +396,7 @@ export function RobAssessmentPage() {
         target.isContentEditable;
       if (isInput) return;
 
-      const currentQ = selectedQuestionKey ? signalingQuestionMap.get(selectedQuestionKey) : undefined;
+      const currentQ = allSignalingQuestions.find((q) => q.answer.question_key === selectedQuestionKey);
 
       if (e.key === "a" || e.key === "A" || e.key === "Enter") {
         e.preventDefault();
@@ -468,7 +427,7 @@ export function RobAssessmentPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedQuestionKey, allSignalingQuestions, undoStack, signalingQuestionMap]);
+  }, [selectedQuestionKey, allSignalingQuestions, undoStack]);
 
   // Flagged questions count (needs_human_review === 1)
   const flaggedCount = useMemo(() => {
@@ -508,6 +467,7 @@ export function RobAssessmentPage() {
   if (isLoading) return <div className="p-8 text-gray-400">Loading risk of bias assessment...</div>;
   if (!assessment) return <div className="p-8 text-gray-400">Assessment not found.</div>;
 
+  const toolDef = assessment.tool_definition;
   const hasAiSuggestions = assessment.domain_judgments.some((dj) =>
     dj.signaling_answers.some((sa) => sa.ai_answer)
   );
@@ -807,8 +767,7 @@ export function RobAssessmentPage() {
           {/* Main Scrollable Review Area: Domains & Signaling Questions */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {displayedDomainJudgments.map((dj) => {
-              // ⚡ O(1) domain definition lookup from memoized Map (Bolt optimization)
-              const domainDef = domainDefMap.get(dj.domain_key);
+              const domainDef = toolDef?.domains.find((d) => d.key === dj.domain_key);
               const isExpanded = expandedDomains.has(dj.domain_key);
               const allVerified = dj.signaling_answers.every((sa) => sa.human_verified === 1);
               const flaggedInDomain = dj.signaling_answers.filter(
@@ -865,8 +824,7 @@ export function RobAssessmentPage() {
                   {isExpanded && domainDef && (
                     <div className="p-4 space-y-3.5 bg-[#FAF9F3]/40">
                       {domainDef.signaling_questions.map((sq) => {
-                        // ⚡ O(1) signaling answer lookup from memoized Map (Bolt optimization)
-                        const sa = signalingAnswerMap.get(`${dj.domain_key}:${sq.key}`);
+                        const sa = dj.signaling_answers.find((a) => a.question_key === sq.key);
                         if (!sa) return null;
                         if (isReviewMode && sa.needs_human_review !== 1) return null;
 

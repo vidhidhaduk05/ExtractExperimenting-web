@@ -1,0 +1,29 @@
+[
+  {
+    "name": "desktop",
+    "notes": 10,
+    "overflow": false,
+    "errors": [],
+    "keyboard": true,
+    "pointerDrag": true,
+    "reset": true
+  },
+  {
+    "name": "mobile",
+    "notes": 10,
+    "overflow": false,
+    "errors": [],
+    "keyboard": true,
+    "pointerDrag": false,
+    "reset": false
+  },
+  {
+    "name": "reduced",
+    "notes": 10,
+    "overflow": false,
+    "errors": [],
+    "keyboard": true,
+    "pointerDrag": true,
+    "reset": true
+  }
+]

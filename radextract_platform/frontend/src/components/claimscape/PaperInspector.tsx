@@ -1,5 +1,5 @@
 import React from "react";
-import { ExternalLink, CheckCircle2, AlertCircle, HelpCircle, Users } from "lucide-react";
+import { ExternalLink, CheckCircle2, AlertCircle, HelpCircle } from "lucide-react";
 import { ProcessedPaper, TIER_BY_ID, STANCE_LABEL } from "../../lib/claimscapeMethod";
 
 interface PaperInspectorProps {
@@ -153,32 +153,6 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
               )}
             </dd>
           </div>
-
-          {(paper.paper.sample_size_display || paper.paper.sample_size) && (
-            <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 pb-2 border-b border-[#381A61]/10 dark:border-white/10">
-              <dt className="cs-muted font-medium flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 inline text-[#381A61] dark:text-[#F9D14A]" />
-                Sample size
-              </dt>
-              <dd className="text-[var(--cs-ink)]">
-                <span className="font-bold text-[#381A61] dark:text-[#F9D14A] text-[13px]">
-                  {paper.paper.sample_size_display || (paper.paper.sample_size ? `${paper.paper.sample_size.toLocaleString()} participants` : "")}
-                </span>
-                {paper.tier === "meta" && (
-                  <span className="block text-[11px] cs-muted mt-0.5 font-normal">
-                    Systematic review synthesizing multiple primary studies and pooled participants.
-                  </span>
-                )}
-                {paper.tier === "case" && (
-                  <span className="block text-[11px] cs-muted mt-0.5 font-normal">
-                    {paper.paper.sample_size === 1
-                      ? "Individual single-patient clinical case report."
-                      : "Case series of patients treated with consecutive observations."}
-                  </span>
-                )}
-              </dd>
-            </div>
-          )}
 
           <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 pb-2 border-b border-[#381A61]/10 dark:border-white/10">
             <dt className="cs-muted font-medium">Evidence</dt>

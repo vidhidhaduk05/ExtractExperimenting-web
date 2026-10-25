@@ -1,0 +1,2846 @@
+{
+ "url": "http://127.0.0.1:5180/prototypes/motion-preview.html",
+ "at": "2026-10-25T00:16:58.343Z",
+ "allow": [
+  "eyebrow",
+  "mixed-font-headline",
+  "font-count",
+  "palette-cream",
+  "few-pictures",
+  "scene-not-started"
+ ],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 8,
+   "filled": [
+    0.46,
+    0.49,
+    0.78,
+    0.78,
+    0.66,
+    0.83,
+    0.64,
+    0.63
+   ],
+   "motion": {
+    "elements": 47,
+    "css": 0,
+    "transitions": 47,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 6387,
+     "screens": 7.1,
+     "words": 629,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 1,
+     "sections": 6,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 2,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 2,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Stay curious. See what the evidence says.",
+     "words": 7,
+     "chars": 41,
+     "lines": 2,
+     "size": 66,
+     "vw": 4.6,
+     "font": "Bodoni Moda",
+     "weight": 600,
+     "tracking": -0.025,
+     "leading": 1.08,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "center",
+     "position": "center",
+     "widthRatio": 0.83,
+     "top": 213,
+     "mixedFonts": [
+      "Bodoni Moda",
+      "Bodoni Moda italic"
+     ],
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Stay curious. See what the evidence says.",
+     "words": 7,
+     "lines": 2,
+     "size": 66,
+     "font": "Bodoni Moda"
+    },
+    "headings": [
+     {
+      "text": "Stay curious. See what the evidence says.",
+      "words": 7,
+      "chars": 41,
+      "lines": 2,
+      "size": 66,
+      "vw": 4.6,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.08,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.83,
+      "top": 213,
+      "mixedFonts": [
+       "Bodoni Moda",
+       "Bodoni Moda italic"
+      ],
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Observe. Question. Understand.",
+      "words": 3,
+      "chars": 30,
+      "lines": 2,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.39,
+      "top": 1009,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Every detail matters.",
+      "words": 3,
+      "chars": 21,
+      "lines": 2,
+      "size": 35,
+      "vw": 2.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.19,
+      "top": 1209,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "See where the literature stands.",
+      "words": 5,
+      "chars": 32,
+      "lines": 2,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.41,
+      "top": 1827,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Begin with what you need to know.",
+      "words": 7,
+      "chars": 33,
+      "lines": 2,
+      "size": 34,
+      "vw": 2.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.16,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.28,
+      "top": 2242,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Keep the sources. Make uncertainty visible.",
+      "words": 6,
+      "chars": 43,
+      "lines": 2,
+      "size": 28,
+      "vw": 1.9,
+      "font": "Newsreader",
+      "weight": 500,
+      "tracking": 0,
+      "leading": 1.3,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.45,
+      "top": 2257,
+      "tag": "h4",
+      "kind": "heading"
+     },
+     {
+      "text": "How does AI-assisted mammography compare with standard screening?",
+      "words": 8,
+      "chars": 65,
+      "lines": 2,
+      "size": 34,
+      "vw": 2.4,
+      "font": "Newsreader",
+      "weight": 500,
+      "tracking": -0.015,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.46,
+      "top": 2309,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Four stages. No shortcuts.",
+      "words": 4,
+      "chars": 26,
+      "lines": 2,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.21,
+      "top": 4297,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Questions from the reading room.",
+      "words": 5,
+      "chars": 32,
+      "lines": 2,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.39,
+      "top": 4845,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Evaluate a new approach.",
+      "words": 4,
+      "chars": 24,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.31,
+      "top": 5036,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Compare imaging pathways.",
+      "words": 3,
+      "chars": 25,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.31,
+      "top": 5241,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Prepare a focused review.",
+      "words": 4,
+      "chars": 25,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.31,
+      "top": 5447,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Start a research conversation.",
+      "words": 4,
+      "chars": 30,
+      "lines": 2,
+      "size": 52,
+      "vw": 3.6,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.37,
+      "top": 5842,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Stellar Labs",
+      "words": 2,
+      "chars": 12,
+      "lines": 1,
+      "size": 142,
+      "vw": 9.9,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.83,
+      "top": 6130,
+      "tag": "p",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 14,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 2,
+     "centered": 1,
+     "medianWords": 4,
+     "mixedFontHeadings": 1
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Newsreader",
+       "share": 0.59,
+       "mono": false
+      },
+      {
+       "family": "Work Sans",
+       "share": 0.3,
+       "mono": false
+      },
+      {
+       "family": "Bodoni Moda",
+       "share": 0.11,
+       "mono": false
+      }
+     ],
+     "familyCount": 3,
+     "sizes": [
+      13,
+      14,
+      15,
+      17,
+      18,
+      20,
+      21,
+      22,
+      24,
+      26,
+      27,
+      28,
+      34,
+      35,
+      52,
+      66,
+      142
+     ],
+     "sizeCount": 17,
+     "notLoaded": [],
+     "body": {
+      "font": "Newsreader",
+      "size": 18,
+      "leading": 1.55,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 8.6
+     },
+     "measureChars": 34,
+     "max": {
+      "size": 142,
+      "vw": 9.9,
+      "font": "Bodoni Moda",
+      "text": "Stellar Labs"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.09,
+     "smallText": 0
+    },
+    "eyebrows": [
+     {
+      "text": "From evidence to the bedside",
+      "above": "Stay curious. See what the evidence says",
+      "upper": false,
+      "tracked": true,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 167
+     }
+    ],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#fbf9f4",
+     "bodyBgHsl": {
+      "h": 43,
+      "s": 0.47,
+      "l": 0.97
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#f0eee9",
+       "top": 1751,
+       "hsl": {
+        "h": 43,
+        "s": 0.19,
+        "l": 0.93
+       }
+      },
+      {
+       "color": "#fbf9f4",
+       "top": 2104,
+       "hsl": {
+        "h": 43,
+        "s": 0.47,
+        "l": 0.97
+       }
+      },
+      {
+       "color": "#eee6eb",
+       "top": 4763,
+       "hsl": {
+        "h": 323,
+        "s": 0.19,
+        "l": 0.92
+       }
+      },
+      {
+       "color": "#3a0f34",
+       "top": 6088,
+       "hsl": {
+        "h": 308,
+        "s": 0.59,
+        "l": 0.14
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#58434f",
+       "share": 0.55
+      },
+      {
+       "color": "#3a0f34",
+       "share": 0.3
+      },
+      {
+       "color": "#66365c",
+       "share": 0.07
+      },
+      {
+       "color": "#fbf9f4",
+       "share": 0.03
+      },
+      {
+       "color": "#e6dce3",
+       "share": 0.02
+      }
+     ],
+     "button": {
+      "bg": "#3a0f34",
+      "hsl": {
+       "h": 308,
+       "s": 0.59,
+       "l": 0.14
+      },
+      "fg": "#3a0f34"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 14,
+     "inHero": 7,
+     "radius": 0,
+     "height": 44,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Skip to content",
+      "Explore evidence →",
+      "Filters +",
+      "Preview evidence →",
+      "Breast imaging ↗"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 4,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 4462
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 7,
+     "fixed": true,
+     "height": 76,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "bodoni moda",
+     "newsreader",
+     "work sans"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 6387,
+    "margins": {
+     "left": 120,
+     "right": 127
+    },
+    "sections": [
+     {
+      "sel": "section.hero",
+      "tag": "section",
+      "top": 120,
+      "height": 793,
+      "words": 80,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Stay curious.",
+       "size": 66,
+       "tag": "h1"
+      },
+      "left": 319,
+      "right": 319,
+      "textLeft": 319,
+      "textRight": 319,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#approach.approach.wrap",
+      "tag": "section",
+      "top": 913,
+      "height": 838,
+      "words": 141,
+      "media": 0,
+      "middle": 200,
+      "heading": {
+       "text": "Observe. Question.",
+       "size": 52,
+       "tag": "h2"
+      },
+      "left": 120,
+      "right": 171,
+      "textLeft": 120,
+      "textRight": 171,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "div.section-intro.wrap",
+      "tag": "div",
+      "top": 1751,
+      "height": 216,
+      "words": 32,
+      "media": 0,
+      "middle": 265,
+      "heading": {
+       "text": "See where the",
+       "size": 52,
+       "tag": "h2"
+      },
+      "left": 120,
+      "right": 127,
+      "textLeft": 120,
+      "textRight": 127,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "div#journey-track.journey-track",
+      "tag": "div",
+      "top": 1967,
+      "height": 2070,
+      "words": 66,
+      "media": 0,
+      "middle": 107,
+      "heading": {
+       "text": "Begin with what you need to know.",
+       "size": 34,
+       "tag": "h3"
+      },
+      "left": 120,
+      "right": 157,
+      "textLeft": 120,
+      "textRight": 157,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": true
+     },
+     {
+      "sel": "section#process.process.wrap",
+      "tag": "section",
+      "top": 4193,
+      "height": 570,
+      "words": 84,
+      "media": 0,
+      "middle": 73,
+      "heading": {
+       "text": "Four stages.",
+       "size": 52,
+       "tag": "h2"
+      },
+      "left": 120,
+      "right": 127,
+      "textLeft": 120,
+      "textRight": 127,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#use-cases.use-cases",
+      "tag": "section",
+      "top": 4763,
+      "height": 949,
+      "words": 141,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Questions from",
+       "size": 52,
+       "tag": "h2"
+      },
+      "left": 120,
+      "right": 126,
+      "textLeft": 120,
+      "textRight": 126,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#collaborate.collaboration.wrap",
+      "tag": "section",
+      "top": 5712,
+      "height": 376,
+      "words": 33,
+      "media": 0,
+      "middle": 296,
+      "heading": {
+       "text": "Start a research conversation.",
+       "size": 52,
+       "tag": "h2"
+      },
+      "left": 120,
+      "right": 154,
+      "textLeft": 120,
+      "textRight": 154,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer.site-footer",
+      "tag": "footer",
+      "top": 6088,
+      "height": 299,
+      "words": 21,
+      "media": 0,
+      "middle": 219,
+      "heading": {
+       "text": "Stellar Labs",
+       "size": 142,
+       "tag": "p"
+      },
+      "left": 120,
+      "right": 120,
+      "textLeft": 120,
+      "textRight": 120,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Stay curious. See what the evidence says.",
+      "size": 66,
+      "top": 213,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 120,
+      "n": 12
+     },
+     {
+      "x": 755,
+      "n": 8
+     },
+     {
+      "x": 376,
+      "n": 6
+     },
+     {
+      "x": 867,
+      "n": 3
+     },
+     {
+      "x": 160,
+      "n": 2
+     },
+     {
+      "x": 782,
+      "n": 2
+     },
+     {
+      "x": 912,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 34,
+    "bodySize": 18,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0.18,
+    "voidBox": {
+     "x": 0,
+     "y": 120,
+     "w": 300,
+     "h": 780
+    }
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 8,
+   "filled": [
+    0.56,
+    0.65,
+    0.58,
+    0.77,
+    0.68,
+    0.62,
+    0.76,
+    0.62
+   ],
+   "motion": {
+    "elements": 47,
+    "css": 0,
+    "transitions": 47,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 7539,
+     "screens": 7.4,
+     "words": 602,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 1,
+     "sections": 6,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 2,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 2,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Stay curious. See what the evidence says.",
+     "words": 7,
+     "chars": 41,
+     "lines": 2,
+     "size": 39.9,
+     "vw": 5.2,
+     "font": "Bodoni Moda",
+     "weight": 600,
+     "tracking": -0.025,
+     "leading": 1.08,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "center",
+     "position": "center",
+     "widthRatio": 0.95,
+     "top": 181,
+     "mixedFonts": [
+      "Bodoni Moda",
+      "Bodoni Moda italic"
+     ],
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Stay curious. See what the evidence says.",
+     "words": 7,
+     "lines": 2,
+     "size": 39.9,
+     "font": "Bodoni Moda"
+    },
+    "headings": [
+     {
+      "text": "Stay curious. See what the evidence says.",
+      "words": 7,
+      "chars": 41,
+      "lines": 2,
+      "size": 39.9,
+      "vw": 5.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.08,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 181,
+      "mixedFonts": [
+       "Bodoni Moda",
+       "Bodoni Moda italic"
+      ],
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Observe. Question. Understand.",
+      "words": 3,
+      "chars": 30,
+      "lines": 2,
+      "size": 32,
+      "vw": 4.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 875,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Every detail matters.",
+      "words": 3,
+      "chars": 21,
+      "lines": 1,
+      "size": 31,
+      "vw": 4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.88,
+      "top": 1082,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "See where the literature stands.",
+      "words": 5,
+      "chars": 32,
+      "lines": 2,
+      "size": 32,
+      "vw": 4.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 1884,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "How does AI-assisted mammography compare with standard screening?",
+      "words": 8,
+      "chars": 65,
+      "lines": 2,
+      "size": 26,
+      "vw": 3.4,
+      "font": "Newsreader",
+      "weight": 500,
+      "tracking": -0.015,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.89,
+      "top": 2541,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Four stages. No shortcuts.",
+      "words": 4,
+      "chars": 26,
+      "lines": 2,
+      "size": 32,
+      "vw": 4.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 5024,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Questions from the reading room.",
+      "words": 5,
+      "chars": 32,
+      "lines": 2,
+      "size": 32,
+      "vw": 4.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 5718,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Evaluate a new approach.",
+      "words": 4,
+      "chars": 24,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 5992,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Compare imaging pathways.",
+      "words": 3,
+      "chars": 25,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 6294,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Prepare a focused review.",
+      "words": 4,
+      "chars": 25,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 6596,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Start a research conversation.",
+      "words": 4,
+      "chars": 30,
+      "lines": 2,
+      "size": 32,
+      "vw": 4.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.48,
+      "top": 6938,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Stellar Labs",
+      "words": 2,
+      "chars": 12,
+      "lines": 1,
+      "size": 76.8,
+      "vw": 10,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.95,
+      "top": 7288,
+      "tag": "p",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 12,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 2,
+     "centered": 1,
+     "medianWords": 4,
+     "mixedFontHeadings": 1
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Newsreader",
+       "share": 0.62,
+       "mono": false
+      },
+      {
+       "family": "Work Sans",
+       "share": 0.27,
+       "mono": false
+      },
+      {
+       "family": "Bodoni Moda",
+       "share": 0.11,
+       "mono": false
+      }
+     ],
+     "familyCount": 3,
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      22,
+      23,
+      24,
+      25,
+      26,
+      31,
+      32,
+      40,
+      77
+     ],
+     "sizeCount": 17,
+     "notLoaded": [],
+     "body": {
+      "font": "Newsreader",
+      "size": 18,
+      "leading": 1.55,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 8.8
+     },
+     "measureChars": 67,
+     "max": {
+      "size": 76.8,
+      "vw": 10,
+      "font": "Bodoni Moda",
+      "text": "Stellar Labs"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.09,
+     "smallText": 0
+    },
+    "eyebrows": [
+     {
+      "text": "From evidence to the bedside",
+      "above": "Stay curious. See what the evidence says",
+      "upper": false,
+      "tracked": true,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 137
+     },
+     {
+      "text": "Breast imaging",
+      "above": "Evaluate a new approach.",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 5955
+     },
+     {
+      "text": "Neuroradiology",
+      "above": "Compare imaging pathways.",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 6258
+     },
+     {
+      "text": "Across clinical research",
+      "above": "Prepare a focused review.",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 6560
+     }
+    ],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#fbf9f4",
+     "bodyBgHsl": {
+      "h": 43,
+      "s": 0.47,
+      "l": 0.97
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#eee6eb",
+       "top": 1054,
+       "hsl": {
+        "h": 323,
+        "s": 0.19,
+        "l": 0.92
+       }
+      },
+      {
+       "color": "#f0eee9",
+       "top": 1826,
+       "hsl": {
+        "h": 43,
+        "s": 0.19,
+        "l": 0.93
+       }
+      },
+      {
+       "color": "#fbf9f4",
+       "top": 2413,
+       "hsl": {
+        "h": 43,
+        "s": 0.47,
+        "l": 0.97
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#58434f",
+       "share": 0.55
+      },
+      {
+       "color": "#3a0f34",
+       "share": 0.3
+      },
+      {
+       "color": "#66365c",
+       "share": 0.07
+      },
+      {
+       "color": "#fbf9f4",
+       "share": 0.03
+      },
+      {
+       "color": "#e6dce3",
+       "share": 0.02
+      }
+     ],
+     "button": {
+      "bg": "#fbf9f4",
+      "hsl": {
+       "h": 43,
+       "s": 0.47,
+       "l": 0.97
+      },
+      "fg": "#3a0f34"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 13,
+     "inHero": 6,
+     "radius": 0,
+     "height": 44,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Skip to content",
+      "Filters +",
+      "Preview evidence →",
+      "Breast imaging ↗",
+      "Stroke imaging ↗"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 4,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 5201
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": true,
+     "height": 66,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "bodoni moda",
+     "newsreader",
+     "work sans"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 7539,
+    "margins": {
+     "left": 20,
+     "right": 26
+    },
+    "sections": [
+     {
+      "sel": "section.hero",
+      "tag": "section",
+      "top": 106,
+      "height": 705,
+      "words": 71,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Stay curious.",
+       "size": 40,
+       "tag": "h1"
+      },
+      "left": 41,
+      "right": 41,
+      "textLeft": 41,
+      "textRight": 80,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#approach.approach.wrap",
+      "tag": "section",
+      "top": 811,
+      "height": 1015,
+      "words": 141,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Observe. Question.",
+       "size": 32,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 59,
+      "textLeft": 20,
+      "textRight": 59,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "div.section-intro.wrap",
+      "tag": "div",
+      "top": 1826,
+      "height": 261,
+      "words": 32,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "See where the",
+       "size": 32,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 263,
+      "textLeft": 20,
+      "textRight": 263,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "div#journey-track.journey-track",
+      "tag": "div",
+      "top": 2087,
+      "height": 2662,
+      "words": 59,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "How does AI-assisted mammography compare with stan",
+       "size": 26,
+       "tag": "p"
+      },
+      "left": 20,
+      "right": 49,
+      "textLeft": 20,
+      "textRight": 49,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": true
+     },
+     {
+      "sel": "div.journey-end.wrap",
+      "tag": "div",
+      "top": 4749,
+      "height": 171,
+      "words": 19,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 20,
+      "right": 249,
+      "textLeft": 20,
+      "textRight": 249,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#process.process.wrap",
+      "tag": "section",
+      "top": 4960,
+      "height": 700,
+      "words": 84,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Four stages.",
+       "size": 32,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 136,
+      "textLeft": 20,
+      "textRight": 136,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#use-cases.use-cases",
+      "tag": "section",
+      "top": 5660,
+      "height": 1214,
+      "words": 141,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Questions from",
+       "size": 32,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 26,
+      "textLeft": 20,
+      "textRight": 26,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#collaborate.collaboration.wrap",
+      "tag": "section",
+      "top": 6874,
+      "height": 382,
+      "words": 33,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Start a research conversation.",
+       "size": 32,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 296,
+      "textLeft": 20,
+      "textRight": 296,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer.site-footer",
+      "tag": "footer",
+      "top": 7256,
+      "height": 283,
+      "words": 21,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Stellar Labs",
+       "size": 77,
+       "tag": "p"
+      },
+      "left": 20,
+      "right": 330,
+      "textLeft": 20,
+      "textRight": 330,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Stay curious. See what the evidence says.",
+      "size": 40,
+      "top": 181,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 20,
+      "n": 32
+     },
+     {
+      "x": 48,
+      "n": 2
+     }
+    ],
+    "leftBlocks": 34,
+    "bodySize": 18,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 10,
+   "filled": [
+    0.75,
+    0.57,
+    0.82,
+    0.67,
+    0.77,
+    0.71,
+    0.37,
+    0.96,
+    0.81,
+    0.64
+   ],
+   "motion": {
+    "elements": 47,
+    "css": 0,
+    "transitions": 47,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 8160,
+     "screens": 9.7,
+     "words": 602,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 1,
+     "sections": 6,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 2,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 2,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Stay curious. See what the evidence says.",
+     "words": 7,
+     "chars": 41,
+     "lines": 2,
+     "size": 29,
+     "vw": 7.4,
+     "font": "Bodoni Moda",
+     "weight": 600,
+     "tracking": -0.025,
+     "leading": 1.08,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "center",
+     "position": "center",
+     "widthRatio": 0.9,
+     "top": 198,
+     "mixedFonts": [
+      "Bodoni Moda",
+      "Bodoni Moda italic"
+     ],
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Stay curious. See what the evidence says.",
+     "words": 7,
+     "lines": 2,
+     "size": 29,
+     "font": "Bodoni Moda"
+    },
+    "headings": [
+     {
+      "text": "S Stellar Labs",
+      "words": 3,
+      "chars": 14,
+      "lines": 1,
+      "size": 22,
+      "vw": 5.6,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.44,
+      "top": 71,
+      "mixedFonts": [
+       "Bodoni Moda",
+       "Bodoni Moda italic"
+      ],
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Stay curious. See what the evidence says.",
+      "words": 7,
+      "chars": 41,
+      "lines": 2,
+      "size": 29,
+      "vw": 7.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.08,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 198,
+      "mixedFonts": [
+       "Bodoni Moda",
+       "Bodoni Moda italic"
+      ],
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Observe. Question. Understand.",
+      "words": 3,
+      "chars": 30,
+      "lines": 2,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 1066,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Every detail matters.",
+      "words": 3,
+      "chars": 21,
+      "lines": 1,
+      "size": 31,
+      "vw": 7.9,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.75,
+      "top": 1301,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Know what evidence can show.",
+      "words": 5,
+      "chars": 28,
+      "lines": 1,
+      "size": 25,
+      "vw": 6.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 1685,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Make the reasoning visible.",
+      "words": 4,
+      "chars": 27,
+      "lines": 1,
+      "size": 25,
+      "vw": 6.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 1829,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Judgment stays at the bedside.",
+      "words": 5,
+      "chars": 30,
+      "lines": 1,
+      "size": 25,
+      "vw": 6.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 1972,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "See where the literature stands.",
+      "words": 5,
+      "chars": 32,
+      "lines": 2,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 2244,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Begin with what you need to know.",
+      "words": 7,
+      "chars": 33,
+      "lines": 2,
+      "size": 23,
+      "vw": 5.9,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.16,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 2577,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "How does AI-assisted mammography compare with standard screening?",
+      "words": 8,
+      "chars": 65,
+      "lines": 3,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Newsreader",
+      "weight": 500,
+      "tracking": -0.015,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.78,
+      "top": 2911,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Four stages. No shortcuts.",
+      "words": 4,
+      "chars": 26,
+      "lines": 2,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 4970,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Formulate",
+      "words": 1,
+      "chars": 9,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 5228,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Search",
+      "words": 1,
+      "chars": 6,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 5411,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Screen",
+      "words": 1,
+      "chars": 6,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 5622,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Synthesize",
+      "words": 1,
+      "chars": 10,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 5806,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Questions from the reading room.",
+      "words": 5,
+      "chars": 32,
+      "lines": 2,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 6026,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Evaluate a new approach.",
+      "words": 4,
+      "chars": 24,
+      "lines": 1,
+      "size": 25,
+      "vw": 6.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 6300,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "“How does AI-assisted mammography compare with standard screening?”",
+      "words": 8,
+      "chars": 67,
+      "lines": 2,
+      "size": 23,
+      "vw": 5.9,
+      "font": "Newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1.55,
+      "upper": false,
+      "italic": true,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 6443,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Compare imaging pathways.",
+      "words": 3,
+      "chars": 25,
+      "lines": 1,
+      "size": 25,
+      "vw": 6.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 6665,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "“How do CT perfusion and MRI compare in acute ischemic stroke assessment?”",
+      "words": 12,
+      "chars": 74,
+      "lines": 3,
+      "size": 23,
+      "vw": 5.9,
+      "font": "Newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1.55,
+      "upper": false,
+      "italic": true,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 6807,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Prepare a focused review.",
+      "words": 4,
+      "chars": 25,
+      "lines": 1,
+      "size": 25,
+      "vw": 6.4,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 7065,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "“What outcomes are reported in studies of GLP-1 receptor agonists?”",
+      "words": 10,
+      "chars": 67,
+      "lines": 2,
+      "size": 23,
+      "vw": 5.9,
+      "font": "Newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1.55,
+      "upper": false,
+      "italic": true,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 7207,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Start a research conversation.",
+      "words": 4,
+      "chars": 30,
+      "lines": 2,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 7469,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Stellar Labs",
+      "words": 2,
+      "chars": 12,
+      "lines": 1,
+      "size": 48,
+      "vw": 12.3,
+      "font": "Bodoni Moda",
+      "weight": 600,
+      "tracking": -0.04,
+      "leading": 1.12,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 7877,
+      "tag": "p",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 24,
+     "maxLines": 3,
+     "over2Lines": 0,
+     "statements": 5,
+     "centered": 1,
+     "medianWords": 4,
+     "mixedFontHeadings": 2
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Newsreader",
+       "share": 0.62,
+       "mono": false
+      },
+      {
+       "family": "Work Sans",
+       "share": 0.27,
+       "mono": false
+      },
+      {
+       "family": "Bodoni Moda",
+       "share": 0.11,
+       "mono": false
+      }
+     ],
+     "familyCount": 3,
+     "sizes": [
+      13,
+      14,
+      15,
+      17,
+      18,
+      19,
+      20,
+      22,
+      23,
+      24,
+      25,
+      29,
+      31,
+      32,
+      48
+     ],
+     "sizeCount": 15,
+     "notLoaded": [],
+     "body": {
+      "font": "Newsreader",
+      "size": 18,
+      "leading": 1.55,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 8.8
+     },
+     "measureChars": 29,
+     "max": {
+      "size": 48,
+      "vw": 12.3,
+      "font": "Bodoni Moda",
+      "text": "Stellar Labs"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.09,
+     "smallText": 0
+    },
+    "eyebrows": [
+     {
+      "text": "From evidence to the bedside",
+      "above": "Stay curious. See what the evidence says",
+      "upper": false,
+      "tracked": true,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 154
+     }
+    ],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#fbf9f4",
+     "bodyBgHsl": {
+      "h": 43,
+      "s": 0.47,
+      "l": 0.97
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#ffffff",
+       "top": 410,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      },
+      {
+       "color": "#eee6eb",
+       "top": 1273,
+       "hsl": {
+        "h": 323,
+        "s": 0.19,
+        "l": 0.92
+       }
+      },
+      {
+       "color": "#f0eee9",
+       "top": 2186,
+       "hsl": {
+        "h": 43,
+        "s": 0.19,
+        "l": 0.93
+       }
+      },
+      {
+       "color": "#fbf9f4",
+       "top": 2769,
+       "hsl": {
+        "h": 43,
+        "s": 0.47,
+        "l": 0.97
+       }
+      },
+      {
+       "color": "#3a0f34",
+       "top": 7845,
+       "hsl": {
+        "h": 308,
+        "s": 0.59,
+        "l": 0.14
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#58434f",
+       "share": 0.55
+      },
+      {
+       "color": "#3a0f34",
+       "share": 0.3
+      },
+      {
+       "color": "#66365c",
+       "share": 0.07
+      },
+      {
+       "color": "#fbf9f4",
+       "share": 0.03
+      },
+      {
+       "color": "#e6dce3",
+       "share": 0.02
+      }
+     ],
+     "button": {
+      "bg": "#fbf9f4",
+      "hsl": {
+       "h": 43,
+       "s": 0.47,
+       "l": 0.97
+      },
+      "fg": "#3a0f34"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 13,
+     "inHero": 5,
+     "radius": 0,
+     "height": 44,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Skip to content",
+      "Filters +",
+      "Preview evidence →",
+      "Breast imaging ↗",
+      "Stroke imaging ↗"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 4,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 5176
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": true,
+     "height": 66,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "bodoni moda",
+     "newsreader",
+     "work sans"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 8160,
+    "margins": {
+     "left": 20,
+     "right": 21
+    },
+    "sections": [
+     {
+      "sel": "section.hero",
+      "tag": "section",
+      "top": 123,
+      "height": 879,
+      "words": 71,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Stay curious.",
+       "size": 29,
+       "tag": "h1"
+      },
+      "left": 27,
+      "right": 27,
+      "textLeft": 27,
+      "textRight": 27,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#approach.approach.wrap",
+      "tag": "section",
+      "top": 1002,
+      "height": 1184,
+      "words": 141,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Observe. Question.",
+       "size": 32,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 22,
+      "textLeft": 20,
+      "textRight": 22,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "div.section-intro.wrap",
+      "tag": "div",
+      "top": 2186,
+      "height": 289,
+      "words": 32,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "See where the",
+       "size": 32,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 22,
+      "textLeft": 20,
+      "textRight": 22,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "div#journey-track.journey-track",
+      "tag": "div",
+      "top": 2475,
+      "height": 2194,
+      "words": 59,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Begin with what you need to know.",
+       "size": 23,
+       "tag": "h3"
+      },
+      "left": 20,
+      "right": 34,
+      "textLeft": 20,
+      "textRight": 34,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": true
+     },
+     {
+      "sel": "div.journey-end.wrap",
+      "tag": "div",
+      "top": 4669,
+      "height": 197,
+      "words": 19,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 20,
+      "right": 65,
+      "textLeft": 20,
+      "textRight": 65,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#process.process.wrap",
+      "tag": "section",
+      "top": 4906,
+      "height": 1062,
+      "words": 84,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Four stages.",
+       "size": 32,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 21,
+      "textLeft": 20,
+      "textRight": 21,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#use-cases.use-cases",
+      "tag": "section",
+      "top": 5968,
+      "height": 1436,
+      "words": 141,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Questions from",
+       "size": 32,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 23,
+      "textLeft": 20,
+      "textRight": 23,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#collaborate.collaboration.wrap",
+      "tag": "section",
+      "top": 7405,
+      "height": 441,
+      "words": 33,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Start a research conversation.",
+       "size": 32,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 67,
+      "textLeft": 20,
+      "textRight": 67,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer.site-footer",
+      "tag": "footer",
+      "top": 7845,
+      "height": 315,
+      "words": 21,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Stellar Labs",
+       "size": 48,
+       "tag": "p"
+      },
+      "left": 20,
+      "right": 104,
+      "textLeft": 20,
+      "textRight": 104,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Stay curious. See what the evidence says.",
+      "size": 29,
+      "top": 198,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 20,
+      "n": 32
+     },
+     {
+      "x": 48,
+      "n": 2
+     }
+    ],
+    "leftBlocks": 34,
+    "bodySize": 18,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "WARN",
+   "id": "size-count",
+   "width": 1440,
+   "message": "17 different font sizes (13, 14, 15, 17, 18, 20, 21, 22, 24, 26, 27, 28, 34, 35, 52, 66, 142).",
+   "fix": "A page needs about five: display, heading, lead, body, small.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "no-footage",
+   "width": 1440,
+   "message": "No video anywhere on the page.",
+   "fix": "Look for one honest clip with scripts/assets.mjs --video (the place, the material, the process) and use it as a muted loop with a poster frame. Defend its absence only if no clip fits the subject."
+  },
+  {
+   "level": "WARN",
+   "id": "pinned-over-picture",
+   "width": 1440,
+   "message": "Pinned large text slides across pictures while the page scrolls: \"How does AI-assisted mammography compare with st\" (screen 3, 31% over a picture)",
+   "fix": "Jurors read a pinned title crossing drawings or photographs as a collision. Keep the pictures in the column the title does not occupy, or unpin it."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\prototypes\\.taste-skill\\inspect\\desktop-fold.jpg",
+   "pages": [
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\prototypes\\.taste-skill\\inspect\\desktop-page-01.jpg",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\prototypes\\.taste-skill\\inspect\\desktop-page-02.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\prototypes\\.taste-skill\\inspect\\tablet-fold.jpg",
+   "pages": [
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\prototypes\\.taste-skill\\inspect\\tablet-page-01.jpg",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\prototypes\\.taste-skill\\inspect\\tablet-page-02.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\prototypes\\.taste-skill\\inspect\\mobile-fold.jpg",
+   "pages": [
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\prototypes\\.taste-skill\\inspect\\mobile-page-01.jpg",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\prototypes\\.taste-skill\\inspect\\mobile-page-02.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

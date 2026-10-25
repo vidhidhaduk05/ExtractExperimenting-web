@@ -558,13 +558,6 @@ const Tooltip: React.FC<TooltipProps> = ({ paper, left, top, width }) => {
         {paper.paper.title}
       </p>
 
-      {paper.paper.sample_size_display && (
-        <div className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-[#381A61] dark:text-[#F9D14A] bg-[#F2F1EB] dark:bg-[#1A1622] px-2 py-0.5 rounded w-fit">
-          <span>👥</span>
-          <span>{paper.paper.sample_size_display}</span>
-        </div>
-      )}
-
       {paper.finding && (
         <p className="mt-1.5 text-[12px] cs-soft italic line-clamp-2 border-l-2 border-[#381A61] dark:border-[#F9D14A] pl-2">
           "{paper.finding}"

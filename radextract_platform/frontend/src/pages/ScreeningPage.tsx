@@ -3,7 +3,6 @@ import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags } from "../lib/recordCollaboration";
 import { RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
-import { cleanDoi, cleanPmid, getDoiUrl, getPmidUrl, getStudySourceUrl, openStudySource } from "../lib/studyUtils";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
@@ -62,11 +61,9 @@ import {
   RotateCcw,
   Pause,
   Square,
-  Scale,
   FileSpreadsheet,
 } from "lucide-react";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
-import { DualBlindedDashboard } from "../components/screening/DualBlindedDashboard";
 
 
 export function ScreeningPage() {
@@ -139,19 +136,10 @@ export function ScreeningPage() {
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Bulk Upload, Hotkeys & Dual-Blind state
+  // Bulk Upload & Hotkeys state
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showHotkeysModal, setShowHotkeysModal] = useState(false);
-  const [showDualBlindModal, setShowDualBlindModal] = useState(false);
   const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
-
-  // Conflicts query for badge
-  const { data: screeningConflicts } = useQuery({
-    queryKey: ["screening-conflicts", projectId],
-    queryFn: () => api.listScreeningConflicts(projectId!),
-    enabled: !!projectId,
-  });
-  const unresolvedConflictsCount = (screeningConflicts || []).filter((c) => c.status === "unresolved").length;
 
 
   // While an AI screening run is in flight, poll so each screened study appears as soon as it is saved
@@ -289,18 +277,12 @@ export function ScreeningPage() {
     }
   };
 
-  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
-
-  // Optimize O(1) bookmark lookups and count memoization to avoid O(N*M) linear scans during renders
-  const bookmarkedIdsSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids]);
-  const savedCount = useMemo(() => {
-    return studyList.reduce((acc, s) => (bookmarkedIdsSet.has(s.study_id) ? acc + 1 : acc), 0);
-  }, [studyList, bookmarkedIdsSet]);
+  const studyList = Array.isArray(studies) ? studies : [];
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
-      if (savedOnly && !bookmarkedIdsSet.has(s.study_id)) return false;
+      if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
 
       // Stage filter
@@ -342,15 +324,13 @@ export function ScreeningPage() {
         }
       }
 
-      // Search query filter (matches title, authors, abstract, DOI, and PMID)
+      // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesTitle = (s.title || "").toLowerCase().includes(q);
         const matchesAuthors = (s.authors || "").toLowerCase().includes(q);
         const matchesAbstract = (s.abstract || "").toLowerCase().includes(q);
-        const matchesDoi = (s.doi || "").toLowerCase().includes(q);
-        const matchesPmid = (s.pmid || "").toLowerCase().includes(q);
-        if (!matchesTitle && !matchesAuthors && !matchesAbstract && !matchesDoi && !matchesPmid) return false;
+        if (!matchesTitle && !matchesAuthors && !matchesAbstract) return false;
       }
       // Confidence filter
       if (confidenceFilter !== "all") {
@@ -361,7 +341,7 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarkedIdsSet, tagIndex.data, tagFilter]);
+  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
 
   // Auto-select first study in filtered set if current selectedStudyId is filtered out
   useEffect(() => {
@@ -596,12 +576,11 @@ export function ScreeningPage() {
         return;
       }
 
-      if (showKeywordsDrawer || showBulkUploadModal || showHotkeysModal || showDualBlindModal) {
+      if (showKeywordsDrawer || showBulkUploadModal || showHotkeysModal) {
         if (e.key === "Escape") {
           setShowBulkUploadModal(false);
           setShowHotkeysModal(false);
           setShowKeywordsDrawer(false);
-          setShowDualBlindModal(false);
         }
         return;
       }
@@ -641,7 +620,6 @@ export function ScreeningPage() {
     showKeywordsDrawer,
     showBulkUploadModal,
     showHotkeysModal,
-    showDualBlindModal,
   ]);
 
   const addKeywordMutation = useMutation({
@@ -709,7 +687,7 @@ export function ScreeningPage() {
     }
 
     // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-    const activeSpans = [...spans];
+    let activeSpans = [...spans];
     if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
       fallbackKeywordsList.forEach((kw) => {
         const word = kw.keyword.trim();
@@ -887,21 +865,6 @@ export function ScreeningPage() {
             >
               <Tag className="w-3.5 h-3.5 text-indigo-600" />
               Keywords & Highlighting ({keywords.length})
-            </button>
-
-            {/* Dual-Blinded Review & Consensus Button */}
-            <button
-              onClick={() => setShowDualBlindModal(true)}
-              className="px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-lg flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-              title="Dual-Blind Review Dashboard: Cohen's Kappa, Inter-Rater Agreement & Disagreement Adjudication"
-            >
-              <Scale className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Dual-Blind &amp; Consensus</span>
-              {unresolvedConflictsCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px] font-mono font-bold">
-                  {unresolvedConflictsCount}
-                </span>
-              )}
             </button>
 
             {progress?.active ? (
@@ -1266,7 +1229,7 @@ export function ScreeningPage() {
                 onChange={(e) => setSavedOnly(e.target.checked)}
                 className="rounded text-indigo-600 focus:ring-indigo-500"
               />
-              <span className="font-medium">Saved ({savedCount})</span>
+              <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
             </label>
           </div>
 
@@ -1487,12 +1450,6 @@ export function ScreeningPage() {
                   <div
                     key={study.study_id}
                     onClick={() => setSelectedStudyId(study.study_id)}
-                    onDoubleClick={(e) => {
-                      const target = e.target as HTMLElement;
-                      if (target.closest("button, a, input")) return;
-                      openStudySource(study);
-                    }}
-                    title="Click to select · Double-click to open in PubMed / DOI"
                     className={`p-3 rounded-lg cursor-pointer transition-all border ${
                       isCurrent
                         ? "bg-indigo-50 border-indigo-400 ring-2 ring-indigo-300 animate-pulse"
@@ -1505,7 +1462,7 @@ export function ScreeningPage() {
                       <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 leading-snug">
                         {study.title}
                       </h3>
-                      <BookmarkButton saved={bookmarkedIdsSet.has(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
+                      <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
                       {conf !== null && (
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap animate-tag-pop ${
@@ -1630,7 +1587,7 @@ export function ScreeningPage() {
                       true
                     )}
                   </h2>
-                  <BookmarkButton saved={bookmarkedIdsSet.has(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
+                  <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
                   <span
                     className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap animate-tag-pop ${
                       selectedStudy.screening_status === "included" || selectedStudy.screening_status === "ta_included"
@@ -1654,37 +1611,14 @@ export function ScreeningPage() {
                 <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
                   <span><span className="font-semibold">Journal:</span> {selectedStudy.journal || "N/A"}</span>
                   <span><span className="font-semibold">Year:</span> {selectedStudy.publication_year || "N/A"}</span>
-                  {selectedStudy.pmid && (
-                    <a
-                      href={getPmidUrl(selectedStudy.pmid) || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sky-700 dark:text-sky-400 hover:underline flex items-center gap-1 font-mono text-[11px]"
-                      title="Open in PubMed"
-                    >
-                      PMID: {cleanPmid(selectedStudy.pmid)} <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
                   {selectedStudy.doi && (
                     <a
-                      href={getDoiUrl(selectedStudy.doi) || `https://doi.org/${selectedStudy.doi}`}
+                      href={`https://doi.org/${selectedStudy.doi}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-mono text-[11px]"
-                      title="Open DOI source"
+                      className="text-indigo-600 hover:underline flex items-center gap-0.5"
                     >
-                      DOI: {cleanDoi(selectedStudy.doi)} <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                  {!selectedStudy.pmid && !selectedStudy.doi && selectedStudy.title && (
-                    <a
-                      href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(selectedStudy.title)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-slate-500 hover:underline flex items-center gap-1 font-mono text-[11px]"
-                      title="Search on PubMed"
-                    >
-                      PubMed Search <ExternalLink className="w-3 h-3" />
+                      DOI: {selectedStudy.doi} <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
                 </div>
@@ -2595,20 +2529,6 @@ export function ScreeningPage() {
             }
           }}
         />
-      )}
-
-      {/* ── Dual-Blinded Review & Consensus Modal ── */}
-      {showDualBlindModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs font-sans animate-in fade-in duration-150">
-          <DualBlindedDashboard
-            projectId={projectId!}
-            onClose={() => setShowDualBlindModal(false)}
-            onSelectStudy={(id) => {
-              setSelectedStudyId(id);
-              setShowDualBlindModal(false);
-            }}
-          />
-        </div>
       )}
     </div>
   );

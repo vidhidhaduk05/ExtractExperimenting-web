@@ -1,0 +1,46 @@
+[
+  {
+    "name": "desktop",
+    "overflow": false,
+    "motion": true,
+    "h1": "Stay curious.See what the evidence says.",
+    "phases": [
+      "0",
+      "1",
+      "2"
+    ],
+    "errors": []
+  },
+  {
+    "name": "sidepanel",
+    "overflow": false,
+    "motion": true,
+    "h1": "Stay curious.See what the evidence says.",
+    "phases": [
+      "0",
+      "1",
+      "2"
+    ],
+    "errors": []
+  },
+  {
+    "name": "mobile",
+    "overflow": false,
+    "motion": true,
+    "h1": "Stay curious.See what the evidence says.",
+    "phases": [
+      "0",
+      "1",
+      "2"
+    ],
+    "errors": []
+  },
+  {
+    "name": "reduced",
+    "overflow": false,
+    "motion": false,
+    "h1": "Stay curious.See what the evidence says.",
+    "phases": [],
+    "errors": []
+  }
+]

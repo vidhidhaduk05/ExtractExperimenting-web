@@ -1,0 +1,191 @@
+{
+  "url": "http://127.0.0.1:4400/",
+  "errors": [
+    "[desktop] Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "[desktop] Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "[keyboard] Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "[keyboard] Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "[hover] Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "[hover] Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "[mobile] Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "[mobile] Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "[reduced] Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+    "[reduced] Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+  ],
+  "failed": [
+    "[desktop] https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health net::ERR_NAME_NOT_RESOLVED",
+    "[desktop] https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health net::ERR_NAME_NOT_RESOLVED",
+    "[keyboard] https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health net::ERR_NAME_NOT_RESOLVED",
+    "[keyboard] https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health net::ERR_NAME_NOT_RESOLVED",
+    "[hover] https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health net::ERR_NAME_NOT_RESOLVED",
+    "[hover] https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health net::ERR_NAME_NOT_RESOLVED",
+    "[mobile] https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health net::ERR_NAME_NOT_RESOLVED",
+    "[mobile] https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health net::ERR_NAME_NOT_RESOLVED",
+    "[reduced] https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health net::ERR_NAME_NOT_RESOLVED",
+    "[reduced] https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/health net::ERR_NAME_NOT_RESOLVED"
+  ],
+  "desktop": {
+    "loadMs": 952,
+    "loaderMs": null,
+    "settledMs": 4057,
+    "vitals": {
+      "lcpMs": 1464,
+      "lcpElement": "h1.font-['Bodoni_Moda']",
+      "cls": 0.014
+    },
+    "height": 3254,
+    "overflowX": false,
+    "offenders": [],
+    "h1": [
+      "Stay curious.\nSee what the evidence says."
+    ],
+    "smallTargets": [
+      "The Approach 88x20",
+      "Evidence Map\nLIVE 126x20",
+      "The Process 77x20",
+      "Projects 52x20",
+      "Collaborate 74x20",
+      "Evidence Map 88x20",
+      "Projects 51x20",
+      "Rigor Scan 67x20"
+    ],
+    "glHidden": [],
+    "title": "RadExtract | AI Agents for Biomedical Literature & Extraction",
+    "glOn": false,
+    "scrollFps": {
+      "fps": 60,
+      "worstFrameMs": 17
+    },
+    "idleMotion": true,
+    "idleAt": "top"
+  },
+  "mobile": {
+    "throttled": true,
+    "loadMs": 17765,
+    "loaderMs": null,
+    "settledMs": null,
+    "vitals": {
+      "lcpMs": 19024,
+      "lcpElement": "h1.font-['Bodoni_Moda']",
+      "cls": 0.064
+    },
+    "height": 5097,
+    "overflowX": false,
+    "offenders": [],
+    "h1": [
+      "Stay curious.\nSee what the evidence says."
+    ],
+    "smallTargets": [
+      "Evidence Map 88x20",
+      "Projects 51x20",
+      "Rigor Scan 67x20"
+    ],
+    "glHidden": [],
+    "title": "RadExtract | AI Agents for Biomedical Literature & Extraction",
+    "glOn": false,
+    "scrollFps": {
+      "fps": 60,
+      "worstFrameMs": 17
+    }
+  },
+  "files": [
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\d-00-firstpaint.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\d-01-hero.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\d-02-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\d-03-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\d-04-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\k-01-focus.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\k-02-focus.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\k-03-focus.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\k-04-focus.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\h-01-rest.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\h-01-hover.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\h-02-rest.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\h-02-hover.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\h-03-rest.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\h-03-hover.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\m-01-hero.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\m-02-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\m-03-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\m-04-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\r-01-hero.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\home\\shots\\r-02-mid.png"
+  ],
+  "notes": [
+    "--nav: no link to another page could be clicked (tried none found)",
+    "desktop FPS runs headless on a software GPU: treat it as a floor, not a measurement of real hardware",
+    "mobile runs at 4x CPU slowdown on slow 4G: mobile.vitals and mobile.scrollFps are the numbers that count",
+    "loadMs: ms from navigation to the load event, null if it had not fired after 30 s (desktop) or 60 s (phone); a heavy page takes long, while visitors see content at vitals.lcpMs. loaderMs: ms until the #loader ended, null when the page has none",
+    "settledMs: ms from navigation by which the first screen stopped changing, never before the fixed wait. null: still changing at the cap, either a long intro or continuous motion (a live shader, video); d-01-hero / m-01-hero tell which. reduced.moving: the screen was still changing 1.5 s after load with reduced motion on"
+  ],
+  "keyboard": {
+    "stops": [
+      "a \"S Stellar Labs\"",
+      "a \"The Approach\"",
+      "a \"Evidence Map LIVE\"",
+      "a \"The Process\"",
+      "a \"Projects\"",
+      "a \"Collaborate\""
+    ],
+    "skipLinkFirst": false,
+    "noVisibleFocus": [],
+    "invisibleFocus": [],
+    "stuck": false
+  },
+  "hover": {
+    "targets": [
+      {
+        "shot": "h-01",
+        "label": "button \"Filters +\"",
+        "interactive": true,
+        "primary": true,
+        "react": "pixels",
+        "changed": []
+      },
+      {
+        "shot": "h-02",
+        "label": "button \"Search papers\"",
+        "interactive": true,
+        "primary": true,
+        "react": "moves",
+        "changed": [
+          "transform"
+        ]
+      },
+      {
+        "shot": "h-03",
+        "label": "button \"Sleep & memory ↗\"",
+        "interactive": true,
+        "primary": true,
+        "react": "pixels",
+        "changed": []
+      }
+    ],
+    "noHoverChange": [],
+    "colorOnly": [],
+    "covered": [],
+    "cursorFollower": false
+  },
+  "reduced": {
+    "hiddenText": 0,
+    "moving": false
+  },
+  "a11y": {
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "count": 16,
+        "nodes": [
+          ".sm\\:inline (#81737b on #ffffff, 4.49:1, needs 4.5:1)",
+          ".text-\\[\\#81737b\\].font-medium (#81737b on #fbf9f4, 4.27:1, needs 4.5:1)",
+          ".tracking-\\[0\\.18em\\] (#81737b on #fbf9f4, 4.27:1, needs 4.5:1)",
+          ".text-black\\/30.text-\\[15px\\].font-semibold:nth-child(2) (#b0aeab on #fbf9f4, 2.1:1, needs 4.5:1)"
+        ]
+      }
+    ],
+    "serious": 1,
+    "contrastNeedsReview": 2
+  }
+}
