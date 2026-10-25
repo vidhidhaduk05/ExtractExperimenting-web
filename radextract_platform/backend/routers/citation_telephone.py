@@ -1,11 +1,12 @@
-﻿"""Router for Citation Telephone claim extraction and verification using local Laya."""
+"""Router for Citation Telephone claim extraction and verification using local Laya."""
 
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from typing import Any, Dict, Optional
+from fastapi import APIRouter, File, HTTPException, UploadFile, Query, Body, Response
 from pydantic import BaseModel, Field
+import httpx
 
 from services.citation_telephone_service import (
     extract_citations_and_claims_from_text,
@@ -15,6 +16,48 @@ from services.citation_telephone_service import (
 
 logger = logging.getLogger("radextract.citation_telephone")
 router = APIRouter(prefix="/api/citation-telephone", tags=["citation-telephone"])
+
+
+@router.get("/paper")
+async def get_citation_paper(id: str = Query(..., description="Paper identifier (PMC ID, PubMed ID, or DOI)")) -> Dict[str, Any]:
+    """Retrieve full structured text, paragraphs, and references for a paper."""
+    clean_id = id.strip()
+    if not clean_id:
+        raise HTTPException(status_code=400, detail="Paper ID cannot be empty")
+    client = httpx.AsyncClient(timeout=25.0)
+    try:
+        resp = await client.get(
+            f"https://www.k-dense.ai/api/citation-telephone/paper?id={clean_id}",
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        raise HTTPException(status_code=resp.status_code, detail=f"Failed to retrieve paper {clean_id}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("Upstream citation paper fetch error: %s", e)
+        raise HTTPException(status_code=502, detail=f"Citation paper resolution error: {str(e)}")
+    finally:
+        await client.aclose()
+
+
+@router.post("/trace")
+async def trace_citation_chain(req: Dict[str, Any] = Body(...)) -> Response:
+    """Trace citation telephone backwards across citing and source papers."""
+    client = httpx.AsyncClient(timeout=30.0)
+    try:
+        resp = await client.post(
+            "https://www.k-dense.ai/api/citation-telephone/trace",
+            json=req,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Content-Type": "application/json"}
+        )
+        return Response(content=resp.content, status_code=resp.status_code, media_type="text/plain")
+    except Exception as e:
+        logger.error("Trace error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await client.aclose()
 
 
 class AuditTextRequest(BaseModel):

@@ -3730,8 +3730,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ citing_sentence, source_title, source_passage }),
     }),
-  uploadCitationTelephoneManuscript: (formData: FormData) =>
-    request<any>("/citation-telephone/upload-manuscript", { method: "POST", body: formData }),
+  getCitationPaper: (id: string) =>
+    request<any>(`/citation-telephone/paper?id=${encodeURIComponent(id)}`),
+  traceCitationTelephone: (body: any) =>
+    request<any>("/citation-telephone/trace", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   getCitationTelephoneStatus: () =>
     request<{
       status: string;

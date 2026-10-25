@@ -6,7 +6,7 @@ import gc
 import io
 import logging
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, File, HTTPException, UploadFile, Response
+from fastapi import APIRouter, File, HTTPException, UploadFile, Response, Body
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import fitz
@@ -210,6 +210,46 @@ async def scan_pdf(file: UploadFile = File(...), response: Response = None) -> D
             pass
         del content
         gc.collect()
+
+
+@router.post("/lookup")
+async def lookup_registries(req: Dict[str, Any] = Body(...)) -> Any:
+    """Live registry and reference resolver for DOI, PMID, ClinicalTrials, Cellosaurus."""
+    import httpx
+    client = httpx.AsyncClient(timeout=25.0)
+    try:
+        resp = await client.post(
+            "https://www.k-dense.ai/api/rigor-scan/lookup",
+            json=req,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Content-Type": "application/json"}
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        return Response(content=resp.content, status_code=resp.status_code, media_type="application/json")
+    except Exception as e:
+        logger.warning("Rigor lookup bypass: %s", e)
+        return {"refs": {}, "cells": {}, "links": {}}
+    finally:
+        await client.aclose()
+
+
+@router.post("/scan")
+async def scan_paragraphs(req: Dict[str, Any] = Body(...)) -> Response:
+    """Stream live rigor scan evaluation across manuscript paragraphs."""
+    import httpx
+    client = httpx.AsyncClient(timeout=45.0)
+    try:
+        resp = await client.post(
+            "https://www.k-dense.ai/api/rigor-scan/scan",
+            json=req,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Content-Type": "application/json"}
+        )
+        return Response(content=resp.content, status_code=resp.status_code, media_type="text/plain")
+    except Exception as e:
+        logger.error("Rigor scan forward error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await client.aclose()
 
 
 @router.get("/status")
