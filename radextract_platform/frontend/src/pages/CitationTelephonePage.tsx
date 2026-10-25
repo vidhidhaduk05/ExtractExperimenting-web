@@ -118,7 +118,7 @@ export const CitationTelephonePage: React.FC = () => {
         setIsLoadingPaper(true);
         setLoadError(null);
         api.getCitationPaper(urlPaper)
-          .then((paperData) => {
+          .then(async (paperData) => {
             if (paperData && paperData.meta) {
               const urlP = searchParams.get("p");
               const urlS = parseInt(searchParams.get("s") || "0", 10) || 0;
@@ -132,21 +132,89 @@ export const CitationTelephonePage: React.FC = () => {
 
               const citingText = targetSentence?.text || paperData.meta.title;
 
-              const dynamicTrace: CitationTelephoneData = {
-                rootPaper: {
-                  id: paperData.meta.pmcid || paperData.meta.pmid || urlPaper,
-                  title: paperData.meta.title,
-                  authors: paperData.meta.authors || "Authors",
-                  year: paperData.meta.year || 2024,
-                  journal: paperData.meta.journal || "Biomedical Literature",
-                  doi: paperData.meta.doi || "",
-                  pmid: paperData.meta.pmid,
-                  pmcid: paperData.meta.pmcid,
-                  citingSentence: citingText
-                },
-                steps: [
+              const refObj = {
+                label: (targetRef as any).label || (targetRefKey ? targetRefKey.replace("ref", "") : "1"),
+                citation: (targetRef as any).citation || "",
+                pmid: (targetRef as any).pmid || null,
+                pmcid: (targetRef as any).pmcid || null,
+                doi: (targetRef as any).doi || null,
+                arxiv: (targetRef as any).arxiv || null,
+                title: (targetRef as any).title || null,
+                year: (targetRef as any).year || 2021
+              };
+
+              const tracePayload = {
+                claim: citingText,
+                citing: citingText,
+                refs: [refObj],
+                from: {
+                  pmid: paperData.meta.pmid || null,
+                  pmcid: paperData.meta.pmcid || null,
+                  doi: paperData.meta.doi || null
+                }
+              };
+
+              let steps: TraceStep[] = [];
+              try {
+                const streamText = await api.traceCitationTelephone(tracePayload);
+                if (streamText && typeof streamText === "string") {
+                  for (const line of streamText.split("\n")) {
+                    if (!line.trim()) continue;
+                    try {
+                      const msg = JSON.parse(line.trim());
+                      if (msg.type === "node" && msg.node) {
+                        const n = msg.node;
+                        const sVerdict = n.status === "supported" ? "same" : n.status === "no_text" ? "notThere" : n.status === "different" ? "different" : "partlyMatches";
+                        const sLabel = n.status === "supported" ? "Matches Source" : n.status === "no_text" ? "Paywalled / No Open-Access Text" : n.status === "different" ? "Changed on the way" : (n.status || "Evaluated");
+                        const sAssess = n.status === "no_text"
+                          ? `The cited article (${n.paper?.title || (targetRef as any).title || "Target article"}) is paywalled or has no open-access full-text XML in PMC/OpenAlex.`
+                          : n.status === "supported"
+                          ? "Direct empirical alignment verified by semantic entailment."
+                          : `Status: ${n.status}`;
+
+                        steps.push({
+                          hop: n.depth || 1,
+                          id: n.id || "hop_1",
+                          paperId: n.paper?.id || (targetRef as any).doi || "REF_1",
+                          title: n.paper?.title || (targetRef as any).title || "Cited Reference",
+                          authors: n.paper?.authors || (targetRef as any).citation?.split("(")[0]?.trim() || "Authors",
+                          year: n.paper?.year || (targetRef as any).year || 2021,
+                          journal: n.paper?.journal || "Scientific Journal",
+                          doi: n.paper?.doi || (targetRef as any).doi || "",
+                          paper: {
+                            id: n.paper?.id || (targetRef as any).doi || "REF_1",
+                            title: n.paper?.title || (targetRef as any).title || "Cited Reference",
+                            authors: n.paper?.authors || (targetRef as any).citation?.split("(")[0]?.trim() || "Authors",
+                            year: n.paper?.year || (targetRef as any).year || 2021,
+                            journal: n.paper?.journal || "Scientific Journal",
+                            doi: n.paper?.doi || (targetRef as any).doi || ""
+                          },
+                          citedClaim: citingText,
+                          citingSentence: citingText,
+                          foundPassage: n.evidence?.sentences?.join(" ") || (targetRef as any).citation || "No open-access full text available.",
+                          sourcePassage: n.evidence?.sentences?.join(" ") || (targetRef as any).citation || "No open-access full text available.",
+                          verdict: sVerdict,
+                          verdictLabel: sLabel,
+                          driftScore: n.drift ?? 0.0,
+                          fidelityScore: n.fidelity ?? (n.status === "supported" ? 0.95 : 0.0),
+                          fidelityAssessment: sAssess,
+                          originalFindingStatus: n.paper?.review ? "review" : "primary",
+                          isFinalHop: true
+                        });
+                      }
+                    } catch {}
+                  }
+                }
+              } catch (traceErr) {
+                console.warn("Live trace stream error, using fallback step:", traceErr);
+              }
+
+              if (steps.length === 0) {
+                steps = [
                   {
                     hop: 1,
+                    id: "step_1",
+                    paperId: (targetRef as any).doi || (targetRef as any).pmid || "REF_1",
                     paper: {
                       id: (targetRef as any).doi || (targetRef as any).pmid || "REF_1",
                       title: (targetRef as any).title || (targetRef as any).citation || "Cited Reference",
@@ -165,10 +233,35 @@ export const CitationTelephonePage: React.FC = () => {
                     originalFindingStatus: "primary",
                     isFinalHop: true
                   }
-                ]
+                ];
+              }
+
+              const dynamicTrace: CitationTelephoneData = {
+                claim: citingText,
+                rootPaper: {
+                  id: paperData.meta.pmcid || paperData.meta.pmid || urlPaper,
+                  title: paperData.meta.title,
+                  authors: paperData.meta.authors || "Authors",
+                  year: paperData.meta.year || 2024,
+                  journal: paperData.meta.journal || "Biomedical Literature",
+                  doi: paperData.meta.doi || "",
+                  pmid: paperData.meta.pmid,
+                  pmcid: paperData.meta.pmcid,
+                  citingSentence: citingText
+                },
+                steps,
+                totalPapersRead: steps.length + 1,
+                originsFound: steps.filter((s) => s.verdict === "same").length,
+                maxHops: steps.length,
+                changesFound: steps.filter((s) => s.verdict === "different").length,
+                auditSummary: {
+                  headline: steps[0]?.verdictLabel || "Citation Trail Evaluated",
+                  subheadline: steps[0]?.fidelityAssessment || "Citation evaluated through telephone trace.",
+                  criticalWarning: steps.some((s) => s.verdict === "different") ? "Potential semantic drift or discrepancy detected along the citation trail." : undefined
+                }
               };
               setCustomTrace(dynamicTrace);
-              setSelectedStep(dynamicTrace.steps[0]);
+              setSelectedStep(steps[0]);
             }
           })
           .catch((err) => {
