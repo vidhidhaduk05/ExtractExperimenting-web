@@ -21,7 +21,10 @@ from typing import List, Dict, Any, Optional, Tuple
 
 import httpx
 import numpy as np
-import onnxruntime as ort
+try:
+    import onnxruntime as ort
+except ImportError:
+    ort = None
 
 from config import settings
 

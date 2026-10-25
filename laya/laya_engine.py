@@ -14,8 +14,14 @@ import os
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import onnxruntime as ort
-from tokenizers import Tokenizer
+try:
+    import onnxruntime as ort
+except ImportError:
+    ort = None
+try:
+    from tokenizers import Tokenizer
+except ImportError:
+    Tokenizer = None
 
 QTYPES = {"choice": 0, "score": 1, "noul": 2}
 QTYPE_NAMES = ["choice", "score", "noul"]
