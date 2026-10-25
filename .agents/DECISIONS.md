@@ -424,3 +424,12 @@ un_full_pipeline) verify pause and cancellation cleanly between individual studi
      - Added dynamic animated progress bar under the Claimscape question card with active scan percentages and stage descriptions ("Querying PubMed...", "Retrieving abstracts...", "Reading abstracts with Laya System-1 ONNX...", "Synthesizing stances...").
      - Added smooth auto-scroll to `#claimscape-map-section` when evidence evaluation results are loaded.
 
+
+## 2026-10-25 — Separate landing HTML search controls
+
+The editable copy at D:/Desktop/Website Updated/Stellar_Labs_landing_working_copy.html keeps its original question card and adds expandable ClaimScape-style query editing and 100/200/300 paper-count controls. It reuses ClaimScape's neutral query builder and preserves manually edited queries. The narrative-review/commentary checkbox affects the outgoing PubMed query: unchecked excludes non-systematic reviews, comments and editorials while retaining systematic reviews and meta-analyses. Settings pass through the existing ClaimScape URL. No backend or original landing source changed.
+
+
+## 2026-10-26 — Evidence-backed preset search scopes in separate frontend copies
+
+The seven preset topic buttons in D:/Desktop/Website Updated now use explicit PubMed search strategies rather than keyword-stripping the full question. All seven scopes were verified with live NCBI ESearch; the three radiology presets also retrieved 100 real publications each through the existing frontend PubMed client. The integrated breast-imaging UI rendered the resulting map in a live fallback check. Exact queries, sampled PMIDs and verification counts are stored in Website Updated/presets/research-presets.json. Editable ClaimScape uses src/data/research_presets.json and src/lib/researchPresets.ts; the landing has a synchronized embedded registry. Manual query edits remain authoritative. No papers, verdicts or evidence tiers were fabricated; backend and scientific scoring were unchanged. Empty tiers must remain empty when no relevant retrieved papers populate them. These changes apply only to the separate copies, not the main frontend or backend repository sources.

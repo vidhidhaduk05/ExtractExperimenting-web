@@ -99,7 +99,7 @@ jobs:
       - name: Build Production Web App
         working-directory: radextract_platform/frontend
         run: |
-          npx vite build
+          npm run build
           cp dist/index.html dist/404.html 2>/dev/null || true
 
       - name: Deploy to gh-pages branch (Direct Branch Publishing)

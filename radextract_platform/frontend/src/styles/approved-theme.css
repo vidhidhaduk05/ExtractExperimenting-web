@@ -1,0 +1,41 @@
+@font-face{font-family:'Serifon Editorial';src:url('../assets/fonts/TheSerifonEditorialRegular-G3dBy.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Serifon Editorial';src:url('../assets/fonts/TheSerifonEditorialItalic-j9gYj.otf') format('opentype');font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:'QuadraatSmallCaps';src:url('../assets/fonts/QuadraatSmallCaps.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+/* Approved ClaimScape styles, isolated from other application screens. */
+/* Shared compact question controls, landing page and ClaimScape working copies. */
+.claimscape-theme .rq-card{background:#fff;border:1px solid #d2c2cb;padding:20px 24px 16px;text-align:left;color:#3a0f34}
+.claimscape-theme .rq-card .rq-guidance{font:400 14px/1.5 'Work Sans',sans-serif;color:#72636d;margin:6px 0 12px}
+.claimscape-theme .rq-card .rq-search-options{border-top:1px solid #e4dce1;padding-top:12px;margin-bottom:10px}
+.claimscape-theme .rq-card .rq-options-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 20px;margin:0;text-align:left}
+.claimscape-theme .rq-query-field{min-width:0}.claimscape-theme .rq-card .rq-query-field>label,.claimscape-theme .rq-card .rq-paper-count legend{font:600 14px/1.5 'Work Sans',sans-serif;color:#4f444b;display:block;margin-bottom:6px}
+.claimscape-theme .rq-card .rq-query-field>label span{font-size:13px;font-weight:400;color:#81737b;margin-left:6px}
+.claimscape-theme .rq-card .rq-query-field>input{width:100%;min-width:0;border:1px solid #d2c2cb;background:#fbf9f4;color:#3a0f34;padding:9px 12px;font:400 14px/1.5 ui-monospace,monospace;border-radius:0;height:42px}
+.claimscape-theme .rq-card .rq-query-field>button{border:0;background:transparent;padding:4px 0;color:#814d75;text-decoration:underline;text-underline-offset:3px;font:400 13px/1.5 'Work Sans',sans-serif;cursor:pointer}
+.claimscape-theme .rq-paper-count{padding:0;margin:0;border:0;min-width:0}.claimscape-theme .rq-paper-count>div{display:flex;border:1px solid #d2c2cb;width:fit-content}
+.claimscape-theme .rq-paper-count label{position:relative;cursor:pointer}.claimscape-theme .rq-paper-count input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}.claimscape-theme .rq-card .rq-paper-count span{display:block;padding:10px 13px;background:#fbf9f4;color:#4f444b;font:500 14px/1.5 'Work Sans',sans-serif}.claimscape-theme .rq-paper-count input:checked+span{background:#3a0f34;color:#fbf9f4}.claimscape-theme .rq-paper-count input:focus-visible+span{outline:2px solid #814d75;outline-offset:3px}
+.claimscape-theme .rq-card .rq-commentary{grid-column:1/-1;display:flex;align-items:center;gap:9px;font:400 14px/1.5 'Work Sans',sans-serif;color:#62535d;cursor:pointer;margin:0}.claimscape-theme .rq-commentary input{accent-color:#3a0f34;width:17px;height:17px;flex-shrink:0}
+.claimscape-theme .rq-query-field>input:focus-visible,.claimscape-theme .rq-query-field>button:focus-visible{outline:2px solid #814d75;outline-offset:3px}
+.claimscape-theme .rq-card .rq-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:10px;border-top:1px solid #e4e2dd}
+.claimscape-theme .rq-card .rq-source{font:400 14px/1.5 'Work Sans',sans-serif;color:#3a0f34;padding:6px 0}
+.claimscape-theme .rq-card .rq-submit{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;background:#3a0f34;color:#fbf9f4;padding:12px 24px;font:600 15px/1.5 'Work Sans',sans-serif;cursor:pointer}.claimscape-theme .rq-card .rq-submit:disabled{opacity:.5;cursor:wait}
+.claimscape-theme .rq-card .rq-status{font:400 13px/1.5 'Work Sans',sans-serif;color:#62535d;margin:8px 0 0}
+.claimscape-theme .rq-topics{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;margin:12px auto 20px;color:#62535d;font:400 14px/1.5 'Work Sans',sans-serif}
+.claimscape-theme .rq-topics button{background:transparent;border:1px solid #d2c2cb;border-radius:0;padding:8px 12px;min-height:40px;color:#3a0f34;font:inherit;cursor:pointer}.claimscape-theme .rq-topics button:hover{background:#ffdea6}
+.claimscape-theme #research-question{min-height:92px;padding-top:14px;padding-bottom:14px}.claimscape-theme .rq-card .rq-heading{font-size:14px}.claimscape-theme .rq-card .rq-heading>span{font-size:12px}
+.claimscape-theme .claim-question-card{display:block}.claimscape-theme .claim-question-card>div:first-child{margin-bottom:6px}.claimscape-theme .claim-question-card>div:first-child>span{display:block;font:400 14px/1.5 'Work Sans',sans-serif;margin:6px 0 12px}.claimscape-theme .claim-question-card>div:first-child>div{font-size:14px}.claimscape-theme .claim-question-card .rq-submit:hover{background:#4a1635}
+@media(max-width:600px){.claimscape-theme .rq-card{padding:16px}.claimscape-theme .rq-card .rq-options-grid{grid-template-columns:1fr;gap:10px}.claimscape-theme .rq-card .rq-query-field>label span{display:block;margin-left:0}.claimscape-theme .rq-card .rq-toolbar .rq-submit{width:100%}.claimscape-theme .rq-card .rq-guidance{font-size:14px}}
+
+/* User-selected Quadraat Small Caps body font. */
+.claimscape-theme{--font-body-quadraat:'QuadraatSmallCaps','Newsreader',Georgia,serif;} .claimscape-theme p:not(.rq-guidance):not(.rq-status):not(.reading-room-label):not(.radiology-margin-note),.claimscape-theme li,.claimscape-theme .font-body,.claimscape-theme .rn-body,.claimscape-theme .footer-brand-desc,.claimscape-theme blockquote{font-family:var(--font-body-quadraat)!important;}
+
+/* Theme typography */
+.claimscape-theme{--font-body:'QuadraatSmallCaps','Newsreader',Georgia,serif;--font-heading:'Bodoni Moda','Newsreader',Georgia,serif;--font-ui:'Work Sans',system-ui,sans-serif;--font-body-quadraat:var(--font-body)}
+.claimscape-theme{font-family:var(--font-body)}
+.claimscape-theme .font-body,.claimscape-theme .theme-body{font-family:var(--font-body)!important}
+.claimscape-theme input,.claimscape-theme select,.claimscape-theme button,.claimscape-theme .rq-guidance,.claimscape-theme .rq-status,.claimscape-theme .rq-heading{font-family:var(--font-ui)}
+
+.claimscape-theme #synthesized-map-headline{font-family:var(--font-body)!important;}
+
+/* Serifon Editorial heading theme. Quadraat body font retained. */
+.claimscape-theme{--font-heading:'Serifon Editorial','Bodoni Moda',Georgia,serif;}
+.claimscape-theme h1,.claimscape-theme h2:not(#synthesized-map-headline),.claimscape-theme h3,.claimscape-theme h4,.claimscape-theme h5,.claimscape-theme h6,.claimscape-theme .font-heading,.claimscape-theme .font-editorial,.claimscape-theme .logo-wordmark,.claimscape-theme .logo-mark-inner,.claimscape-theme .footer .site-header-logo>span,.claimscape-theme #research-question,.claimscape-theme #claim-textarea,.claimscape-theme .reading-room-row blockquote,.claimscape-theme .rq-topics button{font-family:var(--font-heading)!important;}

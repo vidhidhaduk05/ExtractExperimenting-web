@@ -102,14 +102,17 @@ export function RobAssessmentPage() {
         filename: s.pdf_path || `${s.title}.pdf`,
       }));
     }
-    return BENCHMARK_PAPERS.map((b) => ({
-      ...b,
-      study_id: b.id,
-      authors: b.title.split("(")[0].trim(),
-      publication_year: 2024,
-      journal: "Journal of NeuroInterventional Surgery",
-    }));
-  }, [dynamicStudies]);
+    if (projectId === "demo") {
+      return BENCHMARK_PAPERS.map((b) => ({
+        ...b,
+        study_id: b.id,
+        authors: b.title.split("(")[0].trim(),
+        publication_year: 2024,
+        journal: "Journal of NeuroInterventional Surgery",
+      }));
+    }
+    return [];
+  }, [dynamicStudies, projectId]);
 
   // Compute PDF URL for the current study
   const currentPdfUrl = useMemo(() => {

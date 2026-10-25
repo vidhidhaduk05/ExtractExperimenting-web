@@ -31,6 +31,8 @@ def generate_variables_from_picos(
     research_question: str = "",
     use_llm: bool = True,
     model_fn: Optional[Callable[..., Any]] = None,
+    desired_sections: Optional[list[str]] = None,
+    custom_instructions: Optional[str] = None,
 ) -> list[dict]:
     """Generate extraction variables specifically tailored to test the project's
     hypothesis and PICO.
@@ -41,6 +43,8 @@ def generate_variables_from_picos(
         research_question: the project's research question
         use_llm: if True and LLM is available, generates hypothesis-grounded variables via LLM
         model_fn: Optional custom model function or callable(prompt, **kwargs) -> dict
+        desired_sections: Optional list of user-defined sections to map variables into
+        custom_instructions: Optional user prompt or constraints
 
     Returns:
         List of variable dicts:
@@ -53,6 +57,12 @@ def generate_variables_from_picos(
     outcome = pico_dict.get("outcome", "")
     study_design = pico_dict.get("study_design", "")
 
+    section_rule = "1. Invent 4-6 section names that fit THIS review (e.g. Study_Metadata, Population, Index_Test_Details, Comparator_Details, Outcomes, Analysis)."
+    if desired_sections and len(desired_sections) > 0:
+        section_rule = f"1. The reviewer has chosen the following sections. You MUST categorize all variables strictly across these sections: {', '.join(desired_sections)}."
+
+    extra_instructions = f"\nUser Custom Instructions: {custom_instructions}" if custom_instructions else ""
+
     prompt = f"""You are a systematic review methodologist designing a data extraction form.
 
 Research Question: {research_question}
@@ -63,22 +73,21 @@ PICO:
 - Comparator: {comparator}
 - Outcome: {outcome}
 - Study Design: {study_design}
+{extra_instructions}
 
-Design a coding form that would let a reviewer test THIS hypothesis from primary studies.
+Design an extraction sheet that would let a reviewer extract and code primary studies.
 
 Rules:
-1. Invent 4-6 section names that fit THIS review (e.g. Study_Metadata, Population,
-   Index_Test_Details, Comparator_Details, Outcomes, Analysis) — do not reuse generic
-   names unless they fit.
-2. Generate 15-25 variables total, distributed across your sections.
-3. Every variable must be answerable from a typical included study AND relevant to
-   the hypothesis or PICO — no filler demographics unless the hypothesis needs them.
-4. For each variable provide: section, name (snake_case), field_type
-   (free_text | int | float | dropdown | boolean), allowed_values (for dropdown,
-   semicolon-separated), description (one-sentence extraction rule a human coder
-   could follow), and extraction_prompt (a complete instruction: what to find,
-   preferred source e.g. 'Table 1', format, unit conversions, and what to do if
-   not reported).
+{section_rule}
+2. Generate 15-30 variables total, distributed across the sections.
+3. Every variable must be answerable from a typical included study AND relevant to the hypothesis or PICO.
+4. For each variable provide:
+   - section: (exact section name)
+   - name: (snake_case variable name, e.g. mean_age, mortality_rate_30d, dose_mg)
+   - field_type: (free_text | int | float | dropdown | boolean | date)
+   - allowed_values: (for dropdown/categorical, semicolon-separated options e.g. 'Mild; Moderate; Severe')
+   - description: (one-sentence extraction rule)
+   - extraction_prompt: (instruction on how to extract this value and default missing coding e.g. 'Enter NR if not reported')
 5. Include at minimum: study_design, sample_size, and one variable per PICO outcome.
 
 Return JSON: {{"variables": [{{"section": ..., "name": ..., "field_type": ...,
@@ -303,3 +312,125 @@ def _generate_heuristic_variables(pico_dict: dict, hypothesis_text: str,
         allowed="Yes; No; Partially; Unclear", order=450)
 
     return fields
+
+
+def import_variables_from_excel(file_bytes: bytes) -> dict:
+    """Parse an existing Excel (.xlsx) extraction sheet or codebook and extract sections and variables.
+    
+    Supports:
+    1. Multi-sheet workbooks (each sheet becomes a section, column headers become variables).
+    2. Codebook sheets (containing Variable, Section/Sheet, Type, Allowed Values, Description, Missing Code).
+    """
+    import io
+    import openpyxl
+
+    wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
+    sheet_names = wb.sheetnames
+
+    variables = []
+    sections = []
+
+    # Check for a Codebook/Variables sheet
+    codebook_sheet = None
+    for name in sheet_names:
+        if name.lower() in ("codebook", "variables", "dictionary", "data_dictionary"):
+            codebook_sheet = wb[name]
+            break
+
+    if codebook_sheet:
+        rows = list(codebook_sheet.iter_rows(values_only=True))
+        if rows:
+            headers = [str(h or "").lower().strip() for h in rows[0]]
+            col_map = {}
+            for idx, h in enumerate(headers):
+                if any(k in h for k in ("variable", "name", "var_name", "field")):
+                    col_map["name"] = idx
+                elif any(k in h for k in ("section", "sheet", "category", "domain")):
+                    col_map["section"] = idx
+                elif any(k in h for k in ("type", "datatype")):
+                    col_map["field_type"] = idx
+                elif any(k in h for k in ("allowed", "options", "values")):
+                    col_map["allowed_values"] = idx
+                elif any(k in h for k in ("description", "definition", "label", "guidance")):
+                    col_map["description"] = idx
+                elif any(k in h for k in ("code", "coding", "missing", "default")):
+                    col_map["coding"] = idx
+
+            for r_idx, row in enumerate(rows[1:], start=1):
+                if not row or not any(row):
+                    continue
+                name_idx = col_map.get("name", 0)
+                var_name = str(row[name_idx] or "").strip() if name_idx < len(row) else ""
+                if not var_name or var_name.lower() in ("studyid", "study_id", "id"):
+                    continue
+                sec_idx = col_map.get("section")
+                section = str(row[sec_idx] or "General").strip() if sec_idx is not None and sec_idx < len(row) and row[sec_idx] else "General"
+                type_idx = col_map.get("field_type")
+                field_type = str(row[type_idx] or "free_text").strip() if type_idx is not None and type_idx < len(row) and row[type_idx] else "free_text"
+                allw_idx = col_map.get("allowed_values")
+                allowed = str(row[allw_idx] or "").strip() if allw_idx is not None and allw_idx < len(row) and row[allw_idx] else ""
+                desc_idx = col_map.get("description")
+                desc = str(row[desc_idx] or "").strip() if desc_idx is not None and desc_idx < len(row) and row[desc_idx] else ""
+                code_idx = col_map.get("coding")
+                coding = str(row[code_idx] or "").strip() if code_idx is not None and code_idx < len(row) and row[code_idx] else ""
+
+                if section not in sections:
+                    sections.append(section)
+                variables.append({
+                    "name": var_name,
+                    "section": section,
+                    "field_type": field_type if field_type in ("free_text", "int", "float", "dropdown", "boolean", "date") else "free_text",
+                    "allowed_values": allowed,
+                    "description": desc + (f" [Default/Missing Coding: {coding}]" if coding else ""),
+                    "order_index": r_idx,
+                })
+
+    if not variables:
+        # Multi-sheet parsing: Each sheet is a section, columns in row 1 are variables
+        order = 1
+        for sheet_name in sheet_names:
+            if sheet_name.lower().startswith("sheet") and len(sheet_names) == 1:
+                sec_name = "General Extraction"
+            else:
+                sec_name = sheet_name.strip()
+            if sec_name not in sections:
+                sections.append(sec_name)
+            ws = wb[sheet_name]
+            rows = list(ws.iter_rows(values_only=True))
+            if not rows:
+                continue
+            header_row = rows[0]
+            data_rows = rows[1:] if len(rows) > 1 else []
+
+            for col_idx, h in enumerate(header_row):
+                if not h:
+                    continue
+                h_str = str(h).strip()
+                if h_str.lower() in ("studyid", "study_id", "id", "#"):
+                    continue
+
+                col_samples = [r[col_idx] for r in data_rows if col_idx < len(r) and r[col_idx] is not None]
+                inferred_type = "free_text"
+                if col_samples:
+                    if all(isinstance(x, (int, float)) for x in col_samples):
+                        inferred_type = "float"
+                    elif all(str(x).strip().lower() in ("yes", "no", "true", "false", "1", "0") for x in col_samples):
+                        inferred_type = "boolean"
+
+                variables.append({
+                    "name": h_str,
+                    "section": sec_name,
+                    "field_type": inferred_type,
+                    "allowed_values": "",
+                    "description": f"Imported column from Excel sheet: {sec_name}",
+                    "order_index": order,
+                })
+                order += 1
+
+    return {
+        "sections": sections,
+        "variables": variables,
+        "total_variables": len(variables),
+        "total_sections": len(sections),
+    }
+

@@ -949,6 +949,15 @@ export function PicoHypothesisPage() {
                   </pre>
                 </div>
 
+                {/* User-requested verification notice under search string */}
+                <div className="flex items-center gap-2.5 p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs text-amber-900 dark:text-amber-200 font-medium shadow-2xs">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div>
+                    <span className="font-bold uppercase tracking-wider text-[11px] text-amber-700 dark:text-amber-300 block">Verify before moving forward</span>
+                    <span>Review Boolean operators, MeSH syntax, and concept synonyms above before querying PubMed or initiating batch reference ingestion.</span>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Copy button */}
                   <button
@@ -963,6 +972,19 @@ export function PicoHypothesisPage() {
                     )}
                     {copiedDb === activeDb ? "Copied" : "Copy"}
                   </button>
+
+                  {/* Direct Test in PubMed */}
+                  {activeDb === "pubmed" && (
+                    <a
+                      href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(currentDbString)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-secondary flex items-center gap-1.5 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>Test in PubMed</span>
+                    </a>
+                  )}
 
                   {/* AutoFetch button (PubMed only) */}
                   {DATABASES.find((d) => d.key === activeDb)?.hasAutoFetch && (

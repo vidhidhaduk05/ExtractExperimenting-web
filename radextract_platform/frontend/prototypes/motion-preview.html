@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A separate Stellar Labs motion concept for review.">
+  <meta name="robots" content="noindex">
+  <title>Stellar Labs | Editorial design preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,600;1,600&family=Newsreader:ital,wght@0,400;0,500;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="./refinement.css">
+  <link rel="stylesheet" href="./notebook.css">
+</head>
+<body>
+  <a href="#main" class="skip ui">Skip to content</a>
+  <div class="review-bar ui"><span>Design preview · Illustrative examples</span><a href="/">Compare original ↗</a><button class="motion-toggle ui" id="motion-toggle" type="button" aria-pressed="false">Motion: off</button></div>
+  <header class="site-header"><div class="header-inner wrap"><a href="#main" class="brand"><span class="monogram">S</span>Stellar Labs</a><nav class="nav ui" aria-label="Main navigation"><a href="#approach">The Approach</a><a href="#evidence">Notebook</a><a href="#journey">Evidence Map</a><a href="#process">The Process</a><a href="#use-cases">Use Cases</a><a href="#collaborate">Collaborate</a></nav><a href="#question" class="button ui">Explore evidence <span aria-hidden="true">→</span></a><button class="menu-toggle ui" id="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-navigation">Menu</button></div><nav class="mobile-nav ui" id="mobile-navigation" aria-label="Mobile navigation" hidden><a href="#approach">The Approach</a><a href="#evidence">Notebook</a><a href="#journey">Evidence Map</a><a href="#process">The Process</a><a href="#use-cases">Use Cases</a><a href="#collaborate">Collaborate</a></nav></header>
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title"><div class="wrap hero-content">
+      <span class="eyebrow ui reveal">From evidence to the bedside</span> <!-- taste-skill-ignore: preserve the original brand eyebrow at user request -->
+      <h1 class="reveal" id="hero-title" style="--delay:70ms">Stay curious.<br><em>See what the evidence says.</em></h1>
+      <p class="product-context ui reveal" style="--delay:110ms">An evidence workspace for radiology and clinical research.</p>
+      <p class="hero-copy reveal" style="--delay:140ms">Research begins with a patient, a careful observation, and a question worth asking.</p>
+      <form class="question-card reveal" style="--delay:210ms" id="demo-form" data-ui><div class="question-label ui"><label for="question">Your research question</label><span>Every investigation begins with a question.</span></div><textarea id="question" rows="2" maxlength="300" aria-describedby="question-help">How does AI-assisted mammography compare with standard screening?</textarea><div class="form-bottom ui"><div class="form-tools"><span class="tag ui"><i class="source-dot" aria-hidden="true"></i>PubMed</span><button class="filter-toggle ui" id="filter-toggle" type="button" aria-expanded="false" aria-controls="filters">Filters +</button></div><button class="button ui" type="submit">Preview evidence <span aria-hidden="true">→</span></button></div><div class="filters ui" id="filters" hidden><label>Study design<select id="study-design"><option>All study designs</option><option>Diagnostic accuracy</option><option>Systematic review</option></select></label><label>Published within<select id="study-period"><option>Any time</option><option>The last 5 years</option><option>The last 10 years</option></select></label></div><small class="ui" id="question-help">Explore the illustrated workflow below. This design preview does not run a live search.</small></form>
+      <div class="examples ui reveal" style="--delay:280ms"><span>Try a question:</span><button class="example" type="button" data-question="How does AI-assisted mammography compare with standard screening?">Breast imaging ↗</button><button class="example" type="button" data-question="How do CT perfusion and MRI compare in acute ischemic stroke assessment?">Stroke imaging ↗</button><button class="example" type="button" data-question="Which follow-up strategies are studied for incidental pulmonary nodules?">Chest imaging ↗</button></div>
+      <p class="scroll-note ui reveal">Careful observation <span aria-hidden="true">·</span> Transparent methods <span aria-hidden="true">·</span> Honest interpretation</p>
+    </div></section>
+    <section class="approach wrap" id="approach" aria-labelledby="approach-title"><div class="section-heading"><h2 id="approach-title" class="reveal">Observe. Question.<br>Understand.</h2><p class="reveal" style="--delay:80ms">Different methods. A shared commitment to careful research. The purpose is clearer thinking for the patient in front of us.</p></div><div class="approach-layout"><article class="observation reveal"><div><h3>Every detail matters.</h3><p>Case reports call for careful observation, verified timelines, and complete documentation. When a condition is rare, a carefully reported case can become a useful point of reference.</p></div><p class="principles ui">Clinical detail · Verified timelines · Clear documentation</p></article><div class="approach-notes"><article class="reveal"><h3>Know what evidence can show.</h3><p>A conclusion deserves scrutiny. How were the data collected? What was measured? Which sources of bias remain?</p></article><article class="reveal" style="--delay:70ms"><h3>Make the reasoning visible.</h3><p>Clear reporting lets another reader follow the question, inspect the methods, and understand the limits of the findings.</p></article><article class="reveal" style="--delay:140ms"><h3>Judgment stays at the bedside.</h3><p>Evidence informs a clinical decision. It still needs to be read in the context of the individual patient, competing explanations, and uncertainty.</p></article></div></div></section>
+    <section class="notebook" id="evidence" aria-labelledby="notebook-title">
+      <div class="wrap"><div class="section-heading"><h2 id="notebook-title" class="reveal">Research principles.<br><em>Lift &amp; explore.</em></h2><p class="reveal" style="--delay:80ms">Research principles that connect evidence to the bedside. Drag the notes to explore the questions behind the work.</p></div>
+      <div class="board-toolbar ui"><p id="board-instructions">Drag notes to rearrange. Focus a note and use arrow keys; hold Shift for a larger move.</p><button class="board-reset ui" type="button" id="board-reset">Reset layout <span aria-hidden="true">↺</span></button></div>
+      <div class="board-legend ui" aria-label="Note categories"><span><i class="legend-observation"></i>Observation</span><span><i class="legend-appraisal"></i>Critical appraisal</span><span><i class="legend-methods"></i>Methods</span><span><i class="legend-interpretation"></i>Interpretation</span></div>
+      <div class="research-board" id="research-board" aria-label="Research notebook with movable sticky notes" data-ui>
+        
+        <div class="rn-note" aria-describedby="board-instructions" id="note-1" data-color="sage" data-x="4" data-y="10" data-rot="-3" tabindex="0" role="article" aria-label="Research note: Case reports">
+          <div class="rn-pin rn-pin--teal" aria-hidden="true"></div>
+          <div class="rn-tag">Observation</div>
+          <h3 class="rn-title">Every detail<br>counts</h3>
+          <p class="rn-body">A carefully documented case can offer a point of reference when a condition is rare. Close observation starts with a complete clinical account.</p>
+          <div class="rn-footer"><span class="rn-meta">Case reports</span></div>
+        </div>
+
+        
+        <div class="rn-note" aria-describedby="board-instructions" id="note-2" data-color="ochre" data-x="30" data-y="5" data-rot="2.5" tabindex="0" role="article" aria-label="Research note: Systematic reviews">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <div class="rn-tag">Evidence synthesis</div>
+          <h3 class="rn-title">Read beyond<br>one paper</h3>
+          <p class="rn-body">Individual studies can conflict. Weigh the body of literature, assess its quality, and resist a conclusion built on a single striking result.</p>
+          <div class="rn-footer"><span class="rn-meta">Systematic reviews</span></div>
+        </div>
+
+        
+        <div class="rn-note" aria-describedby="board-instructions" id="note-3" data-color="plum" data-x="57" data-y="8" data-rot="-1.5" tabindex="0" role="article" aria-label="Research note: Read the methods">
+          <div class="rn-pin rn-pin--plum" aria-hidden="true"></div>
+          <div class="rn-tag">Critical appraisal</div>
+          <h3 class="rn-title">Question the<br>evidence</h3>
+          <p class="rn-body">Ask how evidence was collected, how outcomes were assessed, and which biases could change the interpretation.</p>
+          <div class="rn-footer"><span class="rn-meta">Read the methods</span></div>
+        </div>
+
+        
+        <div class="rn-note" aria-describedby="board-instructions" id="note-4" data-color="cream" data-x="6" data-y="48" data-rot="4" tabindex="0" role="article" aria-label="Research note: Respect the limits">
+          <div class="rn-pin rn-pin--teal" aria-hidden="true"></div>
+          <div class="rn-tag">Observational research</div>
+          <h3 class="rn-title">Comparable groups.<br>Remaining uncertainty.</h3>
+          <p class="rn-body">Propensity matching balances measured characteristics. Unmeasured confounding and selection bias can still affect the findings.</p>
+          <div class="rn-footer"><span class="rn-meta">Respect the limits</span></div>
+        </div>
+
+        
+        <div class="rn-note" aria-describedby="board-instructions" id="note-5" data-color="rose" data-x="31" data-y="50" data-rot="-2" tabindex="0" role="article" aria-label="Research note: Question the inference">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <div class="rn-tag">Causal reasoning</div>
+          <h3 class="rn-title">Association is<br>not causation.</h3>
+          <p class="rn-body">A relationship in the data does not, by itself, establish cause. Look for competing explanations before attributing an outcome to a treatment.</p>
+          <div class="rn-footer"><span class="rn-meta">Question the inference</span></div>
+        </div>
+
+        
+        <div class="rn-note" aria-describedby="board-instructions" id="note-6" data-color="sage" data-x="58" data-y="48" data-rot="3" tabindex="0" role="article" aria-label="Research note: Interpret with care">
+          <div class="rn-pin rn-pin--plum" aria-hidden="true"></div>
+          <div class="rn-tag">Statistics</div>
+          <h3 class="rn-title">Make uncertainty<br>visible</h3>
+          <p class="rn-body">Mathematics helps examine complex clinical relationships. The assumptions and the quality of the underlying data still shape what a model can tell us.</p>
+          <div class="rn-footer"><span class="rn-meta">Interpret with care</span></div>
+        </div>
+
+        
+        <div class="rn-note" aria-describedby="board-instructions" id="note-7" data-color="ochre" data-x="78" data-y="10" data-rot="-4" tabindex="0" role="article" aria-label="Research note: Beyond recall">
+          <div class="rn-pin rn-pin--teal" aria-hidden="true"></div>
+          <div class="rn-tag">Clinical judgment</div>
+          <h3 class="rn-title">Memory has<br>its limits</h3>
+          <p class="rn-body">Structured analysis can help examine relationships that memory alone cannot track. It supports clinical reasoning while leaving room for context.</p>
+          <div class="rn-footer"><span class="rn-meta">Beyond recall</span></div>
+        </div>
+
+        
+        <div class="rn-note" aria-describedby="board-instructions" id="note-8" data-color="plum" data-x="77" data-y="50" data-rot="2" tabindex="0" role="article" aria-label="Research note: From data to bedside">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <div class="rn-tag">Evidence in context</div>
+          <h3 class="rn-title">Return to<br>the patient</h3>
+          <p class="rn-body">A method answers a question. Its value in practice depends on what it helps us understand about the patient in front of us.</p>
+          <div class="rn-footer"><span class="rn-meta">From data to bedside</span></div>
+        </div>
+
+        
+        <div class="rn-note" aria-describedby="board-instructions" id="note-9" data-color="cream" data-x="42" data-y="28" data-rot="-1" tabindex="0" role="article" aria-label="Research note: Honest interpretation">
+          <div class="rn-pin rn-pin--plum" aria-hidden="true"></div>
+          <div class="rn-tag">Research integrity</div>
+          <h3 class="rn-title">Report the limits.<br>Keep questioning.</h3>
+          <p class="rn-body">Genuine research makes its reasoning visible. Describe what the findings support, what they cannot establish, and what remains unresolved.</p>
+          <div class="rn-footer"><span class="rn-meta">Honest interpretation</span></div>
+        </div>
+
+      
+
+        
+        <div class="rn-note quote-note" aria-describedby="board-instructions" id="note-quote" data-x="43" data-y="30" data-rot="-5" tabindex="0" role="article" aria-label="Quote by Theodore Roosevelt. Drag to rearrange.">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <blockquote class="sticky-quote">
+            <span><em>“Believe</em> YOU CAN,</span>
+            <span>AND <em>you’re</em></span>
+            <span><em>halfway</em> THERE.”</span>
+            <cite>THEODORE ROOSEVELT</cite>
+          </blockquote>
+        </div>
+      </div><p class="board-status ui" role="status" aria-live="polite" id="board-status">Ten notes. A shared commitment to careful research.</p></div>
+    </section>
+    <section class="journey" id="journey" aria-labelledby="journey-title">
+      <div class="section-intro wrap"><div class="reveal"><h2 id="journey-title">See where the<br>literature stands.</h2></div><p class="reveal" style="--delay:100ms">Keep the clinical question in sight as individual studies become a body of evidence. Follow the question, inspect the studies, and see their relationships.</p></div>
+      <div class="journey-track" id="journey-track"><div class="stage wrap">
+        <div class="stage-copy"><span class="ui" id="phase-label">The clinical question</span><h3 id="phase-title">Begin with what<br>you need to know.</h3><p id="phase-description">Frame the population, the imaging approach, and the comparison before looking for answers.</p><div class="steps ui" aria-label="Explore demonstration stages"><button class="step" type="button" data-step="0" aria-current="step"><b>Question</b></button><button class="step" type="button" data-step="1"><b>Studies</b></button><button class="step" type="button" data-step="2"><b>Evidence map</b></button></div><div class="progress-track" aria-hidden="true"><div class="progress-fill"></div></div><div class="stage-help ui">Scroll to continue, or select a stage.</div></div>
+        <div class="visual" data-ui><div class="visual-top ui"><span>ClaimScape / Evidence explorer</span><span>Illustrative example</span></div>
+          <div class="scene active" data-scene="0"><span class="specimen-label ui">Your starting point</span><p class="query-focus" id="demo-question">How does AI-assisted mammography compare with standard screening?</p><div class="pico ui"><span>Population</span><span>Imaging approach</span><span>Comparator</span></div><p class="prototype-note ui">An example question, not a clinical recommendation.</p></div>
+          <div class="scene" data-scene="1"><span class="specimen-label ui">Read the studies in context</span><h4>A collection of papers.<br>Different kinds of evidence.</h4><div class="study" style="--angle:-1deg"><span class="study-number" aria-hidden="true">A</span><div><strong>Diagnostic accuracy</strong><small class="ui">Study design · Population · Reference standard</small></div></div><div class="study" style="--angle:1deg"><span class="study-number" aria-hidden="true">B</span><div><strong>Clinical outcomes</strong><small class="ui">Study design · Follow-up · Outcome definition</small></div></div><div class="study"><span class="study-number" aria-hidden="true">C</span><div><strong>Systematic review</strong><small class="ui">Search scope · Included studies · Limitations</small></div></div><p class="scene-note ui">Schematic cards. No real papers or search results are represented.</p></div>
+          <div class="scene" data-scene="2"><span class="specimen-label ui">See the relationships</span><h4>Keep the sources.<br>Make uncertainty visible.</h4><svg class="map" viewBox="0 0 500 215" role="img" aria-labelledby="map-title"><title id="map-title">Schematic evidence map. Nodes represent illustrative study groups, not clinical data.</title><path d="M90 115 185 55 300 100 405 40M90 115 180 170 300 100 390 175M185 55 180 170M300 100 440 110M185 55 405 40M180 170 390 175"/><circle cx="90" cy="115" r="17"/><circle cx="185" cy="55" r="24"/><circle cx="180" cy="170" r="13" class="outline"/><circle cx="300" cy="100" r="33"/><circle cx="405" cy="40" r="14" class="outline"/><circle cx="390" cy="175" r="22"/><circle cx="440" cy="110" r="10" class="outline"/></svg><div class="legend ui"><span><i></i>Study group</span><span><i class="open"></i>Context to inspect</span></div><p class="prototype-note ui">Illustrative layout only. Node size, position and connections carry no clinical meaning.</p></div>
+        </div>
+      </div></div>
+      <div class="journey-end wrap"><p>The overview begins the investigation. Interpretation still depends on reading the methods and the individual sources.</p><a class="button ui" href="/#/claimscape">Open ClaimScape <span aria-hidden="true">→</span></a></div>
+    </section>
+    <section class="process wrap" id="process" aria-labelledby="process-title"><div class="process-header"><h2 class="reveal" id="process-title">Four stages.<br>No shortcuts.</h2><p class="reveal" style="--delay:80ms">A clear research process, from the first question to an interpretation another researcher can examine.</p></div><ol class="process-list"><li class="reveal"><span class="process-index ui">The question</span><h3>Formulate</h3><p>Define the population, intervention or imaging approach, comparator, and outcomes.</p></li><li class="reveal" style="--delay:80ms"><span class="process-index ui">The literature</span><h3>Search</h3><p>Develop database-specific search strategies and document how the evidence was retrieved.</p></li><li class="reveal" style="--delay:160ms"><span class="process-index ui">The selection</span><h3>Screen</h3><p>Apply explicit eligibility criteria and retain a transparent record of decisions.</p></li><li class="reveal" style="--delay:240ms"><span class="process-index ui">The interpretation</span><h3>Synthesize</h3><p>Examine study design, assess limitations, and report what the evidence can support.</p></li></ol></section>
+    <section class="use-cases" id="use-cases" aria-labelledby="cases-title"><div class="wrap"><header><h2 class="reveal" id="cases-title">Questions from<br>the reading room.</h2><p class="reveal" style="--delay:80ms">For the questions that arise between a scan, a report, and a research meeting. Radiology first, with a wider view of clinical research.</p></header>
+      <article class="case"><span class="case-field ui reveal">Breast imaging</span><div class="reveal" style="--delay:80ms"><h3>Evaluate a new approach.</h3><p>Examine study populations, comparators, and reference standards before interpreting diagnostic performance.</p></div><div class="reveal" style="--delay:160ms"><p class="sample">“How does AI-assisted mammography compare with standard screening?”</p><button class="case-action ui" type="button" data-case-question="How does AI-assisted mammography compare with standard screening?">Explore this example <span aria-hidden="true">↗</span></button></div></article>
+      <article class="case"><span class="case-field ui reveal">Neuroradiology</span><div class="reveal" style="--delay:80ms"><h3>Compare imaging pathways.</h3><p>Read the evidence in the context of timing, patient selection, and the outcomes each study measured.</p></div><div class="reveal" style="--delay:160ms"><p class="sample">“How do CT perfusion and MRI compare in acute ischemic stroke assessment?”</p><button class="case-action ui" type="button" data-case-question="How do CT perfusion and MRI compare in acute ischemic stroke assessment?">Explore this example <span aria-hidden="true">↗</span></button></div></article>
+      <article class="case"><span class="case-field ui reveal">Across clinical research</span><div class="reveal" style="--delay:80ms"><h3>Prepare a focused review.</h3><p>Define a question, inspect the study designs, and identify the limitations that need closer reading.</p></div><div class="reveal" style="--delay:160ms"><p class="sample">“What outcomes are reported in studies of GLP-1 receptor agonists?”</p><button class="case-action ui" type="button" data-case-question="What outcomes are reported in studies of GLP-1 receptor agonists?">Explore this example <span aria-hidden="true">↗</span></button></div></article>
+    </div></section>
+    <section class="collaboration wrap" id="collaborate" aria-labelledby="collaboration-title"><h2 class="reveal" id="collaboration-title">Start a research conversation.</h2><div class="reveal" style="--delay:80ms"><p>Whether you are conducting a clinical systematic review, meta-analysis, or investigating rare observational phenotypes, we welcome scientific collaboration.</p><a class="text-link ui" href="mailto:research@stellarlabs.org">Get in touch <span aria-hidden="true">→</span></a></div></section>
+  </main>
+  <footer class="site-footer"><div class="wrap"><p class="footer-wordmark">Stellar Labs</p><div class="footer-bottom ui"><span>From evidence to the bedside.</span><nav class="footer-links" aria-label="Footer"><a href="/#/claimscape">Evidence Map</a><a href="/#/projects">Projects</a><a href="#main">Back to top ↑</a><a href="/">Original homepage ↗</a></nav><span>Design preview · 2026</span></div></div></footer>
+  <script src="./notebook.js" defer></script>
+  <script>
+    const root=document.documentElement;
+    const preference=matchMedia('(prefers-reduced-motion: reduce)');
+    const toggle=document.querySelector('#motion-toggle');
+    const track=document.querySelector('#journey-track');
+    const scenes=[...document.querySelectorAll('[data-scene]')];
+    const steps=[...document.querySelectorAll('[data-step]')];
+    const question=document.querySelector('#question');
+    const menu=document.querySelector('#mobile-navigation');
+    const menuToggle=document.querySelector('#menu-toggle');
+    const filters=document.querySelector('#filters');
+    const filterToggle=document.querySelector('#filter-toggle');
+    const phases=[['The clinical question','Begin with what you need to know.','Frame the population, the imaging approach, and the comparison before looking for answers.'],['The individual studies','Look past the headline.','Read study design, patient selection, and outcomes together. Different methods answer different questions.'],['The body of evidence','See the whole picture.','Bring the studies into context while keeping sources, disagreements, and limitations available to inspect.']];
+    let motion=!preference.matches,frame=0,active=-1;
+    const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');observer.unobserve(entry.target)}}),{threshold:.12});
+    document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+    function selectPhase(index){if(index===active)return;active=index;document.querySelector('#phase-label').textContent=phases[index][0];document.querySelector('#phase-title').textContent=phases[index][1];document.querySelector('#phase-description').textContent=phases[index][2];scenes.forEach((scene,i)=>{scene.classList.toggle('active',i===index);if(motion)scene.setAttribute('aria-hidden',String(i!==index));else scene.removeAttribute('aria-hidden')});steps.forEach((step,i)=>{if(i===index)step.setAttribute('aria-current','step');else step.removeAttribute('aria-current')})}
+    function render(){frame=0;if(!motion)return;const r=track.getBoundingClientRect();const stickyOffset=innerWidth<=800?66:76;const stage=track.querySelector('.stage');const range=Math.max(1,r.height-stage.getBoundingClientRect().height);const progress=Math.min(1,Math.max(0,(stickyOffset-r.top)/range));root.style.setProperty('--progress',progress);root.style.setProperty('--drift',Math.min(80,scrollY*.12)+'px');selectPhase(Math.min(2,Math.floor(progress*3)))}
+    function schedule(){if(!frame)frame=requestAnimationFrame(render)}
+    function setMotion(value){motion=value&&!preference.matches&&innerHeight>680;root.classList.toggle('motion-on',motion);toggle.textContent=motion?'Motion: on':'Motion: off';toggle.setAttribute('aria-pressed',String(motion));active=-1;selectPhase(0);if(!motion){root.style.setProperty('--drift','0px');root.style.setProperty('--progress','0');document.querySelectorAll('.reveal').forEach(el=>el.classList.add('visible'))}schedule()}
+    function goToStage(index){if(!motion){scenes[index].scrollIntoView({behavior:'auto',block:'center'});return}const offset=innerWidth<=800?66:76;const range=track.offsetHeight-track.querySelector('.stage').getBoundingClientRect().height;const fraction=[.05,.5,.93][index];window.scrollTo({top:scrollY+track.getBoundingClientRect().top-offset+range*fraction,behavior:'smooth'})}
+    toggle.addEventListener('click',()=>setMotion(!motion));preference.addEventListener('change',()=>setMotion(!preference.matches));window.addEventListener('scroll',schedule,{passive:true});window.addEventListener('resize',()=>{if(innerHeight<=680&&motion)setMotion(false);schedule()});
+    steps.forEach((step,i)=>step.addEventListener('click',()=>goToStage(i)));
+    menuToggle.addEventListener('click',()=>{const open=menuToggle.getAttribute('aria-expanded')!=='true';menuToggle.setAttribute('aria-expanded',String(open));menu.hidden=!open;menuToggle.textContent=open?'Close':'Menu'});
+    menu.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>{menu.hidden=true;menuToggle.setAttribute('aria-expanded','false');menuToggle.textContent='Menu'}));
+    filterToggle.addEventListener('click',()=>{const open=filterToggle.getAttribute('aria-expanded')!=='true';filterToggle.setAttribute('aria-expanded',String(open));filterToggle.textContent=open?'Filters −':'Filters +';filters.hidden=!open});
+    document.querySelectorAll('[data-case-question]').forEach(button=>button.addEventListener('click',()=>{question.value=button.dataset.caseQuestion;document.querySelector('#demo-question').textContent=question.value;goToStage(0)}));
+    document.querySelectorAll('[data-question]').forEach(button=>button.addEventListener('click',()=>{question.value=button.dataset.question;document.querySelector('#demo-question').textContent=question.value;question.focus()}));
+    document.querySelector('#demo-form').addEventListener('submit',event=>{event.preventDefault();const text=question.value.trim();if(!text){question.focus();return}document.querySelector('#demo-question').textContent=text;goToStage(0)});
+    setMotion(motion);
+  </script>
+</body>
+</html>

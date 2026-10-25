@@ -528,18 +528,19 @@ def _build_pubmed_block(phrases: list[str]) -> str:
                 terms.append(f'"{mesh_term}"[MeSH Terms]')
                 seen.add(mesh_key)
 
-        # Add free-text term
+        # Add free-text term - keep full exact phrase and significant bigram
         ft_key = f'ft:{phrase.lower()}'
         if ft_key not in seen:
-            if len(phrase.split()) <= 2:
-                terms.append(f'"{phrase}"[tiab]')
-            else:
-                # Use first two significant words with truncation
-                words = [w for w in phrase.split() if w.lower() not in STOPWORDS]
-                if words:
-                    truncated = " ".join(words[:2])
-                    terms.append(f'"{truncated}"[tiab]')
+            terms.append(f'"{phrase}"[tiab]')
             seen.add(ft_key)
+            if len(phrase.split()) > 2:
+                words = [w for w in phrase.split() if w.lower() not in STOPWORDS]
+                if words and len(words) >= 2:
+                    truncated = " ".join(words[:2])
+                    trunc_key = f'ft:{truncated.lower()}'
+                    if trunc_key not in seen and truncated.lower() != phrase.lower():
+                        terms.append(f'"{truncated}"[tiab]')
+                        seen.add(trunc_key)
 
         # Add synonyms as free-text
         for syn in _get_synonyms(phrase):

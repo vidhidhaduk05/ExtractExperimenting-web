@@ -1446,9 +1446,10 @@ async def batch_ai_screen(
 
     # Parse project search string
     search_str = ""
-    if proj.get("search_strings_json"):
+    proj_dict = dict(proj) if proj else {}
+    if proj_dict.get("search_strings_json"):
         try:
-            s_dict = json.loads(proj["search_strings_json"])
+            s_dict = json.loads(proj_dict["search_strings_json"])
             if isinstance(s_dict, dict):
                 search_str = s_dict.get("pubmed") or s_dict.get("default") or next(iter(s_dict.values()), "")
             elif isinstance(s_dict, str):

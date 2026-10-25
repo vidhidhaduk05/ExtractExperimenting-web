@@ -1,0 +1,159 @@
+{
+  "url": "https://phylo.bio/",
+  "errors": [],
+  "failed": [
+    "[desktop] https://cdn.sanity.io/files/68oocy6x/production/8e49f63d152d716e28b351e620ae27c16e15242c.mp4 net::ERR_ABORTED",
+    "[keyboard] https://cdn.sanity.io/files/68oocy6x/production/8e49f63d152d716e28b351e620ae27c16e15242c.mp4 net::ERR_ABORTED",
+    "[hover] https://cdn.sanity.io/files/68oocy6x/production/8e49f63d152d716e28b351e620ae27c16e15242c.mp4 net::ERR_ABORTED",
+    "[hover] https://phylo.bio/blog/the-integrated-biology-environment-a-new-way-biologists-work?_rsc=p37cr net::ERR_ABORTED",
+    "[mobile] https://cdn.sanity.io/files/68oocy6x/production/8e49f63d152d716e28b351e620ae27c16e15242c.mp4 net::ERR_ABORTED",
+    "[mobile] https://phylo.bio/blog/the-integrated-biology-environment-a-new-way-biologists-work?_rsc=p37cr net::ERR_ABORTED",
+    "[reduced] https://cdn.sanity.io/files/68oocy6x/production/8e49f63d152d716e28b351e620ae27c16e15242c.mp4 net::ERR_ABORTED"
+  ],
+  "desktop": {
+    "loadMs": 2585,
+    "loaderMs": null,
+    "settledMs": 6563,
+    "vitals": {
+      "lcpMs": 2700,
+      "lcpElement": "img",
+      "cls": 0.001
+    },
+    "height": 8618,
+    "overflowX": false,
+    "offenders": [],
+    "h1": [
+      "TheNewWay\nBiologistsWork"
+    ],
+    "smallTargets": [
+      "Use Cases 71x20",
+      "Enterprise 77x20",
+      "Research 65x20",
+      "Blog 34x20",
+      "Company 87x20",
+      "Pricing 53x20",
+      "BUTTON 8x8",
+      "BUTTON 8x8"
+    ],
+    "glHidden": [],
+    "title": "Phylo - AI Agents for Biomedical Research",
+    "glOn": false,
+    "scrollFps": {
+      "fps": 61,
+      "worstFrameMs": 18
+    },
+    "idleMotion": true,
+    "idleAt": "35%"
+  },
+  "mobile": {
+    "throttled": false,
+    "loadMs": 1681,
+    "loaderMs": null,
+    "settledMs": 4120,
+    "vitals": {
+      "lcpMs": 1576,
+      "lcpElement": "img",
+      "cls": 0.001
+    },
+    "height": 8222,
+    "overflowX": false,
+    "offenders": [],
+    "h1": [
+      "TheNewWay\nBiologistsWork"
+    ],
+    "smallTargets": [
+      "BUTTON 8x8",
+      "BUTTON 8x8",
+      "BUTTON 8x8",
+      "BUTTON 8x8",
+      "BUTTON 8x8",
+      "BUTTON 8x8",
+      "X 11x24"
+    ],
+    "glHidden": [],
+    "title": "Phylo - AI Agents for Biomedical Research",
+    "glOn": false,
+    "scrollFps": {
+      "fps": 61,
+      "worstFrameMs": 17
+    }
+  },
+  "files": [
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\d-00-firstpaint.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\d-01-hero.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\d-02-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\d-03-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\d-04-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\d-05-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\h-01-rest.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\h-01-hover.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\m-01-hero.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\m-02-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\m-03-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\m-04-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\m-05-scroll.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\r-01-hero.png",
+    "D:\\Desktop\\Rad Extract Experimenting\\radextract_platform\\frontend\\.jury\\phylo-reference\\shots\\r-02-mid.png"
+  ],
+  "notes": [
+    "desktop FPS runs headless on a software GPU: treat it as a floor, not a measurement of real hardware",
+    "loadMs: ms from navigation to the load event, null if it had not fired after 30 s (desktop) or 60 s (phone); a heavy page takes long, while visitors see content at vitals.lcpMs. loaderMs: ms until the #loader ended, null when the page has none",
+    "settledMs: ms from navigation by which the first screen stopped changing, never before the fixed wait. null: still changing at the cap, either a long intro or continuous motion (a live shader, video); d-01-hero / m-01-hero tell which. reduced.moving: the screen was still changing 1.5 s after load with reduced motion on"
+  ],
+  "keyboard": {
+    "stops": [],
+    "skipLinkFirst": false,
+    "noVisibleFocus": [],
+    "invisibleFocus": [],
+    "stuck": false
+  },
+  "hover": {
+    "targets": [
+      {
+        "shot": "h-01",
+        "label": "button \"logo\"",
+        "interactive": true,
+        "primary": true,
+        "react": "none",
+        "changed": []
+      }
+    ],
+    "noHoverChange": [
+      "h-01 button \"logo\""
+    ],
+    "colorOnly": [],
+    "covered": [],
+    "cursorFollower": false
+  },
+  "reduced": {
+    "hiddenText": 0,
+    "moving": false
+  },
+  "a11y": {
+    "violations": [
+      {
+        "id": "button-name",
+        "impact": "critical",
+        "help": "Buttons must have discernible text",
+        "count": 6,
+        "nodes": [
+          ".w-2.h-2[type=\"button\"]:nth-child(1)",
+          ".bg-black\\/30.w-2.h-2:nth-child(2)",
+          ".bg-black\\/30.w-2.h-2:nth-child(3)",
+          ".bg-black\\/30.w-2.h-2:nth-child(4)"
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "count": 1,
+        "nodes": [
+          ".min-\\[810px\\]\\:block (#898885 on #faf9f3, 3.36:1, needs 4.5:1)"
+        ]
+      }
+    ],
+    "serious": 2,
+    "contrastNeedsReview": 23
+  }
+}

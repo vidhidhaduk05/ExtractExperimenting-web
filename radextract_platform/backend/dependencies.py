@@ -96,7 +96,7 @@ def create_user(username: str, password: str, email: str = "", role: str = "revi
         
         canonical = canonicalize_email(email_clean)
         # Check canonical email uniqueness across existing users
-        all_users = db.query("users")
+        all_users = db.query_all("users") if hasattr(db, "query_all") else db.query("users", {})
         for u in all_users:
             u_email = (u.get("email") or "").strip()
             if u_email and canonicalize_email(u_email) == canonical:
