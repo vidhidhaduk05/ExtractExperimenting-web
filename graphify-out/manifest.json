@@ -3912,9 +3912,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/LandingPage.tsx": {
-    "mtime": 1792963698.4968622,
-    "seen": 1792964200.6744914,
-    "ast_hash": "754caf23301d3d0416e61d2d89d9b2f6",
+    "mtime": 1792965719.0717633,
+    "seen": 1792966003.043595,
+    "ast_hash": "e90ff156f100fb65bddad99abb816501",
     "semantic_hash": ""
   },
   "Website for software/10.24.26_Website_landing_page.html": {
@@ -5370,9 +5370,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/assets/motion/edgeMotion.ts": {
-    "mtime": 1792964878.2365024,
-    "seen": 1792965243.6963935,
-    "ast_hash": "03e52aad928eaee662dfc9c14dc2e3e0",
+    "mtime": 1792965739.9463031,
+    "seen": 1792966003.027929,
+    "ast_hash": "0c8271a4605e8175906febc28a0338d1",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/assets/motion/landingCarousel.ts": {

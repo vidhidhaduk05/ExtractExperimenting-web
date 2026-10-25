@@ -1,7 +1,7 @@
 # Graph Report - Rad Extract Experimenting  (2026-10-26)
 
 ## Corpus Check
-- 790 files · ~1,990,186 words
+- 790 files · ~1,990,242 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 179 file(s) not represented in the graph (top: .ttf 57, .csv 54, .css 22)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `be09a3c4`
+- Built from commit: `6433a93b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -2296,7 +2296,7 @@ Nodes (4): 3A. Verify storage abstraction is complete, 3B. Test S3 storage with 
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Decision log` connect `Decision log` to `prefilter_study`, `json`, `keyword_highlight_service.py`, `prisma_service.py`, `ScreeningPage.tsx`?**
-  _High betweenness centrality (0.090) - this node is a cross-community bridge._
+  _High betweenness centrality (0.089) - this node is a cross-community bridge._
 - **Are the 310 inferred relationships involving `DBBackend` (e.g. with `4A. Fix dependencies.py to use DBBackend` and `4C. Migrate services to DBBackend`) actually correct?**
   _`DBBackend` has 310 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `react`, `react-dom`, `react-router-dom` to the rest of the system?**
