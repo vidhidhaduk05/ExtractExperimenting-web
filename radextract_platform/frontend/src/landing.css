@@ -2308,8 +2308,12 @@ html.stellar-landing-active.sl-rhythm [data-rhythm-kind="paper"][data-rhythm-sta
 
 
 /* The clipping boundary retains the document's original scroll extent. */
+.stellar-labs-landing-root main,
+.stellar-labs-landing-root .hero {
+  background-color: var(--beige-bg);
+}
 .stellar-labs-landing-root .sl-edge-boundary { display: flow-root; overflow: clip; background: #fbf9f4; }
-.stellar-labs-landing-root .sl-edge-surface { display: flow-root; }
+.stellar-labs-landing-root .sl-edge-surface { display: flow-root; background-color: var(--beige-bg); }
 .stellar-labs-landing-root .sl-edge-boundary[data-edge="bottom"] { background: #3a0f34; }
 .stellar-labs-landing-root .sl-edge-surface.is-settling { will-change: translate; }
 @media (hover: hover) and (pointer: fine) {
