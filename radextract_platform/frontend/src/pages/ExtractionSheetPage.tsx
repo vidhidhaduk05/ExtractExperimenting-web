@@ -149,7 +149,7 @@ export function ExtractionSheetPage() {
     enabled: !!selectedStudyId,
   });
 
-  const variableList = variables && variables.length > 0 ? variables : DEMO_VARIABLES;
+  const variableList = variables && variables.length > 0 ? variables : (projectId === "demo" ? DEMO_VARIABLES : []);
 
   const { data: projectStudies } = useQuery({
     queryKey: ["studies", projectId],
@@ -205,7 +205,7 @@ export function ExtractionSheetPage() {
   const paperVariableExtMap = useMemo(() => {
     const map = new Map<string, any>();
     availablePapers.forEach((paper) => {
-      const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+      const paperExts = projectId === "demo" ? ((DEMO_EXTRACTIONS as any)[paper.id] || []) : [];
       paperExts.forEach((e: any) => {
         if (e.variable_id) {
           map.set(`${paper.id}:${e.variable_id}`, e);
@@ -213,7 +213,7 @@ export function ExtractionSheetPage() {
       });
     });
     return map;
-  }, [availablePapers]);
+  }, [availablePapers, projectId]);
 
   // Overall metrics across all papers
   const allBenchmarkStats = useMemo(() => {
@@ -222,7 +222,7 @@ export function ExtractionSheetPage() {
     let highConfCount = 0;
 
     availablePapers.forEach((paper) => {
-      const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+      const paperExts = projectId === "demo" ? ((DEMO_EXTRACTIONS as any)[paper.id] || []) : [];
       paperExts.forEach((e: any) => {
         totalVars++;
         if (e.is_verified) verifiedVars++;
@@ -518,7 +518,7 @@ export function ExtractionSheetPage() {
     const headers = ["Variable ID", "Variable Name", "Section", ...availablePapers.map((p) => `"${p.title}"`)];
     const rows = variableList.map((v: any) => {
       const studyValues = availablePapers.map((p) => {
-        const exts = (DEMO_EXTRACTIONS as any)[p.id] || [];
+        const exts = projectId === "demo" ? ((DEMO_EXTRACTIONS as any)[p.id] || []) : [];
         const found = exts.find((e: any) => e.variable_id === v.variable_id);
         const val = found?.value || "NR";
         const status = found?.is_verified ? " [Verified]" : "";
@@ -1087,7 +1087,7 @@ export function ExtractionSheetPage() {
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
                 {availablePapers.map((paper, idx) => {
                   const isSelected = paper.id === selectedStudyId;
-                  const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+                  const paperExts = projectId === "demo" ? ((DEMO_EXTRACTIONS as any)[paper.id] || []) : [];
                   const paperVerified = paperExts.filter((e: any) => e.is_verified).length;
                   const isAwaitingPdf = (paper as any).extraction_status === "awaiting_pdf";
 

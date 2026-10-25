@@ -234,7 +234,7 @@ export function PdfViewerPage() {
   });
 
   // Ensure first variable is selected on load
-  const variableList = (variables && variables.length > 0) ? variables : DEMO_VARIABLES;
+  const variableList = (variables && variables.length > 0) ? variables : (projectId === "demo" ? DEMO_VARIABLES : []);
   useEffect(() => {
     if (!selectedVarId && variableList.length > 0) {
       setSelectedVarId(variableList[0].variable_id);
@@ -255,16 +255,16 @@ export function PdfViewerPage() {
   const currentVar = variableList.find((v: any) => v.variable_id === selectedVarId) || variableList[0];
   const extractionMap: Record<string, any> = useMemo(() => {
     const map: Record<string, any> = {};
-    const fallbackList = (DEMO_EXTRACTIONS as any)[activeStudyId] || (DEMO_EXTRACTIONS as any)["study_birua_2022"] || [];
+    const fallbackList = (projectId === "demo") ? ((DEMO_EXTRACTIONS as any)[activeStudyId] || (DEMO_EXTRACTIONS as any)["study_birua_2022"] || []) : [];
     const sourceList = (extractions && extractions.length > 0) ? extractions : fallbackList;
     sourceList.forEach((e: any) => {
       if (e.variable_id) map[e.variable_id] = e;
     });
     return map;
-  }, [extractions, activeStudyId]);
+  }, [extractions, activeStudyId, projectId]);
 
   const currentExtraction = currentVar ? extractionMap[currentVar.variable_id] : null;
-  const currentRule: CodebookRule | undefined = currentVar ? (customRules[currentVar.variable_id] || DEMO_CODEBOOK_RULES[currentVar.variable_id]) : undefined;
+  const currentRule: CodebookRule | undefined = currentVar ? (customRules[currentVar.variable_id] || (projectId === "demo" ? DEMO_CODEBOOK_RULES[currentVar.variable_id] : undefined)) : undefined;
 
   // Progress metrics
   const currentVarIndex = Math.max(0, variableList.findIndex((v: any) => v.variable_id === selectedVarId));
