@@ -212,3 +212,176 @@ async def auto_generate_variables(project_id: str, user: Optional[dict] = Depend
         "skipped_duplicates": len(generated) - len(created),
         "variables": created,
     }
+
+
+from pydantic import BaseModel
+from fastapi import UploadFile, File
+
+class VariableSuggestRequest(BaseModel):
+    sections: Optional[list[str]] = None
+    custom_instructions: Optional[str] = None
+
+
+@router.post("/projects/{project_id}/variables/suggest")
+async def suggest_variables_preview(
+    project_id: str,
+    body: Optional[VariableSuggestRequest] = None,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Generate variable candidates for human preview and selection WITHOUT modifying the database."""
+    from services.variable_generator import generate_variables_from_picos, _generate_heuristic_variables
+    check_project_access(conn, project_id, user)
+    row = conn.execute(
+        "SELECT name, pico_json, hypothesis, research_question FROM projects WHERE project_id = ?",
+        (project_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    pico_json = row["pico_json"] or "{}"
+    hypothesis = row["hypothesis"] or ""
+    rq = row["research_question"] or ""
+    try:
+        pico_dict = json.loads(pico_json)
+    except Exception:
+        pico_dict = {}
+
+    desired_sections = body.sections if body else None
+    custom_instructions = body.custom_instructions if body else None
+
+    # Generate candidate variables
+    generated = generate_variables_from_picos(
+        pico_dict,
+        hypothesis_text=hypothesis,
+        research_question=rq,
+        desired_sections=desired_sections,
+        custom_instructions=custom_instructions,
+    )
+    if not generated:
+        generated = _generate_heuristic_variables(pico_dict, hypothesis, rq)
+
+    # Get existing variable names to flag already existing items
+    existing_names = {
+        r["name"].lower() for r in conn.execute(
+            "SELECT name FROM variables WHERE project_id = ?", (project_id,)
+        ).fetchall()
+    }
+
+    candidates = []
+    for idx, v in enumerate(generated):
+        candidates.append({
+            "temp_id": f"sug_{idx}_{uuid.uuid4().hex[:6]}",
+            "section": v.get("section", "General"),
+            "name": v.get("name", f"variable_{idx+1}"),
+            "field_type": v.get("field_type", "free_text"),
+            "allowed_values": v.get("allowed_values", ""),
+            "description": v.get("description", ""),
+            "extraction_prompt": v.get("extraction_prompt", ""),
+            "is_already_present": v.get("name", "").lower() in existing_names,
+            "default_missing_code": "NR",
+        })
+
+    return {
+        "project_id": project_id,
+        "total_suggestions": len(candidates),
+        "suggestions": candidates,
+    }
+
+
+class VariableBatchCreate(BaseModel):
+    variables: list[VariableCreate]
+
+
+@router.post("/projects/{project_id}/variables/batch")
+async def create_variables_batch(
+    project_id: str,
+    body: VariableBatchCreate,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Batch insert variables (e.g. from accepted AI suggestions or bulk Excel grid)."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.variable_generator import _default_extraction_prompt
+
+    created = []
+    for v in body.variables:
+        if not v.name or not v.name.strip():
+            continue
+        vname = v.name.strip()
+        variable_id = str(uuid.uuid4())
+        prompt = _default_extraction_prompt(vname, v.description or "", v.field_type)
+        conn.execute(
+            """INSERT INTO variables
+               (variable_id, project_id, section, name, field_type, allowed_values,
+                range_min, range_max, description, extraction_prompt, order_index, is_base)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (variable_id, project_id, v.section or "General", vname, v.field_type or "free_text",
+             v.allowed_values or "", v.range_min, v.range_max,
+             v.description or "", prompt, v.order_index or 0, 1 if v.is_base else 0),
+        )
+        created.append({
+            "variable_id": variable_id,
+            "project_id": project_id,
+            "section": v.section or "General",
+            "name": vname,
+            "field_type": v.field_type or "free_text",
+            "allowed_values": v.allowed_values or "",
+            "description": v.description or "",
+            "order_index": v.order_index or 0,
+        })
+    conn.commit()
+    return {"created_count": len(created), "variables": created}
+
+
+@router.post("/projects/{project_id}/variables/import-excel")
+async def import_variables_from_excel_endpoint(
+    project_id: str,
+    file: UploadFile = File(...),
+    auto_commit: bool = True,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Import sheet sections and variables from an uploaded Excel (.xlsx) file."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.variable_generator import import_variables_from_excel, _default_extraction_prompt
+
+    contents = await file.read()
+    parsed = import_variables_from_excel(contents)
+    imported_vars = parsed.get("variables", [])
+
+    created = []
+    if auto_commit and imported_vars:
+        for v in imported_vars:
+            vname = v["name"].strip()
+            variable_id = str(uuid.uuid4())
+            prompt = _default_extraction_prompt(vname, v.get("description", ""), v.get("field_type", "free_text"))
+            conn.execute(
+                """INSERT INTO variables
+                   (variable_id, project_id, section, name, field_type, allowed_values,
+                    range_min, range_max, description, extraction_prompt, order_index, is_base)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (variable_id, project_id, v["section"], vname, v["field_type"],
+                 v.get("allowed_values", ""), None, None,
+                 v.get("description", ""), prompt, v.get("order_index", 0), 0),
+            )
+            created.append({
+                "variable_id": variable_id,
+                "project_id": project_id,
+                "section": v["section"],
+                "name": vname,
+                "field_type": v["field_type"],
+                "allowed_values": v.get("allowed_values", ""),
+                "description": v.get("description", ""),
+            })
+        conn.commit()
+
+    return {
+        "project_id": project_id,
+        "filename": file.filename,
+        "total_sections": parsed.get("total_sections", 0),
+        "sections": parsed.get("sections", []),
+        "total_variables": len(imported_vars),
+        "imported_variables": created if auto_commit else imported_vars,
+    }
+

@@ -47,7 +47,8 @@ import {
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
   Sparkles, ExternalLink, RefreshCw, CheckCheck, ChevronRight,
   TrendingUp, Award, Layers, ShieldCheck, Tag, FolderPlus, Upload,
-  Lock, Unlock, Plus, ChevronDown, ChevronUp, FileUp, Database, Save, Loader2, Table
+  Lock, Unlock, Plus, ChevronDown, ChevronUp, FileUp, Database, Save, Loader2, Table,
+  ChevronLeft, Trash2
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { cn } from "../lib/utils";
@@ -65,7 +66,7 @@ export function ExtractionSheetPage() {
   const initialStudyId = routeStudyId || queryStudyId || "study_chua_2021";
 
   const [selectedStudyId, setSelectedStudyId] = useState<string>(initialStudyId);
-  const [viewMode, setViewMode] = useState<"single" | "matrix">("single");
+  const [viewMode, setViewMode] = useState<"single" | "matrix" | "variables_setup">("single");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "pending" | "low_conf">("all");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
@@ -76,6 +77,64 @@ export function ExtractionSheetPage() {
   const [isRetrievingOa, setIsRetrievingOa] = useState<boolean>(false);
   const [isDownloadingSrma, setIsDownloadingSrma] = useState<boolean>(false);
   const [isEnrichingCtgov, setIsEnrichingCtgov] = useState<boolean>(false);
+
+  // Standard 18 SRMA Sections Preset
+  const STANDARD_18_SECTIONS = useMemo(() => [
+    "Study_Metadata",
+    "Baseline_Demographics",
+    "Inclusion_Exclusion",
+    "Comorbidities",
+    "Imaging_Characteristics",
+    "Intervention_Experimental",
+    "Intervention_Comparator",
+    "Procedural_Details",
+    "Co_Interventions",
+    "Primary_Efficacy_Outcomes",
+    "Secondary_Outcomes",
+    "Safety_Adverse_Events",
+    "Mortality",
+    "TimeToEvent_Survival",
+    "FollowUp_Adherence",
+    "Quality_Of_Life",
+    "Subgroup_Analyses",
+    "Risk_Of_Bias",
+  ], []);
+
+  // Custom Sections (persisted per project)
+  const [customSections, setCustomSections] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(`radextract_custom_sections_${projectId}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  });
+
+  const saveCustomSections = (secs: string[]) => {
+    setCustomSections(secs);
+    try {
+      localStorage.setItem(`radextract_custom_sections_${projectId}`, JSON.stringify(secs));
+    } catch (e) {}
+  };
+
+  // Section Sheet Tab Addition & Navigation
+  const [isAddingSectionTab, setIsAddingSectionTab] = useState(false);
+  const [newSectionName, setNewSectionName] = useState("");
+  const tabsScrollRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Excel Grid Interactive Variables Phase State
+  const [draftVariables, setDraftVariables] = useState<any[]>([]);
+  const [isSavingDraftVars, setIsSavingDraftVars] = useState(false);
+
+  // On-Demand AI Suggestions Modal State
+  const [showAiSuggestModal, setShowAiSuggestModal] = useState(false);
+  const [aiSuggestLoading, setAiSuggestLoading] = useState(false);
+  const [aiSuggestPrompt, setAiSuggestPrompt] = useState("");
+  const [aiSuggestTargetSections, setAiSuggestTargetSections] = useState<string[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  const [selectedAiSuggestionIds, setSelectedAiSuggestionIds] = useState<Set<string>>(new Set());
+  const [isAcceptingAiSuggestions, setIsAcceptingAiSuggestions] = useState(false);
+  const [isImportingExcel, setIsImportingExcel] = useState<boolean>(false);
+  const excelUploadInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Double-blind extraction config state
   const [isExtractionBlinded, setIsExtractionBlinded] = useState(() => {
@@ -120,17 +179,6 @@ export function ExtractionSheetPage() {
   // Excel-like UX States
   const [activeCell, setActiveCell] = useState<{ row: number; col: string } | null>({ row: 0, col: "value" });
   const [showVariableDesignerBanner, setShowVariableDesignerBanner] = useState<boolean>(true);
-  const [isAddingNewVar, setIsAddingNewVar] = useState<boolean>(false);
-  const [newVarForm, setNewVarForm] = useState({
-    name: "",
-    section: "Patient Demographics",
-    field_type: "text",
-    definition: "",
-    allowed_values: "",
-  });
-  const [isSubmittingNewVar, setIsSubmittingNewVar] = useState<boolean>(false);
-  const [isImportingExcel, setIsImportingExcel] = useState<boolean>(false);
-  const excelFileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Queries
   const { data: project } = useQuery({
@@ -265,14 +313,42 @@ export function ExtractionSheetPage() {
     });
   }, [variableList, extractionMap, searchQuery, sectionFilter, statusFilter]);
 
-  // Distinct sections for filter chips
-  const sections = useMemo(() => {
+  // Distinct sections for Excel sheet tabs navigation (up to 18 sections or custom)
+  const allSections = useMemo(() => {
     const s = new Set<string>();
     variableList.forEach((v: any) => {
       if (v.section) s.add(v.section);
     });
+    customSections.forEach((sec) => {
+      if (sec) s.add(sec);
+    });
+    if (s.size === 0) {
+      return ["Study_Metadata", "Baseline_Demographics", "Intervention_Detail", "Outcomes"];
+    }
     return Array.from(s);
-  }, [variableList]);
+  }, [variableList, customSections]);
+
+  const sections = allSections; // alias for backwards compatibility
+
+  // Sync draftVariables whenever variableList updates
+  useEffect(() => {
+    if (variableList && variableList.length > 0) {
+      setDraftVariables(
+        variableList.map((v: any, idx: number) => ({
+          variable_id: v.variable_id || `var_${idx}`,
+          name: v.name || "",
+          section: v.section || "General",
+          field_type: v.field_type || "free_text",
+          allowed_values: v.allowed_values || "",
+          default_code: "NR",
+          description: v.description || "",
+          is_new: false,
+        }))
+      );
+    } else if (projectId !== "demo") {
+      setDraftVariables([]);
+    }
+  }, [variableList, projectId]);
 
   // Verification actions
   const handleVerifyDecision = async (
@@ -626,6 +702,235 @@ export function ExtractionSheetPage() {
     }
   };
 
+  // Tab Bar scroll helpers
+  const scrollTabsLeft = () => {
+    if (tabsScrollRef.current) {
+      tabsScrollRef.current.scrollBy({ left: -220, behavior: "smooth" });
+    }
+  };
+  const scrollTabsRight = () => {
+    if (tabsScrollRef.current) {
+      tabsScrollRef.current.scrollBy({ left: 220, behavior: "smooth" });
+    }
+  };
+
+  const handleAddSectionTab = (name: string) => {
+    const clean = name.trim();
+    if (!clean) return;
+    if (!allSections.includes(clean)) {
+      const updated = [...customSections, clean];
+      saveCustomSections(updated);
+      setSectionFilter(clean);
+      setFeedbackToast(`Added Sheet Tab: "${clean}"`);
+      setTimeout(() => setFeedbackToast(null), 3000);
+    } else {
+      setSectionFilter(clean);
+    }
+    setIsAddingSectionTab(false);
+    setNewSectionName("");
+  };
+
+  const handleLoad18SectionsPreset = () => {
+    const merged = Array.from(new Set([...customSections, ...STANDARD_18_SECTIONS]));
+    saveCustomSections(merged);
+    setFeedbackToast("Loaded 18 Standard SRMA Sheet Sections!");
+    setTimeout(() => setFeedbackToast(null), 3500);
+  };
+
+  const handleDeleteSectionTab = (secName: string) => {
+    const updated = customSections.filter((s) => s !== secName);
+    saveCustomSections(updated);
+    if (sectionFilter === secName) {
+      setSectionFilter("all");
+    }
+    setFeedbackToast(`Removed Sheet Tab: "${secName}"`);
+    setTimeout(() => setFeedbackToast(null), 3000);
+  };
+
+  // Draft Variable Grid Handlers
+  const handleAddDraftVariableRow = () => {
+    const activeSec = sectionFilter !== "all" ? sectionFilter : (allSections[0] || "General");
+    const newRow = {
+      variable_id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      name: "",
+      section: activeSec,
+      field_type: "free_text",
+      allowed_values: "",
+      default_code: "NR",
+      description: "",
+      is_new: true,
+    };
+    setDraftVariables((prev) => [...prev, newRow]);
+  };
+
+  const handleUpdateDraftVariable = (id: string, field: string, val: any) => {
+    setDraftVariables((prev) =>
+      prev.map((row) => (row.variable_id === id ? { ...row, [field]: val } : row))
+    );
+  };
+
+  const handleDeleteDraftVariable = async (id: string, isNew: boolean) => {
+    if (isNew) {
+      setDraftVariables((prev) => prev.filter((r) => r.variable_id !== id));
+      return;
+    }
+    try {
+      await api.deleteVariable(id);
+      setDraftVariables((prev) => prev.filter((r) => r.variable_id !== id));
+      queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
+      setFeedbackToast("Deleted variable from project.");
+      setTimeout(() => setFeedbackToast(null), 2500);
+    } catch (e: any) {
+      setFeedbackToast("Failed to delete variable: " + (e?.message || "Unknown error"));
+      setTimeout(() => setFeedbackToast(null), 3500);
+    }
+  };
+
+  const handleSaveAllDraftVariables = async () => {
+    if (!projectId) return;
+    setIsSavingDraftVars(true);
+    try {
+      const validRows = draftVariables.filter((r) => r.name && r.name.trim().length > 0);
+      const newRows = validRows.filter((r) => r.is_new);
+      const existingRows = validRows.filter((r) => !r.is_new);
+
+      if (newRows.length > 0) {
+        await api.createVariablesBatch(
+          projectId,
+          newRows.map((r, idx) => ({
+            name: r.name.trim(),
+            section: r.section || "General",
+            field_type: r.field_type || "free_text",
+            allowed_values: r.allowed_values || "",
+            description: r.description ? `${r.description} [Coding: ${r.default_code || "NR"}]` : `[Coding: ${r.default_code || "NR"}]`,
+            order_index: idx + 1,
+          }))
+        );
+      }
+
+      for (const r of existingRows) {
+        await api.updateVariable(r.variable_id, {
+          name: r.name.trim(),
+          section: r.section,
+          field_type: r.field_type,
+          allowed_values: r.allowed_values,
+          description: r.description,
+        });
+      }
+
+      const usedSecs = validRows.map((r) => r.section).filter(Boolean);
+      const mergedSecs = Array.from(new Set([...customSections, ...usedSecs]));
+      saveCustomSections(mergedSecs);
+
+      queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
+      setFeedbackToast(`Saved ${validRows.length} variables to project extraction sheet!`);
+      setTimeout(() => setFeedbackToast(null), 3500);
+    } catch (e: any) {
+      setFeedbackToast("Save failed: " + (e?.message || "Unknown error"));
+      setTimeout(() => setFeedbackToast(null), 4000);
+    } finally {
+      setIsSavingDraftVars(false);
+    }
+  };
+
+  // On-Demand AI Suggestions
+  const handleOpenAiSuggestModal = () => {
+    setAiSuggestTargetSections(sectionFilter !== "all" ? [sectionFilter] : allSections.slice(0, 6));
+    setAiSuggestPrompt("");
+    setAiSuggestions([]);
+    setSelectedAiSuggestionIds(new Set());
+    setShowAiSuggestModal(true);
+  };
+
+  const handleFetchAiSuggestions = async () => {
+    if (!projectId) return;
+    setAiSuggestLoading(true);
+    try {
+      const res = await api.suggestVariables(projectId, {
+        sections: aiSuggestTargetSections.length > 0 ? aiSuggestTargetSections : undefined,
+        custom_instructions: aiSuggestPrompt || undefined,
+      });
+      const list = res.suggestions || [];
+      setAiSuggestions(list);
+      const initialSelected = new Set<string>();
+      list.forEach((s) => {
+        if (!s.is_already_present) {
+          initialSelected.add(s.temp_id);
+        }
+      });
+      setSelectedAiSuggestionIds(initialSelected);
+      if (list.length === 0) {
+        setFeedbackToast("No suggestions returned. Try specifying a different section or prompt.");
+        setTimeout(() => setFeedbackToast(null), 3500);
+      }
+    } catch (e: any) {
+      setFeedbackToast("AI Suggestion failed: " + (e?.message || "Unknown error"));
+      setTimeout(() => setFeedbackToast(null), 4000);
+    } finally {
+      setAiSuggestLoading(false);
+    }
+  };
+
+  const handleAcceptSelectedAiSuggestions = async () => {
+    if (!projectId) return;
+    const toAccept = aiSuggestions.filter((s) => selectedAiSuggestionIds.has(s.temp_id));
+    if (toAccept.length === 0) {
+      setFeedbackToast("Please check at least one variable to accept.");
+      setTimeout(() => setFeedbackToast(null), 3000);
+      return;
+    }
+    setIsAcceptingAiSuggestions(true);
+    try {
+      await api.createVariablesBatch(
+        projectId,
+        toAccept.map((s, idx) => ({
+          name: s.name,
+          section: s.section,
+          field_type: s.field_type,
+          allowed_values: s.allowed_values,
+          description: s.description ? `${s.description} [Coding: ${s.default_missing_code || "NR"}]` : `[Coding: ${s.default_missing_code || "NR"}]`,
+          order_index: idx + 1,
+        }))
+      );
+      const newSecs = toAccept.map((s) => s.section).filter((sec) => !customSections.includes(sec));
+      if (newSecs.length > 0) {
+        saveCustomSections([...customSections, ...newSecs]);
+      }
+      queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
+      setFeedbackToast(`Accepted ${toAccept.length} AI suggested variables into your sheet!`);
+      setTimeout(() => setFeedbackToast(null), 3500);
+      setShowAiSuggestModal(false);
+    } catch (e: any) {
+      setFeedbackToast("Failed to accept variables: " + (e?.message || "Unknown error"));
+      setTimeout(() => setFeedbackToast(null), 4000);
+    } finally {
+      setIsAcceptingAiSuggestions(false);
+    }
+  };
+
+  const handleImportExcelFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !projectId) return;
+    setIsImportingExcel(true);
+    try {
+      setFeedbackToast("Analyzing Excel sheets and column headers...");
+      const res = await api.importVariablesFromExcel(projectId, file, true);
+      if (res.sections && res.sections.length > 0) {
+        const mergedSecs = Array.from(new Set([...customSections, ...res.sections]));
+        saveCustomSections(mergedSecs);
+      }
+      queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
+      setFeedbackToast(`Adapted ${res.total_variables || 0} variables across ${res.total_sections || 0} sheet sections!`);
+      setTimeout(() => setFeedbackToast(null), 4000);
+    } catch (err: any) {
+      setFeedbackToast("Excel import failed: " + (err?.message || "Unknown error"));
+      setTimeout(() => setFeedbackToast(null), 4000);
+    } finally {
+      setIsImportingExcel(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
   const activeStudyVerifiedCount = variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
   const activeStudyPercent = variableList.length > 0 ? Math.round((activeStudyVerifiedCount / variableList.length) * 100) : 0;
 
@@ -802,6 +1107,62 @@ export function ExtractionSheetPage() {
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        {/* Hidden File Input for Excel/CSV Adaptation */}
+        <input
+          ref={excelUploadInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
+          onChange={handleImportExcelFile}
+        />
+
+        {/* ── Top Coding Conventions Example Banner ── */}
+        <div className="mb-6 rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-50/90 via-[#FAF9F3] to-amber-50/70 p-4 text-[#141413] shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 rounded-xl bg-amber-400/20 text-amber-800 flex items-center justify-center text-lg font-bold shrink-0">
+                💡
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold font-serif text-[#141413]">
+                  Interactive Variable Coding Standards & Conventions
+                </h4>
+                <p className="text-xs text-[#6B665E] mt-0.5 font-sans">
+                  You decide what sections, variables, and coding you want. For missing, unavailable, or pending data, you can use standard clinical codes:
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-2 font-mono text-[11px]">
+                  <span className="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-md border border-amber-300 font-semibold" title="Searched all text, tables, and supplement; value is absent">
+                    NR = Not Reported
+                  </span>
+                  <span className="bg-slate-200 text-slate-800 px-2.5 py-0.5 rounded-md border border-slate-300 font-semibold" title="Field does not apply to this trial arm or design">
+                    NA = Not Applicable
+                  </span>
+                  <span className="bg-orange-100 text-orange-900 px-2.5 py-0.5 rounded-md border border-orange-300 font-semibold" title="Standard numeric missing code for R, Python, and Stata">
+                    -99 = Numeric Missing
+                  </span>
+                  <span className="bg-red-100 text-red-900 px-2.5 py-0.5 rounded-md border border-red-300 font-semibold" title="Figure-only, blurred scan, or illegible text layer">
+                    UE = Unable to Extract
+                  </span>
+                  <span className="bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-md border border-purple-300 font-semibold" title="Pending team discussion or dual-reviewer consensus">
+                    TBD = To Be Discussed
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+              <button
+                onClick={handleLoad18SectionsPreset}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 transition-colors shadow-2xs flex items-center gap-1.5"
+                title="Populate 18 standard clinical systematic review sheet tabs"
+              >
+                <Layers className="h-3.5 w-3.5 text-amber-700" />
+                <span>Load 18 SRMA Sections Preset</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* ── Awaiting PDF Alert Banner ── */}
         {(currentPaper as any).extraction_status === "awaiting_pdf" && (
           <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50/90 p-4 text-amber-950 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -1131,7 +1492,7 @@ export function ExtractionSheetPage() {
         <div className="card-phylo overflow-hidden mb-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
           <div className="px-6 py-4 border-b border-black/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#F2F1EB]/50">
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 bg-black/[0.05] p-1 rounded-full">
+            <div className="flex items-center gap-1 bg-black/[0.05] p-1 rounded-full flex-wrap">
               <button
                 onClick={() => setViewMode("single")}
                 className={cn(
@@ -1154,7 +1515,19 @@ export function ExtractionSheetPage() {
                 )}
               >
                 <FileSpreadsheet className="h-3.5 w-3.5" />
-                <span>Consolidated Multi-Study Matrix</span>
+                <span>Consolidated Matrix</span>
+              </button>
+              <button
+                onClick={() => setViewMode("variables_setup")}
+                className={cn(
+                  "px-4 py-1.5 text-xs font-medium rounded-full transition-all flex items-center gap-1.5",
+                  viewMode === "variables_setup"
+                    ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
+                    : "text-[#6B665E] hover:text-[#141413]"
+                )}
+              >
+                <Sliders className="h-3.5 w-3.5 text-amber-500" />
+                <span>Variables &amp; Coding Setup (Excel Grid)</span>
               </button>
             </div>
 
@@ -1706,6 +2079,355 @@ export function ExtractionSheetPage() {
               </table>
             </div>
           )}
+
+          {/* ══════════════════════════════════════════════════════════
+              VIEW MODE 3: VARIABLES & CODING SETUP (EXCEL GRID)
+          ══════════════════════════════════════════════════════════ */}
+          {viewMode === "variables_setup" && (
+            <div className="p-6 bg-white dark:bg-slate-900">
+              {/* Studio Header Toolbar */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-black/[0.08]">
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-[#141413] flex items-center gap-2">
+                    <Table className="h-5 w-5 text-emerald-700" />
+                    <span>Interactive Variables &amp; Coding Designer</span>
+                  </h3>
+                  <p className="text-xs text-[#6B665E] mt-0.5 font-sans">
+                    Decide what variables you want, what sheet sections they belong to, and what custom coding you prefer.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* On-Demand AI Suggestions Button */}
+                  <button
+                    onClick={handleOpenAiSuggestModal}
+                    className="btn-phylo-primary text-xs flex items-center gap-1.5 shadow-xs"
+                    title="Ask AI to recommend variables based on PICO, but you review and decide what to accept"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-[#E9ED4C]" />
+                    <span>✨ AI Suggest Variables</span>
+                  </button>
+
+                  {/* Add Variable Row */}
+                  <button
+                    onClick={handleAddDraftVariableRow}
+                    className="btn-phylo-secondary text-xs bg-white/90 hover:bg-emerald-50 border-emerald-300 text-emerald-800 flex items-center gap-1.5"
+                    title="Add a new variable row to this sheet"
+                  >
+                    <Plus className="h-3.5 w-3.5 text-emerald-700" />
+                    <span>+ Add Variable Row</span>
+                  </button>
+
+                  {/* Import from Existing Excel */}
+                  <button
+                    onClick={() => excelUploadInputRef.current?.click()}
+                    disabled={isImportingExcel}
+                    className="btn-phylo-secondary text-xs bg-white/90 hover:bg-slate-100 border-black/15 flex items-center gap-1.5"
+                    title="Upload an already made Excel extraction sheet to adapt its sections and variables"
+                  >
+                    {isImportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 text-blue-600" />}
+                    <span>{isImportingExcel ? "Importing..." : "Import Existing Excel"}</span>
+                  </button>
+
+                  {/* 18 Sections Preset */}
+                  <button
+                    onClick={handleLoad18SectionsPreset}
+                    className="btn-phylo-secondary text-xs bg-white/90 hover:bg-amber-50 border-amber-300 text-amber-900 flex items-center gap-1.5"
+                    title="Set up the 18 standard clinical systematic review sheet tabs"
+                  >
+                    <Layers className="h-3.5 w-3.5 text-amber-700" />
+                    <span>Preset 18 Sections</span>
+                  </button>
+
+                  {/* Save All Variables Button */}
+                  <button
+                    onClick={handleSaveAllDraftVariables}
+                    disabled={isSavingDraftVars || draftVariables.length === 0}
+                    className="btn-phylo-primary text-xs bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1.5 shadow-xs"
+                    title="Persist all variables and coding rules to the project"
+                  >
+                    {isSavingDraftVars ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5 text-[#E9ED4C]" />}
+                    <span>{isSavingDraftVars ? "Saving..." : "Save Variables to Sheet"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Spreadsheet Table */}
+              {draftVariables.length === 0 ? (
+                <div className="text-center py-12 px-4 border-2 border-dashed border-black/10 rounded-2xl bg-[#FAF9F3]/60 my-4">
+                  <div className="h-12 w-12 rounded-2xl bg-amber-100/80 text-amber-800 flex items-center justify-center mx-auto mb-3 text-xl">
+                    📊
+                  </div>
+                  <h4 className="font-serif text-base font-bold text-[#141413] mb-1">
+                    No Extraction Variables Defined Yet
+                  </h4>
+                  <p className="text-xs text-[#6B665E] max-w-md mx-auto mb-5">
+                    Start fresh! You have complete control to decide what sections, variables, and coding conventions you want for this review.
+                  </p>
+                  <div className="flex items-center justify-center gap-3 flex-wrap">
+                    <button
+                      onClick={handleAddDraftVariableRow}
+                      className="btn-phylo-secondary text-xs bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-50 flex items-center gap-1.5"
+                    >
+                      <Plus className="h-3.5 w-3.5 text-emerald-700" />
+                      <span>Add Variable Row Manually</span>
+                    </button>
+                    <button
+                      onClick={handleOpenAiSuggestModal}
+                      className="btn-phylo-primary text-xs flex items-center gap-1.5"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-[#E9ED4C]" />
+                      <span>✨ On-Demand AI Suggestions</span>
+                    </button>
+                    <button
+                      onClick={() => excelUploadInputRef.current?.click()}
+                      className="btn-phylo-secondary text-xs bg-white text-blue-800 border-blue-300 hover:bg-blue-50 flex items-center gap-1.5"
+                    >
+                      <Upload className="h-3.5 w-3.5 text-blue-600" />
+                      <span>Import Existing Excel Sheet</span>
+                    </button>
+                    <button
+                      onClick={handleLoad18SectionsPreset}
+                      className="btn-phylo-secondary text-xs bg-white text-amber-900 border-amber-300 hover:bg-amber-50 flex items-center gap-1.5"
+                    >
+                      <Layers className="h-3.5 w-3.5 text-amber-700" />
+                      <span>Preset 18 Sections</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-black/[0.12] rounded-xl overflow-x-auto shadow-2xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-[#F2F1EB] text-[#141413] border-b border-black/[0.12] font-mono text-[11px] uppercase tracking-wider">
+                        <th className="px-3 py-2.5 w-12 text-center border-r border-black/[0.08]">#</th>
+                        <th className="px-3 py-2.5 min-w-[200px] border-r border-black/[0.08]">Variable Name *</th>
+                        <th className="px-3 py-2.5 min-w-[180px] border-r border-black/[0.08]">Sheet Section</th>
+                        <th className="px-3 py-2.5 min-w-[130px] border-r border-black/[0.08]">Data Type</th>
+                        <th className="px-3 py-2.5 min-w-[180px] border-r border-black/[0.08]">Allowed Options / Units</th>
+                        <th className="px-3 py-2.5 min-w-[120px] border-r border-black/[0.08]">Missing Coding</th>
+                        <th className="px-3 py-2.5 min-w-[250px] border-r border-black/[0.08]">Extraction Guidance / Rules</th>
+                        <th className="px-3 py-2.5 w-14 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/[0.06] bg-white">
+                      {draftVariables
+                        .filter((r) => sectionFilter === "all" || r.section === sectionFilter)
+                        .map((row, idx) => (
+                          <tr key={row.variable_id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="px-3 py-2 text-center text-[#8A817A] font-mono text-[11px] border-r border-black/[0.06] bg-[#FAF9F3]/40">
+                              {idx + 1}
+                            </td>
+                            <td className="px-2 py-1.5 border-r border-black/[0.06]">
+                              <input
+                                type="text"
+                                placeholder="e.g. mean_age, mortality_30d"
+                                value={row.name}
+                                onChange={(e) => handleUpdateDraftVariable(row.variable_id, "name", e.target.value)}
+                                className="w-full px-2 py-1 text-xs border border-transparent hover:border-black/20 focus:border-emerald-600 rounded focus:outline-hidden font-mono font-semibold text-slate-900 bg-transparent focus:bg-white"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 border-r border-black/[0.06]">
+                              <select
+                                value={row.section}
+                                onChange={(e) => handleUpdateDraftVariable(row.variable_id, "section", e.target.value)}
+                                className="w-full px-2 py-1 text-xs border border-transparent hover:border-black/20 focus:border-emerald-600 rounded focus:outline-hidden font-mono bg-transparent focus:bg-white"
+                              >
+                                {allSections.map((s) => (
+                                  <option key={s} value={s}>{s}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-2 py-1.5 border-r border-black/[0.06]">
+                              <select
+                                value={row.field_type}
+                                onChange={(e) => handleUpdateDraftVariable(row.variable_id, "field_type", e.target.value)}
+                                className="w-full px-2 py-1 text-xs border border-transparent hover:border-black/20 focus:border-emerald-600 rounded focus:outline-hidden font-mono bg-transparent focus:bg-white text-blue-800 font-medium"
+                              >
+                                <option value="free_text">Free Text</option>
+                                <option value="float">Numeric / Float</option>
+                                <option value="int">Integer</option>
+                                <option value="dropdown">Dropdown / Enum</option>
+                                <option value="boolean">Boolean (Yes/No)</option>
+                                <option value="date">Date</option>
+                              </select>
+                            </td>
+                            <td className="px-2 py-1.5 border-r border-black/[0.06]">
+                              <input
+                                type="text"
+                                placeholder="e.g. Mild; Moderate; Severe"
+                                value={row.allowed_values}
+                                onChange={(e) => handleUpdateDraftVariable(row.variable_id, "allowed_values", e.target.value)}
+                                className="w-full px-2 py-1 text-xs border border-transparent hover:border-black/20 focus:border-emerald-600 rounded focus:outline-hidden text-slate-700 bg-transparent focus:bg-white"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 border-r border-black/[0.06]">
+                              <input
+                                type="text"
+                                placeholder="NR"
+                                value={row.default_code || "NR"}
+                                onChange={(e) => handleUpdateDraftVariable(row.variable_id, "default_code", e.target.value)}
+                                className="w-full px-2 py-1 text-xs border border-transparent hover:border-black/20 focus:border-emerald-600 rounded focus:outline-hidden font-mono font-bold text-amber-800 bg-transparent focus:bg-white"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 border-r border-black/[0.06]">
+                              <input
+                                type="text"
+                                placeholder="Extraction source or rule..."
+                                value={row.description}
+                                onChange={(e) => handleUpdateDraftVariable(row.variable_id, "description", e.target.value)}
+                                className="w-full px-2 py-1 text-xs border border-transparent hover:border-black/20 focus:border-emerald-600 rounded focus:outline-hidden text-slate-700 bg-transparent focus:bg-white"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 text-center">
+                              <button
+                                onClick={() => handleDeleteDraftVariable(row.variable_id, row.is_new)}
+                                className="p-1 text-slate-400 hover:text-red-600 rounded transition"
+                                title="Remove row"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                  <div className="p-3 bg-[#FAF9F3] border-t border-black/[0.08] flex items-center justify-between">
+                    <button
+                      onClick={handleAddDraftVariableRow}
+                      className="px-3 py-1.5 text-xs font-mono font-semibold rounded-lg bg-white border border-black/15 hover:bg-emerald-50 hover:border-emerald-300 text-emerald-800 flex items-center gap-1.5 transition shadow-2xs"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>+ Add Row Below</span>
+                    </button>
+                    <span className="text-[11px] font-mono text-[#8A817A]">
+                      Showing {draftVariables.filter((r) => sectionFilter === "all" || r.section === sectionFilter).length} variables in current tab
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════════════════════
+              EXCEL WORKBOOK BOTTOM SHEET TABS NAVIGATION SYSTEM
+          ══════════════════════════════════════════════════════════ */}
+          <div className="bg-[#EFEFEA] border-t border-black/[0.12] px-4 py-1.5 flex items-center justify-between gap-2 shadow-inner">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1" ref={tabsScrollRef}>
+              {/* Tab Scroll Arrows */}
+              <button onClick={scrollTabsLeft} className="p-1 rounded hover:bg-black/10 text-[#6B665E] shrink-0" title="Scroll tabs left">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button onClick={scrollTabsRight} className="p-1 rounded hover:bg-black/10 text-[#6B665E] shrink-0" title="Scroll tabs right">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+
+              {/* All Sheets Tab */}
+              <button
+                onClick={() => setSectionFilter("all")}
+                className={cn(
+                  "px-3 py-1 text-xs font-mono rounded-t border-t border-l border-r transition-all flex items-center gap-1.5 shrink-0 shadow-2xs",
+                  sectionFilter === "all"
+                    ? "bg-white text-[#141413] border-black/25 font-bold border-b-2 border-b-emerald-600"
+                    : "bg-[#E2E1DA] text-[#6B665E] border-transparent hover:bg-white/60"
+                )}
+              >
+                <span>📋 All Sections ({variableList.length})</span>
+              </button>
+
+              {/* Section Sheet Tabs */}
+              {allSections.map((sec, idx) => {
+                const varCount = variableList.filter((v: any) => v.section === sec).length;
+                const isActive = sectionFilter === sec;
+                return (
+                  <div
+                    key={sec}
+                    onClick={() => setSectionFilter(sec)}
+                    className={cn(
+                      "group relative px-3 py-1 text-xs font-mono rounded-t border-t border-l border-r transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs",
+                      isActive
+                        ? "bg-white text-[#141413] border-black/25 font-bold border-b-2 border-b-emerald-600"
+                        : "bg-[#E2E1DA] text-[#6B665E] border-transparent hover:bg-white/60"
+                    )}
+                  >
+                    <span>Sheet {idx + 1}: {sec}</span>
+                    <span
+                      className={cn(
+                        "text-[10px] px-1.5 py-0.2 rounded-full",
+                        isActive ? "bg-emerald-100 text-emerald-800 font-bold" : "bg-black/5 text-[#8A817A]"
+                      )}
+                    >
+                      {varCount}
+                    </span>
+                    {varCount === 0 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSectionTab(sec);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-[#8A817A] hover:text-red-600 p-0.5 rounded transition"
+                        title="Remove empty sheet tab"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Inline Add Sheet Tab Form */}
+              {isAddingSectionTab ? (
+                <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-emerald-400 shrink-0">
+                  <input
+                    type="text"
+                    placeholder="New Section Name..."
+                    value={newSectionName}
+                    onChange={(e) => setNewSectionName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddSectionTab(newSectionName);
+                      if (e.key === "Escape") setIsAddingSectionTab(false);
+                    }}
+                    className="px-1.5 py-0.5 text-xs font-mono border-0 focus:outline-hidden w-36"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => handleAddSectionTab(newSectionName)}
+                    className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                    title="Confirm Add"
+                  >
+                    <Check className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => setIsAddingSectionTab(false)}
+                    className="p-1 text-slate-500 hover:text-slate-700"
+                    title="Cancel"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsAddingSectionTab(true)}
+                  className="px-2.5 py-1 text-xs font-mono rounded bg-emerald-600/10 text-emerald-800 hover:bg-emerald-600/20 border border-emerald-300 flex items-center gap-1 shrink-0 transition"
+                  title="Add a new sheet section tab"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>+ Add Sheet Tab</span>
+                </button>
+              )}
+            </div>
+
+            <div className="hidden lg:flex items-center gap-2 shrink-0 text-xs font-mono text-[#8A817A]">
+              <button
+                onClick={handleLoad18SectionsPreset}
+                className="hover:text-[#141413] underline flex items-center gap-1 text-[11px]"
+                title="Populate 18 standard clinical systematic review sheet tabs"
+              >
+                <Layers className="h-3 w-3 text-amber-700" />
+                <span>18 SRMA Sections Preset</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* ── Footer Information ── */}
@@ -1778,6 +2500,280 @@ export function ExtractionSheetPage() {
             setTimeout(() => setFeedbackToast(null), 5000);
           }}
         />
+      )}
+
+      {/* ── On-Demand AI Suggestions Modal (Human Decides First) ── */}
+      {showAiSuggestModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#FAF9F3] dark:bg-slate-900 border border-black/15 dark:border-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-[#F2F1EB] dark:bg-slate-800 border-b border-black/[0.08] dark:border-slate-700 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 text-white flex items-center justify-center shadow-xs">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-base font-bold text-[#141413] dark:text-white flex items-center gap-2">
+                    <span>On-Demand AI Variable Suggestions</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold border border-amber-300">
+                      HUMAN-IN-THE-LOOP
+                    </span>
+                  </h3>
+                  <p className="text-xs text-[#6B665E] dark:text-slate-400">
+                    AI analyzes your review protocol to recommend variables. You review and decide which ones to accept.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAiSuggestModal(false)}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              {/* Step 1: Prompt & Target Sections */}
+              <div className="bg-white dark:bg-slate-800/60 p-4 rounded-xl border border-black/[0.08] dark:border-slate-700">
+                <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#6B665E] dark:text-slate-300 mb-2 flex items-center gap-1.5">
+                  <Sliders className="h-3.5 w-3.5 text-amber-600" />
+                  <span>1. Configure AI Generation Scope</span>
+                </h4>
+                
+                {/* Target Section Chips */}
+                <div className="mb-3">
+                  <label className="block text-[11px] font-sans text-slate-600 dark:text-slate-400 mb-1.5">
+                    Target Sheet Sections (Click to toggle):
+                  </label>
+                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-slate-50 dark:bg-slate-900 rounded-lg border border-black/5">
+                    {allSections.map((sec) => {
+                      const isTargeted = aiSuggestTargetSections.includes(sec);
+                      return (
+                        <button
+                          key={sec}
+                          type="button"
+                          onClick={() => {
+                            if (isTargeted) {
+                              setAiSuggestTargetSections(aiSuggestTargetSections.filter((s) => s !== sec));
+                            } else {
+                              setAiSuggestTargetSections([...aiSuggestTargetSections, sec]);
+                            }
+                          }}
+                          className={cn(
+                            "px-2.5 py-1 text-[11px] font-mono rounded-md border transition-all",
+                            isTargeted
+                              ? "bg-amber-100 text-amber-900 border-amber-300 font-bold shadow-2xs"
+                              : "bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                          )}
+                        >
+                          {sec}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Custom Instructions Input */}
+                <div className="mb-3">
+                  <label className="block text-[11px] font-sans text-slate-600 dark:text-slate-400 mb-1">
+                    Custom Prompt or Specific Focus (Optional):
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Focus on aneurysm geometry (aspect ratio, dome-to-neck ratio), Raymond-Roy occlusion classification, 30-day stroke/mortality, and anticoagulation protocols..."
+                    value={aiSuggestPrompt}
+                    onChange={(e) => setAiSuggestPrompt(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-black/15 dark:border-slate-700 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-sans"
+                  />
+                </div>
+
+                {/* Generate Button */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-[#8A817A] font-mono">
+                    Uses local Biomni / LLaMA model on GPU
+                  </span>
+                  <button
+                    onClick={handleFetchAiSuggestions}
+                    disabled={aiSuggestLoading}
+                    className="btn-phylo-primary text-xs bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1.5 shadow-xs"
+                  >
+                    {aiSuggestLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    <span>{aiSuggestLoading ? "Generating Suggestions..." : "Generate AI Suggestions"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Step 2: Human Review & Decision Table */}
+              <div className="bg-white dark:bg-slate-800/60 p-4 rounded-xl border border-black/[0.08] dark:border-slate-700">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#6B665E] dark:text-slate-300 flex items-center gap-1.5">
+                    <Table className="h-3.5 w-3.5 text-emerald-700" />
+                    <span>2. Human Decision: Select Variables to Accept</span>
+                  </h4>
+
+                  {aiSuggestions.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const allIds = new Set<string>();
+                          aiSuggestions.forEach((s) => {
+                            if (!s.is_already_present) allIds.add(s.temp_id);
+                          });
+                          setSelectedAiSuggestionIds(allIds);
+                        }}
+                        className="text-[11px] font-mono text-emerald-700 hover:underline"
+                      >
+                        Select All New
+                      </button>
+                      <span className="text-slate-300">•</span>
+                      <button
+                        onClick={() => setSelectedAiSuggestionIds(new Set())}
+                        className="text-[11px] font-mono text-slate-500 hover:underline"
+                      >
+                        Deselect All
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {aiSuggestions.length === 0 ? (
+                  <div className="text-center py-8 px-4 border-2 border-dashed border-black/10 rounded-xl bg-slate-50/50">
+                    <Sparkles className="h-8 w-8 text-amber-500 mx-auto mb-2 opacity-60" />
+                    <p className="text-xs text-[#6B665E] font-medium">
+                      No suggestions generated yet.
+                    </p>
+                    <p className="text-[11px] text-[#8A817A] mt-1 max-w-sm mx-auto">
+                      Click "Generate AI Suggestions" above to inspect proposed clinical variables before adding them to your sheet.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                    <table className="min-w-full text-xs">
+                      <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[10px] uppercase border-b border-slate-200 dark:border-slate-700">
+                        <tr>
+                          <th className="w-10 px-3 py-2 text-center">Accept</th>
+                          <th className="px-3 py-2 text-left">Variable Name</th>
+                          <th className="px-3 py-2 text-left">Section</th>
+                          <th className="px-2 py-2 text-left">Type</th>
+                          <th className="px-3 py-2 text-left">Allowed Values / Coding</th>
+                          <th className="px-3 py-2 text-left">Description / Prompt</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {aiSuggestions.map((s) => {
+                          const isSelected = selectedAiSuggestionIds.has(s.temp_id);
+                          const isPresent = s.is_already_present;
+
+                          return (
+                            <tr
+                              key={s.temp_id}
+                              onClick={() => {
+                                if (isPresent) return;
+                                const next = new Set(selectedAiSuggestionIds);
+                                if (next.has(s.temp_id)) next.delete(s.temp_id);
+                                else next.add(s.temp_id);
+                                setSelectedAiSuggestionIds(next);
+                              }}
+                              className={cn(
+                                "transition-colors cursor-pointer",
+                                isSelected ? "bg-amber-50/40 dark:bg-amber-950/20" : "hover:bg-slate-50 dark:hover:bg-slate-800/40",
+                                isPresent && "opacity-50 cursor-not-allowed bg-slate-50"
+                              )}
+                            >
+                              <td className="px-3 py-2 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  disabled={isPresent}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    const next = new Set(selectedAiSuggestionIds);
+                                    if (e.target.checked) next.add(s.temp_id);
+                                    else next.delete(s.temp_id);
+                                    setSelectedAiSuggestionIds(next);
+                                  }}
+                                  className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                                />
+                              </td>
+                              <td className="px-3 py-2 font-bold text-slate-900 dark:text-slate-100">
+                                <div className="flex items-center gap-1.5">
+                                  <span>{s.name}</span>
+                                  {isPresent && (
+                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-200 text-slate-700">
+                                      In Sheet
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2">
+                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200">
+                                  {s.section}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2">
+                                <span className="text-[10px] font-mono text-slate-600 uppercase">
+                                  {s.field_type}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                                {s.allowed_values ? (
+                                  <span>{s.allowed_values}</span>
+                                ) : (
+                                  <span className="text-slate-400 italic">Default missing: {s.default_missing_code || "NR"}</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-slate-600 dark:text-slate-400 text-[11px] max-w-xs truncate" title={s.description || s.extraction_prompt}>
+                                {s.description || s.extraction_prompt || "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 bg-[#F2F1EB] dark:bg-slate-800 border-t border-black/[0.08] dark:border-slate-700 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 text-xs font-mono text-slate-600 dark:text-slate-400">
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                <span>
+                  <strong>{selectedAiSuggestionIds.size}</strong> variables selected to accept
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAiSuggestModal(false)}
+                  className="px-4 py-1.5 text-xs text-[#6B665E] hover:text-[#141413] rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAcceptSelectedAiSuggestions}
+                  disabled={isAcceptingAiSuggestions || selectedAiSuggestionIds.size === 0}
+                  className="btn-phylo-primary text-xs bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1.5 shadow-xs"
+                >
+                  {isAcceptingAiSuggestions ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CheckCheck className="h-3.5 w-3.5 text-[#E9ED4C]" />
+                  )}
+                  <span>Accept Selected ({selectedAiSuggestionIds.size}) into Sheet</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Feedback Toast ── */}

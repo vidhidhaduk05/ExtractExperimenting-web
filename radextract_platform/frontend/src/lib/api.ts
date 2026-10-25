@@ -3578,6 +3578,46 @@ export const api = {
     request<any>(`/variables/${variableId}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteVariable: (variableId: string) =>
     request<{ deleted: boolean }>(`/variables/${variableId}`, { method: "DELETE" }),
+  suggestVariables: (projectId: string, data?: { sections?: string[]; custom_instructions?: string }) =>
+    request<{
+      project_id: string;
+      total_suggestions: number;
+      suggestions: Array<{
+        temp_id: string;
+        section: string;
+        name: string;
+        field_type: string;
+        allowed_values: string;
+        description: string;
+        extraction_prompt: string;
+        is_already_present: boolean;
+        default_missing_code: string;
+      }>;
+    }>(`/projects/${projectId}/variables/suggest`, {
+      method: "POST",
+      body: JSON.stringify(data || {}),
+    }),
+  createVariablesBatch: (projectId: string, variables: any[]) =>
+    request<{ created_count: number; variables: any[] }>(`/projects/${projectId}/variables/batch`, {
+      method: "POST",
+      body: JSON.stringify({ variables }),
+    }),
+  importVariablesFromExcel: async (projectId: string, file: File, autoCommit = true) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/projects/${projectId}/variables/import-excel?auto_commit=${autoCommit}`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (!res.ok) {
+      throw new Error(`Excel import failed: ${res.statusText}`);
+    }
+    return await res.json();
+  },
 
   // PRISMA SVG (R-generated)
   prismaSvgUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/svg`,
