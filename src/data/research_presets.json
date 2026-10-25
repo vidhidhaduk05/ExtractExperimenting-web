@@ -1,0 +1,262 @@
+[
+  {
+    "id": "breast-imaging",
+    "label": "Breast imaging",
+    "question": "How does AI-assisted mammography compare with standard screening?",
+    "query": "mammograph*[Title/Abstract] AND (\"artificial intelligence\"[Title/Abstract] OR \"deep learning\"[Title/Abstract] OR \"computer-aided\"[Title/Abstract] OR AI[Title/Abstract]) AND screen*[Title/Abstract]",
+    "sources": [
+      "37541274"
+    ],
+    "verification": {
+      "checked": "2026-10-26",
+      "database": "PubMed",
+      "queryExcludesNarrativeCommentary": true,
+      "matches": 1003,
+      "samplePmids": [
+        "42334348",
+        "42262245",
+        "42349440",
+        "42446361",
+        "42349442",
+        "42227862",
+        "40626877",
+        "42478950",
+        "31894144",
+        "37585182",
+        "38074781",
+        "17364978",
+        "42678997",
+        "40341801",
+        "39904653",
+        "38625766",
+        "42205157",
+        "16696454",
+        "35506581",
+        "12449356"
+      ],
+      "warnings": {}
+    }
+  },
+  {
+    "id": "stroke-imaging",
+    "label": "Stroke imaging",
+    "question": "How do CT perfusion and MRI compare in acute ischemic stroke assessment?",
+    "query": "(\"ischemic stroke\"[Title/Abstract] OR \"ischaemic stroke\"[Title/Abstract] OR \"Brain Ischemia\"[MeSH Terms]) AND (\"Perfusion Imaging\"[MeSH Terms] OR \"CT perfusion\"[Title/Abstract] OR \"computed tomography perfusion\"[Title/Abstract]) AND (\"Magnetic Resonance Imaging\"[MeSH Terms] OR MRI[Title/Abstract] OR \"diffusion-weighted\"[Title/Abstract])",
+    "sources": [
+      "17258669"
+    ],
+    "verification": {
+      "checked": "2026-10-26",
+      "database": "PubMed",
+      "queryExcludesNarrativeCommentary": true,
+      "matches": 586,
+      "samplePmids": [
+        "37338893",
+        "39648915",
+        "19110149",
+        "31863885",
+        "19295219",
+        "31240344",
+        "31857324",
+        "23162036",
+        "27758774",
+        "30201456",
+        "40674670",
+        "20189096",
+        "24119625",
+        "36893661",
+        "27554072",
+        "20130398",
+        "19016599",
+        "20657354",
+        "36762865",
+        "31067369"
+      ],
+      "warnings": {}
+    }
+  },
+  {
+    "id": "chest-imaging",
+    "label": "Chest imaging",
+    "question": "What predicts malignancy in incidental pulmonary nodules?",
+    "query": "(\"pulmonary nodule*\"[Title/Abstract] OR \"lung nodule*\"[Title/Abstract] OR \"Solitary Pulmonary Nodule\"[MeSH Terms]) AND (malignan*[Title/Abstract] OR \"Lung Neoplasms\"[MeSH Terms]) AND (predict*[Title/Abstract] OR model*[Title/Abstract] OR risk[Title/Abstract])",
+    "sources": [
+      "39842180",
+      "35392654",
+      "35137543"
+    ],
+    "verification": {
+      "checked": "2026-10-26",
+      "database": "PubMed",
+      "queryExcludesNarrativeCommentary": true,
+      "matches": 3430,
+      "samplePmids": [
+        "39481281",
+        "41432561",
+        "41360981",
+        "41591243",
+        "28293773",
+        "42453934",
+        "38670484",
+        "39013667",
+        "31189944",
+        "42659915",
+        "41264937",
+        "39985828",
+        "40524012",
+        "35597900",
+        "42689326",
+        "39243018",
+        "41785281",
+        "41963826",
+        "41703731",
+        "37061539"
+      ],
+      "warnings": {}
+    }
+  },
+  {
+    "id": "sleep-memory",
+    "label": "Sleep & memory",
+    "question": "How does sleep deprivation affect memory consolidation?",
+    "query": "(\"Sleep Deprivation\"[MeSH Terms] OR \"sleep deprivation\"[Title/Abstract] OR \"sleep restriction\"[Title/Abstract]) AND (\"Memory Consolidation\"[MeSH Terms] OR \"memory consolidation\"[Title/Abstract] OR memory[Title/Abstract])",
+    "sources": [],
+    "verification": {
+      "checked": "2026-10-26",
+      "database": "PubMed",
+      "queryExcludesNarrativeCommentary": true,
+      "matches": 1504,
+      "samplePmids": [
+        "40022197",
+        "40315642",
+        "36349660",
+        "40946426",
+        "31932417",
+        "3681926",
+        "228327",
+        "187162",
+        "29272546",
+        "20946438",
+        "21261452",
+        "27515199",
+        "21325523",
+        "28757454",
+        "27381857",
+        "39427809",
+        "19742409",
+        "38759474",
+        "36721179",
+        "213132"
+      ],
+      "warnings": {}
+    }
+  },
+  {
+    "id": "cardiovascular",
+    "label": "Cardiovascular health",
+    "question": "What are the cardiovascular outcomes of GLP-1 receptor agonists?",
+    "query": "(\"GLP-1\"[Title/Abstract] OR \"glucagon-like peptide-1\"[Title/Abstract]) AND cardiovascular[Title/Abstract] AND (agonist*[Title/Abstract] OR semaglutide[Title/Abstract] OR liraglutide[Title/Abstract])",
+    "sources": [],
+    "verification": {
+      "checked": "2026-10-26",
+      "database": "PubMed",
+      "queryExcludesNarrativeCommentary": true,
+      "matches": 2639,
+      "samplePmids": [
+        "36841762",
+        "39046272",
+        "38172989",
+        "36700417",
+        "40892610",
+        "31422062",
+        "36706596",
+        "41984016",
+        "33317348",
+        "41774502",
+        "40072928",
+        "30243806",
+        "24263424",
+        "39710830",
+        "42610271",
+        "37062189",
+        "41815032",
+        "39964295",
+        "42100257",
+        "42567819"
+      ],
+      "warnings": {}
+    }
+  },
+  {
+    "id": "mental-health",
+    "label": "Mental health",
+    "question": "What does the evidence say about treatments for treatment-resistant depression?",
+    "query": "(\"Depressive Disorder, Treatment-Resistant\"[MeSH Terms] OR \"treatment-resistant depression\"[Title/Abstract] OR \"treatment resistant depression\"[Title/Abstract]) AND (treatment[Title/Abstract] OR therapy[Title/Abstract] OR randomized[Title/Abstract] OR randomised[Title/Abstract])",
+    "sources": [],
+    "verification": {
+      "checked": "2026-10-26",
+      "database": "PubMed",
+      "queryExcludesNarrativeCommentary": true,
+      "matches": 4984,
+      "samplePmids": [
+        "25433401",
+        "36103934",
+        "40400347",
+        "38574492",
+        "41546191",
+        "36623562",
+        "39210712",
+        "42687406",
+        "34895296",
+        "25590350",
+        "39260582",
+        "29275697",
+        "34368919",
+        "40534411",
+        "42198984",
+        "40892783",
+        "41481890",
+        "40220014",
+        "36585782",
+        "40890784"
+      ],
+      "warnings": {}
+    }
+  },
+  {
+    "id": "cancer-vaccines",
+    "label": "Cancer vaccines",
+    "question": "What are the clinical outcomes of therapeutic cancer vaccines?",
+    "query": "(\"Cancer Vaccines\"[MeSH Terms] OR \"therapeutic cancer vaccine*\"[Title/Abstract] OR \"cancer vaccine*\"[Title/Abstract]) AND (clinical[Title/Abstract] OR trial[Title/Abstract] OR survival[Title/Abstract])",
+    "sources": [],
+    "verification": {
+      "checked": "2026-10-26",
+      "database": "PubMed",
+      "queryExcludesNarrativeCommentary": true,
+      "matches": 6350,
+      "samplePmids": [
+        "41369171",
+        "40220758",
+        "42303538",
+        "42062531",
+        "30500939",
+        "37079677",
+        "34480368",
+        "17919310",
+        "22111853",
+        "35536547",
+        "10866299",
+        "39155847",
+        "30518425",
+        "16157940",
+        "16475151",
+        "39034683",
+        "21744082",
+        "32849281",
+        "27029708",
+        "24907636"
+      ],
+      "warnings": {}
+    }
+  }
+]

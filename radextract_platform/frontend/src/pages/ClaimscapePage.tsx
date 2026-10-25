@@ -31,6 +31,7 @@ import { PaperInspector } from "../components/claimscape/PaperInspector";
 import { MethodologySection } from "../components/claimscape/MethodologySection";
 import { api } from "../lib/api";
 import { fetchLivePubMedEvidence } from "../lib/pubmedLiveClient";
+import { RESEARCH_PRESETS, findResearchPreset } from "../lib/researchPresets";
 
 export const ClaimscapePage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -39,7 +40,7 @@ export const ClaimscapePage: React.FC = () => {
   const urlN = searchParams.get("n");
 
   const initialClaim = urlClaim || hrtDataRaw.claim;
-  const initialQuery = urlQ || (urlClaim ? urlClaim.split("+").join(" ") : hrtDataRaw.query);
+  const initialQuery = urlQ || (urlClaim ? findResearchPreset(urlClaim)?.query || urlClaim.split("+").join(" ") : hrtDataRaw.query);
   const initialCount = urlN ? parseInt(urlN, 10) || 300 : 300;
 
   // Active dataset state (initialized with 300 publications so the map renders immediately)
@@ -59,6 +60,8 @@ export const ClaimscapePage: React.FC = () => {
 
   // Helper to build neutral PubMed query from claim statement
   const buildPubMedQuery = (claimText: string): string => {
+    const preset = findResearchPreset(claimText);
+    if (preset) return preset.query;
     let q = claimText.trim();
     if (!q) return "";
     const directional = [
@@ -101,13 +104,9 @@ export const ClaimscapePage: React.FC = () => {
 
   // Typewriter suggestions when input is empty
   const suggestions = [
-    "Hormone replacement therapy reduces the risk of Alzheimer's disease",
-    "Metformin extends lifespan in model organisms",
-    "Statins reduce all-cause mortality in primary prevention",
-    "What are the cardiovascular outcomes of GLP-1 receptor agonists?",
-    "How does sleep deprivation affect memory consolidation?",
-    "What are the clinical outcomes of therapeutic cancer vaccines?",
-    "Daily aspirin reduces the incidence of colorectal cancer"
+    "How does AI-assisted mammography compare with standard screening?",
+    "How do CT perfusion and MRI compare in acute ischemic stroke assessment?",
+    "What predicts malignancy in incidental pulmonary nodules?"
   ];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [subIndex, setSubIndex] = useState(0);
@@ -428,7 +427,7 @@ export const ClaimscapePage: React.FC = () => {
       )}
 
       {/* Main Container */}
-      <main className="mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-12 pt-2 sm:px-6 lg:px-8">
+      <main className="claimscape-theme mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-12 pt-2 sm:px-6 lg:px-8">
         
         {/* Section 1: Hero & Question Card - Compact 2-Column Editorial Velvet Layout */}
         <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10 pt-1 pb-2">
@@ -438,10 +437,6 @@ export const ClaimscapePage: React.FC = () => {
               <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
               Evidence map for any research claim
             </p>
-            <h1 className="font-['Bodoni_Moda'] text-[clamp(30px,3.5vw,44px)] font-normal leading-[1.08] text-[#3a0f34] tracking-tight">
-              Stay curious.<br />
-              <span className="italic font-normal text-[#814d75]">See what the evidence says.</span>
-            </h1>
 
             {/* Restored Description Paragraph */}
             <p className="mt-3 text-[15px] sm:text-[15.5px] text-[#4f444b] font-['Newsreader'] leading-[1.58]">
@@ -495,7 +490,7 @@ export const ClaimscapePage: React.FC = () => {
           <div className="w-full">
             <form
               onSubmit={handleMapEvidence}
-              className="bg-white border border-[#d2c2cb] p-5 sm:p-6 shadow-xs grid gap-3.5 transition-all focus-within:border-[#814d75] focus-within:ring-2 focus-within:ring-[#eadce6]"
+              className="rq-card claim-question-card"
             >
               {/* Claim statement label and helper */}
               <div className="grid gap-1">
@@ -523,60 +518,16 @@ export const ClaimscapePage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Toolbar: PubMed query, papers pills, map button */}
-              <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
-                <label className="grid gap-1">
-                  <span className="flex items-center justify-between text-[11px] font-semibold text-[#62535d] font-['Work_Sans']">
-                    <span className="flex items-center gap-1.5">
-                      <span>PubMed search query</span>
-                      <span className="text-[10.5px] font-normal text-[#81737b]">auto-built, edit to refine</span>
-                    </span>
-                    {userEditedQuery && (
-                      <span className="text-[10px] text-amber-700 font-medium">Custom query</span>
-                    )}
-                  </span>
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => {
-                      setQuery(e.target.value);
-                      setUserEditedQuery(true);
-                    }}
-                    onKeyDown={handleQueryKeyDown}
-                    placeholder="e.g. hormone replacement therapy coronary heart disease"
-                    className="border border-[#d2c2cb] bg-[#fbf9f4] text-[#3a0f34] px-3 py-1.5 text-[12px] font-mono font-medium focus:outline-none focus:border-[#3a0f34] h-[36px]"
-                  />
-                </label>
-
-                {/* Papers count pills */}
-                <div className="grid gap-1">
-                  <span className="text-[11px] font-semibold text-[#62535d] font-['Work_Sans']">
-                    Papers to read
-                  </span>
-                  <div className="flex items-center border border-[#d2c2cb] bg-[#fbf9f4] overflow-hidden h-[36px]">
-                    {[100, 200, 300].map((cnt) => (
-                      <button
-                        key={cnt}
-                        type="button"
-                        aria-pressed={paperCount === cnt}
-                        onClick={() => setPaperCount(cnt)}
-                        className={`px-3 py-1 text-[12px] font-['Work_Sans'] transition-colors h-full ${
-                          paperCount === cnt
-                            ? "bg-[#3a0f34] text-[#fbf9f4] font-bold"
-                            : "text-[#4f444b] hover:bg-[#f0eee9]"
-                        }`}
-                      >
-                        {cnt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Submit Button */}
+              <div className="rq-search-options"><div className="rq-options-grid">
+                <div className="rq-query-field"><label htmlFor="claim-pubmed-query">PubMed search query <span>{userEditedQuery ? "Custom query" : findResearchPreset(claim) ? "Preset query · edit to refine" : "Auto-built · edit to refine"}</span></label><input id="claim-pubmed-query" type="text" value={query} onChange={e=>{setQuery(e.target.value);setUserEditedQuery(true);}} onKeyDown={handleQueryKeyDown} placeholder="Search terms appear as you type"/><button type="button" onClick={()=>{setUserEditedQuery(false);setQuery(buildPubMedQuery(claim));}}>Reset to auto-built query</button></div>
+                <fieldset className="rq-paper-count"><legend>Papers to read</legend><div>{[100,200,300].map(count=><label key={count}><input type="radio" name="paper-count" value={count} checked={paperCount===count} onChange={()=>setPaperCount(count)}/><span>{count}</span></label>)}</div></fieldset>
+                <label className="rq-commentary"><input type="checkbox" checked={includeCommentary} onChange={e=>setIncludeCommentary(e.target.checked)}/>Include narrative reviews &amp; commentary</label>
+              </div></div>
+              <div className="rq-toolbar"><span className="rq-source">PubMed</span>
                 <button
                   type="submit"
                   disabled={isScanning}
-                  className="font-['Work_Sans'] font-semibold text-[13px] bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] px-4 py-2 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50 h-[36px] whitespace-nowrap"
+                  className="rq-submit"
                 >
                   {isScanning ? (
                     <>
@@ -589,41 +540,11 @@ export const ClaimscapePage: React.FC = () => {
                       <span>Map the evidence</span>
                     </>
                   )}
-                </button>
-              </div>
-
-              {/* Example Chips & Toggle Row */}
-              <div className="mt-1 pt-3 border-t border-[#e4e2dd] flex flex-wrap items-center justify-between gap-2.5 text-[11.5px] font-['Work_Sans']">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="font-semibold text-[#72636d]">Examples:</span>
-                  {[
-                    { label: "HRT and heart disease", claim: "Hormone replacement therapy reduces the risk of coronary heart disease in postmenopausal women" },
-                    { label: "Anesthesia and cancer recurrence", claim: "Regional anesthesia improves recurrence-free survival compared to general anesthesia in cancer surgery" },
-                    { label: "Vitamin D and fractures", claim: "Vitamin D supplementation reduces fracture risk in older adults" },
-                    { label: "Metformin and lifespan", claim: "Metformin extends lifespan in model organisms" },
-                  ].map((ex) => (
-                    <button
-                      key={ex.label}
-                      type="button"
-                      onClick={() => handleTopicClick(ex.claim)}
-                      className="px-2.5 py-1 bg-[#f0eee9] hover:bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb] transition-colors cursor-pointer text-[11px]"
-                    >
-                      {ex.label}
-                    </button>
-                  ))}
-                </div>
-
-                <label className="inline-flex items-center gap-2 cursor-pointer text-[#4f444b] text-[11.5px]">
-                  <input
-                    type="checkbox"
-                    checked={includeCommentary}
-                    onChange={(e) => setIncludeCommentary(e.target.checked)}
-                    className="rounded-none border-[#d2c2cb] text-[#3a0f34] focus:ring-0"
-                  />
-                  <span>Include narrative reviews & commentary</span>
-                </label>
-              </div>
+                </button></div>
+              <p className="rq-status">Your question is explored in ClaimScape, where the evidence search begins.</p>
             </form>
+            <div className="rq-topics" aria-label="Suggested research questions"><span>Try a topic:</span>{RESEARCH_PRESETS.map(ex=><button key={ex.id} title="Literature-backed example with a dedicated PubMed query" type="button" disabled={isScanning} onClick={()=>{setClaim(ex.question);setQuery(ex.query);setUserEditedQuery(false);document.getElementById('claim-textarea')?.focus();}}>{ex.label} ↗</button>)}</div>
+
 
             {/* Progress Bar under the Question Card */}
             {(isScanning || scanProgress > 0) && (
@@ -670,7 +591,7 @@ export const ClaimscapePage: React.FC = () => {
                   </span>
                 )}
               </div>
-              <h2 className="text-[clamp(24px,2.8vw,34px)] font-['Bodoni_Moda'] font-normal leading-tight tracking-tight text-[#3a0f34]">
+              <h2 id="synthesized-map-headline" className="text-[clamp(24px,2.8vw,34px)] font-['Bodoni_Moda'] font-normal leading-tight tracking-tight text-[#3a0f34]">
                 {headlineData.text}
               </h2>
               {headlineData.detail && (

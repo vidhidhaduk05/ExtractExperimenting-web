@@ -226,9 +226,6 @@ export const MethodologySection: React.FC = () => {
       {/* Provenance Statement */}
       <footer className="mt-8 border-t border-[var(--cs-line)] pt-6 text-[12.5px] cs-muted space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <p>
-            <strong>Evidence Mapping Framework:</strong> Dual-prompt stance verification and Wilson score visual synthesis calibrated for systematic biomedical reviews.
-          </p>
           <span className="cs-mono text-[11px] text-[var(--cs-ink-3)]">
             NLM / NCBI E-Utilities Citation Data
           </span>
