@@ -44,7 +44,7 @@ export interface ApiConnectionInfo {
 type ApiListener = (info: ApiConnectionInfo) => void;
 const apiListeners: Set<ApiListener> = new Set();
 
-export const PERMANENT_HPC_BACKEND = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
+export const PERMANENT_HPC_BACKEND = "https://verification-enter-attachments-mug.trycloudflare.com";
 
 export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
@@ -95,7 +95,7 @@ export async function autoDiscoverBackend(): Promise<string | null> {
   } catch (e) {}
 
   // Hardcoded fallback to current known HPC active tunnel
-  const hpcFallback = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
+  const hpcFallback = "https://verification-enter-attachments-mug.trycloudflare.com";
   try {
     const checkFallback = await testBackendConnection(hpcFallback);
     if (checkFallback.ok) {
