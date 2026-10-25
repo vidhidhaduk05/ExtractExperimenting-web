@@ -320,6 +320,11 @@ export const LandingPage: React.FC = () => {
       const link = target?.closest('a[href^="#"]') as HTMLAnchorElement | null;
       if (link) {
         const href = link.getAttribute("href");
+        if (href && href.startsWith("#/")) {
+          e.preventDefault();
+          navigate(href.slice(1));
+          return;
+        }
         if (href && href.length > 1 && !href.startsWith("#/")) {
           const el = container.querySelector(href) as HTMLElement | null;
           if (el) {
