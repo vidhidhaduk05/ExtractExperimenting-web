@@ -113,11 +113,16 @@ TUNNEL_HEALTHY=0
 # Only reuse tunnel if cloudflared is actively running on this compute node
 if pgrep -f "cloudflared.*8000" > /dev/null; then
     TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' "$CLOUDFLARED_LOG" 2>/dev/null | tail -n 1 || true)
+    if [ -z "$TUNNEL_URL" ] && [ -f /home/vd00026/cloudflared_8000.log ]; then
+        TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /home/vd00026/cloudflared_8000.log 2>/dev/null | tail -n 1 || true)
+    fi
     if [ -n "$TUNNEL_URL" ]; then
         echo "[*] Local cloudflared process found. Testing active tunnel: $TUNNEL_URL..."
         if curl -s --max-time 6 "$TUNNEL_URL/health" | grep -q '"status":"healthy"'; then
             TUNNEL_HEALTHY=1
             echo "[+] [TIER 3 VERIFIED] Public Ingress is reachable from external internet: $TUNNEL_URL"
+            # Ensure GitHub has the active URL published
+            bash "$REPO_DIR/jobs/publish_active_tunnel.sh" "$TUNNEL_URL" || true
         fi
     fi
 fi

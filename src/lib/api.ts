@@ -72,39 +72,46 @@ export async function autoDiscoverBackend(): Promise<string | null> {
     localStorage.removeItem("custom_api_base");
   }
 
-  try {
-    let res = await fetch("./active_backend.json", { cache: "no-store" }).catch(() => null);
-    if (!res || !res.ok) {
-      res = await fetch(
-        "https://raw.githubusercontent.com/vidhidhaduk05/ExtractExperimenting-web/main/public/active_backend.json",
-        { cache: "no-store" }
-      ).catch(() => null);
-    }
-    if (res && res.ok) {
-      const data = await res.json();
-      if (data?.backend_url) {
-        const url = String(data.backend_url).replace(/\/+$/, "");
-        const check = await testBackendConnection(url);
-        if (check.ok) {
-          API_BASE = url.endsWith("/api") ? url : `${url}/api`;
-          updateApiState({ apiBase: API_BASE, state: "live" });
-          return API_BASE;
+  // Probe sources in priority order:
+  // 1. Live raw GitHub (updated immediately on shift change, bypasses Pages build delay)
+  // 2. Relative ./active_backend.json (current static deployment)
+  const candidateSources = [
+    `https://raw.githubusercontent.com/vidhidhaduk05/ExtractExperimenting-web/main/public/active_backend.json?t=${Date.now()}`,
+    `./active_backend.json?t=${Date.now()}`,
+  ];
+
+  for (const src of candidateSources) {
+    try {
+      const res = await fetch(src, { cache: "no-store" }).catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json().catch(() => null);
+        const rawUrl = data?.api_url || data?.backend_url;
+        if (rawUrl) {
+          const cleanUrl = String(rawUrl).replace(/\/+$/, "");
+          const testUrl = cleanUrl.endsWith("/api") ? cleanUrl.slice(0, -4) : cleanUrl;
+          const check = await testBackendConnection(testUrl);
+          if (check.ok) {
+            API_BASE = cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`;
+            updateApiState({ apiBase: API_BASE, state: "live" });
+            return API_BASE;
+          }
         }
       }
-    }
-  } catch (e) {}
+    } catch (e) {}
+  }
 
-  // Hardcoded fallback to current known HPC active tunnel
-  const hpcFallback = "https://verification-enter-attachments-mug.trycloudflare.com";
+  // Priority 3: Fallback to permanent / hardcoded HPC tunnel
+  const hpcFallback = PERMANENT_HPC_BACKEND || "https://verification-enter-attachments-mug.trycloudflare.com";
   try {
     const checkFallback = await testBackendConnection(hpcFallback);
     if (checkFallback.ok) {
-      API_BASE = `${hpcFallback}/api`;
+      API_BASE = `${hpcFallback.replace(/\/+$/, "")}/api`;
       updateApiState({ apiBase: API_BASE, state: "live" });
       return API_BASE;
     }
   } catch (e) {}
 
+  updateApiState({ state: isDemoModeEnabled() ? "explicit_demo" : "offline" });
   return null;
 }
 
@@ -112,6 +119,13 @@ if (typeof window !== "undefined") {
   setTimeout(() => {
     autoDiscoverBackend().catch(() => {});
   }, 50);
+
+  // Periodic heartbeat every 45 seconds: auto-reconnects when HPC shifts change
+  setInterval(() => {
+    if (!localStorage.getItem("custom_api_base")) {
+      autoDiscoverBackend().catch(() => {});
+    }
+  }, 45000);
 }
 
 export function isDemoModeEnabled(): boolean {
