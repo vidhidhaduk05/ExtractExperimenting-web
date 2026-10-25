@@ -2536,7 +2536,7 @@ export const api = {
   health: () => request<{ status: string }>("/health"),
 
   // ClaimScape Fast Pipeline
-  evaluateClaimscape: (claim: string, query?: string, count: number = 100) =>
+  evaluateClaimscape: (claim: string, query?: string, count: number = 200) =>
     request<{
       claim: string;
       query: string;
@@ -2548,7 +2548,7 @@ export const api = {
       cached?: boolean;
     }>("/claimscape/evaluate", {
       method: "POST",
-      body: JSON.stringify({ claim, query, count }),
+      body: JSON.stringify({ claim, query, count, size: count }),
     }),
   getClaimscapeStatus: () =>
     request<{

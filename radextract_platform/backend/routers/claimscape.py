@@ -16,7 +16,9 @@ router = APIRouter(prefix="/api/claimscape", tags=["claimscape"])
 class EvaluateRequest(BaseModel):
     claim: str = Field(..., description="The clinical claim statement (e.g. 'Metformin extends lifespan in humans')")
     query: Optional[str] = Field(None, description="Optional custom PubMed query string")
-    count: int = Field(100, ge=20, le=300, description="Target number of PubMed abstracts to read (20-300)")
+    count: Optional[int] = Field(None, ge=20, le=300, description="Target number of PubMed abstracts to read (20-300)")
+    size: Optional[int] = Field(None, ge=20, le=300, description="Alias for count (k-dense parameter compatibility)")
+    includeCommentary: Optional[bool] = Field(False, description="Whether to include narrative commentary/reviews")
 
 
 @router.post("/evaluate")
@@ -25,16 +27,24 @@ async def evaluate_claim(request: EvaluateRequest) -> Dict[str, Any]:
     if not request.claim.strip():
         raise HTTPException(status_code=400, detail="Claim statement cannot be empty")
 
+    effective_count = request.count or request.size or 200
+
     try:
         result = evaluate_claim_fast(
             claim=request.claim,
             query=request.query,
-            count=request.count,
+            count=effective_count,
         )
         return result
     except Exception as e:
         logger.error("ClaimScape evaluation failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Evaluation pipeline error: {str(e)}")
+
+
+@router.post("/scan")
+async def scan_claim(request: EvaluateRequest) -> Dict[str, Any]:
+    """Direct alias for /evaluate matching k-dense scan endpoint."""
+    return await evaluate_claim(request)
 
 
 @router.get("/status")

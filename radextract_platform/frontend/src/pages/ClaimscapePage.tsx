@@ -38,11 +38,12 @@ export const ClaimscapePage: React.FC = () => {
   const urlQ = searchParams.get("q");
   const urlN = searchParams.get("n");
 
+  const isCustomClaim = !!(urlClaim && urlClaim !== hrtDataRaw.claim);
   const initialClaim = urlClaim || hrtDataRaw.claim;
   const initialQuery = urlQ || (urlClaim ? urlClaim.split("+").join(" ") : hrtDataRaw.query);
-  const initialCount = urlN ? parseInt(urlN, 10) || 300 : 300;
+  const initialCount = urlN ? parseInt(urlN, 10) || 200 : 200;
 
-  // Active dataset state (initialized with 300 publications so the map renders immediately)
+  // Active dataset state: start empty if custom claim URL so HRT data does not flash
   const [dataset, setDataset] = useState<{
     claim: string;
     query: string;
@@ -52,9 +53,9 @@ export const ClaimscapePage: React.FC = () => {
   }>({
     claim: initialClaim,
     query: initialQuery,
-    total: hrtDataRaw.total || 594,
-    papers: hrtDataRaw.papers as Paper[],
-    judgments: (hrtDataRaw as any).judgments || [],
+    total: isCustomClaim ? 0 : (hrtDataRaw.total || 594),
+    papers: isCustomClaim ? [] : (hrtDataRaw.papers as Paper[]),
+    judgments: isCustomClaim ? [] : ((hrtDataRaw as any).judgments || []),
   });
 
   // Helper to build neutral PubMed query from claim statement
@@ -92,11 +93,14 @@ export const ClaimscapePage: React.FC = () => {
   const [includeCommentary, setIncludeCommentary] = useState<boolean>(false);
   const [directOnly, setDirectOnly] = useState<boolean>(false);
   const [showReviews, setShowReviews] = useState<boolean>(true);
-  const [selectedExample, setSelectedExample] = useState<string>("hrt");
-  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [isScanning, setIsScanning] = useState<boolean>(isCustomClaim);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [scanError, setScanError] = useState("");
-  const [resultSource, setResultSource] = useState("Evidence synthesis active · 300 publications analyzed across study designs");
+  const [resultSource, setResultSource] = useState(
+    isCustomClaim
+      ? "Synthesizing evidence across biomedical literature…"
+      : "Evidence synthesis active · 300 publications analyzed across study designs"
+  );
   const [evalSpeed, setEvalSpeed] = useState<number | null>(null);
 
   // Typewriter suggestions when input is empty
@@ -212,7 +216,7 @@ export const ClaimscapePage: React.FC = () => {
     );
 
     return {
-      totalMatches: dataset.total || 594,
+      totalMatches: dataset.total ?? 0,
       read: Math.min(paperCount, processedPapers.length),
       onTopic: onTopicList.length,
       onMap: mappedList.length,
@@ -244,10 +248,14 @@ export const ClaimscapePage: React.FC = () => {
     }, 200);
   };
 
-  const runEvidenceSearch = async (nextClaim: string, nextQuery: string) => {
+  const runEvidenceSearch = async (nextClaim: string, nextQuery: string, nextCount?: number) => {
     const activeClaim = nextClaim.trim();
     let activeQuery = nextQuery.trim() || buildPubMedQuery(activeClaim);
     if (!activeClaim) return;
+    const targetCount = nextCount ?? paperCount;
+    if (nextCount && nextCount !== paperCount) {
+      setPaperCount(nextCount);
+    }
 
     // Apply studyType and period to query if user toggled them
     if (studyType && !activeQuery.includes(studyType)) {
@@ -289,7 +297,7 @@ export const ClaimscapePage: React.FC = () => {
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.set("claim", activeClaim);
       if (activeQuery) newUrl.searchParams.set("q", activeQuery);
-      newUrl.searchParams.set("n", paperCount.toString());
+      newUrl.searchParams.set("n", targetCount.toString());
       window.history.replaceState({}, "", newUrl.toString());
     } catch {}
 
@@ -310,7 +318,7 @@ export const ClaimscapePage: React.FC = () => {
 
     // Step 1: Try Local Backend API if available
     try {
-      const res = await api.evaluateClaimscape(activeClaim, activeQuery, paperCount);
+      const res = await api.evaluateClaimscape(activeClaim, activeQuery, targetCount);
       if (Array.isArray(res?.papers) && res.papers.length > 0 && Array.isArray(res?.judgments)) {
         setDataset({
           claim: res.claim || activeClaim,
@@ -321,7 +329,7 @@ export const ClaimscapePage: React.FC = () => {
         });
         setSelectedPmid(res.papers[0]?.pmid || "");
         setEvalSpeed(res.elapsed_ms);
-        setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: ${res.engine || "Laya System-1"}`);
+        setResultSource(`Live PubMed search · ${res.papers.length} publications indexed · Engine: ${res.engine || "ClaimScape Engine"}`);
         finishScan();
         return;
       }
@@ -331,7 +339,7 @@ export const ClaimscapePage: React.FC = () => {
 
     // Step 2: Query Live PubMed directly via NCBI E-Utilities with Laya System-1 Inference
     try {
-      const liveRes = await fetchLivePubMedEvidence(activeClaim, activeQuery, paperCount);
+      const liveRes = await fetchLivePubMedEvidence(activeClaim, activeQuery, targetCount);
       if (Array.isArray(liveRes?.papers) && liveRes.papers.length > 0) {
         setDataset({
           claim: activeClaim,
@@ -341,7 +349,7 @@ export const ClaimscapePage: React.FC = () => {
           judgments: liveRes.judgments,
         });
         setSelectedPmid(liveRes.papers[0]?.pmid || "");
-        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Laya System-1`);
+        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · ClaimScape Engine`);
         finishScan();
         return;
       } else {
@@ -364,11 +372,13 @@ export const ClaimscapePage: React.FC = () => {
   };
 
   // Run search on initial load if URL contains a custom claim
+  const initialSearchRanRef = useRef(false);
   useEffect(() => {
-    if (urlClaim && urlClaim !== hrtDataRaw.claim) {
-      void runEvidenceSearch(urlClaim, urlQ || buildPubMedQuery(urlClaim));
+    if (urlClaim && urlClaim !== hrtDataRaw.claim && !initialSearchRanRef.current) {
+      initialSearchRanRef.current = true;
+      void runEvidenceSearch(urlClaim, urlQ || buildPubMedQuery(urlClaim), initialCount);
     }
-  }, [urlClaim, urlQ]);
+  }, [urlClaim, urlQ, urlN]);
 
   const handleSelectExample = (ex: typeof PRESET_EXAMPLES[0]) => {
     if (isScanning) return;

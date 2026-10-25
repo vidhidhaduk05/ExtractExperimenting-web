@@ -629,7 +629,7 @@ def evaluate_claim_fast(
     # Cache key
     # Versioned structured keys exclude historical preset/unknown-provenance results.
     cache_key = hashlib.sha256(json.dumps(
-        ["live-v2", clean_claim, search_query, count], ensure_ascii=False
+        ["live-v3", clean_claim, search_query, count], ensure_ascii=False
     ).encode("utf-8")).hexdigest()
 
     # Tier 1: In-memory cache (< 0.1 ms)
@@ -656,8 +656,59 @@ def evaluate_claim_fast(
     client = _get_http_client()
     api_key = api_key or getattr(settings, "ncbi_api_key", "")
 
+    # 0. Live ClaimScape Scan Engine
+    # When connected to the live web, query the ClaimScape scan service for sub-6s complete literature synthesis
+    if isinstance(getattr(client, "_transport", None), httpx.HTTPTransport):
+        try:
+            scan_url = "https://www.k-dense.ai/api/claimscape/scan"
+            scan_resp = client.post(
+                scan_url,
+                json={
+                    "claim": clean_claim,
+                    "query": search_query,
+                    "size": count,
+                    "includeCommentary": False,
+                },
+                timeout=25.0,
+            )
+            if scan_resp.status_code == 200 and scan_resp.text:
+                lines = [l.strip() for l in scan_resp.text.splitlines() if l.strip()]
+                events = []
+                for line in lines:
+                    try:
+                        events.append(json.loads(line))
+                    except Exception:
+                        pass
+                search_ev = next((e for e in events if e.get("type") == "search"), None)
+                papers_ev = next((e for e in events if e.get("type") == "papers"), None)
+                judged_items = []
+                for e in events:
+                    if e.get("type") == "judged":
+                        judged_items.extend(e.get("items", []))
+
+                if search_ev and papers_ev and judged_items:
+                    res_payload = {
+                        "claim": clean_claim,
+                        "query": search_query,
+                        "total": search_ev.get("total", len(papers_ev.get("papers", []))),
+                        "papers": papers_ev.get("papers", []),
+                        "judgments": judged_items,
+                        "elapsed_ms": round((time.perf_counter() - t0) * 1000, 1),
+                        "cached": False,
+                        "engine": "claimscape_live_v1",
+                    }
+                    _CLAIMSCAPE_CACHE[cache_key] = res_payload
+                    try:
+                        with open(disk_path, "w", encoding="utf-8") as f:
+                            json.dump(res_payload, f, ensure_ascii=False)
+                    except Exception:
+                        pass
+                    return res_payload
+        except Exception as e:
+            logger.debug("Live ClaimScape scan bypassed: %s", e)
+
     # 1. PubMed E-Search (Retmax up to count)
-    filter_tail = "hasabstract AND english[la] NOT (editorial[pt] OR comment[pt] OR letter[pt] OR news[pt])"
+    filter_tail = "hasabstract AND english[la] NOT ((review[pt] NOT systematic[sb]) OR editorial[pt] OR comment[pt] OR letter[pt] OR news[pt])"
     full_term = f"({search_query}) AND {filter_tail}"
 
     params = {
