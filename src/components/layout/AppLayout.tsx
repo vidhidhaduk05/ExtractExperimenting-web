@@ -665,7 +665,7 @@ export function AppLayout() {
                     ? "border-rose-200/80 bg-rose-50/80 text-rose-900"
                     : "border-black/10 bg-white/70 text-[#6B665E]"
                 )}
-                title={`HPC Backend: ${apiInfo.apiBase || "Permanent HPC Tunnel"} (${apiInfo.state})`}
+                title={`Backend: ${apiInfo.apiBase || "Live Tunnel"} (${apiInfo.state})`}
               >
                 <span
                   className={cn(
@@ -679,9 +679,9 @@ export function AppLayout() {
                 />
                 <span className="font-mono text-[10px]">
                   {apiInfo.state === "live"
-                    ? "HPC GPU Live"
+                    ? "Online"
                     : apiInfo.state === "error"
-                    ? "HPC Offline"
+                    ? "Offline"
                     : "Connecting..."}
                 </span>
               </div>
