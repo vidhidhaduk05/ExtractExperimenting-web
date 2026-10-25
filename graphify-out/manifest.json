@@ -384,9 +384,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/variables.py": {
-    "mtime": 1791664521.036887,
-    "seen": 1791664941.925462,
-    "ast_hash": "9ba29daeb6f4c044ef70b9c4d1a03d49",
+    "mtime": 1792968681.9529026,
+    "seen": 1792969918.132325,
+    "ast_hash": "48a92c35d432bf95742c4e2e08209059",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/__init__.py": {
@@ -576,9 +576,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/variable_generator.py": {
-    "mtime": 1791664521.1157563,
-    "seen": 1791664941.925462,
-    "ast_hash": "834014a22d362fa517bee115d6ed5bc2",
+    "mtime": 1792968681.9543302,
+    "seen": 1792969918.1696694,
+    "ast_hash": "d58429fd3daf9f928e9b267558c18aae",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/conftest.py": {
@@ -780,15 +780,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/layout/AppLayout.tsx": {
-    "mtime": 1792950192.9940217,
-    "seen": 1792951085.2279685,
-    "ast_hash": "392bad49830ec4a0ecc2c0830289e096",
+    "mtime": 1792968687.5441403,
+    "seen": 1792969918.2266018,
+    "ast_hash": "d62b32a22fea00c2d4964f3d1e48fcf3",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1792882250.4834602,
-    "seen": 1792886070.133042,
-    "ast_hash": "47af6162d9723c2dd16e425604180721",
+    "mtime": 1792968687.545095,
+    "seen": 1792969918.2306235,
+    "ast_hash": "bf23d8b9be07440c2dc00cbfee3638e5",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -918,9 +918,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyList.tsx": {
-    "mtime": 1792279735.9489684,
-    "seen": 1792279857.5285745,
-    "ast_hash": "71d5e2f60b54603a1a6aa5b5dfeb9e66",
+    "mtime": 1792968687.5480943,
+    "seen": 1792969918.2423875,
+    "ast_hash": "21b1bbc8ea95d5846d2f7929e84701f5",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/vite-env.d.ts": {
@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ExtractionSheetPage.tsx": {
-    "mtime": 1792952815.6661942,
-    "seen": 1792953691.2277448,
-    "ast_hash": "70e0a0cd5f03c2325115b9c8416ad4c1",
+    "mtime": 1792969358.9806721,
+    "seen": 1792969918.2423875,
+    "ast_hash": "7c3d643a1103e58a2dfd1f4325673200",
     "semantic_hash": ""
   },
   ".jules/bolt.md": {
@@ -5051,18 +5051,6 @@
     "ast_hash": "af3767d63ca29cac7885890c563ee1bf",
     "semantic_hash": ""
   },
-  ".tmp-radiology-update.py": {
-    "mtime": 1792891795.7809315,
-    "seen": 1792891868.4974895,
-    "ast_hash": "95ae3525af5225bffd21830f802ee3b1",
-    "semantic_hash": ""
-  },
-  ".tmp-verify-radiology.mjs": {
-    "mtime": 1792891809.4126983,
-    "seen": 1792891868.4974895,
-    "ast_hash": "79f85b2f53467405a67b94e9e254815d",
-    "semantic_hash": ""
-  },
   ".claimscape-export/ClaimScape/app.tsx": {
     "mtime": 1792892794.093776,
     "seen": 1792892822.491734,
@@ -5141,12 +5129,6 @@
     "ast_hash": "698606e21e3abe3fe35ed0773637f1cb",
     "semantic_hash": ""
   },
-  ".tmp-export-claimscape.cjs": {
-    "mtime": 1792892792.7566626,
-    "seen": 1792892822.491734,
-    "ast_hash": "e8f39888bd3a7a3a7edc3d99499893ad",
-    "semantic_hash": ""
-  },
   ".claimscape-export/ClaimScape/README.md": {
     "mtime": 1792892794.0967746,
     "seen": 1792892822.9186735,
@@ -5163,36 +5145,6 @@
     "mtime": 1792892796.0120144,
     "seen": 1792892822.9186735,
     "ast_hash": "18cda2ca30f182af8578d8a64a072af0",
-    "semantic_hash": ""
-  },
-  ".tmp-integrate-question-options.py": {
-    "mtime": 1792893191.5656195,
-    "seen": 1792893276.3022363,
-    "ast_hash": "7b48cd6e3f05cf2976db3a6a088798d1",
-    "semantic_hash": ""
-  },
-  ".tmp-verify-question-options.mjs": {
-    "mtime": 1792893216.6987538,
-    "seen": 1792893276.3022363,
-    "ast_hash": "919636e49ff570387a1afaaac75e4377",
-    "semantic_hash": ""
-  },
-  ".tmp-match-question-controls.py": {
-    "mtime": 1792893513.791762,
-    "seen": 1792893582.5478115,
-    "ast_hash": "8f80bb71f5aa1c7670ee285f35622857",
-    "semantic_hash": ""
-  },
-  ".tmp-serifon-local/info.txt": {
-    "mtime": 1792208076.0,
-    "seen": 1792953691.3654451,
-    "ast_hash": "57f9d00b6e4ae975a1364d9c75ac2ea1",
-    "semantic_hash": ""
-  },
-  ".tmp-MASTER_THEME.md": {
-    "mtime": 1792954156.2430217,
-    "seen": 1792954221.7477207,
-    "ast_hash": "ea6582909e1f5892af2c713743b09f1c",
     "semantic_hash": ""
   },
   "build_landing_component.py": {
@@ -5213,60 +5165,6 @@
     "ast_hash": "be3d20ed665118fd7f906ef7dde73d63",
     "semantic_hash": ""
   },
-  ".tmp-integrate-lenis.cjs": {
-    "mtime": 1792956623.9909885,
-    "seen": 1792957295.212748,
-    "ast_hash": "514d4bcd7963bcb278ab9575f1fe13eb",
-    "semantic_hash": ""
-  },
-  ".tmp-verify-lenis.mjs": {
-    "mtime": 1792959227.6434124,
-    "seen": 1792959333.400191,
-    "ast_hash": "c82afaa54700f61751dc139d032758c9",
-    "semantic_hash": ""
-  },
-  ".tmp-install-rhythm.cjs": {
-    "mtime": 1792957183.511567,
-    "seen": 1792957295.212748,
-    "ast_hash": "285cb5b601b48fb93f4fb66efbfcc456",
-    "semantic_hash": ""
-  },
-  ".tmp-rhythm.js": {
-    "mtime": 1792957314.765442,
-    "seen": 1792959153.153287,
-    "ast_hash": "995b13b1059000257837d326ce642fda",
-    "semantic_hash": ""
-  },
-  ".tmp-verify-rhythm.mjs": {
-    "mtime": 1792957230.1857402,
-    "seen": 1792957295.218752,
-    "ast_hash": "e9fdf2255945fc5b540504862fadaf6b",
-    "semantic_hash": ""
-  },
-  ".tmp-edge-motion.js": {
-    "mtime": 1792959093.7969663,
-    "seen": 1792959153.1462886,
-    "ast_hash": "43bc8c24f29a06c5913814ec9e0d6b28",
-    "semantic_hash": ""
-  },
-  ".tmp-install-physics.cjs": {
-    "mtime": 1792959005.4364915,
-    "seen": 1792959153.1472876,
-    "ast_hash": "1807d94bf8d0afacca4a8a889138df27",
-    "semantic_hash": ""
-  },
-  ".tmp-spring-motion.js": {
-    "mtime": 1792959005.4304886,
-    "seen": 1792959153.153287,
-    "ast_hash": "f355dff274001fe3b87ce84624f2f367",
-    "semantic_hash": ""
-  },
-  ".tmp-verify-physics.mjs": {
-    "mtime": 1792959128.1711588,
-    "seen": 1792959153.1542883,
-    "ast_hash": "2270c4702051b31eff1a2a2b4f9cc3b2",
-    "semantic_hash": ""
-  },
   "radextract_platform/frontend/src/assets/motion/rhythm.js": {
     "mtime": 1792957317.8612044,
     "seen": 1792959153.561041,
@@ -5283,90 +5181,6 @@
     "mtime": 1792956627.4291928,
     "seen": 1792959153.8031592,
     "ast_hash": "95463cf5983bbba4dff18c7019e77b80",
-    "semantic_hash": ""
-  },
-  ".tmp-install-verified-presets.py": {
-    "mtime": 1792959806.9836137,
-    "seen": 1792959970.4626727,
-    "ast_hash": "cdd731c6a424742a1ad6f22a7d29b4c1",
-    "semantic_hash": ""
-  },
-  ".tmp-preset-retrieval-results.json": {
-    "mtime": 1792959894.2740388,
-    "seen": 1792959970.4646757,
-    "ast_hash": "709b606752083cdf282c8b5085925189",
-    "semantic_hash": ""
-  },
-  ".tmp-probe-preset-retrieval.cjs": {
-    "mtime": 1792959852.2810483,
-    "seen": 1792959970.4646757,
-    "ast_hash": "b3077c8d8391dc8c68a3d69bcc7764ee",
-    "semantic_hash": ""
-  },
-  ".tmp-probe-preset-retrieval.js": {
-    "mtime": 1792959855.5630984,
-    "seen": 1792959970.4646757,
-    "ast_hash": "3a7f3f585e69fbca03684585685c7770",
-    "semantic_hash": ""
-  },
-  ".tmp-verified-presets.json": {
-    "mtime": 1792959724.4286032,
-    "seen": 1792959970.4666681,
-    "ast_hash": "3ea7ecee05b32c3c1cbcc298b78450de",
-    "semantic_hash": ""
-  },
-  ".tmp-verify-preset-evidence.py": {
-    "mtime": 1792959708.9624975,
-    "seen": 1792959970.467667,
-    "ast_hash": "e7f9c0eeae57a6b40a7e0638fc8b62ee",
-    "semantic_hash": ""
-  },
-  ".tmp-verify-preset-ui.mjs": {
-    "mtime": 1792959905.4725478,
-    "seen": 1792959970.467667,
-    "ast_hash": "f31d9e2364fb39abcfdc2355530df25b",
-    "semantic_hash": ""
-  },
-  ".tmp-generate-react-landing.cjs": {
-    "mtime": 1792960281.7991974,
-    "seen": 1792962141.9701307,
-    "ast_hash": "9a2a572f68f2573765c172d1a4c7feab",
-    "semantic_hash": ""
-  },
-  ".tmp-integrate-shared-theme.cjs": {
-    "mtime": 1792960264.1021864,
-    "seen": 1792962141.9721308,
-    "ast_hash": "b74f51e377cc132e36ce87f4bba40feb",
-    "semantic_hash": ""
-  },
-  ".tmp-jules-deployment-audit.json": {
-    "mtime": 1792960198.217213,
-    "seen": 1792962141.9721308,
-    "ast_hash": "1d89fbe39585686c792a95101a4cc084",
-    "semantic_hash": ""
-  },
-  ".tmp-release-manifest.json": {
-    "mtime": 1792960595.6252522,
-    "seen": 1792962141.9732249,
-    "ast_hash": "95fb7c1fa4675d184ed37b47f5d6f4f6",
-    "semantic_hash": ""
-  },
-  ".tmp-sync-approved-release.py": {
-    "mtime": 1792960591.4671638,
-    "seen": 1792962141.9732249,
-    "ast_hash": "4cc8d9b6b65ede1cf4266647465a60cc",
-    "semantic_hash": ""
-  },
-  ".tmp-update-react-landing.py": {
-    "mtime": 1792960364.8903782,
-    "seen": 1792962141.9732249,
-    "ast_hash": "a3de688cee34d1f6fe57d0a266ab24d8",
-    "semantic_hash": ""
-  },
-  ".tmp-verify-release.mjs": {
-    "mtime": 1792960528.361009,
-    "seen": 1792962141.9753253,
-    "ast_hash": "4e6db6cacaab9c24ce345e6f1a0fddef",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/assets/motion/edgeMotion.ts": {

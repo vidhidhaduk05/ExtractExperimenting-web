@@ -1,17 +1,17 @@
 # Graph Report - Rad Extract Experimenting  (2026-10-26)
 
 ## Corpus Check
-- 790 files · ~1,990,242 words
+- 760 files · ~1,986,728 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 179 file(s) not represented in the graph (top: .ttf 57, .csv 54, .css 22)
+- Unclassified: 171 file(s) not represented in the graph (top: .ttf 56, .csv 54, .css 19)
 
 ## Summary
-- 11259 nodes · 21582 edges · 562 communities (423 shown, 139 thin omitted)
+- 11154 nodes · 21479 edges · 544 communities (398 shown, 146 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 1411 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6433a93b`
+- Built from commit: `8bdd052d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -21,13 +21,13 @@
 - frontend/src/lib/api.ts
 - lenis.min.js
 - test_core.py
-- DBBackend
+- check_project_access
 - laya/package.json
-- json
+- DBBackend
 - getApiBase
 - DesignSystemGenerator
 - prisma2020_sync.py
-- grade.py
+- get_db_backend
 - assets.mjs
 - test_rob_batch_run.py
 - Catchii detailed feature audit and RadExtract gap report
@@ -36,9 +36,9 @@
 - frontend/src/lib/claimscapeMethod.ts
 - DeterministicScreener
 - test_dual_writer.py
-- graphify.py
+- _load_graph
 - Native, managed, and packaged artifacts
-- generate_variables_from_picos
+- variables.py
 - _create_project_and_study
 - App.tsx
 - math
@@ -49,33 +49,33 @@
 - rigor_scan_service.py
 - ClaimScape/src/lib/api.ts
 - Snap
-- check_project_access
+- routers/screening.py
 - Lenis
-- OCRBackend
+- validate.py
 - compilerOptions
 - validate_tool_response
 - patch
-- test_extraction_gaps.py
+- auto_extract_service.py
 - test_clarification.py
-- ref_node_fs
-- _verify_project
-- citation_telephone.py
+- download.ts
+- analysis_service.py
+- citation_telephone_service.py
 - _db
 - compilerOptions
 - ToolCallingClient
-- keyword_highlight_service.py
+- test_keyword_highlight.py
 - models.py
 - ShadcnInstaller
-- test_pubmed_query.py
+- literature_search_service.py
 - shutil
-- extract_pico_spans_from_abstract
+- prefill_assessment
 - dependencies.py
 - SQLiteBackend
 - scripts/core.py
 - DynamoDBBackend
 - parse_nbib
 - VirtualScroll
-- validate.py
+- test_end_to_end.py
 - devDependencies
 - Verification Chains (by Language)
 - schema.py
@@ -91,8 +91,8 @@
 - 3. Data Extraction Schema
 - The 20 Anti-Patterns
 - lenis/package.json
-- test_claimscape_live_pipeline.py
-- test_fulltext_retrieval.py
+- claimscape_fast_pipeline.py
+- fetch_one
 - compilerOptions
 - icon/generate.py
 - Persona Protocol
@@ -103,14 +103,14 @@
 - test_robvis_figures.py
 - 3. Deployment Steps
 - extract_variables_with_aide_engine
-- reconcile.py
+- rob_tools.py
 - test_ai_search_strings.py
 - reference_parser.py
-- test_rob_service.py
-- ScreeningPage.tsx
+- _create_project_and_study
+- StudyList.tsx
 - GRAVITAS Prompt Template
 - Agent: General
-- MockProcessor
+- document_processor.py
 - generate_criteria_from_pico
 - Tailwind CSS Utility Reference
 - ref_lenis
@@ -124,7 +124,7 @@
 - GRAVITAS — Python Extension
 - VDExtract: Screening & Extraction Quality Gap Fixes
 - patch
-- test_bookmarks.py
+- run_statistical_analysis
 - ClaimScape/src/lib/demoData.ts
 - TestSessions
 - Model-Native Optimization Notes (Gemini tuned)
@@ -135,13 +135,13 @@
 - extract_pico_from_text
 - Lenis v2 Roadmap
 - parse_ris
-- test_core_data_quality.py
+- meta.py
 - test_extraction_decisions.py
 - BooleanNode
 - object
 - parse_csv
 - PrismaFlowPage.tsx
-- pubmed_service.py
+- fulltext_availability.py
 - mcp_server/package.json
 - Brand Guidelines v1.0
 - biomni.py
@@ -154,7 +154,7 @@
 - TestPdfService
 - provider.tsx
 - animate.ts
-- fulltext_availability.py
+- test_fulltext_availability.py
 - devDependencies
 - clarification.py
 - Decision log
@@ -166,23 +166,23 @@
 - Google Jules Autonomous Agent Rules
 - logo/generate.py
 - spacing
-- classify_study
+- select_rob_tool_with_alternatives
 - biome.json
 - Form & Input Components
 - test_design_system_mode.py
 - playground/package.json
 - compilerOptions
-- claimscape_fast_pipeline.py
+- laya_engine.py
 - re
-- convert_with_fallback
+- unittest
 - search_string_generator.py
 - RadExtract: final decisions and coding-agent implementation handoff
-- DoclingProcessor
+- exhaustive_extract
 - compilerOptions
 - lenis/react
 - cip/core.py
-- PdfViewerPage.tsx
-- format_ascii_box
+- RobAssessmentPage.tsx
+- design_system.py
 - Tailwind CSS Responsive Design
 - Agent: Plan
 - Subagent Patterns
@@ -194,25 +194,24 @@
 - html-token-validator.py
 - RadExtract Platform - HPC AI Agent Master Operational & Deployment Plan
 - MockAgent
-- setup_logging
+- test_rob_tools.py
 - Tokenizer
 - post
 - descriptive_synthesis.py
 - 4. Recipes
 - laya.ts
 - tsconfig.json
-- test_end_to_end.py
+- picos_schema_generator.py
 - RadExtract — Agent Handoff Document
 - dev-start.sh script
 - generate_search_strings
 - dev-stop.sh script
-- antigravity_schemas.py
+- parse_llm_response
 - TestDocxExport
 - lenis/vue
-- TestGenerateProjectConfig
-- Stellar Labs — Master Theme
+- TestDomainDetection
 - GRAVITAS -- Engineering Reliability Runtime
-- extract_pico_from_file
+- test_claimscape_live_pipeline.py
 - TestSearchDomains
 - TestSearchStrings
 - Skill: Variable Extraction
@@ -244,10 +243,10 @@
 - jev_screener.py
 - radextract-platform
 - backup_db.sh script
-- .tmp-install-physics.cjs
+- render-html.py
 - os
 - radius
-- GradePage.tsx
+- BM25
 - Gravitas -- Delegation Reference
 - Gravitas -- Interruption Recovery Reference
 - Gravitas -- Task Contract Reference
@@ -256,7 +255,7 @@
 - Asset Approval Checklist
 - rules
 - Logo AI Prompt Engineering
-- test_catalog_summary_line_endings.py
+- test_relevance_evaluator.py
 - UI Styling Skill
 - RigorScanPage.tsx
 - Dimensions
@@ -267,28 +266,28 @@
 - codebook_f3fb4fe7.md
 - ClaimScape/package.json
 - react/package.json
-- pubmed.py
+- typing
 - React + TypeScript + Vite
 - roadmap_Founder_Roadmap_SR_AI_SaaS (1)_836a92da.md
-- unittest
+- csv
 - Section 3 — Commercialization Roadmap
 - Color Palette Management
-- TestNativeDesktopStackFreshness
-- document_processor.py
+- test_native_desktop_stack_freshness.py
+- verify_study_citation
 - 1. Using the Open OnDemand (OOD) "Job Composer"
 - The run
 - lint.mjs
 - TestGenericMetaAnalysis
 - CIP Deliverable Guide
 - Gravitas -- Model Routing Reference
-- init_db
+- get_connection
 - States and Variants
 - Gravitas -- Adaptive Reasoning Reference
 - Editorial Velvet.md
-- cip/generate.py
+- get_review_graph_stats
 - Gravitas -- Reconnaissance Reference
 - vue/nuxt/tsconfig.json
-- test_production_hardening.py
+- CircuitBreaker
 - Workflow
 - Section 6 — 12-Month Strategic Roadmap
 - Design System
@@ -300,7 +299,7 @@
 - sanitize.ts
 - TestTailwindConfigGenerator
 - parse_bibtex
-- .tmp-edge-motion.js
+- RateLimiter
 - TestAutoExtract
 - gravitas-invariants.md
 - coordinator.md
@@ -312,18 +311,18 @@
 - The study
 - useSortedClasses
 - peerDependenciesMeta
-- design_system.py
+- compute_quadas2_domain_judgment
 - test_icon_generate.py
 - Tailwind CSS Customization
 - Colour
-- ref_path
+- get_ai_screening_status
 - test_record_collaboration.py
 - test_cip_generate.py
 - Tells — the dated registry
 - record_collaboration.py
 - vue/package.json
 - TestPICOEndpoints
-- read_rows
+- evaluate_claim
 - Critique — judging the render
 - src/lenis.ts
 - generate-slide.py
@@ -332,7 +331,7 @@
 - element.ts
 - Routing by Task Type
 - match_search_string
-- tool_calling_client.py
+- parse_json_from_text
 - TestHypothesisEndpoints
 - _simple_pico_extraction
 - tasteskill v2 (`design-taste-frontend`)
@@ -346,23 +345,23 @@
 - Nuxt Minimal Starter
 - TestPubMedFetch
 - TestWebStackFreshness
-- literature_search_service.py
+- ExitStatusTests
 - test_search_string_generator.py
 - TestPubMedKey
 - BM25
-- laya/eslint.config.js
+- TestThresholdGate
 - gray
 - landing_scripts.js
-- rob_service.py
+- json
 - CatalogRefreshTest
 - color
-- prisma_service.py
-- llm_extractor.py
+- test_skill_script_paths.py
+- antigravity_tools.py
 - parse_authors
-- .tmp-integrate-shared-theme.cjs
+- writer.py
 - _setup
 - New file: `routers/clarification.py`
-- parse_ovid
+- test_new_features.py
 - source
 - domains
 - Lenis Contributing Guide
@@ -370,24 +369,24 @@
 - Brand Consistency Checklist
 - dependencies
 - CIP Mockup Prompt Engineering
-- TestStyleTaxonomy
-- test_keyword_highlight.py
+- test_style_taxonomy.py
+- jules_auto_merge.py
 - playground/nuxt/tsconfig.json
 - TestAutoGenerateVariables
-- csv
+- logo/core.py
 - sync_web_repo.py
 - server/tsconfig.json
 - Color Semantics
-- FallbackProcessor
+- get_judgment_color
 - core/package.json
 - snap/package.json
 - raf
 - raf
 - raf
-- detect_project.py
+- pathlib
 - TailwindConfigGenerator
 - UI/UX Pro Max - Design Intelligence
-- biomni_service.py
+- Part 5 — Backend: API Endpoints
 - reset_breaker
 - create_app
 - parse_endnote_xml
@@ -395,10 +394,10 @@
 - Design Principles
 - parse_pubmed_xml
 - Design Principles
-- TestBivariateModel
+- test_meta_analysis.py
 - TestReferenceUpload
-- test_pdf_service.py
-- get_connection
+- TestPdfEndpoints
+- _make_project_and_study
 - coded_extract_study
 - extract-colors.cjs
 - Stellar Labs frontend — deployment handover
@@ -406,24 +405,24 @@
 - TestCriteria
 - TestAssessmentCRUD
 - laya_extraction_tracer.py
-- .tmp-generate-react-landing.cjs
+- TestFunnelPlot
 - sync-brand-to-tokens.cjs
 - CIP Design Reference
-- test_data_contracts.py
+- Words
 - _clean_latex
-- PicoHypothesisPage.tsx
-- pathlib
+- TestForestPlot
+- jules_monitor.py
 - Icon Design Reference
 - TestToolDefinitions
-- .tmp-probe-preset-retrieval.js
+- TestGradeCRUD
 - Copywriting Formulas
 - Part 6 — Frontend: Screening Page Redesign
 - lenis/snap
-- test_r_plot_service.py
+- TestRAvailability
 - Copywriting Formulas
-- get_processor
-- parse_decision_rules
-- _setup_project_and_study
+- invalidate_tool_cache
+- test_data_contracts.py
+- TestExtractionAdjudication
 - Banner Design - Multi-Format Creative Banner System
 - Messaging Framework
 - Brand Voice Framework
@@ -436,11 +435,11 @@
 - Logo Design Reference
 - Token Architecture
 - design-tokens-starter.json
-- ProcessedDocument
+- TestExtractionVerification
 - Pre-Delivery Checklist (canonical — the only one)
 - Quick Reference
-- AgentBackend
-- test_coded_extraction.py
+- TestAutoSelection
+- build_field_prompt
 - Primitive Tokens
 - embed-tokens.cjs
 - validate-tokens.cjs
@@ -460,11 +459,11 @@
 - main
 - test_settings.py
 - runtime/lenis.ts
-- _exhaustive_search
+- Mandatory Rules for AI Agents (Antigravity, Claude, Cline)
 - S3Storage
-- BM25
+- Part 11 — Test Cases
 - compute_rob2_domain_judgment
-- TestEffectSizeComputation
+- TestMLA
 - Slides Reference
 - HTML Slide Template
 - export_onnx.py
@@ -472,43 +471,39 @@
 - Slides
 - MetaSynthesis AI — Design System & Project Context
 - snap/test.ts
-- test_quote_verification.py
+- TestHealthEndpoint
 - Considerations
 - Brand Guidelines Template
-- test_validate_tokens.py
-- collections
-- @receptron/laya
-- TestKeywordGroupsAPI
+- subprocess
+- TestPRISMAFlow
+- TestCallRScript
+- TestSROCCurve
 - export_ris
 - cip/search.py
-- rob.py
+- RobAdjudicateRequest
 - ref_fs
 - Part 2 — Backend: Multi-Stage AI Screening Service
-- screen_with_clarification
+- TestAutoPopulate
 - padding-y
 - fixture
 - Biomni-R0 32B Model Integration Reference
-- dependencies
+- TestFactorUpdate
 - 1. Design Tokens
-- repository
-- export_endnote_xml
-- rct_rob_engine.py
+- assess_study_risk_of_bias
 - TestGetSensitivityEndpoint
 - 0. Project Context
 - App.vue
 - xl
 - touch-debug/test.ts
 - logo/search.py
-- bugs
 - slides-create.md
 - create.md
-- engines
 - TestResearchQuestionAPI
-- io
+- robvis_service.py
 - tsdown.config.ts
 - devDependencies
 - update-readme.js
-- chart_engine.py
+- generate_prisma_flow
 - TestGetHeterogeneity
 - peerDependencies
 - 2. Section Architecture
@@ -516,30 +511,19 @@
 - Motion prototype, 25 October 2026
 - 6. Copy & content patterns
 - handleDemoRequest
-- publishConfig
-- reference_export.py
 - rhythm.js
 - ref_react
 - TestExpandedSearchStrings
-- Bolt's Journal - Performance Learnings
 - Phase 5: Lambda Packaging + API Gateway (AWS Deployment)
 - test_pipeline_reports_progress
 - funding
 - module.ts
 - repository
-- TestLandingAndStackContract
 - generate_citations
 - TestPublicationPlots
 - TestMetaAnalysisCRUD
 - vendor/lenis/README.md
-- init_aws_local.py
-- Part 9 — Question Type Specifications
-- .tmp-rhythm.js
 - Phase 6: Production Hardening
-- delete_assessment
-- TestSVGGeneration
-- TestFullRun
-- TestReferenceExportAPI
 - TestReviewMatrixBugFix
 - ClaimScape/README.md
 - PicoExtractionResponse
@@ -549,11 +533,8 @@
 - Phase 2: LocalStack Setup (No Docker)
 - 3A. Verify storage abstraction is complete
 - TestCreateAgentConfig
-- TestIsAntigravityAvailable
-- TestEggersTest
 - TestLogin
-- _get_keyword_regex
-- test_start_ai_analysis_direct_function_call
+- start_ai_analysis
 - test_get_ai_screening_status_forbidden_when_not_member
 - TestGetAnalysisProfile
 - TestGetVariableStats
@@ -567,13 +548,13 @@
 - TestProjectSummary
 
 ## God Nodes (most connected - your core abstractions)
-1. `DBBackend` - 373 edges
-2. `check_project_access()` - 177 edges
+1. `DBBackend` - 376 edges
+2. `check_project_access()` - 182 edges
 3. `get_connection()` - 172 edges
 4. `init_db()` - 116 edges
 5. `Complete decision register` - 114 edges
-6. `reset_db()` - 102 edges
-7. `post()` - 102 edges
+6. `post()` - 105 edges
+7. `reset_db()` - 102 edges
 8. `get_db_backend()` - 101 edges
 9. `ToolCallingClient` - 69 edges
 10. `SQLiteBackend` - 62 edges
@@ -593,7 +574,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (562 total, 139 thin omitted)
+## Communities (544 total, 146 thin omitted)
 
 ### Community 0 - "Complete decision register"
 Cohesion: 0.02
@@ -605,51 +586,51 @@ Nodes (42): analyze_table(), build_records(), detect_orientation(), drop_empty_c
 
 ### Community 2 - "frontend/src/lib/api.ts"
 Cohesion: 0.02
-Nodes (130): CodebookDesignerModal(), CodebookDesignerModalProps, PREDEFINED_TEMPLATES, CuratedExcelModal(), CuratedExcelModalProps, DuplicateReviewModalProps, QueuedFile, UniversalBulkUploadModal() (+122 more)
+Nodes (136): CodebookDesignerModal(), CodebookDesignerModalProps, PREDEFINED_TEMPLATES, CuratedExcelModal(), CuratedExcelModalProps, DuplicateReviewModal(), DuplicateReviewModalProps, ReferenceImportModalProps (+128 more)
 
 ### Community 3 - "lenis.min.js"
 Cohesion: 0.09
 Nodes (23): advance(), C(), checkOverflow(), cleanUpClassName(), constructor(), destroy(), emit(), F() (+15 more)
 
 ### Community 4 - "test_core.py"
-Cohesion: 0.06
-Nodes (4): TestBm25CoreBehavior, TestDiagnosticsContracts, TestDomainDetection, TestTokenizer
+Cohesion: 0.09
+Nodes (5): generate_design_system(), TestBm25CoreBehavior, TestDiagnosticsContracts, TestPersistence, TestTokenizer
 
-### Community 5 - "DBBackend"
-Cohesion: 0.03
-Nodes (75): ScreeningKeywordResponse, VariableResponse, dismiss_clarification(), _fetch_export_data(), adjudicate_extraction(), list_extractions(), record_extraction_decision(), update_extraction() (+67 more)
+### Community 5 - "check_project_access"
+Cohesion: 0.04
+Nodes (66): check_project_access(), CriteriaResponse, Criterion, PicoExtractionResponse, ProjectMemberInvite, ProjectMemberResponse, ResearchQuestionRequest, ResearchQuestionResponse (+58 more)
 
 ### Community 6 - "laya/package.json"
-Cohesion: 0.08
-Nodes (23): author, description, exports, files, homepage, eslint, @eslint/js, globals (+15 more)
+Cohesion: 0.05
+Nodes (39): author, bugs, url, dependencies, @huggingface/tokenizers, onnxruntime-node, description, engines (+31 more)
 
-### Community 7 - "json"
-Cohesion: 0.02
-Nodes (74): 2026-10-24 — Two-Tier Fast Abstract Screening & Claimscape Progress UX, 1. Precision — more accurate tools & methods, A4. AI-Reviewer Integration (Human + LLM), ai_prefill(), batch_ai_screen(), _check_and_record_conflict(), ai_screen_fulltext(), ai_screen_title_abstract() (+66 more)
+### Community 7 - "DBBackend"
+Cohesion: 0.03
+Nodes (67): screen_and_extract(), _export_csv(), export_project(), export_project_csv_alias(), export_project_xlsx_alias(), export_references(), _export_xlsx(), _fetch_export_data() (+59 more)
 
 ### Community 8 - "getApiBase"
-Cohesion: 0.19
-Nodes (23): ApiConnectionBanner(), ApiConnectionBannerProps, ApiSettingsModal(), ApiSettingsModalProps, ApiConnectionInfo, authenticatedRequest(), autoDiscoverBackend(), getApiBase() (+15 more)
+Cohesion: 0.18
+Nodes (24): ApiConnectionBanner(), ApiConnectionBannerProps, ApiSettingsModal(), ApiSettingsModalProps, ApiConnectionInfo, authenticatedRequest(), autoDiscoverBackend(), getApiBase() (+16 more)
 
 ### Community 9 - "DesignSystemGenerator"
-Cohesion: 0.12
-Nodes (3): DesignSystemGenerator, TestReasoningMatch, TestEndToEndCoherence
+Cohesion: 0.10
+Nodes (3): DesignSystemGenerator, TestReasoningMatch, TestReasoningContract
 
 ### Community 10 - "prisma2020_sync.py"
 Cohesion: 0.13
 Nodes (19): build_prisma2020_sync(), build_shiny_url(), classify_source(), _clean_label(), _format_pairs(), _is_automation(), _is_duplicate(), _named_sources() (+11 more)
 
-### Community 11 - "grade.py"
+### Community 11 - "get_db_backend"
 Cohesion: 0.06
-Nodes (24): auto_populate_grade(), compute_grade_certainty(), create_grade(), delete_grade(), export_grade(), get_grade(), get_sof_table(), get_starting_level() (+16 more)
+Nodes (27): auto_populate_grade(), compute_grade_certainty(), create_grade(), delete_grade(), export_grade(), get_grade(), get_sof_table(), get_starting_level() (+19 more)
 
 ### Community 12 - "assets.mjs"
 Cohesion: 0.07
 Nodes (84): AIC_FIELDS, AIC_HEADERS, applyThumb(), ARCHIVE_LICENCE, args, argv, base(), clock() (+76 more)
 
 ### Community 13 - "test_rob_batch_run.py"
-Cohesion: 0.18
-Nodes (17): get_batch_rob_progress(), list_assessments_for_project(), start_batch_rob_run(), mock_ai(), _project(), test_auto_trigger_after_screening_is_opt_in(), test_cancel_stops_the_run_and_keeps_finished_work(), test_http_endpoints() (+9 more)
+Cohesion: 0.11
+Nodes (23): _maybe_start_batch_rob(), cancel_batch_rob(), cancel_rob_run(), rob_run_progress(), cancel_batch_rob_run(), get_batch_rob_progress(), list_assessments_for_project(), start_batch_rob_run() (+15 more)
 
 ### Community 14 - "Catchii detailed feature audit and RadExtract gap report"
 Cohesion: 0.05
@@ -668,36 +649,36 @@ Cohesion: 0.09
 Nodes (41): ClaimscapeMap(), ClaimscapeMapProps, DotSymbol(), DotSymbolProps, RowSummary(), Tooltip(), TooltipProps, TooltipState (+33 more)
 
 ### Community 18 - "DeterministicScreener"
-Cohesion: 0.06
-Nodes (15): Codebase Navigation Rules: Graphify First, Mandatory Rules for AI Agents (Antigravity, Claude, Cline), Codebase Navigation Rules: Graphify First, Mandatory Rules for AI Agents (Antigravity, Claude, Cline), advance_status(), DeterministicScreener, get_ready_papers(), LLMScreener (+7 more)
+Cohesion: 0.07
+Nodes (11): advance_status(), DeterministicScreener, get_ready_papers(), LLMScreener, screen_batch(), Screener, ScreeningDecision, TestAdvanceStatus (+3 more)
 
 ### Community 19 - "test_dual_writer.py"
 Cohesion: 0.06
 Nodes (19): 5.4 radextract.dual_writer, 7.6 Function name shadowing in write_all, build_column_map(), read_sqlite(), sanitize_column_name(), sanitize_table_name(), _sql_type(), write_all() (+11 more)
 
-### Community 20 - "graphify.py"
-Cohesion: 0.11
-Nodes (13): 2026-03-30 - Inconsistent Project Access Checks on Graphify Endpoints, 2026-03-30 - Unreachable Access Check in Download Report and Missing Checks on Analysis Endpoints, 2026-03-30 - Unreachable Authorization Check Placed After Return Statement, download_full_report(), _build_review_graph(), _filter_graph(), get_code_graph(), get_code_graph_for_community() (+5 more)
+### Community 20 - "_load_graph"
+Cohesion: 0.22
+Nodes (6): _filter_graph(), get_code_graph(), get_code_graph_for_community(), get_code_graph_for_file(), get_code_graph_stats(), _load_graph()
 
 ### Community 21 - "Native, managed, and packaged artifacts"
 Cohesion: 0.05
 Nodes (36): Android application artifacts, Choose the remedy from the observed failure, Codex tool approval is separate from REA readiness, Connection and task recovery, Continue through an installed CLI, Repair registration when needed, Evidence, comparison, and verification workflows, JavaScript and Electron application artifacts (+28 more)
 
-### Community 22 - "generate_variables_from_picos"
-Cohesion: 0.06
-Nodes (11): _extract_var_list(), _format_variable_dicts(), _generate_heuristic_variables(), add(), generate_variables_from_picos(), _tokenize(), TestDefaultExtractionPrompt, TestFormatting (+3 more)
+### Community 22 - "variables.py"
+Cohesion: 0.04
+Nodes (28): VariableCreate, VariableResponse, VariableUpdate, _persist_protocol_extraction(), _slug_code(), auto_generate_variables(), create_variable(), create_variables_batch() (+20 more)
 
 ### Community 23 - "_create_project_and_study"
 Cohesion: 0.07
 Nodes (7): _create_project_and_study(), TestAutoPopulate, TestCertaintyComputation, TestCreateGradeAssessment, TestCRUD, TestSoFTable, TestStartingLevel
 
 ### Community 24 - "App.tsx"
-Cohesion: 0.06
-Nodes (53): App(), PassageInspector(), PassageInspectorProps, TrailGraphView(), TrailGraphViewProps, TrailViewer(), TrailViewerProps, api (+45 more)
+Cohesion: 0.05
+Nodes (63): App(), ReferenceImportModal(), api, CodeGraph, CodeGraphLink, CodeGraphNode, CodeGraphStats, Criterion (+55 more)
 
 ### Community 25 - "math"
-Cohesion: 0.10
-Nodes (15): compute_effect_size(), compute_heterogeneity(), compute_sroc_curve(), eggers_test(), fit_bivariate_model(), fit_generic_meta_analysis(), funnel_plot_data(), generate_forest_plot_svg() (+7 more)
+Cohesion: 0.07
+Nodes (24): _confidence_from_probs(), create_forest_plot(), generate_forest_plot(), generate_funnel_plot(), generate_rob_traffic_light(), generate_sroc_curve(), compute_effect_size(), compute_heterogeneity() (+16 more)
 
 ### Community 26 - "3. Component Library"
 Cohesion: 0.17
@@ -705,14 +686,14 @@ Nodes (12): 3. Component Library, `.btn-outline` — secondary CTA, `.btn-pill` 
 
 ### Community 27 - "litextract/__init__.py"
 Cohesion: 0.04
-Nodes (38): adjudicate_cells(), Adjudicator, AgentAdjudicator, DeterministicAdjudicator, _missing(), _as_dict(), write_audit(), find_in_document() (+30 more)
+Nodes (34): AgentAdjudicator, _missing(), _autorotate_pdf(), find_in_document(), _get_page_rotation(), in_document(), _norm(), parse_document() (+26 more)
 
 ### Community 28 - "Tool Orchestration"
 Cohesion: 0.06
 Nodes (33): 1. Parallel by Default, 2. Tool Selection Hierarchy, 3. Never Retry Verbatim, 4. Confirm Before Destructive Actions, After implementation, After write, Always capture output, Always read before write (+25 more)
 
 ### Community 29 - "draw.mjs"
-Cohesion: 0.10
+Cohesion: 0.09
 Nodes (39): adjustments(), argv, assetQueries(), ASSETS_PATH, briefStop(), briefWords(), deal(), dealHero() (+31 more)
 
 ### Community 30 - "rigor_scan_service.py"
@@ -727,13 +708,13 @@ Nodes (98): AIPrioritizationResult, AIScreeningProgress, AiScreenResult, Analysi
 Cohesion: 0.12
 Nodes (8): Methods, SnapElementOptions, RequiredPick, Snap, OnSnapCallback, SnapItem, SnapOptions, uid
 
-### Community 33 - "check_project_access"
-Cohesion: 0.05
-Nodes (38): check_project_access(), AIPrioritizationResult, DeduplicationResult, ScreeningConflictResponse, SignalSetResponse, get_availability_check(), get_fulltext_fetch(), deduplicate_studies() (+30 more)
+### Community 33 - "routers/screening.py"
+Cohesion: 0.04
+Nodes (45): 2026-10-15 — Official PRISMA2020 diagram sync, AIPrioritizationResult, DeduplicationResult, ExclusionReasonsResponse, ScreeningConflictResponse, ScreeningDecisionCreate, ScreeningKeywordResponse, add_screening_keyword() (+37 more)
 
-### Community 35 - "OCRBackend"
-Cohesion: 0.07
-Nodes (10): NullOCRBackend, OCRBackend, TesseractFallback, UnlimitedOCRBackend, UnlimitedOCRServerBackend, HybridTSR, _parse_markdown_table(), PdfplumberTSR (+2 more)
+### Community 35 - "validate.py"
+Cohesion: 0.11
+Nodes (25): 5.1 radextract.screening, 5.2 radextract.picos_schema_generator, 5.3 radextract.document_processor, 5.5 litextract.schema (Project loader), 5.6 litextract.pipeline (Core engine), 5.7 litextract.validate (Config-driven validation), 5.8 litextract.codebook (Codebook loader), 5. Module-by-Module API Reference (+17 more)
 
 ### Community 36 - "compilerOptions"
 Cohesion: 0.09
@@ -747,25 +728,25 @@ Nodes (5): get_response_schema(), get_tool(), get_tools_for_request(), validate_
 Cohesion: 0.12
 Nodes (3): TestPubMedBatch, TestPubMedFulltext, TestPubMedLookup
 
-### Community 39 - "test_extraction_gaps.py"
-Cohesion: 0.06
-Nodes (16): B2. Exhaustive Search Strategy (7-Step + Recheck), _is_scanned_pdf(), exhaustive_extract(), _extract_number_or_sentence(), recheck_missing(), apply_g1_fixed_horizon(), apply_g2_comparator_heterogeneity(), apply_g3_subgroup_detection() (+8 more)
+### Community 39 - "auto_extract_service.py"
+Cohesion: 0.05
+Nodes (25): auto_extract(), _find_keyword_in_text(), _is_scanned_pdf(), _match_variable_to_keywords(), verify_quote_provenance(), resolve_duplicate_decision(), auto_extract_with_docling(), _extract_numeric_from_text() (+17 more)
 
 ### Community 40 - "test_clarification.py"
-Cohesion: 0.14
-Nodes (24): New file: `tests/test_clarification.py`, test_answer_already_answered_question(), test_answer_clarification(), test_answer_nonexistent_question(), test_answer_other_option(), test_answer_records_screening_decision(), test_answer_unsure_option(), test_answer_updates_study_status() (+16 more)
-
-### Community 41 - "ref_node_fs"
-Cohesion: 0.08
-Nodes (12): state, t0, BUNDLE_FILES, DEFAULT_REPO, defaultCacheDir(), ensureBundle(), fileSize(), Laya (+4 more)
-
-### Community 42 - "_verify_project"
-Cohesion: 0.06
-Nodes (20): get_analysis_profile(), get_descriptive_synthesis(), get_forest_data(), get_full_report(), get_funnel_data(), get_heterogeneity(), get_sensitivity(), get_variable_stats() (+12 more)
-
-### Community 43 - "citation_telephone.py"
 Cohesion: 0.11
-Nodes (11): audit_text(), AuditTextRequest, evaluate_claim(), EvaluateClaimPassageRequest, get_status(), upload_manuscript(), compute_unsureness_matrix(), evaluate_passage_with_laya() (+3 more)
+Nodes (35): New file: `tests/test_clarification.py`, _jev_args(), screen_with_clarification(), test_answer_already_answered_question(), test_answer_clarification(), test_answer_nonexistent_question(), test_answer_other_option(), test_answer_records_screening_decision() (+27 more)
+
+### Community 41 - "download.ts"
+Cohesion: 0.14
+Nodes (9): state, t0, BUNDLE_FILES, DEFAULT_REPO, defaultCacheDir(), ensureBundle(), fileSize(), Laya (+1 more)
+
+### Community 42 - "analysis_service.py"
+Cohesion: 0.07
+Nodes (21): download_full_report(), get_analysis_profile(), get_descriptive_synthesis(), get_forest_data(), get_full_report(), get_funnel_data(), get_heterogeneity(), get_sensitivity() (+13 more)
+
+### Community 43 - "citation_telephone_service.py"
+Cohesion: 0.09
+Nodes (14): Codebase Navigation Rules: Graphify First, Mandatory Rules for AI Agents (Antigravity, Claude, Cline), LayaModel, audit_text(), AuditTextRequest, evaluate_claim(), EvaluateClaimPassageRequest, get_status() (+6 more)
 
 ### Community 44 - "_db"
 Cohesion: 0.16
@@ -776,44 +757,44 @@ Cohesion: 0.10
 Nodes (20): compilerOptions, allowImportingTsExtensions, isolatedModules, jsx, lib, module, moduleDetection, moduleResolution (+12 more)
 
 ### Community 46 - "ToolCallingClient"
-Cohesion: 0.11
+Cohesion: 0.15
 Nodes (6): extract_pico_from_question(), ToolCallingClient, model_fn(), TestRobPrefillIntegration, TestAdvancedToolCalling, TestToolCallingClient
 
-### Community 47 - "keyword_highlight_service.py"
-Cohesion: 0.15
-Nodes (10): 2026-10-11 — Protocol-Aware Screening Keywords & Priority Span Highlighting, get_abstract_highlights(), auto_generate_keywords_from_pico(), auto_generate_keywords_from_protocol(), extract_pico_highlights(), merge_and_sort_spans(), resolve_character_spans(), test_auto_generate_keywords_from_protocol() (+2 more)
+### Community 47 - "test_keyword_highlight.py"
+Cohesion: 0.04
+Nodes (41): 2026-10-11 — Protocol-Aware Screening Keywords & Priority Span Highlighting, 2025-05-20 - Cache Word-Boundary Regexes in Abstract Keyword Highlighting, 2026-10-06 - Fast Substring Pre-Check for Keyword Regex Matching, 2026-10-10 - Length Ratio Upper-Bound Pre-Check & LRU Caching for Title Similarity, 2026-10-18 - Parallel Integer Priority Arrays for Character Span Resolution, 2026-10-25 - Parallel Integer Priority Array for Character-Level Span Conflict Resolution, Bolt's Journal - Performance Learnings, `tests/test_keyword_highlight.py` (10 tests) (+33 more)
 
 ### Community 48 - "models.py"
-Cohesion: 0.03
-Nodes (101): AbstractHighlightsResponse, ActiveLearningFeedbackRequest, AIScreeningStartRequest, AiScreenResult, BatchClarificationItem, ClarificationData, ConflictResolveRequest, CriteriaResponse (+93 more)
+Cohesion: 0.04
+Nodes (80): Modified Files Summary, AbstractHighlightsResponse, ActiveLearningFeedbackRequest, AIScreeningStartRequest, AIScreeningSummary, AiScreenResult, BatchClarificationAnswerRequest, BatchClarificationItem (+72 more)
 
 ### Community 49 - "ShadcnInstaller"
 Cohesion: 0.05
 Nodes (3): main(), ShadcnInstaller, TestShadcnInstaller
 
-### Community 50 - "test_pubmed_query.py"
-Cohesion: 0.13
-Nodes (13): is_advanced_pubmed_query(), pubmed_terms(), search_pubmed(), _fake(), test_advanced_queries_are_sent_unchanged(), test_advanced_query_makes_a_single_unchanged_request(), test_all_words_search_tops_up_a_short_phrase_result_without_duplicates(), test_extra_whitespace_is_collapsed() (+5 more)
+### Community 50 - "literature_search_service.py"
+Cohesion: 0.07
+Nodes (24): MultiSearchRequest, search_literature(), is_advanced_pubmed_query(), openalex_phrases(), _openalex_record(), _or_clauses(), _pubmed_ids(), pubmed_terms() (+16 more)
 
 ### Community 51 - "shutil"
-Cohesion: 0.07
-Nodes (21): _run(), test_creates_default_output_directory_when_missing(), test_dark_base_color_does_not_collapse_shades_to_black(), test_discovered_css_without_tokens_does_not_block_sync(), test_force_allows_sync_with_existing_css_token_source(), test_ignores_commented_root_custom_properties(), test_ignores_custom_properties_outside_root(), test_ignores_external_css_imports() (+13 more)
+Cohesion: 0.09
+Nodes (18): _run(), test_creates_default_output_directory_when_missing(), test_dark_base_color_does_not_collapse_shades_to_black(), test_discovered_css_without_tokens_does_not_block_sync(), test_force_allows_sync_with_existing_css_token_source(), test_ignores_commented_root_custom_properties(), test_ignores_custom_properties_outside_root(), test_ignores_external_css_imports() (+10 more)
 
-### Community 52 - "extract_pico_spans_from_abstract"
-Cohesion: 0.08
-Nodes (14): 4A. `services/keyword_highlight_service.py`, 4B. Highlighting API endpoint, 4C. Keyword management endpoints, Part 4 — Backend: Keyword Highlighting Service, extract_pico_spans_from_abstract(), test_empty_abstract(), test_extract_comparator_span(), test_extract_index_test_span() (+6 more)
+### Community 52 - "prefill_assessment"
+Cohesion: 0.13
+Nodes (8): build_domain_prompt(), _mock_answer(), mock_model_fn(), _mock_support(), prefill_assessment(), TestMockModelFn, TestPrefillAssessment, TestPromptConstruction
 
 ### Community 53 - "dependencies.py"
 Cohesion: 0.03
-Nodes (54): 4A. Fix dependencies.py to use DBBackend, 4B. Migrate routers to DBBackend, 4C. Migrate services to DBBackend, 4D. Update DBBackend for missing features, 4E. Update tests for dual-backend compatibility, 4F. Verify database migration, Phase 4: Complete Database Migration (SQLite → DynamoDB), get_db() (+46 more)
+Nodes (58): 4A. Fix dependencies.py to use DBBackend, 4B. Migrate routers to DBBackend, 4C. Migrate services to DBBackend, 4D. Update DBBackend for missing features, 4E. Update tests for dual-backend compatibility, 4F. Verify database migration, Phase 4: Complete Database Migration (SQLite → DynamoDB), authenticate_user() (+50 more)
 
 ### Community 54 - "SQLiteBackend"
-Cohesion: 0.06
-Nodes (19): 1D. Migration in `database.py`, Assumptions, init_sqlite_db(), _run_migrations(), seed_database(), SQLiteBackend, QueryCountingSQLiteBackend, run_export_benchmark() (+11 more)
+Cohesion: 0.05
+Nodes (22): Assumptions, seed_database(), SQLiteBackend, apply_overrides(), QueryCountingSQLiteBackend, setup_benchmark_data(), TestDBBackend, db() (+14 more)
 
 ### Community 55 - "scripts/core.py"
-Cohesion: 0.06
-Nodes (31): BM25, _contains_phrase(), detect_domain(), _domain_keywords(), _exact_match_diagnostic(), _exact_row_identity(), _exact_stack_identifier(), _file_signature() (+23 more)
+Cohesion: 0.07
+Nodes (30): _contains_phrase(), detect_domain(), _domain_keywords(), _exact_match_diagnostic(), _exact_row_identity(), _exact_stack_identifier(), _file_signature(), _get_bm25() (+22 more)
 
 ### Community 57 - "parse_nbib"
 Cohesion: 0.24
@@ -823,9 +804,9 @@ Nodes (4): _add_nbib_field(), _finalize_nbib_record(), parse_nbib(), TestParseNB
 Cohesion: 0.18
 Nodes (4): Emitter, getDeltaMultiplier(), listenerOptions, VirtualScroll
 
-### Community 59 - "validate.py"
-Cohesion: 0.07
-Nodes (18): _blank(), _check_required(), _check_vocab(), _num(), _rows(), _rule_comparator_resolves(), _rule_conditional_required(), _rule_key_resolves() (+10 more)
+### Community 59 - "test_end_to_end.py"
+Cohesion: 0.04
+Nodes (29): Phase 2: Graphify Integration (token efficiency), adjudicate_cells(), Adjudicator, DeterministicAdjudicator, _as_dict(), write_audit(), AgentBackend, DeterministicBackend (+21 more)
 
 ### Community 60 - "devDependencies"
 Cohesion: 0.05
@@ -837,7 +818,7 @@ Nodes (27): Baseline (before implementation), C#, Edge Case Matrix, Evidence For
 
 ### Community 62 - "schema.py"
 Cohesion: 0.06
-Nodes (20): 7.1 YAML colon issue, 7.2 Numeric range vs controlled vocabulary, 7.3 Config file naming, 7.4 Docling coord_origin case sensitivity, 7.5 SQLite FK constraint placement, 7.8 DeterministicScreener dict format handling, 7.9 JSON nested writer parent_key indexing, 7. Every Bug That Was Found and Fixed (+12 more)
+Nodes (21): 7.1 YAML colon issue, 7.2 Numeric range vs controlled vocabulary, 7.3 Config file naming, 7.4 Docling coord_origin case sensitivity, 7.5 SQLite FK constraint placement, 7.7 GeneratedField missing allowed_values, 7.8 DeterministicScreener dict format handling, 7.9 JSON nested writer parent_key indexing (+13 more)
 
 ### Community 63 - "Deployment Readiness Plan — ExtractExperimenting (Systematic Review Tool)"
 Cohesion: 0.11
@@ -848,11 +829,11 @@ Cohesion: 0.08
 Nodes (25): number(), deco(), wrapper(), ScrollToOptions, Options, Basic:, Custom raf loop:, Events (+17 more)
 
 ### Community 65 - "validate_data.py"
-Cohesion: 0.10
-Nodes (33): _catalog_date(), _check_app_interface_contract(), _check_catalog_contract(), _check_catalog_summary(), _check_chart_contract(), _check_color_contract(), _check_core_data_contract(), _check_file() (+25 more)
+Cohesion: 0.07
+Nodes (42): read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons, TestCurrentReactGuidance, TestSemanticColors, _catalog_date(), _check_app_interface_contract(), _check_catalog_contract() (+34 more)
 
 ### Community 66 - "ClaimScape/src/lib/claimscapeMethod.ts"
-Cohesion: 0.09
+Cohesion: 0.08
 Nodes (41): ClaimscapeMap(), ClaimscapeMapProps, DotSymbol(), DotSymbolProps, RowSummary(), Tooltip(), TooltipProps, TooltipState (+33 more)
 
 ### Community 67 - "AnalysisPage.tsx"
@@ -887,13 +868,13 @@ Nodes (23): 10. Preamble Padding, 11. Over-scoping, 12. Quiet Workarounds, 13. S
 Cohesion: 0.10
 Nodes (20): @biomejs/biome, author, bugs, url, description, files, homepage, react (+12 more)
 
-### Community 75 - "test_claimscape_live_pipeline.py"
-Cohesion: 0.08
-Nodes (18): claimscape_status(), evaluate_claim(), EvaluateRequest, _classify_study_tier(), _clean_claim_query(), evaluate_claim_fast(), _get_http_client(), _get_laya_model() (+10 more)
+### Community 75 - "claimscape_fast_pipeline.py"
+Cohesion: 0.12
+Nodes (11): _softmax(), _to_internal(), _batch_eval_laya(), _classify_study_tier(), _clean_claim_query(), evaluate_claim_fast(), _get_http_client(), _get_laya_model() (+3 more)
 
-### Community 76 - "test_fulltext_retrieval.py"
-Cohesion: 0.13
-Nodes (14): fetch_one(), _fetch_xml(), parse_jats(), _text(), _walk(), _study(), test_fetch_one_outcomes(), test_fetch_one_reports_errors_without_raising() (+6 more)
+### Community 76 - "fetch_one"
+Cohesion: 0.08
+Nodes (20): get_availability_check(), get_fulltext_fetch(), fetch_one(), _fetch_xml(), get_job(), _local(), parse_jats(), start_job() (+12 more)
 
 ### Community 77 - "compilerOptions"
 Cohesion: 0.11
@@ -908,16 +889,16 @@ Cohesion: 0.08
 Nodes (23): After Tool Calls, Always open with:, Autonomous Operation Voice, Core Voice, Disagreement Protocol, Do, Don't, Examples (+15 more)
 
 ### Community 80 - "_select_palette_for_mode"
-Cohesion: 0.11
-Nodes (9): _button_outline_text_color(), _contrast_ratio(), _derive_dark_palette(), format_master_md(), _palette_is_dark(), _relative_luminance(), _select_palette_for_mode(), TestLuminance (+1 more)
+Cohesion: 0.13
+Nodes (6): _palette_is_dark(), _relative_luminance(), _select_palette_for_mode(), TestEndToEndCoherence, TestLuminance, TestPaletteSelection
 
 ### Community 81 - "compilerOptions"
 Cohesion: 0.10
 Nodes (20): compilerOptions, allowJs, declaration, isolatedModules, jsx, lib, module, moduleDetection (+12 more)
 
 ### Community 82 - "generate_citation"
-Cohesion: 0.11
-Nodes (7): generate_citation(), TestAPA, TestBibTeX, TestChicago, TestHarvard, TestMLA, TestVancouver
+Cohesion: 0.13
+Nodes (6): generate_citation(), TestAPA, TestBibTeX, TestChicago, TestHarvard, TestVancouver
 
 ### Community 83 - "test_generate.py"
 Cohesion: 0.18
@@ -932,12 +913,12 @@ Cohesion: 0.17
 Nodes (11): 1. Architecture Overview, 2. Server Prerequisites, 3. Deployment Steps, 4. Connecting the GitHub Pages Frontend, 5. Automated Backups, RadExtract Platform — VPS & Production Deployment Guide, Step 1: Copy Deployment Files, Step 2: Configure Environment (+3 more)
 
 ### Community 86 - "extract_variables_with_aide_engine"
-Cohesion: 0.11
-Nodes (10): 2. Cost control, 3. Deployment — a better fit than the current AWS serverless plan, Suggested priority order, VDExtract: Precision, Cost & Deployment Improvement Plan, extract_variables_with_aide_engine(), TestAiScreenTitleAbstractEndpoint, TestExtractVariablesIntegration, TestGenerateVariablesIntegration (+2 more)
+Cohesion: 0.09
+Nodes (14): 0.1 There are two extraction engines, and only the weaker one is wired up, 0. Two findings that affect all three tracks, 1. Precision — more accurate tools & methods, 2. Cost control, 3. Deployment — a better fit than the current AWS serverless plan, Suggested priority order, VDExtract: Precision, Cost & Deployment Improvement Plan, Modified Files Summary (+6 more)
 
-### Community 87 - "reconcile.py"
-Cohesion: 0.21
-Nodes (7): compare_values(), _index(), _is_missing(), _iter_cells(), _key_for(), _norm_text(), _to_number()
+### Community 87 - "rob_tools.py"
+Cohesion: 0.11
+Nodes (8): compute_nos_overall(), compute_overall_judgment(), compute_quadas2_overall(), compute_rob2_overall(), compute_robins_e_overall(), compute_robins_i_overall(), SignalingQuestion, TestOverallJudgments
 
 ### Community 88 - "test_ai_search_strings.py"
 Cohesion: 0.21
@@ -947,13 +928,13 @@ Nodes (11): check_search_syntax(), generate_ai_search_strings(), SearchGeneratio
 Cohesion: 0.16
 Nodes (13): _add_endnote_tagged_field(), _add_wos_field(), detect_reference_format(), _finalize_csv_record(), _finalize_endnote_tagged_record(), _finalize_wos_record(), parse_csv_mapped(), parse_endnote_tagged() (+5 more)
 
-### Community 90 - "test_rob_service.py"
-Cohesion: 0.09
-Nodes (10): _create_project_and_study(), fresh_db(), TestAIPrefill, TestAutoSelectAndCreate, TestCreateAssessment, TestDeleteAssessment, TestExport, TestProjectSummary (+2 more)
+### Community 90 - "_create_project_and_study"
+Cohesion: 0.10
+Nodes (8): _create_project_and_study(), TestAIPrefill, TestAutoSelectAndCreate, TestCreateAssessment, TestDeleteAssessment, TestProjectSummary, TestUpdateDomainJudgment, TestUpdateSignalingAnswer
 
-### Community 91 - "ScreeningPage.tsx"
-Cohesion: 0.13
-Nodes (33): 2026-10-11 — Side-by-Side Duplicate Review & Reversible Resolution, BookmarkButton(), DuplicateReviewModal(), CollaborationDialog(), ErrorNotice(), RecordCollaborationPanel(), TagBadges(), TagEditor() (+25 more)
+### Community 91 - "StudyList.tsx"
+Cohesion: 0.09
+Nodes (39): 2026-10-11 — Side-by-Side Duplicate Review & Reversible Resolution, BookmarkButton(), CollaborationDialog(), ErrorNotice(), RecordCollaborationPanel(), TagBadges(), TagEditor(), TagFilter() (+31 more)
 
 ### Community 92 - "GRAVITAS Prompt Template"
 Cohesion: 0.09
@@ -963,9 +944,9 @@ Nodes (21): Assembling the Full Prompt, Bug Fix, Example: Bug Fix Task, Explore 
 Cohesion: 0.10
 Nodes (20): Agent: General, Always run the full chain for the language, Before Writing Any Code, Cite verbatim, Code Standards, Compare to baseline, Don't over-engineer, Execution Protocol (+12 more)
 
-### Community 94 - "MockProcessor"
-Cohesion: 0.15
-Nodes (4): MockProcessor, TestIntegrationWithLitExtract, TestMockProcessor, TestProcessedDocumentSerialization
+### Community 94 - "document_processor.py"
+Cohesion: 0.04
+Nodes (28): 0.2 Docling isn't a pinned dependency, so you don't reliably know which parser ran, 9. The End-to-End Test (What It Proves), convert_with_fallback(), DoclingProcessor, FallbackProcessor, FigureAnnotation, get_processor(), load_processed_document() (+20 more)
 
 ### Community 96 - "Tailwind CSS Utility Reference"
 Cohesion: 0.05
@@ -976,12 +957,12 @@ Cohesion: 0.17
 Nodes (14): AddCallbackSymbol, GlobalComponents, LenisExposed, LenisSymbol, RemoveCallbackSymbol, @vue/runtime-core, VueLenis, vueLenisPlugin() (+6 more)
 
 ### Community 98 - "jev_client.py"
-Cohesion: 0.14
-Nodes (16): _api_key(), ask_batch(), _ask_laya(), _ask_laya_batch(), _ask_typesafe(), ask_with_engine(), _get_laya_engine(), _get_laya_model_dir() (+8 more)
+Cohesion: 0.12
+Nodes (18): _api_key(), ask_batch(), _ask_laya(), _ask_laya_batch(), _ask_typesafe(), ask_with_engine(), _get_laya_engine(), _get_laya_model_dir() (+10 more)
 
 ### Community 99 - "test_jev_screening.py"
 Cohesion: 0.12
-Nodes (20): _abstract(), _answers(), FakeClient, _noul(), test_clarification_flow_shape(), test_dict_exclusion_reasons_are_accepted(), ask(), test_no_key_never_calls_jev() (+12 more)
+Nodes (20): _abstract(), _answers(), FakeClient, _noul(), test_clarification_flow_shape(), test_compose_uncertain_no_clarification_when_not_ambiguous(), test_dict_exclusion_reasons_are_accepted(), ask() (+12 more)
 
 ### Community 100 - "parse_file"
 Cohesion: 0.20
@@ -1000,24 +981,24 @@ Cohesion: 0.07
 Nodes (8): lorem-ipsum, debugEl, lenis, Window, _lorem, Props, lenis, lenis
 
 ### Community 104 - "test_screening_decisions.py"
-Cohesion: 0.13
-Nodes (13): client(), _create_project_and_studies(), fresh_db(), _make_decision(), test_blind_mode_sets_is_blinded(), test_conflict_detection(), test_create_screening_decision(), test_get_study_screening_decisions() (+5 more)
+Cohesion: 0.14
+Nodes (12): client(), _create_project_and_studies(), _make_decision(), test_blind_mode_sets_is_blinded(), test_conflict_detection(), test_create_screening_decision(), test_get_study_screening_decisions(), test_list_screening_decisions() (+4 more)
 
 ### Community 105 - "GRAVITAS — Python Extension"
 Cohesion: 0.11
 Nodes (18): Common Python Failure Modes, Django, FastAPI, Fixture pattern, Framework-Specific Notes, GRAVITAS — Python Extension, Never shadow builtins, Never use bare `except` (+10 more)
 
 ### Community 106 - "VDExtract: Screening & Extraction Quality Gap Fixes"
-Cohesion: 0.09
-Nodes (22): A1. Signal Generation Service (Hybrid: MeSH + LLM), A2. Signal-Based Pre-Filter, A3. PICO Hard-Override Safety Net, A5. Screening Summary Enhancement, Assumptions, B3. Universal Gap Rules (G1-G5), B4. Missing-Data Codes, Database Migration Summary (+14 more)
+Cohesion: 0.10
+Nodes (19): A1. Signal Generation Service (Hybrid: MeSH + LLM), A2. Signal-Based Pre-Filter, A3. PICO Hard-Override Safety Net, A4. AI-Reviewer Integration (Human + LLM), A5. Screening Summary Enhancement, Assumptions, Database Migration Summary, Frontend Changes (Phase 2 — Optional) (+11 more)
 
 ### Community 107 - "patch"
 Cohesion: 0.07
 Nodes (16): mock_db(), mock_project(), mock_study(), mock_variables(), TestCreateClarificationQuestion, TestExtractVariables, TestGetPdfText, TestGetProject (+8 more)
 
-### Community 108 - "test_bookmarks.py"
-Cohesion: 0.09
-Nodes (23): ScreeningDecisionCreate, MultiSearchRequest, search_literature(), create_screening_decision(), update_screening(), analyze_groups(), StatsRequest, BookmarkUpdate (+15 more)
+### Community 108 - "run_statistical_analysis"
+Cohesion: 0.29
+Nodes (3): analyze_groups(), StatsRequest, run_statistical_analysis()
 
 ### Community 109 - "ClaimScape/src/lib/demoData.ts"
 Cohesion: 0.04
@@ -1028,24 +1009,24 @@ Cohesion: 0.12
 Nodes (16): 10. Integration with GRAVITAS Tiers, 11. Portability Notes (tuned on Gemini, re-validate elsewhere), 12. Anti-patterns for Gemini, 1. Adaptive Reasoning, 2. Outcome-First Prompting, 3. Few-Shot Examples — Gemini's Strongest Lever, 4. Markdown Structure Over XML, 5. Context Window — Large, But Use Wisely (+8 more)
 
 ### Community 112 - "VDExtract: Interactive AI Screening with Mid-Pipeline Clarification Questions"
-Cohesion: 0.08
-Nodes (24): Architecture: Hybrid Pipeline Flow, Assumptions, Implementation Order, `lib/api.ts` — New API methods and types, Modified: `GET /projects/{project_id}/screening/summary` in `routers/screening.py`, Modified: `routers/screening.py` or `routers/studies.py`, New file: `services/clarification_generator.py`, New file: `services/clarification_resolver.py` (+16 more)
+Cohesion: 0.07
+Nodes (29): Architecture: Hybrid Pipeline Flow, Assumptions, Implementation Order, Intervention/Test Match Question, `lib/api.ts` — New API methods and types, Modified: `GET /projects/{project_id}/screening/summary` in `routers/screening.py`, Modified: `routers/screening.py` or `routers/studies.py`, New file: `services/clarification_generator.py` (+21 more)
 
 ### Community 113 - "Code-inspection evidence and baseline limitations"
 Cohesion: 0.18
 Nodes (11): Code-inspection evidence and baseline limitations, Current PDF path, Current screening and extraction path, Inspection findings to verify during design, PDF, screening and Jev/Laya implementation review, Required validation and still-open choices, Standalone methodology inspection: Citation Telephone baseline, Standalone methodology inspection: Claimscape baseline (+3 more)
 
 ### Community 114 - "time"
-Cohesion: 0.09
-Nodes (32): cancel_ai_screening(), resume_ai_screening(), get_job(), _local(), _run(), start_job(), _summary(), cancel() (+24 more)
+Cohesion: 0.11
+Nodes (26): _run(), cancel(), check_pause_or_cancel(), finish(), get(), is_canceled(), is_paused(), mark_done() (+18 more)
 
 ### Community 115 - "style"
 Cohesion: 0.10
 Nodes (20): style, noInferrableTypes, noNestedTernary, noNonNullAssertion, noParameterAssign, noUnusedTemplateLiteral, noUselessElse, useAsConstAssertion (+12 more)
 
 ### Community 116 - "extract_pico_from_text"
-Cohesion: 0.10
-Nodes (5): extract_pico_from_text(), _find_keyword_match(), _find_section_content(), _normalize_text(), TestExtractPicoFromText
+Cohesion: 0.13
+Nodes (3): _empty_pico(), extract_pico_from_text(), TestExtractPicoFromText
 
 ### Community 117 - "Lenis v2 Roadmap"
 Cohesion: 0.11
@@ -1055,29 +1036,25 @@ Nodes (17): Auto CSS injection, Breaking changes, Default values flip, Documenta
 Cohesion: 0.17
 Nodes (4): _add_ris_field(), _finalize_ris_record(), parse_ris(), TestParseRIS
 
-### Community 119 - "test_core_data_quality.py"
-Cohesion: 0.15
-Nodes (10): read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons, TestCurrentReactGuidance, TestSemanticColors, _check_typography_contract(), _configured_font_names(), _declared_weights() (+2 more)
+### Community 119 - "meta.py"
+Cohesion: 0.11
+Nodes (11): create_meta_analysis(), get_forest_plot(), get_funnel_plot(), get_meta_analysis(), get_sroc_curve(), list_meta_analyses(), MetaAnalysisCreate, MetaAnalysisStudyUpdate (+3 more)
 
 ### Community 120 - "test_extraction_decisions.py"
-Cohesion: 0.19
-Nodes (13): client(), _decide(), project(), test_accepting_keeps_the_value_and_is_counted(), test_bad_requests_are_rejected(), test_classification(), test_deciding_on_a_missing_extraction_creates_it(), test_error_analysis_summary() (+5 more)
+Cohesion: 0.12
+Nodes (20): classify_discrepancy(), export_training_dataset(), get_analysis_summary(), learning_rationale(), _live_records(), _public(), record_decision(), client() (+12 more)
 
 ### Community 121 - "BooleanNode"
 Cohesion: 0.16
 Nodes (6): AndNode, BooleanNode, NotNode, OrNode, SearchStringParser, TermNode
 
-### Community 122 - "object"
-Cohesion: 0.10
-Nodes (3): AtlasGenerationTests, ExitStatusTests, MuapiGenerationTests
-
 ### Community 124 - "PrismaFlowPage.tsx"
 Cohesion: 0.28
 Nodes (12): Prisma2020Sync, PrismaFlow, CountGrid(), downloadFile(), FlowArrow(), FlowBox(), OfficialPrismaPanel(), PhaseLabel() (+4 more)
 
-### Community 125 - "pubmed_service.py"
-Cohesion: 0.12
-Nodes (13): _api(), main(), _store_pmc_text(), batch_search(), _eutils_get(), _eutils_url(), fetch_by_pmid(), fetch_fulltext() (+5 more)
+### Community 125 - "fulltext_availability.py"
+Cohesion: 0.10
+Nodes (17): _api(), main(), _store_pmc_text(), _europepmc(), _fetch_json(), _fetch_xml(), _unpaywall(), batch_search() (+9 more)
 
 ### Community 126 - "mcp_server/package.json"
 Cohesion: 0.06
@@ -1088,28 +1065,28 @@ Cohesion: 0.05
 Nodes (37): 1. Color Palette, 2. Typography, 3. Logo Usage, 4. Voice & Tone, 5. Imagery Guidelines, 6. Design Components, Accessibility, AI Image Generation (+29 more)
 
 ### Community 128 - "biomni.py"
-Cohesion: 0.17
-Nodes (10): AdmetRequest, BatchEntityRequest, cross_reference_batch(), cross_reference_entity(), CslCitationRequest, EntityRequest, generate_zotero_csl_field(), get_admet_prediction() (+2 more)
+Cohesion: 0.12
+Nodes (17): AdmetRequest, BatchEntityRequest, cross_reference_batch(), cross_reference_entity(), CslCitationRequest, EntityRequest, generate_zotero_csl_field(), get_admet_prediction() (+9 more)
 
 ### Community 129 - "r_plot_service.py"
-Cohesion: 0.07
-Nodes (26): _autorotate_pdf(), _cache_key(), call_r_script(), call_r_script_bytes(), generate_forest_plot(), generate_funnel_plot(), generate_sroc_curve(), _is_r_available() (+18 more)
+Cohesion: 0.10
+Nodes (13): create_funnel_plot(), FunnelPlotRequest, call_r_script(), call_r_script_bytes(), generate_forest_plot(), generate_funnel_plot(), generate_sroc_curve(), _is_r_available() (+5 more)
 
 ### Community 130 - "test_duplicate_review.py"
-Cohesion: 0.07
-Nodes (17): client(), test_evaluation_uses_supplied_passage(), test_invalid_upload_is_not_reported_as_success(), test_upload_extracts_all_claims_without_evaluating_references(), _add_study(), client(), _group(), project() (+9 more)
+Cohesion: 0.15
+Nodes (13): _add_study(), client(), _group(), project(), _study(), test_auto_mark_flags_the_duplicate_and_reports_it(), test_bad_resolve_requests_are_rejected(), test_candidate_list_is_read_only_and_rich() (+5 more)
 
 ### Community 131 - "extraction.py"
-Cohesion: 0.08
-Nodes (23): B1. Confidence Taxonomy, ExtractionCreate, ExtractionResponse, ExtractionUpdate, MissingDataSummary, coded_extract(), coded_extraction_xlsx(), create_extraction() (+15 more)
+Cohesion: 0.09
+Nodes (19): B1. Confidence Taxonomy, ExtractionCreate, ExtractionResponse, ExtractionUpdate, MissingDataSummary, coded_extract(), coded_extraction_xlsx(), create_extraction() (+11 more)
 
 ### Community 132 - "Design"
 Cohesion: 0.05
 Nodes (36): Banner Design (Built-in), Banner: Design Rules, Banner: Quick Size Reference, Banner: Top Art Styles, Banner: Workflow, CIP Design (Built-in), CIP: Generate Brief, CIP: Generate Mockups (+28 more)
 
 ### Community 134 - "scientific_exports.py"
-Cohesion: 0.12
-Nodes (10): BibliographyRequest, draft_manuscript_sections(), export_prisma_mermaid(), export_project_bibliography(), ManuscriptDraftRequest, PrismaMermaidRequest, draft_methods_section(), draft_results_section() (+2 more)
+Cohesion: 0.13
+Nodes (9): BibliographyRequest, draft_manuscript_sections(), export_prisma_mermaid(), ManuscriptDraftRequest, PrismaMermaidRequest, draft_methods_section(), draft_results_section(), generate_prisma_flow_mermaid() (+1 more)
 
 ### Community 136 - "provider.tsx"
 Cohesion: 0.20
@@ -1119,9 +1096,9 @@ Nodes (11): LenisContext, ReactLenis, rootLenisContextStore, Listener, Store, us
 Cohesion: 0.17
 Nodes (10): 2. Margins and the grid, 2. The scale: few sizes, far apart, Animate, clamp(), damp(), lerp(), modulo(), EasingFunction (+2 more)
 
-### Community 138 - "fulltext_availability.py"
-Cohesion: 0.11
-Nodes (25): check_study(), _clean_doi(), _europepmc(), _fetch_json(), _fetch_xml(), get_job(), _pmc_oa_pdf(), _run() (+17 more)
+### Community 138 - "test_fulltext_availability.py"
+Cohesion: 0.12
+Nodes (21): check_study(), _clean_doi(), get_job(), _pmc_oa_pdf(), _run(), start_job(), _summary(), _epmc() (+13 more)
 
 ### Community 139 - "devDependencies"
 Cohesion: 0.17
@@ -1129,7 +1106,7 @@ Nodes (12): devDependencies, eslint, eslint-config-prettier, @eslint/js, eslint-
 
 ### Community 140 - "clarification.py"
 Cohesion: 0.13
-Nodes (15): Modified Files Summary, BatchClarificationAnswerRequest, ClarificationAnswerRequest, ClarificationAnswerResponse, ClarificationOption, ClarificationQuestionResponse, ClarificationStatsResponse, answer_clarification() (+7 more)
+Nodes (9): ClarificationAnswerResponse, answer_clarification(), batch_answer_clarifications(), clarification_stats(), dismiss_clarification(), get_single_clarification(), get_study_clarifications(), list_clarifications() (+1 more)
 
 ### Community 141 - "Decision log"
 Cohesion: 0.06
@@ -1144,8 +1121,8 @@ Cohesion: 0.12
 Nodes (16): Before saving, Cross-Session Continuity Pattern, Don't save, `feedback` — What the user has corrected, Layer 1 — Session Memory (in-session, ephemeral), Layer 2 — Project Memory (cross-session, persistent), Memory Index — GRAVITAS_MEMORY.md, Memory Lifecycle (+8 more)
 
 ### Community 144 - "test_included_bibtex.py"
-Cohesion: 0.16
-Nodes (8): export_bibtex(), test_ambiguous_flattened_names_are_preserved_as_literal_text(), test_distinct_authors_and_name_order_preserved(), test_keys_are_unique_and_stable_for_persisted_records(), test_missing_fields_are_omitted_without_placeholders(), test_special_characters_are_escaped_in_metadata(), test_unmatched_literal_braces_do_not_break_bibtex_structure(), TestExportBibtex
+Cohesion: 0.09
+Nodes (12): _escape_bibtex(), export_bibtex(), export_endnote_xml(), _make_bibtex_key(), test_ambiguous_flattened_names_are_preserved_as_literal_text(), test_distinct_authors_and_name_order_preserved(), test_keys_are_unique_and_stable_for_persisted_records(), test_missing_fields_are_omitted_without_placeholders() (+4 more)
 
 ### Community 146 - "Canvas Design System"
 Cohesion: 0.06
@@ -1156,16 +1133,16 @@ Cohesion: 0.25
 Nodes (7): 1. When to Delegate to Jules, 2. Jules API Protocol, 3. Post-Jules Merge Workflow, Google Jules Autonomous Agent Rules, Key REST Methods, Purpose, Session Creation Payload
 
 ### Community 148 - "logo/generate.py"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (21): _atlas_prediction_data(), _download_atlas_image(), _download_image(), _download_muapi_image(), enhance_prompt(), generate_batch(), generate_logo(), _generate_with_atlas() (+13 more)
 
 ### Community 149 - "spacing"
 Cohesion: 0.06
 Nodes (34): $type, $value, $type, $value, $type, $value, $type, $value (+26 more)
 
-### Community 150 - "classify_study"
-Cohesion: 0.13
-Nodes (11): classify_study(), _document_text(), _heuristic_classification(), _llm_classification(), select_rob_tool_with_alternatives(), test_ambiguous_classification_stays_manual(), test_case_report_classification_selects_jbi(), test_ambiguous_design_detection() (+3 more)
+### Community 150 - "select_rob_tool_with_alternatives"
+Cohesion: 0.18
+Nodes (5): select_rob_tool_with_alternatives(), test_ambiguous_design_detection(), test_ambiguous_study_heuristic_routes_to_manual_when_no_llm(), test_ambiguous_study_llm_fallback_resolves(), TestSelectRobToolWithAlternatives
 
 ### Community 151 - "biome.json"
 Cohesion: 0.12
@@ -1187,29 +1164,29 @@ Nodes (25): astro, @astrojs/check, @astrojs/react, @astrojs/vue, stats-js, root,
 Cohesion: 0.20
 Nodes (9): compilerOptions, declaration, declarationMap, noEmit, rootDir, sourceMap, extends, include (+1 more)
 
-### Community 156 - "claimscape_fast_pipeline.py"
-Cohesion: 0.12
-Nodes (11): _confidence_from_probs(), LayaModel, _py_json_dumps(), _render_options(), _serialize_state(), _size_bucket(), _softmax(), _temp_bucket() (+3 more)
+### Community 156 - "laya_engine.py"
+Cohesion: 0.18
+Nodes (6): 2026-10-24 — Two-Tier Fast Abstract Screening & Claimscape Progress UX, _py_json_dumps(), _render_options(), _serialize_state(), _size_bucket(), _temp_bucket()
 
 ### Community 157 - "re"
-Cohesion: 0.15
-Nodes (13): _apply_descriptive_protocol(), _criteria_lines(), _db_key(), _empty_pico(), _get_abstract_pico_regex(), _is_any_header(), _is_descriptive_case_review(), _looks_like_header() (+5 more)
+Cohesion: 0.07
+Nodes (20): normalize_title(), _apply_descriptive_protocol(), _criteria_lines(), _db_key(), _extract_docx_text(), _extract_pdf_text(), extract_pico_from_file(), _find_keyword_match() (+12 more)
 
-### Community 158 - "convert_with_fallback"
-Cohesion: 0.16
-Nodes (9): convert_with_fallback(), _fake_processed(), _FakeDoc, test_falls_back_when_docling_available_but_convert_raises(), test_pdf_service_uses_fallback_aware_conversion(), test_prefer_docling_false_skips_docling_entirely(), test_raises_when_both_engines_fail(), test_uses_docling_when_it_actually_works() (+1 more)
+### Community 158 - "unittest"
+Cohesion: 0.12
+Nodes (6): imported_plugin_names(), main(), sha256(), CatalogSummaryLineEndingsTest, _load_generator(), TestStackFlagWithDesignSystem
 
 ### Community 159 - "search_string_generator.py"
-Cohesion: 0.10
+Cohesion: 0.12
 Nodes (9): _build_cinahl_block(), _build_cochrane_block(), _build_embase_block(), _build_pubmed_block(), _build_scopus_block(), _build_wos_block(), _get_key_regex(), _get_synonyms() (+1 more)
 
 ### Community 160 - "RadExtract: final decisions and coding-agent implementation handoff"
 Cohesion: 0.22
 Nodes (8): Current requirements at a glance, End-to-end acceptance checklist, External prerequisites and technical investigation tasks, Implementation phases and reviewable deliverables, Instructions to the coding agent, Prompt implementation contracts, RadExtract: final decisions and coding-agent implementation handoff, Two unanswered product choices
 
-### Community 161 - "DoclingProcessor"
-Cohesion: 0.14
-Nodes (5): DoclingProcessor, save_processed_document(), convert_pdf_to_docling_json(), main(), sync_document_with_db()
+### Community 161 - "exhaustive_extract"
+Cohesion: 0.12
+Nodes (9): B2. Exhaustive Search Strategy (7-Step + Recheck), B3. Universal Gap Rules (G1-G5), B4. Missing-Data Codes, Part B — Extraction: Confidence Taxonomy, Exhaustive Search, Gap Rules, Missing-Data Codes, _extract_from_table_data(), exhaustive_extract(), TestExhaustiveSearchPipeline, TestMathematicalDerivations (+1 more)
 
 ### Community 162 - "compilerOptions"
 Cohesion: 0.20
@@ -1223,13 +1200,13 @@ Nodes (14): Basic, Custom requestAnimationFrame loop:, Examples, Framer Motion i
 Cohesion: 0.12
 Nodes (7): BM25, detect_domain(), get_cip_brief(), _load_csv(), search(), search_all(), _search_csv()
 
-### Community 165 - "PdfViewerPage.tsx"
-Cohesion: 0.08
-Nodes (44): ActualPdfViewer(), ActualPdfViewerProps, mergeContiguousRects(), PageHighlightOverlay, PdfHighlightItem, RenderedPage, PdfDocumentData, PdfHighlight (+36 more)
+### Community 165 - "RobAssessmentPage.tsx"
+Cohesion: 0.06
+Nodes (52): ActualPdfViewer(), ActualPdfViewerProps, mergeContiguousRects(), PageHighlightOverlay, PdfHighlightItem, RenderedPage, ClarificationNotificationCenter(), ClarificationNotificationCenterProps (+44 more)
 
-### Community 166 - "format_ascii_box"
-Cohesion: 0.13
-Nodes (9): ansi_ljust(), format_ascii_box(), add_wrapped(), wrap_text(), format_markdown(), hex_to_ansi(), _mode_support_labels(), section_header() (+1 more)
+### Community 166 - "design_system.py"
+Cohesion: 0.06
+Nodes (20): ansi_ljust(), _button_outline_text_color(), _contrast_ratio(), _derive_dark_palette(), _detect_page_type(), format_ascii_box(), add_wrapped(), wrap_text() (+12 more)
 
 ### Community 167 - "Tailwind CSS Responsive Design"
 Cohesion: 0.06
@@ -1275,17 +1252,17 @@ Nodes (17): 1. System Mission & Core Objective, 2. Port & Service Architecture (
 Cohesion: 0.06
 Nodes (6): MockAgent, MockChatResponse, TestAgentRouter, TestRunBatchAgent, make_agent(), TestRunScreeningExtractionAgent
 
-### Community 178 - "setup_logging"
-Cohesion: 0.29
-Nodes (3): 1D. Wire in production hardening services (or delete them), JSONFormatter, setup_logging()
+### Community 178 - "test_rob_tools.py"
+Cohesion: 0.18
+Nodes (5): compute_domain_judgment(), compute_nos_domain_judgment(), compute_robins_e_domain_judgment(), compute_robins_i_domain_judgment(), TestRobinsIDomainJudgment
 
 ### Community 179 - "Tokenizer"
 Cohesion: 0.22
 Nodes (4): EncodeOptions, Encoding, @huggingface/tokenizers, Tokenizer
 
 ### Community 180 - "post"
-Cohesion: 0.05
-Nodes (31): AIScreeningSummary, ContinueScreeningRequest, continue_ai_screening(), get_ai_screening_progress(), get_ai_screening_status(), _maybe_start_batch_rob(), pause_ai_screening(), start_ai_analysis() (+23 more)
+Cohesion: 0.06
+Nodes (19): cancel_ai_screening(), continue_ai_screening(), pause_ai_screening(), resume_ai_screening(), start_ai_screening(), logout(), register(), start_availability_check() (+11 more)
 
 ### Community 181 - "descriptive_synthesis.py"
 Cohesion: 0.20
@@ -1296,36 +1273,32 @@ Cohesion: 0.10
 Nodes (19): 1. The budget, 2. Four questions before any animation, 3. Tokens, 4. Recipes, 5. Signature moves, 6. Reduced motion and performance, 7. What gives generated motion away, Accordion (+11 more)
 
 ### Community 183 - "laya.ts"
-Cohesion: 0.12
-Nodes (32): Options, Usage, DownloadOptions, LayaOptions, round4(), buildSequence(), confidenceFromProbs(), Encode (+24 more)
+Cohesion: 0.09
+Nodes (38): Development, Exporting the ONNX bundle yourself, Install, License, Limits, Options, @receptron/laya, Usage (+30 more)
 
-### Community 185 - "test_end_to_end.py"
+### Community 185 - "picos_schema_generator.py"
 Cohesion: 0.05
-Nodes (18): 12. Key Design Decisions (Don't Change These), 7.7 GeneratedField missing allowed_values, 9. The End-to-End Test (What It Proves), DeterministicBackend, DeterministicSchemaGenerator, _generate_merged_codebook(), generate_project_config(), GeneratedField (+10 more)
+Nodes (11): 12. Key Design Decisions (Don't Change These), DeterministicSchemaGenerator, _generate_merged_codebook(), generate_project_config(), GeneratedField, LLMSchemaGenerator, PICOS, SchemaGenerator (+3 more)
 
 ### Community 186 - "RadExtract — Agent Handoff Document"
-Cohesion: 0.04
-Nodes (47): 0. TL;DR — What Is This Project?, 10. External Resources, 13. Common Pitfalls (Read Before Coding), 14. Quick Reference — Test Counts, 15. If Something Breaks, 16. File Checksums (for verification), 17. Contact / Context, 1. Directory Structure (+39 more)
+Cohesion: 0.05
+Nodes (42): 0. TL;DR — What Is This Project?, 10. External Resources, 11. What to Build Next (Phases 2-5), 13. Common Pitfalls (Read Before Coding), 14. Quick Reference — Test Counts, 15. If Something Breaks, 16. File Checksums (for verification), 17. Contact / Context (+34 more)
 
-### Community 190 - "antigravity_schemas.py"
-Cohesion: 0.21
-Nodes (5): BatchProcessingResult, ExtractionItem, ExtractionResult, ScreeningResult, StudyProcessingResult
+### Community 190 - "parse_llm_response"
+Cohesion: 0.19
+Nodes (4): _avg_confidence(), parse_llm_response(), Domain, TestResponseParsing
 
 ### Community 193 - "lenis/vue"
 Cohesion: 0.14
 Nodes (13): Examples, GSAP integration, Hooks, Installation, Introduction, lenis/vue, License, Motion Integration (+5 more)
 
-### Community 195 - "Stellar Labs — Master Theme"
-Cohesion: 0.12
-Nodes (16): Authority and scope, Brand and audience, ClaimScape-specific preferences, Closing sections and footer, Colors, Files and editing workflow, Font assets, Frontend integration handoff (+8 more)
-
 ### Community 196 - "GRAVITAS -- Engineering Reliability Runtime"
 Cohesion: 0.14
 Nodes (13): DECISION RECORDS, DEEP REFERENCES, DELEGATION, EFFORT PROFILES, Evidence, GRAVITAS -- Engineering Reliability Runtime, MODES, OUTPUT FORMAT (+5 more)
 
-### Community 197 - "extract_pico_from_file"
-Cohesion: 0.18
-Nodes (4): _extract_docx_text(), _extract_pdf_text(), extract_pico_from_file(), TestExtractPicoFromFile
+### Community 197 - "test_claimscape_live_pipeline.py"
+Cohesion: 0.26
+Nodes (8): isolated_pipeline(), mock_pubmed(), test_empty_search_is_success_without_inference(), test_fetch_failures_are_not_partial_successes(), test_hrt_request_retrieves_live_papers_instead_of_landmark_preset(), test_inference_provenance_survives_memory_and_disk_cache(), test_legacy_cache_cannot_answer_live_request(), test_search_failures_are_not_empty_successes()
 
 ### Community 199 - "TestSearchStrings"
 Cohesion: 0.12
@@ -1344,7 +1317,7 @@ Cohesion: 0.29
 Nodes (6): Sheet: Codebook, Sheet: Cohort_Level, Sheet: Outcome_Level, Sheet: Protocol_Level, Sheet: Quality_Assessment, Sheet: Study_Level
 
 ### Community 203 - "verify_citations.py"
-Cohesion: 0.23
+Cohesion: 0.21
 Nodes (3): CitationVerifier, main(), normalize_doi()
 
 ### Community 205 - "shadcn/ui Accessibility Patterns"
@@ -1369,11 +1342,11 @@ Nodes (13): exports, ./dist/*, ./nuxt, ./react, ./snap, ./vue, default, default 
 
 ### Community 210 - "VDExtract: AI-Driven Multi-Stage Screening with Keyword Highlighting, Preview Pane, and Clarification Questions"
 Cohesion: 0.07
-Nodes (29): 1A. New columns on `studies` table, 1B. New `clarification_questions` table, 1C. New `screening_keywords` table (Rayyan-style keyword highlighting), 3A. `services/clarification_generator.py`, 3B. `services/clarification_resolver.py`, 5A. Pipeline endpoints (new file: `routers/ai_screening.py`), 5B. Clarification endpoints (from `plan_interactive_clarification.md`), 5C. Fix broken Include/Exclude buttons (+21 more)
+Nodes (26): 1A. New columns on `studies` table, 1B. New `clarification_questions` table, 1C. New `screening_keywords` table (Rayyan-style keyword highlighting), 3A. `services/clarification_generator.py`, 3B. `services/clarification_resolver.py`, 4A. `services/keyword_highlight_service.py`, 4B. Highlighting API endpoint, 4C. Keyword management endpoints (+18 more)
 
 ### Community 211 - "LandingPage"
-Cohesion: 0.07
-Nodes (34): initializeEdgeMotion(), bypass(), cancelPull(), clearEdge(), initialize(), onScroll(), onWheel(), release() (+26 more)
+Cohesion: 0.06
+Nodes (35): Check(), initializeEdgeMotion(), bypass(), cancelPull(), clearEdge(), initialize(), onScroll(), onWheel() (+27 more)
 
 ### Community 212 - "Reference Library (All Hyperlinked)"
 Cohesion: 0.17
@@ -1416,32 +1389,28 @@ Cohesion: 0.17
 Nodes (12): suspicious, noDebugger, noDoubleEquals, noEmptyBlockStatements, noExplicitAny, noGlobalIsFinite, noGlobalIsNan, noMisleadingCharacterClass (+4 more)
 
 ### Community 223 - "frontend/package.json"
-Cohesion: 0.05
-Nodes (33): autoprefixer, eslint, @eslint/js, globals, lenis, lucide-react, postcss, react (+25 more)
+Cohesion: 0.06
+Nodes (32): autoprefixer, eslint, @eslint/js, globals, lenis, lucide-react, postcss, react (+24 more)
 
 ### Community 225 - "codebook_be3c8761.md"
 Cohesion: 0.40
 Nodes (4): Sheet: Codebook, Sheet: Cohort_Methods, Sheet: Outcome_Level, Sheet: Study_Level
 
 ### Community 226 - "jev_screener.py"
-Cohesion: 0.15
+Cohesion: 0.17
 Nodes (17): _aspect_question(), build_questions(), build_state(), compose(), _labels(), _noul(), _pico_fields(), screen() (+9 more)
 
-### Community 229 - ".tmp-install-physics.cjs"
-Cohesion: 0.20
-Nodes (9): css, edge, engine, file, fs, html, motion, path (+1 more)
+### Community 229 - "render-html.py"
+Cohesion: 0.25
+Nodes (4): generate_html(), get_deliverable_info(), get_image_base64(), main()
 
 ### Community 230 - "os"
 Cohesion: 0.04
-Nodes (22): generate_html(), get_deliverable_info(), get_image_base64(), main(), main(), main(), detect_language(), run_verification() (+14 more)
+Nodes (26): build_cip_prompt(), check_logo_required(), generate_cip_set(), generate_with_nano_banana(), load_env(), load_logo_image(), main(), main() (+18 more)
 
 ### Community 231 - "radius"
 Cohesion: 0.13
 Nodes (22): $type, $value, sm, $type, $value, $type, $value, $type (+14 more)
-
-### Community 232 - "GradePage.tsx"
-Cohesion: 0.27
-Nodes (10): GradeAssessment, GradeFactor, CERTAINTY_BG, CERTAINTY_COLORS, CreateGradeForm(), FactorRow(), GradeCard(), GradeDetail() (+2 more)
 
 ### Community 233 - "Gravitas -- Delegation Reference"
 Cohesion: 0.20
@@ -1475,10 +1444,6 @@ Nodes (11): noForEach, useFlatMap, useSimplifiedLogicExpression, rules, noImgEle
 Cohesion: 0.08
 Nodes (25): Common Pitfalls, Core Prompt Structure, Detailed Brief, Eco/Sustainable, Effective Keywords by Style, Fashion Brand, Healthcare, Industry-Specific Prompts (+17 more)
 
-### Community 241 - "test_catalog_summary_line_endings.py"
-Cohesion: 0.09
-Nodes (5): CatalogSummaryLineEndingsTest, _load_generator(), TestFixtureValidation, TestMetricMath, TestThresholdGate
-
 ### Community 242 - "UI Styling Skill"
 Cohesion: 0.08
 Nodes (25): Accessibility Patterns, Alternative: Tailwind-Only Setup, Best Practices, Common Patterns, Component Layer: shadcn/ui, Component Library Guide, Component + Styling Setup, Core Stack (+17 more)
@@ -1500,7 +1465,7 @@ Cohesion: 0.50
 Nodes (3): Laya (System-1 Decision Engine) Screening Rules, Mandatory Rules for AI Agents, Overview
 
 ### Community 248 - "Page"
-Cohesion: 0.20
+Cohesion: 0.19
 Nodes (4): Browser, findChrome(), Page, sleep()
 
 ### Community 249 - "codebook_f3fb4fe7.md"
@@ -1515,17 +1480,17 @@ Nodes (23): dependencies, lucide-react, react, react-dom, react-router-dom, devD
 Cohesion: 0.25
 Nodes (7): devDependencies, react, @types/react, react, @types/react, name, type
 
-### Community 252 - "pubmed.py"
-Cohesion: 0.18
-Nodes (7): BatchSearchRequest, _get_project_api_key(), PreviewSearchRequest, pubmed_batch(), pubmed_fulltext(), pubmed_lookup(), pubmed_preview()
+### Community 252 - "typing"
+Cohesion: 0.02
+Nodes (49): 1D. Migration in `database.py`, 1A. Delete duplicate and dead files, 1D. Wire in production hardening services (or delete them), get_db(), init_sqlite_db(), _run_migrations(), get_current_user_optional(), lifespan() (+41 more)
 
 ### Community 254 - "roadmap_Founder_Roadmap_SR_AI_SaaS (1)_836a92da.md"
 Cohesion: 0.22
 Nodes (8): Closing Note, Reading Guide, Section 5 — 30-Day Action Plan, Three Things to Push Back On, Week 1 — Foundations, Week 2 — Incorporation and Validation Setup, Week 3 — Validation Execution Begins, Company Live, Week 4 — Manuscript Draft, Beta Recruitment, Launch Prep
 
-### Community 255 - "unittest"
-Cohesion: 0.08
-Nodes (7): TestStackFlagWithDesignSystem, resolve(), shipped_invocations(), SkillScriptPathsTest, read_rows(), TestTextLayoutDataContracts, TestTextLayoutRetrieval
+### Community 255 - "csv"
+Cohesion: 0.15
+Nodes (5): read_rows(), TestTextLayoutDataContracts, TestTextLayoutRetrieval, load_template_rows(), render_prisma2020_csv()
 
 ### Community 256 - "Section 3 — Commercialization Roadmap"
 Cohesion: 0.22
@@ -1535,9 +1500,9 @@ Nodes (9): 3.1 Beta Launch Strategy, 3.2 Academic User Acquisition, 3.3 Universi
 Cohesion: 0.08
 Nodes (24): Accessibility Requirements, Brand Compliance Validation, Checking Contrast, Color Documentation Format, Color Extraction, Color Palette Examples, Color Palette Management, Color System Structure (+16 more)
 
-### Community 261 - "document_processor.py"
-Cohesion: 0.17
-Nodes (4): FigureAnnotation, load_processed_document(), TableAnnotation, TextAnnotation
+### Community 261 - "verify_study_citation"
+Cohesion: 0.20
+Nodes (5): classify_publication_type(), is_valid_doi(), is_valid_pmid(), verify_project_citations(), verify_study_citation()
 
 ### Community 262 - "1. Using the Open OnDemand (OOD) "Job Composer""
 Cohesion: 0.22
@@ -1548,8 +1513,8 @@ Cohesion: 0.12
 Nodes (16): 10. Report, 1. Read the brief and the project, 2. Write the argument, 3. Draw the direction, 4. Find the idea, 5. Write the words, 6. Build it, still, 7. Gate (+8 more)
 
 ### Community 264 - "lint.mjs"
-Cohesion: 0.15
-Nodes (12): line(), args, asJson, byId, EXT, files, findings, R (+4 more)
+Cohesion: 0.11
+Nodes (14): line(), args, asJson, byId, EXT, files, findings, R (+6 more)
 
 ### Community 266 - "CIP Deliverable Guide"
 Cohesion: 0.08
@@ -1559,9 +1524,9 @@ Nodes (24): Apparel, Business Card, Car/Sedan, CIP Deliverable Guide, Core Ident
 Cohesion: 0.25
 Nodes (7): Available Models in Antigravity (example snapshot, September 2026 -- verify), Conceptual Routing Policy, Gravitas -- Model Routing Reference, GravitasBench Will Measure This, Quota-Aware Routing, The Principle, When Native Antigravity Features Are Better
 
-### Community 268 - "init_db"
+### Community 268 - "get_connection"
 Cohesion: 0.02
-Nodes (82): 1A. Delete duplicate and dead files, ensure_dirs(), init_db(), reset_db(), lifespan(), preload_all(), init_s3_buckets(), client() (+74 more)
+Nodes (109): `tests/test_screening_fixes.py` (5 tests), get_connection(), init_db(), reset_db(), seed_pam(), run_export_benchmark(), client(), fresh_db() (+101 more)
 
 ### Community 269 - "States and Variants"
 Cohesion: 0.08
@@ -1575,9 +1540,9 @@ Nodes (7): Gravitas -- Adaptive Reasoning Reference, Reasoning by Scenario, Reas
 Cohesion: 0.25
 Nodes (7): Brand & Style, Colors, Components, Elevation & Depth, Layout & Spacing, Shapes, Typography
 
-### Community 272 - "cip/generate.py"
-Cohesion: 0.19
-Nodes (7): build_cip_prompt(), check_logo_required(), generate_cip_set(), generate_with_nano_banana(), load_env(), load_logo_image(), main()
+### Community 272 - "get_review_graph_stats"
+Cohesion: 0.20
+Nodes (5): 2026-03-30 - Inconsistent Project Access Checks on Graphify Endpoints, 2026-03-30 - Unreachable Access Check in Download Report and Missing Checks on Analysis Endpoints, 2026-03-30 - Unreachable Authorization Check Placed After Return Statement, _build_review_graph(), get_review_graph_stats()
 
 ### Community 273 - "Gravitas -- Reconnaissance Reference"
 Cohesion: 0.25
@@ -1586,10 +1551,6 @@ Nodes (7): Dependency-Directed Recon, Extended Recon (unfamiliar codebase or hig
 ### Community 274 - "vue/nuxt/tsconfig.json"
 Cohesion: 0.25
 Nodes (7): compilerOptions, baseUrl, paths, extends, ../../../tsconfig.json, #app, #imports
-
-### Community 275 - "test_production_hardening.py"
-Cohesion: 0.09
-Nodes (5): CircuitBreaker, RateLimiter, TestCircuitBreaker, TestHealthEndpoint, TestRateLimiter
 
 ### Community 276 - "Workflow"
 Cohesion: 0.08
@@ -1623,10 +1584,6 @@ Nodes (4): cleanTree(), DANGEROUS_URI_ATTRS, DISALLOWED_TAGS, sanitizeSvg()
 Cohesion: 0.21
 Nodes (4): _finalize_bibtex_record(), parse_bibtex(), _parse_bibtex_fields(), TestParseBibtex
 
-### Community 287 - ".tmp-edge-motion.js"
-Cohesion: 0.48
-Nodes (6): bypass(), cancelPull(), initialize(), onWheel(), release(), reset()
-
 ### Community 293 - "correctness"
 Cohesion: 0.29
 Nodes (7): noInvalidUseBeforeDeclaration, noUnknownMediaFeatureName, noUnusedFunctionParameters, noUnusedImports, noUnusedVariables, useExhaustiveDependencies, correctness
@@ -1647,10 +1604,6 @@ Nodes (7): useSortedClasses, attributes, functions, nursery, fix, level, options
 Cohesion: 0.29
 Nodes (7): optional, peerDependenciesMeta, @nuxt/kit, react, vue, optional, optional
 
-### Community 299 - "design_system.py"
-Cohesion: 0.11
-Nodes (9): _detect_page_type(), format_page_override_md(), generate_design_system(), _generate_intelligent_overrides(), persist_design_system(), _resolve_dial(), safe_slug(), _write_persisted_file() (+1 more)
-
 ### Community 300 - "test_icon_generate.py"
 Cohesion: 0.14
 Nodes (16): _Config, gen(), _response(), _run_main(), test_generate_batch_handles_empty_response(), test_generate_batch_reports_max_tokens(), test_generate_batch_warns_when_truncated_after_some_icons(), test_generate_icon_handles_none_text() (+8 more)
@@ -1663,9 +1616,9 @@ Nodes (22): @apply Directive, Best Practices, Color Customization, Complete Tail
 Cohesion: 0.17
 Nodes (11): 1. What the study measured, 2. The roles, 3. Proportion, 4. Surfaces without lines or shadows, 5. Colour fields, 6. Dark pages, 7. Colour and photographs, 8. Contrast (+3 more)
 
-### Community 303 - "ref_path"
-Cohesion: 0.09
-Nodes (19): ./tailwind.config.js, {createRequire}, esbuild, front, fs, out, path, req (+11 more)
+### Community 303 - "get_ai_screening_status"
+Cohesion: 0.29
+Nodes (4): get_ai_screening_progress(), get_ai_screening_status(), test_get_ai_screening_status_unit_function_mock(), run_test()
 
 ### Community 304 - "test_record_collaboration.py"
 Cohesion: 0.30
@@ -1680,16 +1633,16 @@ Cohesion: 0.18
 Nodes (10): 1. First wave (2023–2024), 2. Second wave (2025), 3. Third wave (2025–2026): the "fix" that became the look, 4. Gallery fashion, banned as house style, 5. Structural tells, 6. Copy tells, 7. Motion tells, 8. Why removal is not enough (+2 more)
 
 ### Community 307 - "record_collaboration.py"
-Cohesion: 0.06
-Nodes (29): add_annotation(), AnnotationCreate, attach_tag(), _can_write(), create_tag(), detach_tag(), list_annotations(), list_tags() (+21 more)
+Cohesion: 0.13
+Nodes (18): add_annotation(), AnnotationCreate, attach_tag(), _can_write(), create_tag(), detach_tag(), list_annotations(), list_tags() (+10 more)
 
 ### Community 308 - "vue/package.json"
 Cohesion: 0.33
 Nodes (5): devDependencies, vue, vue, name, type
 
-### Community 310 - "read_rows"
-Cohesion: 0.16
-Nodes (3): read_rows(), TestGeneratedCatalogContract, TestReasoningContract
+### Community 310 - "evaluate_claim"
+Cohesion: 0.25
+Nodes (3): claimscape_status(), evaluate_claim(), EvaluateRequest
 
 ### Community 311 - "Critique — judging the render"
 Cohesion: 0.22
@@ -1701,11 +1654,15 @@ Nodes (12): version, OptionalPick, GestureOrientation, LenisEvent, OnStartCallba
 
 ### Community 313 - "generate-slide.py"
 Cohesion: 0.14
-Nodes (11): _e(), generate_chart_slide(), generate_cta_slide(), generate_deck(), generate_metrics_slide(), generate_problem_slide(), generate_solution_slide(), generate_testimonial_slide() (+3 more)
+Nodes (10): _e(), generate_chart_slide(), generate_cta_slide(), generate_deck(), generate_metrics_slide(), generate_problem_slide(), generate_solution_slide(), generate_testimonial_slide() (+2 more)
 
 ### Community 314 - "shadcn/ui Theming & Customization"
 Cohesion: 0.10
 Nodes (19): Base Color Presets, Best Practices, Color Customization, Color Format, Component Customization, CSS Variable System, Customize Styles, Customize Variants (+11 more)
+
+### Community 315 - "TestCitationEndpoints"
+Cohesion: 0.13
+Nodes (3): client(), project(), TestCitationEndpoints
 
 ### Community 316 - "element.ts"
 Cohesion: 0.23
@@ -1719,10 +1676,6 @@ Nodes (19): Banner Design Tasks, Brand Identity Tasks, Component Creation, Corpo
 Cohesion: 0.27
 Nodes (7): clean_search_string(), match_search_string(), test_boolean_and_or_matching(), test_clean_search_string(), test_empty_query_passes(), test_not_matching(), test_wildcard_matching()
 
-### Community 319 - "tool_calling_client.py"
-Cohesion: 0.12
-Nodes (6): _extract_balanced_json(), parse_json_from_text(), get_cache_stats(), invalidate_tool_cache(), TestJsonUtils, clean_tool_cache()
-
 ### Community 322 - "tasteskill v2 (`design-taste-frontend`)"
 Cohesion: 0.29
 Nodes (6): Contents, How it works, Install, Notes, Requirements, tasteskill v2 (`design-taste-frontend`)
@@ -1732,8 +1685,8 @@ Cohesion: 0.10
 Nodes (21): $type, $value, $type, $value, $type, $value, $type, $value (+13 more)
 
 ### Community 324 - "test_citation_service.py"
-Cohesion: 0.22
-Nodes (5): 1C. Consolidate citation services, generate_formatted_bibliography(), study_to_bibtex(), study_to_ris(), TestBibliographyHelpers
+Cohesion: 0.20
+Nodes (6): 1C. Consolidate citation services, export_project_bibliography(), generate_formatted_bibliography(), study_to_bibtex(), study_to_ris(), TestBibliographyHelpers
 
 ### Community 325 - "Asset Organization Guide"
 Cohesion: 0.11
@@ -1759,14 +1712,6 @@ Nodes (18): 1. Wordmark (Logotype), 2. Lettermark (Monogram), 3. Pictorial Mark 
 Cohesion: 0.40
 Nodes (4): Development Server, Nuxt Minimal Starter, Production, Setup
 
-### Community 333 - "literature_search_service.py"
-Cohesion: 0.16
-Nodes (9): openalex_phrases(), _openalex_record(), _or_clauses(), _pubmed_ids(), _reconstruct_abstract(), search_multi_database(), search_openalex(), search_openalex_phrases() (+1 more)
-
-### Community 337 - "laya/eslint.config.js"
-Cohesion: 0.28
-Nodes (4): eslint-plugin-prettier, eslint-plugin-react-hooks, eslint-plugin-react-refresh, eslint-plugin-sonarjs
-
 ### Community 338 - "gray"
 Cohesion: 0.05
 Nodes (53): $type, $value, $type, $value, $type, $value, $type, $value (+45 more)
@@ -1775,9 +1720,9 @@ Nodes (53): $type, $value, $type, $value, $type, $value, $type, $value (+45 more
 Cohesion: 0.11
 Nodes (19): animate(), fadeEls, fadeObserver, form, hamburger, heroMockup, metricBars, metricContainer (+11 more)
 
-### Community 340 - "rob_service.py"
+### Community 340 - "json"
 Cohesion: 0.03
-Nodes (56): auto_select_tool(), get_rob_tool(), list_rob_tools(), seed(), _avg_confidence(), build_domain_prompt(), _find_evidence_sentence(), _mock_answer() (+48 more)
+Nodes (75): create_forest_plot_from_meta(), create_funnel_plot_from_meta(), create_sroc_curve_from_meta(), _extract_studies(), _load_meta(), accept_ai_suggestions(), ai_prefill(), auto_create_assessment() (+67 more)
 
 ### Community 341 - "CatalogRefreshTest"
 Cohesion: 0.30
@@ -1787,17 +1732,17 @@ Nodes (3): CatalogRefreshTest, first(), handle()
 Cohesion: 0.05
 Nodes (37): $type, $value, background, destructive, destructive-foreground, foreground, muted, muted-foreground (+29 more)
 
-### Community 343 - "prisma_service.py"
-Cohesion: 0.20
-Nodes (6): 2026-10-15 — Official PRISMA2020 diagram sync, generate_prisma_2020_svg(), get_prisma_2020_data(), verify_exclusion_with_laya(), test_generate_prisma_2020_svg(), test_verify_exclusion_with_laya()
+### Community 343 - "test_skill_script_paths.py"
+Cohesion: 0.38
+Nodes (3): resolve(), shipped_invocations(), SkillScriptPathsTest
 
-### Community 344 - "llm_extractor.py"
-Cohesion: 0.18
-Nodes (10): Modified files:, jev_gate(), _clean_json_response(), _eligibility_block(), _jev_args_abstract(), _jev_args_fulltext(), _jev_args_title(), _normalize_extracted_item() (+2 more)
+### Community 344 - "antigravity_tools.py"
+Cohesion: 0.04
+Nodes (29): Modified files:, ensure_dirs(), create_agent_config(), _get_semaphore(), run_screening_extraction_agent(), extract_variables(), get_pdf_text(), get_project() (+21 more)
 
-### Community 346 - ".tmp-integrate-shared-theme.cjs"
-Cohesion: 0.14
-Nodes (12): content, cp, fontFaces, frontend, fs, main, original, out (+4 more)
+### Community 346 - "writer.py"
+Cohesion: 0.33
+Nodes (3): append_records(), count_dropdowns(), _lastrow()
 
 ### Community 347 - "_setup"
 Cohesion: 0.22
@@ -1807,9 +1752,9 @@ Nodes (6): _db(), _setup(), TestMissingCodeColors, TestNotesAndLegend, TestWorkb
 Cohesion: 0.22
 Nodes (9): 1. `GET /projects/{project_id}/clarifications`, 2. `GET /clarifications/{question_id}`, 3. `POST /clarifications/{question_id}/answer`, 4. `POST /projects/{project_id}/clarifications/batch-answer`, 5. `GET /projects/{project_id}/clarifications/stats`, 6. `DELETE /clarifications/{question_id}`, New file: `routers/clarification.py`, Part 4 — API Endpoints (+1 more)
 
-### Community 349 - "parse_ovid"
-Cohesion: 0.31
-Nodes (3): _finalize_ovid_record(), parse_ovid(), TestParseOVID
+### Community 349 - "test_new_features.py"
+Cohesion: 0.09
+Nodes (7): _finalize_ovid_record(), parse_ovid(), client(), project(), TestKeywordGroupsAPI, TestParseOVID, TestReferenceExportAPI
 
 ### Community 350 - "source"
 Cohesion: 0.50
@@ -1839,13 +1784,13 @@ Nodes (14): dependencies, astro, @astrojs/check, @astrojs/react, @astrojs/vue, l
 Cohesion: 0.11
 Nodes (17): Apparel (Polo/T-Shirt), Base Prompt Structure, Business Card, CIP Mockup Prompt Engineering, Context Modifiers, Corporate Minimal, Deliverable-Specific Modifiers, Letterhead (+9 more)
 
-### Community 358 - "test_keyword_highlight.py"
-Cohesion: 0.18
-Nodes (13): `tests/test_keyword_highlight.py` (10 tests), find_keyword_matches(), client(), test_add_screening_keyword(), test_ai_keywords_from_screening(), test_auto_generate_keywords_from_pico(), test_delete_screening_keyword(), test_exclude_keyword_highlight() (+5 more)
+### Community 358 - "jules_auto_merge.py"
+Cohesion: 0.53
+Nodes (5): approve_plan(), get_activities(), get_session(), merge_pr_or_branch(), monitor_loop()
 
-### Community 361 - "csv"
-Cohesion: 0.17
-Nodes (7): detect_domain(), _load_csv(), search(), search_all(), _search_csv(), load_template_rows(), render_prisma2020_csv()
+### Community 361 - "logo/core.py"
+Cohesion: 0.08
+Nodes (7): BM25, detect_domain(), _load_csv(), search(), search_all(), _search_csv(), MetricsCollector
 
 ### Community 362 - "sync_web_repo.py"
 Cohesion: 0.22
@@ -1855,17 +1800,17 @@ Nodes (5): ensure_github_pages_workflow(), ensure_vite_config(), main(), run_git
 Cohesion: 0.11
 Nodes (17): Accent, Applying Semantic Tokens, Background & Foreground, Border & Ring, Color Semantics, Dark Mode Overrides, Destructive, Interactive States (+9 more)
 
-### Community 376 - "detect_project.py"
-Cohesion: 0.39
-Nodes (4): count_source_files(), detect_language(), main(), suggest_budget()
+### Community 376 - "pathlib"
+Cohesion: 0.13
+Nodes (7): count_source_files(), detect_language(), main(), suggest_budget(), main(), detect_language(), run_verification()
 
 ### Community 378 - "UI/UX Pro Max - Design Intelligence"
 Cohesion: 0.11
 Nodes (17): Before Delivering App UI, Example Workflow, If a search returns 0 results, Output Formats, Query Contract, Rule Categories by Priority, Running the search tool, Step 1: Analyze User Requirements (+9 more)
 
-### Community 379 - "biomni_service.py"
-Cohesion: 0.24
-Nodes (7): fetch_supplementary_materials(), generate_csl_citation_field(), _get_from_cache(), predict_drug_admet(), query_biomedical_entities_batch(), query_biomedical_entity(), _save_to_cache()
+### Community 379 - "Part 5 — Backend: API Endpoints"
+Cohesion: 0.40
+Nodes (5): 5A. Pipeline endpoints (new file: `routers/ai_screening.py`), 5B. Clarification endpoints (from `plan_interactive_clarification.md`), 5C. Fix broken Include/Exclude buttons, 5D. Enhanced screening summary endpoint, Part 5 — Backend: API Endpoints
 
 ### Community 380 - "reset_breaker"
 Cohesion: 0.29
@@ -1883,20 +1828,20 @@ Nodes (15): 22 Art Direction Styles, Banner Sizes & Art Direction Styles Referen
 Cohesion: 0.12
 Nodes (15): 22 Art Direction Styles, Banner Sizes & Art Direction Styles Reference, Complete Banner Sizes, CTA Rules, Design Principles, Pinterest Research Queries, Print, Print Specs (+7 more)
 
-### Community 389 - "test_pdf_service.py"
-Cohesion: 0.16
-Nodes (5): client(), _create_test_pdf(), fresh_db(), project_study_with_pdf(), TestPdfEndpoints
+### Community 387 - "test_meta_analysis.py"
+Cohesion: 0.06
+Nodes (5): TestBivariateModel, TestEffectSizeComputation, TestEggersTest, TestFullRun, TestSVGGeneration
 
-### Community 390 - "get_connection"
-Cohesion: 0.03
-Nodes (59): get_connection(), canonicalize_email(), create_access_token(), create_user(), hash_password(), is_disposable_email(), _add_decision(), client() (+51 more)
+### Community 390 - "_make_project_and_study"
+Cohesion: 0.17
+Nodes (9): _assessments_for(), _db(), _make_project_and_study(), TestAiPrefillMetadata, prefill_with_spy(), spy_model_fn(), TestAutoSelectTool, TestManualIncludeTrigger (+1 more)
 
 ### Community 391 - "coded_extract_study"
-Cohesion: 0.17
-Nodes (7): coded_extract_study(), _is_missing(), _is_not_applicable(), _numeric_double_check(), _page_texts(), _quote_verbatim(), _recheck()
+Cohesion: 0.10
+Nodes (14): coded_extract_study(), _exhaustive_search(), _find_quote_page(), _is_missing(), _is_not_applicable(), _llm_extract_section(), _numeric_double_check(), _page_texts() (+6 more)
 
 ### Community 392 - "extract-colors.cjs"
-Cohesion: 0.22
+Cohesion: 0.20
 Nodes (11): calculateCompliance(), colorDistance(), displayPalette(), extractHexColors(), findNearestBrandColor(), fs, generateImageMagickCommand(), hexToRgb() (+3 more)
 
 ### Community 393 - "Stellar Labs frontend — deployment handover"
@@ -1907,37 +1852,25 @@ Nodes (10): Critical safety/scope notes, Current objective and status, Exact rel
 Cohesion: 0.22
 Nodes (8): _extract_page_sentences(), _split_into_sentences(), trace_all_extractions(), trace_variable_evidence(), test_split_into_sentences(), test_trace_all_extractions(), test_trace_variable_evidence_missing_codes_return_none(), test_trace_variable_evidence_verbatim_page()
 
-### Community 398 - ".tmp-generate-react-landing.cjs"
-Cohesion: 0.18
-Nodes (10): ast, body, {createRequire}, css, fs, path, postcss, ref (+2 more)
-
 ### Community 399 - "sync-brand-to-tokens.cjs"
-Cohesion: 0.20
+Cohesion: 0.18
 Nodes (13): adjustBrightness(), CSS_SCAN_DIRS, CSS_TOKEN_SOURCES, { execFileSync }, extractColorsFromMarkdown(), findExistingTokenSources(), fs, GENERATE_TOKENS_SCRIPT (+5 more)
 
 ### Community 400 - "CIP Design Reference"
 Cohesion: 0.13
 Nodes (14): CIP Brief (Start Here), CIP Design Reference, Commands, Deliverable Categories, Design Styles, Detailed References, Generate Mockups, HTML Presentation Features (+6 more)
 
-### Community 401 - "test_data_contracts.py"
-Cohesion: 0.13
-Nodes (12): 1. Write the argument first, 2. The two-line headline, 3. Headline shapes that work, 4. Supporting line, body, buttons, 5. Proof without inventing it, 6. Things that read as generated, 7. Micro-typography, Contents (+4 more)
+### Community 401 - "Words"
+Cohesion: 0.20
+Nodes (9): 1. Write the argument first, 2. The two-line headline, 3. Headline shapes that work, 4. Supporting line, body, buttons, 5. Proof without inventing it, 6. Things that read as generated, 7. Micro-typography, Contents (+1 more)
 
-### Community 403 - "PicoHypothesisPage.tsx"
-Cohesion: 0.17
-Nodes (13): ReferenceImportModal(), ReferenceImportModalProps, SUPPORTED_FORMATS, TARGET_FIELDS, Criterion, MalformedRecordDetail, ReferencePreviewResponse, ReferenceUploadResponse (+5 more)
-
-### Community 404 - "pathlib"
-Cohesion: 0.07
-Nodes (14): approve_plan(), get_activities(), get_session(), merge_pr_or_branch(), monitor_loop(), approve_plan(), get_activities(), get_session() (+6 more)
+### Community 404 - "jules_monitor.py"
+Cohesion: 0.48
+Nodes (4): approve_plan(), get_activities(), get_session(), monitor_loop()
 
 ### Community 405 - "Icon Design Reference"
 Cohesion: 0.13
 Nodes (14): Available Styles, CLI Options, Commands, Generate Batch Variations, Generate Multiple Sizes, Generate Single Icon, Icon Categories, Icon Design Reference (+6 more)
-
-### Community 407 - ".tmp-probe-preset-retrieval.js"
-Cohesion: 0.39
-Nodes (7): argmax(), classifyPaper(), computeTierSummaries(), fetchLivePubMedEvidence(), parseFractionalDate(), splitSentences(), wilsonScore()
 
 ### Community 408 - "Copywriting Formulas"
 Cohesion: 0.13
@@ -1951,25 +1884,13 @@ Nodes (9): 6A. Layout: Two-pane design (Rayyan-style), 6B. "Start AI Screening" 
 Cohesion: 0.29
 Nodes (6): Basic, Installation, Introduction, lenis/snap, Slideshow, Usage
 
-### Community 411 - "test_r_plot_service.py"
-Cohesion: 0.07
-Nodes (6): TestCallRScript, TestForestPlot, TestFunnelPlot, TestPRISMAFlow, TestRAvailability, TestSROCCurve
-
 ### Community 412 - "Copywriting Formulas"
 Cohesion: 0.13
 Nodes (14): AIDA (Attention-Interest-Desire-Action), Before-After-Bridge, Contrast Patterns, Copywriting Formulas, Core Formulas, Cost of Inaction, FAB (Features-Advantages-Benefits), Formula-to-Slide Mapping (+6 more)
 
-### Community 413 - "get_processor"
-Cohesion: 0.20
-Nodes (5): 0.1 There are two extraction engines, and only the weaker one is wired up, 0.2 Docling isn't a pinned dependency, so you don't reliably know which parser ran, 0. Two findings that affect all three tracks, get_processor(), TestFacade
-
-### Community 414 - "parse_decision_rules"
-Cohesion: 0.27
-Nodes (4): apply_decision_rules(), _object_without_duplicates(), parse_decision_rules(), _validate_action()
-
-### Community 415 - "_setup_project_and_study"
-Cohesion: 0.23
-Nodes (7): `tests/test_screening_fixes.py` (5 tests), _setup_project_and_study(), test_decision_recorded_in_screening_decisions(), test_enhanced_summary_includes_new_fields(), test_maybe_decision_works(), test_single_reviewer_exclude_updates_status(), test_single_reviewer_include_updates_status()
+### Community 414 - "test_data_contracts.py"
+Cohesion: 0.10
+Nodes (11): apply_decision_rules(), _object_without_duplicates(), parse_decision_rules(), _validate_action(), read_rows(), split_values(), style_identities(), TestGeneratedCatalogContract (+3 more)
 
 ### Community 416 - "Banner Design - Multi-Format Creative Banner System"
 Cohesion: 0.14
@@ -2019,10 +1940,6 @@ Nodes (12): Categories, Dark Mode, File Organization, Layer 1: Primitive Tokens,
 Cohesion: 0.17
 Nodes (11): $type, $value, dark, semantic, $schema, $type, $value, semantic (+3 more)
 
-### Community 428 - "ProcessedDocument"
-Cohesion: 0.24
-Nodes (4): process_batch(), process_pdf(), ProcessedDocument, test_process_pdf_and_process_batch_use_the_same_fallback()
-
 ### Community 429 - "Pre-Delivery Checklist (canonical — the only one)"
 Cohesion: 0.15
 Nodes (12): Accessibility, Common Rules for Professional UI + Pre-Delivery Checklist, Icons & Visual Elements, Interaction, Interaction (App), Layout, Layout & Spacing, Light/Dark Mode (+4 more)
@@ -2031,13 +1948,9 @@ Nodes (12): Accessibility, Common Rules for Professional UI + Pre-Delivery Check
 Cohesion: 0.15
 Nodes (12): 10. Charts & Data (LOW), 1. Accessibility (CRITICAL), 2. Touch & Interaction (CRITICAL), 3. Performance (HIGH), 4. Style Selection (HIGH), 5. Layout & Responsive (HIGH), 6. Typography & Color (MEDIUM), 7. Animation (MEDIUM) (+4 more)
 
-### Community 431 - "AgentBackend"
-Cohesion: 0.24
-Nodes (6): 11. What to Build Next (Phases 2-5), Phase 2: Graphify Integration (token efficiency), Phase 3: Pre-Review Modules (literature search), Phase 4: Review Web App (interactive review), Phase 5: Polish & Scale, AgentBackend
-
-### Community 432 - "test_coded_extraction.py"
-Cohesion: 0.13
-Nodes (6): _llm_extract_section(), build_coded_extraction_workbook(), _note_for(), build_all_prompts(), build_field_prompt(), TestPromptBuilder
+### Community 432 - "build_field_prompt"
+Cohesion: 0.18
+Nodes (5): build_coded_extraction_workbook(), _note_for(), build_all_prompts(), build_field_prompt(), TestPromptBuilder
 
 ### Community 433 - "Primitive Tokens"
 Cohesion: 0.17
@@ -2104,16 +2017,16 @@ Cohesion: 0.20
 Nodes (9): Common Structures, Duarte Sparkline Pattern, Matching Strategy to Context, Product Demo (6 slides), Sales Pitch (9 slides), Search Commands, Slide Strategies, Strategy Selection (+1 more)
 
 ### Community 452 - "test_settings.py"
-Cohesion: 0.07
+Cohesion: 0.06
 Nodes (30): ConnectionTestRequest, get_llm_config(), LLMConfigUpdate, reset_llm_config(), test_llm_connection(), update_llm_config(), config_version(), _effective_model() (+22 more)
 
 ### Community 453 - "runtime/lenis.ts"
 Cohesion: 0.36
 Nodes (4): plugin, #app, Plugin, #imports
 
-### Community 454 - "_exhaustive_search"
-Cohesion: 0.20
-Nodes (5): _exhaustive_search(), _search_sentences(), _search_tables(), _try_derivations(), _variable_keywords()
+### Community 457 - "Part 11 — Test Cases"
+Cohesion: 0.67
+Nodes (3): Part 11 — Test Cases, `tests/test_clarification.py` (15 tests), test_dismiss_clarification()
 
 ### Community 461 - "Slides Reference"
 Cohesion: 0.29
@@ -2128,8 +2041,8 @@ Cohesion: 0.29
 Nodes (6): Animation Classes, Background Images, Base Structure, Chart.js Integration, CSS Variables Reference, HTML Slide Template
 
 ### Community 465 - "Slides"
-Cohesion: 0.18
-Nodes (7): References (Knowledge Base), Routing, Script Paths, Slides, Subcommands, When to Use, create()
+Cohesion: 0.29
+Nodes (6): References (Knowledge Base), Routing, Script Paths, Slides, Subcommands, When to Use
 
 ### Community 466 - "MetaSynthesis AI — Design System & Project Context"
 Cohesion: 0.22
@@ -2139,10 +2052,6 @@ Nodes (8): 10. File layout convention, 11. Quick-start prompt for an LLM buildin
 Cohesion: 0.29
 Nodes (6): lenis, raf(), snap, _unsub1, _unsubs, Window
 
-### Community 468 - "test_quote_verification.py"
-Cohesion: 0.39
-Nodes (5): verify_quote_provenance(), test_verify_quote_provenance_hallucination_detected(), test_verify_quote_provenance_missing_codes_ignored(), test_verify_quote_provenance_ocr_noise(), test_verify_quote_provenance_verbatim()
-
 ### Community 469 - "Considerations"
 Cohesion: 0.33
 Nodes (6): Anchor links, Considerations, Nested scroll, Reduced motion, Using HTML attributes, Using Javascript
@@ -2151,33 +2060,17 @@ Nodes (6): Anchor links, Considerations, Nested scroll, Reduced motion, Using HT
 Cohesion: 0.40
 Nodes (4): Brand Guidelines Template, Document Structure, Extractable Fields, Usage
 
-### Community 471 - "test_validate_tokens.py"
-Cohesion: 0.28
-Nodes (3): _run(), test_flags_hardcoded_hex_sharing_line_with_token(), test_token_only_line_reports_no_violation()
-
-### Community 473 - "@receptron/laya"
-Cohesion: 0.29
-Nodes (6): Development, Exporting the ONNX bundle yourself, Install, License, Limits, @receptron/laya
+### Community 471 - "subprocess"
+Cohesion: 0.08
+Nodes (13): main(), _run(), test_flags_hardcoded_hex_sharing_line_with_token(), test_token_only_line_reports_no_violation(), check_dependencies(), generate_pdf(), main(), cleanup() (+5 more)
 
 ### Community 476 - "cip/search.py"
 Cohesion: 0.32
 Nodes (3): format_brief(), format_results(), main()
 
-### Community 477 - "rob.py"
-Cohesion: 0.06
-Nodes (23): RobAssessmentCreate, RobDomainJudgmentUpdate, RobSignalingAnswerUpdate, accept_ai_suggestions(), auto_create_assessment(), create_assessment(), export_rob(), get_assessment() (+15 more)
-
-### Community 478 - "ref_fs"
-Cohesion: 0.14
-Nodes (8): fs, css, file, fs, html, js, out, path
-
 ### Community 479 - "Part 2 — Backend: Multi-Stage AI Screening Service"
 Cohesion: 0.25
 Nodes (8): 2A. Title screening LLM prompt, 2B. Abstract screening LLM prompt (enhanced with keyword extraction), 2C. Full-text screening LLM prompt, 2D. Confidence display logic, 2E. Recording AI decisions, 2F. Screening status values, New file: `services/ai_screening_pipeline.py`, Part 2 — Backend: Multi-Stage AI Screening Service
-
-### Community 480 - "screen_with_clarification"
-Cohesion: 0.14
-Nodes (12): _jev_args(), screen_with_clarification(), test_clarification_has_context_excerpt(), test_clarification_has_valid_options(), test_clarification_intervention_match_type(), test_clarification_llm_fallback(), test_clarification_outcome_match_type(), test_clarification_population_match_type() (+4 more)
 
 ### Community 481 - "padding-y"
 Cohesion: 0.67
@@ -2187,17 +2080,9 @@ Nodes (4): padding-y, padding-y, $type, $value
 Cohesion: 0.33
 Nodes (5): 1. Local Server Details, 2. API Credentials & Parameters, 3. Configuration in Software (`/home/vd00026/Desktop/Software`), 4. Verification, Biomni-R0 32B Model Integration Reference
 
-### Community 484 - "dependencies"
-Cohesion: 0.67
-Nodes (3): dependencies, @huggingface/tokenizers, onnxruntime-node
-
 ### Community 485 - "1. Design Tokens"
 Cohesion: 0.33
 Nodes (6): 1. Design Tokens, Animations, Border radius scale, Color palette, Responsive breakpoints, Typography (Google Fonts, already loaded)
-
-### Community 486 - "repository"
-Cohesion: 0.67
-Nodes (3): repository, type, url
 
 ### Community 490 - "0. Project Context"
 Cohesion: 0.40
@@ -2215,17 +2100,17 @@ Nodes (4): xl, xl, $type, $value
 Cohesion: 0.50
 Nodes (4): counts, log, onTouch(), render()
 
-### Community 500 - "io"
-Cohesion: 0.08
-Nodes (24): _export_csv(), _export_xlsx(), decode_classification(), export_project_package(), _file_name(), _profile_workbook(), _rob_workbook(), _sheet_name() (+16 more)
+### Community 500 - "robvis_service.py"
+Cohesion: 0.16
+Nodes (14): _judgment_map(), _matplotlib_plot(), normalize_judgment(), render_project_figures(), render_robvis(), render_summary(), render_traffic_light(), robvis_tool_name() (+6 more)
 
 ### Community 502 - "devDependencies"
 Cohesion: 0.50
 Nodes (4): devDependencies, @biomejs/biome, tsdown, typescript
 
-### Community 504 - "chart_engine.py"
-Cohesion: 0.07
-Nodes (19): create_forest_plot(), create_funnel_plot(), create_prisma_flow(), create_rob_traffic_light(), create_sroc_curve(), ForestPlotRequest, FunnelPlotRequest, PrismaFlowRequest (+11 more)
+### Community 504 - "generate_prisma_flow"
+Cohesion: 0.13
+Nodes (8): create_prisma_flow(), create_rob_traffic_light(), create_sroc_curve(), ForestPlotRequest, PrismaFlowRequest, RobTrafficLightRequest, SrocCurveRequest, generate_prisma_flow()
 
 ### Community 506 - "peerDependencies"
 Cohesion: 0.50
@@ -2244,12 +2129,8 @@ Cohesion: 0.33
 Nodes (7): getStoredProjectExtractions(), getStoredProjectStudies(), getStoredScreeningDecisions(), handleDemoRequest(), saveStoredProjectExtractions(), saveStoredProjectStudies(), saveStoredScreeningDecision()
 
 ### Community 516 - "ref_react"
-Cohesion: 0.07
-Nodes (22): Check(), ClarificationNotificationCenter(), ClarificationNotificationCenterProps, ErrorBoundary, Props, State, LoaderPreset, LoaderScreen() (+14 more)
-
-### Community 518 - "Bolt's Journal - Performance Learnings"
-Cohesion: 0.29
-Nodes (6): 2025-05-20 - Cache Word-Boundary Regexes in Abstract Keyword Highlighting, 2026-10-06 - Fast Substring Pre-Check for Keyword Regex Matching, 2026-10-10 - Length Ratio Upper-Bound Pre-Check & LRU Caching for Title Similarity, 2026-10-18 - Parallel Integer Priority Arrays for Character Span Resolution, 2026-10-25 - Parallel Integer Priority Array for Character-Level Span Conflict Resolution, Bolt's Journal - Performance Learnings
+Cohesion: 0.18
+Nodes (16): PassageInspector(), PassageInspectorProps, TrailGraphView(), TrailGraphViewProps, TrailViewer(), TrailViewerProps, LoaderPreset, LoaderScreen() (+8 more)
 
 ### Community 519 - "Phase 5: Lambda Packaging + API Gateway (AWS Deployment)"
 Cohesion: 0.33
@@ -2267,10 +2148,6 @@ Nodes (3): @nuxt/kit, ModuleOptions, nuxtModule
 Cohesion: 0.67
 Nodes (3): repository, type, url
 
-### Community 530 - "Part 9 — Question Type Specifications"
-Cohesion: 0.40
-Nodes (5): Intervention/Test Match Question, Outcome Match Question, Part 9 — Question Type Specifications, Population Match Question, Study Design Question
-
 ### Community 532 - "Phase 6: Production Hardening"
 Cohesion: 0.40
 Nodes (5): 6A. Security, 6B. Monitoring, 6C. Error handling, 6D. Database migration tool, Phase 6: Production Hardening
@@ -2287,23 +2164,27 @@ Nodes (4): 2A. Install LocalStack via pip, 2B. Create local dev startup scripts,
 Cohesion: 0.50
 Nodes (4): 3A. Verify storage abstraction is complete, 3B. Test S3 storage with LocalStack, 3C. Add storage backend to health check, Phase 3: Complete Storage Migration (Local → S3)
 
+### Community 550 - "start_ai_analysis"
+Cohesion: 0.50
+Nodes (3): start_ai_analysis(), test_start_ai_analysis_direct_function_call(), run_test()
+
 ## Knowledge Gaps
-- **66 isolated node(s):** `react`, `react-dom`, `react-router-dom`, `lucide-react`, `esbuild` (+61 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 5518 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **139 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **65 isolated node(s):** `react`, `react-dom`, `react-router-dom`, `lucide-react`, `esbuild` (+60 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 5447 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **146 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Decision log` connect `Decision log` to `prefilter_study`, `json`, `keyword_highlight_service.py`, `prisma_service.py`, `ScreeningPage.tsx`?**
-  _High betweenness centrality (0.089) - this node is a cross-community bridge._
-- **Are the 310 inferred relationships involving `DBBackend` (e.g. with `4A. Fix dependencies.py to use DBBackend` and `4C. Migrate services to DBBackend`) actually correct?**
-  _`DBBackend` has 310 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Decision log` connect `Decision log` to `routers/screening.py`, `prefilter_study`, `test_keyword_highlight.py`, `StudyList.tsx`, `laya_engine.py`?**
+  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+- **Are the 313 inferred relationships involving `DBBackend` (e.g. with `4A. Fix dependencies.py to use DBBackend` and `4C. Migrate services to DBBackend`) actually correct?**
+  _`DBBackend` has 313 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `react`, `react-dom`, `react-router-dom` to the rest of the system?**
-  _66 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _65 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Complete decision register` be split into smaller, more focused modules?**
   _Cohesion score 0.017543859649122806 - nodes in this community are weakly interconnected._
-- **Why does `DBBackend` connect `DBBackend` to `extraction.py`, `get_connection`, `json`, `scientific_exports.py`, `coded_extract_study`, `grade.py`, `init_db`, `clarification.py`, `test_rob_batch_run.py`, `test_dedup_service.py`, `graphify.py`, `delete_assessment`, `check_project_access`, `_verify_project`, `keyword_highlight_service.py`, `models.py`, `record_collaboration.py`, `post`, `dependencies.py`, `SQLiteBackend`, `DynamoDBBackend`, `rob_service.py`, `rob.py`, `test_bookmarks.py`, `time`, `io`, `pubmed.py`?**
+- **Why does `2026-10-11 — Side-by-Side Duplicate Review & Reversible Resolution` connect `StudyList.tsx` to `Decision log`?**
   _High betweenness centrality (0.062) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `check_project_access()` (e.g. with `2026-03-30 - Inconsistent Project Access Checks on Graphify Endpoints` and `2026-03-30 - Unreachable Access Check in Download Report and Missing Checks on Analysis Endpoints`) actually correct?**
   _`check_project_access()` has 4 INFERRED edges - model-reasoned connections that need verification._
