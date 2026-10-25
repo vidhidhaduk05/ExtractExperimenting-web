@@ -1,478 +1,649 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, SlidersHorizontal, Sparkles, ExternalLink, Layers, Search, Check } from "lucide-react";
+import React, { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Lenis from "lenis";
+import landingMarkup from "../landing_body.html?raw";
+import "../landing.css";
+import { RESEARCH_PRESETS, findResearchPreset } from "../lib/researchPresets";
+import { springRevealFrames } from "../assets/motion/spring";
+import { initializeEdgeMotion } from "../assets/motion/edgeMotion";
+import { initializeLandingCarousel } from "../assets/motion/landingCarousel";
+
+type LandingEventMap = WindowEventMap & DocumentEventMap & GlobalEventHandlersEventMap & MediaQueryListEventMap;
+type LandingWindow = Window & { stellarLenis?: Lenis | null };
+
 
 export const LandingPage: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  const [question, setQuestion] = useState("");
-  const [studyType, setStudyType] = useState("");
-  const [period, setPeriod] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Suggested questions for typewriter effect
-  const suggestions = [
-    "How does sleep deprivation affect memory consolidation?",
-    "What are the cardiovascular outcomes of GLP-1 receptor agonists?",
-    "What does the evidence say about treatments for treatment-resistant depression?",
-    "What are the clinical outcomes of therapeutic cancer vaccines?",
-    "Metformin extends lifespan in model organisms",
-    "Statins reduce all-cause mortality in primary prevention"
-  ];
-
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [subIndex, setSubIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [currentPlaceholder, setCurrentPlaceholder] = useState("What does the evidence say about…");
-
-  // Typewriter effect loop
   useEffect(() => {
-    if (question.length > 0) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const html = document.documentElement;
+    const landingWindow = window as LandingWindow;
+    const controller = new AbortController();
+    let disposed = false;
+    const timeouts = new Set<number>();
+    html.classList.add("stellar-landing-active");
+    document.body.classList.add("stellar-landing-active");
+    function later(callback: () => void, delay: number) {
+      const id = window.setTimeout(() => {
+        timeouts.delete(id);
+        if (!disposed) callback();
+      }, delay);
+      timeouts.add(id);
+      return id;
+    }
 
-    const timeout = setTimeout(() => {
-      const targetText = suggestions[placeholderIndex];
 
-      if (!isDeleting) {
-        if (subIndex < targetText.length) {
-          setCurrentPlaceholder(targetText.substring(0, subIndex + 1));
-          setSubIndex(subIndex + 1);
-        } else {
-          setTimeout(() => setIsDeleting(true), 2200);
+    function listen<K extends keyof LandingEventMap>(
+      target: EventTarget | null, type: K,
+      listener: (event: LandingEventMap[K]) => void,
+      options: AddEventListenerOptions | boolean = {},
+    ) {
+      target?.addEventListener(type, listener as EventListener, {
+        ...(typeof options === "boolean" ? { capture: options } : options),
+        signal: controller.signal,
+      });
+    }
+
+    // 0. Lenis smooth scrolling with reduced-motion respect
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let lenis: Lenis | null = null;
+
+    function destroyLenis() {
+      if (lenis) {
+        lenis.destroy();
+        lenis = null;
+      }
+      if (landingWindow.stellarLenis) {
+        landingWindow.stellarLenis = null;
+      }
+    }
+
+    function configureLenis() {
+      destroyLenis();
+      if (reducedMotion.matches) return;
+      lenis = new Lenis({
+        autoRaf: true,
+        lerp: 0.1,
+        smoothWheel: true,
+        syncTouch: false,
+        anchors: false,
+        prevent: (node) =>
+          node instanceof Element &&
+          !!node.closest(
+            "textarea, select, #research-board, #usecase-carousel-container, #use-cases-carousel-container, [data-lenis-prevent]"
+          ),
+      });
+      landingWindow.stellarLenis = lenis;
+    }
+
+    configureLenis();
+    const handleMotionChange = () => {
+      configureLenis();
+      if (reducedMotion.matches) {
+        showAllRhythmNodes();
+        stopType();
+        if (rqInput && !rqInput.value) rqInput.placeholder = suggestions[0];
+      } else restartType();
+    };
+    listen(reducedMotion, "change", handleMotionChange);
+
+    // 1. Mobile hamburger
+    const hamburger = container.querySelector("#hamburger");
+    const mobileMenu = container.querySelector("#mobile-menu");
+    const handleHamburger = () => {
+      mobileMenu?.classList.toggle("open");
+    };
+    listen(hamburger, "click", handleHamburger);
+
+    // 2. Rhythmic section reveals
+    const rhythmTargets: Element[] = [];
+    const rhythmRunning = new Map<Element, Animation>();
+    let rhythmObserver: IntersectionObserver | null = null;
+    const seenNodes = new Set<Element>();
+    const rhythmRules: [string, "lift" | "paper"][] = [
+      [
+        ".hero-headline, .hero-content > .rq-card, .hero-content > .rq-topics, .hero-content > .hero-sub, .hero-cta-group, .hero-proof, .hero-stats-grid",
+        "lift",
+      ],
+      [
+        "main section .section-eyebrow, .features-header-row h2, .features-header-row > p, .reading-room-heading > h2, .reading-room-heading > p",
+        "lift",
+      ],
+      [
+        ".bento-grid > .feature-card, .usecase-gallery-grid > .feature-card, .reading-room-row, .radiology-evidence, .step-card, .precision-row, .testimonial-card, .faq-item",
+        "lift",
+      ],
+      [
+        ".use-cases-h2, .use-cases-desc, #how-it-works .section-h2, #testimonials .section-h2, #collaboration .section-h2, #collaboration .section-inner > p, #collaboration .collab-grid > *, #faq .section-h2",
+        "lift",
+      ],
+      [
+        "#waitlist .cta-headline, #waitlist .cta-sub, #waitlist .email-form, #waitlist .section-inner > p, .footer-top > div, .footer-bottom",
+        "lift",
+      ],
+      [".rn-note, .board-legend, #usecase-carousel-container, #use-cases-carousel-container", "paper"],
+    ];
+
+    function showRhythmNode(node: HTMLElement) {
+      rhythmRunning.get(node)?.cancel();
+      rhythmRunning.delete(node);
+      node.dataset.rhythmState = "shown";
+      rhythmObserver?.unobserve(node);
+    }
+
+    function showAllRhythmNodes() {
+      rhythmObserver?.disconnect();
+      rhythmTargets.forEach((n) => showRhythmNode(n as HTMLElement));
+    }
+
+    let onFocusInHandler: ((e: FocusEvent) => void) | null = null;
+
+    if (!reducedMotion.matches && "IntersectionObserver" in window && typeof Element.prototype.animate === "function") {
+      try {
+        html.classList.add("sl-rhythm");
+        rhythmRules.forEach(([selector, kind]) => {
+          container.querySelectorAll(selector).forEach((node) => {
+            const el = node as HTMLElement;
+            if (seenNodes.has(el)) return;
+            seenNodes.add(el);
+            el.dataset.rhythmKind =
+              kind === "paper" || el.matches("form, input, textarea, select")
+                ? "paper"
+                : "lift";
+            el.dataset.rhythmState = "pending";
+            rhythmTargets.push(el);
+          });
+        });
+
+        function parseTimeMs(val: string, fallback: number): number {
+          if (!val) return fallback;
+          const trimmed = val.trim();
+          if (trimmed.endsWith("ms")) return parseFloat(trimmed) || fallback;
+          if (trimmed.endsWith("s")) return (parseFloat(trimmed) * 1000) || fallback;
+          const num = parseFloat(trimmed);
+          if (isNaN(num)) return fallback;
+          return num < 10 ? num * 1000 : num;
         }
-      } else {
-        if (subIndex > 0) {
-          setCurrentPlaceholder(targetText.substring(0, subIndex - 1));
-          setSubIndex(subIndex - 1);
-        } else {
-          setIsDeleting(false);
-          setPlaceholderIndex((prev) => (prev + 1) % suggestions.length);
+
+        const computed = getComputedStyle(container);
+        const duration = parseTimeMs(computed.getPropertyValue("--motion-reveal-duration"), 660);
+        const beat = parseTimeMs(computed.getPropertyValue("--motion-reveal-stagger"), 90);
+        const distance = computed.getPropertyValue("--motion-reveal-distance").trim() || "26px";
+        const ease = computed.getPropertyValue("--motion-reveal-ease").trim() || "cubic-bezier(.22,1,.36,1)";
+
+        rhythmObserver = new IntersectionObserver(
+          (entries) => {
+            const batch = entries
+              .filter(
+                (entry) =>
+                  entry.isIntersecting && (entry.target as HTMLElement).dataset.rhythmState === "pending"
+              )
+              .sort((a, b) =>
+                a.target.compareDocumentPosition(b.target) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+              );
+            const beats = new Map<Element, number>();
+            batch.forEach((entry) => {
+              const node = entry.target as HTMLElement;
+              rhythmObserver?.unobserve(node);
+              if (entry.boundingClientRect.bottom < 0 || reducedMotion.matches) {
+                showRhythmNode(node);
+                return;
+              }
+              const group = node.closest("section, footer") || html;
+              const index = beats.get(group) || 0;
+              beats.set(group, index + 1);
+              node.dataset.rhythmState = "entering";
+              const isPaper = node.dataset.rhythmKind === "paper";
+              node.dataset.rhythmMotion = isPaper ? "fade" : "spring";
+              const animation = node.animate(
+                isPaper ? [
+                  { opacity: 0, translate: "0 0" },
+                  { opacity: 1, translate: "0 0" },
+                ] : springRevealFrames(parseFloat(distance), duration),
+                {
+                  duration: isPaper ? duration * 0.85 : duration,
+                  delay: Math.min(index, 3) * beat,
+                  easing: isPaper ? ease : "linear",
+                  fill: "backwards",
+                }
+              );
+              rhythmRunning.set(node, animation);
+              animation.finished
+                .then(() => {
+                  if (rhythmRunning.get(node) === animation) {
+                    rhythmRunning.delete(node);
+                    node.dataset.rhythmState = "shown";
+                  }
+                })
+                .catch(() => {});
+            });
+          },
+          { threshold: 0.04, rootMargin: "0px 0px -5% 0px" }
+        );
+
+        rhythmTargets.forEach((n) => rhythmObserver?.observe(n));
+
+        onFocusInHandler = (event: FocusEvent) => {
+          let node = event.target as HTMLElement | null;
+          while (node instanceof Element) {
+            if (node.dataset.rhythmState && node.dataset.rhythmState !== "shown") {
+              showRhythmNode(node);
+            }
+            node = node.parentElement;
+          }
+        };
+        listen(document, "focusin", onFocusInHandler);
+      } catch (err) {
+        showAllRhythmNodes();
+        html.classList.remove("sl-rhythm");
+      }
+    }
+
+    // 3. Metric bars animation
+    const metricVals = [92, 94, 91, 88, 90];
+    const metricBars = [
+      container.querySelector("#m1") as HTMLElement | null,
+      container.querySelector("#m2") as HTMLElement | null,
+      container.querySelector("#m3") as HTMLElement | null,
+      container.querySelector("#m4") as HTMLElement | null,
+      container.querySelector("#m5") as HTMLElement | null,
+    ];
+    const metricContainer = container.querySelector("#metric-list");
+    let barObs: IntersectionObserver | null = null;
+    if (metricContainer) {
+      barObs = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            metricBars.forEach((bar, i) => {
+              if (bar) {
+                later(() => {
+                  bar.style.width = metricVals[i] + "%";
+                }, i * 120);
+              }
+            });
+            barObs?.disconnect();
+          }
+        },
+        { threshold: 0.3 }
+      );
+      barObs.observe(metricContainer);
+    }
+
+    // 4. FAQ accordion
+    const faqBtns = container.querySelectorAll(".faq-q");
+    const handleFaqClick = (btn: Element) => {
+      const item = btn.closest(".faq-item");
+      if (!item) return;
+      const isOpen = item.classList.contains("open");
+      container.querySelectorAll(".faq-item").forEach((i) => {
+        i.classList.remove("open");
+        i.querySelector(".faq-q")?.setAttribute("aria-expanded", "false");
+      });
+      if (!isOpen) {
+        item.classList.add("open");
+        btn.setAttribute("aria-expanded", "true");
+      }
+    };
+    faqBtns.forEach((btn) => {
+      listen(btn, "click", () => handleFaqClick(btn));
+    });
+
+    // 5. Waitlist form
+    const waitlistForm = container.querySelector("#waitlist-form");
+    const wBtn = container.querySelector("#waitlist-btn") as HTMLButtonElement | null;
+    const handleWaitlist = (e: Event) => {
+      e.preventDefault();
+      const emailInput = waitlistForm?.querySelector(".email-input") as HTMLInputElement | null;
+      if (emailInput && emailInput.value && wBtn) {
+        wBtn.textContent = "✓ You're on the list!";
+        wBtn.style.background = "var(--sage)";
+        wBtn.disabled = true;
+        emailInput.disabled = true;
+      }
+    };
+    listen(waitlistForm, "submit", handleWaitlist);
+
+    // 6. Smooth anchor scroll with Lenis
+    const handleAnchor = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const link = target?.closest('a[href^="#"]') as HTMLAnchorElement | null;
+      if (link) {
+        const href = link.getAttribute("href");
+        if (href && href.length > 1 && !href.startsWith("#/")) {
+          const el = container.querySelector(href) as HTMLElement | null;
+          if (el) {
+            e.preventDefault();
+            if (lenis) {
+              lenis.scrollTo(el, { offset: -80 });
+            } else {
+              window.scrollTo({
+                top: el.getBoundingClientRect().top + window.scrollY - 80,
+                behavior: reducedMotion.matches ? "instant" : "smooth",
+              });
+            }
+          }
         }
       }
-    }, isDeleting ? 25 : 55);
+    };
+    listen(container, "click", handleAnchor);
 
-    return () => clearTimeout(timeout);
-  }, [subIndex, isDeleting, placeholderIndex, question]);
+    // 7. Hero mockup parallax tilt
+    const heroMockup = container.querySelector("#hero-mockup") as HTMLElement | null;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!heroMockup || reducedMotion.matches) return;
+      const x = (e.clientX / window.innerWidth - 0.5) * 12;
+      const y = (e.clientY / window.innerHeight - 0.5) * 8;
+      heroMockup.style.transform = "rotateY(" + (-6 + x * 0.4) + "deg) rotateX(" + (3 - y * 0.4) + "deg)";
+    };
+    listen(window, "mousemove", handleMouseMove, { passive: true });
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const q = question.trim();
-    if (!q) return;
+    const cleanupEdge = initializeEdgeMotion(container, reducedMotion);
 
-    setIsSubmitting(true);
-    let term = q;
-    if (studyType) term = `(${term}) AND "${studyType}"[Publication Type]`;
-    if (period) term = `(${term}) AND "last ${period === "1" ? "year" : period + " years"}"[Publication Date]`;
+    // 8. Research board draggable sticky notes
+    const board = container.querySelector("#research-board") as HTMLElement | null;
+    let cleanupBoard: (() => void) | null = null;
+    if (board) {
+      const notes = board.querySelectorAll(".rn-note") as NodeListOf<HTMLElement>;
+      let zCounter = 100;
+      let activeNote: HTMLElement | null = null;
+      const dragOffset = { x: 0, y: 0 };
+      const boardRects = new WeakMap<HTMLElement, DOMRect>();
 
-    navigate(`/claimscape?claim=${encodeURIComponent(q)}&q=${encodeURIComponent(term)}&n=300`);
-  };
+      function placeNote(note: HTMLElement) {
+        if (!board) return;
+        const bW = board.clientWidth;
+        const bH = board.clientHeight;
+        const nW = note.offsetWidth || 240;
+        const nH = note.offsetHeight || 260;
 
-  const handleTopicClick = (topicText: string) => {
-    setQuestion(topicText);
-    navigate(`/claimscape?claim=${encodeURIComponent(topicText)}&q=${encodeURIComponent(topicText)}&n=300`);
-  };
+        const pctX = parseFloat(note.dataset.x || "5");
+        const pctY = parseFloat(note.dataset.y || "10");
+        const rot = parseFloat(note.dataset.rot || "0");
 
-  return (
-    <div className="min-h-screen bg-[#fbf9f4] text-[#1b1c19] selection:bg-[#66365c]/15 font-['Newsreader']">
-      {/* Site Header */}
-      <header className="sticky top-0 z-50 bg-[#fbf9f4]/95 backdrop-blur-md border-b border-[#d2c2cb]/70">
-        <div className="max-w-[1280px] mx-auto px-6 py-3.5 flex items-center justify-between">
-          {/* Logo Wordmark */}
-          <Link to="/" className="flex items-center gap-2.5 text-decoration-none group">
-            <div className="w-8 h-8 bg-[#3a0f34] text-[#fbf9f4] flex items-center justify-center font-['Bodoni_Moda'] font-medium italic text-lg leading-none shadow-xs">
-              S
-            </div>
-            <span className="font-['Bodoni_Moda'] text-[21px] font-semibold tracking-[-0.02em] text-[#3a0f34] group-hover:opacity-85 transition-opacity">
-              Stellar Labs
-            </span>
-          </Link>
+        let left = Math.max(16, Math.min(bW - nW - 16, (pctX / 100) * bW));
+        let top = Math.max(60, Math.min(bH - nH - 16, (pctY / 100) * bH));
 
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-7 text-[13px] font-['Work_Sans'] font-medium text-[#4f444b]">
-            <a href="#features" className="hover:text-[#3a0f34] transition-colors">The Approach</a>
-            <Link to="/claimscape" className="hover:text-[#3a0f34] transition-colors flex items-center gap-1">
-              <span>Evidence Map</span>
-              <span className="text-[10px] px-1.5 py-0.5 bg-[#ffdea6] text-[#7c5800] font-semibold uppercase">Live</span>
-            </Link>
-            <a href="#process" className="hover:text-[#3a0f34] transition-colors">The Process</a>
-            <Link to="/projects" className="hover:text-[#3a0f34] transition-colors">Projects</Link>
-            <a href="#collaborate" className="hover:text-[#3a0f34] transition-colors">Collaborate</a>
-          </nav>
+        note.style.left = left + "px";
+        note.style.top = top + "px";
+        note.style.transform = "rotate(" + rot + "deg)";
+        note.style.setProperty("--rot", rot + "deg");
+        note.style.zIndex = (zCounter++).toString();
+      }
 
-          {/* Header Action Button */}
-          <div className="hidden sm:flex items-center gap-3">
-            <Link
-              to="/claimscape"
-              className="font-['Work_Sans'] text-[13px] font-semibold bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] px-4 py-2 transition-all shadow-xs flex items-center gap-1.5"
-            >
-              <span>Explore Evidence</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+      if (document.fonts) {
+        document.fonts.ready.then(() => { if (!disposed) notes.forEach(placeNote); });
+      } else {
+        later(() => notes.forEach(placeNote), 100);
+      }
 
-          {/* Mobile Menu Button */}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-[#3a0f34]"
-            aria-label="Toggle menu"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
+      let resizeTimer: ReturnType<typeof setTimeout>;
+      const handleResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = later(() => notes.forEach(placeNote), 200);
+      };
+      listen(window, "resize", handleResize, { passive: true });
 
-        {/* Mobile dropdown */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-[#d2c2cb] bg-[#fbf9f4] px-6 py-4 flex flex-col gap-3 font-['Work_Sans'] text-sm">
-            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="py-1">The Approach</a>
-            <Link to="/claimscape" onClick={() => setMobileMenuOpen(false)} className="py-1 text-[#66365c] font-semibold">Evidence Map</Link>
-            <a href="#process" onClick={() => setMobileMenuOpen(false)} className="py-1">The Process</a>
-            <Link to="/projects" onClick={() => setMobileMenuOpen(false)} className="py-1">Projects</Link>
-            <a href="#collaborate" onClick={() => setMobileMenuOpen(false)} className="py-1">Collaborate</a>
-          </div>
-        )}
-      </header>
+      function onPointerDown(this: HTMLElement, e: PointerEvent) {
+        if ((e.target as HTMLElement).closest(".rn-link")) return;
+        e.preventDefault();
+        activeNote = this;
+        this.classList.add("lifting");
+        this.classList.remove("landing");
+        this.style.zIndex = (++zCounter).toString();
+        this.setPointerCapture(e.pointerId);
 
-      {/* Hero Section */}
-      <section className="relative px-6 pt-6 pb-10 md:pt-8 md:pb-12 max-w-[1100px] mx-auto text-center flex flex-col items-center">
-        {/* Eyebrow badge */}
-        <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 bg-[#ffdea6]/60 border border-[#7c5800]/20 text-[#7c5800] text-[11px] font-['Work_Sans'] font-semibold tracking-wider uppercase">
-          <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800] animate-pulse"></span>
-          From Evidence to the Bedside
-        </div>
+        const rect = this.getBoundingClientRect();
+        const boardRect = board!.getBoundingClientRect();
+        dragOffset.x = e.clientX - rect.left;
+        dragOffset.y = e.clientY - rect.top;
+        boardRects.set(this, boardRect);
+      }
 
-        {/* Hero Headline */}
-        <h1 className="font-['Bodoni_Moda'] text-[clamp(36px,5.2vw,64px)] font-semibold leading-[1.08] text-[#3a0f34] max-w-[920px] tracking-[-0.02em]">
-          Stay curious.<br />
-          <span className="italic text-[#66365c]">See what the evidence says.</span>
-        </h1>
+      function onPointerMove(this: HTMLElement, e: PointerEvent) {
+        if (!activeNote || activeNote !== this) return;
+        e.preventDefault();
+        const bRect = boardRects.get(this) || board!.getBoundingClientRect();
+        const nW = this.offsetWidth;
+        const nH = this.offsetHeight;
+        const bW = bRect.width;
+        const bH = bRect.height;
 
-        {/* Hero Subhead */}
-        <p className="mt-2.5 max-w-[62ch] text-[17px] md:text-[19px] text-[#4f444b] font-['Newsreader'] italic leading-relaxed">
-          Research begins with a patient, a careful observation, and a question worth asking.
-        </p>
+        let newLeft = e.clientX - bRect.left - dragOffset.x;
+        let newTop = e.clientY - bRect.top - dragOffset.y;
 
-        {/* The .rq-card Question Box */}
-        <div className="w-full max-w-[860px] mt-5 text-left bg-white border border-[#d2c2cb] p-5 sm:p-6 shadow-xs transition-all focus-within:border-[#814d75] focus-within:ring-2 focus-within:ring-[#eadce6]">
-          <form onSubmit={handleSubmit}>
-            {/* Card Heading */}
-            <div className="flex items-center justify-between text-[11px] font-['Work_Sans'] font-medium text-[#62535d] tracking-wider uppercase mb-2">
-              <label htmlFor="landing-question-input" className="font-semibold text-[#3a0f34]">
-                Your research question
-              </label>
-              <span className="hidden sm:inline normal-case tracking-normal text-[#81737b]">
-                Enter to explore · Shift + Enter for a new line
-              </span>
-            </div>
+        newLeft = Math.max(0, Math.min(bW - nW, newLeft));
+        newTop = Math.max(0, Math.min(bH - nH, newTop));
 
-            {/* Large Question Input */}
-            <textarea
-              id="landing-question-input"
-              rows={2}
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
-                }
-              }}
-              placeholder={currentPlaceholder}
-              className="w-full resize-none border-0 bg-transparent py-3 text-[#3a0f34] font-['Newsreader'] text-[clamp(22px,2.8vw,30px)] font-medium leading-[1.35] focus:outline-none placeholder:text-[#72636d]/70"
-            />
+        this.style.left = newLeft + "px";
+        this.style.top = newTop + "px";
 
-            {/* Toolbar */}
-            <div className="mt-3 pt-4 border-t border-[#e4e2dd] flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="font-['Work_Sans'] text-[12px] text-[#3a0f34] bg-[#fbf9f4] border border-[#d2c2cb] px-3 py-1.5 flex items-center gap-1.5 font-medium">
-                  <span className="w-2 h-2 rounded-none bg-emerald-600 inline-block"></span>
-                  PubMed
-                </span>
+        const rot = parseFloat(this.dataset.rot || "0");
+        const velX = (e.movementX || 0) * 0.08;
+        this.style.transform = "rotate(" + (rot + velX) + "deg) scale(1.04)";
+      }
 
-                <button
-                  type="button"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="font-['Work_Sans'] text-[12px] text-[#3a0f34] bg-[#fbf9f4] border border-[#d2c2cb] hover:bg-[#ffdea6] px-3 py-1.5 transition-colors flex items-center gap-1 cursor-pointer font-medium"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#814d75]" />
-                  <span>Filters</span>
-                  <span className="font-bold text-xs">{showFilters ? "−" : "+"}</span>
-                </button>
-              </div>
+      function onPointerUp(this: HTMLElement, e: PointerEvent) {
+        if (!activeNote || activeNote !== this) return;
+        const rot = parseFloat(this.dataset.rot || "0");
+        const bW = board!.clientWidth;
+        const bH = board!.clientHeight;
+        const curLeft = parseFloat(this.style.left) || 0;
+        const curTop = parseFloat(this.style.top) || 0;
+        this.dataset.x = ((curLeft / bW) * 100).toFixed(1);
+        this.dataset.y = ((curTop / bH) * 100).toFixed(1);
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="font-['Work_Sans'] font-semibold text-[14px] bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] px-7 py-3 transition-all cursor-pointer flex items-center gap-2 shadow-xs group"
-              >
-                <span>Search papers</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
+        this.style.setProperty("--note-transform", "translate(0,0)");
+        this.style.transform = "rotate(" + rot + "deg)";
+        this.classList.remove("lifting");
+        this.classList.add("landing");
+        later(() => this.classList.remove("landing"), 520);
+        activeNote = null;
+      }
 
-            {/* Expandable Filters */}
-            {showFilters && (
-              <div className="mt-4 pt-4 border-t border-[#e4e2dd] grid gap-4 sm:grid-cols-2 animate-in fade-in">
-                <label className="grid gap-1 text-[11px] font-['Work_Sans'] uppercase tracking-wider text-[#62535d]">
-                  Study Type
-                  <select
-                    value={studyType}
-                    onChange={(e) => setStudyType(e.target.value)}
-                    className="border border-[#d2c2cb] bg-[#fbf9f4] text-[#3a0f34] p-2 text-[13px] font-normal"
-                  >
-                    <option value="">All study types</option>
-                    <option value="systematic review">Systematic reviews</option>
-                    <option value="randomized controlled trial">Randomized trials</option>
-                    <option value="case reports">Case reports</option>
-                  </select>
-                </label>
+      notes.forEach((note) => {
+        listen(note, "pointerdown", onPointerDown);
+        listen(note, "pointermove", onPointerMove);
+        listen(note, "pointerup", onPointerUp);
+        listen(note, "pointercancel", onPointerUp);
+        listen(note, "keydown", event => {
+          const step = event.shiftKey ? 20 : 8;
+          const dx = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
+          const dy = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+          if (!dx && !dy) return;
+          event.preventDefault();
+          const left = Math.max(0, Math.min(board.clientWidth - note.offsetWidth, (parseFloat(note.style.left) || 0) + dx));
+          const top = Math.max(0, Math.min(board.clientHeight - note.offsetHeight, (parseFloat(note.style.top) || 0) + dy));
+          note.style.left = left + "px"; note.style.top = top + "px";
+          note.dataset.x = String((left / board.clientWidth) * 100);
+          note.dataset.y = String((top / board.clientHeight) * 100);
+          note.style.zIndex = String(++zCounter);
+        });
+      });
 
-                <label className="grid gap-1 text-[11px] font-['Work_Sans'] uppercase tracking-wider text-[#62535d]">
-                  Publication Date
-                  <select
-                    value={period}
-                    onChange={(e) => setPeriod(e.target.value)}
-                    className="border border-[#d2c2cb] bg-[#fbf9f4] text-[#3a0f34] p-2 text-[13px] font-normal"
-                  >
-                    <option value="">Any time</option>
-                    <option value="5">Past 5 years</option>
-                    <option value="1">Past year</option>
-                  </select>
-                </label>
-              </div>
-            )}
-          </form>
-          <p className="mt-3 text-[11px] font-['Work_Sans'] text-[#62535d]">
-            Your question opens immediately in ClaimScape, where the evidence search begins.
-          </p>
-        </div>
+      cleanupBoard = () => {
+        window.removeEventListener("resize", handleResize);
+        notes.forEach((note) => {
+          note.removeEventListener("pointerdown", onPointerDown);
+          note.removeEventListener("pointermove", onPointerMove);
+          note.removeEventListener("pointerup", onPointerUp);
+          note.removeEventListener("pointercancel", onPointerUp);
+        });
+      };
+    }
 
-        {/* Suggested Topic Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mt-5 text-[12px] font-['Work_Sans'] text-[#62535d]">
-          <span className="font-medium text-[#81737b]">Try a topic:</span>
-          {suggestions.slice(0, 4).map((sugg, i) => {
-            const shortLabels = ["Sleep & memory", "Cardiovascular health", "Mental health", "Cancer vaccines"];
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => handleTopicClick(sugg)}
-                className="px-3.5 py-1.5 border border-[#d2c2cb] bg-transparent hover:bg-[#ffdea6] hover:border-[#7c5800] text-[#3a0f34] transition-colors cursor-pointer text-[12px]"
-              >
-                {shortLabels[i]} ↗
-              </button>
-            );
-          })}
-        </div>
+    // 9. Approved use-case carousel with mount-owned listeners and RAF.
+    const cleanupCarousel = initializeLandingCarousel(container, reducedMotion);
 
-        {/* Proof Strip */}
-        <div className="flex flex-wrap items-center justify-center gap-6 mt-10 text-[12.5px] font-['Work_Sans'] text-[#62535d]">
-          <span className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-none bg-[#66365c]"></span>
-            Careful observation
-          </span>
-          <span className="text-[#d2c2cb]">·</span>
-          <span>Transparent methods</span>
-          <span className="text-[#d2c2cb]">·</span>
-          <span>Honest interpretation</span>
-        </div>
-      </section>
+    // 11. Research Question Form Integration with ClaimScape
+    const rqForm = container.querySelector("#research-question-form") as HTMLFormElement | null;
+    const rqInput = container.querySelector("#research-question") as HTMLTextAreaElement | null;
+    const rqQueryInput = container.querySelector("#rq-query") as HTMLInputElement | null;
+    const rqQueryMode = container.querySelector("#rq-query-mode") as HTMLElement | null;
+    const rqQueryReset = container.querySelector("#rq-query-reset") as HTMLElement | null;
+    const rqIncludeCommentary = container.querySelector("#rq-include-commentary") as HTMLInputElement | null;
+    const rqStatus = container.querySelector("#rq-status") as HTMLElement | null;
 
-      {/* Trust Strip */}
-      <div className="border-y border-[#d2c2cb] bg-[#fbf9f4] py-8 px-6">
-        <div className="max-w-[1200px] mx-auto flex flex-wrap items-center justify-center gap-8 md:gap-14">
-          <span className="font-['Work_Sans'] text-[10px] uppercase tracking-[0.18em] text-[#81737b] w-full text-center md:w-auto">
-            Reading across the evidence
-          </span>
-          {["Cochrane", "PubMed", "PROSPERO", "Elsevier", "JBI", "BMJ", "WHO"].map((src) => (
-            <span key={src} className="font-['Work_Sans'] text-[15px] font-semibold text-black/30">
-              {src}
-            </span>
-          ))}
-        </div>
-      </div>
+    let customQuery = false;
+    const buildPubMedQuery = (claimText: string) => {
+      const preset = findResearchPreset(claimText);
+      if (preset) return preset.query;
+      let q = claimText.trim();
+      if (!q) return "";
+      const directional = [
+        /\breduces\b/gi, /\breduce\b/gi, /\bdecreases\b/gi, /\bdecrease\b/gi,
+        /\bincreases\b/gi, /\bincrease\b/gi, /\bimproves\b/gi, /\bimprove\b/gi,
+        /\bworsens\b/gi, /\bworsen\b/gi, /\bprevents\b/gi, /\bprevent\b/gi,
+        /\bcauses\b/gi, /\bcause\b/gi, /\bleads to\b/gi, /\bprotects against\b/gi,
+        /\bprotective nature against\b/gi, /\bprotective against\b/gi,
+        /\blowers\b/gi, /\blower\b/gi, /\belevates\b/gi, /\belevate\b/gi,
+        /\bextends\b/gi, /\bextend\b/gi
+      ];
+      for (const d of directional) {
+        q = q.replace(d, " ");
+      }
+      q = q.replace(/[^\w\s-]/g, " ");
+      const stopWords = new Set([
+        "the", "a", "an", "and", "or", "for", "with", "from", "in", "on", "at",
+        "by", "to", "of", "is", "are", "was", "were", "risk", "nature"
+      ]);
+      const terms = q.split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w.toLowerCase()));
+      return terms.join(" ");
+    };
 
-      {/* Section 01: The Approach */}
-      <section id="features" className="py-20 px-6 max-w-[1240px] mx-auto">
-        <div className="text-[11px] font-['Work_Sans'] uppercase tracking-[0.15em] text-[#81737b] mb-4 flex items-center gap-3">
-          <span>[ 01 ]</span>
-          <span className="w-12 h-px bg-[#d2c2cb]"></span>
-          <span>The Approach</span>
-        </div>
+    function syncQuery() {
+      if (!rqInput || !rqQueryInput) return;
+      if (!customQuery) rqQueryInput.value = buildPubMedQuery(rqInput.value);
+      if (rqQueryMode) {
+        rqQueryMode.textContent = customQuery ? "Custom query" : findResearchPreset(rqInput.value) ? "Preset query · edit to refine" : "Auto-built · edit to refine";
+      }
+    }
 
-        <div className="grid lg:grid-cols-2 gap-8 items-end mb-14">
-          <h2 className="font-['Bodoni_Moda'] text-[clamp(36px,4.5vw,56px)] leading-[1.1] text-[#3a0f34]">
-            Observe.<br />
-            <span className="italic text-[#814d75]">Question.</span><br />
-            Understand.
-          </h2>
-          <p className="text-[18px] text-[#4f444b] font-['Newsreader'] leading-relaxed">
-            Different methods. A shared commitment to careful research. The purpose is clearer thinking for the patient in front of us.
-          </p>
-        </div>
+    listen(rqQueryInput, "input", () => {
+      customQuery = true;
+      syncQuery();
+    });
 
-        {/* Bento Grid */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="border border-[#d2c2cb] bg-white p-7 md:col-span-2 relative">
-            <span className="text-[10px] font-['Work_Sans'] font-semibold tracking-wider text-[#66365c] uppercase">
-              01 // OBSERVE
-            </span>
-            <h3 className="font-['Bodoni_Moda'] text-[24px] text-[#3a0f34] mt-2 mb-3">
-              Every detail matters
-            </h3>
-            <p className="text-[15px] text-[#4f444b] leading-relaxed">
-              Case reports call for careful observation, verified timelines, and complete documentation. When a condition is rare, a carefully reported case can become a useful point of reference.
-            </p>
-            <div className="flex gap-2 mt-6">
-              <span className="px-2.5 py-1 bg-[#dde3e8] text-[11px] font-['Work_Sans'] font-medium text-[#3a0f34]">Clinical detail</span>
-              <span className="px-2.5 py-1 bg-[#dde3e8] text-[11px] font-['Work_Sans'] font-medium text-[#3a0f34]">Verified timelines</span>
-              <span className="px-2.5 py-1 bg-[#dde3e8] text-[11px] font-['Work_Sans'] font-medium text-[#3a0f34]">Clear documentation</span>
-            </div>
-          </div>
+    listen(rqQueryReset, "click", () => {
+      customQuery = false;
+      syncQuery();
+    });
 
-          <div className="border border-[#d2c2cb] bg-white p-7">
-            <span className="text-[10px] font-['Work_Sans'] font-semibold tracking-wider text-[#7c5800] uppercase">
-              02 // QUESTION
-            </span>
-            <h3 className="font-['Bodoni_Moda'] text-[24px] text-[#3a0f34] mt-2 mb-3">
-              Know what evidence can show
-            </h3>
-            <p className="text-[15px] text-[#4f444b] leading-relaxed">
-              A conclusion deserves scrutiny. How were the data collected? What was measured? Which sources of bias remain?
-            </p>
-          </div>
+    // Suggested questions and topics
+    container.querySelectorAll("[data-research-question]").forEach((button) => {
+      listen(button, "click", () => {
+        const qVal = (button as HTMLElement).dataset.researchQuestion || "";
+        if (rqInput) {
+          rqInput.value = qVal;
+          customQuery = false;
+          syncQuery();
+          rqInput?.setCustomValidity("");
+          if (lenis) {
+            lenis.scrollTo(rqInput, { offset: -120 });
+          } else {
+            rqInput.scrollIntoView({ behavior: reducedMotion.matches ? "instant" : "smooth", block: "center" });
+          }
+          rqInput.focus({ preventScroll: true });
+        }
+      });
+    });
 
-          <div className="border border-[#d2c2cb] bg-white p-7">
-            <span className="text-[10px] font-['Work_Sans'] font-semibold tracking-wider text-[#66365c] uppercase">
-              03 // REPORT
-            </span>
-            <h3 className="font-['Bodoni_Moda'] text-[24px] text-[#3a0f34] mt-2 mb-3">
-              Make the reasoning visible
-            </h3>
-            <p className="text-[15px] text-[#4f444b] leading-relaxed">
-              Clear reporting lets another reader follow the question, inspect the methods, and understand the limits of the findings.
-            </p>
-          </div>
+    listen(rqInput, "input", () => {
+      rqInput?.setCustomValidity("");
+      syncQuery();
+    });
 
-          <div className="border border-[#d2c2cb] bg-white p-7 md:col-span-2">
-            <span className="text-[10px] font-['Work_Sans'] font-semibold tracking-wider text-[#814d75] uppercase">
-              04 // INTERPRET
-            </span>
-            <h3 className="font-['Bodoni_Moda'] text-[24px] text-[#3a0f34] mt-2 mb-3">
-              Judgment stays at the bedside
-            </h3>
-            <p className="text-[15px] text-[#4f444b] leading-relaxed">
-              Evidence informs a clinical decision. It still needs to be read in the context of the individual patient, competing explanations, and uncertainty.
-            </p>
-          </div>
-        </div>
-      </section>
+    listen(rqInput, "keydown", (event: KeyboardEvent) => {
+      if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        rqForm?.requestSubmit();
+      }
+    });
 
-      {/* Section 02: Evidence Synthesis Overview */}
-      <section className="py-16 px-6 bg-[#f0eee9] border-t border-[#d2c2cb]">
-        <div className="max-w-[1240px] mx-auto text-center">
-          <span className="text-[11px] font-['Work_Sans'] uppercase tracking-[0.15em] text-[#81737b]">
-            [ 02 ] ClaimScape Technology
-          </span>
-          <h2 className="font-['Bodoni_Moda'] text-[clamp(32px,4vw,50px)] text-[#3a0f34] mt-2 mb-4">
-            See where the literature stands.
-          </h2>
-          <p className="max-w-[68ch] mx-auto text-[17px] text-[#4f444b] leading-relaxed mb-10">
-            Up to 300 PubMed abstracts are read and analyzed in parallel with Laya System-1 ONNX, sorted by study design, and plotted with exact Wilson 95% confidence intervals.
-          </p>
-          <Link
-            to="/claimscape"
-            className="inline-flex items-center gap-2 font-['Work_Sans'] font-semibold text-[14px] bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] px-8 py-3.5 shadow-sm transition-all"
-          >
-            <span>Open ClaimScape Evidence Map</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </section>
+    listen(rqForm, "submit", (event: Event) => {
+      event.preventDefault();
+      if (!rqInput || !rqForm) return;
+      const query = rqInput.value.trim();
+      if (!query) {
+        rqInput.setCustomValidity("Please enter a research question.");
+        rqInput.reportValidity();
+        return;
+      }
+      let term = (rqQueryInput?.value.trim()) || buildPubMedQuery(query) || query;
+      if (rqIncludeCommentary && !rqIncludeCommentary.checked) {
+        term = "(" + term + ') NOT ((Review[Publication Type] NOT ("Systematic Review"[Publication Type] OR "Meta-Analysis"[Publication Type])) OR Comment[Publication Type] OR Editorial[Publication Type])';
+      }
+      const paperCountInput = rqForm.querySelector('input[name="paper-count"]:checked') as HTMLInputElement | null;
+      const paperCount = paperCountInput ? paperCountInput.value : "300";
 
-      {/* Section 03: The Process */}
-      <section id="process" className="py-20 px-6 max-w-[1240px] mx-auto">
-        <div className="text-[11px] font-['Work_Sans'] uppercase tracking-[0.15em] text-[#81737b] mb-4 flex items-center gap-3">
-          <span>[ 03 ]</span>
-          <span className="w-12 h-px bg-[#d2c2cb]"></span>
-          <span>The Process</span>
-        </div>
+      if (rqStatus) rqStatus.textContent = "Opening your question in ClaimScape…";
+      rqForm.setAttribute("aria-busy", "true");
+      const submitBtn = rqForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (submitBtn) submitBtn.disabled = true;
 
-        <h2 className="font-['Bodoni_Moda'] text-[clamp(36px,4.5vw,52px)] text-[#3a0f34] mb-12">
-          Four stages. No shortcuts.
-        </h2>
+      const params = new URLSearchParams({ claim: query, q: term, n: paperCount });
+      navigate("/claimscape?" + params.toString());
+    });
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { step: "01", title: "Formulate", desc: "PICO framework, hypothesis framing, and database-specific search strings." },
-            { step: "02", title: "Search", desc: "Multi-database retrieval across PubMed, Embase, and Scopus with deduplication." },
-            { step: "03", title: "Screen", desc: "Two-tier screening: microsecond Boolean filter followed by local Laya System-1." },
-            { step: "04", title: "Synthesize", desc: "Evidence mapping, Forest plot Wilson intervals, and RoB critical appraisal." }
-          ].map((item) => (
-            <div key={item.step} className="border border-[#d2c2cb] bg-white p-6 relative">
-              <span className="font-['Bodoni_Moda'] text-[32px] text-[#814d75] font-light">
-                {item.step}
-              </span>
-              <h3 className="font-['Bodoni_Moda'] text-[20px] text-[#3a0f34] mt-2 mb-2">
-                {item.title}
-              </h3>
-              <p className="text-[14px] text-[#4f444b] font-['Work_Sans'] leading-relaxed">
-                {item.desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
+    // Typewriter placeholder animation
+    const suggestions = RESEARCH_PRESETS.slice(0, 3).map(preset => preset.question);
 
-      {/* Section 04: Collaboration */}
-      <section id="collaborate" className="py-20 px-6 bg-[#fbf9f4] border-t border-[#d2c2cb]">
-        <div className="max-w-[840px] mx-auto text-center">
-          <span className="text-[11px] font-['Work_Sans'] uppercase tracking-[0.15em] text-[#81737b]">
-            [ 04 ] Collaboration
-          </span>
-          <h2 className="font-['Bodoni_Moda'] text-[clamp(32px,4vw,48px)] text-[#3a0f34] mt-2 mb-4">
-            Start a research conversation.
-          </h2>
-          <p className="text-[17px] text-[#4f444b] leading-relaxed mb-8">
-            Whether you are conducting a clinical systematic review, meta-analysis, or investigating rare observational phenotypes, we welcome scientific collaboration.
-          </p>
-          <a
-            href="mailto:research@stellarlabs.org"
-            className="inline-flex items-center gap-2 font-['Work_Sans'] font-semibold text-[14px] border border-[#3a0f34] text-[#3a0f34] hover:bg-[#3a0f34] hover:text-[#fbf9f4] px-7 py-3 transition-colors"
-          >
-            <span>Get in touch</span>
-            <ArrowRight className="w-4 h-4" />
-          </a>
-        </div>
-      </section>
+    let typeTimer: ReturnType<typeof setTimeout>;
+    let sIdx = 0;
+    let charCount = 0;
+    let isDeleting = false;
 
-      {/* Footer */}
-      <footer className="border-t border-[#d2c2cb] bg-[#3a0f34] text-[#fbf9f4] py-14 px-6">
-        <div className="max-w-[1240px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-7 h-7 bg-[#fbf9f4] text-[#3a0f34] flex items-center justify-center font-['Bodoni_Moda'] font-bold text-base italic">
-              S
-            </div>
-            <span className="font-['Bodoni_Moda'] text-lg font-semibold tracking-tight">
-              Stellar Labs
-            </span>
-          </div>
+    function tick() {
+      if (!rqInput || document.activeElement === rqInput || rqInput.value || reducedMotion.matches || document.hidden) return;
+      if (suggestions.length === 0) return;
+      const curSuggestion = suggestions[sIdx];
+      charCount += isDeleting ? -1 : 1;
+      rqInput.placeholder = curSuggestion.slice(0, charCount) || "What does the evidence say about…";
+      let delay = isDeleting ? 22 : 45;
+      if (charCount >= curSuggestion.length) {
+        isDeleting = true;
+        delay = 2400;
+      }
+      if (charCount <= 0) {
+        isDeleting = false;
+        sIdx = (sIdx + 1) % suggestions.length;
+        delay = 600;
+      }
+      typeTimer = later(tick, delay);
+    }
 
-          <div className="flex items-center gap-6 text-[13px] font-['Work_Sans'] text-[#fbf9f4]/70">
-            <Link to="/claimscape" className="hover:text-white transition-colors">Evidence Map</Link>
-            <Link to="/projects" className="hover:text-white transition-colors">Projects</Link>
-            <Link to="/rigor-scan" className="hover:text-white transition-colors">Rigor Scan</Link>
-          </div>
+    function stopType() { clearTimeout(typeTimer); }
+    function restartType() {
+      stopType();
+      if (rqInput && !rqInput.value && !reducedMotion.matches) {
+        typeTimer = later(tick, 900);
+      }
+    }
 
-          <p className="text-[12px] font-['Work_Sans'] text-[#fbf9f4]/50">
-            © {new Date().getFullYear()} Stellar Labs. From evidence to the bedside.
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
+    listen(rqInput, "focus", stopType);
+    listen(rqInput, "blur", restartType);
+    const onVisibility = () => (document.hidden ? stopType() : restartType());
+    listen(document, "visibilitychange", onVisibility);
+    restartType();
+
+    return () => {
+      disposed = true;
+      controller.abort();
+      timeouts.forEach(id => clearTimeout(id));
+      timeouts.clear();
+      cleanupEdge();
+      destroyLenis();
+      showAllRhythmNodes();
+      barObs?.disconnect();
+      cleanupBoard?.();
+      cleanupCarousel();
+      stopType();
+      html.classList.remove("sl-rhythm", "stellar-landing-active");
+      document.body.classList.remove("stellar-landing-active");
+    };
+  }, [navigate]);
+
+  return <div ref={containerRef} className="stellar-labs-landing-root" dangerouslySetInnerHTML={{ __html: landingMarkup }} />;
 };
