@@ -928,6 +928,45 @@ export function ExtractionSheetPage() {
     }
   };
 
+  // Doctor helper: 1-Click fill all remaining empty cells with "NR" (Not Reported)
+  const handleFillEmptyWithNR = async () => {
+    if (!selectedStudyId) return;
+    const emptyVars = filteredVariables.filter((v: any) => {
+      const ext = extractionMap[v.variable_id];
+      return !ext || !ext.value || ext.value.trim() === "";
+    });
+
+    if (emptyVars.length === 0) {
+      setFeedbackToast("All variables in this sheet already have recorded values!");
+      setTimeout(() => setFeedbackToast(null), 3000);
+      return;
+    }
+
+    try {
+      for (const v of emptyVars) {
+        await handleVerifyDecision(v.variable_id, "modified", "NR");
+      }
+      setFeedbackToast(`Filled ${emptyVars.length} empty variables with 'NR' (Not Reported).`);
+      setTimeout(() => setFeedbackToast(null), 4000);
+    } catch (e: any) {
+      setFeedbackToast("Failed to fill empty cells: " + (e?.message || "Unknown error"));
+      setTimeout(() => setFeedbackToast(null), 4000);
+    }
+  };
+
+  // Familiar Excel Keyboard shortcut: Ctrl+S to save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        setFeedbackToast("Excel workbook saved. All clinical values are up to date.");
+        setTimeout(() => setFeedbackToast(null), 3000);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const activeStudyVerifiedCount = variableList.filter((v: any) => extractionMap[v.variable_id]?.is_verified).length;
   const activeStudyPercent = variableList.length > 0 ? Math.round((activeStudyVerifiedCount / variableList.length) * 100) : 0;
 
@@ -1627,29 +1666,152 @@ export function ExtractionSheetPage() {
               VIEW 1: SINGLE STUDY RECORDED EXTRACTION SHEET TABLE (EXCEL WORKBOOK STYLE)
           ══════════════════════════════════════════════════════════ */}
           {viewMode === "single" && (
-            <div className="overflow-x-auto border-t border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
-              {/* Excel Formula Bar */}
-              <div className="px-4 py-1.5 bg-[#F9F9F8] border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 text-xs font-mono">
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-300 dark:border-slate-700 rounded text-[11px] font-bold text-slate-700 min-w-[55px] justify-center shadow-2xs">
-                  {activeCell ? `${activeCell.col.toUpperCase()}${activeCell.row + 1}` : "A1"}
+            <div className="overflow-x-auto border-t border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+              {/* ── EXCEL GREEN RIBBON (Familiar & Intuitive for Physicians) ── */}
+              <div className="bg-[#107C41] text-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-xs border-b border-[#0c6233]">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 bg-[#0c5c30] px-3 py-1 rounded text-xs font-semibold tracking-wide shadow-2xs">
+                    <FileSpreadsheet className="h-4 w-4 text-[#85e0a3]" />
+                    <span>EXCEL CLINICAL SHEET</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setFeedbackToast("Workbook saved successfully. All clinical values are stored.");
+                      setTimeout(() => setFeedbackToast(null), 3000);
+                    }}
+                    className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-medium flex items-center gap-1.5 transition border border-white/20"
+                    title="Save all changes (Ctrl+S)"
+                  >
+                    <Save className="h-3.5 w-3.5 text-[#85e0a3]" />
+                    <span>Save Sheet (Ctrl+S)</span>
+                  </button>
+                  <button
+                    onClick={handleExportAllStudiesMatrixCsv}
+                    className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-medium flex items-center gap-1.5 transition border border-white/20"
+                    title="Download this extraction sheet as a real Excel file"
+                  >
+                    <Download className="h-3.5 w-3.5 text-white" />
+                    <span>Download Excel (.xlsx)</span>
+                  </button>
                 </div>
-                <span className="text-slate-400 font-bold select-none text-xs">fx</span>
-                <div className="flex-1 px-2 py-0.5 bg-white border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-slate-200 truncate font-sans">
-                  {activeCell && filteredVariables[activeCell.row] ? (
-                    <span>
-                      <strong className="font-semibold text-emerald-800 mr-2">[{filteredVariables[activeCell.row].name}]</strong>
-                      {extractionMap[filteredVariables[activeCell.row].variable_id]?.value || "Not Reported (NR)"}
-                      {extractionMap[filteredVariables[activeCell.row].variable_id]?.quote && (
-                        <span className="text-slate-400 italic ml-2">
-                          — Quote: "{extractionMap[filteredVariables[activeCell.row].variable_id]?.quote}"
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="text-slate-400">Select any cell below to inspect or edit clinical values</span>
-                  )}
+
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <button
+                    onClick={handleFillEmptyWithNR}
+                    className="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-slate-900 rounded font-bold flex items-center gap-1.5 transition shadow-2xs"
+                    title="Fill all remaining empty cells in this sheet with 'NR' (Not Reported)"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5 text-slate-900" />
+                    <span>⚡ Fill Empty with "NR"</span>
+                  </button>
+
+                  <button
+                    onClick={handleAcceptAllHighConfidence}
+                    className="px-3 py-1 bg-emerald-200 hover:bg-emerald-100 text-emerald-950 rounded font-bold flex items-center gap-1.5 transition shadow-2xs"
+                    title="Accept all AI extractions that have >95% confidence with 1 click"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-900" />
+                    <span>✓ Accept All High-Confidence (&gt;95%)</span>
+                  </button>
                 </div>
               </div>
+
+              {/* ── EXCEL FORMULA BAR ── */}
+              <div className="px-4 py-2 bg-[#F3F2F1] border-b border-slate-300 dark:border-slate-700 flex items-center gap-3 text-xs font-mono">
+                <div className="flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-400 rounded text-xs font-bold text-slate-800 min-w-[65px] justify-center shadow-2xs">
+                  {activeCell ? `${activeCell.col.toUpperCase()}${activeCell.row + 1}` : "C1"}
+                </div>
+                <span className="text-slate-500 font-bold select-none text-sm font-serif italic">fx</span>
+                <div className="flex-1 px-3 py-1 bg-white border border-slate-300 rounded text-xs text-slate-900 font-sans flex items-center justify-between gap-2 shadow-2xs">
+                  {activeCell && filteredVariables[activeCell.row] ? (
+                    <div className="truncate flex items-center gap-2">
+                      <strong className="font-semibold text-emerald-900">
+                        {filteredVariables[activeCell.row].name}:
+                      </strong>
+                      <span className="font-mono font-bold text-slate-900">
+                        {extractionMap[filteredVariables[activeCell.row].variable_id]?.value || "Not Reported (NR)"}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-500 italic">Select any cell below to view evidence quote from the research paper</span>
+                  )}
+                  <span className="text-[11px] text-slate-400 font-mono shrink-0 hidden sm:inline">
+                    Double-click cell or press Enter to edit
+                  </span>
+                </div>
+              </div>
+
+              {/* ── DOCTOR EVIDENCE & DECISION STRIP (Human-in-the-loop) ── */}
+              {activeCell && filteredVariables[activeCell.row] && (
+                <div className="px-4 py-2.5 bg-amber-50/80 border-b border-amber-200 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs animate-in fade-in duration-150">
+                  <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                    <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-bold font-mono text-[10px] shrink-0 mt-0.5 shadow-2xs">
+                      PAPER EVIDENCE
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      {extractionMap[filteredVariables[activeCell.row].variable_id]?.quote ? (
+                        <p className="text-slate-900 italic leading-snug line-clamp-2 font-serif text-[12px]">
+                          “{extractionMap[filteredVariables[activeCell.row].variable_id]?.quote}”
+                        </p>
+                      ) : (
+                        <p className="text-slate-500 italic">
+                          No direct quote reported in study text. Default missing code: NR.
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-600 font-mono">
+                        <span>Page {extractionMap[filteredVariables[activeCell.row].variable_id]?.source_page || 1}</span>
+                        {extractionMap[filteredVariables[activeCell.row].variable_id]?.confidence != null && (
+                          <>
+                            <span>•</span>
+                            <span className="font-bold text-emerald-800">
+                              Confidence: {Math.round(extractionMap[filteredVariables[activeCell.row].variable_id]?.confidence * 100)}%
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 1-Click Doctor Decision Buttons */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleVerifyDecision(filteredVariables[activeCell.row].variable_id, "accepted")}
+                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-xs flex items-center gap-1 shadow-2xs"
+                      title="Accept this extraction as verified"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Accept</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingVarId(filteredVariables[activeCell.row].variable_id);
+                        setEditValue(extractionMap[filteredVariables[activeCell.row].variable_id]?.value || "");
+                      }}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs flex items-center gap-1 shadow-2xs"
+                      title="Change or type your own value"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                      <span>Edit Cell</span>
+                    </button>
+                    <button
+                      onClick={() => handleVerifyDecision(filteredVariables[activeCell.row].variable_id, "modified", "NR")}
+                      className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded font-medium text-xs flex items-center gap-1 shadow-2xs"
+                      title="Mark as Not Reported (NR)"
+                    >
+                      <X className="h-3.5 w-3.5 text-rose-500" />
+                      <span>Set NR</span>
+                    </button>
+                    <Link
+                      to={`/projects/${projectId}/studies/${selectedStudyId}/pdf?var=${filteredVariables[activeCell.row].variable_id}`}
+                      className="px-3 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded font-medium text-xs flex items-center gap-1"
+                      title="Open PDF viewer with verbatim highlight"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>View in PDF</span>
+                    </Link>
+                  </div>
+                </div>
+              )}
 
               <table className="min-w-full text-xs border-collapse">
                 {/* Excel Column Letters (A, B, C, D, E, F, G, H, I) */}

@@ -297,17 +297,71 @@ def _numeric_double_check(var: dict, value: str, quote: str,
     return any(num in ptext.replace(",", "") for _, ptext in pages)
 
 
+def _gate_relevant_text(section: str, variables: list[dict], pdf_data: Optional[dict], full_text: str) -> str:
+    """SLIDERS-inspired relevance gating:
+    Scores and extracts only the pages and tables that discuss the target section/variables.
+    Prevents token bloat and hallucination by discarding irrelevant pages.
+    """
+    if not pdf_data:
+        return full_text[:24000]
+
+    pages = _page_texts(pdf_data)
+    if not pages:
+        return full_text[:24000]
+
+    # Collect keywords from section name and variable names/prompts
+    keywords = set()
+    for tok in re.split(r"[\s_/,()-]+", section.lower()):
+        if len(tok) >= 3 and tok not in ("and", "the", "for", "with", "from", "section"):
+            keywords.add(tok)
+    for v in variables:
+        for tok in re.split(r"[\s_/,()-]+", v.get("name", "").lower()):
+            if len(tok) >= 3 and tok not in ("and", "the", "for", "with", "from", "variable"):
+                keywords.add(tok)
+
+    # Score pages based on keyword density and presence of tables
+    scored_pages = []
+    for pnum, ptext in pages:
+        ptext_lower = ptext.lower()
+        score = sum(1 for kw in keywords if kw in ptext_lower)
+        if "table" in ptext_lower or re.search(r"\b\d+(?:\.\d+)?%", ptext):
+            score += 2
+        if score > 0:
+            scored_pages.append((score, pnum, ptext))
+
+    if not scored_pages:
+        # Fall back to first 3 pages
+        scored_pages = [(1, pnum, ptext) for pnum, ptext in pages[:3]]
+
+    scored_pages.sort(key=lambda x: x[0], reverse=True)
+    # Re-sort top pages in document order
+    top_pages = sorted(scored_pages[:5], key=lambda x: x[1])
+    assembled = []
+    curr_len = 0
+    for score, pnum, ptext in top_pages:
+        chunk = f"--- [Page {pnum}] ---\n{ptext}\n"
+        if curr_len + len(chunk) > 24000:
+            assembled.append(chunk[:(24000 - curr_len)])
+            break
+        assembled.append(chunk)
+        curr_len += len(chunk)
+
+    return "\n".join(assembled) if assembled else full_text[:24000]
+
+
 def _llm_extract_section(section: str, variables: list[dict], full_text: str,
-                         model_fn: Callable) -> dict[str, dict]:
-    """One LLM call per section; returns {var_name: response dict}."""
+                         model_fn: Callable, pdf_data: Optional[dict] = None) -> dict[str, dict]:
+    """One LLM call per section; returns {var_name: response dict} with gated context."""
     var_lines = []
     for v in variables:
         var_lines.append(f"- {v['name']}: {build_field_prompt(v)}")
 
+    gated_context = _gate_relevant_text(section, variables, pdf_data, full_text)
+
     prompt = f"""Extract data from this clinical study for the coding form section "{section}".
 
 Document text:
-{full_text[:24000]}
+{gated_context}
 
 For EACH variable below, follow its extraction instruction exactly:
 {chr(10).join(var_lines)}
@@ -396,7 +450,7 @@ def coded_extract_study(
     if model_fn is not None and full_text:
         for section, sec_vars in sections.items():
             try:
-                llm_by_name.update(_llm_extract_section(section, sec_vars, full_text, model_fn))
+                llm_by_name.update(_llm_extract_section(section, sec_vars, full_text, model_fn, pdf_data=pdf_data))
             except Exception as e:
                 logger.warning(f"[CodedExtraction] LLM section '{section}' failed for {study_id}: {e}")
 
