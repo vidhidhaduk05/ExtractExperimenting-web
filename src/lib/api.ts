@@ -940,6 +940,97 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     }
     return DEMO_STUDY_CLARIFICATIONS as unknown as T;
   }
+  if (path.includes("/storm/deliberate") || path.includes("/storm")) {
+    const title = (body?.title || "").toLowerCase();
+    const abstract = (body?.abstract || "").toLowerCase();
+    const isRetrospective = title.includes("retrospective") || abstract.includes("retrospective") || abstract.includes("series");
+    const isTiciPooled = abstract.includes("2b/3") || abstract.includes("2b or 3");
+
+    const flaws = [];
+    if (isTiciPooled) {
+      flaws.push({
+        flaw_code: "TICI_POOLED_ENDPOINT",
+        severity: "MODERATE",
+        title: "Pooled Recanalization Definition (TICI 2b/3)",
+        description: "Study aggregates partial (TICI 2b) and complete (TICI 2c/3) reperfusion into a single endpoint, obscuring superior functional recovery associated with TICI 2c/3.",
+        advocated_by: "Dr. Sarah Chen (Neurointerventionalist)"
+      });
+    }
+    if (!abstract.includes("ecass") && !abstract.includes("sits-most")) {
+      flaws.push({
+        flaw_code: "SICH_CRITERIA_UNSPECIFIED",
+        severity: "HIGH",
+        title: "Unstandardized Symptomatic ICH Definition",
+        description: "Symptomatic intracranial hemorrhage reported without standard operational criteria (ECASS-III / SITS-MOST).",
+        advocated_by: "Dr. Marcus Vance (Stroke Neurologist)"
+      });
+    }
+    if (isRetrospective) {
+      flaws.push({
+        flaw_code: "SELECTION_BIAS_CONFOUNDING",
+        severity: "MODERATE",
+        title: "Retrospective Selection Bias",
+        description: "Observational cohort subject to selection bias; severely tortuous anatomies may have been systematically excluded.",
+        advocated_by: "Dr. Elena Rostova (Biostatistician)"
+      });
+    }
+
+    return {
+      title: body?.title || "Clinical Study",
+      laya_fast_triage: {
+        flaw_probability: flaws.length >= 2 ? 0.68 : 0.24,
+        has_flaw_warning: flaws.length >= 2,
+        primary_specialty: "interventional",
+        rob_score: isRetrospective ? 1.4 : 0.8,
+        rob_level: isRetrospective ? "moderate" : "low",
+        engine: "laya_system1_onnx"
+      },
+      consensus_status: flaws.length >= 2 ? "QUALIFIED_CONSENSUS" : "UNANIMOUS_CONSENSUS",
+      verdict_badge: flaws.length >= 2 ? "⚡ Qualified Consensus (With Flaws)" : "✅ Multi-Specialty Clinical Consensus",
+      verdict_color: flaws.length >= 2 ? "#d97706" : "#16a34a",
+      design_flaws: flaws,
+      total_flaws: flaws.length,
+      persona_opinions: [
+        {
+          persona_id: "persona_interventional",
+          name: "Dr. Sarah Chen, MD",
+          role: "Neurointerventional Radiologist",
+          avatar: "💉",
+          stance: isTiciPooled ? "cautionary" : "positive",
+          critique: isTiciPooled ? "Recanalization reporting lacks granular TICI 2c/3 breakdown." : "Catheter technique and recanalization verified by DSA.",
+          confidence: 0.92
+        },
+        {
+          persona_id: "persona_neurology",
+          name: "Dr. Marcus Vance, MD, PhD",
+          role: "Stroke Neurologist & Neurointensivist",
+          avatar: "🩺",
+          stance: "cautionary",
+          critique: "Adverse safety endpoints lack explicit ECASS-III sICH adjudication.",
+          confidence: 0.89
+        },
+        {
+          persona_id: "persona_surgeon",
+          name: "Dr. Alexander Thorne, MD",
+          role: "Cerebrovascular Neurosurgeon",
+          avatar: "🔬",
+          stance: "positive",
+          critique: "Vascular anatomy assessed; surgical decompression threshold noted.",
+          confidence: 0.86
+        },
+        {
+          persona_id: "persona_biostatistician",
+          name: "Dr. Elena Rostova, PhD",
+          role: "Lead Clinical Trial Biostatistician",
+          avatar: "📊",
+          stance: isRetrospective ? "critical" : "positive",
+          critique: isRetrospective ? "Confounding by indication present in retrospective series." : "Cohort design meets PRISMA reporting criteria.",
+          confidence: 0.94
+        }
+      ],
+      grand_rounds_summary: `Stanford STORM & LAYA multi-perspective review conducted across 4 specialties. ${flaws.length} design flaw(s) identified.`
+    } as unknown as T;
+  }
   if (path.includes("/exclusion-reasons")) {
     return DEMO_EXCLUSION_REASONS as unknown as T;
   }
@@ -4013,6 +4104,46 @@ export const api = {
     formData.append("file", file);
     return request<any>("/rigor-scan/scan-pdf", { method: "POST", body: formData });
   },
+
+  // ── Stanford STORM & LAYA Clinical Deliberation ──
+  getStormPersonas: () =>
+    request<any[]>("/storm/personas"),
+  deliberateStorm: (data: { title: string; abstract?: string; topic?: string; extracted_variables?: any[] }) =>
+    request<{
+      title: string;
+      laya_fast_triage: {
+        flaw_probability: number;
+        has_flaw_warning: boolean;
+        primary_specialty: string;
+        rob_score: number;
+        rob_level: string;
+        engine: string;
+      };
+      consensus_status: string;
+      verdict_badge: string;
+      verdict_color: string;
+      design_flaws: Array<{
+        flaw_code: string;
+        severity: string;
+        title: string;
+        description: string;
+        advocated_by: string;
+      }>;
+      total_flaws: number;
+      persona_opinions: Array<{
+        persona_id: string;
+        name: string;
+        role: string;
+        avatar: string;
+        stance: string;
+        critique: string;
+        confidence: number;
+      }>;
+      grand_rounds_summary: string;
+    }>("/storm/deliberate", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
 

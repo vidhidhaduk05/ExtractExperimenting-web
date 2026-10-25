@@ -1,12 +1,42 @@
-import React from "react";
-import { ExternalLink, CheckCircle2, AlertCircle, HelpCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ExternalLink, CheckCircle2, AlertCircle, HelpCircle, Sparkles, ShieldAlert, Activity, ChevronDown, ChevronUp } from "lucide-react";
 import { ProcessedPaper, TIER_BY_ID, STANCE_LABEL } from "../../lib/claimscapeMethod";
+import { api } from "../../lib/api";
 
 interface PaperInspectorProps {
   paper: ProcessedPaper | null;
 }
 
 export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
+  const [stormResult, setStormResult] = useState<any | null>(null);
+  const [isDeliberating, setIsDeliberating] = useState<boolean>(false);
+  const [showGrandRounds, setShowGrandRounds] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (!paper) {
+      setStormResult(null);
+      return;
+    }
+    let isCancelled = false;
+    setIsDeliberating(true);
+    api.deliberateStorm({
+      title: paper.paper.title,
+      abstract: paper.finding || paper.paper.title,
+      topic: "acute ischemic stroke & neurovascular therapy"
+    }).then((res) => {
+      if (!isCancelled) {
+        setStormResult(res);
+        setIsDeliberating(false);
+      }
+    }).catch(() => {
+      if (!isCancelled) setIsDeliberating(false);
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [paper?.paper.pmid]);
+
   if (!paper) {
     return (
       <div className="cs-card p-6 text-center text-sm cs-muted flex flex-col items-center justify-center min-h-[320px]">
@@ -177,6 +207,121 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
           </div>
         </dl>
       </div>
+
+      {/* ⚡ Stanford STORM & LAYA Multi-Perspective Clinical Grand Rounds */}
+      <section className="rounded-xl border border-[#381A61]/15 dark:border-white/15 bg-gradient-to-br from-[#FAF9F3] via-[#F5F3E9] to-[#EFECE0] dark:from-[#1D1926] dark:to-[#14121A] p-4 shadow-sm">
+        <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowGrandRounds(!showGrandRounds)}>
+          <div className="flex items-center gap-2">
+            <span className="p-1 rounded-md bg-[#381A61] text-[#F9D14A] text-xs font-mono font-bold flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5" /> STORM
+            </span>
+            <h4 className="text-[13px] font-serif font-bold text-[#381A61] dark:text-[#F9D14A] flex items-center gap-1.5">
+              Clinical Grand Rounds · Multi-Perspective Review
+            </h4>
+            {stormResult?.verdict_badge && (
+              <span
+                className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full"
+                style={{
+                  backgroundColor: `${stormResult.verdict_color}18`,
+                  color: stormResult.verdict_color,
+                  border: `1px solid ${stormResult.verdict_color}40`,
+                }}
+              >
+                {stormResult.verdict_badge}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs cs-muted">
+            {isDeliberating ? (
+              <span className="flex items-center gap-1 text-[11px] font-mono text-amber-600 animate-pulse">
+                <Activity className="w-3 h-3 animate-spin" /> Deliberating...
+              </span>
+            ) : (
+              <span className="text-[11px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded">
+                ⚡ LAYA System-1 &lt;150ms
+              </span>
+            )}
+            {showGrandRounds ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </div>
+        </div>
+
+        {showGrandRounds && stormResult && (
+          <div className="mt-3.5 space-y-3 pt-3 border-t border-[#381A61]/10 dark:border-white/10">
+            {/* Laya Fast Metrics */}
+            <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
+              <div className="p-2 rounded bg-white/70 dark:bg-black/20 border border-[#381A61]/10 dark:border-white/10">
+                <span className="cs-muted block text-[10px]">Study Design Flaw Risk</span>
+                <span className={`font-bold text-[13px] ${stormResult.laya_fast_triage?.has_flaw_warning ? "text-red-600" : "text-emerald-600"}`}>
+                  {Math.round((stormResult.laya_fast_triage?.flaw_probability || 0) * 100)}%
+                </span>
+              </div>
+              <div className="p-2 rounded bg-white/70 dark:bg-black/20 border border-[#381A61]/10 dark:border-white/10">
+                <span className="cs-muted block text-[10px]">Primary Specialty Lens</span>
+                <span className="font-bold text-[12px] text-[#381A61] dark:text-[#F9D14A] capitalize">
+                  {stormResult.laya_fast_triage?.primary_specialty?.replace("_", " ") || "Interventional"}
+                </span>
+              </div>
+              <div className="p-2 rounded bg-white/70 dark:bg-black/20 border border-[#381A61]/10 dark:border-white/10">
+                <span className="cs-muted block text-[10px]">RoB Level</span>
+                <span className="font-bold text-[12px] text-amber-700 dark:text-amber-400 capitalize">
+                  {stormResult.laya_fast_triage?.rob_level || "Low"}
+                </span>
+              </div>
+            </div>
+
+            {/* Study Design Flaws Alert Banner */}
+            {stormResult.design_flaws && stormResult.design_flaws.length > 0 && (
+              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[12px] space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>{stormResult.design_flaws.length} Methodological Flaw(s) Identified:</span>
+                </div>
+                {stormResult.design_flaws.map((flaw: any, idx: number) => (
+                  <div key={idx} className="pl-5 text-[11.5px] text-[#634E28] dark:text-[#E2D6B5] leading-snug">
+                    • <strong>{flaw.title}:</strong> {flaw.description} <span className="italic text-[10px]">({flaw.advocated_by})</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 4 Specialist Personas Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {stormResult.persona_opinions?.map((p: any) => (
+                <div
+                  key={p.persona_id}
+                  className="p-2.5 rounded-lg bg-white/80 dark:bg-black/30 border border-[#381A61]/10 dark:border-white/10 text-[12px] space-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 font-semibold text-[#141413] dark:text-[#FAF9F3]">
+                      <span>{p.avatar}</span>
+                      <span className="truncate max-w-[150px]">{p.role}</span>
+                    </div>
+                    <span
+                      className={`text-[9.5px] font-mono px-1.5 py-0.5 rounded uppercase font-bold ${
+                        p.stance === "critical"
+                          ? "bg-red-500/10 text-red-600 border border-red-500/20"
+                          : p.stance === "cautionary"
+                          ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                          : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                      }`}
+                    >
+                      {p.stance}
+                    </span>
+                  </div>
+                  <p className="text-[11.5px] text-[#555] dark:text-[#AAA] leading-relaxed">
+                    {p.critique}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Deliberation Footer Summary */}
+            <p className="text-[11px] font-serif italic text-center text-[#6B665E] dark:text-[#A09A8F] pt-1">
+              "{stormResult.grand_rounds_summary}"
+            </p>
+          </div>
+        )}
+      </section>
 
       {/* Abstract & Extracted Key Finding Sentence */}
       <section className="grid gap-2.5 pt-2">

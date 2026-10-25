@@ -42,6 +42,7 @@ from routers import (
     claimscape,
     citation_telephone,
     rigor_scan,
+    storm_router,
     settings as system_settings,
 )
 
@@ -169,6 +170,8 @@ def create_app() -> FastAPI:
     app.include_router(claimscape.router)
     app.include_router(citation_telephone.router)
     app.include_router(rigor_scan.router)
+    app.include_router(storm_router.router, prefix="/api")
+    app.include_router(storm_router.router)
     app.include_router(system_settings.router)
 
     # Health check
