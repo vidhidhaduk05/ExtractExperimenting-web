@@ -150,17 +150,27 @@ export const LandingPage: React.FC = () => {
             if (seenNodes.has(el)) return;
             seenNodes.add(el);
             el.dataset.rhythmKind =
-              el.matches("form") || el.querySelector("a,button,input,textarea,select")
+              kind === "paper" || el.matches("form, input, textarea, select")
                 ? "paper"
-                : kind;
+                : "lift";
             el.dataset.rhythmState = "pending";
             rhythmTargets.push(el);
           });
         });
 
+        function parseTimeMs(val: string, fallback: number): number {
+          if (!val) return fallback;
+          const trimmed = val.trim();
+          if (trimmed.endsWith("ms")) return parseFloat(trimmed) || fallback;
+          if (trimmed.endsWith("s")) return (parseFloat(trimmed) * 1000) || fallback;
+          const num = parseFloat(trimmed);
+          if (isNaN(num)) return fallback;
+          return num < 10 ? num * 1000 : num;
+        }
+
         const computed = getComputedStyle(container);
-        const duration = parseFloat(computed.getPropertyValue("--motion-reveal-duration")) || 660;
-        const beat = parseFloat(computed.getPropertyValue("--motion-reveal-stagger")) || 90;
+        const duration = parseTimeMs(computed.getPropertyValue("--motion-reveal-duration"), 660);
+        const beat = parseTimeMs(computed.getPropertyValue("--motion-reveal-stagger"), 90);
         const distance = computed.getPropertyValue("--motion-reveal-distance").trim() || "26px";
         const ease = computed.getPropertyValue("--motion-reveal-ease").trim() || "cubic-bezier(.22,1,.36,1)";
 

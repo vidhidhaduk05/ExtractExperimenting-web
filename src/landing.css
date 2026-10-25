@@ -2276,22 +2276,33 @@ html.stellar-landing-active.lenis{scroll-behavior:auto!important}
 @media(prefers-reduced-motion:reduce){html.stellar-landing-active{scroll-behavior:auto!important}}
 
 /* Stellar Labs: rhythmic reveals layered over the existing page. */
+:root,
+html.stellar-landing-active,
 .stellar-labs-landing-root {
   --motion-reveal-duration: 660ms;
   --motion-reveal-stagger: 90ms;
   --motion-reveal-distance: 26px;
   --motion-reveal-ease: cubic-bezier(.22, 1, .36, 1);
 }
+html.sl-rhythm .fade-up,
 html.stellar-landing-active.sl-rhythm .fade-up { opacity: 1; transform: none; transition: none; }
+html.sl-rhythm :is(.hero-eyebrow,.hero-headline,.hero-sub,.hero-sub-small,.hero-cta-group,.hero-proof,.hero-stats-grid),
 html.stellar-landing-active.sl-rhythm :is(.hero-eyebrow,.hero-headline,.hero-sub,.hero-sub-small,.hero-cta-group,.hero-proof,.hero-stats-grid) { animation: none; }
+html.sl-rhythm [data-rhythm-state="pending"],
 html.stellar-landing-active.sl-rhythm [data-rhythm-state="pending"] { opacity: 0; translate: 0 var(--motion-reveal-distance); }
+html.sl-rhythm [data-rhythm-state="entering"],
+html.sl-rhythm [data-rhythm-state="shown"],
 html.stellar-landing-active.sl-rhythm [data-rhythm-state="entering"],
 html.stellar-landing-active.sl-rhythm [data-rhythm-state="shown"] { opacity: 1; translate: none; }
+html.sl-rhythm [data-rhythm-kind="paper"][data-rhythm-state="pending"],
 html.stellar-landing-active.sl-rhythm [data-rhythm-kind="paper"][data-rhythm-state="pending"] { translate: none; }
 @media (max-width: 700px) {
+  :root,
+  html.stellar-landing-active,
   .stellar-labs-landing-root { --motion-reveal-distance: 16px; --motion-reveal-duration: 560ms; --motion-reveal-stagger: 70ms; }
 }
 @media (prefers-reduced-motion: reduce) {
+  html.sl-rhythm [data-rhythm-state],
   html.stellar-landing-active.sl-rhythm [data-rhythm-state] { opacity: 1 !important; translate: none !important; }
 }
 
