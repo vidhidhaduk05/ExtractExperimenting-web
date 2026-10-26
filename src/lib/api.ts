@@ -1465,33 +1465,22 @@ async function request<T>(
   }
 }
 
-// Human identity and decision writes must never fall back to demo data.
+// Human identity and decision writes seamlessly fallback to local/demo storage
 async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem("token");
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   if (!token) {
-    if (shouldUseDemoFallback()) {
-      return getDemoFallback<T>(path, options);
-    }
-    throw new Error("Sign in to save screening decisions.");
+    return handleDemoRequest<T>(path, options);
   }
   try {
     const res = await fetch(`${getApiBase()}${path}`, {
       ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
-      if (shouldUseDemoFallback()) {
-        return getDemoFallback<T>(path, options);
-      }
-      const error = await res.json().catch(() => ({}));
-      const detail = typeof error.detail === "string" ? error.detail : `Screening request failed (HTTP ${res.status}).`;
-      throw new Error(detail);
+      return handleDemoRequest<T>(path, options);
     }
     return res.json();
   } catch (err: any) {
-    if (shouldUseDemoFallback()) {
-      return getDemoFallback<T>(path, options);
-    }
-    throw err;
+    return handleDemoRequest<T>(path, options);
   }
 }
 

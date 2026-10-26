@@ -468,16 +468,16 @@ export function ActualPdfViewer({
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-[#ECE9E2] relative overflow-hidden select-none", className)}>
-      {/* ── TOP PDF TOOLBAR ── */}
-      <div className="bg-[#FAF9F3] border-b border-[#381A61]/10 px-3.5 py-2 flex items-center justify-between shrink-0 shadow-2xs z-20">
+    <div className={cn("flex flex-col h-full bg-[#fbf9f4] relative overflow-hidden select-none", className)}>
+      {/* ── TOP PDF TOOLBAR (Master Theme) ── */}
+      <div className="bg-[#ffffff] border-b border-[#d2c2cb] px-3.5 py-2 flex items-center justify-between shrink-0 shadow-2xs z-20">
         {/* Left: Study Selector & Upload */}
         <div className="flex items-center gap-2">
           {availableStudies.length > 0 ? (
             <select
               value={currentStudyId || ""}
               onChange={(e) => onSelectStudy?.(e.target.value)}
-              className="text-xs font-semibold bg-white border border-[#7C4B73]/25 rounded-lg px-2.5 py-1 text-[#381A61] focus:outline-hidden focus:ring-1 focus:ring-[#88A0DC] max-w-[240px] truncate shadow-2xs"
+              className="text-xs font-semibold bg-[#ffffff] border border-[#d2c2cb] rounded-lg px-2.5 py-1 text-[#3a0f34] focus:outline-hidden focus:ring-1 focus:ring-[#814d75] max-w-[240px] truncate shadow-2xs"
               title="Switch publication paper"
             >
               {availableStudies.map((s) => (
@@ -487,8 +487,8 @@ export function ActualPdfViewer({
               ))}
             </select>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#381A61]">
-              <FileText className="h-4 w-4 text-[#88A0DC]" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a0f34]">
+              <FileText className="h-4 w-4 text-[#814d75]" />
               <span>Publication PDF</span>
             </div>
           )}
@@ -503,10 +503,10 @@ export function ActualPdfViewer({
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#381A61] hover:text-[#381A61] bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 border border-[#88A0DC]/40 px-2.5 py-1 rounded-lg transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#3a0f34] hover:bg-[#eee7ec] bg-[#ffffff] border border-[#d2c2cb] px-2.5 py-1 rounded-lg transition-colors shadow-2xs font-['Work_Sans']"
             title="Upload and inspect your own PDF paper"
           >
-            <Upload className="h-3 w-3 text-[#7C4B73]" />
+            <Upload className="h-3 w-3 text-[#814d75]" />
             <span>Upload PDF</span>
           </button>
         </div>
@@ -514,10 +514,10 @@ export function ActualPdfViewer({
         {/* Center: Page Jump Pills */}
         {numPages > 0 && (
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-mono text-[#7C4B73] font-medium mr-1">
+            <span className="text-[11px] font-mono text-[#62535d] font-medium mr-1">
               Page {currentPage} of {numPages}
             </span>
-            <div className="flex items-center gap-1 bg-[#88A0DC]/15 p-0.5 rounded-lg border border-[#88A0DC]/30 text-[10px] font-mono font-bold">
+            <div className="flex items-center gap-1 bg-[#eee7ec] p-0.5 rounded-lg border border-[#d2c2cb] text-[10px] font-mono font-bold">
               {Array.from({ length: numPages }, (_, idx) => idx + 1).map((p) => (
                 <button
                   key={p}
@@ -525,8 +525,8 @@ export function ActualPdfViewer({
                   className={cn(
                     "px-2 py-0.5 rounded-md transition-all",
                     currentPage === p
-                      ? "bg-[#381A61] text-[#F9D14A] font-bold shadow-xs scale-105"
-                      : "text-[#381A61]/80 hover:bg-white hover:text-[#381A61]"
+                      ? "bg-[#3a0f34] text-[#fbf9f4] font-bold shadow-xs scale-105"
+                      : "text-[#4f444b] hover:bg-white hover:text-[#3a0f34]"
                   )}
                   title={`Jump to Page ${p}`}
                 >
@@ -541,24 +541,24 @@ export function ActualPdfViewer({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setZoom((z) => Math.max(60, z - 10))}
-            className="p-1.5 rounded-lg hover:bg-[#381A61]/5 text-[#381A61] transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#eee7ec] text-[#4f444b] transition-colors"
             title="Zoom Out"
           >
             <ZoomOut className="h-3.5 w-3.5" />
           </button>
-          <span className="text-[11px] font-mono font-bold text-[#381A61] w-10 text-center">
+          <span className="text-[11px] font-mono font-bold text-[#3a0f34] w-10 text-center">
             {zoom}%
           </span>
           <button
             onClick={() => setZoom((z) => Math.min(180, z + 10))}
-            className="p-1.5 rounded-lg hover:bg-[#381A61]/5 text-[#381A61] transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#eee7ec] text-[#4f444b] transition-colors"
             title="Zoom In"
           >
             <ZoomIn className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => setZoom(100)}
-            className="text-[10px] font-bold text-[#381A61] hover:bg-[#88A0DC]/35 bg-[#88A0DC]/20 border border-[#88A0DC]/40 px-2 py-0.5 rounded-md ml-1 shadow-2xs"
+            className="text-[10px] font-bold text-[#3a0f34] hover:bg-[#eee7ec] bg-[#ffffff] border border-[#d2c2cb] px-2 py-0.5 rounded-md ml-1 shadow-2xs font-['Work_Sans']"
             title="Reset to 100% Fit"
           >
             Fit
@@ -573,31 +573,85 @@ export function ActualPdfViewer({
       >
         {loading && pages.length === 0 ? (
           <div className="my-auto py-16 flex flex-col items-center text-center">
-            <Loader2 className="h-8 w-8 text-[#381A61] animate-spin mb-3" />
-            <p className="text-sm font-semibold text-[#381A61]">{loadingProgress}</p>
-            <p className="text-xs text-[#7C4B73] mt-1 font-serif italic">Rendering high-resolution multi-column layout with Docling-aligned highlights</p>
+            <Loader2 className="h-8 w-8 text-[#3a0f34] animate-spin mb-3" />
+            <p className="text-sm font-semibold text-[#3a0f34] font-['Work_Sans']">{loadingProgress}</p>
+            <p className="text-xs text-[#62535d] mt-1 font-serif italic">Rendering high-resolution multi-column layout with Docling-aligned highlights</p>
           </div>
         ) : error ? (
-          <div className="my-auto max-w-md p-6 bg-white rounded-2xl border border-[#AB3329]/30 shadow-md text-center">
-            <AlertCircle className="h-10 w-10 text-[#AB3329] mx-auto mb-2" />
-            <h3 className="text-sm font-bold text-[#381A61] mb-1">Could not render PDF preview</h3>
-            <p className="text-xs text-[#6B665E] mb-4">{error}</p>
-            <div className="flex justify-center gap-3">
+          <div className="my-auto max-w-2xl w-full p-6 bg-white rounded-xl border border-[#d2c2cb] shadow-sm text-center">
+            <AlertCircle className="h-10 w-10 text-[#814d75] mx-auto mb-2" />
+            <h3 className="text-base font-bold text-[#3a0f34] mb-1 font-serif">Original PDF Document Not Localized</h3>
+            <p className="text-xs text-[#62535d] mb-4">
+              {error.includes("404") || error.includes("Could not") 
+                ? "The original publisher PDF file is not stored on this local instance. You can upload the PDF or inspect the extracted quotes below."
+                : error}
+            </p>
+            <div className="flex justify-center gap-3 mb-6">
               <button
-                onClick={() => setRetryCount((prev) => prev + 1)}
-                className="btn-palette-secondary text-xs"
+                onClick={() => {
+                  if (availableStudies.length > 0) {
+                    onSelectStudy?.(availableStudies[0].id);
+                  } else {
+                    setRetryCount((prev) => prev + 1);
+                  }
+                }}
+                className="px-3.5 py-1.5 bg-[#3a0f34] text-[#fbf9f4] text-xs font-semibold rounded-lg hover:bg-[#1a0017] transition-colors flex items-center gap-1.5 shadow-2xs font-['Work_Sans']"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                Retry Loading
+                Inspect Bundled Demo Paper
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="btn-palette-primary text-xs"
+                className="px-3.5 py-1.5 bg-white border border-[#d2c2cb] text-[#3a0f34] text-xs font-semibold rounded-lg hover:bg-[#eee7ec] transition-colors flex items-center gap-1.5 shadow-2xs font-['Work_Sans']"
               >
-                <Upload className="h-3.5 w-3.5" />
+                <Upload className="h-3.5 w-3.5 text-[#814d75]" />
                 Upload Local PDF
               </button>
             </div>
+
+            {/* Extracted Evidence Snippets Fallback */}
+            {highlights && highlights.length > 0 && (
+              <div className="text-left border-t border-[#d2c2cb] pt-4 mt-2">
+                <h4 className="text-xs font-bold text-[#3a0f34] uppercase tracking-wider mb-3 flex items-center gap-1.5 font-['Work_Sans']">
+                  <Sparkles className="h-3.5 w-3.5 text-[#814d75]" />
+                  Extracted Evidence Snippets & Verified Values ({highlights.length})
+                </h4>
+                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                  {highlights.map((h) => (
+                    <div 
+                      key={h.id} 
+                      className={cn(
+                        "p-3 rounded-lg border transition-all text-xs",
+                        activeHighlightId === h.id 
+                          ? "bg-[#eee7ec] border-[#814d75] shadow-xs" 
+                          : "bg-[#fbf9f4] border-[#d2c2cb] hover:bg-white"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-[#3a0f34]">{h.label}</span>
+                        <div className="flex items-center gap-2">
+                          {h.value && (
+                            <span className="bg-white px-2 py-0.5 rounded border border-[#d2c2cb] font-mono text-[11px] text-[#4f444b] font-bold">
+                              {h.value}
+                            </span>
+                          )}
+                          <span className="text-[10px] font-mono text-[#62535d]">Page {h.pageNumber}</span>
+                        </div>
+                      </div>
+                      {h.quote ? (
+                        <p className="text-[11px] text-[#4f444b] italic font-serif bg-white/70 p-2 rounded border border-[#d2c2cb]/50">
+                          "{h.quote}"
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-[#81737b] italic font-serif">
+                          No direct quote string recorded for this variable.
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           pages.map((page) => {

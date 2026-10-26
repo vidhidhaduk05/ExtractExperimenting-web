@@ -104,6 +104,19 @@ export const LandingPage: React.FC = () => {
     };
     listen(hamburger, "click", handleHamburger);
 
+    const workspaceBtn = container.querySelector("#workspace-btn");
+    listen(workspaceBtn, "click", (e) => {
+      e.preventDefault();
+      navigate("/projects");
+    });
+
+    const mobileWorkspaceLink = container.querySelector("#mobile-workspace-link");
+    listen(mobileWorkspaceLink, "click", (e) => {
+      e.preventDefault();
+      mobileMenu?.classList.remove("open");
+      navigate("/projects");
+    });
+
     // 2. Rhythmic section reveals
     const rhythmTargets: Element[] = [];
     const rhythmRunning = new Map<Element, Animation>();
