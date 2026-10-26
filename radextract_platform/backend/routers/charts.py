@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from database import get_db
+from dependencies import check_project_access, get_current_user_optional
 from services.db_backend import DBBackend
 from services import r_plot_service
 from services.chart_engine import (
@@ -220,13 +221,16 @@ def create_prisma_flow(req: PrismaFlowRequest):
 # Convenience endpoints: generate charts from an existing meta-analysis record
 # ---------------------------------------------------------------------------
 
-def _load_meta(meta_id: str, conn: DBBackend) -> Dict[str, Any]:
+def _load_meta(meta_id: str, conn: DBBackend, user: Optional[dict] = None) -> Dict[str, Any]:
     row = conn.execute(
         "SELECT * FROM meta_analyses WHERE meta_id = ?", (meta_id,)
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Meta-analysis not found")
-    return dict(row)
+    meta = dict(row)
+    if meta.get("project_id"):
+        check_project_access(conn, meta["project_id"], user)
+    return meta
 
 
 def _extract_studies(results: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -251,9 +255,13 @@ def _extract_studies(results: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 @router.post("/forest/from-meta/{meta_id}")
-def create_forest_plot_from_meta(meta_id: str, conn: DBBackend = Depends(get_db)):
+def create_forest_plot_from_meta(
+    meta_id: str,
+    conn: DBBackend = Depends(get_db),
+    user: Optional[dict] = Depends(get_current_user_optional),
+):
     """Generate forest plot from an existing meta-analysis."""
-    meta = _load_meta(meta_id, conn)
+    meta = _load_meta(meta_id, conn, user)
     results = json.loads(meta.get("results_json") or "{}")
     studies = _extract_studies(results)
     if not studies:
@@ -275,9 +283,13 @@ def create_forest_plot_from_meta(meta_id: str, conn: DBBackend = Depends(get_db)
 
 
 @router.post("/funnel/from-meta/{meta_id}")
-def create_funnel_plot_from_meta(meta_id: str, conn: DBBackend = Depends(get_db)):
+def create_funnel_plot_from_meta(
+    meta_id: str,
+    conn: DBBackend = Depends(get_db),
+    user: Optional[dict] = Depends(get_current_user_optional),
+):
     """Generate funnel plot from an existing meta-analysis."""
-    meta = _load_meta(meta_id, conn)
+    meta = _load_meta(meta_id, conn, user)
     results = json.loads(meta.get("results_json") or "{}")
     studies = _extract_studies(results)
     if not studies:
@@ -295,9 +307,13 @@ def create_funnel_plot_from_meta(meta_id: str, conn: DBBackend = Depends(get_db)
 
 
 @router.post("/sroc/from-meta/{meta_id}")
-def create_sroc_curve_from_meta(meta_id: str, conn: DBBackend = Depends(get_db)):
+def create_sroc_curve_from_meta(
+    meta_id: str,
+    conn: DBBackend = Depends(get_db),
+    user: Optional[dict] = Depends(get_current_user_optional),
+):
     """Generate SROC curve from an existing meta-analysis."""
-    meta = _load_meta(meta_id, conn)
+    meta = _load_meta(meta_id, conn, user)
     results = json.loads(meta.get("results_json") or "{}")
     studies = _extract_studies(results)
     if not studies:
