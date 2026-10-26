@@ -173,6 +173,7 @@ def main():
     print("[1/4] Synchronizing frontend sources from main workspace...")
     sync_directory(SRC_FRONTEND, DEST_PLATFORM_FRONTEND)
     sync_directory(SRC_FRONTEND / "src", DEST_ROOT_SRC)
+    sync_directory(SRC_FRONTEND / "public", WEB_REPO_DIR / "public")
 
     # Step 2: Ensure GitHub Pages configuration
     print("\n[2/4] Verifying GitHub Pages workflow & Vite configurations...")
@@ -192,10 +193,12 @@ def main():
             has_staged = True
             break
 
+    commit_msg = sys.argv[1] if len(sys.argv) > 1 else "feat(web): add interactive Excel extraction workspace, universal undo, and quote locator"
+
     if has_staged:
         print("  -> New changes detected. Committing...")
         commit_res = run_git(
-            ["commit", "-m", "feat: complete RadExtract web app with Evidence Map, Rigor Scan, and Citation Telephone"],
+            ["commit", "-m", commit_msg],
             WEB_REPO_DIR,
         )
         print(f"  -> {commit_res.stdout.strip()}")
