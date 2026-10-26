@@ -53,9 +53,6 @@ export function getApiBase(): string {
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") return "/api";
-  if (host.includes("github.io")) {
-    return ""; // GitHub Pages is static; unless verified tunnel is active, API base is local in-browser engine
-  }
   return `${PERMANENT_HPC_BACKEND}/api`;
 }
 
@@ -63,7 +60,6 @@ export let API_BASE = getApiBase();
 
 export async function autoDiscoverBackend(): Promise<string | null> {
   if (typeof window === "undefined") return null;
-  const isGithubPages = window.location.hostname.includes("github.io");
   const custom = localStorage.getItem("custom_api_base");
   if (custom && custom.trim()) {
     const checkCustom = await testBackendConnection(custom.trim()).catch(() => null);
@@ -111,10 +107,10 @@ export async function autoDiscoverBackend(): Promise<string | null> {
 
   const isBrowser = typeof window !== "undefined";
   const isLocalhost = isBrowser && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
 
   if (isLocalhost || isGithubPages || isDemoModeEnabled()) {
-    API_BASE = isGithubPages ? "" : API_BASE;
-    updateApiState({ apiBase: isGithubPages ? "Local In-Browser Engine" : "Local Engine", state: "live", isExplicitDemo: isDemoModeEnabled() });
+    updateApiState({ apiBase: "Local Engine", state: "live" });
     return API_BASE;
   }
 
@@ -134,19 +130,12 @@ export function isDemoModeEnabled(): boolean {
 }
 
 export function shouldUseDemoFallback(): boolean {
-  if (typeof window === "undefined") return false;
-  if (isDemoModeEnabled()) return true;
-  const isGithubPages = window.location.hostname.includes("github.io");
-  // On GitHub Pages, if no verified custom backend is configured, default to local demo/offline engine so projects and extractions work instantly!
-  if (isGithubPages && !localStorage.getItem("custom_api_base") && (API_BASE === "" || currentApiState.apiBase === "Local In-Browser Engine")) {
-    return true;
-  }
-  return false;
+  return isDemoModeEnabled();
 }
 
 let currentApiState: ApiConnectionInfo = {
-  state: isDemoModeEnabled() ? "explicit_demo" : (typeof window !== "undefined" && window.location.hostname.includes("github.io") ? "live" : "checking"),
-  apiBase: getApiBase() || "Local In-Browser Engine",
+  state: isDemoModeEnabled() ? "explicit_demo" : "checking",
+  apiBase: getApiBase(),
   lastChecked: Date.now(),
   isExplicitDemo: isDemoModeEnabled(),
 };
@@ -299,6 +288,49 @@ export function saveStoredScreeningDecision(projectId = "proj_pam_current", deci
     }
     localStorage.setItem(`radextract_screening_decisions_${projectId}`, JSON.stringify(current));
   } catch (e) {}
+}
+
+export function getStoredClarifications(projectId = "proj_pam_current"): ClarificationQuestion[] {
+  const isDemo = projectId === "demo" || projectId === "proj_pam_current";
+  if (typeof window === "undefined") return isDemo ? [...DEMO_STUDY_CLARIFICATIONS] : [];
+  try {
+    const isBlank = localStorage.getItem(`radextract_blank_clarifications_${projectId}`) === "true";
+    if (isBlank) return [];
+    const saved = localStorage.getItem(`radextract_clarifications_${projectId}`);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  if (isDemo) {
+    return [...DEMO_STUDY_CLARIFICATIONS];
+  }
+  return [];
+}
+
+export function saveStoredClarificationAnswer(
+  projectId: string,
+  questionId: string,
+  answer: string,
+  answerLabel?: string,
+  answerFreetext?: string
+): ClarificationQuestion | null {
+  if (typeof window === "undefined") return null;
+  const list = getStoredClarifications(projectId);
+  const q = list.find((item) => item.question_id === questionId);
+  if (q) {
+    q.status = "answered";
+    q.answer = answer;
+    q.answer_label = answerLabel || answer;
+    q.answer_freetext = answerFreetext;
+    q.answered_by = "Reviewer (HIL AI)";
+    q.answered_at = new Date().toISOString();
+    q.final_decision = "include";
+    q.final_confidence = 0.98;
+    q.final_reason_text = `Verified by reviewer: ${answerLabel || answer}`;
+    try {
+      localStorage.setItem(`radextract_clarifications_${projectId}`, JSON.stringify(list));
+    } catch (e) {}
+    return q;
+  }
+  return null;
 }
 
 function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
@@ -468,25 +500,54 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     if (path.includes("/clarifications/") && path.includes("/answer")) {
       const qMatch = path.match(/\/clarifications\/([^/]+)\/answer/);
       const qId = qMatch ? qMatch[1] : "q_clarify_1";
-      const qObj = (DEMO_STUDY_CLARIFICATIONS as any[]).find((q) => q.question_id === qId);
-      if (qObj) {
-        qObj.status = "answered";
-        qObj.answer = body.answer || "confirmed";
-        qObj.answer_label = body.answer_label || body.answer;
-        qObj.answered_by = body.answered_by || "Reviewer";
-        qObj.answered_at = new Date().toISOString();
-        qObj.final_decision = "include";
-        qObj.final_confidence = 0.98;
-        qObj.final_reason_text = "Verified via human clarification.";
+      let updatedQ: ClarificationQuestion | null = null;
+      let targetProjectId = "proj_pam_current";
+
+      // Check current projects or stored
+      try {
+        const pamList = getStoredClarifications("proj_pam_current");
+        if (pamList.some((q) => q.question_id === qId)) {
+          updatedQ = saveStoredClarificationAnswer("proj_pam_current", qId, body.answer, body.answer_label, body.answer_freetext);
+          targetProjectId = "proj_pam_current";
+        } else {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k?.startsWith("radextract_clarifications_")) {
+              const pId = k.replace("radextract_clarifications_", "");
+              const pList = getStoredClarifications(pId);
+              if (pList.some((q) => q.question_id === qId)) {
+                updatedQ = saveStoredClarificationAnswer(pId, qId, body.answer, body.answer_label, body.answer_freetext);
+                targetProjectId = pId;
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {}
+
+      // Also update the corresponding study's screening status if stored
+      if (updatedQ?.study_id) {
+        try {
+          const studies = getStoredProjectStudies(targetProjectId);
+          const st = studies.find(s => s.study_id === updatedQ!.study_id);
+          if (st) {
+            st.screening_status = "included";
+            st.ai_decision = "include";
+            st.ai_confidence = 0.98;
+            st.ai_reason = `Resolved via human clarification: ${body.answer_label || body.answer}`;
+            saveStoredProjectStudies(targetProjectId, studies);
+          }
+        } catch (e) {}
       }
+
       return {
         question_id: qId,
-        study_id: qObj?.study_id || "study_albina_2024",
+        study_id: updatedQ?.study_id || "study_birua_2022",
         status: "answered",
         final_decision: "include",
         final_confidence: 0.98,
-        final_reason_text: "Clarification recorded and study re-evaluated.",
-        conflict_detected: false
+        final_reason_text: `Verified by reviewer: ${body.answer_label || body.answer}`,
+        conflict_detected: false,
       } as unknown as T;
     }
     if (path.includes("/pico/suggestions")) {
@@ -890,7 +951,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       alternatives: ["robins_i", "nos"]
     } as unknown as T;
   }
-  if (path.includes("/rob/summary") || path.includes("/rob-summary") || (path.includes("/rob") && path.includes("/summary"))) {
+  if (path.includes("/rob/summary") || path.includes("/rob-summary")) {
     return DEMO_ROB_SUMMARY as unknown as T;
   }
   if (path.match(/\/rob\/[^/]+$/)) {
@@ -932,104 +993,33 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     return allDecisions as unknown as T;
   }
   if (path.includes("/clarifications/stats")) {
-    return { project_id: "proj_pam_current", total: 3, pending: 2, answered: 1, expired: 0, by_type: { eligibility: 1, study_design: 1, intervention: 1 }, by_stage: { abstract: 1, fulltext: 2 } } as unknown as T;
+    const projectId = path.split("/projects/")[1]?.split("/")[0];
+    const questions = projectId ? getStoredClarifications(projectId) : [];
+    const pending = questions.filter(q => q.status === "pending").length;
+    const answered = questions.filter(q => q.status === "answered").length;
+    return {
+      project_id: projectId || "default",
+      total: questions.length,
+      pending,
+      answered,
+      expired: 0,
+      by_type: { eligibility: questions.length > 0 ? 1 : 0, study_design: questions.length > 1 ? 1 : 0, intervention: 0 },
+      by_stage: { abstract: questions.length > 0 ? 1 : 0, fulltext: questions.length > 1 ? 1 : 0 }
+    } as unknown as T;
   }
   if (path.includes("/clarifications")) {
+    const projectId = path.split("/projects/")[1]?.split("/")[0];
+    const studyMatch = path.match(/\/studies\/([^/]+)\/clarifications/);
+    if (studyMatch) {
+      const studyId = studyMatch[1];
+      const allQ = projectId ? getStoredClarifications(projectId) : getStoredClarifications("proj_pam_current");
+      return allQ.filter(q => q.study_id === studyId) as unknown as T;
+    }
+    const questions = projectId ? getStoredClarifications(projectId) : [];
     if (path.includes("status=pending")) {
-      return (DEMO_STUDY_CLARIFICATIONS as any[]).filter((q) => q.status === "pending") as unknown as T;
+      return questions.filter((q) => q.status === "pending") as unknown as T;
     }
-    return DEMO_STUDY_CLARIFICATIONS as unknown as T;
-  }
-  if (path.includes("/storm/deliberate") || path.includes("/storm")) {
-    const title = (body?.title || "").toLowerCase();
-    const abstract = (body?.abstract || "").toLowerCase();
-    const isRetrospective = title.includes("retrospective") || abstract.includes("retrospective") || abstract.includes("series");
-    const isTiciPooled = abstract.includes("2b/3") || abstract.includes("2b or 3");
-
-    const flaws = [];
-    if (isTiciPooled) {
-      flaws.push({
-        flaw_code: "TICI_POOLED_ENDPOINT",
-        severity: "MODERATE",
-        title: "Pooled Recanalization Definition (TICI 2b/3)",
-        description: "Study aggregates partial (TICI 2b) and complete (TICI 2c/3) reperfusion into a single endpoint, obscuring superior functional recovery associated with TICI 2c/3.",
-        advocated_by: "Dr. Sarah Chen (Neurointerventionalist)"
-      });
-    }
-    if (!abstract.includes("ecass") && !abstract.includes("sits-most")) {
-      flaws.push({
-        flaw_code: "SICH_CRITERIA_UNSPECIFIED",
-        severity: "HIGH",
-        title: "Unstandardized Symptomatic ICH Definition",
-        description: "Symptomatic intracranial hemorrhage reported without standard operational criteria (ECASS-III / SITS-MOST).",
-        advocated_by: "Dr. Marcus Vance (Stroke Neurologist)"
-      });
-    }
-    if (isRetrospective) {
-      flaws.push({
-        flaw_code: "SELECTION_BIAS_CONFOUNDING",
-        severity: "MODERATE",
-        title: "Retrospective Selection Bias",
-        description: "Observational cohort subject to selection bias; severely tortuous anatomies may have been systematically excluded.",
-        advocated_by: "Dr. Elena Rostova (Biostatistician)"
-      });
-    }
-
-    return {
-      title: body?.title || "Clinical Study",
-      laya_fast_triage: {
-        flaw_probability: flaws.length >= 2 ? 0.68 : 0.24,
-        has_flaw_warning: flaws.length >= 2,
-        primary_specialty: "interventional",
-        rob_score: isRetrospective ? 1.4 : 0.8,
-        rob_level: isRetrospective ? "moderate" : "low",
-        engine: "laya_system1_onnx"
-      },
-      consensus_status: flaws.length >= 2 ? "QUALIFIED_CONSENSUS" : "UNANIMOUS_CONSENSUS",
-      verdict_badge: flaws.length >= 2 ? "⚡ Qualified Consensus (With Flaws)" : "✅ Multi-Specialty Clinical Consensus",
-      verdict_color: flaws.length >= 2 ? "#d97706" : "#16a34a",
-      design_flaws: flaws,
-      total_flaws: flaws.length,
-      persona_opinions: [
-        {
-          persona_id: "persona_interventional",
-          name: "Dr. Sarah Chen, MD",
-          role: "Neurointerventional Radiologist",
-          avatar: "💉",
-          stance: isTiciPooled ? "cautionary" : "positive",
-          critique: isTiciPooled ? "Recanalization reporting lacks granular TICI 2c/3 breakdown." : "Catheter technique and recanalization verified by DSA.",
-          confidence: 0.92
-        },
-        {
-          persona_id: "persona_neurology",
-          name: "Dr. Marcus Vance, MD, PhD",
-          role: "Stroke Neurologist & Neurointensivist",
-          avatar: "🩺",
-          stance: "cautionary",
-          critique: "Adverse safety endpoints lack explicit ECASS-III sICH adjudication.",
-          confidence: 0.89
-        },
-        {
-          persona_id: "persona_surgeon",
-          name: "Dr. Alexander Thorne, MD",
-          role: "Cerebrovascular Neurosurgeon",
-          avatar: "🔬",
-          stance: "positive",
-          critique: "Vascular anatomy assessed; surgical decompression threshold noted.",
-          confidence: 0.86
-        },
-        {
-          persona_id: "persona_biostatistician",
-          name: "Dr. Elena Rostova, PhD",
-          role: "Lead Clinical Trial Biostatistician",
-          avatar: "📊",
-          stance: isRetrospective ? "critical" : "positive",
-          critique: isRetrospective ? "Confounding by indication present in retrospective series." : "Cohort design meets PRISMA reporting criteria.",
-          confidence: 0.94
-        }
-      ],
-      grand_rounds_summary: `Stanford STORM & LAYA multi-perspective review conducted across 4 specialties. ${flaws.length} design flaw(s) identified.`
-    } as unknown as T;
+    return questions as unknown as T;
   }
   if (path.includes("/exclusion-reasons")) {
     return DEMO_EXCLUSION_REASONS as unknown as T;
@@ -1322,7 +1312,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   }
   if (path.match(/\/projects\/[^/]+$/)) {
     const pId = path.split("/").pop();
-    if (pId === DEMO_PROJECT.project_id || pId === "demo" || pId === "proj_pam_current") return DEMO_PROJECT as unknown as T;
+    if (pId === DEMO_PROJECT.project_id) return DEMO_PROJECT as unknown as T;
     try {
       const custom = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
       const found = custom.find((p: any) => p.project_id === pId);
@@ -1359,14 +1349,13 @@ async function request<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const isBrowser = typeof window !== "undefined";
-  const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
   const base = getApiBase();
 
-  // If in demo mode, or on GitHub Pages without a verified custom backend, or no base is configured:
-  if (shouldUseDemoFallback() || (isGithubPages && !localStorage.getItem("custom_api_base")) || !base) {
+  // Demo data is available only when explicitly selected in connection settings.
+  if (shouldUseDemoFallback()) {
     updateApiState({
       state: isDemoModeEnabled() ? "explicit_demo" : "demo_fallback",
-      apiBase: "Local In-Browser Engine",
+      apiBase: base,
       isExplicitDemo: isDemoModeEnabled(),
     });
     return handleDemoRequest<T>(path, options);
@@ -1382,10 +1371,6 @@ async function request<T>(
   try {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
-      if (shouldUseDemoFallback() || isGithubPages) {
-        console.warn(`[API] Server returned ${res.status}, falling back to local engine for ${path}`);
-        return handleDemoRequest<T>(path, options);
-      }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }
@@ -1395,37 +1380,27 @@ async function request<T>(
   } catch (err: any) {
     const msg = err?.message || "Network request failed";
     console.warn(`[API Connection Failed] ${base}${path}:`, err);
-    // Graceful offline fallback: if network request failed (e.g. cloudflare down, offline, or gh-pages static), smoothly fallback to local demo data
-    if (isGithubPages || shouldUseDemoFallback() || !base || base.includes("trycloudflare.com")) {
-      console.warn(`[API Connection Failed] Smoothly falling back to local engine for: ${path}`);
-      updateApiState({ state: "demo_fallback", apiBase: "Local In-Browser Engine", errorMessage: undefined });
-      return handleDemoRequest<T>(path, options);
-    }
     updateApiState({ state: "error", apiBase: base, errorMessage: msg });
     throw err;
   }
 }
 
-// Authenticated requests fallback cleanly to local state when offline or on GitHub Pages
+// Human identity and decision writes must never fall back to demo data.
 async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const isBrowser = typeof window !== "undefined";
-  const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
-  const token = isBrowser ? localStorage.getItem("token") : null;
-  const base = getApiBase();
-
+  const token = localStorage.getItem("token");
   if (!token) {
-    if (shouldUseDemoFallback() || isGithubPages || !base) {
-      return handleDemoRequest<T>(path, options);
+    if (shouldUseDemoFallback()) {
+      return getDemoFallback<T>(path, options);
     }
     throw new Error("Sign in to save screening decisions.");
   }
   try {
-    const res = await fetch(`${base}${path}`, {
+    const res = await fetch(`${getApiBase()}${path}`, {
       ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
-      if (shouldUseDemoFallback() || isGithubPages) {
-        return handleDemoRequest<T>(path, options);
+      if (shouldUseDemoFallback()) {
+        return getDemoFallback<T>(path, options);
       }
       const error = await res.json().catch(() => ({}));
       const detail = typeof error.detail === "string" ? error.detail : `Screening request failed (HTTP ${res.status}).`;
@@ -1433,8 +1408,8 @@ async function authenticatedRequest<T>(path: string, options: RequestInit = {}):
     }
     return res.json();
   } catch (err: any) {
-    if (shouldUseDemoFallback() || isGithubPages || !base || base.includes("trycloudflare.com")) {
-      return handleDemoRequest<T>(path, options);
+    if (shouldUseDemoFallback()) {
+      return getDemoFallback<T>(path, options);
     }
     throw err;
   }
@@ -3571,44 +3546,20 @@ export const api = {
       body: JSON.stringify({ variables }),
     }),
   importVariablesFromExcel: async (projectId: string, file: File, autoCommit = true) => {
-    const isGithubPages = typeof window !== "undefined" && window.location.hostname.includes("github.io");
-    const base = getApiBase();
-    if (isGithubPages || shouldUseDemoFallback() || !base) {
-      return {
-        status: "success",
-        total_sections: 4,
-        total_variables: 12,
-        sections: ["Study Identification", "Demographics & Baseline", "Imaging Characteristics", "Clinical Outcomes"],
-        imported_variables: [],
-      };
-    }
     const formData = new FormData();
     formData.append("file", file);
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    try {
-      const res = await fetch(`${base}/projects/${projectId}/variables/import-excel?auto_commit=${autoCommit}`, {
-        method: "POST",
-        body: formData,
-        headers,
-      });
-      if (!res.ok) {
-        throw new Error(`Excel import failed: ${res.statusText}`);
-      }
-      return await res.json();
-    } catch (err: any) {
-      if (isGithubPages || shouldUseDemoFallback()) {
-        return {
-          status: "success",
-          total_sections: 4,
-          total_variables: 12,
-          sections: ["Study Identification", "Demographics & Baseline", "Imaging Characteristics", "Clinical Outcomes"],
-          imported_variables: [],
-        };
-      }
-      throw err;
+    const res = await fetch(`${API_BASE}/projects/${projectId}/variables/import-excel?auto_commit=${autoCommit}`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (!res.ok) {
+      throw new Error(`Excel import failed: ${res.statusText}`);
     }
+    return await res.json();
   },
 
   // PRISMA SVG (R-generated)
@@ -4104,46 +4055,6 @@ export const api = {
     formData.append("file", file);
     return request<any>("/rigor-scan/scan-pdf", { method: "POST", body: formData });
   },
-
-  // ── Stanford STORM & LAYA Clinical Deliberation ──
-  getStormPersonas: () =>
-    request<any[]>("/storm/personas"),
-  deliberateStorm: (data: { title: string; abstract?: string; topic?: string; extracted_variables?: any[] }) =>
-    request<{
-      title: string;
-      laya_fast_triage: {
-        flaw_probability: number;
-        has_flaw_warning: boolean;
-        primary_specialty: string;
-        rob_score: number;
-        rob_level: string;
-        engine: string;
-      };
-      consensus_status: string;
-      verdict_badge: string;
-      verdict_color: string;
-      design_flaws: Array<{
-        flaw_code: string;
-        severity: string;
-        title: string;
-        description: string;
-        advocated_by: string;
-      }>;
-      total_flaws: number;
-      persona_opinions: Array<{
-        persona_id: string;
-        name: string;
-        role: string;
-        avatar: string;
-        stance: string;
-        critique: string;
-        confidence: number;
-      }>;
-      grand_rounds_summary: string;
-    }>("/storm/deliberate", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
 };
 
 

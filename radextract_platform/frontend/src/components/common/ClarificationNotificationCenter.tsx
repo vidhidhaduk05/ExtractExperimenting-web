@@ -22,6 +22,7 @@ import {
   Send,
   Loader2,
   ExternalLink,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -177,191 +178,207 @@ export function ClarificationNotificationCenter({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeToasts, selectedOptions, isDrawerOpen]);
 
+  const [expandedToastAnswerIds, setExpandedToastAnswerIds] = useState<Set<string>>(new Set());
+
+  const toggleToastQuickAnswer = (qId: string) => {
+    setExpandedToastAnswerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(qId)) next.delete(qId);
+      else next.add(qId);
+      return next;
+    });
+  };
+
   if (!projectId) return null;
 
   return (
     <>
       {/* ─────────────────────────────────────────────────────────────
-          1. BOTTOM-RIGHT TOAST STACK (Only alert when on ANOTHER screen)
+          1. BOTTOM-RIGHT DESKTOP NOTIFICATION (Only alert on other screens)
           ───────────────────────────────────────────────────────────── */}
       {!isScreeningPage && (
-        <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 max-w-md w-full pointer-events-none px-4 sm:px-0">
+        <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0">
           {/* Floating counter pill if there are pending questions */}
           {pendingQuestions.length > 0 && !isDrawerOpen && (
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="pointer-events-auto flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#141413] text-[#FAF9F3] text-xs font-medium shadow-lg hover:bg-black/85 transition-all transform hover:-translate-y-0.5 border border-purple-500/30"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
-            </span>
-            <span className="font-serif italic font-medium">Clarification Inbox</span>
-            <span className="bg-purple-600 text-white font-mono text-[10px] px-1.5 py-0.2 rounded-full font-bold">
-              {pendingQuestions.length}
-            </span>
-          </button>
-        )}
-
-        {/* Sequential Toast Notifications */}
-        {activeToasts.map((q, idx) => {
-          const feedback = successFeedback[q.question_id];
-          const curSelected = selectedOptions[q.question_id] || "";
-          const isSubmitting = answerMutation.isPending && (answerMutation.variables as any)?.questionId === q.question_id;
-
-          return (
-            <div
-              key={q.question_id}
-              className={cn(
-                "pointer-events-auto w-full rounded-2xl border p-4 shadow-xl backdrop-blur-md transition-all duration-300",
-                feedback
-                  ? "bg-emerald-50/95 border-emerald-300 text-emerald-950"
-                  : "bg-[#FAF9F3]/95 border-black/10 text-[#141413]"
-              )}
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141413] text-[#FAF9F3] text-xs font-medium shadow-lg hover:bg-black/85 transition-all transform hover:-translate-y-0.5 border border-purple-500/30"
             >
-              {/* Toast Header */}
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-                    <HelpCircle className="h-2.5 w-2.5" />
-                    AI Screening Clarification
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase font-medium bg-black/[0.05] text-[#6B665E]">
-                    {q.stage}
-                  </span>
-                  {q.pico_aspect && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                      {q.pico_aspect}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => setDismissedToastIds((prev) => new Set([...prev, q.question_id]))}
-                  className="p-1 rounded-full text-[#6B665E] hover:text-[#141413] hover:bg-black/5 transition-colors"
-                  title="Dismiss toast (remains in Inbox)"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
+              </span>
+              <span className="font-serif italic font-medium">Clarification Inbox</span>
+              <span className="bg-purple-600 text-white font-mono text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                {pendingQuestions.length}
+              </span>
+            </button>
+          )}
 
-              {/* Study Title with Link */}
-              <div className="mb-2">
-                <Link
-                  to={`/projects/${projectId}/screening`}
-                  className="font-serif font-semibold text-xs text-[#141413] hover:underline line-clamp-1 flex items-center gap-1 group"
-                >
-                  <span>{q.study_title || `Study ${q.study_id}`}</span>
-                  <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 text-[#8A817A] transition-opacity" />
-                </Link>
-              </div>
+          {/* Sequential Toast Notifications (Desktop-style floating notification) */}
+          {activeToasts.map((q) => {
+            const feedback = successFeedback[q.question_id];
+            const curSelected = selectedOptions[q.question_id] || "";
+            const isSubmitting = answerMutation.isPending && (answerMutation.variables as any)?.questionId === q.question_id;
+            const isQuickOpen = expandedToastAnswerIds.has(q.question_id);
 
-              {/* Success Banner if just answered */}
-              {feedback ? (
-                <div className="p-3 rounded-xl bg-emerald-100/80 border border-emerald-300 flex items-start gap-2.5 text-xs text-emerald-900 animate-fadeIn">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold">Answer recorded & study re-evaluated!</p>
-                    <p className="text-[11px] text-emerald-800 mt-0.5">
-                      Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% conf)
-                    </p>
-                    <p className="text-[10px] text-emerald-700 italic mt-0.5">{feedback.final_reason_text}</p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Question Text */}
-                  <p className="text-xs text-[#141413]/90 font-medium leading-relaxed mb-3">
-                    {q.question_text}
-                  </p>
-
-                  {/* Context excerpt if present */}
-                  {q.context_excerpt && (
-                    <div className="mb-3 text-[11px] text-[#6B665E] bg-black/[0.03] rounded-lg p-2 border-l-2 border-purple-400 font-serif italic line-clamp-2">
-                      "{q.context_excerpt}"
+            return (
+              <div
+                key={q.question_id}
+                className={cn(
+                  "pointer-events-auto w-88 max-w-sm rounded-xl border p-3.5 shadow-2xl backdrop-blur-md transition-all duration-300",
+                  feedback
+                    ? "bg-emerald-50/95 border-emerald-300 text-emerald-950"
+                    : "bg-white/95 dark:bg-[#1E1E1E]/95 border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100"
+                )}
+                role="alert"
+              >
+                {/* Desktop Notification Header */}
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <Sparkles className="h-3 w-3" />
                     </div>
-                  )}
-
-                  {/* Options List */}
-                  <div className="space-y-1.5 mb-3">
-                    {q.options.map((opt, optIdx) => {
-                      const isChosen = curSelected === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          onClick={() => {
-                            setSelectedOptions((prev) => ({ ...prev, [q.question_id]: opt.value }));
-                          }}
-                          className={cn(
-                            "w-full text-left px-2.5 py-1.5 rounded-lg border text-xs transition-all flex items-start gap-2",
-                            isChosen
-                              ? "bg-purple-50 border-purple-400 text-purple-950 font-medium shadow-xs"
-                              : "bg-white/80 border-black/10 hover:border-black/20 text-[#141413]"
-                          )}
-                        >
-                          <span className="font-mono text-[10px] font-bold px-1 rounded bg-black/[0.06] text-[#6B665E] shrink-0 mt-0.5">
-                            {optIdx + 1}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="leading-tight">{opt.label}</div>
-                            {opt.description && (
-                              <div className="text-[10px] text-[#6B665E] truncate mt-0.5 font-normal">
-                                {opt.description}
-                              </div>
-                            )}
-                          </div>
-                          {isChosen && <Check className="h-3.5 w-3.5 text-purple-600 shrink-0 mt-0.5" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Action Bar */}
-                  <div className="flex items-center justify-between pt-2 border-t border-black/[0.08]">
-                    <span className="text-[10px] text-[#8A817A] font-mono">
-                      Keys [1-{q.options.length}], Enter to submit
+                    <span className="text-[11px] font-bold text-purple-900 dark:text-purple-300 truncate">
+                      AI Screening Clarification
                     </span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase font-semibold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 shrink-0">
+                      {q.stage}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-400 font-sans">Just now</span>
                     <button
-                      disabled={!curSelected || isSubmitting}
-                      onClick={() => {
-                        const opt = q.options.find((o) => o.value === curSelected);
-                        answerMutation.mutate({
-                          questionId: q.question_id,
-                          answer: curSelected,
-                          answerLabel: opt?.label,
-                        });
-                      }}
-                      className={cn(
-                        "btn-primary text-xs py-1 px-3 flex items-center gap-1.5 shadow-xs",
-                        !curSelected && "opacity-50 cursor-not-allowed"
-                      )}
+                      onClick={() => setDismissedToastIds((prev) => new Set([...prev, q.question_id]))}
+                      className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                      title="Dismiss notification"
                     >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          <span>Re-evaluating...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Submit Answer</span>
-                          <ChevronRight className="h-3 w-3" />
-                        </>
-                      )}
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <div className="mt-2 text-right">
-                    <Link
-                      to={`/projects/${projectId}/screening`}
-                      className="text-[10px] text-purple-700 hover:text-purple-900 font-semibold inline-flex items-center gap-1"
-                    >
-                      <span>Open in Screening Workspace</span>
-                      <ExternalLink className="h-2.5 w-2.5" />
-                    </Link>
+                </div>
+
+                {/* Study Title with Link */}
+                <div className="mb-1">
+                  <Link
+                    to={`/projects/${projectId}/screening#clarifications`}
+                    className="font-sans font-semibold text-xs text-slate-900 dark:text-white hover:text-purple-600 dark:hover:text-purple-400 hover:underline line-clamp-1 flex items-center gap-1 group"
+                    title={q.study_title}
+                  >
+                    <span className="truncate">{q.study_title || `Study ${q.study_id}`}</span>
+                    <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 text-slate-400 transition-opacity shrink-0" />
+                  </Link>
+                </div>
+
+                {/* Success Banner if just answered */}
+                {feedback ? (
+                  <div className="p-2.5 rounded-lg bg-emerald-100/90 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 flex items-start gap-2 text-xs text-emerald-900 dark:text-emerald-200 animate-fadeIn mt-1">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-[11px]">Clarified & Re-screened!</p>
+                      <p className="text-[10px] text-emerald-800 dark:text-emerald-300 mt-0.5 font-medium">
+                        Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% conf)
+                      </p>
+                    </div>
                   </div>
-                </>
-              )}
-            </div>
-          );
-        })}
+                ) : (
+                  <>
+                    {/* Question Text (Compact snippet) */}
+                    <p className="text-[11px] text-slate-700 dark:text-slate-300 font-normal leading-snug line-clamp-2 mb-2.5">
+                      {q.question_text}
+                    </p>
+
+                    {/* Actions Bar */}
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-white/5">
+                      <Link
+                        to={`/projects/${projectId}/screening#clarifications`}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 px-2.5 py-1 rounded-md transition-colors"
+                      >
+                        <ClipboardCheck className="h-3 w-3" />
+                        <span>Clarify in Dashboard</span>
+                        <ChevronRight className="h-3 w-3" />
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleToastQuickAnswer(q.question_id)}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                      >
+                        <span>Quick Answer</span>
+                        <ChevronDown className={cn("h-3 w-3 transition-transform", isQuickOpen && "rotate-180")} />
+                      </button>
+                    </div>
+
+                    {/* Expandable Quick Answer Options (Collapsible drawer) */}
+                    {isQuickOpen && (
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/10 space-y-1.5 animate-fadeIn">
+                        <div className="space-y-1">
+                          {q.options.map((opt, optIdx) => {
+                            const isChosen = curSelected === opt.value;
+                            return (
+                              <button
+                                key={opt.value}
+                                onClick={() => {
+                                  setSelectedOptions((prev) => ({ ...prev, [q.question_id]: opt.value }));
+                                }}
+                                className={cn(
+                                  "w-full text-left px-2 py-1.5 rounded-md border text-[11px] transition-all flex items-start gap-1.5",
+                                  isChosen
+                                    ? "bg-purple-50 border-purple-400 text-purple-950 font-medium"
+                                    : "bg-slate-50/70 border-slate-200 hover:bg-slate-100/70 text-slate-800"
+                                )}
+                              >
+                                <span className="font-mono text-[9px] font-bold px-1 rounded bg-black/5 text-slate-600 shrink-0 mt-0.5">
+                                  {optIdx + 1}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="leading-tight font-medium truncate">{opt.label}</div>
+                                </div>
+                                {isChosen && <Check className="h-3 w-3 text-purple-600 shrink-0 mt-0.5" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[9px] text-slate-400 font-mono">
+                            Keys [1-{q.options.length}]
+                          </span>
+                          <button
+                            disabled={!curSelected || isSubmitting}
+                            onClick={() => {
+                              const opt = q.options.find((o) => o.value === curSelected);
+                              answerMutation.mutate({
+                                questionId: q.question_id,
+                                answer: curSelected,
+                                answerLabel: opt?.label,
+                              });
+                            }}
+                            className={cn(
+                              "btn-primary text-[10px] py-1 px-2.5 flex items-center gap-1 rounded-md",
+                              !curSelected && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                                <span>Saving...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Submit</span>
+                                <ChevronRight className="h-2.5 w-2.5" />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

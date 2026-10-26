@@ -108,6 +108,7 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     vi.spyOn(api, "listScreeningKeywords").mockResolvedValue([]);
     vi.spyOn(api, "getAbstractHighlights").mockResolvedValue({ all_spans: [], title_spans: [] } as any);
     vi.spyOn(api, "getStudyClarifications").mockResolvedValue([] as any);
+    vi.spyOn(api, "listClarifications").mockResolvedValue([] as any);
     vi.spyOn(api, "robSummary").mockResolvedValue({ assessments: [] } as any);
     vi.spyOn(api, "getRobRunProgress").mockResolvedValue({ active: false } as any);
   });
@@ -142,12 +143,13 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     await waitFor(() => expect(api.screeningDecision).toHaveBeenCalledWith("study_002", expect.objectContaining({ stage: "ta" })));
   });
 
-  it("enables decision buttons and hotkeys so the reviewer can test without signing in", async () => {
+  it("blocks decision buttons and hotkeys when no user is signed in", async () => {
     localStorage.removeItem("token");
     renderScreeningPage();
-    expect(await screen.findByRole("button", { name: /Include Study/i })).not.toBeDisabled();
+    expect(await screen.findByRole("button", { name: /Include Study/i })).toBeDisabled();
     fireEvent.keyDown(window, { key: "1" });
-    await waitFor(() => expect(api.screeningDecision).toHaveBeenCalled());
+    expect(api.screeningDecision).not.toHaveBeenCalled();
+    expect(screen.getByText("Sign in with a valid account to save screening decisions.")).toBeInTheDocument();
   });
 
   it("displays the verified account name rather than a browser-stored username", async () => {
