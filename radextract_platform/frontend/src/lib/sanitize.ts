@@ -1,9 +1,9 @@
 /**
- * Utility for sanitizing raw SVG markup before passing to dangerouslySetInnerHTML.
+ * Utility for sanitizing raw SVG markup and HTML content before passing to dangerouslySetInnerHTML.
  * Removes script tags, event handlers, iframe/object elements, and dangerous URLs (e.g. javascript:).
  */
 
-const DISALLOWED_TAGS = new Set([
+const DISALLOWED_SVG_TAGS = new Set([
   "script",
   "iframe",
   "object",
@@ -18,9 +18,48 @@ const DISALLOWED_TAGS = new Set([
   "base",
   "link",
   "meta",
+  "style",
+  "animate",
+  "set",
+  "animatetransform",
+  "animatecolor",
+]);
+
+const DISALLOWED_HTML_TAGS = new Set([
+  "script",
+  "iframe",
+  "object",
+  "embed",
+  "base",
+  "link",
+  "meta",
+  "applet",
 ]);
 
 const DANGEROUS_URI_ATTRS = new Set(["href", "xlink:href", "src", "action", "data"]);
+
+/**
+ * Sanitizes an HTML string using the browser DOMParser API.
+ * Safely removes executable script/iframe tags, inline event attributes, and dangerous URIs.
+ */
+export function sanitizeHtml(htmlContent: string): string {
+  if (!htmlContent || typeof htmlContent !== "string") {
+    return "";
+  }
+
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") {
+    return "";
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, "text/html");
+    cleanTree(doc.body, DISALLOWED_HTML_TAGS);
+    return doc.body.innerHTML;
+  } catch {
+    return "";
+  }
+}
 
 /**
  * Sanitizes an SVG string using the browser DOMParser API.
@@ -32,11 +71,7 @@ export function sanitizeSvg(svgContent: string): string {
   }
 
   if (typeof window === "undefined" || typeof DOMParser === "undefined") {
-    // Basic fallback regex strip for SSR or non-browser environments
-    return svgContent
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(/\son\w+\s*=\s*(['"])[^'"]*\1/gi, "")
-      .replace(/\son\w+\s*=\s*[^\s>]+/gi, "");
+    return "";
   }
 
   try {
@@ -48,20 +83,20 @@ export function sanitizeSvg(svgContent: string): string {
     if (parserError) {
       // Fallback to HTML parser if SVG parser failed
       const htmlDoc = parser.parseFromString(svgContent, "text/html");
-      cleanTree(htmlDoc.body);
+      cleanTree(htmlDoc.body, DISALLOWED_SVG_TAGS);
       return htmlDoc.body.innerHTML;
     }
 
-    cleanTree(doc.documentElement);
+    cleanTree(doc.documentElement, DISALLOWED_SVG_TAGS);
     return new XMLSerializer().serializeToString(doc.documentElement);
   } catch {
-    return svgContent;
+    return "";
   }
 }
 
-function cleanTree(node: Element) {
+function cleanTree(node: Element, disallowedTags: Set<string> = DISALLOWED_SVG_TAGS) {
   const tagName = node.tagName.toLowerCase();
-  if (DISALLOWED_TAGS.has(tagName)) {
+  if (disallowedTags.has(tagName)) {
     node.remove();
     return;
   }
@@ -89,6 +124,6 @@ function cleanTree(node: Element) {
   // Recursively clean children
   const children = Array.from(node.children);
   for (const child of children) {
-    cleanTree(child);
+    cleanTree(child, disallowedTags);
   }
 }
