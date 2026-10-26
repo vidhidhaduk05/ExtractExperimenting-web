@@ -68,8 +68,13 @@ async def create_grade(
 
 
 @router.get("/projects/{project_id}/grade")
-async def list_grade(project_id: str, conn: DBBackend = Depends(get_db)):
+async def list_grade(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """List all GRADE assessments for a project."""
+    check_project_access(conn, project_id, user)
     return grade_service.list_grade_assessments(project_id, db=conn)
 
 
@@ -144,8 +149,13 @@ async def get_sof_table(grade_id: str, conn: DBBackend = Depends(get_db)):
 # ── Starting level ──
 
 @router.get("/projects/{project_id}/grade/starting-level")
-async def get_starting_level(project_id: str, conn: DBBackend = Depends(get_db)):
+async def get_starting_level(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Auto-determine the GRADE starting level from study designs."""
+    check_project_access(conn, project_id, user)
     level = grade_service.determine_starting_level(project_id, db=conn)
     return {"project_id": project_id, "starting_level": level}
 
@@ -156,9 +166,11 @@ async def get_starting_level(project_id: str, conn: DBBackend = Depends(get_db))
 async def export_grade(
     project_id: str,
     format: str = Query("csv", pattern="^(csv)$"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Export all GRADE assessments for a project as CSV."""
+    check_project_access(conn, project_id, user)
     filepath = grade_service.export_grade_csv(project_id, db=conn)
     filename = filepath.split("/")[-1]
     from fastapi.responses import FileResponse
