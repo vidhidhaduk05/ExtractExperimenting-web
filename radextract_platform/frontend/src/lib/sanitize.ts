@@ -48,11 +48,7 @@ export function sanitizeHtml(htmlContent: string): string {
   }
 
   if (typeof window === "undefined" || typeof DOMParser === "undefined") {
-    return htmlContent
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(/<(iframe|object|embed|base|link|meta)\b[^>]*>/gi, "")
-      .replace(/\son\w+\s*=\s*(['"])[^'"]*\1/gi, "")
-      .replace(/\son\w+\s*=\s*[^\s>]+/gi, "");
+    return "";
   }
 
   try {
@@ -61,7 +57,7 @@ export function sanitizeHtml(htmlContent: string): string {
     cleanTree(doc.body, DISALLOWED_HTML_TAGS);
     return doc.body.innerHTML;
   } catch {
-    return htmlContent;
+    return "";
   }
 }
 
@@ -75,12 +71,7 @@ export function sanitizeSvg(svgContent: string): string {
   }
 
   if (typeof window === "undefined" || typeof DOMParser === "undefined") {
-    // Basic fallback regex strip for SSR or non-browser environments
-    return svgContent
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(/<(style|animate|set|animatetransform|animatecolor)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>/gi, "")
-      .replace(/\son\w+\s*=\s*(['"])[^'"]*\1/gi, "")
-      .replace(/\son\w+\s*=\s*[^\s>]+/gi, "");
+    return "";
   }
 
   try {
@@ -99,7 +90,7 @@ export function sanitizeSvg(svgContent: string): string {
     cleanTree(doc.documentElement, DISALLOWED_SVG_TAGS);
     return new XMLSerializer().serializeToString(doc.documentElement);
   } catch {
-    return svgContent;
+    return "";
   }
 }
 
