@@ -209,8 +209,7 @@ export function ExtractionSheetPage() {
 
   const availablePapers = useMemo(() => {
     if (!projectStudies || projectStudies.length === 0) {
-      if (projectId === "demo") return BENCHMARK_PAPERS;
-      return [];
+      return BENCHMARK_PAPERS;
     }
     return projectStudies.map((s, idx) => {
       const match = BENCHMARK_PAPERS.find((b) => b.id === s.study_id);
