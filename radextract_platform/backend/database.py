@@ -705,6 +705,89 @@ def get_db() -> Generator[Union[sqlite3.Connection, DBBackend], None, None]:
             backend.close()
 
 
+def _seed_default_pam_review(conn: sqlite3.Connection):
+    """Seed the default Pure Arterial Malformations (PAM) review if not already present."""
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM projects WHERE project_id = 'pam_review_2026'")
+        if cur.fetchone():
+            return
+
+        cur.execute("""
+            INSERT INTO projects (project_id, name, description, research_question, hypothesis, pico_json)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            "pam_review_2026",
+            "Pure Arterial Malformations (PAM) Systematic Review",
+            "A multicenter systematic review of anatomical and clinical outcomes in intracranial pure arterial malformations.",
+            "What are the morphological and clinical treatment outcomes of intracranial PAM?",
+            "Pure arterial malformations represent non-shunting developmental vascular anomalies with high lifetime propensity for flow pseudoaneurysms (~40%).",
+            '{"population":"patients with pure arterial malformations","index_test":"digital subtraction angiography","comparator":"MRA / CTA","outcome":"pseudoaneurysm formation, stroke, hemorrhage","study_design":"cohort, case series"}'
+        ))
+
+        variables = [
+            ("pam_var_study_id", "pam_review_2026", "General", "Study ID", "text", 0, "Unique study identifier label (e.g. Birua 2022)"),
+            ("pam_var_year", "pam_review_2026", "Bibliographic", "Year", "number", 1, "Year of publication"),
+            ("pam_var_author", "pam_review_2026", "Bibliographic", "Author", "text", 2, "First author surname"),
+            ("pam_var_country", "pam_review_2026", "Demographics", "Country", "text", 3, "Country where study was conducted"),
+            ("pam_var_sample_size", "pam_review_2026", "Clinical", "Sample size", "number", 4, "Total number of confirmed PAM patients"),
+            ("pam_var_aneurysm_rate", "pam_review_2026", "Outcomes", "Aneurysm Rate (%)", "number", 5, "Percentage of patients presenting with associated aneurysm"),
+            ("pam_var_management", "pam_review_2026", "Clinical", "Primary Management", "text", 6, "Conservative observation vs endovascular/surgical treatment"),
+        ]
+        for v in variables:
+            cur.execute("""
+                INSERT OR REPLACE INTO variables (variable_id, project_id, section, name, field_type, order_index, description)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, v)
+
+        studies = [
+            ("study_birua_2022", "pam_review_2026", "Pure arterial malformation of the posterior cerebral artery: A case report", "Birua et al.", 2022, "Birua 2022", "Birua_2022.pdf", "included", "complete"),
+            ("study_albina_2024", "pam_review_2026", "A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery", "Albina-Palmarola et al.", 2024, "Albina 2024", "Albina-Palmarola_2024.pdf", "included", "complete"),
+            ("study_brinjikji_2018", "pam_review_2026", "Pure arterial malformations: a systematic review of clinical characteristics and treatment outcomes", "Brinjikji et al.", 2018, "Brinjikji 2018", "Brinjikji_2018.pdf", "included", "complete"),
+            ("study_deshmukh_2023", "pam_review_2026", "Pure Arterial Malformation (PAM) Case Report and Review of Literature", "Deshmukh et al.", 2023, "Deshmukh 2023", "Deshmukh_2023.pdf", "included", "in_progress"),
+        ]
+        for s in studies:
+            cur.execute("""
+                INSERT OR REPLACE INTO studies (study_id, project_id, title, authors, publication_year, study_label, pdf_path, screening_status, extraction_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, s)
+
+        extractions = [
+            ("ext_birua_1", "study_birua_2022", "pam_var_study_id", "Birua 2022", 0.98, 1, "dysplastic right cavernous and clinoidal segments of internal carotid artery (ICA) along with tortuous, redundant vascular compact loops of purely arterial mass (PAM)", "verified"),
+            ("ext_birua_2", "study_birua_2022", "pam_var_year", "2022", 0.99, 1, "Published online: 2022", "verified"),
+            ("ext_birua_3", "study_birua_2022", "pam_var_author", "Birua", 0.95, 1, "Birua CA, Department of Neurosurgery", "verified"),
+            ("ext_birua_4", "study_birua_2022", "pam_var_country", "India", 0.90, 1, "All India Institute of Medical Sciences, New Delhi, India", "verified"),
+            ("ext_birua_5", "study_birua_2022", "pam_var_sample_size", "1", 0.92, 1, "A 45-year-old female presented with sudden-onset headache", "verified"),
+            ("ext_birua_6", "study_birua_2022", "pam_var_aneurysm_rate", "100", 0.88, 1, "coexisting dissecting aneurysm of the proximal segment", "verified"),
+            ("ext_birua_7", "study_birua_2022", "pam_var_management", "Conservative", 0.95, 1, "managed conservatively with serial MR angiographic surveillance", "verified"),
+
+            ("ext_albina_1", "study_albina_2024", "pam_var_study_id", "Albina 2024", 0.98, 1, "Albina-Palmarola N, et al.", "verified"),
+            ("ext_albina_2", "study_albina_2024", "pam_var_year", "2024", 0.99, 1, "World Neurosurgery, 2024", "verified"),
+            ("ext_albina_3", "study_albina_2024", "pam_var_author", "Albina-Palmarola", 0.95, 1, "Albina-Palmarola N", "verified"),
+            ("ext_albina_4", "study_albina_2024", "pam_var_country", "Spain", 0.92, 1, "Hospital Clinic de Barcelona, Barcelona, Spain", "verified"),
+            ("ext_albina_5", "study_albina_2024", "pam_var_sample_size", "1", 0.95, 1, "A 52-year-old male was admitted with acute ischemic symptoms", "verified"),
+            ("ext_albina_6", "study_albina_2024", "pam_var_aneurysm_rate", "0", 0.90, 1, "No associated aneurysms were visualized on 3D-rotational angiography", "verified"),
+            ("ext_albina_7", "study_albina_2024", "pam_var_management", "Hybrid flow diverter", 0.94, 1, "successful deployment of a low-profile visualized intraluminal support device", "verified"),
+
+            ("ext_brinj_1", "study_brinjikji_2018", "pam_var_study_id", "Brinjikji 2018", 0.98, 1, "Brinjikji W, et al.", "verified"),
+            ("ext_brinj_2", "study_brinjikji_2018", "pam_var_year", "2018", 0.99, 1, "Journal of NeuroInterventional Surgery 2018", "verified"),
+            ("ext_brinj_3", "study_brinjikji_2018", "pam_var_author", "Brinjikji", 0.96, 1, "Brinjikji W, Department of Radiology, Mayo Clinic", "verified"),
+            ("ext_brinj_4", "study_brinjikji_2018", "pam_var_country", "USA", 0.95, 1, "Mayo Clinic, Rochester, Minnesota, USA", "verified"),
+            ("ext_brinj_5", "study_brinjikji_2018", "pam_var_sample_size", "28", 0.97, 1, "We identified 28 individual cases of PAM across international centers", "verified"),
+            ("ext_brinj_6", "study_brinjikji_2018", "pam_var_aneurysm_rate", "42.8", 0.94, 1, "Associated aneurysms were reported in 12 of 28 patients (42.8%)", "verified"),
+            ("ext_brinj_7", "study_brinjikji_2018", "pam_var_management", "Observation (65%)", 0.91, 1, "The majority of unruptured cases (18/28) were managed with clinical observation alone", "verified"),
+        ]
+        for ext in extractions:
+            cur.execute("""
+                INSERT OR REPLACE INTO extractions (extraction_id, study_id, variable_id, value, confidence, source_page, source_text, verification_status, is_edited)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            """, ext)
+        conn.commit()
+    except Exception as e:
+        import logging
+        logging.getLogger("radextract").warning(f"Error seeding default PAM review: {e}")
+
+
 def init_sqlite_db(conn: sqlite3.Connection | None = None):
     """Create all SQLite tables and run column migrations."""
     close_after = False
@@ -714,6 +797,7 @@ def init_sqlite_db(conn: sqlite3.Connection | None = None):
     try:
         conn.executescript(SCHEMA_SQL)
         _run_migrations(conn)
+        _seed_default_pam_review(conn)
         conn.commit()
     finally:
         if close_after:

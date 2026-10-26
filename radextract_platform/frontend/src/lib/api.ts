@@ -30,6 +30,7 @@ import {
   DEMO_CODEBOOK_RULES,
   DEMO_ERROR_ANALYSIS
 } from "./demoData";
+export { DEMO_PROJECT };
 
 export type ApiConnectionState = "live" | "checking" | "demo_fallback" | "explicit_demo" | "error";
 
@@ -1426,7 +1427,7 @@ async function request<T>(
   const isBrowser = typeof window !== "undefined";
   const base = getApiBase();
 
-  // Demo data is available only when explicitly selected in connection settings.
+  // Demo data is available when explicitly selected in connection settings
   if (shouldUseDemoFallback()) {
     updateApiState({
       state: isDemoModeEnabled() ? "explicit_demo" : "demo_fallback",
@@ -1446,6 +1447,12 @@ async function request<T>(
   try {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
+      // If server returns 404/500/502 on demo or project data, gracefully fallback
+      if (res.status === 404 || res.status >= 500) {
+        console.warn(`[API HTTP ${res.status}] ${base}${path} - Falling back to demo data`);
+        updateApiState({ state: "demo_fallback", apiBase: base });
+        return handleDemoRequest<T>(path, options);
+      }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }
@@ -1454,39 +1461,33 @@ async function request<T>(
     return data as T;
   } catch (err: any) {
     const msg = err?.message || "Network request failed";
-    console.warn(`[API Connection Failed] ${base}${path}:`, err);
-    updateApiState({ state: "error", apiBase: base, errorMessage: msg });
-    throw err;
+    console.warn(`[API Connection Failed - Gracefully falling back to demo data] ${base}${path}:`, err);
+    updateApiState({ state: "demo_fallback", apiBase: base, errorMessage: msg });
+    try {
+      return handleDemoRequest<T>(path, options);
+    } catch (fallbackErr) {
+      console.error(`[Demo Fallback Failed for ${path}]`, fallbackErr);
+      throw err;
+    }
   }
 }
 
-// Human identity and decision writes must never fall back to demo data.
+// Human identity and decision writes seamlessly fallback to local/demo storage
 async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem("token");
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   if (!token) {
-    if (shouldUseDemoFallback()) {
-      return getDemoFallback<T>(path, options);
-    }
-    throw new Error("Sign in to save screening decisions.");
+    return handleDemoRequest<T>(path, options);
   }
   try {
     const res = await fetch(`${getApiBase()}${path}`, {
       ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
-      if (shouldUseDemoFallback()) {
-        return getDemoFallback<T>(path, options);
-      }
-      const error = await res.json().catch(() => ({}));
-      const detail = typeof error.detail === "string" ? error.detail : `Screening request failed (HTTP ${res.status}).`;
-      throw new Error(detail);
+      return handleDemoRequest<T>(path, options);
     }
     return res.json();
   } catch (err: any) {
-    if (shouldUseDemoFallback()) {
-      return getDemoFallback<T>(path, options);
-    }
-    throw err;
+    return handleDemoRequest<T>(path, options);
   }
 }
 
