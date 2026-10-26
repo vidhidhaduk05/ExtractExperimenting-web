@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1792968687.545095,
-    "seen": 1792969918.2306235,
-    "ast_hash": "bf23d8b9be07440c2dc00cbfee3638e5",
+    "mtime": 1792972377.542704,
+    "seen": 1792973424.5877843,
+    "ast_hash": "7a67fa0dde75b27a57ce21f216d607d3",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
-    "mtime": 1792952996.906146,
-    "seen": 1792953691.2436874,
-    "ast_hash": "57a0f17f6c435c0d68e558c0d8888f80",
+    "mtime": 1792973053.328251,
+    "seen": 1792973424.6009827,
+    "ast_hash": "eb57ad3fda0c8b73268833dfcaaa0def",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyImport.tsx": {
@@ -1782,9 +1782,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/ClarificationNotificationCenter.tsx": {
-    "mtime": 1792279735.9178274,
-    "seen": 1792279857.4995635,
-    "ast_hash": "bf623e644ef7614a42a6101bf24df6cf",
+    "mtime": 1792972499.4250612,
+    "seen": 1792973424.5815785,
+    "ast_hash": "6f3ccf4369401f8262693fcfdffde599",
     "semantic_hash": ""
   },
   ".agents/jules_auto_merge.py": {
@@ -2196,9 +2196,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningExclusion.test.tsx": {
-    "mtime": 1791717334.7722478,
-    "seen": 1791718452.5728045,
-    "ast_hash": "b77de2cdd430bf4d064e29512783f5ef",
+    "mtime": 1792973065.358353,
+    "seen": 1792973424.6009827,
+    "ast_hash": "55458d7d68b5402553d4844218cbb533",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/vitest.config.ts": {
@@ -3681,24 +3681,6 @@
     "mtime": 1792300227.550563,
     "seen": 1792300331.3261225,
     "ast_hash": "13a5908c28c88c071ae5bb21e9e1e3fe",
-    "semantic_hash": ""
-  },
-  "Website for software/rayan/rayyan_review_overview.html": {
-    "mtime": 1792327068.9727275,
-    "seen": 1792327506.2135494,
-    "ast_hash": "5bedf49a2a81239cab779b87a879b71e",
-    "semantic_hash": ""
-  },
-  "Website for software/rayan/rayyan_user_dashboard.html": {
-    "mtime": 1792327056.0531514,
-    "seen": 1792327506.2135494,
-    "ast_hash": "04b4d26a26ed75d8443f1f6db5813f1d",
-    "semantic_hash": ""
-  },
-  "Website for software/rayan/rayyan_workbench.html": {
-    "mtime": 1792327062.4670947,
-    "seen": 1792327506.2135494,
-    "ast_hash": "726351bf33e4d80c8021138f3b6858e4",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/rmetafor.ts": {
@@ -5241,6 +5223,12 @@
     "mtime": 1792962362.235397,
     "seen": 1792962590.89821,
     "ast_hash": "9715876b0ea0cfe60f0af4ffdcd2f479",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/pages/ScreeningClarifications.test.tsx": {
+    "mtime": 1792973213.8898225,
+    "seen": 1792973424.6009827,
+    "ast_hash": "429913e3a4879da5d19c5e6778684430",
     "semantic_hash": ""
   }
 }

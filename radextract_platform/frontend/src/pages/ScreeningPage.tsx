@@ -61,7 +61,12 @@ import {
   RotateCcw,
   Pause,
   Square,
+  ListChecks,
+  CheckSquare,
+  CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
+import { cn } from "../lib/utils";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
 
 
@@ -92,8 +97,53 @@ export function ScreeningPage() {
       setStatusFilter("all");
     } else {
       setStatusFilter(bundleKey);
+      if (bundleKey === "awaiting_clarification") {
+        setIsChecklistExpanded(true);
+      }
     }
   };
+
+  // Project-level clarification questions for checklist
+  const { data: projectClarifications = [] } = useQuery<ClarificationQuestion[]>({
+    queryKey: ["project-clarifications", projectId],
+    queryFn: () => (projectId ? api.listClarifications(projectId).catch(() => []) : Promise.resolve([])),
+    enabled: !!projectId,
+  });
+
+  const [isChecklistExpanded, setIsChecklistExpanded] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return window.location.hash.includes("clarifications");
+    }
+    return false;
+  });
+  const [checklistFilter, setChecklistFilter] = useState<"all" | "pending" | "answered">("pending");
+  const [expandedChecklistQuestionId, setExpandedChecklistQuestionId] = useState<string | null>(null);
+  const [checklistSelectedOption, setChecklistSelectedOption] = useState<Record<string, string>>({});
+  const [checklistNotes, setChecklistNotes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash.includes("clarifications")) {
+      setIsChecklistExpanded(true);
+      const el = document.getElementById("clarifications-checklist");
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 200);
+      }
+    }
+  }, []);
+
+  const pendingClarifications = useMemo(() => {
+    return projectClarifications.filter((q) => q.status === "pending");
+  }, [projectClarifications]);
+
+  const answeredClarifications = useMemo(() => {
+    return projectClarifications.filter((q) => q.status === "answered");
+  }, [projectClarifications]);
+
+  const filteredChecklistQuestions = useMemo(() => {
+    if (checklistFilter === "pending") return pendingClarifications;
+    if (checklistFilter === "answered") return answeredClarifications;
+    return projectClarifications;
+  }, [projectClarifications, pendingClarifications, answeredClarifications, checklistFilter]);
 
   // Reviewer identity
   const authToken = localStorage.getItem("token");
@@ -353,7 +403,7 @@ export function ScreeningPage() {
   }, [statusFilter, stageFilter, filteredStudies, selectedStudyId]);
 
   // Selection and keyboard actions use the same visible record set as all filters.
-  const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || null;
+  const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || (failedDecision ? studyList.find(s => s.study_id === failedDecision.studyId) : null) || null;
   const prevActiveStudyIdRef = useRef<string | null>(null);
   useEffect(() => {
     const currentId = selectedStudy?.study_id || null;
@@ -662,6 +712,7 @@ export function ScreeningPage() {
       queryClient.invalidateQueries({ queryKey: ["study-clarifications", selectedStudyId] });
       queryClient.invalidateQueries({ queryKey: ["pending-clarifications", projectId] });
       queryClient.invalidateQueries({ queryKey: ["all-clarifications", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project-clarifications", projectId] });
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
       queryClient.invalidateQueries({ queryKey: ["rob-summary", projectId] });
     },
@@ -1230,6 +1281,9 @@ export function ScreeningPage() {
               />
               <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
             </label>
+
+            {/* Tag Filter */}
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
           </div>
 
           {/* Search Box */}
@@ -1380,6 +1434,322 @@ export function ScreeningPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── AI SCREENING CLARIFICATIONS & REVIEWER CHECKLIST ── */}
+      {projectClarifications.length > 0 && (
+        <section
+          id="clarifications-checklist"
+          className="max-w-7xl w-full mx-auto px-4 md:px-6 pt-3"
+          aria-label="AI Screening Clarifications Checklist"
+        >
+          <div className="bg-white border border-purple-200/90 rounded-xl shadow-xs overflow-hidden transition-all">
+            {/* Checklist Ribbon Header */}
+            <div className="px-4 py-3 bg-gradient-to-r from-purple-50/90 via-indigo-50/50 to-white flex flex-wrap items-center justify-between gap-3 border-b border-purple-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-xs">
+                  <ListChecks className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-slate-900 tracking-tight">
+                      AI Screening Clarifications Checklist
+                    </h2>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                      {pendingClarifications.length} Pending
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Review and clarify ambiguous PICO criteria flagged by AI screener
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Filter Pills */}
+                {isChecklistExpanded && (
+                  <div className="flex items-center gap-1 bg-white border border-slate-200 p-0.5 rounded-lg text-xs font-medium text-slate-600">
+                    <button
+                      onClick={() => setChecklistFilter("pending")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-[11px] transition-all",
+                        checklistFilter === "pending"
+                          ? "bg-purple-100 text-purple-900 font-bold"
+                          : "hover:text-slate-900"
+                      )}
+                    >
+                      Pending ({pendingClarifications.length})
+                    </button>
+                    <button
+                      onClick={() => setChecklistFilter("answered")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-[11px] transition-all",
+                        checklistFilter === "answered"
+                          ? "bg-purple-100 text-purple-900 font-bold"
+                          : "hover:text-slate-900"
+                      )}
+                    >
+                      Resolved ({answeredClarifications.length})
+                    </button>
+                    <button
+                      onClick={() => setChecklistFilter("all")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-[11px] transition-all",
+                        checklistFilter === "all"
+                          ? "bg-purple-100 text-purple-900 font-bold"
+                          : "hover:text-slate-900"
+                      )}
+                    >
+                      All ({projectClarifications.length})
+                    </button>
+                  </div>
+                )}
+
+                {/* Expand / Collapse Button */}
+                <button
+                  onClick={() => setIsChecklistExpanded((prev) => !prev)}
+                  className="px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>{isChecklistExpanded ? "Hide Checklist" : `Show Checklist (${pendingClarifications.length})`}</span>
+                  <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", isChecklistExpanded && "rotate-180")} />
+                </button>
+              </div>
+            </div>
+
+            {/* Checklist Body */}
+            {isChecklistExpanded && (
+              <div className="p-4 space-y-3 divide-y divide-slate-100">
+                {filteredChecklistQuestions.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-slate-500">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-1.5 opacity-80" />
+                    <p className="font-semibold text-slate-700">No clarification questions in this view.</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">All items in this filter are resolved or up to date.</p>
+                  </div>
+                ) : (
+                  filteredChecklistQuestions.map((q, idx) => {
+                    const isAnswered = q.status === "answered";
+                    const isExpanded = expandedChecklistQuestionId === q.question_id || (!isAnswered && filteredChecklistQuestions.length <= 3);
+                    const curSelected = checklistSelectedOption[q.question_id] || (isAnswered ? q.answer : "");
+                    const curNotes = checklistNotes[q.question_id] || q.answer_freetext || "";
+                    const feedback = resolutionFeedback[q.question_id];
+                    const isSubmitting = answerClarificationMutation.isPending && (answerClarificationMutation.variables as any)?.questionId === q.question_id;
+
+                    return (
+                      <div
+                        key={q.question_id}
+                        className={cn(
+                          "pt-3 first:pt-0 transition-all rounded-lg",
+                          selectedStudyId === q.study_id ? "bg-purple-50/40 p-3 -mx-1" : ""
+                        )}
+                      >
+                        {/* Checklist Item Header */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            {/* Checkbox Icon */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExpandedChecklistQuestionId(isExpanded ? null : q.question_id);
+                              }}
+                              className="mt-0.5 text-left focus:outline-none cursor-pointer"
+                              title={isAnswered ? "Resolved (Click to view details)" : "Pending (Click to answer)"}
+                            >
+                              {isAnswered ? (
+                                <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100 shrink-0" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-md border-2 border-purple-400 bg-white hover:bg-purple-50 flex items-center justify-center shrink-0 transition-colors shadow-2xs">
+                                  <span className="font-mono text-[9px] font-bold text-purple-700">{idx + 1}</span>
+                                </div>
+                              )}
+                            </button>
+
+                            {/* Content Preview */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedStudyId(q.study_id)}
+                                  className="text-xs font-bold text-slate-900 hover:text-indigo-600 hover:underline truncate text-left group flex items-center gap-1 cursor-pointer"
+                                  title="Click to view and screen this study in the workspace below"
+                                >
+                                  <span>{q.study_title || `Study ${q.study_id}`}</span>
+                                  <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-slate-400 transition-opacity" />
+                                </button>
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                  {q.stage}
+                                </span>
+                                {q.pico_aspect && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-purple-100 text-purple-800 border border-purple-200">
+                                    {q.pico_aspect}
+                                  </span>
+                                )}
+                                {isAnswered && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                    <Check className="w-2.5 h-2.5 text-emerald-600" />
+                                    Resolved: {q.answer_label || q.answer}
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="text-xs text-slate-800 font-medium leading-relaxed">
+                                {q.question_text}
+                              </p>
+
+                              {q.context_excerpt && (
+                                <p className="text-[11px] text-slate-600 bg-slate-50 border-l-2 border-purple-400 px-2 py-1 rounded-r mt-1.5 italic font-serif line-clamp-2">
+                                  &ldquo;{q.context_excerpt}&rdquo;
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Expand/Collapse Button */}
+                          <button
+                            type="button"
+                            onClick={() => setExpandedChecklistQuestionId(isExpanded ? null : q.question_id)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                            title={isExpanded ? "Collapse" : "Expand Question"}
+                          >
+                            <ChevronDown className={cn("w-4 h-4 transition-transform", isExpanded && "rotate-180")} />
+                          </button>
+                        </div>
+
+                        {/* Expanded MCQ Form */}
+                        {isExpanded && (
+                          <div className="mt-3 ml-8 p-3.5 bg-slate-50/80 rounded-xl border border-slate-200 space-y-3 animate-fadeIn">
+                            {/* Feedback Banner if answered in this session */}
+                            {feedback && (
+                              <div className="p-2.5 rounded-lg bg-emerald-100/90 border border-emerald-300 flex items-start gap-2 text-xs text-emerald-950">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="font-bold">Clarification recorded and study re-evaluated!</p>
+                                  <p className="text-[11px] text-emerald-800 mt-0.5">
+                                    AI Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% confidence)
+                                  </p>
+                                  {feedback.final_reason_text && (
+                                    <p className="text-[10px] text-emerald-700 italic mt-0.5">{feedback.final_reason_text}</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Multiple Choice Options */}
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Multiple Choice Questions (Select One):
+                              </label>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                {q.options.map((opt, optIdx) => {
+                                  const isSelected = curSelected === opt.value;
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={opt.value}
+                                      onClick={() => {
+                                        setChecklistSelectedOption((prev) => ({ ...prev, [q.question_id]: opt.value }));
+                                      }}
+                                      className={cn(
+                                        "p-2.5 rounded-lg border text-left transition-all flex flex-col justify-between cursor-pointer",
+                                        isSelected
+                                          ? "bg-purple-50 border-purple-500 ring-2 ring-purple-400/40 shadow-xs"
+                                          : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60"
+                                      )}
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-600 font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                                          {optIdx + 1}
+                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-xs font-bold text-slate-900 leading-tight">
+                                            {opt.label}
+                                          </p>
+                                          {opt.description && (
+                                            <p className="text-[10px] text-slate-500 leading-normal mt-1">
+                                              {opt.description}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {isSelected && (
+                                        <div className="mt-2 text-right">
+                                          <span className="text-[9px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">
+                                            Selected
+                                          </span>
+                                        </div>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Reviewer Notes / Rationale */}
+                            <div>
+                              <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                                Reviewer Rationale / Clarification Notes (Optional):
+                              </label>
+                              <input
+                                type="text"
+                                value={curNotes}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setChecklistNotes((prev) => ({ ...prev, [q.question_id]: val }));
+                                }}
+                                placeholder="Add clinical rationale or citation excerpt reference..."
+                                className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                              />
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-200/80">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedStudyId(q.study_id)}
+                                className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                              >
+                                <span>Inspect Study Full-Text / Abstract &rarr;</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={!curSelected || isSubmitting}
+                                onClick={() => {
+                                  const opt = q.options.find((o) => o.value === curSelected);
+                                  answerClarificationMutation.mutate({
+                                    questionId: q.question_id,
+                                    answer: curSelected,
+                                    label: opt?.label,
+                                    freetext: curNotes,
+                                  });
+                                }}
+                                className={cn(
+                                  "px-4 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer",
+                                  (!curSelected || isSubmitting) && "opacity-50 cursor-not-allowed"
+                                )}
+                              >
+                                {isSubmitting ? (
+                                  <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Saving Clarification...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>{isAnswered ? "Update Clarification" : "Confirm Clarification & Re-Screen"}</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {/* Main Two-Pane Screening Workspace */}

@@ -290,6 +290,49 @@ export function saveStoredScreeningDecision(projectId = "proj_pam_current", deci
   } catch (e) {}
 }
 
+export function getStoredClarifications(projectId = "proj_pam_current"): ClarificationQuestion[] {
+  const isDemo = projectId === "demo" || projectId === "proj_pam_current";
+  if (typeof window === "undefined") return isDemo ? [...DEMO_STUDY_CLARIFICATIONS] : [];
+  try {
+    const isBlank = localStorage.getItem(`radextract_blank_clarifications_${projectId}`) === "true";
+    if (isBlank) return [];
+    const saved = localStorage.getItem(`radextract_clarifications_${projectId}`);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  if (isDemo) {
+    return [...DEMO_STUDY_CLARIFICATIONS];
+  }
+  return [];
+}
+
+export function saveStoredClarificationAnswer(
+  projectId: string,
+  questionId: string,
+  answer: string,
+  answerLabel?: string,
+  answerFreetext?: string
+): ClarificationQuestion | null {
+  if (typeof window === "undefined") return null;
+  const list = getStoredClarifications(projectId);
+  const q = list.find((item) => item.question_id === questionId);
+  if (q) {
+    q.status = "answered";
+    q.answer = answer;
+    q.answer_label = answerLabel || answer;
+    q.answer_freetext = answerFreetext;
+    q.answered_by = "Reviewer (HIL AI)";
+    q.answered_at = new Date().toISOString();
+    q.final_decision = "include";
+    q.final_confidence = 0.98;
+    q.final_reason_text = `Verified by reviewer: ${answerLabel || answer}`;
+    try {
+      localStorage.setItem(`radextract_clarifications_${projectId}`, JSON.stringify(list));
+    } catch (e) {}
+    return q;
+  }
+  return null;
+}
+
 function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   const method = (options.method || "GET").toUpperCase();
   let body: any = {};
@@ -457,25 +500,54 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     if (path.includes("/clarifications/") && path.includes("/answer")) {
       const qMatch = path.match(/\/clarifications\/([^/]+)\/answer/);
       const qId = qMatch ? qMatch[1] : "q_clarify_1";
-      const qObj = (DEMO_STUDY_CLARIFICATIONS as any[]).find((q) => q.question_id === qId);
-      if (qObj) {
-        qObj.status = "answered";
-        qObj.answer = body.answer || "confirmed";
-        qObj.answer_label = body.answer_label || body.answer;
-        qObj.answered_by = body.answered_by || "Reviewer";
-        qObj.answered_at = new Date().toISOString();
-        qObj.final_decision = "include";
-        qObj.final_confidence = 0.98;
-        qObj.final_reason_text = "Verified via human clarification.";
+      let updatedQ: ClarificationQuestion | null = null;
+      let targetProjectId = "proj_pam_current";
+
+      // Check current projects or stored
+      try {
+        const pamList = getStoredClarifications("proj_pam_current");
+        if (pamList.some((q) => q.question_id === qId)) {
+          updatedQ = saveStoredClarificationAnswer("proj_pam_current", qId, body.answer, body.answer_label, body.answer_freetext);
+          targetProjectId = "proj_pam_current";
+        } else {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k?.startsWith("radextract_clarifications_")) {
+              const pId = k.replace("radextract_clarifications_", "");
+              const pList = getStoredClarifications(pId);
+              if (pList.some((q) => q.question_id === qId)) {
+                updatedQ = saveStoredClarificationAnswer(pId, qId, body.answer, body.answer_label, body.answer_freetext);
+                targetProjectId = pId;
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {}
+
+      // Also update the corresponding study's screening status if stored
+      if (updatedQ?.study_id) {
+        try {
+          const studies = getStoredProjectStudies(targetProjectId);
+          const st = studies.find(s => s.study_id === updatedQ!.study_id);
+          if (st) {
+            st.screening_status = "included";
+            st.ai_decision = "include";
+            st.ai_confidence = 0.98;
+            st.ai_reason = `Resolved via human clarification: ${body.answer_label || body.answer}`;
+            saveStoredProjectStudies(targetProjectId, studies);
+          }
+        } catch (e) {}
       }
+
       return {
         question_id: qId,
-        study_id: qObj?.study_id || "study_albina_2024",
+        study_id: updatedQ?.study_id || "study_birua_2022",
         status: "answered",
         final_decision: "include",
         final_confidence: 0.98,
-        final_reason_text: "Clarification recorded and study re-evaluated.",
-        conflict_detected: false
+        final_reason_text: `Verified by reviewer: ${body.answer_label || body.answer}`,
+        conflict_detected: false,
       } as unknown as T;
     }
     if (path.includes("/pico/suggestions")) {
@@ -921,13 +993,33 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     return allDecisions as unknown as T;
   }
   if (path.includes("/clarifications/stats")) {
-    return { project_id: "proj_pam_current", total: 3, pending: 2, answered: 1, expired: 0, by_type: { eligibility: 1, study_design: 1, intervention: 1 }, by_stage: { abstract: 1, fulltext: 2 } } as unknown as T;
+    const projectId = path.split("/projects/")[1]?.split("/")[0];
+    const questions = projectId ? getStoredClarifications(projectId) : [];
+    const pending = questions.filter(q => q.status === "pending").length;
+    const answered = questions.filter(q => q.status === "answered").length;
+    return {
+      project_id: projectId || "default",
+      total: questions.length,
+      pending,
+      answered,
+      expired: 0,
+      by_type: { eligibility: questions.length > 0 ? 1 : 0, study_design: questions.length > 1 ? 1 : 0, intervention: 0 },
+      by_stage: { abstract: questions.length > 0 ? 1 : 0, fulltext: questions.length > 1 ? 1 : 0 }
+    } as unknown as T;
   }
   if (path.includes("/clarifications")) {
-    if (path.includes("status=pending")) {
-      return (DEMO_STUDY_CLARIFICATIONS as any[]).filter((q) => q.status === "pending") as unknown as T;
+    const projectId = path.split("/projects/")[1]?.split("/")[0];
+    const studyMatch = path.match(/\/studies\/([^/]+)\/clarifications/);
+    if (studyMatch) {
+      const studyId = studyMatch[1];
+      const allQ = projectId ? getStoredClarifications(projectId) : getStoredClarifications("proj_pam_current");
+      return allQ.filter(q => q.study_id === studyId) as unknown as T;
     }
-    return DEMO_STUDY_CLARIFICATIONS as unknown as T;
+    const questions = projectId ? getStoredClarifications(projectId) : [];
+    if (path.includes("status=pending")) {
+      return questions.filter((q) => q.status === "pending") as unknown as T;
+    }
+    return questions as unknown as T;
   }
   if (path.includes("/exclusion-reasons")) {
     return DEMO_EXCLUSION_REASONS as unknown as T;

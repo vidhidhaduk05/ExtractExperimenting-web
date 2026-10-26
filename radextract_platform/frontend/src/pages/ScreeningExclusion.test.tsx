@@ -108,6 +108,7 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
     vi.spyOn(api, "listScreeningKeywords").mockResolvedValue([]);
     vi.spyOn(api, "getAbstractHighlights").mockResolvedValue({ all_spans: [], title_spans: [] } as any);
     vi.spyOn(api, "getStudyClarifications").mockResolvedValue([] as any);
+    vi.spyOn(api, "listClarifications").mockResolvedValue([] as any);
     vi.spyOn(api, "robSummary").mockResolvedValue({ assessments: [] } as any);
     vi.spyOn(api, "getRobRunProgress").mockResolvedValue({ active: false } as any);
   });
