@@ -14,12 +14,12 @@ from __future__ import annotations
 import re
 import uuid
 from typing import Optional
+from functools import lru_cache
 
 from database import get_db_backend
 from services.db_backend import DBBackend
 
-from functools import lru_cache
-
+_AUTHOR_DELIM_RE = re.compile(r"[,;&]")
 TITLE_SIMILARITY_THRESHOLD = 0.90
 
 # Pre-compiled regex pattern for Unicode-aware alphanumeric cleaning in Strategy 4
@@ -125,15 +125,14 @@ def _normalize_title(title: str) -> str:
     return t
 
 
-import re
-
 _AUTHOR_SPLIT_RE = re.compile(r"[,;&]|\s+and\s+", re.IGNORECASE)
 
 
-def _normalize_authors(authors: str) -> set[str]:
-    """Extract a set of author last names for comparison."""
+@lru_cache(maxsize=4096)
+def _normalize_authors(authors: str) -> frozenset[str]:
+    """Extract an immutable set of author last names for comparison (memoized)."""
     if not authors:
-        return set()
+        return frozenset()
     parts = _AUTHOR_SPLIT_RE.split(authors)
     names = set()
     for p in parts:
@@ -144,17 +143,20 @@ def _normalize_authors(authors: str) -> set[str]:
         words = p.split()
         if words:
             names.add(words[0])
-    return names
+    return frozenset(names)
 
 
-def _author_overlap(a1: set[str] | str, a2: set[str] | str) -> float:
+def _author_overlap(a1: Any, a2: Any) -> float:
     """Compute author name overlap ratio."""
-    s1 = a1 if isinstance(a1, set) else _normalize_authors(a1)
-    s2 = a2 if isinstance(a2, set) else _normalize_authors(a2)
+    s1 = a1 if isinstance(a1, (set, frozenset)) else _normalize_authors(a1)
+    s2 = a2 if isinstance(a2, (set, frozenset)) else _normalize_authors(a2)
     if not s1 or not s2:
         return 0.0
     overlap = s1 & s2
     return len(overlap) / min(len(s1), len(s2))
+
+
+_author_overlap_sets = _author_overlap
 
 
 def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DBBackend] = None) -> dict:
@@ -264,6 +266,7 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
     # Bolt Optimization: Pre-compute normalized author surname sets once per study
     # prior to the O(N^2) pairwise loop to eliminate redundant re-parsing & regex splits.
     norm_author_sets = [_normalize_authors(a) for a in authors]
+    authors_sets = norm_author_sets
 
     for i in range(len(studies)):
         t_i = titles[i]
