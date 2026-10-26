@@ -309,7 +309,12 @@ class TestToolOverrideAndBatchRun:
 class TestSecurityAccessControl:
 
     def test_unauthorized_user_denied_access(self, client, project_and_study):
-        pid, _ = project_and_study
+        pid, sid = project_and_study
+        r = client.post(f"/api/rob/studies/{sid}/rob", json={
+            "study_id": sid, "project_id": pid, "tool": "quadas2",
+        })
+        aid = r.json()["assessment_id"]
+
         db = get_connection()
         db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES ('unauth_rob_user', 'unauth_rob_user', 'test')")
         db.commit()
@@ -344,3 +349,4 @@ class TestSecurityAccessControl:
         assert client.put(f"/api/rob/judgments/{jid}", json={"risk_judgment": "high"}, headers=headers).status_code == 403
         assert client.put(f"/api/rob/answers/{ans_id}", json={"answer": "yes"}, headers=headers).status_code == 403
         assert client.delete(f"/api/rob/assessments/{aid}", headers=headers).status_code == 403
+
