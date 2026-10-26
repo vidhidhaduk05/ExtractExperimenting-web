@@ -1,5 +1,48 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeSvg } from "./sanitize";
+import { sanitizeSvg, sanitizeHtml } from "./sanitize";
+
+describe("sanitizeHtml", () => {
+  it("returns empty string when given null or empty input", () => {
+    expect(sanitizeHtml("")).toBe("");
+    // @ts-expect-error testing invalid input
+    expect(sanitizeHtml(null)).toBe("");
+  });
+
+  it("preserves valid HTML content", () => {
+    const validHtml = `<div class="container"><h1>Title</h1><p>Description line with <a href="/projects">link</a>.</p></div>`;
+    const sanitized = sanitizeHtml(validHtml);
+    expect(sanitized).toContain('<div class="container">');
+    expect(sanitized).toContain("<h1>Title</h1>");
+    expect(sanitized).toContain('href="/projects"');
+  });
+
+  it("strips script tags and inline event handlers from HTML", () => {
+    const maliciousHtml = `<div><script>alert('xss')</script><button onclick="alert(1)" onload="alert(2)">Click</button></div>`;
+    const sanitized = sanitizeHtml(maliciousHtml);
+    expect(sanitized).not.toContain("script");
+    expect(sanitized).not.toContain("onclick");
+    expect(sanitized).not.toContain("onload");
+    expect(sanitized).not.toContain("alert");
+  });
+
+  it("strips dangerous javascript: URIs from links in HTML", () => {
+    const maliciousHtml = `<a href="javascript:alert('xss')">Click me</a>`;
+    const sanitized = sanitizeHtml(maliciousHtml);
+    expect(sanitized).not.toContain("javascript:");
+    expect(sanitized).not.toContain("alert");
+  });
+
+  it("strips disallowed tags like iframe, object, embed, base, link, meta", () => {
+    const maliciousHtml = `<div><iframe></iframe><object></object><embed/><base href="/"><link rel="stylesheet"/><meta charset="utf-8"/></div>`;
+    const sanitized = sanitizeHtml(maliciousHtml);
+    expect(sanitized).not.toContain("iframe");
+    expect(sanitized).not.toContain("object");
+    expect(sanitized).not.toContain("embed");
+    expect(sanitized).not.toContain("base");
+    expect(sanitized).not.toContain("link");
+    expect(sanitized).not.toContain("meta");
+  });
+});
 
 describe("sanitizeSvg", () => {
   it("returns empty string when given null or empty input", () => {
