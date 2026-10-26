@@ -202,3 +202,10 @@ This document is the canonical ledger of all engineering, architectural, scienti
 - The existing header control uses an envelope and the shared server-pending query for its count. Viewing the inbox does not resolve questions; only a successful answer save removes a pending question. Failed saves retain it with retry feedback.
 - Announcement IDs alone persist per project in local storage, with an in-memory fallback when storage is unavailable. Questions and history remain server-backed. An open inbox receives new questions quietly and stays open until the reviewer closes it.
 - Clarification surfaces follow the master theme, responsive controls, polite announcements, keyboard focus handling, and reduced motion. Backend screening and eligibility logic are unchanged.
+
+## 2026-10-26 — Claim-first evidence map and optional review prefill
+
+- The claim form precedes the explanatory guide at every viewport. The guide uses master-theme surfaces and typography while preserving scientific evidence colors.
+- Direct-evidence and narrative-review filters now share the visible paper set across the map, counts, inventory, and inspector. Systematic reviews/meta-analyses remain distinct from narrative reviews; classification and Wilson calculations are unchanged.
+- Launching the review workspace carries the entered claim to new-project setup. An explicit prefill action copies it into editable project name and primary hypothesis fields. Creating the project saves the reviewed hypothesis through the existing API; the demo store preserves it across subsequent reads.
+- This handoff does not automatically import studies or create a project. Existing project setup and screening policies remain unchanged.

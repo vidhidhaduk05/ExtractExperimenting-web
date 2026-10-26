@@ -798,6 +798,8 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         project_id: `proj_${Date.now()}`,
         name: body.name || "New Systematic Review",
         description: body.description || "",
+        hypothesis: body.hypothesis || "",
+        research_question: body.research_question || "",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         status: "active",
@@ -808,6 +810,10 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         const stored = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
         stored.push(newProj);
         localStorage.setItem("radextract_custom_projects", JSON.stringify(stored));
+        localStorage.setItem(`radextract_hyp_${newProj.project_id}`, JSON.stringify({
+          project_id: newProj.project_id, hypothesis: newProj.hypothesis,
+          research_question: newProj.research_question, secondary_hypotheses: [],
+        }));
         saveStoredProjectStudies(newProj.project_id, []);
         localStorage.setItem(`radextract_blank_${newProj.project_id}`, "true");
       } catch (e) {}

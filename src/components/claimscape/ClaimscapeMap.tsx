@@ -90,6 +90,7 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
 
     return summaries
       .filter((s) => {
+        if (showReviews === false && s.id === "review") return false;
         if (evidenceLens === "reviews") return s.id === "review";
         if (evidenceLens === "direct") return s.id !== "review";
         return true;
@@ -164,6 +165,7 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
           return (
             <div
               key={summary.id}
+              data-tier={summary.id}
               className={`cs-row ${summary.id === "review" ? "review" : ""}`}
             >
               {/* Left Label */}
