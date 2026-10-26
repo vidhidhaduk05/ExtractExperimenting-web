@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Share2,
@@ -63,20 +63,16 @@ export const CitationTelephonePage: React.FC = () => {
 
   const [selectedExampleIndex, setSelectedExampleIndex] = useState(initialIndex);
   const activeExample = PRESET_TELEPHONE_EXAMPLES[selectedExampleIndex] || PRESET_TELEPHONE_EXAMPLES[0];
-
-  // Performance Optimization: Memoize flattened trace step list so tree traversal & array allocations
-  // do not re-run on every render frame (e.g., user keystrokes, tab changes, or hover state updates).
-  const allSteps = useMemo(() => {
-    const steps: TraceStep[] = [];
-    const gatherSteps = (items: TraceStep[]) => {
-      for (const it of items) {
-        steps.push(it);
-        if (it.nextSteps) gatherSteps(it.nextSteps);
-      }
-    };
-    gatherSteps(activeExample.data.steps);
-    return steps;
-  }, [activeExample]);
+  
+  // Flatten steps for selection
+  const allSteps: TraceStep[] = [];
+  const gatherSteps = (items: TraceStep[]) => {
+    for (const it of items) {
+      allSteps.push(it);
+      if (it.nextSteps) gatherSteps(it.nextSteps);
+    }
+  };
+  gatherSteps(activeExample.data.steps);
 
   const [selectedStep, setSelectedStep] = useState<TraceStep>(allSteps[allSteps.length - 1] || activeExample.data.steps[0]);
   const [paperInput, setPaperInput] = useState(activeExample.paperId);
@@ -156,7 +152,7 @@ export const CitationTelephonePage: React.FC = () => {
       const res = await api.evaluateCitationTelephoneClaim(citingClaim, sourcePassage, "");
       setEvalResult(res);
     } catch (err: any) {
-      setEvalError(err?.message || "Local Laya is unavailable");
+      setEvalError(err?.message || "Co-Scientist service is currently unavailable");
       setEvalResult(null);
     } finally {
       setIsComparing(false);
@@ -243,7 +239,7 @@ export const CitationTelephonePage: React.FC = () => {
                 </button>
               </div>
               <span className="text-xs text-zinc-500">
-                {activeTab === "audit" ? "Local Laya System-1 ONNX Model" : "K-Dense Ground Truth Multi-Hop Trace"}
+                {activeTab === "audit" ? "Co-Scientist Verification Engine" : "K-Dense Ground Truth Multi-Hop Trace"}
               </span>
             </div>
 
@@ -290,7 +286,7 @@ export const CitationTelephonePage: React.FC = () => {
               </>
             ) : (
               <div className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Audit any citing sentence against its cited source passage using the local Laya inference engine. Extract citations from manuscript text or evaluate claim alignment directly.
+                Audit any citing sentence against its cited source passage using the Co-Scientist verification engine. Extract citations from manuscript text or evaluate claim alignment directly.
               </div>
             )}
           </div>
@@ -371,7 +367,7 @@ export const CitationTelephonePage: React.FC = () => {
                   <h2 className="text-sm font-bold uppercase tracking-wider text-[#381A61] dark:text-[#F9D14A]">
                     2. Claim vs Source Evaluation
                   </h2>
-                  <span className="text-xs text-zinc-500">Local Laya Verification</span>
+                  <span className="text-xs text-zinc-500">Co-Scientist Citation Verification</span>
                 </div>
 
                 {evalError && (

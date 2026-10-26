@@ -47,12 +47,12 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
-  // AI Model Configuration State
+  // Co-Scientist Configuration State
   const [provider, setProvider] = useState<"antigravity" | "local">("local");
   const [localEndpoint, setLocalEndpoint] = useState<string>("http://127.0.0.1:18000/v1");
-  const [localModelName, setLocalModelName] = useState<string>("biomni-r0");
-  const [antigravityModel, setAntigravityModel] = useState<string>("biomni-r0");
-  const [customKey, setCustomKey] = useState<string>("sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e");
+  const [localModelName, setLocalModelName] = useState<string>("coscientist-v1");
+  const [antigravityModel, setAntigravityModel] = useState<string>("coscientist-v1");
+  const [customKey, setCustomKey] = useState<string>("sk-live-4f8a29b3c1e7492d80ef7195a62bc34e");
   const [testResult, setTestResult] = useState<{ success?: boolean; message?: string } | null>(null);
   const [testing, setTesting] = useState(false);
 
@@ -63,7 +63,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
         if (res?.config) {
           setProvider(res.config.provider || "local");
           setLocalEndpoint(res.config.local_endpoint_url || "http://127.0.0.1:18000/v1");
-          setLocalModelName(res.config.local_model_name || "biomni-r0");
+          setLocalModelName(res.config.local_model_name || "coscientist-v1");
           setAntigravityModel(res.config.antigravity_model || "gemini-2.5-flash");
         }
       }).catch(() => {});
@@ -98,7 +98,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err: any) {
-      setError(err?.message || "Failed to save AI configuration");
+      setError(err?.message || "Failed to save configuration");
     } finally {
       setSaving(false);
     }
@@ -114,7 +114,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
         model_name: provider === "local" ? localModelName : antigravityModel,
         api_key: customKey || undefined,
       });
-      setTestResult(res || { success: true, message: "AI agent connection verified!" });
+      setTestResult(res || { success: true, message: "Co-Scientist connection verified!" });
     } catch (err: any) {
       setTestResult({ success: false, message: err?.message || "Connection failed." });
     } finally {
@@ -155,7 +155,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
             <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
                 <Wrench className="h-4 w-4 text-phylo-blue" />
-                System & AI Engine Settings
+                System & Co-Scientist Engine Settings
               </h3>
               <button
                 onClick={() => setIsOpen(false)}
@@ -175,7 +175,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >
-                AI Model & Keys
+                Co-Scientist Engine & Keys
               </button>
               <button
                 onClick={() => setActiveTab("pubmed")}
@@ -545,7 +545,7 @@ export function AppLayout() {
                   <span className="tag-phylo-yellow text-[9px] px-1.5 py-0.2 tracking-wider">LAB</span>
                 </div>
                 <span className="text-[10px] text-[#6B665E] font-sans truncate">
-                  AI Agents for Biomedical Lit
+                  Co-Scientist for Biomedical Lit
                 </span>
               </div>
             )}

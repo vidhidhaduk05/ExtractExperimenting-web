@@ -1,11 +1,11 @@
 /**
- * Direct Client-Side PubMed E-Utilities Client with Laya System-1 Inference.
+ * Direct Client-Side PubMed E-Utilities Client with Co-Scientist Inference.
  *
  * Calls NCBI Entrez E-Utilities with CORS enabled (Access-Control-Allow-Origin: *):
  * 1. esearch: retrieves real PMIDs matching the search query sorted by relevance.
  *    - Automatic multi-query relaxation ensures comprehensive coverage across study tiers.
  * 2. esummary & efetch: retrieves real metadata (title, journal, fractional pubdate, pubtypes, DOI, and real abstract sentences).
- * 3. Laya System-1 Inference:
+ * 3. Co-Scientist Inference:
  *    - Dual-reading stance scoring (supports, contradicts, mixed).
  *    - Hierarchical evidence tier mapping (meta, rct, observational, case_report, animal, in_vitro, review).
  *    - Extractive sentence-level finding identification.
@@ -216,7 +216,7 @@ export async function fetchLivePubMedEvidence(
       ];
     }
 
-    // ── LAYA SYSTEM-1 INFERENCE LOGIC ──
+    // ── CO-SCIENTIST INFERENCE LOGIC ──
     const titleLower = title.toLowerCase();
     const abstractLower = (fetched?.abstract || "").toLowerCase();
     const textCorpus = `${titleLower} ${abstractLower}`;

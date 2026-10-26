@@ -14,11 +14,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe('Citation Telephone live workflow', () => {
   it('starts without a fabricated trace and requires a source passage', () => {
-    render(
-      <MemoryRouter>
-        <CitationTelephonePage />
-      </MemoryRouter>
-    );
+    render(<MemoryRouter><CitationTelephonePage /></MemoryRouter>);
     expect(screen.getByRole('button', { name: 'Compare passage' })).toBeDisabled();
     expect(screen.queryByText(/Traced to origin/)).not.toBeInTheDocument();
   });
@@ -28,11 +24,7 @@ describe('Citation Telephone live workflow', () => {
       claims: [{ sentenceIndex: 0, citingSentence: 'Treatment helped [1].', refNumber: 1, refText: 'Smith. Paper title.' }],
       references: { 1: 'Smith. Paper title.' }, totalClaimsFound: 1, totalReferencesFound: 1,
     });
-    render(
-      <MemoryRouter>
-        <CitationTelephonePage />
-      </MemoryRouter>
-    );
+    render(<MemoryRouter><CitationTelephonePage /></MemoryRouter>);
     fireEvent.change(screen.getByLabelText('Manuscript text'), { target: { value: 'Treatment helped [1].' } });
     fireEvent.click(screen.getByRole('button', { name: 'Extract citations' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Compare this claim with source text' }));
@@ -42,16 +34,12 @@ describe('Citation Telephone live workflow', () => {
   });
 
   it('reports backend failure without presenting an evaluation', async () => {
-    vi.mocked(api.evaluateCitationTelephoneClaim).mockRejectedValue(new Error('Local Laya is unavailable'));
-    render(
-      <MemoryRouter>
-        <CitationTelephonePage />
-      </MemoryRouter>
-    );
+    vi.mocked(api.evaluateCitationTelephoneClaim).mockRejectedValue(new Error('Co-Scientist service is currently unavailable'));
+    render(<MemoryRouter><CitationTelephonePage /></MemoryRouter>);
     fireEvent.change(screen.getByLabelText('Citing claim'), { target: { value: 'Treatment helped.' } });
     fireEvent.change(screen.getByLabelText('Actual source passage'), { target: { value: 'No difference was observed.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Compare passage' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Local Laya is unavailable');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Co-Scientist service is currently unavailable');
     expect(api.evaluateCitationTelephoneClaim).toHaveBeenCalledWith('Treatment helped.', 'No difference was observed.', '');
     expect(screen.queryByText('Matches Source')).not.toBeInTheDocument();
   });

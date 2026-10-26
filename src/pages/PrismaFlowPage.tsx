@@ -194,7 +194,7 @@ export function PrismaFlowPage() {
               <span className="text-base font-bold text-emerald-600">{flow.audit.human_decisions}</span>
             </div>
             <div className="border-l pl-6 border-slate-200">
-              <span className="text-xs text-slate-500 block font-medium">AI / LAYA DECISIONS</span>
+              <span className="text-xs text-slate-500 block font-medium">CO-SCIENTIST DECISIONS</span>
               <span className="text-base font-bold text-indigo-600">{flow.audit.ai_decisions}</span>
             </div>
           </div>

@@ -734,7 +734,7 @@ export const DEMO_CODE_GRAPH_STATS = {
   top_communities: { "1": 420, "2": 310, "3": 280, "4": 210 },
   top_source_files: [
     { path: "radextract_platform/backend/main.py", node_count: 48 },
-    { path: "radextract_platform/backend/services/biomni_service.py", node_count: 36 },
+    { path: "radextract_platform/backend/services/coscientist_service.py", node_count: 36 },
     { path: "radextract_web_repo/src/lib/api.ts", node_count: 52 }
   ]
 };
@@ -742,7 +742,7 @@ export const DEMO_CODE_GRAPH_STATS = {
 export const DEMO_CODE_GRAPH = {
   nodes: [
     { id: "1", label: "radextract_platform/backend/main.py", community: 1, file_type: ".py" },
-    { id: "2", label: "radextract_platform/backend/services/biomni_service.py", community: 1, file_type: ".py" },
+    { id: "2", label: "radextract_platform/backend/services/coscientist_service.py", community: 1, file_type: ".py" },
     { id: "3", label: "radextract_platform/backend/routers/settings.py", community: 1, file_type: ".py" },
     { id: "4", label: "radextract_web_repo/src/App.tsx", community: 2, file_type: ".tsx" },
     { id: "5", label: "radextract_web_repo/src/lib/api.ts", community: 2, file_type: ".ts" },

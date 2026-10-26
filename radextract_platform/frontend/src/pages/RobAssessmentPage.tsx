@@ -137,31 +137,7 @@ export function RobAssessmentPage() {
     }
   }, [assessment]);
 
-  // Performance Optimization: Map domain key to domain definition for O(1) lookup during render loops
-  const domainDefMap = useMemo(() => {
-    const map = new Map<string, any>();
-    if (assessment?.tool_definition?.domains) {
-      for (const d of assessment.tool_definition.domains) {
-        map.set(d.key, d);
-      }
-    }
-    return map;
-  }, [assessment?.tool_definition?.domains]);
-
-  // Performance Optimization: Map `${domainKey}:${questionKey}` to signaling answer for O(1) lookup during question render loops
-  const signalingAnswerMap = useMemo(() => {
-    const map = new Map<string, RobSignalingAnswer>();
-    if (assessment?.domain_judgments) {
-      for (const dj of assessment.domain_judgments) {
-        for (const sa of dj.signaling_answers) {
-          map.set(`${dj.domain_key}:${sa.question_key}`, sa);
-        }
-      }
-    }
-    return map;
-  }, [assessment?.domain_judgments]);
-
-  // Flatten signaling questions list for linear hotkey navigation with indexed O(1) map lookups
+  // Flatten signaling questions list for linear hotkey navigation
   const allSignalingQuestions = useMemo(() => {
     if (!assessment) return [];
     const list: Array<{
@@ -172,15 +148,9 @@ export function RobAssessmentPage() {
     }> = [];
     let idx = 1;
     for (const dj of assessment.domain_judgments) {
-      const domainDef = domainDefMap.get(dj.domain_key);
-      const sqDefMap = new Map<string, any>();
-      if (domainDef?.signaling_questions) {
-        for (const q of domainDef.signaling_questions) {
-          sqDefMap.set(q.key, q);
-        }
-      }
+      const domainDef = assessment.tool_definition?.domains.find((d) => d.key === dj.domain_key);
       for (const sa of dj.signaling_answers) {
-        const sqDef = sqDefMap.get(sa.question_key);
+        const sqDef = domainDef?.signaling_questions.find((q) => q.key === sa.question_key);
         list.push({
           answer: sa,
           domain: dj,
@@ -190,16 +160,7 @@ export function RobAssessmentPage() {
       }
     }
     return list;
-  }, [assessment, domainDefMap]);
-
-  // Performance Optimization: Map question key to signaling question object for O(1) keyboard event and quote lookup
-  const signalingQuestionMap = useMemo(() => {
-    const map = new Map<string, (typeof allSignalingQuestions)[0]>();
-    for (const q of allSignalingQuestions) {
-      map.set(q.answer.question_key, q);
-    }
-    return map;
-  }, [allSignalingQuestions]);
+  }, [assessment]);
 
   // Map RoB signaling questions to spatial PDF highlight items for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -223,12 +184,12 @@ export function RobAssessmentPage() {
     }
   }, [selectedQuestionKey, allSignalingQuestions]);
 
-  // Pre-fill mutation with local Laya
+  // Pre-fill mutation with Co-Scientist
   const prefillMutation = useMutation({
     mutationFn: () => api.aiPrefill(assessmentId!, study?.abstract || "", ""),
     onSuccess: (result) => {
       setPrefillMsg(
-        `Laya AI auto-recorded ${result.questions_prefilled} answers across ${result.domains_prefilled} domains ` +
+        `Co-Scientist auto-recorded ${result.questions_prefilled} answers across ${result.domains_prefilled} domains ` +
           `(avg confidence: ${(result.avg_confidence * 100).toFixed(0)}%, ${result.used_full_text ? "full text" : "abstract"} mode).`
       );
       queryClient.invalidateQueries({ queryKey: ["rob-assessment", assessmentId] });
@@ -237,12 +198,12 @@ export function RobAssessmentPage() {
     onError: (e: Error) => setPrefillMsg(`Error: ${e.message}`),
   });
 
-  // Accept all AI mutation
+  // Accept all Co-Scientist recommendations mutation
   const acceptAiMutation = useMutation({
     mutationFn: () => api.acceptAi(assessmentId!),
     onSuccess: (result) => {
       setPrefillMsg(
-        `Verified and confirmed ${result.answers_accepted} AI-inferred answers. Domain and overall judgments updated.`
+        `Verified and confirmed ${result.answers_accepted} Co-Scientist recommendations. Domain and overall judgments updated.`
       );
       queryClient.invalidateQueries({ queryKey: ["rob-assessment", assessmentId] });
       queryClient.invalidateQueries({ queryKey: ["rob-summary", projectId] });
@@ -435,7 +396,7 @@ export function RobAssessmentPage() {
         target.isContentEditable;
       if (isInput) return;
 
-      const currentQ = selectedQuestionKey ? signalingQuestionMap.get(selectedQuestionKey) : undefined;
+      const currentQ = allSignalingQuestions.find((q) => q.answer.question_key === selectedQuestionKey);
 
       if (e.key === "a" || e.key === "A" || e.key === "Enter") {
         e.preventDefault();
@@ -683,30 +644,30 @@ export function RobAssessmentPage() {
                 </span>
               </div>
 
-              {/* Fast Action Ribbon Buttons: Laya AI Pre-Fill, Accept All AI, Undo */}
+              {/* Fast Action Ribbon Buttons: Co-Scientist Pre-Fill, Accept All, Undo */}
               <div className="flex items-center gap-1.5">
-                {/* Laya Pre-fill Button */}
+                {/* Co-Scientist Pre-fill Button */}
                 <button
                   onClick={() => prefillMutation.mutate()}
                   disabled={prefillMutation.isPending}
                   className="px-2.5 py-1.5 text-xs font-bold text-[#381A61] bg-[#F9D14A] hover:bg-[#F9D14A]/90 border border-[#E78429]/40 rounded-xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs ring-1 ring-[#F9D14A]/50"
-                  title="Run local Laya engine to evaluate signaling questions and extract supporting quotes"
+                  title="Run Co-Scientist to evaluate signaling questions and extract supporting quotes"
                 >
                   {prefillMutation.isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Sparkles className="h-3.5 w-3.5 text-[#381A61]" />
                   )}
-                  <span>Run Laya AI</span>
+                  <span>Run Co-Scientist</span>
                 </button>
 
-                {/* Accept All AI Button */}
+                {/* Accept All Button */}
                 {hasAiSuggestions && (
                   <button
                     onClick={() => acceptAiMutation.mutate()}
                     disabled={acceptAiMutation.isPending}
                     className="px-2.5 py-1.5 text-xs font-bold text-white bg-[#381A61] hover:bg-[#4E2487] rounded-xl flex items-center gap-1.5 transition-all shadow-xs"
-                    title="Confirm and verify all AI recorded answers"
+                    title="Confirm and verify all Co-Scientist recorded answers"
                   >
                     {acceptAiMutation.isPending ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -806,8 +767,7 @@ export function RobAssessmentPage() {
           {/* Main Scrollable Review Area: Domains & Signaling Questions */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {displayedDomainJudgments.map((dj) => {
-              // Performance Optimization: Use O(1) map lookup instead of O(N) array search
-              const domainDef = domainDefMap.get(dj.domain_key);
+              const domainDef = toolDef?.domains.find((d) => d.key === dj.domain_key);
               const isExpanded = expandedDomains.has(dj.domain_key);
               const allVerified = dj.signaling_answers.every((sa) => sa.human_verified === 1);
               const flaggedInDomain = dj.signaling_answers.filter(
@@ -863,9 +823,8 @@ export function RobAssessmentPage() {
                   {/* Domain Signaling Questions Body */}
                   {isExpanded && domainDef && (
                     <div className="p-4 space-y-3.5 bg-[#FAF9F3]/40">
-                      {domainDef.signaling_questions.map((sq: any) => {
-                        // Performance Optimization: Use O(1) map lookup instead of O(N) array search
-                        const sa = signalingAnswerMap.get(`${dj.domain_key}:${sq.key}`);
+                      {domainDef.signaling_questions.map((sq) => {
+                        const sa = dj.signaling_answers.find((a) => a.question_key === sq.key);
                         if (!sa) return null;
                         if (isReviewMode && sa.needs_human_review !== 1) return null;
 
@@ -922,7 +881,7 @@ export function RobAssessmentPage() {
                                   </span>
                                 ) : (
                                   <span className="text-[10px] font-semibold text-[#6B665E] bg-[#88A0DC]/10 border border-[#88A0DC]/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                    Auto-Recorded by Laya
+                                    Assisted by Co-Scientist
                                   </span>
                                 )}
 
