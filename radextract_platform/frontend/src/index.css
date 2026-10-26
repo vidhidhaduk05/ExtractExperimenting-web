@@ -1209,3 +1209,50 @@
   animation: breathing-glow 2.8s ease-in-out infinite;
 }
 
+@keyframes velvetIn {
+  0% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-velvetIn {
+  animation: velvetIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes velvetLanding {
+  0% {
+    transform: translateY(-8px) scale(0.985);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-velvet-landing {
+  animation: velvetLanding 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes rhythmicPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(0.97);
+  }
+}
+
+.animate-rhythmic-pulse {
+  animation: rhythmicPulse 2s ease-in-out infinite;
+}
+
+
+

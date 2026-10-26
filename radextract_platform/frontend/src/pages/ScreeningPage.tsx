@@ -65,13 +65,15 @@ import {
   CheckSquare,
   CheckCircle2,
   ChevronDown,
+  Sliders,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
-
+import { ExploratoryScreeningView } from "../components/screening/ExploratoryScreeningView";
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const [viewMode, setViewMode] = useState<"standard" | "exploratory">("standard");
   const bookmarks = useBookmarks(projectId);
   const tagIndex = useProjectTags(projectId);
   const [tagFilter, setTagFilter] = useState("");
@@ -867,6 +869,20 @@ export function ScreeningPage() {
     }
   };
 
+  if (viewMode === "exploratory") {
+    return (
+      <ExploratoryScreeningView
+        projectId={projectId}
+        projectStudies={studies}
+        summary={summary}
+        exclusionReasons={exclusionReasons}
+        onScreenStudy={(payload) => decisionMutation.mutateAsync(payload)}
+        isDecisionPending={decisionMutation.isPending}
+        onSwitchToStandard={() => setViewMode("standard")}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#fbf9f4] flex flex-col font-sans text-[#4f444b]">
       {/* Top Header */}
@@ -912,6 +928,19 @@ export function ScreeningPage() {
               <Keyboard className="w-3.5 h-3.5 text-[#814d75]" />
               <span>Hotkeys</span>
               <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-[#ffdea6] text-[#3a0f34] rounded font-bold">?</kbd>
+            </button>
+
+            {/* View Switcher: Exploratory Velvet + Senior Mode */}
+            <button
+              onClick={() => setViewMode("exploratory")}
+              className="px-3.5 py-2 text-xs font-bold text-[#2E1231] bg-[#FAF7F2] border-2 border-[#2E1231] hover:bg-[#E8C5E0]/40 rounded-lg flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+              title="Switch to Velvet Exploratory View with Senior Doctor Mode, Toggles, and Step-by-Step Process Trace"
+            >
+              <Sliders className="w-3.5 h-3.5 text-amber-600" />
+              <span>Velvet Stream + Senior Mode</span>
+              <span className="text-[10px] font-mono uppercase bg-[#2E1231] text-white px-1.5 py-0.2 rounded font-bold">
+                Live
+              </span>
             </button>
 
             <button
@@ -1249,7 +1278,6 @@ export function ScreeningPage() {
 
           {/* Quick Dropdowns & Saved Filter */}
           <div className="flex items-center gap-2 flex-wrap">
-            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -1285,6 +1313,9 @@ export function ScreeningPage() {
               />
               <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
             </label>
+
+            {/* Tag Filter */}
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
           </div>
 
           {/* Search Box */}
