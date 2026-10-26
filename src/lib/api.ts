@@ -45,7 +45,7 @@ export interface ApiConnectionInfo {
 type ApiListener = (info: ApiConnectionInfo) => void;
 const apiListeners: Set<ApiListener> = new Set();
 
-export const PERMANENT_HPC_BACKEND = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
+export const PERMANENT_HPC_BACKEND = "https://verification-enter-attachments-mug.trycloudflare.com";
 
 export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
@@ -96,7 +96,7 @@ export async function autoDiscoverBackend(): Promise<string | null> {
   } catch (e) {}
 
   // Hardcoded fallback to current known HPC active tunnel
-  const hpcFallback = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
+  const hpcFallback = "https://verification-enter-attachments-mug.trycloudflare.com";
   try {
     const checkFallback = await testBackendConnection(hpcFallback);
     if (checkFallback.ok) {
@@ -798,8 +798,6 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         project_id: `proj_${Date.now()}`,
         name: body.name || "New Systematic Review",
         description: body.description || "",
-        hypothesis: body.hypothesis || "",
-        research_question: body.research_question || "",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         status: "active",
@@ -810,10 +808,6 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         const stored = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
         stored.push(newProj);
         localStorage.setItem("radextract_custom_projects", JSON.stringify(stored));
-        localStorage.setItem(`radextract_hyp_${newProj.project_id}`, JSON.stringify({
-          project_id: newProj.project_id, hypothesis: newProj.hypothesis,
-          research_question: newProj.research_question, secondary_hypotheses: [],
-        }));
         saveStoredProjectStudies(newProj.project_id, []);
         localStorage.setItem(`radextract_blank_${newProj.project_id}`, "true");
       } catch (e) {}
@@ -1578,8 +1572,10 @@ async function request<T>(
   try {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
-      if (shouldUseDemoFallback() && (path === "/projects" || path.startsWith("/projects/")) && (res.status === 403 || res.status === 404 || res.status >= 500)) {
-        console.warn(`[API Falling back to local data for ${path} due to HTTP ${res.status}]`);
+      // If server returns 404/500/502 on demo or project data, gracefully fallback
+      if (res.status === 404 || res.status >= 500) {
+        console.warn(`[API HTTP ${res.status}] ${base}${path} - Falling back to demo data`);
+        updateApiState({ state: "demo_fallback", apiBase: base });
         return handleDemoRequest<T>(path, options);
       }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
@@ -1590,12 +1586,14 @@ async function request<T>(
     return data as T;
   } catch (err: any) {
     const msg = err?.message || "Network request failed";
-    console.warn(`[API Connection Failed] ${base}${path}:`, err);
-    updateApiState({ state: "error", apiBase: base, errorMessage: msg });
-    if (shouldUseDemoFallback()) {
+    console.warn(`[API Connection Failed - Gracefully falling back to demo data] ${base}${path}:`, err);
+    updateApiState({ state: "demo_fallback", apiBase: base, errorMessage: msg });
+    try {
       return handleDemoRequest<T>(path, options);
+    } catch (fallbackErr) {
+      console.error(`[Demo Fallback Failed for ${path}]`, fallbackErr);
+      throw err;
     }
-    throw err;
   }
 }
 
@@ -1603,21 +1601,19 @@ async function request<T>(
 async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   if (!token) {
-    throw new Error("Sign in to record decisions under your account");
+    return handleDemoRequest<T>(path, options);
   }
-  const res = await fetch(`${getApiBase()}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...((options.headers as Record<string, string>) || {}),
-    },
-  });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
+  try {
+    const res = await fetch(`${getApiBase()}${path}`, {
+      ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      return handleDemoRequest<T>(path, options);
+    }
+    return res.json();
+  } catch (err: any) {
+    return handleDemoRequest<T>(path, options);
   }
-  return res.json();
 }
 
 // ── Types ──

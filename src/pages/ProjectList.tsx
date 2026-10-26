@@ -9,8 +9,8 @@ export function ProjectList() {
     queryFn: api.listProjects,
   });
 
-  // Always ensure at least the landmark review project is accessible if list is empty
-  const projects = rawProjects && rawProjects.length > 0 ? rawProjects : (rawProjects ? [DEMO_PROJECT] : []);
+  // Always ensure at least the landmark review project is accessible if list is empty or offline
+  const projects = (rawProjects && rawProjects.length > 0) ? rawProjects : [DEMO_PROJECT];
 
   return (
     <div className="min-h-screen bg-[#fbf9f4] p-6 sm:p-10 font-['Work_Sans']">
