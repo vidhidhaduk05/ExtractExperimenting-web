@@ -164,9 +164,6 @@ export const ClaimscapePage: React.FC = () => {
   // Selected paper in inspector (default to landmark WHI trial)
   const [selectedPmid, setSelectedPmid] = useState<string>("12117397");
 
-  // Active Specialist Lens & LAYA Flaw Alert Filter
-  const [activeLens, setActiveLens] = useState<string>("all");
-
   // Map judgments by PMID
   const judgmentMap = useMemo(() => {
     const map = new Map<string, Judgment>();
@@ -670,62 +667,6 @@ export const ClaimscapePage: React.FC = () => {
                   />
                   <span className="font-medium text-[#3a0f34]">Show reviews & commentary</span>
                 </label>
-
-                {/* Clinical Specialist Lens & LAYA Flaw Filter */}
-                <div className="flex items-center gap-1 bg-[#e4dfd8] px-1.5 py-0.5 rounded border border-[#d2c2cb] ml-2">
-                  <span className="text-[10px] font-bold text-[#3a0f34] uppercase tracking-wider pr-1">
-                    ⚡ Lens:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLens("all")}
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                      activeLens === "all" ? "bg-[#3a0f34] text-white shadow-xs" : "text-[#5e5359] hover:text-[#3a0f34]"
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLens("flaw_alert")}
-                    title="Highlight studies with methodological design flaws flagged by LAYA"
-                    className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors flex items-center gap-1 ${
-                      activeLens === "flaw_alert" ? "bg-amber-600 text-white shadow-xs" : "text-amber-800 hover:bg-amber-100"
-                    }`}
-                  >
-                    <span>⚠️ Flaws ({processedPapers.filter((p) => p.hasFlawWarning || (p.layaFlawProb ?? 0) >= 0.40).length})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLens("interventional")}
-                    title="Neurointerventionalist: Recanalization & Device Performance"
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                      activeLens === "interventional" ? "bg-purple-900 text-white shadow-xs" : "text-[#5e5359] hover:text-[#3a0f34]"
-                    }`}
-                  >
-                    🧠 Interventional
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLens("stroke_neurology")}
-                    title="Stroke Neurologist: Clinical Independence & Safety"
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                      activeLens === "stroke_neurology" ? "bg-blue-900 text-white shadow-xs" : "text-[#5e5359] hover:text-[#3a0f34]"
-                    }`}
-                  >
-                    🩺 Neurology
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLens("biostatistics")}
-                    title="Trial Biostatistician: Risk of Bias & Endpoint Validity"
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                      activeLens === "biostatistics" ? "bg-emerald-900 text-white shadow-xs" : "text-[#5e5359] hover:text-[#3a0f34]"
-                    }`}
-                  >
-                    📐 Biostat
-                  </button>
-                </div>
               </div>
 
               <p className="cs-mono text-[12px] text-[#72636d]" aria-live="polite">
@@ -739,7 +680,6 @@ export const ClaimscapePage: React.FC = () => {
               selectedPmid={selectedPmid}
               onSelectPaper={(pmid) => setSelectedPmid(pmid)}
               showReviews={showReviews}
-              activeLens={activeLens}
             />
 
             {/* Legend Bar */}

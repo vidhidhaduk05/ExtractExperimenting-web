@@ -59,23 +59,20 @@ export function UniversalBulkUploadModal({
   const handleAddFiles = (files: globalThis.File[]) => {
     if (!files || files.length === 0) return;
 
-    const newItems: QueuedFile[] = files.map((f) => {
-      const name = f.name.toLowerCase();
-      let ftype = "other";
-      if (name.endsWith(".pdf")) ftype = "pdf";
-      else if (name.endsWith(".zip")) ftype = "zip";
-      else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) ftype = "spreadsheet";
-      else if (name.endsWith(".ris") || name.endsWith(".bib") || name.endsWith(".xml") || name.endsWith(".enw") || name.endsWith(".ciw") || name.endsWith(".nbib")) ftype = "citation";
-
-      return {
-        id: `${f.name}-${f.size}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        file: f,
-        name: f.name,
-        size: f.size,
-        type: ftype,
-        status: "queued",
-      };
-    });
+    const newItems: QueuedFile[] = files.map((f) => ({
+      id: `${f.name}-${f.size}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      file: f,
+      name: f.name,
+      size: f.size,
+      type: f.name.toLowerCase().endsWith(".pdf")
+        ? "pdf"
+        : f.name.toLowerCase().endsWith(".xlsx") || f.name.toLowerCase().endsWith(".xls") || f.name.toLowerCase().endsWith(".csv")
+        ? "spreadsheet"
+        : f.name.toLowerCase().endsWith(".ris") || f.name.toLowerCase().endsWith(".bib")
+        ? "citation"
+        : "other",
+      status: "queued",
+    }));
 
     setQueuedFiles((prev) => {
       // Avoid duplicate file names in the active list
@@ -139,15 +136,6 @@ export function UniversalBulkUploadModal({
 
     const createdStudies: Study[] = [];
     const isDirectExtraction = targetWorkflow === "extraction";
-
-    if (isDirectExtraction) {
-      try {
-        const rawFiles = queuedFiles.map((q) => q.file);
-        await api.uploadIncludedFiles(projectId, rawFiles);
-      } catch (err) {
-        console.warn("Backend uploadIncludedFiles:", err);
-      }
-    }
 
     for (let i = 0; i < queuedFiles.length; i++) {
       const item = queuedFiles[i];
@@ -373,7 +361,7 @@ export function UniversalBulkUploadModal({
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".pdf,.PDF,.zip,.ZIP,.ris,.RIS,.xml,.XML,.enw,.ENW,.bib,.BIB,.ciw,.CIW,.nbib,.NBIB,.xlsx,.XLSX,.xls,.XLS,.csv,.CSV,.txt,application/pdf,application/zip,application/x-zip-compressed,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,text/plain"
+              accept=".pdf,.PDF,.xlsx,.XLSX,.xls,.XLS,.csv,.CSV,.ris,.bib,.txt,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,text/plain"
               className="hidden"
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
@@ -391,10 +379,10 @@ export function UniversalBulkUploadModal({
 
               <div>
                 <p className="font-serif text-base font-normal text-[#141413]">
-                  Click to select or drag & drop files from your computer
+                  Click to select or drag & drop files from your laptop
                 </p>
                 <p className="font-sans text-xs text-[#6B665E] mt-1">
-                  Supports multiple files simultaneously (e.g. hold Ctrl or Shift)
+                  Supports selecting multiple files simultaneously (e.g. hold Ctrl or Shift)
                 </p>
               </div>
 
@@ -408,12 +396,12 @@ export function UniversalBulkUploadModal({
                   className="btn-phylo-primary text-xs inline-flex items-center gap-2 cursor-pointer shadow-xs"
                 >
                   <FolderPlus className="h-3.5 w-3.5 text-[#E9ED4C]" />
-                  <span>Browse Files</span>
+                  <span>Browse Laptop Files</span>
                 </button>
               </div>
 
               <p className="text-[11px] font-mono text-[#8A817A] pt-1">
-                Supports: <strong className="text-[#141413]">.PDF & .ZIP</strong> (Papers & archives) &bull; <strong className="text-[#141413]">.RIS / .XML / .ENW / .BIB</strong> (Zotero & EndNote) &bull; <strong className="text-[#141413]">.XLSX / .CSV</strong>
+                Supports: <strong className="text-[#141413]">.PDF</strong> (Full text papers) &bull; <strong className="text-[#141413]">.XLSX / .CSV</strong> (Curated datasets) &bull; <strong className="text-[#141413]">.RIS / .BIB</strong> (Citations)
               </p>
             </div>
           </div>

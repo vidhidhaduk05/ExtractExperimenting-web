@@ -7,7 +7,6 @@ import {
   Lightbulb, HelpCircle, Plus, Trash2, Loader2, CheckCircle,
   Upload, FileText, Copy, Search, Sparkles, Database,
   ChevronDown, ChevronRight, AlertCircle, AlertTriangle, FileUp,
-  ExternalLink,
 } from "lucide-react";
 import { ReferenceImportModal } from "../components/common/ReferenceImportModal";
 

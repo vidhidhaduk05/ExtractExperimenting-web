@@ -6,8 +6,6 @@ import {
   type RobDomainJudgment,
   type RobSignalingAnswer,
   type RobToolDef,
-  type RobDomainDef,
-  type RobSQDef,
 } from "../lib/api";
 import {
   ArrowLeft,
@@ -43,7 +41,7 @@ interface UndoRecord {
   answerId: string;
   previousAnswer: string;
   previousVerified: number;
-  previousNeedsReview?: number;
+  previousNeedsReview: number;
 }
 
 export function RobAssessmentPage() {
@@ -119,13 +117,12 @@ export function RobAssessmentPage() {
   // Compute PDF URL for the current study
   const currentPdfUrl = useMemo(() => {
     if (customPdfUrl) return customPdfUrl;
-    const currentStudyId = assessment?.study_id || (projectId === "demo" ? "study_birua_2022" : (allStudies[0]?.study_id || ""));
+    const currentStudyId = assessment?.study_id || "study_birua_2022";
     const paper = allStudies.find((p: any) => p.study_id === currentStudyId || p.id === currentStudyId) || allStudies[0];
-    if (!paper) return "";
     const base = import.meta.env.BASE_URL || "/";
     const cleanBase = base.endsWith("/") ? base : base + "/";
-    return paper.pdf_path || cleanBase + "papers/" + (paper.filename || (projectId === "demo" ? "Birua_2022.pdf" : ""));
-  }, [customPdfUrl, assessment?.study_id, allStudies, projectId]);
+    return cleanBase + "papers/" + (paper?.filename || paper?.title + ".pdf" || "Birua_2022.pdf");
+  }, [customPdfUrl, assessment?.study_id, allStudies]);
 
   useEffect(() => {
     if (assessment?.tool && !selectedNewTool) {
@@ -140,44 +137,20 @@ export function RobAssessmentPage() {
     }
   }, [assessment]);
 
-  // Bolt Performance Optimization: Pre-compute O(1) lookup map for tool domain definitions
-  const domainDefMap = useMemo(() => {
-    const map = new Map<string, RobDomainDef>();
-    if (assessment?.tool_definition?.domains) {
-      for (const d of assessment.tool_definition.domains) {
-        map.set(d.key, d);
-      }
-    }
-    return map;
-  }, [assessment?.tool_definition]);
-
-  // Bolt Performance Optimization: Pre-compute O(1) lookup map for signaling answers scoped by domain_key:question_key
-  const signalingAnswerMap = useMemo(() => {
-    const map = new Map<string, RobSignalingAnswer>();
-    if (assessment?.domain_judgments) {
-      for (const dj of assessment.domain_judgments) {
-        for (const sa of dj.signaling_answers) {
-          map.set(`${dj.domain_key}:${sa.question_key}`, sa);
-        }
-      }
-    }
-    return map;
-  }, [assessment?.domain_judgments]);
-
   // Flatten signaling questions list for linear hotkey navigation
   const allSignalingQuestions = useMemo(() => {
     if (!assessment) return [];
     const list: Array<{
       answer: RobSignalingAnswer;
       domain: RobDomainJudgment;
-      questionDef?: RobSQDef;
+      questionDef?: { key: string; text: string; response_options: string[]; parent_key?: string | null; trigger_answers?: string[] | null };
       globalIndex: number;
     }> = [];
     let idx = 1;
     for (const dj of assessment.domain_judgments) {
-      const domainDef = domainDefMap.get(dj.domain_key);
+      const domainDef = assessment.tool_definition?.domains.find((d) => d.key === dj.domain_key);
       for (const sa of dj.signaling_answers) {
-        const sqDef = domainDef?.signaling_questions?.find((q) => q.key === sa.question_key);
+        const sqDef = domainDef?.signaling_questions.find((q) => q.key === sa.question_key);
         list.push({
           answer: sa,
           domain: dj,
@@ -187,16 +160,7 @@ export function RobAssessmentPage() {
       }
     }
     return list;
-  }, [assessment, domainDefMap]);
-
-  // Bolt Performance Optimization: Pre-compute O(1) map for question items by question_key for hotkey navigation
-  const signalingQuestionByKey = useMemo(() => {
-    const map = new Map<string, typeof allSignalingQuestions[0]>();
-    for (const item of allSignalingQuestions) {
-      map.set(item.answer.question_key, item);
-    }
-    return map;
-  }, [allSignalingQuestions]);
+  }, [assessment]);
 
   // Map RoB signaling questions to spatial PDF highlight items for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -432,7 +396,7 @@ export function RobAssessmentPage() {
         target.isContentEditable;
       if (isInput) return;
 
-      const currentQ = selectedQuestionKey ? signalingQuestionByKey.get(selectedQuestionKey) : undefined;
+      const currentQ = allSignalingQuestions.find((q) => q.answer.question_key === selectedQuestionKey);
 
       if (e.key === "a" || e.key === "A" || e.key === "Enter") {
         e.preventDefault();
@@ -803,8 +767,7 @@ export function RobAssessmentPage() {
           {/* Main Scrollable Review Area: Domains & Signaling Questions */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {displayedDomainJudgments.map((dj) => {
-              // Bolt performance optimization: O(1) domain definition lookup from memoized Map
-              const domainDef = domainDefMap.get(dj.domain_key);
+              const domainDef = toolDef?.domains.find((d) => d.key === dj.domain_key);
               const isExpanded = expandedDomains.has(dj.domain_key);
               const allVerified = dj.signaling_answers.every((sa) => sa.human_verified === 1);
               const flaggedInDomain = dj.signaling_answers.filter(
@@ -860,10 +823,8 @@ export function RobAssessmentPage() {
                   {/* Domain Signaling Questions Body */}
                   {isExpanded && domainDef && (
                     <div className="p-4 space-y-3.5 bg-[#FAF9F3]/40">
-                      {domainDef.signaling_questions.map((sq: RobSQDef) => {
-                        // Bolt performance optimization: O(1) signaling answer lookup from domain-scoped memoized Map
-                        // Replaces linear .find() search inside nested render loops on every render pass
-                        const sa = signalingAnswerMap.get(`${dj.domain_key}:${sq.key}`);
+                      {domainDef.signaling_questions.map((sq) => {
+                        const sa = dj.signaling_answers.find((a) => a.question_key === sq.key);
                         if (!sa) return null;
                         if (isReviewMode && sa.needs_human_review !== 1) return null;
 

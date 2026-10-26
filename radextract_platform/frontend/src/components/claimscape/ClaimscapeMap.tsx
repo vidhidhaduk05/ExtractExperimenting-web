@@ -13,7 +13,6 @@ interface ClaimscapeMapProps {
   selectedPmid: string | null;
   onSelectPaper: (pmid: string) => void;
   showReviews: boolean;
-  activeLens?: string;
 }
 
 interface TooltipState {
@@ -28,8 +27,7 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
   summaries,
   selectedPmid,
   onSelectPaper,
-  showReviews,
-  activeLens = "all"
+  showReviews
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const axisRef = useRef<HTMLDivElement>(null);
@@ -233,20 +231,12 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                     const isHovered = hovered?.pmid === paper.paper.pmid;
                     const transformStr = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
 
-                    const hasFlaw = Boolean(paper.hasFlawWarning || (paper.layaFlawProb ?? 0) >= 0.40);
-                    const isFlawAlert = activeLens === "flaw_alert";
-                    const isSpecialtyFilter = activeLens && activeLens !== "all" && activeLens !== "flaw_alert";
-                    const matchesLens = !isSpecialtyFilter || paper.layaSpecialty === activeLens;
-                    const isDimmed = (isFlawAlert && !hasFlaw) || (isSpecialtyFilter && !matchesLens);
-
                     return (
                       <g
                         key={paper.paper.pmid}
                         className="cs-dot enter"
                         style={{
                           transform: transformStr,
-                          opacity: isDimmed ? 0.25 : 1,
-                          transition: "opacity 0.2s ease, transform 0.2s ease",
                           // @ts-expect-error CSS variable for transform animation
                           "--t": transformStr
                         }}
@@ -257,40 +247,6 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                           strength={paper.strength}
                           r={6.5}
                         />
-
-                        {/* LAYA Flaw Warning Halo */}
-                        {hasFlaw && (
-                          <>
-                            <circle
-                              r={10}
-                              fill="none"
-                              stroke="#F59E0B"
-                              strokeWidth={isFlawAlert ? 2.5 : 1.5}
-                              strokeDasharray={isFlawAlert ? "3 2" : "2 2"}
-                              opacity={isFlawAlert ? 1 : 0.85}
-                            />
-                            {isFlawAlert && (
-                              <circle
-                                r={13}
-                                fill="none"
-                                stroke="#D97706"
-                                strokeWidth={1}
-                                opacity={0.4}
-                              />
-                            )}
-                          </>
-                        )}
-
-                        {/* Specialist Lens Active Indicator */}
-                        {isSpecialtyFilter && matchesLens && (
-                          <circle
-                            r={10.5}
-                            fill="none"
-                            stroke="#381A61"
-                            strokeWidth={2}
-                            opacity={0.9}
-                          />
-                        )}
 
                         {isSelected && <circle className="cs-sel" r={10} />}
                         {isHovered && !isSelected && <circle className="cs-hov" r={9.5} />}
@@ -607,25 +563,6 @@ const Tooltip: React.FC<TooltipProps> = ({ paper, left, top, width }) => {
           "{paper.finding}"
         </p>
       )}
-
-      {/* LAYA Fast Triage & Specialty Indicator */}
-      <div className="mt-2 pt-1.5 border-t border-[var(--cs-line)] flex items-center justify-between text-[11px]">
-        <div className="flex items-center gap-1.5">
-          <span className="font-semibold text-purple-700 dark:text-purple-300">⚡ LAYA:</span>
-          <span className={`px-1.5 py-0.5 rounded font-semibold text-[10px] ${
-            paper.hasFlawWarning || (paper.layaFlawProb ?? 0) >= 0.40
-              ? "bg-amber-100 text-amber-900 border border-amber-300"
-              : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-          }`}>
-            {paper.hasFlawWarning || (paper.layaFlawProb ?? 0) >= 0.40
-              ? `⚠️ Flaw Risk ${Math.round((paper.layaFlawProb ?? 0.48) * 100)}%`
-              : `✓ Sound Design (${Math.round((paper.layaFlawProb ?? 0.16) * 100)}%)`}
-          </span>
-        </div>
-        <span className="text-[10px] text-slate-500 capitalize font-mono">
-          {paper.layaSpecialty?.replace("_", " ") || "interventional"}
-        </span>
-      </div>
 
       <div className="mt-2 text-[11px] cs-muted flex items-center justify-between">
         <span>{paper.direct ? "Direct evidence" : "Indirect model/proxy"}</span>

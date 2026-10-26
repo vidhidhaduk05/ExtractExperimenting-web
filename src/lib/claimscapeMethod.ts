@@ -8,10 +8,6 @@ export interface Paper {
   findingText?: string;
   sentences?: string[];
   abstract?: string;
-  laya_flaw_probability?: number;
-  laya_primary_specialty?: string;
-  laya_bias_risk?: string;
-  has_flaw_warning?: boolean;
 }
 
 export interface Judgment {
@@ -44,10 +40,6 @@ export interface ProcessedPaper {
   category: "supports" | "contradicts" | "mixed" | "no_result" | "unclear";
   strength: number;
   finding: string | null;
-  layaFlawProb?: number;
-  layaSpecialty?: string;
-  layaBiasRisk?: string;
-  hasFlawWarning?: boolean;
 }
 
 export interface TierSummary {
@@ -229,18 +221,6 @@ export function classifyPaper(paper: Paper, judgment: Judgment): ProcessedPaper 
       ? paper.sentences[judgment.finding.index] ?? null
       : paper.findingText ?? null;
 
-  const layaFlawProb = paper.laya_flaw_probability ?? (
-    paper.abstract?.toLowerCase().includes("retrospective") || paper.pubTypes?.includes("Case Reports") ? 0.48 : 0.16
-  );
-  const layaSpecialty = paper.laya_primary_specialty ?? (
-    paper.abstract?.toLowerCase().includes("alteplase") || paper.abstract?.toLowerCase().includes("tpa") ? "stroke_neurology" :
-    paper.abstract?.toLowerCase().includes("surgery") || paper.abstract?.toLowerCase().includes("bypass") ? "vascular_surgery" :
-    paper.pubTypes?.includes("Meta-Analysis") || paper.pubTypes?.includes("Systematic Review") ? "biostatistics" :
-    "interventional"
-  );
-  const layaBiasRisk = paper.laya_bias_risk ?? (layaFlawProb >= 0.40 ? "moderate" : "low");
-  const hasFlawWarning = paper.has_flaw_warning ?? (layaFlawProb >= 0.40);
-
   return {
     paper,
     judgment,
@@ -252,11 +232,7 @@ export function classifyPaper(paper: Paper, judgment: Judgment): ProcessedPaper 
     agree,
     category,
     strength: avgProb,
-    finding: findingSentence,
-    layaFlawProb,
-    layaSpecialty,
-    layaBiasRisk,
-    hasFlawWarning
+    finding: findingSentence
   };
 }
 

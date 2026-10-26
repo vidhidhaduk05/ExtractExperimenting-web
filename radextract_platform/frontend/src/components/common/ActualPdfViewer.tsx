@@ -276,7 +276,8 @@ export function ActualPdfViewer({
       const pageMap: Record<number, PageHighlightOverlay[]> = {};
 
       for (const item of highlights) {
-        if (!item.quote || !item.quote.trim()) continue;
+        const searchText = (item.quote && item.quote.trim()) ? item.quote.trim() : (item.value && item.value.trim().length >= 2 && item.value !== "NR" ? item.value.trim() : "");
+        if (!searchText) continue;
 
         // Try referenced page first, fallback to checking other pages
         const targetPage = parseTargetPage(item.pageNumber, numPages);
@@ -284,7 +285,12 @@ export function ActualPdfViewer({
 
         try {
           const page = await pdf.getPage(targetPage);
-          const rects = await locateQuoteRects(page, item.quote);
+          let rects = await locateQuoteRects(page, searchText);
+
+          // If quote search failed, try value search on target page
+          if (rects.length === 0 && item.value && item.value.trim().length >= 2 && item.value !== "NR" && searchText !== item.value.trim()) {
+            rects = await locateQuoteRects(page, item.value.trim());
+          }
 
           if (rects.length > 0) {
             located = true;
@@ -309,7 +315,11 @@ export function ActualPdfViewer({
             if (p === targetPage) continue;
             try {
               const otherPage = await pdf.getPage(p);
-              const otherRects = await locateQuoteRects(otherPage, item.quote);
+              let otherRects = await locateQuoteRects(otherPage, searchText);
+              if (otherRects.length === 0 && item.value && item.value.trim().length >= 2 && item.value !== "NR" && searchText !== item.value.trim()) {
+                otherRects = await locateQuoteRects(otherPage, item.value.trim());
+              }
+
               if (otherRects.length > 0) {
                 located = true;
                 if (!pageMap[p]) pageMap[p] = [];
@@ -326,6 +336,21 @@ export function ActualPdfViewer({
               }
             } catch (e) {}
           }
+        }
+
+        // If still not located in text, attach a clean page-header indicator highlight so it can always be jumped to
+        if (!located) {
+          const p = Math.min(Math.max(1, targetPage), Math.max(1, numPages));
+          if (!pageMap[p]) pageMap[p] = [];
+          pageMap[p].push({
+            variableId: item.id,
+            varIndex: item.varIndex,
+            label: item.label,
+            value: item.value,
+            isVerified: !!item.isVerified,
+            isActive: item.id === activeHighlightId,
+            rects: [{ left: 8, top: 2.5 + (pageMap[p].length * 3), width: 84, height: 2.8 }],
+          });
         }
       }
 
@@ -394,10 +419,10 @@ export function ActualPdfViewer({
             block: "center",
             inline: "nearest",
           });
-          highlightElement.classList.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+          highlightElement.classList.add("ring-4", "ring-[#814d75]", "scale-105", "shadow-xl");
           if (activePulseTimeoutRef.current) clearTimeout(activePulseTimeoutRef.current);
           activePulseTimeoutRef.current = setTimeout(() => {
-            highlightElement.classList.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+            highlightElement.classList.remove("ring-4", "ring-[#814d75]", "scale-105", "shadow-xl");
           }, 1500);
           return true;
         }
@@ -410,6 +435,10 @@ export function ActualPdfViewer({
         const pageElement = document.getElementById(`pdf-page-${targetPage}`);
         if (pageElement) {
           pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
+          pageElement.classList.add("ring-4", "ring-[#814d75]", "shadow-2xl");
+          setTimeout(() => {
+            pageElement.classList.remove("ring-4", "ring-[#814d75]", "shadow-2xl");
+          }, 1500);
           setTimeout(() => {
             triggerScrollAndFlash();
           }, 350);

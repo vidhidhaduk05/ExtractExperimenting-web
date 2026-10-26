@@ -529,15 +529,14 @@ export const CitationTelephonePage: React.FC = () => {
               <div className="lg:col-span-7">
                 {showGraphView ? (
                   <TrailGraphView
-                    steps={activeExample.data.steps}
-                    selectedStepId={selectedStep.id}
+                    data={activeExample.data}
+                    selectedStep={selectedStep}
                     onSelectStep={setSelectedStep}
-                    rootPaper={activeExample.data.rootPaper}
                   />
                 ) : (
                   <TrailViewer
-                    steps={activeExample.data.steps}
-                    selectedStepId={selectedStep.id}
+                    data={activeExample.data}
+                    selectedStep={selectedStep}
                     onSelectStep={setSelectedStep}
                   />
                 )}
