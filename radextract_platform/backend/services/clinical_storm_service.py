@@ -132,7 +132,7 @@ def run_laya_fast_triage(title: str, abstract: str, topic: str = "clinical medic
 NEUROVASCULAR_PERSONAS = [
     {
         "id": "persona_interventional",
-        "name": "Dr. Sarah Chen, MD",
+        "name": "Neurointerventionalist",
         "role": "Neurointerventional Radiologist",
         "domain": "neurovascular",
         "avatar": "💉",
@@ -145,7 +145,7 @@ NEUROVASCULAR_PERSONAS = [
     },
     {
         "id": "persona_neurology",
-        "name": "Dr. Marcus Vance, MD, PhD",
+        "name": "Neurologist",
         "role": "Stroke Neurologist & Neurointensivist",
         "domain": "neurovascular",
         "avatar": "🩺",
@@ -158,7 +158,7 @@ NEUROVASCULAR_PERSONAS = [
     },
     {
         "id": "persona_surgeon",
-        "name": "Dr. Alexander Thorne, MD",
+        "name": "Cerebrovascular Surgeon",
         "role": "Cerebrovascular Neurosurgeon",
         "domain": "neurovascular",
         "avatar": "🔬",
@@ -171,7 +171,7 @@ NEUROVASCULAR_PERSONAS = [
     },
     {
         "id": "persona_biostatistician",
-        "name": "Dr. Elena Rostova, PhD",
+        "name": "Biostatistician",
         "role": "Lead Clinical Trial Biostatistician",
         "domain": "neurovascular",
         "avatar": "📊",
@@ -187,7 +187,7 @@ NEUROVASCULAR_PERSONAS = [
 BREAST_IMAGING_PERSONAS = [
     {
         "id": "persona_breast_radiologist",
-        "name": "Dr. Claire Dupont, MD",
+        "name": "Breast Radiologist",
         "role": "Breast Imaging Radiologist",
         "domain": "breast_imaging",
         "avatar": "🎗️",
@@ -200,7 +200,7 @@ BREAST_IMAGING_PERSONAS = [
     },
     {
         "id": "persona_breast_surgeon",
-        "name": "Dr. Lisa Tanaka, MD",
+        "name": "Surgical Oncologist",
         "role": "Breast Surgical Oncologist",
         "domain": "breast_imaging",
         "avatar": "🩺",
@@ -213,7 +213,7 @@ BREAST_IMAGING_PERSONAS = [
     },
     {
         "id": "persona_med_oncologist",
-        "name": "Dr. Robert King, MD, PhD",
+        "name": "Medical Oncologist",
         "role": "Medical Oncologist & Breast Trialist",
         "domain": "breast_imaging",
         "avatar": "🔬",
@@ -226,7 +226,7 @@ BREAST_IMAGING_PERSONAS = [
     },
     {
         "id": "persona_biostatistician",
-        "name": "Dr. Elena Rostova, PhD",
+        "name": "Biostatistician",
         "role": "Diagnostic Screening & Meta-Analysis Biostatistician",
         "domain": "breast_imaging",
         "avatar": "📊",
@@ -242,7 +242,7 @@ BREAST_IMAGING_PERSONAS = [
 THORACIC_PULMONARY_PERSONAS = [
     {
         "id": "persona_thoracic_rad",
-        "name": "Dr. Arthur Pendelton, MD",
+        "name": "Thoracic Radiologist",
         "role": "Thoracic Radiologist",
         "domain": "thoracic_pulmonary",
         "avatar": "🫁",
@@ -255,7 +255,7 @@ THORACIC_PULMONARY_PERSONAS = [
     },
     {
         "id": "persona_pulmonologist",
-        "name": "Dr. Maya Lin, MD",
+        "name": "Pulmonologist",
         "role": "Interventional Pulmonologist",
         "domain": "thoracic_pulmonary",
         "avatar": "🩺",
@@ -268,7 +268,7 @@ THORACIC_PULMONARY_PERSONAS = [
     },
     {
         "id": "persona_thoracic_surgeon",
-        "name": "Dr. James Sterling, MD",
+        "name": "Thoracic Surgeon",
         "role": "Thoracic Surgical Oncologist",
         "domain": "thoracic_pulmonary",
         "avatar": "🔬",
@@ -281,7 +281,7 @@ THORACIC_PULMONARY_PERSONAS = [
     },
     {
         "id": "persona_biostatistician",
-        "name": "Dr. Elena Rostova, PhD",
+        "name": "Biostatistician",
         "role": "Lead Epidemiologist & Trial Biostatistician",
         "domain": "thoracic_pulmonary",
         "avatar": "📊",
@@ -297,7 +297,7 @@ THORACIC_PULMONARY_PERSONAS = [
 CARDIOVASCULAR_PERSONAS = [
     {
         "id": "persona_interventional_cardio",
-        "name": "Dr. Tariq Al-Mansoor, MD",
+        "name": "Interventional Cardiologist",
         "role": "Interventional Cardiologist",
         "domain": "cardiovascular",
         "avatar": "🫀",
@@ -310,7 +310,7 @@ CARDIOVASCULAR_PERSONAS = [
     },
     {
         "id": "persona_cardio_imaging",
-        "name": "Dr. Rachel Adams, MD",
+        "name": "Cardiologist",
         "role": "Cardiovascular Imaging Specialist",
         "domain": "cardiovascular",
         "avatar": "🩺",
@@ -323,7 +323,7 @@ CARDIOVASCULAR_PERSONAS = [
     },
     {
         "id": "persona_cardiac_surgeon",
-        "name": "Dr. Gregory Vance, MD",
+        "name": "Cardiac Surgeon",
         "role": "Cardiothoracic Surgeon",
         "domain": "cardiovascular",
         "avatar": "🔬",
@@ -336,7 +336,7 @@ CARDIOVASCULAR_PERSONAS = [
     },
     {
         "id": "persona_biostatistician",
-        "name": "Dr. Elena Rostova, PhD",
+        "name": "Biostatistician",
         "role": "Cardiovascular Trial Biostatistician",
         "domain": "cardiovascular",
         "avatar": "📊",
@@ -352,7 +352,7 @@ CARDIOVASCULAR_PERSONAS = [
 ABDOMINAL_GI_PERSONAS = [
     {
         "id": "persona_abdominal_rad",
-        "name": "Dr. Vikram Patel, MD",
+        "name": "Abdominal Radiologist",
         "role": "Abdominal & GI Radiologist",
         "domain": "abdominal_gi",
         "avatar": "🔬",
@@ -365,7 +365,7 @@ ABDOMINAL_GI_PERSONAS = [
     },
     {
         "id": "persona_hepatologist",
-        "name": "Dr. Hannah Goldstein, MD",
+        "name": "Hepatologist",
         "role": "Hepatologist & GI Oncologist",
         "domain": "abdominal_gi",
         "avatar": "🩺",
@@ -378,7 +378,7 @@ ABDOMINAL_GI_PERSONAS = [
     },
     {
         "id": "persona_hpb_surgeon",
-        "name": "Dr. Carlos Mendez, MD",
+        "name": "HPB Surgeon",
         "role": "HPB Surgical Oncologist",
         "domain": "abdominal_gi",
         "avatar": "🔪",
@@ -391,7 +391,7 @@ ABDOMINAL_GI_PERSONAS = [
     },
     {
         "id": "persona_biostatistician",
-        "name": "Dr. Elena Rostova, PhD",
+        "name": "Biostatistician",
         "role": "Diagnostic Meta-Analysis Biostatistician",
         "domain": "abdominal_gi",
         "avatar": "📊",
@@ -407,7 +407,7 @@ ABDOMINAL_GI_PERSONAS = [
 UNIVERSAL_PERSONAS = [
     {
         "id": "persona_interventional",
-        "name": "Dr. Sarah Chen, MD",
+        "name": "Diagnostic Specialist",
         "role": "Specialized Interventional & Diagnostic Lead",
         "domain": "universal",
         "avatar": "🔬",
@@ -420,7 +420,7 @@ UNIVERSAL_PERSONAS = [
     },
     {
         "id": "persona_medical",
-        "name": "Dr. Marcus Vance, MD, PhD",
+        "name": "Medical Specialist",
         "role": "Primary Clinical Medical Lead",
         "domain": "universal",
         "avatar": "🩺",
@@ -433,7 +433,7 @@ UNIVERSAL_PERSONAS = [
     },
     {
         "id": "persona_surgical",
-        "name": "Dr. Alexander Thorne, MD",
+        "name": "Surgeon",
         "role": "Procedural & Surgical Specialist",
         "domain": "universal",
         "avatar": "🔪",
@@ -446,7 +446,7 @@ UNIVERSAL_PERSONAS = [
     },
     {
         "id": "persona_biostatistician",
-        "name": "Dr. Elena Rostova, PhD",
+        "name": "Biostatistician",
         "role": "Lead Systematic Review Biostatistician",
         "domain": "universal",
         "avatar": "📊",
@@ -1040,10 +1040,18 @@ def deliberate_protocol_flaws(
         verdict_color = "#16a34a"
 
     grand_rounds_summary = (
-        f"Stanford STORM Grand Rounds convened for {domain_label}. "
+        f"Multi-specialty clinical review convened for {domain_label}. "
         f"Assigned specialist panel: {personas[0]['role']}, {personas[1]['role']}, {personas[2]['role']}, {personas[3]['role']}. "
         f"Protocol Rigor Score: {rigor_score}/100. "
         f"{len(design_flaws)} potential methodological design flaw(s) identified with {len(suggestions)} 1-click refinement suggestion(s)."
+    )
+
+    prisma_conformance = evaluate_prisma2020_conformance(
+        pico=pico,
+        hypothesis=hypothesis,
+        criteria=criteria,
+        research_question=research_question,
+        topic=topic
     )
 
     return {
@@ -1060,5 +1068,175 @@ def deliberate_protocol_flaws(
         "total_suggestions": len(suggestions),
         "personas": personas,
         "persona_opinions": persona_opinions,
-        "grand_rounds_summary": grand_rounds_summary
+        "grand_rounds_summary": grand_rounds_summary,
+        "prisma_conformance": prisma_conformance
     }
+
+
+def evaluate_prisma2020_conformance(
+    pico: Optional[Dict[str, Any]] = None,
+    hypothesis: Optional[str] = None,
+    criteria: Optional[Dict[str, Any]] = None,
+    research_question: Optional[str] = None,
+    topic: str = ""
+) -> Dict[str, Any]:
+    """Evaluate protocol against official PRISMA 2020 reporting checklist items (adapted from RevAIse/prismAId)."""
+    pico = pico or {}
+    criteria = criteria or {}
+    pop = str(pico.get("population", "")).strip()
+    idx = str(pico.get("index_test", "")).strip()
+    cmp = str(pico.get("comparator", "")).strip()
+    out = str(pico.get("outcome", "")).strip()
+    std = str(pico.get("study_design", "")).strip()
+    rq = str(research_question or "").strip()
+    hyp = str(hypothesis or "").strip()
+
+    inc = criteria.get("inclusion", []) if isinstance(criteria, dict) else []
+    exc = criteria.get("exclusion", []) if isinstance(criteria, dict) else []
+
+    checklist = [
+        {
+            "item_id": "prisma_title",
+            "item_number": 1,
+            "section": "Title",
+            "name": "Title Identification",
+            "passed": bool(topic.strip()),
+            "status": "passed" if topic.strip() else "missing",
+            "guidance": "Identifies the report as a systematic review, meta-analysis, or both."
+        },
+        {
+            "item_id": "prisma_rq",
+            "item_number": 2,
+            "section": "Introduction",
+            "name": "Rationale & Research Question",
+            "passed": len(rq) > 10,
+            "status": "passed" if len(rq) > 10 else "missing",
+            "guidance": "Provides explicit statement of the question(s) being addressed with reference to participants, interventions, comparators, and outcomes (PICO)."
+        },
+        {
+            "item_id": "prisma_pico_p",
+            "item_number": "3a",
+            "section": "Methods - Eligibility",
+            "name": "P — Population Specified",
+            "passed": len(pop) > 5,
+            "status": "passed" if len(pop) > 5 else "missing",
+            "guidance": "Eligibility criteria for participants/patients defined with clinical specificity."
+        },
+        {
+            "item_id": "prisma_pico_i",
+            "item_number": "3b",
+            "section": "Methods - Eligibility",
+            "name": "I — Intervention / Index Test",
+            "passed": len(idx) > 5,
+            "status": "passed" if len(idx) > 5 else "missing",
+            "guidance": "Index test or intervention criteria operationalized."
+        },
+        {
+            "item_id": "prisma_pico_c",
+            "item_number": "3c",
+            "section": "Methods - Eligibility",
+            "name": "C — Comparator Specified",
+            "passed": len(cmp) > 5 and cmp.lower() not in ["none", "n/a", "no comparator"],
+            "status": "passed" if (len(cmp) > 5 and cmp.lower() not in ["none", "n/a", "no comparator"]) else "warning",
+            "guidance": "Explicit active or reference comparator defined to prevent confounding by indication."
+        },
+        {
+            "item_id": "prisma_pico_o",
+            "item_number": "3d",
+            "section": "Methods - Eligibility",
+            "name": "O — Primary & Safety Outcomes",
+            "passed": len(out) > 5,
+            "status": "passed" if len(out) > 5 else "missing",
+            "guidance": "Primary clinical efficacy and adverse safety outcomes pre-specified."
+        },
+        {
+            "item_id": "prisma_pico_s",
+            "item_number": "3e",
+            "section": "Methods - Eligibility",
+            "name": "S — Study Design Eligibility",
+            "passed": len(std) > 5,
+            "status": "passed" if len(std) > 5 else "missing",
+            "guidance": "Eligible study designs (RCT, observational cohort, case series) documented."
+        },
+        {
+            "item_id": "prisma_criteria",
+            "item_number": 4,
+            "section": "Methods - Eligibility",
+            "name": "Inclusion & Exclusion Criteria",
+            "passed": len(inc) > 0 and len(exc) > 0,
+            "status": "passed" if (len(inc) > 0 and len(exc) > 0) else ("warning" if (len(inc) > 0 or len(exc) > 0) else "missing"),
+            "guidance": "Full inclusion and exclusion criteria documented for reproducible screening."
+        },
+        {
+            "item_id": "prisma_hyp",
+            "item_number": 5,
+            "section": "Methods - Objectives",
+            "name": "Hypothesis Pre-Specification",
+            "passed": len(hyp) > 10,
+            "status": "passed" if len(hyp) > 10 else "missing",
+            "guidance": "Pre-specified testable primary hypothesis formulated prior to study synthesis."
+        }
+    ]
+
+    passed_count = sum(1 for item in checklist if item["passed"])
+    total_count = len(checklist)
+    conformance_pct = int(round((passed_count / total_count) * 100))
+
+    return {
+        "conformance_score": conformance_pct,
+        "passed_items": passed_count,
+        "total_items": total_count,
+        "status": "FULL_CONFORMANCE" if conformance_pct == 100 else ("SUBSTANTIAL_CONFORMANCE" if conformance_pct >= 75 else "INCOMPLETE_PROTOCOL"),
+        "badge": f"PRISMA 2020: {conformance_pct}% Compliant" if conformance_pct >= 75 else f"PRISMA 2020: {passed_count}/{total_count} Items",
+        "checklist": checklist
+    }
+
+
+def export_prisma2020_protocol(
+    pico: Optional[Dict[str, Any]] = None,
+    hypothesis: Optional[str] = None,
+    criteria: Optional[Dict[str, Any]] = None,
+    research_question: Optional[str] = None,
+    topic: str = "",
+    gathered_studies: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
+    """Export standardized PRISMA 2020 / PROSPERO pre-registration protocol specification (adapted from RevAIse/prismAId)."""
+    import datetime
+
+    conformance = evaluate_prisma2020_conformance(
+        pico=pico,
+        hypothesis=hypothesis,
+        criteria=criteria,
+        research_question=research_question,
+        topic=topic
+    )
+
+    personas = resolve_personas_for_protocol(pico=pico, topic=topic, gathered_studies=gathered_studies)
+
+    return {
+        "protocol_format": "PRISMA-2020-PreRegistration-v1",
+        "exported_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "title": research_question or topic or "Systematic Review Protocol",
+        "topic": topic,
+        "research_question": research_question,
+        "hypothesis": hypothesis,
+        "pico": pico or {},
+        "eligibility_criteria": criteria or {},
+        "specialist_reviewers": [
+            {
+                "id": p["id"],
+                "role": p["role"],
+                "focus": p.get("focus", ""),
+                "key_questions": p.get("key_questions", [])
+            }
+            for p in personas
+        ],
+        "prisma_2020_conformance": conformance,
+        "reproducibility": {
+            "screener_engine": "laya_deterministic_screening",
+            "open_science_standard": "PRISMA-2020 / PROSPERO",
+            "hash_algorithm": "SHA-256",
+            "dual_reviewer_mode": "enabled"
+        }
+    }
+

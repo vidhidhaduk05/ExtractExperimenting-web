@@ -119,3 +119,21 @@ def deliberate_protocol(req: ProtocolDeliberateRequest):
     except Exception as e:
         logger.exception("Clinical STORM protocol deliberation failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/export-protocol")
+def export_protocol(req: ProtocolDeliberateRequest):
+    """Export study protocol conforming to PRISMA 2020 / PROSPERO standards (adapted from RevAIse/prismAId)."""
+    try:
+        from services.clinical_storm_service import export_prisma2020_protocol
+        return export_prisma2020_protocol(
+            pico=req.pico,
+            hypothesis=req.hypothesis,
+            criteria=req.criteria,
+            research_question=req.research_question,
+            topic=req.topic,
+            gathered_studies=req.gathered_studies
+        )
+    except Exception as e:
+        logger.exception("PRISMA 2020 protocol export failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))

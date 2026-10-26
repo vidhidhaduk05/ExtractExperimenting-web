@@ -7,7 +7,7 @@ import {
   Lightbulb, HelpCircle, Plus, Trash2, Loader2, CheckCircle,
   Upload, FileText, Copy, Search, Sparkles, Database,
   ChevronDown, ChevronRight, AlertCircle, AlertTriangle, FileUp,
-  ExternalLink, Check, ShieldAlert,
+  ExternalLink, Check, ShieldAlert, Download, ShieldCheck, ClipboardCheck,
 } from "lucide-react";
 import { ReferenceImportModal } from "../components/common/ReferenceImportModal";
 
@@ -353,12 +353,44 @@ export function PicoHypothesisPage() {
     refUploadMutation.mutate(file);
   };
 
-  // ── Stanford STORM & LAYA Protocol Deliberation State ──
+  // ── Multi-Specialty Clinical Review & Flaw Detection State ──
   const [stormResult, setStormResult] = useState<any | null>(null);
   const [isStormLoading, setIsStormLoading] = useState<boolean>(false);
   const [activePersonaId, setActivePersonaId] = useState<string>("");
   const [adoptedSuggestions, setAdoptedSuggestions] = useState<Set<string>>(new Set());
   const [adoptedToast, setAdoptedToast] = useState<string | null>(null);
+  const [showPrismaChecklist, setShowPrismaChecklist] = useState<boolean>(false);
+  const [isExportingProtocol, setIsExportingProtocol] = useState<boolean>(false);
+
+  const handleExportProtocol = async () => {
+    setIsExportingProtocol(true);
+    try {
+      const activePico = picoForm || pico || {};
+      const exportData = await api.exportProtocol({
+        pico: activePico,
+        hypothesis: hypothesis || hyp?.primary_hypothesis || "",
+        criteria: { inclusion, exclusion },
+        research_question: researchQuestion || researchQuestionInput || "",
+        topic: researchQuestion || researchQuestionInput || (activePico.population ? `${activePico.population} ${activePico.index_test}` : "clinical medicine"),
+      });
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `protocol-prisma2020-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      setAdoptedToast("Downloaded PRISMA 2020 / PROSPERO Protocol Specification (JSON).");
+      setTimeout(() => setAdoptedToast(null), 4000);
+    } catch (err) {
+      console.error("[Export Protocol Error]", err);
+    } finally {
+      setIsExportingProtocol(false);
+    }
+  };
 
   const runStormGrandRounds = async (customPico?: any, customTopic?: string) => {
     setIsStormLoading(true);
@@ -648,10 +680,10 @@ export function PicoHypothesisPage() {
       </SectionCard>
 
       {/* ═══════════════════════════════════════════════════════════════
-          Section 1c: Stanford STORM Multi-Perspective Protocol Critique
+          Section 1c: Multi-Specialty Clinical Review & Flaw Detection
           ═══════════════════════════════════════════════════════════════ */}
       <SectionCard
-        title="Stanford STORM Protocol Grand Rounds & Flaw Detection"
+        title="Multi-Specialty Protocol Review & Flaw Detection"
         icon={Sparkles}
         isOpen={openSections.storm}
         onToggle={() => toggleSection("storm")}
@@ -675,25 +707,54 @@ export function PicoHypothesisPage() {
                     {stormResult.verdict_badge}
                   </span>
                 )}
+                {stormResult?.prisma_conformance && (
+                  <span
+                    className={`text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                      stormResult.prisma_conformance.conformance_score >= 80
+                        ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
+                        : "bg-amber-50 text-amber-800 border border-amber-300"
+                    }`}
+                  >
+                    <ClipboardCheck className="h-3 w-3" />
+                    {stormResult.prisma_conformance.badge}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Multi-perspective cross-examination (Interventional, Medical, Surgical, Biostatistics) detecting latent study design traps.
+                Multi-perspective cross-examination (Interventional, Medical, Surgical, Biostatistics) detecting latent study design traps & PRISMA 2020 protocol gaps.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => runStormGrandRounds()}
-              disabled={isStormLoading}
-              className="btn-secondary whitespace-nowrap self-start sm:self-auto !py-1.5 !px-3 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
-            >
-              {isStormLoading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-[#381A61]" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5 text-[#381A61]" />
-              )}
-              {isStormLoading ? "Deliberating..." : "Re-Run Grand Rounds"}
-            </button>
+            <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={handleExportProtocol}
+                disabled={isExportingProtocol}
+                className="btn-secondary whitespace-nowrap !py-1.5 !px-3 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-sm text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg"
+                title="Export reproducible study protocol adhering to PRISMA 2020 & PROSPERO standards"
+              >
+                {isExportingProtocol ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[#381A61]" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 text-[#381A61]" />
+                )}
+                <span>Export Protocol (PRISMA)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => runStormGrandRounds()}
+                disabled={isStormLoading}
+                className="btn-secondary whitespace-nowrap !py-1.5 !px-3 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                {isStormLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[#381A61]" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5 text-[#381A61]" />
+                )}
+                {isStormLoading ? "Deliberating..." : "Re-Run Review"}
+              </button>
+            </div>
           </div>
 
           {/* Rigor Gauge & Fast Triage Bar */}
@@ -730,6 +791,101 @@ export function PicoHypothesisPage() {
             </div>
           )}
 
+          {/* PRISMA 2020 Conformance Checklist (Adapted from open-and-sustainable/prismaid) */}
+          {stormResult?.prisma_conformance && (
+            <div className="p-3.5 bg-white rounded-xl border border-gray-200 shadow-xs space-y-2.5">
+              <div
+                className="flex items-center justify-between cursor-pointer select-none"
+                onClick={() => setShowPrismaChecklist(!showPrismaChecklist)}
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <ShieldCheck className="h-4 w-4 text-[#381A61]" />
+                  <span className="text-xs font-bold text-gray-900">
+                    PRISMA 2020 Protocol Conformance (Open Science Standard)
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      stormResult.prisma_conformance.conformance_score === 100
+                        ? "bg-emerald-100 text-emerald-800"
+                        : stormResult.prisma_conformance.conformance_score >= 75
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {stormResult.prisma_conformance.passed_items}/{stormResult.prisma_conformance.total_items} Items Passed ({stormResult.prisma_conformance.conformance_score}%)
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+                  <span>{showPrismaChecklist ? "Hide Checklist" : "Review 9 Items"}</span>
+                  {showPrismaChecklist ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </div>
+              </div>
+
+              {/* Visual 9-Segment Conformance Strip */}
+              <div className="grid grid-cols-9 gap-1 h-2 rounded-full overflow-hidden bg-gray-100 p-0.5 border border-gray-200/60">
+                {stormResult.prisma_conformance.checklist?.map((item: any, idx: number) => (
+                  <div
+                    key={idx}
+                    title={`${item.item_number}. ${item.name}: ${item.status}`}
+                    className={`h-full rounded-xs transition-all ${
+                      item.passed
+                        ? "bg-emerald-500"
+                        : item.status === "warning"
+                        ? "bg-amber-400"
+                        : "bg-red-300"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Detailed 9-Item PRISMA 2020 Breakdown */}
+              {showPrismaChecklist && (
+                <div className="pt-2 border-t border-gray-100 space-y-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {stormResult.prisma_conformance.checklist?.map((item: any) => (
+                      <div
+                        key={item.item_id}
+                        className={`p-2.5 rounded-lg border text-xs flex items-start gap-2 ${
+                          item.passed
+                            ? "bg-emerald-50/40 border-emerald-200 text-gray-800"
+                            : item.status === "warning"
+                            ? "bg-amber-50/40 border-amber-200 text-gray-800"
+                            : "bg-red-50/40 border-red-200 text-gray-800"
+                        }`}
+                      >
+                        <span className="shrink-0 mt-0.5">
+                          {item.passed ? (
+                            <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                          ) : item.status === "warning" ? (
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                          ) : (
+                            <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+                          )}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-gray-900 truncate">
+                              Item {item.item_number}: {item.name}
+                            </span>
+                            <span className={`text-[9.5px] uppercase font-bold px-1.5 py-0.2 rounded shrink-0 ${
+                              item.passed ? "bg-emerald-100 text-emerald-800" : item.status === "warning" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
+                            }`}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                            {item.guidance}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Persona Specialist Tabs */}
           {stormResult?.personas && stormResult.personas.length > 0 && (
             <div className="space-y-2">
@@ -756,9 +912,9 @@ export function PicoHypothesisPage() {
                     >
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="text-lg leading-none">{p.avatar}</span>
-                        <span className="text-xs font-bold text-gray-900 truncate">{p.name}</span>
+                        <span className="text-xs font-bold text-gray-900 truncate">{p.role}</span>
                       </div>
-                      <div className="text-[11px] text-gray-500 font-medium truncate">{p.role}</div>
+                      <div className="text-[11px] text-gray-500 font-medium truncate">{p.focus ? p.focus.slice(0, 45) + "..." : "Specialist Lens"}</div>
                       <div className="mt-1.5 flex items-center gap-1">
                         <span
                           className={`inline-block w-1.5 h-1.5 rounded-full ${
@@ -786,7 +942,7 @@ export function PicoHypothesisPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-xl">{activePersona.avatar}</span>
                         <div>
-                          <span className="text-xs font-bold text-gray-900">{activePersona.name} — {activePersona.role}</span>
+                          <span className="text-xs font-bold text-gray-900">{activePersona.role}</span>
                           <p className="text-[11px] text-gray-500">{activePersona.focus}</p>
                         </div>
                       </div>
@@ -897,7 +1053,7 @@ export function PicoHypothesisPage() {
           ) : isStormLoading ? (
             <div className="flex items-center gap-2.5 p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-600">
               <Loader2 className="h-4 w-4 animate-spin text-[#381A61]" />
-              <span>Convening Stanford STORM Grand Rounds & analyzing protocol design...</span>
+              <span>Convening Multi-Specialty Clinical Review & analyzing protocol design...</span>
             </div>
           ) : null}
         </div>

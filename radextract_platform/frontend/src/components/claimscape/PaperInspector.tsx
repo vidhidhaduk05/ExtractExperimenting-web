@@ -208,15 +208,15 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
         </dl>
       </div>
 
-      {/* ⚡ Stanford STORM & LAYA Multi-Perspective Clinical Grand Rounds */}
+      {/* ⚡ Multi-Specialty Clinical Review & LAYA Triage */}
       <section className="rounded-xl border border-[#381A61]/15 dark:border-white/15 bg-gradient-to-br from-[#FAF9F3] via-[#F5F3E9] to-[#EFECE0] dark:from-[#1D1926] dark:to-[#14121A] p-4 shadow-sm">
         <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowGrandRounds(!showGrandRounds)}>
           <div className="flex items-center gap-2">
             <span className="p-1 rounded-md bg-[#381A61] text-[#F9D14A] text-xs font-mono font-bold flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> STORM
+              <Sparkles className="w-3.5 h-3.5" /> Review
             </span>
             <h4 className="text-[13px] font-serif font-bold text-[#381A61] dark:text-[#F9D14A] flex items-center gap-1.5">
-              Clinical Grand Rounds · Multi-Perspective Review
+              Multi-Specialty Review · Clinical Deliberation
             </h4>
             {stormResult?.verdict_badge && (
               <span

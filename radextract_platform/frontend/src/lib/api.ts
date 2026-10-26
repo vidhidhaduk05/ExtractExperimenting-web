@@ -4102,24 +4102,46 @@ export const api = {
       return runClientSideProtocolDeliberation(data);
     }
   },
+
+  exportProtocol: async (data: {
+    pico?: any;
+    hypothesis?: string;
+    criteria?: any;
+    research_question?: string;
+    topic?: string;
+    gathered_studies?: any[];
+  }): Promise<any> => {
+    if (shouldUseDemoFallback()) {
+      return runClientSideExportProtocol(data);
+    }
+    try {
+      return await request<any>("/storm/export-protocol", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    } catch (err) {
+      console.warn("[Protocol Export Network Fallback]", err);
+      return runClientSideExportProtocol(data);
+    }
+  },
 };
 
-// ── Client-side STORM Fallback Generators (Offline / GitHub Pages) ──
-function runClientSideStormDeliberation(title: str, abstract: string, topic: string) {
-  const combined = (title + " " + abstract + " " + topic).lower();
+// ── Client-side Clinical Review Fallback Generators (Offline / GitHub Pages) ──
+function runClientSideStormDeliberation(title: string, abstract: string, topic: string) {
+  const combined = (title + " " + abstract + " " + topic).toLowerCase();
   const isBreast = /breast|mammog|birads|bi-rads|tomosynthesis|dbt/i.test(combined);
   const isNeuro = /pam|stroke|tici|thrombectomy|aneurysm|arterial/i.test(combined);
 
   const personas = isBreast ? [
-    { id: "persona_breast_radiologist", name: "Dr. Claire Dupont, MD", role: "Breast Imaging Radiologist", avatar: "🎗️" },
-    { id: "persona_breast_surgeon", name: "Dr. Lisa Tanaka, MD", role: "Breast Surgical Oncologist", avatar: "🩺" },
-    { id: "persona_med_oncologist", name: "Dr. Robert King, MD, PhD", role: "Medical Oncologist & Breast Trialist", avatar: "🔬" },
-    { id: "persona_biostatistician", name: "Dr. Elena Rostova, PhD", role: "Diagnostic Screening Biostatistician", avatar: "📊" },
+    { id: "persona_breast_radiologist", name: "Breast Imaging Radiologist", role: "Breast Imaging Radiologist", avatar: "🎗️" },
+    { id: "persona_breast_surgeon", name: "Breast Surgical Oncologist", role: "Breast Surgical Oncologist", avatar: "🩺" },
+    { id: "persona_med_oncologist", name: "Medical Oncologist & Breast Trialist", role: "Medical Oncologist & Breast Trialist", avatar: "🔬" },
+    { id: "persona_biostatistician", name: "Diagnostic Screening Biostatistician", role: "Diagnostic Screening Biostatistician", avatar: "📊" },
   ] : [
-    { id: "persona_interventional", name: "Dr. Sarah Chen, MD", role: "Neurointerventional Radiologist", avatar: "💉" },
-    { id: "persona_neurology", name: "Dr. Marcus Vance, MD, PhD", role: "Stroke Neurologist & Neurointensivist", avatar: "🩺" },
-    { id: "persona_surgeon", name: "Dr. Alexander Thorne, MD", role: "Cerebrovascular Neurosurgeon", avatar: "🔬" },
-    { id: "persona_biostatistician", name: "Dr. Elena Rostova, PhD", role: "Lead Clinical Trial Biostatistician", avatar: "📊" },
+    { id: "persona_interventional", name: "Neurointerventional Radiologist", role: "Neurointerventional Radiologist", avatar: "💉" },
+    { id: "persona_neurology", name: "Stroke Neurologist & Neurointensivist", role: "Stroke Neurologist & Neurointensivist", avatar: "🩺" },
+    { id: "persona_surgeon", name: "Cerebrovascular Neurosurgeon", role: "Cerebrovascular Neurosurgeon", avatar: "🔬" },
+    { id: "persona_biostatistician", name: "Lead Clinical Trial Biostatistician", role: "Lead Clinical Trial Biostatistician", avatar: "📊" },
   ];
 
   const design_flaws: any[] = [];
@@ -4164,7 +4186,7 @@ function runClientSideStormDeliberation(title: str, abstract: string, topic: str
       critique: design_flaws.length > 0 ? `${p.role} notes methodological caveats requiring verification.` : `${p.role} endorses clinical rigor.`,
       confidence: 0.92
     })),
-    grand_rounds_summary: `Grand Rounds conducted across 4 specialist clinical personas. ${design_flaws.length} design flaw(s) identified.`
+    grand_rounds_summary: `Multi-specialty clinical review conducted across 4 specialist clinical roles. ${design_flaws.length} design flaw(s) identified.`
   };
 }
 
@@ -4185,29 +4207,29 @@ function runClientSideProtocolDeliberation(data: any) {
   let domain = "universal";
   let domain_label = "Universal Clinical Medicine";
   let personas = [
-    { id: "persona_interventional", name: "Dr. Sarah Chen, MD", role: "Specialized Diagnostic / Interventional Lead", avatar: "🔬", key_questions: ["Are index testing criteria standardized?"] },
-    { id: "persona_medical", name: "Dr. Marcus Vance, MD, PhD", role: "Primary Clinical Medical Lead", avatar: "🩺", key_questions: ["Are clinical endpoints clinically validated?"] },
-    { id: "persona_surgical", name: "Dr. Alexander Thorne, MD", role: "Procedural & Surgical Specialist", avatar: "🔪", key_questions: ["Are surgical rescue procedures protocolized?"] },
-    { id: "persona_biostatistician", name: "Dr. Elena Rostova, PhD", role: "Lead Systematic Review Biostatistician", avatar: "📊", key_questions: ["Is there an explicit active comparator?"] },
+    { id: "persona_interventional", name: "Specialized Diagnostic / Interventional Lead", role: "Specialized Diagnostic / Interventional Lead", avatar: "🔬", key_questions: ["Are index testing criteria standardized?"] },
+    { id: "persona_medical", name: "Primary Clinical Medical Lead", role: "Primary Clinical Medical Lead", avatar: "🩺", key_questions: ["Are clinical endpoints clinically validated?"] },
+    { id: "persona_surgical", name: "Procedural & Surgical Specialist", role: "Procedural & Surgical Specialist", avatar: "🔪", key_questions: ["Are surgical rescue procedures protocolized?"] },
+    { id: "persona_biostatistician", name: "Lead Systematic Review Biostatistician", role: "Lead Systematic Review Biostatistician", avatar: "📊", key_questions: ["Is there an explicit active comparator?"] },
   ];
 
   if (isBreast) {
     domain = "breast_imaging";
     domain_label = "Breast Imaging & Multidisciplinary Breast Oncology";
     personas = [
-      { id: "persona_breast_radiologist", name: "Dr. Claire Dupont, MD", role: "Breast Imaging Radiologist", avatar: "🎗️", key_questions: ["Is the diagnostic cutoff defined as BI-RADS >=4?"] },
-      { id: "persona_breast_surgeon", name: "Dr. Lisa Tanaka, MD", role: "Breast Surgical Oncologist", avatar: "🩺", key_questions: ["Are surgical margins and re-excision rates measured?"] },
-      { id: "persona_med_oncologist", name: "Dr. Robert King, MD, PhD", role: "Medical Oncologist & Breast Trialist", avatar: "🔬", key_questions: ["Are molecular subtypes (ER/PR/HER2) stratified?"] },
-      { id: "persona_biostatistician", name: "Dr. Elena Rostova, PhD", role: "Diagnostic Screening Biostatistician", avatar: "📊", key_questions: ["Is differential verification bias adjusted for?"] },
+      { id: "persona_breast_radiologist", name: "Breast Imaging Radiologist", role: "Breast Imaging Radiologist", avatar: "🎗️", key_questions: ["Is the diagnostic cutoff defined as BI-RADS >=4?"] },
+      { id: "persona_breast_surgeon", name: "Breast Surgical Oncologist", role: "Breast Surgical Oncologist", avatar: "🩺", key_questions: ["Are surgical margins and re-excision rates measured?"] },
+      { id: "persona_med_oncologist", name: "Medical Oncologist & Breast Trialist", role: "Medical Oncologist & Breast Trialist", avatar: "🔬", key_questions: ["Are molecular subtypes (ER/PR/HER2) stratified?"] },
+      { id: "persona_biostatistician", name: "Diagnostic Screening Biostatistician", role: "Diagnostic Screening Biostatistician", avatar: "📊", key_questions: ["Is differential verification bias adjusted for?"] },
     ];
   } else if (isNeuro) {
     domain = "neurovascular";
     domain_label = "Neurovascular Intervention, Stroke & Diagnostic Neuroradiology";
     personas = [
-      { id: "persona_interventional", name: "Dr. Sarah Chen, MD", role: "Neurointerventional Radiologist", avatar: "💉", key_questions: ["Was recanalization verified by catheter DSA?"] },
-      { id: "persona_neurology", name: "Dr. Marcus Vance, MD, PhD", role: "Stroke Neurologist & Neurointensivist", avatar: "🩺", key_questions: ["Is sICH operationalized using ECASS-III?"] },
-      { id: "persona_surgeon", name: "Dr. Alexander Thorne, MD", role: "Cerebrovascular Neurosurgeon", avatar: "🔬", key_questions: ["Are AVM and dAVF arteriovenous shunts excluded?"] },
-      { id: "persona_biostatistician", name: "Dr. Elena Rostova, PhD", role: "Lead Clinical Trial Biostatistician", avatar: "📊", key_questions: ["Is there a pre-specified active comparator arm?"] },
+      { id: "persona_interventional", name: "Neurointerventional Radiologist", role: "Neurointerventional Radiologist", avatar: "💉", key_questions: ["Was recanalization verified by catheter DSA?"] },
+      { id: "persona_neurology", name: "Stroke Neurologist & Neurointensivist", role: "Stroke Neurologist & Neurointensivist", avatar: "🩺", key_questions: ["Is sICH operationalized using ECASS-III?"] },
+      { id: "persona_surgeon", name: "Cerebrovascular Neurosurgeon", role: "Cerebrovascular Neurosurgeon", avatar: "🔬", key_questions: ["Are AVM and dAVF arteriovenous shunts excluded?"] },
+      { id: "persona_biostatistician", name: "Lead Clinical Trial Biostatistician", role: "Lead Clinical Trial Biostatistician", avatar: "📊", key_questions: ["Is there a pre-specified active comparator arm?"] },
     ];
   }
 
@@ -4216,14 +4238,7 @@ function runClientSideProtocolDeliberation(data: any) {
 
   // Check 1: Missing Comparator
   if (!comparator || /none|standard of care/i.test(comparator.trim())) {
-    design_flaws.append?.({
-      flaw_code: "MISSING_COMPARATOR_SPECIFICATION",
-      severity: "HIGH",
-      title: "Unspecified Comparative Reference Arm",
-      description: "Comparator is undefined or generic. Systematic reviews require explicit comparator contrasts.",
-      advocated_by: personas[3].role,
-      persona_id: personas[3].id
-    }) || design_flaws.push({
+    design_flaws.push({
       flaw_code: "MISSING_COMPARATOR_SPECIFICATION",
       severity: "HIGH",
       title: "Unspecified Comparative Reference Arm",
@@ -4319,6 +4334,115 @@ function runClientSideProtocolDeliberation(data: any) {
   const deductions = design_flaws.length * 15;
   const rigor_score = Math.max(40, 100 - deductions);
 
+  // PRISMA 2020 Conformance Validation (adapted from RevAIse/prismAId)
+  const pop = String(pico.population || "").trim();
+  const idx = String(pico.index_test || "").trim();
+  const cmp = String(pico.comparator || "").trim();
+  const out = String(pico.outcome || "").trim();
+  const std = String(pico.study_design || "").trim();
+  const rq = String(data.research_question || "").trim();
+  const hyp = String(data.hypothesis || "").trim();
+
+  const inc = Array.isArray(criteria.inclusion) ? criteria.inclusion : [];
+  const exc = Array.isArray(criteria.exclusion) ? criteria.exclusion : [];
+
+  const checklist = [
+    {
+      item_id: "prisma_title",
+      item_number: 1,
+      section: "Title",
+      name: "Title Identification",
+      passed: Boolean(topic.trim()),
+      status: topic.trim() ? "passed" : "missing",
+      guidance: "Identifies the report as a systematic review, meta-analysis, or both."
+    },
+    {
+      item_id: "prisma_rq",
+      item_number: 2,
+      section: "Introduction",
+      name: "Rationale & Research Question",
+      passed: rq.length > 10,
+      status: rq.length > 10 ? "passed" : "missing",
+      guidance: "Provides explicit statement of the question(s) being addressed with reference to PICO."
+    },
+    {
+      item_id: "prisma_pico_p",
+      item_number: "3a",
+      section: "Methods - Eligibility",
+      name: "P — Population Specified",
+      passed: pop.length > 5,
+      status: pop.length > 5 ? "passed" : "missing",
+      guidance: "Eligibility criteria for participants/patients defined with clinical specificity."
+    },
+    {
+      item_id: "prisma_pico_i",
+      item_number: "3b",
+      section: "Methods - Eligibility",
+      name: "I — Intervention / Index Test",
+      passed: idx.length > 5,
+      status: idx.length > 5 ? "passed" : "missing",
+      guidance: "Index test or intervention criteria operationalized."
+    },
+    {
+      item_id: "prisma_pico_c",
+      item_number: "3c",
+      section: "Methods - Eligibility",
+      name: "C — Comparator Specified",
+      passed: cmp.length > 5 && !/^(none|n\/a|no comparator)$/i.test(cmp),
+      status: (cmp.length > 5 && !/^(none|n\/a|no comparator)$/i.test(cmp)) ? "passed" : "warning",
+      guidance: "Explicit active or reference comparator defined to prevent confounding by indication."
+    },
+    {
+      item_id: "prisma_pico_o",
+      item_number: "3d",
+      section: "Methods - Eligibility",
+      name: "O — Primary & Safety Outcomes",
+      passed: out.length > 5,
+      status: out.length > 5 ? "passed" : "missing",
+      guidance: "Primary clinical efficacy and adverse safety outcomes pre-specified."
+    },
+    {
+      item_id: "prisma_pico_s",
+      item_number: "3e",
+      section: "Methods - Eligibility",
+      name: "S — Study Design Eligibility",
+      passed: std.length > 5,
+      status: std.length > 5 ? "passed" : "missing",
+      guidance: "Eligible study designs (RCT, observational cohort, case series) documented."
+    },
+    {
+      item_id: "prisma_criteria",
+      item_number: 4,
+      section: "Methods - Eligibility",
+      name: "Inclusion & Exclusion Criteria",
+      passed: inc.length > 0 && exc.length > 0,
+      status: (inc.length > 0 && exc.length > 0) ? "passed" : ((inc.length > 0 || exc.length > 0) ? "warning" : "missing"),
+      guidance: "Full inclusion and exclusion criteria documented for reproducible screening."
+    },
+    {
+      item_id: "prisma_hyp",
+      item_number: 5,
+      section: "Methods - Objectives",
+      name: "Hypothesis Pre-Specification",
+      passed: hyp.length > 10,
+      status: hyp.length > 10 ? "passed" : "missing",
+      guidance: "Pre-specified testable primary hypothesis formulated prior to study synthesis."
+    }
+  ];
+
+  const passed_count = checklist.filter(item => item.passed).length;
+  const total_count = checklist.length;
+  const conformance_pct = Math.round((passed_count / total_count) * 100);
+
+  const prisma_conformance = {
+    conformance_score: conformance_pct,
+    passed_items: passed_count,
+    total_items: total_count,
+    status: conformance_pct === 100 ? "FULL_CONFORMANCE" : (conformance_pct >= 75 ? "SUBSTANTIAL_CONFORMANCE" : "INCOMPLETE_PROTOCOL"),
+    badge: conformance_pct >= 75 ? `PRISMA 2020: ${conformance_pct}% Compliant` : `PRISMA 2020: ${passed_count}/${total_count} Items`,
+    checklist
+  };
+
   return {
     domain,
     domain_label,
@@ -4343,7 +4467,35 @@ function runClientSideProtocolDeliberation(data: any) {
         key_questions: p.key_questions || []
       };
     }),
-    grand_rounds_summary: `Stanford STORM Grand Rounds convened for ${domain_label}. Rigor Score: ${rigor_score}/100. ${design_flaws.length} design flaw(s) identified with ${suggestions.length} 1-click refinement suggestion(s).`
+    grand_rounds_summary: `Multi-specialty clinical review convened for ${domain_label}. Rigor Score: ${rigor_score}/100. ${design_flaws.length} design flaw(s) identified with ${suggestions.length} 1-click refinement suggestion(s).`,
+    prisma_conformance
+  };
+}
+
+function runClientSideExportProtocol(data: any) {
+  const deliberation = runClientSideProtocolDeliberation(data);
+  return {
+    protocol_format: "PRISMA-2020-PreRegistration-v1",
+    exported_at: new Date().toISOString(),
+    title: data.research_question || data.topic || "Systematic Review Protocol",
+    topic: data.topic || "clinical medicine",
+    research_question: data.research_question || "",
+    hypothesis: data.hypothesis || "",
+    pico: data.pico || {},
+    eligibility_criteria: data.criteria || {},
+    specialist_reviewers: deliberation.personas.map((p: any) => ({
+      id: p.id,
+      role: p.role,
+      focus: p.focus || "",
+      key_questions: p.key_questions || []
+    })),
+    prisma_2020_conformance: deliberation.prisma_conformance,
+    reproducibility: {
+      screener_engine: "laya_deterministic_screening",
+      open_science_standard: "PRISMA-2020 / PROSPERO",
+      hash_algorithm: "SHA-256",
+      dual_reviewer_mode: "enabled"
+    }
   };
 }
 

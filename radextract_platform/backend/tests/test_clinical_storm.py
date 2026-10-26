@@ -179,3 +179,56 @@ def test_storm_router_endpoints(client):
     assert proto_out["rigor_score"] <= 100
     assert len(proto_out["suggestions"]) > 0
     assert len(proto_out["personas"]) == 4
+    assert "prisma_conformance" in proto_out
+    assert proto_out["prisma_conformance"]["total_items"] == 9
+
+
+def test_prisma2020_conformance_evaluation():
+    from services.clinical_storm_service import evaluate_prisma2020_conformance
+    res = evaluate_prisma2020_conformance(
+        pico={
+            "population": "Adult patients with suspected acute ischemic stroke",
+            "index_test": "CT Angiography and CTP",
+            "comparator": "Digital Subtraction Angiography",
+            "outcome": "Sensitivity, specificity, and 90-day mRS",
+            "study_design": "Prospective diagnostic accuracy cohort"
+        },
+        hypothesis="CTA has non-inferior diagnostic accuracy compared to catheter DSA.",
+        criteria={
+            "inclusion": [{"text": "Age >=18"}],
+            "exclusion": [{"text": "Prior intracranial hemorrhage"}]
+        },
+        research_question="What is the diagnostic accuracy of CTA versus DSA in acute ischemic stroke?",
+        topic="acute ischemic stroke diagnostic imaging"
+    )
+    assert res["conformance_score"] == 100
+    assert res["status"] == "FULL_CONFORMANCE"
+    assert res["passed_items"] == 9
+
+
+def test_export_prisma2020_protocol(client):
+    payload = {
+        "pico": {
+            "population": "Patients with acute ischemic stroke eligible for thrombectomy",
+            "index_test": "Direct Mechanical Thrombectomy",
+            "comparator": "Bridging IV Thrombolysis plus Thrombectomy",
+            "outcome": "90-day mRS 0-2 functional independence",
+            "study_design": "Randomized controlled trials"
+        },
+        "hypothesis": "Direct thrombectomy is non-inferior to bridging therapy.",
+        "criteria": {
+            "inclusion": [{"text": "Adults with anterior circulation large vessel occlusion"}],
+            "exclusion": [{"text": "Pre-stroke mRS > 2"}]
+        },
+        "research_question": "Is direct mechanical thrombectomy non-inferior to bridging thrombolysis?",
+        "topic": "neurovascular intervention acute stroke"
+    }
+    res = client.post("/api/storm/export-protocol", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["protocol_format"] == "PRISMA-2020-PreRegistration-v1"
+    assert "specialist_reviewers" in data
+    assert len(data["specialist_reviewers"]) == 4
+    assert data["prisma_2020_conformance"]["conformance_score"] == 100
+    assert data["reproducibility"]["screener_engine"] == "laya_deterministic_screening"
+

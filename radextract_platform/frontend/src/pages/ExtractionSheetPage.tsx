@@ -1725,10 +1725,10 @@ export function ExtractionSheetPage() {
                   <button
                     onClick={() => setShowGrandRoundsPanel(!showGrandRoundsPanel)}
                     className={`px-3 py-1 ${showGrandRoundsPanel ? "bg-amber-400 text-slate-900 font-bold" : "bg-white/10 hover:bg-white/20 text-white font-medium"} rounded text-xs flex items-center gap-1.5 transition border border-white/20`}
-                    title="Toggle Stanford STORM & LAYA Multi-Perspective Grand Rounds Panel"
+                    title="Toggle Multi-Specialty Clinical Review Panel"
                   >
                     <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                    <span>⚡ STORM &amp; LAYA Grand Rounds</span>
+                    <span>⚡ Multi-Specialty Review</span>
                   </button>
                 </div>
 
@@ -1778,13 +1778,13 @@ export function ExtractionSheetPage() {
                 </div>
               </div>
 
-              {/* ── STANFORD STORM & LAYA CLINICAL GRAND ROUNDS STRIP ── */}
+              {/* ── MULTI-SPECIALTY CLINICAL REVIEW STRIP ── */}
               {showGrandRoundsPanel && (
                 <div className="px-4 py-2 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border-b border-indigo-900 text-xs flex flex-wrap items-center justify-between gap-3 shadow-inner">
                   <div className="flex items-center gap-3 flex-wrap">
                     <div className="flex items-center gap-1.5 bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded font-mono text-[10px] border border-indigo-500/30 font-semibold">
                       <Sparkles className="w-3 h-3 text-amber-300" />
-                      <span>STORM &amp; LAYA GRAND ROUNDS</span>
+                      <span>MULTI-SPECIALTY CLINICAL REVIEW</span>
                     </div>
 
                     {isStormLoading ? (
@@ -1815,7 +1815,7 @@ export function ExtractionSheetPage() {
                           {stormDeliberation.persona_opinions?.map((p: any) => (
                             <span
                               key={p.persona_id}
-                              title={`${p.name} (${p.role}): ${p.critique}`}
+                              title={`${p.role}: ${p.critique}`}
                               className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-help flex items-center gap-1 border ${
                                 p.stance === "critical"
                                   ? "bg-red-950/60 text-red-300 border-red-700/50"

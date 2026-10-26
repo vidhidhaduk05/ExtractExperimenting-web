@@ -110,4 +110,31 @@ This document is the canonical ledger of all engineering, architectural, scienti
   * Unauthorized requests receive HTTP 403 Forbidden with `Access denied to project`.
   * Verified with automated unit tests in `test_charts_security.py`.
 
+---
+
+## 10. Role-Only Personas without Fictitious Doctor Names & Scholarly De-Branding
+* **Date**: 2026-10-26 (Commit `57a654a`)
+* **Decision**: Completely eliminate fictitious persona identities (e.g., "Dr. Sarah Chen, MD", "Dr. Marcus Vance, MD, PhD", "Dr. Claire Dupont, MD") and replace them exclusively with pure clinical specialty roles ("Radiologist", "Neurologist", "Biostatistician", "Breast Radiologist", "Cerebrovascular Surgeon"). De-brand external "Stanford STORM" labels in favor of clean academic editorial terminology: "Multi-Specialty Clinical Review & Flaw Detection".
+* **Rationale**:
+  * Fictitious doctor identities create an impression of simulated or synthetic authority, detracting from the credibility expected by clinical faculty, systematic reviewers, and trialists.
+  * Real systematic reviews are cross-examined through disciplines and methodology, not invented personalities.
+  * Preserves editorial gravitas under the Stellar Labs / RadExtract Master Theme.
+* **Impact**:
+  * UI cards, badges, and tooltips display clean specialty titles.
+  * Client-side fallback generators and backend services strictly adhere to role-only outputs.
+
+---
+
+## 11. PRISMA 2020 Protocol Conformance & Open Science Pre-Registration Export (Adapted from prismAId)
+* **Date**: 2026-10-26
+* **Decision**: Adapt the core reporting validation and declarative export strengths of `open-and-sustainable/prismaid` into RadExtract's visual web platform:
+  * **PRISMA 2020 Conformance Validator**: Evaluates 9 mandatory items (Title, Rationale & RQ, P, I, C, O, S, Eligibility Criteria, and Hypothesis Pre-Specification).
+  * **Visual 9-Segment Conformance Strip**: Displays instant compliance percentage (e.g. 100% or 89%) and expandable guidance for any missing or warning items.
+  * **1-Click Open Science Export (`/api/storm/export-protocol`)**: Exports a standardized JSON/PROSPERO protocol pre-registration document embedding PICO specifications, specialist reviewer roles, and PRISMA 2020 conformance ledger.
+* **Rationale**:
+  * While `prismaid` lacks a web UI, interactive evidence map, local tensor inference, and human-in-the-loop extraction spreadsheets, its emphasis on PRISMA 2020 reporting completeness and reproducible open-science protocol export provides substantial methodological value.
+* **Impact**:
+  * Reviewers can verify protocol completeness prior to study screening.
+  * Seamless 1-click export of reproducible study protocols for PROSPERO and Open Science Framework (OSF) pre-registration.
+
 
