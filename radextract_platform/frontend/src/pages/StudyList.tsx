@@ -312,7 +312,24 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   };
 
   const isBlank = studies && studies.length === 0;
-  const visibleStudies = (studies || []).filter(s => (!savedOnly || bookmarks.ids.includes(s.study_id)) && matchesTag(tagIndex.data, s.study_id, tagFilter));
+
+  // Performance optimization: O(1) Set lookup for bookmarks instead of O(N*B) array searches
+  const bookmarkSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids]);
+
+  // Memoized count of bookmarked studies
+  const bookmarkedCount = useMemo(() => {
+    if (!studies) return 0;
+    let count = 0;
+    for (let i = 0; i < studies.length; i++) {
+      if (bookmarkSet.has(studies[i].study_id)) count++;
+    }
+    return count;
+  }, [studies, bookmarkSet]);
+
+  const visibleStudies = useMemo(() => {
+    if (!studies) return [];
+    return studies.filter(s => (!savedOnly || bookmarkSet.has(s.study_id)) && matchesTag(tagIndex.data, s.study_id, tagFilter));
+  }, [studies, savedOnly, bookmarkSet, tagIndex.data, tagFilter]);
 
   return (
     <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
@@ -709,11 +726,11 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
-        {bookmarkedOnly ? <span className="font-medium">{(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length} bookmarked studies</span> : <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length})</label>}
+        {bookmarkedOnly ? <span className="font-medium">{bookmarkedCount} bookmarked studies</span> : <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({bookmarkedCount})</label>}
         <span className="text-xs text-[#81737b]">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
         {bookmarks.error && <span role="alert" className="text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
       </div>
-      {savedOnly && studies && studies.length > 0 && !studies.some(s => bookmarks.ids.includes(s.study_id)) && <p className="text-sm text-[#62535d]">No saved studies yet. Use the bookmark icon to save a study for later.</p>}
+      {savedOnly && studies && studies.length > 0 && bookmarkedCount === 0 && <p className="text-sm text-[#62535d]">No saved studies yet. Use the bookmark icon to save a study for later.</p>}
       {/* Populated Study Table */}
       {studies && studies.length > 0 && <p className="text-xs text-[#81737b]">{visibleStudies.length} matching studies</p>}
       {tagFilter && studies && studies.length > 0 && visibleStudies.length === 0 && <p className="text-sm text-[#62535d]">No studies match this tag and the current filters.</p>}
@@ -739,7 +756,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                     assessment={robMap.get(s.study_id)}
                     tags={tagIndex.data}
                     onComments={() => setCollaborationStudy(s)}
-                    bookmark={<BookmarkButton saved={bookmarks.ids.includes(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
+                    bookmark={<BookmarkButton saved={bookmarkSet.has(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
                     projectId={projectId!}
                     onDelete={() => deleteMutation.mutate(s.study_id)}
                   />

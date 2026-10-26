@@ -9,3 +9,7 @@
 ## 2026-03-31 - Memoizing Trace Tree Traversals in Interactive Page Root Components
 **Learning:** Performing recursive tree walks or array flattening at the root level of interactive pages (such as `CitationTelephonePage`) re-executes on every keystroke in form fields (e.g. manuscript or claim text inputs) or state toggles, allocating new array references and causing child graph/tree components to re-render.
 **Action:** Always wrap multi-hop tree gather functions or array flatteners in `useMemo` with minimal dependencies (e.g. `[activeExample]`) to preserve object reference equality across user interaction frames.
+
+## 2026-03-31 - Converting Collection Scans to O(1) Sets in Interactive List Views
+**Learning:** Checking `array.includes(id)` inside list rendering loops and counter badge calculations (such as study bookmark filtering in `ScreeningPage` and `StudyList`) executes $O(N \cdot B)$ linear searches multiple times per render frame (e.g. user keystrokes in search inputs).
+**Action:** Construct a memoized `Set` (`new Set(array)`) via `useMemo` and compute badge counts in memoized helpers to reduce list filtering and card rendering complexity to $O(N)$ with $O(1)$ set checks.
