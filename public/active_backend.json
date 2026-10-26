@@ -2,7 +2,7 @@
   "backend_url": "https://verification-enter-attachments-mug.trycloudflare.com",
   "api_url": "https://verification-enter-attachments-mug.trycloudflare.com/api",
   "health_url": "https://verification-enter-attachments-mug.trycloudflare.com/health",
-  "updated_at": "2026-10-25T19:15:38Z",
+  "updated_at": "2026-10-26T03:25:02Z",
   "status": "online",
   "model": "biomni-r0"
 }

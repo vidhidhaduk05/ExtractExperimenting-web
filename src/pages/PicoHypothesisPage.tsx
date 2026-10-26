@@ -7,7 +7,7 @@ import {
   Lightbulb, HelpCircle, Plus, Trash2, Loader2, CheckCircle,
   Upload, FileText, Copy, Search, Sparkles, Database,
   ChevronDown, ChevronRight, AlertCircle, AlertTriangle, FileUp,
-  ExternalLink,
+  ExternalLink, Check, ShieldAlert, Download, ShieldCheck, ClipboardCheck,
 } from "lucide-react";
 import { ReferenceImportModal } from "../components/common/ReferenceImportModal";
 
@@ -330,14 +330,18 @@ export function PicoHypothesisPage() {
       queryClient.invalidateQueries({ queryKey: ["search-strings", projectId] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
 
-      // Auto-expand PICO, Hypothesis, and Criteria sections so user immediately views all fields filled
+      // Auto-expand PICO, Hypothesis, Criteria, and STORM sections so user immediately views all fields filled
       setOpenSections((prev) => ({
         ...prev,
         protocol: true,
+        storm: true,
         pico: true,
         hypothesis: true,
         criteria: true,
       }));
+
+      // Immediately run Stanford STORM Grand Rounds on extracted protocol
+      runStormGrandRounds(newPico, newRq);
     } catch (err) {
       console.error("[Protocol Upload Error]", err);
       setExtractionError((err as Error).message || "Failed to process protocol file");
@@ -349,9 +353,119 @@ export function PicoHypothesisPage() {
     refUploadMutation.mutate(file);
   };
 
+  // ── Multi-Specialty Clinical Review & Flaw Detection State ──
+  const [stormResult, setStormResult] = useState<any | null>(null);
+  const [isStormLoading, setIsStormLoading] = useState<boolean>(false);
+  const [activePersonaId, setActivePersonaId] = useState<string>("");
+  const [adoptedSuggestions, setAdoptedSuggestions] = useState<Set<string>>(new Set());
+  const [adoptedToast, setAdoptedToast] = useState<string | null>(null);
+  const [showPrismaChecklist, setShowPrismaChecklist] = useState<boolean>(false);
+  const [isExportingProtocol, setIsExportingProtocol] = useState<boolean>(false);
+
+  const handleExportProtocol = async () => {
+    setIsExportingProtocol(true);
+    try {
+      const activePico = picoForm || pico || {};
+      const exportData = await api.exportProtocol({
+        pico: activePico,
+        hypothesis: hypothesis || hyp?.primary_hypothesis || "",
+        criteria: { inclusion, exclusion },
+        research_question: researchQuestion || researchQuestionInput || "",
+        topic: researchQuestion || researchQuestionInput || (activePico.population ? `${activePico.population} ${activePico.index_test}` : "clinical medicine"),
+      });
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `protocol-prisma2020-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      setAdoptedToast("Downloaded PRISMA 2020 / PROSPERO Protocol Specification (JSON).");
+      setTimeout(() => setAdoptedToast(null), 4000);
+    } catch (err) {
+      console.error("[Export Protocol Error]", err);
+    } finally {
+      setIsExportingProtocol(false);
+    }
+  };
+
+  const runStormGrandRounds = async (customPico?: any, customTopic?: string) => {
+    setIsStormLoading(true);
+    try {
+      const activePico = customPico || picoForm;
+      const res = await api.deliberateProtocolStorm({
+        pico: activePico,
+        hypothesis,
+        criteria: { inclusion, exclusion },
+        research_question: researchQuestion || researchQuestionInput,
+        topic: customTopic || (activePico.population ? `${activePico.population} ${activePico.index_test}` : "clinical medicine"),
+      });
+      setStormResult(res);
+      if (res.personas && res.personas.length > 0) {
+        setActivePersonaId((prev) => (prev && res.personas.some((p: any) => p.id === prev)) ? prev : res.personas[0].id);
+      }
+    } catch (err) {
+      console.warn("[STORM Protocol Deliberation Error]", err);
+    } finally {
+      setIsStormLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (pico && (pico.population || pico.index_test || pico.outcome)) {
+      runStormGrandRounds(pico);
+    }
+  }, [pico?.population, pico?.index_test, pico?.outcome]);
+
+  const handleAdoptSuggestion = async (sugg: any) => {
+    const target = sugg.target_type;
+    const txt = sugg.suggested_text;
+
+    if (target === "pico_outcome") {
+      setPicoForm((prev) => ({ ...prev, outcome: txt }));
+      api.updatePico(projectId!, { ...picoForm, outcome: txt }).catch(() => {});
+    } else if (target === "pico_comparator") {
+      setPicoForm((prev) => ({ ...prev, comparator: txt }));
+      api.updatePico(projectId!, { ...picoForm, comparator: txt }).catch(() => {});
+    } else if (target === "pico_index_test") {
+      setPicoForm((prev) => ({ ...prev, index_test: txt }));
+      api.updatePico(projectId!, { ...picoForm, index_test: txt }).catch(() => {});
+    } else if (target === "pico_population") {
+      setPicoForm((prev) => ({ ...prev, population: txt }));
+      api.updatePico(projectId!, { ...picoForm, population: txt }).catch(() => {});
+    } else if (target === "pico_study_design") {
+      setPicoForm((prev) => ({ ...prev, study_design: txt }));
+      api.updatePico(projectId!, { ...picoForm, study_design: txt }).catch(() => {});
+    } else if (target === "inclusion_criterion") {
+      const updated = [...inclusion, { text: txt, category: "eligibility" }];
+      setInclusion(updated);
+      api.updateCriteria(projectId!, { inclusion: updated, exclusion }).catch(() => {});
+    } else if (target === "exclusion_criterion") {
+      const updated = [...exclusion, { text: txt, category: "safety/confounding" }];
+      setExclusion(updated);
+      api.updateCriteria(projectId!, { inclusion, exclusion: updated }).catch(() => {});
+    } else if (target === "secondary_hypothesis") {
+      const updated = [...secondary, { text: txt, type: "alternative" as const, status: "pending" as const }];
+      setSecondary(updated);
+      api.updateHypothesis(projectId!, { hypothesis, research_question: researchQuestion, secondary_hypotheses: updated }).catch(() => {});
+    }
+
+    setAdoptedSuggestions((prev) => new Set([...prev, sugg.id]));
+    setAdoptedToast(`Adopted: "${sugg.flaw_title}" into study protocol!`);
+    setTimeout(() => setAdoptedToast(null), 3500);
+
+    queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
+  };
+
   // ── Collapsible sections ──
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     protocol: true,
+    storm: true,
     pico: true,
     hypothesis: true,
     criteria: true,
@@ -562,6 +676,386 @@ export function PicoHypothesisPage() {
               {questionResult}
             </div>
           )}
+        </div>
+      </SectionCard>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          Section 1c: Multi-Specialty Clinical Review & Flaw Detection
+          ═══════════════════════════════════════════════════════════════ */}
+      <SectionCard
+        title="Multi-Specialty Protocol Review & Flaw Detection"
+        icon={Sparkles}
+        isOpen={openSections.storm}
+        onToggle={() => toggleSection("storm")}
+      >
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#381A61] bg-[#381A61]/10 px-2 py-0.5 rounded">
+                  {stormResult?.domain_label || "Multi-Specialty Clinical Lens"}
+                </span>
+                {stormResult?.verdict_badge && (
+                  <span
+                    className="text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1"
+                    style={{
+                      backgroundColor: `${stormResult.verdict_color}18`,
+                      color: stormResult.verdict_color,
+                      border: `1px solid ${stormResult.verdict_color}35`,
+                    }}
+                  >
+                    {stormResult.verdict_badge}
+                  </span>
+                )}
+                {stormResult?.prisma_conformance && (
+                  <span
+                    className={`text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                      stormResult.prisma_conformance.conformance_score >= 80
+                        ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
+                        : "bg-amber-50 text-amber-800 border border-amber-300"
+                    }`}
+                  >
+                    <ClipboardCheck className="h-3 w-3" />
+                    {stormResult.prisma_conformance.badge}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Multi-perspective cross-examination (Interventional, Medical, Surgical, Biostatistics) detecting latent study design traps & PRISMA 2020 protocol gaps.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={handleExportProtocol}
+                disabled={isExportingProtocol}
+                className="btn-secondary whitespace-nowrap !py-1.5 !px-3 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-sm text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg"
+                title="Export reproducible study protocol adhering to PRISMA 2020 & PROSPERO standards"
+              >
+                {isExportingProtocol ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[#381A61]" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 text-[#381A61]" />
+                )}
+                <span>Export Protocol (PRISMA)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => runStormGrandRounds()}
+                disabled={isStormLoading}
+                className="btn-secondary whitespace-nowrap !py-1.5 !px-3 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                {isStormLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[#381A61]" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5 text-[#381A61]" />
+                )}
+                {isStormLoading ? "Deliberating..." : "Re-Run Review"}
+              </button>
+            </div>
+          </div>
+
+          {/* Rigor Gauge & Fast Triage Bar */}
+          {stormResult && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-gray-50/80 rounded-xl border border-gray-200/80 text-xs">
+              <div>
+                <span className="text-gray-500 block text-[11px] uppercase font-bold tracking-wider">Protocol Rigor Score</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-base font-black text-[#141413]">{stormResult.rigor_score}/100</span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        stormResult.rigor_score >= 80 ? "bg-emerald-500" : stormResult.rigor_score >= 60 ? "bg-amber-500" : "bg-red-500"
+                      }`}
+                      style={{ width: `${stormResult.rigor_score}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-gray-500 block text-[11px] uppercase font-bold tracking-wider">Methodological Flaws</span>
+                <span className={`text-sm font-bold mt-0.5 block ${stormResult.total_flaws > 0 ? "text-amber-700" : "text-emerald-700"}`}>
+                  {stormResult.total_flaws === 0 ? "Zero Critical Flaws" : `${stormResult.total_flaws} Flaw(s) Identified`}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-gray-500 block text-[11px] uppercase font-bold tracking-wider">Actionable Suggestions</span>
+                <span className="text-sm font-bold text-[#381A61] mt-0.5 block">
+                  {stormResult.total_suggestions || 0} 1-Click Improvement(s)
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* PRISMA 2020 Conformance Checklist (Adapted from open-and-sustainable/prismaid) */}
+          {stormResult?.prisma_conformance && (
+            <div className="p-3.5 bg-white rounded-xl border border-gray-200 shadow-xs space-y-2.5">
+              <div
+                className="flex items-center justify-between cursor-pointer select-none"
+                onClick={() => setShowPrismaChecklist(!showPrismaChecklist)}
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <ShieldCheck className="h-4 w-4 text-[#381A61]" />
+                  <span className="text-xs font-bold text-gray-900">
+                    PRISMA 2020 Protocol Conformance (Open Science Standard)
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      stormResult.prisma_conformance.conformance_score === 100
+                        ? "bg-emerald-100 text-emerald-800"
+                        : stormResult.prisma_conformance.conformance_score >= 75
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {stormResult.prisma_conformance.passed_items}/{stormResult.prisma_conformance.total_items} Items Passed ({stormResult.prisma_conformance.conformance_score}%)
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+                  <span>{showPrismaChecklist ? "Hide Checklist" : "Review 9 Items"}</span>
+                  {showPrismaChecklist ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </div>
+              </div>
+
+              {/* Visual 9-Segment Conformance Strip */}
+              <div className="grid grid-cols-9 gap-1 h-2 rounded-full overflow-hidden bg-gray-100 p-0.5 border border-gray-200/60">
+                {stormResult.prisma_conformance.checklist?.map((item: any, idx: number) => (
+                  <div
+                    key={idx}
+                    title={`${item.item_number}. ${item.name}: ${item.status}`}
+                    className={`h-full rounded-xs transition-all ${
+                      item.passed
+                        ? "bg-emerald-500"
+                        : item.status === "warning"
+                        ? "bg-amber-400"
+                        : "bg-red-300"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Detailed 9-Item PRISMA 2020 Breakdown */}
+              {showPrismaChecklist && (
+                <div className="pt-2 border-t border-gray-100 space-y-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {stormResult.prisma_conformance.checklist?.map((item: any) => (
+                      <div
+                        key={item.item_id}
+                        className={`p-2.5 rounded-lg border text-xs flex items-start gap-2 ${
+                          item.passed
+                            ? "bg-emerald-50/40 border-emerald-200 text-gray-800"
+                            : item.status === "warning"
+                            ? "bg-amber-50/40 border-amber-200 text-gray-800"
+                            : "bg-red-50/40 border-red-200 text-gray-800"
+                        }`}
+                      >
+                        <span className="shrink-0 mt-0.5">
+                          {item.passed ? (
+                            <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                          ) : item.status === "warning" ? (
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                          ) : (
+                            <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+                          )}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-gray-900 truncate">
+                              Item {item.item_number}: {item.name}
+                            </span>
+                            <span className={`text-[9.5px] uppercase font-bold px-1.5 py-0.2 rounded shrink-0 ${
+                              item.passed ? "bg-emerald-100 text-emerald-800" : item.status === "warning" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
+                            }`}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                            {item.guidance}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Persona Specialist Tabs */}
+          {stormResult?.personas && stormResult.personas.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                Specialist Lenses (Dynamically Assigned to Topic)
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {stormResult.personas.map((p: any) => {
+                  const opinion = stormResult.persona_opinions?.find((o: any) => o.persona_id === p.id);
+                  const isSelected = activePersonaId === p.id;
+                  const isCritical = opinion?.stance === "critical";
+                  const isCaution = opinion?.stance === "cautionary";
+
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setActivePersonaId(p.id)}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? "border-[#381A61] bg-[#381A61]/5 shadow-sm ring-1 ring-[#381A61]"
+                          : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-lg leading-none">{p.avatar}</span>
+                        <span className="text-xs font-bold text-gray-900 truncate">{p.role}</span>
+                      </div>
+                      <div className="text-[11px] text-gray-500 font-medium truncate">{p.focus ? p.focus.slice(0, 45) + "..." : "Specialist Lens"}</div>
+                      <div className="mt-1.5 flex items-center gap-1">
+                        <span
+                          className={`inline-block w-1.5 h-1.5 rounded-full ${
+                            isCritical ? "bg-red-500" : isCaution ? "bg-amber-500" : "bg-emerald-500"
+                          }`}
+                        />
+                        <span className="text-[10px] font-semibold text-gray-600">
+                          {isCritical ? "Critical Concern" : isCaution ? "Caution" : "Endorsed"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Persona Critique Card */}
+              {(() => {
+                const activePersona = stormResult.personas.find((p: any) => p.id === activePersonaId) || stormResult.personas[0];
+                const activeOpinion = stormResult.persona_opinions?.find((o: any) => o.persona_id === activePersona?.id);
+                if (!activePersona) return null;
+
+                return (
+                  <div className="p-3.5 bg-white rounded-xl border border-gray-200 shadow-sm space-y-2 mt-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{activePersona.avatar}</span>
+                        <div>
+                          <span className="text-xs font-bold text-gray-900">{activePersona.role}</span>
+                          <p className="text-[11px] text-gray-500">{activePersona.focus}</p>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                        activeOpinion?.stance === "critical" ? "bg-red-100 text-red-800" : activeOpinion?.stance === "cautionary" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                      }`}>
+                        {activeOpinion?.stance || "Endorsed"}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">
+                      "{activeOpinion?.critique}"
+                    </div>
+
+                    {activePersona.key_questions && activePersona.key_questions.length > 0 && (
+                      <div className="pt-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Key Questions Examined:</span>
+                        <ul className="list-disc list-inside text-[11px] text-gray-600 space-y-0.5 mt-0.5">
+                          {activePersona.key_questions.map((q: string, i: number) => (
+                            <li key={i}>{q}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Actionable Suggestions (1-Click Adoption) */}
+          {stormResult?.suggestions && stormResult.suggestions.length > 0 ? (
+            <div className="space-y-2.5 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-[#381A61]" />
+                  Actionable Protocol Suggestions (1-Click Adoption)
+                </span>
+                <span className="text-[11px] text-gray-500">
+                  Click adopt to automatically update and persist protocol fields
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {stormResult.suggestions.map((sugg: any) => {
+                  const isAdopted = adoptedSuggestions.has(sugg.id);
+
+                  return (
+                    <div
+                      key={sugg.id}
+                      className={`p-3.5 rounded-xl border transition-all ${
+                        isAdopted
+                          ? "bg-emerald-50/50 border-emerald-200"
+                          : sugg.flaw_severity === "HIGH"
+                          ? "bg-red-50/30 border-red-200"
+                          : "bg-amber-50/30 border-amber-200"
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-gray-900">{sugg.flaw_title}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                              sugg.flaw_severity === "HIGH" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"
+                            }`}>
+                              {sugg.flaw_severity}
+                            </span>
+                            <span className="text-[11px] text-gray-500">by {sugg.persona_role}</span>
+                          </div>
+
+                          <p className="text-[11px] text-gray-600">{sugg.rationale}</p>
+
+                          <div className="mt-2 p-2 bg-white rounded-lg border border-gray-200 text-xs font-mono text-gray-800 leading-relaxed">
+                            {sugg.suggested_text}
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 self-end sm:self-center">
+                          {isAdopted ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200">
+                              <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                              Adopted ✓
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAdoptSuggestion(sugg)}
+                              className="btn-primary !py-1.5 !px-3 text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap"
+                            >
+                              <Sparkles className="h-3.5 w-3.5" />
+                              {sugg.action_label}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : stormResult ? (
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2.5">
+              <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>
+                <strong>Methodological Consensus Reached:</strong> No critical protocol flaws detected. Your study protocol is well-calibrated across all 4 clinical lenses.
+              </span>
+            </div>
+          ) : isStormLoading ? (
+            <div className="flex items-center gap-2.5 p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-600">
+              <Loader2 className="h-4 w-4 animate-spin text-[#381A61]" />
+              <span>Convening Multi-Specialty Clinical Review & analyzing protocol design...</span>
+            </div>
+          ) : null}
         </div>
       </SectionCard>
 
@@ -1053,6 +1547,14 @@ export function PicoHypothesisPage() {
             setFetchResult(`Successfully imported ${count} references from ${source}`);
           }}
         />
+      )}
+
+      {/* Floating 1-Click Adoption Notification */}
+      {adoptedToast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-[#381A61] text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 border border-purple-400/20">
+          <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{adoptedToast}</span>
+        </div>
       )}
     </div>
   );

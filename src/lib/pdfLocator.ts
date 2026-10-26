@@ -307,8 +307,9 @@ export async function locateQuoteRects(page: any, quote: string): Promise<Percen
   if (idx === -1) {
     const words = normQuote.split(" ").filter(Boolean);
     const startCount = Math.min(words.length, 12);
-    for (let count = startCount; count >= 4; count--) {
+    for (let count = startCount; count >= 1; count--) {
       const prefix = words.slice(0, count).join(" ");
+      if (prefix.length < 2) continue;
       const foundIdx = normText.indexOf(prefix);
       if (foundIdx !== -1) {
         idx = foundIdx;
@@ -322,11 +323,28 @@ export async function locateQuoteRects(page: any, quote: string): Promise<Percen
   if (idx === -1) {
     const cleanQuote = normQuote.replace(/[^\w\s]/g, "");
     const cleanText = normText.replace(/[^\w\s]/g, "");
-    const cleanIdx = cleanText.indexOf(cleanQuote);
-    if (cleanIdx !== -1) {
-      // Map approximate position
-      idx = Math.min(cleanIdx, normText.length - 1);
-      matchLen = Math.min(cleanQuote.length, normText.length - idx);
+    if (cleanQuote.length >= 2) {
+      const cleanIdx = cleanText.indexOf(cleanQuote);
+      if (cleanIdx !== -1) {
+        idx = Math.min(cleanIdx, normText.length - 1);
+        matchLen = Math.min(cleanQuote.length, normText.length - idx);
+      }
+    }
+  }
+
+  // 4. Fall back to searching any informative word (>= 4 chars or year/number) from quote
+  if (idx === -1) {
+    const candidateWords = normQuote
+      .split(/\s+/)
+      .map((w) => w.replace(/[^\w]/g, ""))
+      .filter((w) => w.length >= 4 || /^\d{2,4}$/.test(w));
+    for (const cand of candidateWords) {
+      const candIdx = normText.indexOf(cand);
+      if (candIdx !== -1) {
+        idx = candIdx;
+        matchLen = cand.length;
+        break;
+      }
     }
   }
 

@@ -326,8 +326,7 @@ export function ScreeningPage() {
     }
   };
 
-  // Bolt Optimization: Memoize studyList array reference to prevent filteredStudies useMemo from re-running on every render frame
-  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
+  const studyList = Array.isArray(studies) ? studies : [];
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
@@ -489,6 +488,11 @@ export function ScreeningPage() {
 
       queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
       queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      if (variables.decision === "included") {
+        queryClient.invalidateQueries({ queryKey: ["extraction-grid", projectId] });
+        queryClient.invalidateQueries({ queryKey: ["extractions", variables.studyId] });
+        queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      }
 
       // Clear the reason selector for the next record ONLY after successful save
       if (variables.decision === "excluded") {
@@ -738,7 +742,7 @@ export function ScreeningPage() {
     }
 
     // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-    const activeSpans = [...spans];
+    let activeSpans = [...spans];
     if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
       fallbackKeywordsList.forEach((kw) => {
         const word = kw.keyword.trim();

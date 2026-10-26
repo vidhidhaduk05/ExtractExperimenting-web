@@ -13,6 +13,7 @@ interface ClaimscapeMapProps {
   selectedPmid: string | null;
   onSelectPaper: (pmid: string) => void;
   evidenceLens?: "all" | "direct" | "reviews";
+  showReviews?: boolean;
 }
 
 interface TooltipState {
@@ -27,7 +28,8 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
   summaries,
   selectedPmid,
   onSelectPaper,
-  evidenceLens = "all"
+  evidenceLens = "all",
+  showReviews
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const axisRef = useRef<HTMLDivElement>(null);
@@ -568,7 +570,6 @@ const Tooltip: React.FC<TooltipProps> = ({ paper, left, top, width }) => {
           "{paper.finding}"
         </p>
       )}
-
 
       <div className="mt-2 text-[11px] cs-muted flex items-center justify-between">
         <span>{paper.direct ? "Direct evidence" : "Indirect model/proxy"}</span>

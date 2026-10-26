@@ -16,35 +16,12 @@ import {
   DUBOWITZ_RIGOR_DATA,
   RigorCheckItem,
   RigorDomain,
-  RigorGate,
   RigorDataset,
 } from "../data/dubowitzRigorData";
 import { RigorFingerprint } from "../components/rigor/RigorFingerprint";
 import { RigorReader } from "../components/rigor/RigorReader";
 import { api } from "../lib/api";
 import type { RigorScanResult, RigorCheck } from "../lib/rigorTypes";
-
-interface ActiveRigorDataset {
-  paper: {
-    title: string;
-    authors: string;
-    venue: string;
-    year: number;
-    doi: string;
-    license: string;
-    pages: number;
-  };
-  completenessIndex: number;
-  counts: {
-    good: number;
-    mid: number;
-    bad: number;
-    na: number;
-  };
-  gates: RigorGate[];
-  domains: RigorDomain[];
-  checks: RigorCheckItem[];
-}
 
 export const RigorScanPage: React.FC = () => {
   const [scanResult, setScanResult] = useState<RigorScanResult | null>(null);
@@ -61,9 +38,9 @@ export const RigorScanPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Derive active dataset: whether custom scan result or Dubowitz benchmark
-  const activeDataset: ActiveRigorDataset | null = React.useMemo(() => {
+  const activeDataset: RigorDataset | null = React.useMemo(() => {
     if (isReferenceActive) {
-      return DUBOWITZ_RIGOR_DATA as unknown as ActiveRigorDataset;
+      return DUBOWITZ_RIGOR_DATA;
     }
     if (scanResult && scanResult.view && scanResult.view.checks && scanResult.view.checks.length > 0) {
       const v = scanResult.view;
@@ -447,7 +424,7 @@ export const RigorScanPage: React.FC = () => {
           <div className="lg:col-span-5 order-2 lg:order-1">
             <RigorReader
               totalPages={activeDataset.paper.pages}
-              selectedCheck={selectedCheck!}
+              selectedCheck={selectedCheck}
               targetPage={targetPage}
             />
           </div>
@@ -459,7 +436,7 @@ export const RigorScanPage: React.FC = () => {
               completenessIndex={activeDataset.completenessIndex}
               checks={activeDataset.checks}
               domains={activeDataset.domains}
-              selectedCheck={selectedCheck!}
+              selectedCheck={selectedCheck}
               onSelectCheck={handleSelectCheck}
               selectedDomain={selectedDomain}
               onSelectDomain={setSelectedDomain}

@@ -576,6 +576,40 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     if (path.includes("/auto-variables")) {
       return DEMO_VARIABLES as unknown as T;
     }
+    if (path.includes("/variables/reorder") && method === "PUT") {
+      return { status: "success", reordered_count: (body.variable_ids || []).length } as unknown as T;
+    }
+    if (path.includes("/extractions/batch") && method === "POST") {
+      const cellsToUpsert = body.cells || [];
+      let saved = 0;
+      for (const c of cellsToUpsert) {
+        if (!c.study_id || !c.variable_id) continue;
+        const current = getStoredProjectExtractions(c.study_id);
+        const exts = current.length > 0 ? current : ((DEMO_EXTRACTIONS as any)[c.study_id] || []);
+        const existing = exts.find((e: any) => e.variable_id === c.variable_id);
+        if (existing) {
+          existing.value = c.value;
+          existing.is_edited = true;
+          if (c.verification_status) {
+            existing.is_verified = c.verification_status === "verified" || c.verification_status === "accepted";
+          }
+        } else {
+          exts.push({
+            extraction_id: `ext_${Date.now()}_${c.variable_id}`,
+            variable_id: c.variable_id,
+            value: c.value,
+            confidence: c.confidence ?? 1.0,
+            is_edited: true,
+            is_verified: false,
+            quote: c.evidence_quote || "",
+            source_page: c.source_page || 1,
+          });
+        }
+        saveStoredProjectExtractions(c.study_id, exts);
+        saved++;
+      }
+      return { saved_count: saved, skipped_verified_count: 0, failed_count: 0, details: [] } as unknown as T;
+    }
     if (path.includes("/variables") && method === "POST") {
       return { variable_id: `v_${Date.now()}`, project_id: "proj_pam_current", ...body, order_index: 5 } as unknown as T;
     }
@@ -1073,6 +1107,47 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       return (DEMO_PDF_DATA as any)[resolvedId] as unknown as T;
     }
     return null as unknown as T;
+  }
+  if (path.includes("/extractions/grid")) {
+    const studies = getStoredProjectStudies("proj_pam_current");
+    const studyList = studies.length > 0 ? studies : DEMO_STUDIES;
+    const gridStudies = studyList.map((s, idx) => ({
+      study_id: s.study_id || (s as any).id,
+      study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || (s as any).year || 2024}`,
+      title: s.title || `Study ${idx + 1}`,
+      authors: s.authors || "",
+      publication_year: (s as any).publication_year || (s as any).year || null,
+      journal: s.journal || "",
+      doi: s.doi || "",
+      pmid: s.pmid || "",
+    }));
+    const cells: Record<string, Record<string, any>> = {};
+    for (const st of gridStudies) {
+      cells[st.study_id] = {};
+      const exts = getStoredProjectExtractions(st.study_id);
+      const srcList = exts.length > 0 ? exts : ((DEMO_EXTRACTIONS as any)[st.study_id] || []);
+      for (const e of srcList) {
+        if (e.variable_id) {
+          cells[st.study_id][e.variable_id] = {
+            extraction_id: e.extraction_id || `ext_${st.study_id}_${e.variable_id}`,
+            value: e.value || "",
+            confidence: e.confidence ?? 0.95,
+            evidence_quote: e.quote || e.evidence_quote || "",
+            source_page: e.source_page || 1,
+            is_verified: !!e.is_verified,
+            is_edited: !!e.is_edited,
+            verification_status: e.is_verified ? (e.is_edited ? "modified" : "verified") : "unverified",
+            extraction_source: e.is_edited ? "manual" : (e.extraction_source || "ai"),
+          };
+        }
+      }
+    }
+    return {
+      project_id: "proj_pam_current",
+      variables: DEMO_VARIABLES,
+      studies: gridStudies,
+      cells,
+    } as unknown as T;
   }
   if (path.includes("/extractions") || path.includes("/coded-extract")) {
     const rawStudyId = path.split("/").filter(Boolean)[1] || "";
@@ -1632,7 +1707,7 @@ export interface ReviewVariable {
   project_id: string;
   name: string;
   section: string;
-  field_type?: string;
+  field_type?: "text" | "numeric" | "categorical" | "date" | "boolean" | string;
   allowed_values?: string;
   range_min?: number | null;
   range_max?: number | null;
@@ -1642,6 +1717,7 @@ export interface ReviewVariable {
 
 export interface ReviewStudyRow {
   study_id: string;
+  study_label?: string;
   title: string;
   authors: string;
   year: number | null;
@@ -1656,7 +1732,40 @@ export interface ReviewStudyRow {
     calc_note?: string | null;
     source_text?: string | null;
     source_page?: number | null;
+    verification_status?: string;
+    extraction_source?: string;
   }>;
+}
+
+export interface ExtractionGridStudy {
+  study_id: string;
+  study_label: string;
+  title: string;
+  authors?: string;
+  publication_year?: number | null;
+  journal?: string;
+  doi?: string;
+  pmid?: string;
+}
+
+export interface ExtractionGridCell {
+  extraction_id: string;
+  value: string;
+  confidence: number;
+  evidence_quote?: string;
+  source_page?: number | null;
+  is_verified?: boolean;
+  is_edited?: boolean;
+  verification_status?: string;
+  extraction_source?: string;
+  updated_at?: string;
+}
+
+export interface ExtractionGridResponse {
+  project_id: string;
+  variables: ReviewVariable[];
+  studies: ExtractionGridStudy[];
+  cells: Record<string, Record<string, ExtractionGridCell>>;
 }
 
 export interface ReviewProgress {
@@ -3612,16 +3721,48 @@ export const api = {
     request<any>(`/studies/${studyId}/extractions`, { method: "POST", body: JSON.stringify(data) }),
   updateExtraction: (extractionId: string, data: { value: string; is_edited?: boolean }) =>
     request<any>(`/extractions/${extractionId}`, { method: "PUT", body: JSON.stringify(data) }),
+  getExtractionGrid: (projectId: string) =>
+    request<ExtractionGridResponse>(`/projects/${projectId}/extractions/grid`),
+  batchUpdateExtractions: (projectId: string, cells: Array<{
+    study_id: string;
+    variable_id: string;
+    value: string;
+    evidence_quote?: string;
+    source_page?: number;
+    confidence?: number;
+    verification_status?: string;
+  }>) =>
+    request<{
+      saved_count: number;
+      skipped_verified_count: number;
+      failed_count: number;
+      details: any[];
+    }>(`/projects/${projectId}/extractions/batch`, {
+      method: "POST",
+      body: JSON.stringify({ cells }),
+    }),
 
   // Variables CRUD
   listVariables: (projectId: string) =>
     request<ReviewVariable[]>(`/projects/${projectId}/variables`),
-  createVariable: (projectId: string, data: { section: string; name: string; field_type: string; allowed_values?: string; range_min?: number | null; range_max?: number | null; description?: string; project_id?: string }) =>
+  createVariable: (projectId: string, data: { section: string; name: string; field_type: string; allowed_values?: string; range_min?: number | null; range_max?: number | null; description?: string; project_id?: string; order_index?: number }) =>
     request<any>(`/projects/${projectId}/variables`, { method: "POST", body: JSON.stringify({ project_id: projectId, ...data }) }),
   updateVariable: (variableId: string, data: Record<string, unknown>) =>
     request<any>(`/variables/${variableId}`, { method: "PUT", body: JSON.stringify(data) }),
-  deleteVariable: (variableId: string) =>
-    request<{ deleted: boolean }>(`/variables/${variableId}`, { method: "DELETE" }),
+  deleteVariable: (variableId: string, force = false) =>
+    request<{ deleted: boolean; requires_confirmation?: boolean; message?: string }>(
+      `/variables/${variableId}${force ? "?force=true" : ""}`,
+      { method: "DELETE" }
+    ),
+  reorderVariables: (projectId: string, variable_ids: string[]) =>
+    request<{ status: string; reordered_count: number }>(`/projects/${projectId}/variables/reorder`, {
+      method: "PUT",
+      body: JSON.stringify({ variable_ids }),
+    }),
+  exportTemplateUrl: (projectId: string) =>
+    `${API_BASE}/projects/${projectId}/export/template.xlsx`,
+  exportProjectXlsxUrl: (projectId: string) =>
+    `${API_BASE}/projects/${projectId}/export?format=xlsx`,
   suggestVariables: (projectId: string, data?: { sections?: string[]; custom_instructions?: string }) =>
     request<{
       project_id: string;
