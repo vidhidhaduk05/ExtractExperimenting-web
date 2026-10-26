@@ -7,13 +7,30 @@ import { api } from '../lib/api';
 
 vi.mock('../lib/api', () => ({
   api: {
-    getProject: vi.fn().mockImplementation(() => Promise.reject(new Error('Demo fallback'))),
-    listVariables: vi.fn().mockImplementation(() => Promise.reject(new Error('Demo fallback'))),
-    listExtractions: vi.fn().mockImplementation(() => Promise.reject(new Error('Demo fallback'))),
-    listStudies: vi.fn().mockImplementation(() => Promise.reject(new Error('Demo fallback'))),
-    recordExtractionDecision: vi.fn().mockResolvedValue({ status: 'ok' }),
+    getExtractionGrid: vi.fn(),
+    batchUpdateExtractions: vi.fn(),
+    updateExtraction: vi.fn(),
+    exportTemplateUrl: vi.fn((pid) => `/mock/export/template-${pid}.xlsx`),
+    exportProjectXlsxUrl: vi.fn((pid) => `/mock/export/project-${pid}.xlsx`),
   },
 }));
+
+const mockGridData = {
+  project_id: 'proj1',
+  variables: [
+    { variable_id: 'v1_vessel_involved', name: 'Year', section: 'Bibliographic', field_type: 'numeric', order_index: 0 },
+    { variable_id: 'v2_author', name: 'Author', section: 'Bibliographic', field_type: 'text', order_index: 1 },
+  ],
+  studies: [
+    { study_id: 's1', study_label: 'Smith 2024', title: 'Study of PAM', authors: 'Smith et al.', publication_year: 2024 },
+  ],
+  cells: {
+    s1: {
+      v1_vessel_involved: { extraction_id: 'e1', value: '2024', confidence: 0.98, is_verified: false },
+      v2_author: { extraction_id: 'e2', value: 'Smith et al.', confidence: 0.97, is_verified: false },
+    },
+  },
+};
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -32,51 +49,33 @@ function renderPage() {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.mocked(api.getProject).mockImplementation(() => Promise.reject(new Error('Demo fallback')));
-  vi.mocked(api.listVariables).mockImplementation(() => Promise.reject(new Error('Demo fallback')));
-  vi.mocked(api.listExtractions).mockImplementation(() => Promise.reject(new Error('Demo fallback')));
-  vi.mocked(api.listStudies).mockImplementation(() => Promise.reject(new Error('Demo fallback')));
-  vi.mocked(api.recordExtractionDecision).mockResolvedValue({ status: 'ok' } as any);
-
-  Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:test') });
-  Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+  vi.mocked(api.getExtractionGrid).mockResolvedValue(mockGridData as any);
+  vi.mocked(api.batchUpdateExtractions).mockResolvedValue({ saved_count: 2, skipped_verified_count: 0, failed_count: 0, details: [] });
+  vi.mocked(api.updateExtraction).mockResolvedValue({ status: 'ok' });
+  vi.mocked(api.exportTemplateUrl).mockReturnValue('/mock/export/template.xlsx');
+  vi.mocked(api.exportProjectXlsxUrl).mockReturnValue('/mock/export/project.xlsx');
 });
 
-it('renders extraction data sheet page and handles matrix CSV export without error', async () => {
-  let filename = '';
-  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
-    filename = this.download;
+it('renders extraction spreadsheet workspace and export links', async () => {
+  renderPage();
+
+  expect(await screen.findByText(/Extraction Spreadsheet Workspace/i)).toBeInTheDocument();
+  expect(await screen.findByRole('link', { name: /Blank Template/i })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Completed Results/i })).toBeInTheDocument();
+});
+
+it('prefills bibliographic metadata across unverified cells', async () => {
+  renderPage();
+
+  expect(await screen.findByText(/Extraction Spreadsheet Workspace/i)).toBeInTheDocument();
+  await screen.findByText('Smith 2024');
+
+  const prefillBtn = screen.getByRole('button', { name: /Prefill Metadata/i });
+  fireEvent.click(prefillBtn);
+
+  await waitFor(() => {
+    expect(api.batchUpdateExtractions).toHaveBeenCalledWith('proj1', expect.arrayContaining([
+      expect.objectContaining({ study_id: 's1', verification_status: 'verified' }),
+    ]));
   });
-
-  renderPage();
-
-  expect(await screen.findByText('Study Extraction Data Sheet')).toBeInTheDocument();
-
-  const exportMatrixBtn = screen.getByRole('button', { name: /Export Matrix CSV/i });
-  fireEvent.click(exportMatrixBtn);
-
-  expect(filename).toContain('full_matrix_benchmark_studies_');
-  expect(URL.createObjectURL).toHaveBeenCalled();
-  expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test');
-
-  click.mockRestore();
-});
-
-it('batch accepts high confidence variables concurrently with Promise.all', async () => {
-  vi.mocked(api.listExtractions).mockResolvedValue([
-    { extraction_id: 'e1', variable_id: 'v1_vessel_involved', value: 'Accessory MCA', confidence: 0.98, is_verified: false },
-    { extraction_id: 'e2', variable_id: 'v9_associated_aneurysm', value: 'Present', confidence: 0.97, is_verified: false },
-  ] as any);
-
-  renderPage();
-
-  expect(await screen.findByText('Study Extraction Data Sheet')).toBeInTheDocument();
-
-  // Wait for extractions query to resolve and update state
-  await screen.findByText('Accessory MCA');
-
-  const acceptAllBtn = screen.getByRole('button', { name: /Accept All >95%/i });
-  fireEvent.click(acceptAllBtn);
-
-  await waitFor(() => expect(api.recordExtractionDecision).toHaveBeenCalledTimes(2));
 });

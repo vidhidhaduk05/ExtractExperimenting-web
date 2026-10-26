@@ -492,11 +492,12 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
   const [editingSourceValue, setEditingSourceValue] = useState("");
 
-  const { data: importBatches = [], isLoading: isBatchesLoading } = useQuery({
+  const { data: rawImportBatches = [], isLoading: isBatchesLoading } = useQuery({
     queryKey: ["import_batches", projectId],
     queryFn: () => api.getImportBatches(projectId!),
     enabled: !!projectId,
   });
+  const importBatches = Array.isArray(rawImportBatches) ? rawImportBatches : [];
 
   const { data: studies, isLoading } = useQuery({
     queryKey: ["studies", projectId],

@@ -1321,9 +1321,6 @@ export function ScreeningPage() {
               />
               <span className="font-medium">Saved ({savedCount})</span>
             </label>
-
-            {/* Tag Filter */}
-            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
           </div>
 
           {/* Search Box */}

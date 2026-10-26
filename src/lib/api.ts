@@ -1416,6 +1416,9 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.includes("/health")) {
     return { status: "ok" } as unknown as T;
   }
+  if (path.includes("/batches")) {
+    return [] as unknown as T;
+  }
 
   return {} as unknown as T;
 }
@@ -1447,7 +1450,7 @@ async function request<T>(
   try {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
-      if ((path === "/projects" || path.startsWith("/projects/")) && (res.status === 403 || res.status === 404 || res.status >= 500)) {
+      if (shouldUseDemoFallback() && (path === "/projects" || path.startsWith("/projects/")) && (res.status === 403 || res.status === 404 || res.status >= 500)) {
         console.warn(`[API Falling back to local data for ${path} due to HTTP ${res.status}]`);
         return handleDemoRequest<T>(path, options);
       }
@@ -1460,27 +1463,41 @@ async function request<T>(
   } catch (err: any) {
     const msg = err?.message || "Network request failed";
     console.warn(`[API Connection Failed] ${base}${path}:`, err);
-    updateApiState({ state: "demo_fallback", apiBase: base, errorMessage: msg });
-    return handleDemoRequest<T>(path, options);
+    updateApiState({ state: "error", apiBase: base, errorMessage: msg });
+    if (shouldUseDemoFallback()) {
+      return handleDemoRequest<T>(path, options);
+    }
+    throw err;
   }
 }
 
-// Human identity and decision writes seamlessly fallback to local/demo storage
+// Human identity and decision writes must never fall back to demo data in authenticated mode.
 async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   if (!token) {
-    return handleDemoRequest<T>(path, options);
+    if (shouldUseDemoFallback()) {
+      return handleDemoRequest<T>(path, options);
+    }
+    throw new Error("Sign in to save screening decisions.");
   }
   try {
     const res = await fetch(`${getApiBase()}${path}`, {
       ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
-      return handleDemoRequest<T>(path, options);
+      if (shouldUseDemoFallback()) {
+        return handleDemoRequest<T>(path, options);
+      }
+      const error = await res.json().catch(() => ({}));
+      const detail = typeof error.detail === "string" ? error.detail : `Screening request failed (HTTP ${res.status}).`;
+      throw new Error(detail);
     }
     return res.json();
   } catch (err: any) {
-    return handleDemoRequest<T>(path, options);
+    if (shouldUseDemoFallback()) {
+      return handleDemoRequest<T>(path, options);
+    }
+    throw err;
   }
 }
 

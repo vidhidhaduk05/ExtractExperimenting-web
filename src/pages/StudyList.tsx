@@ -492,11 +492,12 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
   const [editingSourceValue, setEditingSourceValue] = useState("");
 
-  const { data: importBatches = [], isLoading: isBatchesLoading } = useQuery({
+  const { data: rawImportBatches = [], isLoading: isBatchesLoading } = useQuery({
     queryKey: ["import_batches", projectId],
     queryFn: () => api.getImportBatches(projectId!),
     enabled: !!projectId,
   });
+  const importBatches = Array.isArray(rawImportBatches) ? rawImportBatches : [];
 
   const { data: studies, isLoading } = useQuery({
     queryKey: ["studies", projectId],
@@ -1184,6 +1185,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                     key={s.study_id}
                     study={s}
                     assessment={robMap.get(s.study_id)}
+                    hasRobSummary={Boolean(robSummary)}
                     tags={tagIndex.data}
                     onComments={() => setCollaborationStudy(s)}
                     bookmark={<BookmarkButton saved={bookmarkedIdsSet.has(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
@@ -1261,6 +1263,7 @@ function StudyRow({
   tags,
   onComments,
   assessment,
+  hasRobSummary,
 }: {
   study: Study;
   projectId: string;
@@ -1269,12 +1272,13 @@ function StudyRow({
   tags: TagIndex | undefined;
   onComments: () => void;
   assessment?: { assessment_id: string; overall_judgment: string };
+  hasRobSummary?: boolean;
 }) {
-  // Batch optimization: Only query per-study if bulk assessment was not supplied
+  // Batch optimization: Only query per-study if bulk assessment and robSummary were not supplied
   const { data: studyAssessments } = useQuery({
     queryKey: ["study-rob", study.study_id],
     queryFn: () => api.listStudyAssessments(study.study_id),
-    enabled: !assessment,
+    enabled: !assessment && !hasRobSummary,
   });
 
   const activeAssessment = assessment || (studyAssessments && studyAssessments[0]);
