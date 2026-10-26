@@ -350,8 +350,13 @@ function TrafficLightChart({
     return list.filter((a) => (a.needs_human_review_count ?? 0) > 0);
   }, [rawAssessments, filterNeedsReview]);
 
-  const domainKeys = (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_key) || [];
-  const domainLabels = (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_label) || [];
+  const domainKeys = useMemo(() => {
+    return (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_key) || [];
+  }, [rawAssessments]);
+
+  const domainLabels = useMemo(() => {
+    return (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_label) || [];
+  }, [rawAssessments]);
 
   const domainMapByAssessment = useMemo(() => {
     const map = new Map<string, Map<string, any>>();
@@ -499,21 +504,24 @@ function AssessmentList({
     return list.filter((a) => (a.needs_human_review_count ?? 0) > 0);
   }, [rawAssessments, filterNeedsReview]);
 
-  // Group assessments by study
-  const studyGroups: Record<
-    string,
-    { study_title: string; study_design: string; assessments: typeof summary.assessments }
-  > = {};
-  for (const a of assessments) {
-    if (!studyGroups[a.study_id]) {
-      studyGroups[a.study_id] = {
-        study_title: a.study_title || "Untitled",
-        study_design: a.study_design || "unknown design",
-        assessments: [],
-      };
+  // Bolt Optimization: Memoize studyGroups object grouping to prevent re-grouping on every render
+  const studyGroups = useMemo(() => {
+    const groups: Record<
+      string,
+      { study_title: string; study_design: string; assessments: typeof summary.assessments }
+    > = {};
+    for (const a of assessments) {
+      if (!groups[a.study_id]) {
+        groups[a.study_id] = {
+          study_title: a.study_title || "Untitled",
+          study_design: a.study_design || "unknown design",
+          assessments: [],
+        };
+      }
+      groups[a.study_id].assessments.push(a);
     }
-    studyGroups[a.study_id].assessments.push(a);
-  }
+    return groups;
+  }, [assessments, summary]);
 
   return (
     <div className="card p-5">
