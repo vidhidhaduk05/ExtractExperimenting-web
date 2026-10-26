@@ -149,6 +149,17 @@ def delete_pdf_data(study_id: str, db: Optional[DBBackend] = None) -> bool:
     for r in rows:
         db.delete("pdf_documents", r["doc_id"])
     db.commit()
+
+    study = db.get("studies", study_id)
+    if study:
+        pdf_path = resolve_pdf_path(study.get("pdf_path", ""))
+        if pdf_path:
+            docling_json_path = os.path.splitext(pdf_path)[0] + ".docling.json"
+            if os.path.isfile(docling_json_path):
+                try:
+                    os.remove(docling_json_path)
+                except Exception:
+                    pass
     return True
 
 

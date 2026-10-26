@@ -95,6 +95,9 @@ def is_jev_enabled() -> bool:
         return False
     if time.monotonic() < _open_until:
         return False
+    provider = getattr(settings, "jev_provider", "typesafe").lower()
+    if provider == "typesafe":
+        return bool(_api_key())
     return bool(_api_key()) or bool(_get_laya_model_dir())
 
 
