@@ -284,8 +284,15 @@ export function ExtractionSheetPage() {
         }
       });
     });
+    if (selectedStudyId && extractions && Array.isArray(extractions)) {
+      extractions.forEach((e: any) => {
+        if (e.variable_id) {
+          map.set(`${selectedStudyId}:${e.variable_id}`, e);
+        }
+      });
+    }
     return map;
-  }, [availablePapers, selectedStudyId, extractions]);
+  }, [availablePapers, projectId, selectedStudyId, extractions]);
 
   // Overall metrics across all papers
   const allBenchmarkStats = useMemo(() => {
@@ -293,13 +300,10 @@ export function ExtractionSheetPage() {
     let verifiedVars = 0;
     let highConfCount = 0;
 
-    availablePapers.forEach((paper) => {
-      const paperExts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
-      paperExts.forEach((e: any) => {
-        totalVars++;
-        if (e.is_verified) verifiedVars++;
-        if ((e.confidence || 0) >= 0.95) highConfCount++;
-      });
+    paperVariableExtMap.forEach((e) => {
+      totalVars++;
+      if (e.is_verified) verifiedVars++;
+      if ((e.confidence || 0) >= 0.95) highConfCount++;
     });
 
     return {
@@ -308,7 +312,7 @@ export function ExtractionSheetPage() {
       highConfCount,
       percent: totalVars > 0 ? Math.round((verifiedVars / totalVars) * 100) : 0,
     };
-  }, [availablePapers, extractions]);
+  }, [paperVariableExtMap]);
 
   // Filtered variables for single-study sheet
   const filteredVariables = useMemo(() => {

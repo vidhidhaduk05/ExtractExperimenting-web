@@ -312,7 +312,10 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   };
 
   const isBlank = studies && studies.length === 0;
-  const visibleStudies = (studies || []).filter(s => (!savedOnly || bookmarks.ids.includes(s.study_id)) && matchesTag(tagIndex.data, s.study_id, tagFilter));
+  const visibleStudies = useMemo(
+    () => (studies || []).filter(s => (!savedOnly || bookmarks.ids.includes(s.study_id)) && matchesTag(tagIndex.data, s.study_id, tagFilter)),
+    [studies, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]
+  );
 
   return (
     <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
