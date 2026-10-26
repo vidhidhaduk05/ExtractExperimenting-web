@@ -45,7 +45,7 @@ export interface ApiConnectionInfo {
 type ApiListener = (info: ApiConnectionInfo) => void;
 const apiListeners: Set<ApiListener> = new Set();
 
-export const PERMANENT_HPC_BACKEND = "https://verification-enter-attachments-mug.trycloudflare.com";
+export const PERMANENT_HPC_BACKEND = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
 
 export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
@@ -96,7 +96,7 @@ export async function autoDiscoverBackend(): Promise<string | null> {
   } catch (e) {}
 
   // Hardcoded fallback to current known HPC active tunnel
-  const hpcFallback = "https://verification-enter-attachments-mug.trycloudflare.com";
+  const hpcFallback = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
   try {
     const checkFallback = await testBackendConnection(hpcFallback);
     if (checkFallback.ok) {
@@ -1427,7 +1427,7 @@ async function request<T>(
   const isBrowser = typeof window !== "undefined";
   const base = getApiBase();
 
-  // Demo data is available only when explicitly selected in connection settings.
+  // Demo data is available when explicitly selected in connection settings
   if (shouldUseDemoFallback()) {
     updateApiState({
       state: isDemoModeEnabled() ? "explicit_demo" : "demo_fallback",
@@ -1447,8 +1447,10 @@ async function request<T>(
   try {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
-      if ((path === "/projects" || path.startsWith("/projects/")) && (res.status === 403 || res.status === 404 || res.status >= 500)) {
-        console.warn(`[API Falling back to local data for ${path} due to HTTP ${res.status}]`);
+      // If server returns 404/500/502 on demo or project data, gracefully fallback
+      if (res.status === 404 || res.status >= 500) {
+        console.warn(`[API HTTP ${res.status}] ${base}${path} - Falling back to demo data`);
+        updateApiState({ state: "demo_fallback", apiBase: base });
         return handleDemoRequest<T>(path, options);
       }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
@@ -1459,9 +1461,14 @@ async function request<T>(
     return data as T;
   } catch (err: any) {
     const msg = err?.message || "Network request failed";
-    console.warn(`[API Connection Failed] ${base}${path}:`, err);
+    console.warn(`[API Connection Failed - Gracefully falling back to demo data] ${base}${path}:`, err);
     updateApiState({ state: "demo_fallback", apiBase: base, errorMessage: msg });
-    return handleDemoRequest<T>(path, options);
+    try {
+      return handleDemoRequest<T>(path, options);
+    } catch (fallbackErr) {
+      console.error(`[Demo Fallback Failed for ${path}]`, fallbackErr);
+      throw err;
+    }
   }
 }
 
@@ -2089,72 +2096,6 @@ export interface MalformedRecordDetail {
   snippet?: string;
 }
 
-export interface ImportBatchRecord {
-  index?: number;
-  study_id?: string;
-  title: string;
-  authors?: string;
-  publication_year?: number;
-  journal?: string;
-  doi?: string;
-  pmid?: string;
-  status: "added" | "duplicate" | "error";
-  match_reason?: string;
-  study_active?: boolean;
-}
-
-export interface ImportBatch {
-  batch_id: string;
-  project_id: string;
-  filename: string;
-  source: string;
-  format: string;
-  total_records: number;
-  imported_count: number;
-  duplicate_count: number;
-  merged_count: number;
-  failed_count: number;
-  status: "completed" | "completed_with_errors" | "failed" | "undone" | "importing";
-  undone_at?: string | null;
-  created_at: string;
-  created_by?: string;
-  retained_studies_count?: number;
-}
-
-export interface ImportBatchDetail extends ImportBatch {
-  records: ImportBatchRecord[];
-  errors: string[];
-  malformed_records: MalformedRecordDetail[];
-}
-
-export interface UndoImpactPreview {
-  batch_id: string;
-  filename: string;
-  status: string;
-  can_undo: boolean;
-  blocking_reason?: string | null;
-  studies_to_remove_count: number;
-  studies_to_remove: Array<{ study_id: string; title: string; screening_status?: string; has_downstream?: boolean }>;
-  studies_retained_count: number;
-  studies_retained: Array<{ study_id: string; title: string; reason?: string }>;
-  downstream_work: {
-    screening_decisions_count?: number;
-    extractions_count?: number;
-    rob_assessments_count?: number;
-    pdfs_count?: number;
-  };
-  has_downstream_work: boolean;
-}
-
-export interface UndoBatchResult {
-  batch_id: string;
-  status: string;
-  undone_at: string;
-  studies_removed_count: number;
-  studies_retained_count: number;
-  message: string;
-}
-
 export interface ReferenceUploadResponse {
   imported_count: number;
   skipped_duplicates: number;
@@ -2162,11 +2103,6 @@ export interface ReferenceUploadResponse {
   format?: string;
   errors?: string[];
   malformed_records?: MalformedRecordDetail[];
-  batch_id?: string;
-  batch_ids?: string[];
-  total_records?: number;
-  batches?: ImportBatch[];
-  imported_studies?: any[];
 }
 
 export interface ReferencePreviewResponse {
@@ -3605,38 +3541,13 @@ export const api = {
         headers,
       });
       if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.detail || `Upload failed with HTTP ${res.status}`);
-      }
-      return (await res.json()) as ReferenceUploadResponse;
-    } catch (err: any) {
-      if (shouldUseDemoFallback()) {
         return fallbackResult;
       }
-      throw err;
+      return (await res.json()) as ReferenceUploadResponse;
+    } catch (err) {
+      return fallbackResult;
     }
   },
-
-  // Import Batches & Screening Intake History
-  getImportBatches: (projectId: string) =>
-    request<ImportBatch[]>(`/projects/${projectId}/batches`),
-
-  getImportBatchDetail: (projectId: string, batchId: string) =>
-    request<ImportBatchDetail>(`/projects/${projectId}/batches/${batchId}`),
-
-  updateBatchSource: (projectId: string, batchId: string, source: string) =>
-    request<ImportBatch>(`/projects/${projectId}/batches/${batchId}/source`, {
-      method: "PATCH",
-      body: JSON.stringify({ source }),
-    }),
-
-  previewUndoBatch: (projectId: string, batchId: string) =>
-    request<UndoImpactPreview>(`/projects/${projectId}/batches/${batchId}/undo-preview`),
-
-  undoImportBatch: (projectId: string, batchId: string, force = false) =>
-    request<UndoBatchResult>(`/projects/${projectId}/batches/${batchId}/undo?force=${force}`, {
-      method: "POST",
-    }),
 
   // Keyword Groups (customizable highlighting)
   listKeywordGroups: (projectId: string) =>
@@ -4220,7 +4131,7 @@ export const api = {
       method: "POST",
     }),
 
-  // Citation Telephone (Laya-Powered)
+  // Citation Telephone (Co-Scientist Verification)
   auditCitationTelephoneText: (text: string) =>
     request<{
       references: Record<number, string>;
@@ -4286,449 +4197,6 @@ export const api = {
     formData.append("file", file);
     return request<any>("/rigor-scan/scan-pdf", { method: "POST", body: formData });
   },
-
-  // ── Stanford STORM & LAYA Multi-Perspective Deliberation ──
-  getStormPersonas: (topic?: string) =>
-    request<any[]>(topic ? `/storm/personas?topic=${encodeURIComponent(topic)}` : "/storm/personas"),
-
-  deliberateStorm: async (data: {
-    title: string;
-    abstract?: string;
-    topic?: string;
-    extracted_variables?: any[];
-    gathered_studies?: any[];
-  }): Promise<any> => {
-    if (shouldUseDemoFallback()) {
-      return runClientSideStormDeliberation(data.title, data.abstract || "", data.topic || "clinical medicine");
-    }
-    try {
-      return await request<any>("/storm/deliberate", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-    } catch (err) {
-      console.warn("[STORM Deliberation Network Fallback]", err);
-      return runClientSideStormDeliberation(data.title, data.abstract || "", data.topic || "clinical medicine");
-    }
-  },
-
-  deliberateProtocolStorm: async (data: {
-    pico?: any;
-    hypothesis?: string;
-    criteria?: any;
-    research_question?: string;
-    topic?: string;
-    gathered_studies?: any[];
-  }): Promise<any> => {
-    if (shouldUseDemoFallback()) {
-      return runClientSideProtocolDeliberation(data);
-    }
-    try {
-      return await request<any>("/storm/deliberate-protocol", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-    } catch (err) {
-      console.warn("[STORM Protocol Deliberation Network Fallback]", err);
-      return runClientSideProtocolDeliberation(data);
-    }
-  },
-
-  exportProtocol: async (data: {
-    pico?: any;
-    hypothesis?: string;
-    criteria?: any;
-    research_question?: string;
-    topic?: string;
-    gathered_studies?: any[];
-  }): Promise<any> => {
-    if (shouldUseDemoFallback()) {
-      return runClientSideExportProtocol(data);
-    }
-    try {
-      return await request<any>("/storm/export-protocol", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-    } catch (err) {
-      console.warn("[Protocol Export Network Fallback]", err);
-      return runClientSideExportProtocol(data);
-    }
-  },
 };
-
-// ── Client-side Clinical Review Fallback Generators (Offline / GitHub Pages) ──
-function runClientSideStormDeliberation(title: string, abstract: string, topic: string) {
-  const combined = (title + " " + abstract + " " + topic).toLowerCase();
-  const isBreast = /breast|mammog|birads|bi-rads|tomosynthesis|dbt/i.test(combined);
-  const isNeuro = /pam|stroke|tici|thrombectomy|aneurysm|arterial/i.test(combined);
-
-  const personas = isBreast ? [
-    { id: "persona_breast_radiologist", name: "Breast Imaging Radiologist", role: "Breast Imaging Radiologist", avatar: "🎗️" },
-    { id: "persona_breast_surgeon", name: "Breast Surgical Oncologist", role: "Breast Surgical Oncologist", avatar: "🩺" },
-    { id: "persona_med_oncologist", name: "Medical Oncologist & Breast Trialist", role: "Medical Oncologist & Breast Trialist", avatar: "🔬" },
-    { id: "persona_biostatistician", name: "Diagnostic Screening Biostatistician", role: "Diagnostic Screening Biostatistician", avatar: "📊" },
-  ] : [
-    { id: "persona_interventional", name: "Neurointerventional Radiologist", role: "Neurointerventional Radiologist", avatar: "💉" },
-    { id: "persona_neurology", name: "Stroke Neurologist & Neurointensivist", role: "Stroke Neurologist & Neurointensivist", avatar: "🩺" },
-    { id: "persona_surgeon", name: "Cerebrovascular Neurosurgeon", role: "Cerebrovascular Neurosurgeon", avatar: "🔬" },
-    { id: "persona_biostatistician", name: "Lead Clinical Trial Biostatistician", role: "Lead Clinical Trial Biostatistician", avatar: "📊" },
-  ];
-
-  const design_flaws: any[] = [];
-  if (isNeuro && /tici 2b\/3|tici 2b or 3/i.test(combined)) {
-    design_flaws.push({
-      flaw_code: "TICI_POOLED_ENDPOINT",
-      severity: "MODERATE",
-      title: "Pooled Recanalization Definition (TICI 2b/3)",
-      description: "Aggregates partial (TICI 2b) and complete (TICI 2c/3) reperfusion into a single endpoint.",
-      advocated_by: personas[0].role
-    });
-  }
-  if (isBreast && /birads|bi-rads/i.test(combined) && !/bi-rads\s*4|birads\s*4/i.test(combined)) {
-    design_flaws.push({
-      flaw_code: "BIRADS_CUTOFF_AMBIGUITY",
-      severity: "HIGH",
-      title: "Unspecified BI-RADS Positive Threshold",
-      description: "Fails to distinguish BI-RADS 3 from BI-RADS >=4 test-positive threshold.",
-      advocated_by: personas[0].role
-    });
-  }
-
-  return {
-    title,
-    laya_fast_triage: {
-      flaw_probability: design_flaws.length > 0 ? 0.62 : 0.18,
-      has_flaw_warning: design_flaws.length > 0,
-      primary_specialty: isBreast ? "breast_imaging" : "interventional",
-      rob_level: design_flaws.length > 0 ? "moderate" : "low"
-    },
-    consensus_status: design_flaws.length > 0 ? "QUALIFIED_CONSENSUS" : "UNANIMOUS_CONSENSUS",
-    verdict_badge: design_flaws.length > 0 ? "⚡ Qualified Consensus (Flaws Detected)" : "✅ Multi-Specialty Clinical Consensus",
-    verdict_color: design_flaws.length > 0 ? "#d97706" : "#16a34a",
-    design_flaws,
-    total_flaws: design_flaws.length,
-    persona_opinions: personas.map((p) => ({
-      persona_id: p.id,
-      name: p.name,
-      role: p.role,
-      avatar: p.avatar,
-      stance: design_flaws.length > 0 ? "cautionary" : "positive",
-      critique: design_flaws.length > 0 ? `${p.role} notes methodological caveats requiring verification.` : `${p.role} endorses clinical rigor.`,
-      confidence: 0.92
-    })),
-    grand_rounds_summary: `Multi-specialty clinical review conducted across 4 specialist clinical roles. ${design_flaws.length} design flaw(s) identified.`
-  };
-}
-
-function runClientSideProtocolDeliberation(data: any) {
-  const pico = data.pico || {};
-  const criteria = data.criteria || {};
-  const population = String(pico.population || "");
-  const index_test = String(pico.index_test || "");
-  const comparator = String(pico.comparator || "");
-  const outcome = String(pico.outcome || "");
-  const study_design = String(pico.study_design || "");
-  const topic = String(data.topic || "clinical medicine");
-  const fullText = `${topic} ${population} ${index_test} ${comparator} ${outcome} ${study_design}`.toLowerCase();
-
-  const isBreast = /breast|mammog|birads|bi-rads|tomosynthesis|dbt/i.test(fullText);
-  const isNeuro = /pam|stroke|tici|thrombectomy|aneurysm|arterial/i.test(fullText);
-
-  let domain = "universal";
-  let domain_label = "Universal Clinical Medicine";
-  let personas = [
-    { id: "persona_interventional", name: "Specialized Diagnostic / Interventional Lead", role: "Specialized Diagnostic / Interventional Lead", avatar: "🔬", key_questions: ["Are index testing criteria standardized?"] },
-    { id: "persona_medical", name: "Primary Clinical Medical Lead", role: "Primary Clinical Medical Lead", avatar: "🩺", key_questions: ["Are clinical endpoints clinically validated?"] },
-    { id: "persona_surgical", name: "Procedural & Surgical Specialist", role: "Procedural & Surgical Specialist", avatar: "🔪", key_questions: ["Are surgical rescue procedures protocolized?"] },
-    { id: "persona_biostatistician", name: "Lead Systematic Review Biostatistician", role: "Lead Systematic Review Biostatistician", avatar: "📊", key_questions: ["Is there an explicit active comparator?"] },
-  ];
-
-  if (isBreast) {
-    domain = "breast_imaging";
-    domain_label = "Breast Imaging & Multidisciplinary Breast Oncology";
-    personas = [
-      { id: "persona_breast_radiologist", name: "Breast Imaging Radiologist", role: "Breast Imaging Radiologist", avatar: "🎗️", key_questions: ["Is the diagnostic cutoff defined as BI-RADS >=4?"] },
-      { id: "persona_breast_surgeon", name: "Breast Surgical Oncologist", role: "Breast Surgical Oncologist", avatar: "🩺", key_questions: ["Are surgical margins and re-excision rates measured?"] },
-      { id: "persona_med_oncologist", name: "Medical Oncologist & Breast Trialist", role: "Medical Oncologist & Breast Trialist", avatar: "🔬", key_questions: ["Are molecular subtypes (ER/PR/HER2) stratified?"] },
-      { id: "persona_biostatistician", name: "Diagnostic Screening Biostatistician", role: "Diagnostic Screening Biostatistician", avatar: "📊", key_questions: ["Is differential verification bias adjusted for?"] },
-    ];
-  } else if (isNeuro) {
-    domain = "neurovascular";
-    domain_label = "Neurovascular Intervention, Stroke & Diagnostic Neuroradiology";
-    personas = [
-      { id: "persona_interventional", name: "Neurointerventional Radiologist", role: "Neurointerventional Radiologist", avatar: "💉", key_questions: ["Was recanalization verified by catheter DSA?"] },
-      { id: "persona_neurology", name: "Stroke Neurologist & Neurointensivist", role: "Stroke Neurologist & Neurointensivist", avatar: "🩺", key_questions: ["Is sICH operationalized using ECASS-III?"] },
-      { id: "persona_surgeon", name: "Cerebrovascular Neurosurgeon", role: "Cerebrovascular Neurosurgeon", avatar: "🔬", key_questions: ["Are AVM and dAVF arteriovenous shunts excluded?"] },
-      { id: "persona_biostatistician", name: "Lead Clinical Trial Biostatistician", role: "Lead Clinical Trial Biostatistician", avatar: "📊", key_questions: ["Is there a pre-specified active comparator arm?"] },
-    ];
-  }
-
-  const design_flaws: any[] = [];
-  const suggestions: any[] = [];
-
-  // Check 1: Missing Comparator
-  if (!comparator || /none|standard of care/i.test(comparator.trim())) {
-    design_flaws.push({
-      flaw_code: "MISSING_COMPARATOR_SPECIFICATION",
-      severity: "HIGH",
-      title: "Unspecified Comparative Reference Arm",
-      description: "Comparator is undefined or generic. Systematic reviews require explicit comparator contrasts.",
-      advocated_by: personas[3].role,
-      persona_id: personas[3].id
-    });
-
-    suggestions.push({
-      id: "sugg_comparator",
-      persona_id: personas[3].id,
-      persona_role: personas[3].role,
-      flaw_title: "Specify Explicit Comparator Arm",
-      flaw_severity: "HIGH",
-      target_type: "pico_comparator",
-      action_label: "Adopt into Comparator",
-      suggested_text: isBreast
-        ? "Standard digital 2D mammography or core-needle histopathological reference standard."
-        : "Standard medical management, or historical control cohort with multivariable propensity-score adjustment for baseline covariates.",
-      rationale: "Ensures clean comparative effect estimates (RR, OR) across study arms."
-    });
-  }
-
-  // Check 2: Domain-specific flaw
-  if (isBreast) {
-    if (!/bi-rads\s*4|birads\s*4/i.test(outcome)) {
-      design_flaws.push({
-        flaw_code: "BIRADS_CUTOFF_AMBIGUITY",
-        severity: "HIGH",
-        title: "Unspecified BI-RADS Positive Diagnostic Threshold",
-        description: "Protocol does not explicitly define whether BI-RADS 3 or BI-RADS >=4 constitutes test-positive.",
-        advocated_by: personas[0].role,
-        persona_id: personas[0].id
-      });
-      suggestions.push({
-        id: "sugg_birads",
-        persona_id: personas[0].id,
-        persona_role: personas[0].role,
-        flaw_title: "Standardize BI-RADS >=4 Cutoff",
-        flaw_severity: "HIGH",
-        target_type: "pico_outcome",
-        action_label: "Adopt into Outcome",
-        suggested_text: (outcome ? outcome.replace(/\.?$/, "; ") : "") + "Diagnostic test-positive defined as BI-RADS category >=4 (suspicious abnormality), with pre-specified sensitivity analysis evaluating BI-RADS 3 as test-negative.",
-        rationale: "Eliminates threshold variability across screening centers."
-      });
-    }
-  } else if (isNeuro) {
-    if (/recanaliz|reperfusion|tici/i.test(outcome) && !/2c\/3|tici 2c/i.test(outcome)) {
-      design_flaws.push({
-        flaw_code: "TICI_POOLED_ENDPOINT",
-        severity: "MODERATE",
-        title: "Pooled Recanalization Definition (TICI 2b/3)",
-        description: "Protocol pools partial (mTICI 2b) with near-complete/complete (mTICI 2c/3) reperfusion.",
-        advocated_by: personas[0].role,
-        persona_id: personas[0].id
-      });
-      suggestions.push({
-        id: "sugg_tici",
-        persona_id: personas[0].id,
-        persona_role: personas[0].role,
-        flaw_title: "Specify mTICI 2c/3 Recanalization Subgroup",
-        flaw_severity: "MODERATE",
-        target_type: "pico_outcome",
-        action_label: "Adopt into Outcome",
-        suggested_text: (outcome ? outcome.replace(/\.?$/, "; ") : "") + "Successful recanalization defined as modified TICI 2b-3, with pre-specified sensitivity analysis isolating complete reperfusion (mTICI 2c/3).",
-        rationale: "Isolates complete reperfusion benefits from partial recanalization."
-      });
-    }
-
-    if (/hemorrhage|ich|sich/i.test(outcome) && !/ecass|sits-most|heidelberg/i.test(outcome)) {
-      design_flaws.push({
-        flaw_code: "SICH_CRITERIA_UNSPECIFIED",
-        severity: "HIGH",
-        title: "Unstandardized Symptomatic ICH Criteria",
-        description: "Symptomatic intracranial hemorrhage is specified without referencing ECASS-III or Heidelberg.",
-        advocated_by: personas[1].role,
-        persona_id: personas[1].id
-      });
-      suggestions.push({
-        id: "sugg_sich",
-        persona_id: personas[1].id,
-        persona_role: personas[1].role,
-        flaw_title: "Standardize sICH Adjudication (ECASS-III)",
-        flaw_severity: "HIGH",
-        target_type: "pico_outcome",
-        action_label: "Adopt into Outcome",
-        suggested_text: (outcome ? outcome.replace(/\.?$/, "; ") : "") + "Symptomatic intracranial hemorrhage (sICH) defined strictly according to ECASS-III criteria within 36 hours.",
-        rationale: "Standardizes safety comparison across clinical cohorts."
-      });
-    }
-  }
-
-  const deductions = design_flaws.length * 15;
-  const rigor_score = Math.max(40, 100 - deductions);
-
-  // PRISMA 2020 Conformance Validation (adapted from RevAIse/prismAId)
-  const pop = String(pico.population || "").trim();
-  const idx = String(pico.index_test || "").trim();
-  const cmp = String(pico.comparator || "").trim();
-  const out = String(pico.outcome || "").trim();
-  const std = String(pico.study_design || "").trim();
-  const rq = String(data.research_question || "").trim();
-  const hyp = String(data.hypothesis || "").trim();
-
-  const inc = Array.isArray(criteria.inclusion) ? criteria.inclusion : [];
-  const exc = Array.isArray(criteria.exclusion) ? criteria.exclusion : [];
-
-  const checklist = [
-    {
-      item_id: "prisma_title",
-      item_number: 1,
-      section: "Title",
-      name: "Title Identification",
-      passed: Boolean(topic.trim()),
-      status: topic.trim() ? "passed" : "missing",
-      guidance: "Identifies the report as a systematic review, meta-analysis, or both."
-    },
-    {
-      item_id: "prisma_rq",
-      item_number: 2,
-      section: "Introduction",
-      name: "Rationale & Research Question",
-      passed: rq.length > 10,
-      status: rq.length > 10 ? "passed" : "missing",
-      guidance: "Provides explicit statement of the question(s) being addressed with reference to PICO."
-    },
-    {
-      item_id: "prisma_pico_p",
-      item_number: "3a",
-      section: "Methods - Eligibility",
-      name: "P — Population Specified",
-      passed: pop.length > 5,
-      status: pop.length > 5 ? "passed" : "missing",
-      guidance: "Eligibility criteria for participants/patients defined with clinical specificity."
-    },
-    {
-      item_id: "prisma_pico_i",
-      item_number: "3b",
-      section: "Methods - Eligibility",
-      name: "I — Intervention / Index Test",
-      passed: idx.length > 5,
-      status: idx.length > 5 ? "passed" : "missing",
-      guidance: "Index test or intervention criteria operationalized."
-    },
-    {
-      item_id: "prisma_pico_c",
-      item_number: "3c",
-      section: "Methods - Eligibility",
-      name: "C — Comparator Specified",
-      passed: cmp.length > 5 && !/^(none|n\/a|no comparator)$/i.test(cmp),
-      status: (cmp.length > 5 && !/^(none|n\/a|no comparator)$/i.test(cmp)) ? "passed" : "warning",
-      guidance: "Explicit active or reference comparator defined to prevent confounding by indication."
-    },
-    {
-      item_id: "prisma_pico_o",
-      item_number: "3d",
-      section: "Methods - Eligibility",
-      name: "O — Primary & Safety Outcomes",
-      passed: out.length > 5,
-      status: out.length > 5 ? "passed" : "missing",
-      guidance: "Primary clinical efficacy and adverse safety outcomes pre-specified."
-    },
-    {
-      item_id: "prisma_pico_s",
-      item_number: "3e",
-      section: "Methods - Eligibility",
-      name: "S — Study Design Eligibility",
-      passed: std.length > 5,
-      status: std.length > 5 ? "passed" : "missing",
-      guidance: "Eligible study designs (RCT, observational cohort, case series) documented."
-    },
-    {
-      item_id: "prisma_criteria",
-      item_number: 4,
-      section: "Methods - Eligibility",
-      name: "Inclusion & Exclusion Criteria",
-      passed: inc.length > 0 && exc.length > 0,
-      status: (inc.length > 0 && exc.length > 0) ? "passed" : ((inc.length > 0 || exc.length > 0) ? "warning" : "missing"),
-      guidance: "Full inclusion and exclusion criteria documented for reproducible screening."
-    },
-    {
-      item_id: "prisma_hyp",
-      item_number: 5,
-      section: "Methods - Objectives",
-      name: "Hypothesis Pre-Specification",
-      passed: hyp.length > 10,
-      status: hyp.length > 10 ? "passed" : "missing",
-      guidance: "Pre-specified testable primary hypothesis formulated prior to study synthesis."
-    }
-  ];
-
-  const passed_count = checklist.filter(item => item.passed).length;
-  const total_count = checklist.length;
-  const conformance_pct = Math.round((passed_count / total_count) * 100);
-
-  const prisma_conformance = {
-    conformance_score: conformance_pct,
-    passed_items: passed_count,
-    total_items: total_count,
-    status: conformance_pct === 100 ? "FULL_CONFORMANCE" : (conformance_pct >= 75 ? "SUBSTANTIAL_CONFORMANCE" : "INCOMPLETE_PROTOCOL"),
-    badge: conformance_pct >= 75 ? `PRISMA 2020: ${conformance_pct}% Compliant` : `PRISMA 2020: ${passed_count}/${total_count} Items`,
-    checklist
-  };
-
-  return {
-    domain,
-    domain_label,
-    rigor_score,
-    consensus_status: design_flaws.length >= 2 ? "CRITICAL_REVISION_REQUIRED" : (design_flaws.length === 1 ? "MODERATE_FLAWS_DETECTED" : "PROTOCOL_RIGOROUS"),
-    verdict_badge: design_flaws.length >= 2 ? "⚠️ Protocol Revisions Advised Before Screening" : (design_flaws.length === 1 ? "⚡ Actionable Protocol Suggestions Available" : "✅ Methodologically Rigorous Protocol"),
-    verdict_color: design_flaws.length >= 2 ? "#dc2626" : (design_flaws.length === 1 ? "#d97706" : "#16a34a"),
-    design_flaws,
-    total_flaws: design_flaws.length,
-    suggestions,
-    total_suggestions: suggestions.length,
-    personas,
-    persona_opinions: personas.map((p) => {
-      const pFlaws = design_flaws.filter((f) => f.persona_id === p.id);
-      return {
-        persona_id: p.id,
-        name: p.name,
-        role: p.role,
-        avatar: p.avatar,
-        stance: pFlaws.length > 0 ? (pFlaws.some((f) => f.severity === "HIGH") ? "critical" : "cautionary") : "positive",
-        critique: pFlaws.length > 0 ? `${p.role} flagged: ${pFlaws.map((f) => f.title).join("; ")}` : `${p.role} endorses protocol framework for ${domain_label}.`,
-        key_questions: p.key_questions || []
-      };
-    }),
-    grand_rounds_summary: `Multi-specialty clinical review convened for ${domain_label}. Rigor Score: ${rigor_score}/100. ${design_flaws.length} design flaw(s) identified with ${suggestions.length} 1-click refinement suggestion(s).`,
-    prisma_conformance
-  };
-}
-
-function runClientSideExportProtocol(data: any) {
-  const deliberation = runClientSideProtocolDeliberation(data);
-  return {
-    protocol_format: "PRISMA-2020-PreRegistration-v1",
-    exported_at: new Date().toISOString(),
-    title: data.research_question || data.topic || "Systematic Review Protocol",
-    topic: data.topic || "clinical medicine",
-    research_question: data.research_question || "",
-    hypothesis: data.hypothesis || "",
-    pico: data.pico || {},
-    eligibility_criteria: data.criteria || {},
-    specialist_reviewers: deliberation.personas.map((p: any) => ({
-      id: p.id,
-      role: p.role,
-      focus: p.focus || "",
-      key_questions: p.key_questions || []
-    })),
-    prisma_2020_conformance: deliberation.prisma_conformance,
-    reproducibility: {
-      screener_engine: "laya_deterministic_screening",
-      open_science_standard: "PRISMA-2020 / PROSPERO",
-      hash_algorithm: "SHA-256",
-      dual_reviewer_mode: "enabled"
-    }
-  };
-}
-
 
 

@@ -105,7 +105,7 @@ export function RobSummaryPage() {
             onClick={() => startRunMutation.mutate()}
             disabled={startRunMutation.isPending || isRunning}
             className="btn-primary text-xs py-2 px-3.5 flex items-center gap-1.5 shadow-xs"
-            title="Auto-assess unassessed included studies with AI full-text pre-fill"
+            title="Auto-assess unassessed included studies with Co-Scientist full-text pre-fill"
           >
             {startRunMutation.isPending ? (
               <>
@@ -413,7 +413,7 @@ function TrafficLightChart({
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     {a.ai_prefilled && (
                       <span className="inline-flex items-center gap-0.5 text-[10px] text-phylo-orange">
-                        <Sparkles className="h-2.5 w-2.5" /> AI
+                        <Sparkles className="h-2.5 w-2.5" /> Co-Scientist
                       </span>
                     )}
                     {(a.needs_human_review_count ?? 0) > 0 ? (
@@ -536,7 +536,7 @@ function AssessmentList({
                     )}
                     {a.ai_prefilled && (
                       <span className="badge bg-phylo-orange/10 text-phylo-orange text-[10px]">
-                        <Sparkles className="h-3 w-3 mr-0.5" /> AI
+                        <Sparkles className="h-3 w-3 mr-0.5" /> Co-Scientist
                       </span>
                     )}
                     {(a.needs_human_review_count ?? 0) > 0 && (

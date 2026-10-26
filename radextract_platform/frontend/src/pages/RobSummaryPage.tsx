@@ -105,7 +105,7 @@ export function RobSummaryPage() {
             onClick={() => startRunMutation.mutate()}
             disabled={startRunMutation.isPending || isRunning}
             className="btn-primary text-xs py-2 px-3.5 flex items-center gap-1.5 shadow-xs"
-            title="Auto-assess unassessed included studies with AI full-text pre-fill"
+            title="Auto-assess unassessed included studies with Co-Scientist full-text pre-fill"
           >
             {startRunMutation.isPending ? (
               <>
@@ -350,13 +350,8 @@ function TrafficLightChart({
     return list.filter((a) => (a.needs_human_review_count ?? 0) > 0);
   }, [rawAssessments, filterNeedsReview]);
 
-  const domainKeys = useMemo(() => {
-    return (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_key) || [];
-  }, [rawAssessments]);
-
-  const domainLabels = useMemo(() => {
-    return (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_label) || [];
-  }, [rawAssessments]);
+  const domainKeys = (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_key) || [];
+  const domainLabels = (Array.isArray(rawAssessments) ? rawAssessments[0] : undefined)?.domains?.map((d) => d.domain_label) || [];
 
   const domainMapByAssessment = useMemo(() => {
     const map = new Map<string, Map<string, any>>();
@@ -418,7 +413,7 @@ function TrafficLightChart({
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     {a.ai_prefilled && (
                       <span className="inline-flex items-center gap-0.5 text-[10px] text-phylo-orange">
-                        <Sparkles className="h-2.5 w-2.5" /> AI
+                        <Sparkles className="h-2.5 w-2.5" /> Co-Scientist
                       </span>
                     )}
                     {(a.needs_human_review_count ?? 0) > 0 ? (
@@ -504,24 +499,21 @@ function AssessmentList({
     return list.filter((a) => (a.needs_human_review_count ?? 0) > 0);
   }, [rawAssessments, filterNeedsReview]);
 
-  // Bolt Optimization: Memoize studyGroups object grouping to prevent re-grouping on every render
-  const studyGroups = useMemo(() => {
-    const groups: Record<
-      string,
-      { study_title: string; study_design: string; assessments: typeof summary.assessments }
-    > = {};
-    for (const a of assessments) {
-      if (!groups[a.study_id]) {
-        groups[a.study_id] = {
-          study_title: a.study_title || "Untitled",
-          study_design: a.study_design || "unknown design",
-          assessments: [],
-        };
-      }
-      groups[a.study_id].assessments.push(a);
+  // Group assessments by study
+  const studyGroups: Record<
+    string,
+    { study_title: string; study_design: string; assessments: typeof summary.assessments }
+  > = {};
+  for (const a of assessments) {
+    if (!studyGroups[a.study_id]) {
+      studyGroups[a.study_id] = {
+        study_title: a.study_title || "Untitled",
+        study_design: a.study_design || "unknown design",
+        assessments: [],
+      };
     }
-    return groups;
-  }, [assessments, summary]);
+    studyGroups[a.study_id].assessments.push(a);
+  }
 
   return (
     <div className="card p-5">
@@ -544,7 +536,7 @@ function AssessmentList({
                     )}
                     {a.ai_prefilled && (
                       <span className="badge bg-phylo-orange/10 text-phylo-orange text-[10px]">
-                        <Sparkles className="h-3 w-3 mr-0.5" /> AI
+                        <Sparkles className="h-3 w-3 mr-0.5" /> Co-Scientist
                       </span>
                     )}
                     {(a.needs_human_review_count ?? 0) > 0 && (

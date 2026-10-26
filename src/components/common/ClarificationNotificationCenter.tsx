@@ -109,7 +109,7 @@ export function ClarificationNotificationCenter({
         answer,
         answer_label: answerLabel,
         answer_freetext: answerFreetext,
-        answered_by: "Reviewer (HIL AI)",
+        answered_by: "Reviewer (Co-Scientist Consultation)",
       }),
     onSuccess: (result, variables) => {
       setSuccessFeedback((prev) => ({ ...prev, [variables.questionId]: result }));
@@ -240,7 +240,7 @@ export function ClarificationNotificationCenter({
                       <Sparkles className="h-3 w-3" />
                     </div>
                     <span className="text-[11px] font-bold text-purple-900 dark:text-purple-300 truncate">
-                      AI Screening Clarification
+                      Co-Scientist Screening Clarification
                     </span>
                     <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase font-semibold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 shrink-0">
                       {q.stage}
@@ -406,7 +406,7 @@ export function ClarificationNotificationCenter({
                       Clarification Inbox
                     </h2>
                     <p className="text-[11px] text-[#6B665E]">
-                      Human-in-the-loop decisions for AI screening ambiguity
+                      Human-in-the-loop decisions for Co-Scientist screening ambiguity
                     </p>
                   </div>
                 </div>
@@ -478,7 +478,7 @@ export function ClarificationNotificationCenter({
                     </p>
                     <p className="text-xs text-[#8A817A] mt-1">
                       {activeDrawerTab === "pending"
-                        ? "Background AI screening proceeds automatically without blocking."
+                        ? "Background Co-Scientist screening proceeds automatically without blocking."
                         : "Answered questions will be preserved here."}
                     </p>
                   </div>
@@ -518,7 +518,7 @@ export function ClarificationNotificationCenter({
                           </div>
                           {q.ai_interim_confidence != null && (
                             <span className="text-[10px] text-[#8A817A] font-mono">
-                              AI Conf: {Math.round(q.ai_interim_confidence * 100)}%
+                              Confidence: {Math.round(q.ai_interim_confidence * 100)}%
                             </span>
                           )}
                         </div>

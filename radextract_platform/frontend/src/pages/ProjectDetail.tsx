@@ -83,7 +83,7 @@ export function ProjectDetail() {
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 relative z-10">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E9ED4C] text-[#62631E] text-xs font-mono font-medium mb-3">
-              <Sparkles className="h-3.5 w-3.5" /> AI AGENT ENGINE · DOCLING v2.4 IN-SITU
+              <Sparkles className="h-3.5 w-3.5" /> CO-SCIENTIST ENGINE · DOCLING v2.4 IN-SITU
             </div>
             <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#141413] tracking-tight leading-snug">
               In-Situ PDF Data Extraction & Word-Style Track Changes

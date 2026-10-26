@@ -3,7 +3,7 @@ import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags } from "../lib/recordCollaboration";
 import { RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
-import { useState, useRef, useMemo, useEffect, useCallback } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
 import {
@@ -275,11 +275,9 @@ export function ScreeningPage() {
   const [extractingStudyId, setExtractingStudyId] = useState<string | null>(null);
 
   // Map study_id -> existing RoB assessment (for Start RoB / View RoB rendering)
-  const robByStudy = useMemo(() => {
-    return new Map(
-      (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
-    );
-  }, [robSummary?.assessments]);
+  const robByStudy = new Map(
+    (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
+  );
 
   const handleStartRob = async (study: Study) => {
     setRobStarting((prev) => ({ ...prev, [study.study_id]: true }));
@@ -328,18 +326,12 @@ export function ScreeningPage() {
     }
   };
 
-  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
-
-  // Optimize O(1) bookmark lookups and count memoization to avoid O(N*M) linear scans during renders
-  const bookmarkedIdsSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids]);
-  const savedCount = useMemo(() => {
-    return studyList.reduce((acc, s) => (bookmarkedIdsSet.has(s.study_id) ? acc + 1 : acc), 0);
-  }, [studyList, bookmarkedIdsSet]);
+  const studyList = Array.isArray(studies) ? studies : [];
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
-      if (savedOnly && !bookmarkedIdsSet.has(s.study_id)) return false;
+      if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
 
       // Stage filter
@@ -398,7 +390,7 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarkedIdsSet, tagIndex.data, tagFilter]);
+  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
 
   // Auto-select first study in filtered set if current selectedStudyId is filtered out
   useEffect(() => {
@@ -732,155 +724,130 @@ export function ScreeningPage() {
   });
 
   // Render Highlighted Text (Abstract or Title) with Priority Resolution & Instant Fallback
-  // Optimization (Bolt): Wrapped in useCallback to prevent re-instantiating on un-related renders.
-  const renderHighlightedText = useCallback(
-    (
-      rawText: string,
-      spans: HighlightSpan[] = [],
-      fallbackKeywordsList: ScreeningKeyword[] = [],
-      isTitle: boolean = false
-    ) => {
-      if (!rawText) {
-        return isTitle ? null : <p className="text-gray-400 italic">No abstract available for this study.</p>;
-      }
-      if (!showHighlights) {
-        return isTitle ? (
-          <span className="text-slate-900">{rawText}</span>
-        ) : (
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
-        );
-      }
+  const renderHighlightedText = (
+    rawText: string,
+    spans: HighlightSpan[] = [],
+    fallbackKeywordsList: ScreeningKeyword[] = [],
+    isTitle: boolean = false
+  ) => {
+    if (!rawText) {
+      return isTitle ? null : <p className="text-gray-400 italic">No abstract available for this study.</p>;
+    }
+    if (!showHighlights) {
+      return isTitle ? (
+        <span className="text-slate-900">{rawText}</span>
+      ) : (
+        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
+      );
+    }
 
-      // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-      const activeSpans = [...spans];
-      if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
-        fallbackKeywordsList.forEach((kw) => {
-          const word = kw.keyword.trim();
-          if (!word) return;
-          try {
-            const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const regex = new RegExp(`\\b${escaped}\\b`, "gi");
-            let match;
-            while ((match = regex.exec(rawText)) !== null) {
-              activeSpans.push({
-                start: match.index,
-                end: match.index + match[0].length,
-                text: match[0],
-                type: kw.keyword_type === "include" ? "include_keyword" : "exclude_keyword",
-                color: kw.keyword_type === "include" ? "green" : "red",
-                confidence: 1.0,
-                label: `${kw.keyword_type === "include" ? "Include" : "Exclude"} keyword: ${kw.keyword}`,
-              });
-            }
-          } catch {
-            // ignore regex errors for special chars
+    // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
+    const activeSpans = [...spans];
+    if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
+      fallbackKeywordsList.forEach((kw) => {
+        const word = kw.keyword.trim();
+        if (!word) return;
+        try {
+          const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+          let match;
+          while ((match = regex.exec(rawText)) !== null) {
+            activeSpans.push({
+              start: match.index,
+              end: match.index + match[0].length,
+              text: match[0],
+              type: kw.keyword_type === "include" ? "include_keyword" : "exclude_keyword",
+              color: kw.keyword_type === "include" ? "green" : "red",
+              confidence: 1.0,
+              label: `${kw.keyword_type === "include" ? "Include" : "Exclude"} keyword: ${kw.keyword}`,
+            });
           }
-        });
-      }
-
-      if (activeSpans.length === 0) {
-        return isTitle ? (
-          <span className="text-slate-900">{rawText}</span>
-        ) : (
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
-        );
-      }
-
-      // Resolve character-level priority so keywords (green/red) are never swallowed by broad sentence spans
-      const priorityMap: Record<string, number> = {
-        exclude_keyword: 40,
-        include_keyword: 30,
-        ai_keyword: 20,
-        population: 10,
-        intervention: 10,
-        comparator: 10,
-        outcome: 10,
-      };
-
-      const charSpans: (HighlightSpan | null)[] = new Array(rawText.length).fill(null);
-      for (const span of activeSpans) {
-        const start = Math.max(0, span.start);
-        const end = Math.min(rawText.length, span.end);
-        if (end <= start) continue;
-        const prio = priorityMap[span.type] || 0;
-        for (let i = start; i < end; i++) {
-          const curr = charSpans[i];
-          if (!curr || (priorityMap[curr.type] || 0) < prio) {
-            charSpans[i] = span;
-          }
+        } catch {
+          // ignore regex errors for special chars
         }
-      }
-
-      const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
-      let currentSpan = charSpans[0];
-      let currentStart = 0;
-      for (let i = 1; i < rawText.length; i++) {
-        if (charSpans[i] !== currentSpan) {
-          segments.push({ start: currentStart, end: i, span: currentSpan });
-          currentSpan = charSpans[i];
-          currentStart = i;
-        }
-      }
-      segments.push({ start: currentStart, end: rawText.length, span: currentSpan });
-
-      const elements: React.ReactNode[] = segments.map((seg, idx) => {
-        const segText = rawText.substring(seg.start, seg.end);
-        if (!seg.span) {
-          return <span key={`plain-${seg.start}-${idx}`}>{segText}</span>;
-        }
-        const s = seg.span;
-        let colorClass = "bg-yellow-100 text-yellow-900 border-yellow-300";
-        if (s.color === "green" || s.type === "include_keyword") {
-          colorClass = "bg-emerald-100 text-emerald-900 border-emerald-300 font-semibold";
-        } else if (s.color === "red" || s.type === "exclude_keyword") {
-          colorClass = "bg-rose-100 text-rose-900 border-rose-300 font-semibold";
-        } else if (s.color === "purple" || s.type === "population") {
-          colorClass = "bg-purple-100 text-purple-900 border-purple-300";
-        } else if (s.color === "blue" || s.type === "intervention" || s.type === "comparator") {
-          colorClass = "bg-sky-100 text-sky-900 border-sky-300";
-        } else if (s.color === "orange" || s.type === "outcome") {
-          colorClass = "bg-amber-100 text-amber-900 border-amber-300";
-        }
-
-        return (
-          <mark
-            key={`mark-${seg.start}-${idx}`}
-            className={`px-1 py-0.5 rounded border ${isTitle ? "text-base inline" : "text-sm inline"} transition-colors ${colorClass}`}
-            title={`${s.label || s.type} (${s.type})`}
-          >
-            {segText}
-          </mark>
-        );
       });
+    }
 
-      if (isTitle) {
-        return <span className="leading-tight">{elements}</span>;
+    if (activeSpans.length === 0) {
+      return isTitle ? (
+        <span className="text-slate-900">{rawText}</span>
+      ) : (
+        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
+      );
+    }
+
+    // Resolve character-level priority so keywords (green/red) are never swallowed by broad sentence spans
+    const priorityMap: Record<string, number> = {
+      exclude_keyword: 40,
+      include_keyword: 30,
+      ai_keyword: 20,
+      population: 10,
+      intervention: 10,
+      comparator: 10,
+      outcome: 10,
+    };
+
+    const charSpans: (HighlightSpan | null)[] = new Array(rawText.length).fill(null);
+    for (const span of activeSpans) {
+      const start = Math.max(0, span.start);
+      const end = Math.min(rawText.length, span.end);
+      if (end <= start) continue;
+      const prio = priorityMap[span.type] || 0;
+      for (let i = start; i < end; i++) {
+        const curr = charSpans[i];
+        if (!curr || (priorityMap[curr.type] || 0) < prio) {
+          charSpans[i] = span;
+        }
       }
-      return <div className="text-gray-800 leading-relaxed text-sm whitespace-pre-wrap">{elements}</div>;
-    },
-    [showHighlights]
-  );
+    }
 
-  // Memoized Title & Abstract Highlight Rendering (Bolt Optimization)
-  const renderedTitle = useMemo(() => {
-    if (!selectedStudy) return null;
-    return renderHighlightedText(
-      selectedStudy.title,
-      selectedHighlights?.title_spans || [],
-      keywords,
-      true
-    );
-  }, [selectedStudy, selectedHighlights?.title_spans, keywords, renderHighlightedText]);
+    const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
+    let currentSpan = charSpans[0];
+    let currentStart = 0;
+    for (let i = 1; i < rawText.length; i++) {
+      if (charSpans[i] !== currentSpan) {
+        segments.push({ start: currentStart, end: i, span: currentSpan });
+        currentSpan = charSpans[i];
+        currentStart = i;
+      }
+    }
+    segments.push({ start: currentStart, end: rawText.length, span: currentSpan });
 
-  const renderedAbstract = useMemo(() => {
-    if (!selectedStudy) return null;
-    return renderHighlightedText(
-      selectedStudy.abstract,
-      selectedHighlights?.all_spans || [],
-      keywords,
-      false
-    );
-  }, [selectedStudy, selectedHighlights?.all_spans, keywords, renderHighlightedText]);
+    const elements: React.ReactNode[] = segments.map((seg, idx) => {
+      const segText = rawText.substring(seg.start, seg.end);
+      if (!seg.span) {
+        return <span key={`plain-${seg.start}-${idx}`}>{segText}</span>;
+      }
+      const s = seg.span;
+      let colorClass = "bg-yellow-100 text-yellow-900 border-yellow-300";
+      if (s.color === "green" || s.type === "include_keyword") {
+        colorClass = "bg-emerald-100 text-emerald-900 border-emerald-300 font-semibold";
+      } else if (s.color === "red" || s.type === "exclude_keyword") {
+        colorClass = "bg-rose-100 text-rose-900 border-rose-300 font-semibold";
+      } else if (s.color === "purple" || s.type === "population") {
+        colorClass = "bg-purple-100 text-purple-900 border-purple-300";
+      } else if (s.color === "blue" || s.type === "intervention" || s.type === "comparator") {
+        colorClass = "bg-sky-100 text-sky-900 border-sky-300";
+      } else if (s.color === "orange" || s.type === "outcome") {
+        colorClass = "bg-amber-100 text-amber-900 border-amber-300";
+      }
+
+      return (
+        <mark
+          key={`mark-${seg.start}-${idx}`}
+          className={`px-1 py-0.5 rounded border ${isTitle ? "text-base inline" : "text-sm inline"} transition-colors ${colorClass}`}
+          title={`${s.label || s.type} (${s.type})`}
+        >
+          {segText}
+        </mark>
+      );
+    });
+
+    if (isTitle) {
+      return <span className="leading-tight">{elements}</span>;
+    }
+    return <div className="text-gray-800 leading-relaxed text-sm whitespace-pre-wrap">{elements}</div>;
+  };
 
   // Upload single PDF handler
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -916,7 +883,7 @@ export function ScreeningPage() {
             <div>
               <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                 <ShieldCheck className="w-6 h-6 text-indigo-600" />
-                AI Screening Workspace
+                Co-Scientist Screening Workspace
               </h1>
               <p className="text-xs text-slate-500">
                 Multi-Stage Screening: Title &rarr; Abstract &rarr; Full-Text with Rayyan-Style Highlighting
@@ -962,7 +929,7 @@ export function ScreeningPage() {
                     onClick={() => resumeMutation.mutate()}
                     disabled={resumeMutation.isPending || cancelMutation.isPending}
                     className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Resume AI screening from current study"
+                    title="Resume Co-Scientist screening from current study"
                   >
                     {resumeMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -975,7 +942,7 @@ export function ScreeningPage() {
                     onClick={() => cancelMutation.mutate()}
                     disabled={cancelMutation.isPending || resumeMutation.isPending}
                     className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Stop AI screening run completely"
+                    title="Stop Co-Scientist screening run completely"
                   >
                     {cancelMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1004,7 +971,7 @@ export function ScreeningPage() {
                     onClick={() => cancelMutation.mutate()}
                     disabled={cancelMutation.isPending || pauseMutation.isPending}
                     className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Stop AI screening run completely"
+                    title="Stop Co-Scientist screening run completely"
                   >
                     {cancelMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1041,7 +1008,7 @@ export function ScreeningPage() {
                   ) : (
                     <Sparkles className="w-4 h-4" />
                   )}
-                  Start Full AI Screening
+                  Start Full Co-Scientist Screening
                 </button>
               </>
             )}
@@ -1173,7 +1140,7 @@ export function ScreeningPage() {
         )}
       </header>
 
-      {/* Live AI screening progress & controls */}
+      {/* Live Co-Scientist screening progress & controls */}
       {progress?.active && (
         <div className={`border-b px-6 py-2.5 transition-colors ${
           progress.paused ? "bg-amber-50/95 border-amber-200" : "bg-indigo-50 border-indigo-200"
@@ -1190,7 +1157,7 @@ export function ScreeningPage() {
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
                 )}
                 <span className={`font-semibold shrink-0 ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
-                  AI screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
+                  Co-Scientist screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
                 </span>
                 <span className={`truncate ${progress.paused ? "text-amber-800" : "text-indigo-700"}`}>
                   {progress.paused
@@ -1284,8 +1251,6 @@ export function ScreeningPage() {
 
           {/* Quick Dropdowns & Saved Filter */}
           <div className="flex items-center gap-2 flex-wrap">
-            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
-
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -1319,7 +1284,7 @@ export function ScreeningPage() {
                 onChange={(e) => setSavedOnly(e.target.checked)}
                 className="rounded text-indigo-600 focus:ring-indigo-500"
               />
-              <span className="font-medium">Saved ({savedCount})</span>
+              <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
             </label>
 
             {/* Tag Filter */}
@@ -1476,12 +1441,12 @@ export function ScreeningPage() {
         </div>
       )}
 
-      {/* ── AI SCREENING CLARIFICATIONS & REVIEWER CHECKLIST ── */}
+      {/* ── CO-SCIENTIST SCREENING CLARIFICATIONS & REVIEWER CHECKLIST ── */}
       {projectClarifications.length > 0 && (
         <section
           id="clarifications-checklist"
           className="max-w-7xl w-full mx-auto px-4 md:px-6 pt-3"
-          aria-label="AI Screening Clarifications Checklist"
+          aria-label="Co-Scientist Screening Clarifications Checklist"
         >
           <div className="bg-white border border-purple-200/90 rounded-xl shadow-xs overflow-hidden transition-all">
             {/* Checklist Ribbon Header */}
@@ -1493,14 +1458,14 @@ export function ScreeningPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-bold text-slate-900 tracking-tight">
-                      AI Screening Clarifications Checklist
+                      Co-Scientist Screening Clarifications Checklist
                     </h2>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
                       {pendingClarifications.length} Pending
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    Review and clarify ambiguous PICO criteria flagged by AI screener
+                    Review and clarify ambiguous PICO criteria flagged by Co-Scientist screener
                   </p>
                 </div>
               </div>
@@ -1664,7 +1629,7 @@ export function ScreeningPage() {
                                 <div>
                                   <p className="font-bold">Clarification recorded and study re-evaluated!</p>
                                   <p className="text-[11px] text-emerald-800 mt-0.5">
-                                    AI Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% confidence)
+                                    Co-Scientist Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% confidence)
                                   </p>
                                   {feedback.final_reason_text && (
                                     <p className="text-[10px] text-emerald-700 italic mt-0.5">{feedback.final_reason_text}</p>
@@ -1871,7 +1836,7 @@ export function ScreeningPage() {
                       <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 leading-snug">
                         {study.title}
                       </h3>
-                      <BookmarkButton saved={bookmarkedIdsSet.has(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
+                      <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
                       {conf !== null && (
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap animate-tag-pop ${
@@ -1932,10 +1897,10 @@ export function ScreeningPage() {
                                 ? "bg-rose-50 text-rose-700"
                                 : "bg-amber-50 text-amber-700"
                             }`}
-                            title={isJustDone ? "Screened in the current run" : "Screened by AI"}
+                            title={isJustDone ? "Screened in the current run" : "Screened by Co-Scientist"}
                           >
                             <CheckCircle className="w-3 h-3" />
-                            AI screened: {study.ai_decision}
+                            Co-Scientist screened: {study.ai_decision}
                           </span>
                         )}
 
@@ -1989,9 +1954,14 @@ export function ScreeningPage() {
               <div>
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <h2 className="text-base font-bold text-slate-900 leading-tight">
-                    {renderedTitle}
+                    {renderHighlightedText(
+                      selectedStudy.title,
+                      selectedHighlights?.title_spans || [],
+                      keywords,
+                      true
+                    )}
                   </h2>
-                  <BookmarkButton saved={bookmarkedIdsSet.has(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
+                  <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
                   <span
                     className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap animate-tag-pop ${
                       selectedStudy.screening_status === "included" || selectedStudy.screening_status === "ta_included"
@@ -2028,14 +1998,14 @@ export function ScreeningPage() {
                 </div>
               </div>
 
-              {/* AI Verdict & Confidence Card */}
+              {/* Co-Scientist Verdict & Confidence Card */}
               {selectedStudy.ai_decision && (
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Bot className="w-4 h-4 text-indigo-600" />
                       <span className="text-xs font-bold text-slate-800">
-                        AI Recommendation: <span className="capitalize">{selectedStudy.ai_decision}</span>
+                        Co-Scientist Recommendation: <span className="capitalize">{selectedStudy.ai_decision}</span>
                       </span>
                     </div>
                     {selectedStudy.ai_confidence && (
@@ -2075,7 +2045,7 @@ export function ScreeningPage() {
                 <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
               </details>
 
-              {/* Biomni Clarification Questions Panel */}
+              {/* Co-Scientist Clarification Questions Panel */}
               {(studyClarifications.length > 0 || selectedStudy.screening_status === "awaiting_clarification" || selectedStudy.ai_decision === "maybe") && (
                 <div className="bg-gradient-to-r from-purple-50/90 to-indigo-50/90 border-2 border-purple-300 rounded-xl p-4 space-y-3 shadow-xs animate-tag-pop">
                   <div className="flex items-center justify-between">
@@ -2084,7 +2054,7 @@ export function ScreeningPage() {
                         <Bot className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="block text-purple-900 font-bold">Biomni AI Clarification Request</span>
+                        <span className="block text-purple-900 font-bold">Co-Scientist Clarification Request</span>
                         <span className="text-[10px] text-purple-600 font-normal">Ambiguous eligibility against PICO criteria &bull; Human clarification needed</span>
                       </div>
                     </div>
@@ -2191,13 +2161,13 @@ export function ScreeningPage() {
                   ) : (
                     <div className="bg-white border border-purple-100 rounded-lg p-3 space-y-3">
                       <p className="text-xs font-semibold text-slate-800">
-                        Biomni is uncertain whether this study meets the Population (pure arterial malformation without nidus) or Intervention criteria. Please clarify:
+                        The Co-Scientist requires clarification whether this study meets the Population (pure arterial malformation without nidus) or Intervention criteria. Please clarify:
                       </p>
                       <div className="space-y-1.5">
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
                           <input
                             type="radio"
-                            name="biomni-clarify"
+                            name="coscientist-clarify"
                             value="included"
                             checked={selectedOption === "included"}
                             onChange={() => setSelectedOption("included")}
@@ -2208,7 +2178,7 @@ export function ScreeningPage() {
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
                           <input
                             type="radio"
-                            name="biomni-clarify"
+                            name="coscientist-clarify"
                             value="excluded"
                             checked={selectedOption === "excluded"}
                             onChange={() => setSelectedOption("excluded")}
@@ -2219,7 +2189,7 @@ export function ScreeningPage() {
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
                           <input
                             type="radio"
-                            name="biomni-clarify"
+                            name="coscientist-clarify"
                             value="pdf"
                             checked={selectedOption === "pdf"}
                             onChange={() => setSelectedOption("pdf")}
@@ -2298,7 +2268,12 @@ export function ScreeningPage() {
 
                 {/* Abstract Text Area */}
                 <div className="bg-slate-50/50 border border-slate-200 rounded-lg p-4 min-h-[140px]">
-                  {renderedAbstract}
+                  {renderHighlightedText(
+                    selectedStudy.abstract,
+                    selectedHighlights?.all_spans || [],
+                    keywords,
+                    false
+                  )}
                 </div>
               </div>
 

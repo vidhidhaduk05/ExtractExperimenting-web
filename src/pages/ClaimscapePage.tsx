@@ -93,6 +93,8 @@ export const ClaimscapePage: React.FC = () => {
   const [period, setPeriod] = useState<string>("");
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [includeCommentary, setIncludeCommentary] = useState<boolean>(false);
+  const [directOnly, setDirectOnly] = useState<boolean>(false);
+  const [showReviews, setShowReviews] = useState<boolean>(true);
   const [selectedExample, setSelectedExample] = useState<string>("hrt");
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
@@ -162,11 +164,6 @@ export const ClaimscapePage: React.FC = () => {
   // Selected paper in inspector (default to landmark WHI trial)
   const [selectedPmid, setSelectedPmid] = useState<string>("12117397");
 
-  // Active Evidence Lens: "all" | "direct" | "reviews"
-  const [evidenceLens, setEvidenceLens] = useState<"all" | "direct" | "reviews">("all");
-  const isDirectOnly = evidenceLens === "direct";
-  const isReviewsOnly = evidenceLens === "reviews";
-
   // Map judgments by PMID
   const judgmentMap = useMemo(() => {
     const map = new Map<string, Judgment>();
@@ -192,8 +189,8 @@ export const ClaimscapePage: React.FC = () => {
 
   // Compute tier summaries and metrics
   const summaries = useMemo(() => {
-    return computeTierSummaries(processedPapers, isDirectOnly);
-  }, [processedPapers, isDirectOnly]);
+    return computeTierSummaries(processedPapers, directOnly);
+  }, [processedPapers, directOnly]);
 
   // Dynamic Headline synthesis
   const headlineData = useMemo(() => {
@@ -208,12 +205,7 @@ export const ClaimscapePage: React.FC = () => {
   // Key KPI stats
   const stats = useMemo(() => {
     const onTopicList = processedPapers.filter((p) => p.onTopic);
-    const mappedList = onTopicList.filter((p) => {
-      if (!p.tier) return false;
-      if (isReviewsOnly) return p.tier === "review";
-      if (isDirectOnly) return p.direct && p.tier !== "review";
-      return true;
-    });
+    const mappedList = onTopicList.filter((p) => p.tier && (!directOnly || p.direct));
     const withVerdictList = mappedList.filter(
       (p) => p.tier && TIER_BY_ID[p.tier]?.counted && (p.category === "supports" || p.category === "contradicts" || p.category === "mixed")
     );
@@ -225,17 +217,12 @@ export const ClaimscapePage: React.FC = () => {
       onMap: mappedList.length,
       withVerdict: withVerdictList.length
     };
-  }, [processedPapers, paperCount, isDirectOnly, isReviewsOnly, dataset.total]);
+  }, [processedPapers, paperCount, directOnly, dataset.total]);
 
   // Filtered papers for bottom data table
   const filteredTablePapers = useMemo(() => {
     return processedPapers
-      .filter((p) => {
-        if (!p.onTopic || !p.tier) return false;
-        if (isReviewsOnly) return p.tier === "review";
-        if (isDirectOnly) return p.direct && p.tier !== "review";
-        return true;
-      })
+      .filter((p) => p.onTopic && p.tier && (!directOnly || p.direct))
       .filter((p) => {
         if (!tableSearch.trim()) return true;
         const q = tableSearch.toLowerCase();
@@ -246,7 +233,7 @@ export const ClaimscapePage: React.FC = () => {
           (p.finding && p.finding.toLowerCase().includes(q))
         );
       });
-  }, [processedPapers, isDirectOnly, isReviewsOnly, tableSearch]);
+  }, [processedPapers, directOnly, tableSearch]);
 
   const scrollToMap = () => {
     setTimeout(() => {
@@ -285,7 +272,7 @@ export const ClaimscapePage: React.FC = () => {
           return prev + 6;
         }
         if (prev < 70) {
-          setScanStepLabel("Reading abstracts with Laya System-1 ONNX model...");
+          setScanStepLabel("Synthesizing abstracts with Co-Scientist inference engine...");
           return prev + 4;
         }
         if (prev < 92) {
@@ -333,7 +320,7 @@ export const ClaimscapePage: React.FC = () => {
         });
         setSelectedPmid(res.papers[0]?.pmid || "");
         setEvalSpeed(res.elapsed_ms);
-        setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: ${res.engine || "Laya System-1"}`);
+        setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: Co-Scientist Engine`);
         finishScan();
         return;
       }
@@ -341,7 +328,7 @@ export const ClaimscapePage: React.FC = () => {
       // Backend not running on this domain/host, proceed to direct client-side live PubMed
     }
 
-    // Step 2: Query Live PubMed directly via NCBI E-Utilities with Laya System-1 Inference
+    // Step 2: Query Live PubMed directly via NCBI E-Utilities with Co-Scientist Inference
     try {
       const liveRes = await fetchLivePubMedEvidence(activeClaim, activeQuery, paperCount);
       if (Array.isArray(liveRes?.papers) && liveRes.papers.length > 0) {
@@ -353,7 +340,7 @@ export const ClaimscapePage: React.FC = () => {
           judgments: liveRes.judgments,
         });
         setSelectedPmid(liveRes.papers[0]?.pmid || "");
-        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Laya System-1`);
+        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Co-Scientist Engine`);
         finishScan();
         return;
       } else {
@@ -489,7 +476,7 @@ export const ClaimscapePage: React.FC = () => {
               <span className="w-px h-3 bg-[#d2c2cb]"></span>
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
-                Laya Fast Screening
+                Co-Scientist Rapid Screening
               </span>
               <span className="w-px h-3 bg-[#d2c2cb]"></span>
               <span className="flex items-center gap-1.5">
@@ -599,7 +586,7 @@ export const ClaimscapePage: React.FC = () => {
                 <p className="cs-eyebrow text-[#7c5800] font-bold">Synthesized Map Headline</p>
                 {evalSpeed !== null && (
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-[#ffdea6] text-[#7c5800] border border-[#7c5800]/30 inline-flex items-center gap-1 shadow-2xs">
-                    <span>⚡ Laya Fast Pipeline:</span>
+                    <span>⚡ Co-Scientist Rapid Pipeline:</span>
                     <span>{evalSpeed < 10 ? `${evalSpeed.toFixed(1)}ms (Cached)` : `${(evalSpeed / 1000).toFixed(2)}s`}</span>
                   </span>
                 )}
@@ -650,56 +637,36 @@ export const ClaimscapePage: React.FC = () => {
               <dd className="text-[11px] text-[#72636d] font-['Work_Sans']">sorted by study type</dd>
             </div>
             <div className="grid gap-0.5 px-4 py-3.5 border-l border-[#d2c2cb]">
-              <dt className="text-[11px] uppercase tracking-wider text-[#72636d] font-bold font-['Work_Sans']">Analyzed</dt>
+              <dt className="text-[11px] uppercase tracking-wider text-[#72636d] font-bold font-['Work_Sans']">With a verdict</dt>
               <dd className="text-[26px] font-['Bodoni_Moda'] font-normal tracking-tight text-[#3a0f34]">{stats.withVerdict}</dd>
-              <dd className="text-[11px] text-[#72636d] font-['Work_Sans']">evidence synthesis</dd>
+              <dd className="text-[11px] text-[#72636d] font-['Work_Sans']">counted in Wilson CI</dd>
             </div>
           </dl>
 
           {/* Section 3: Interactive SVG Scatter Map */}
           <div ref={mapSectionRef} id="claimscape-map-section" className="cs-card overflow-hidden shadow-sm scroll-mt-6 border border-[#d2c2cb]">
             {/* Map Header Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-[#d2c2cb] px-5 py-3 bg-[#fbf9f4]">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-['Work_Sans'] text-xs">
-                {/* Evidence Lens Selector */}
-                <div className="flex items-center gap-1 bg-[#ffffff] p-1 rounded-md border border-[#d2c2cb] shadow-2xs">
-                  <span className="text-[11px] font-bold text-[#3a0f34] uppercase tracking-wider px-2">
-                    ⚡ Lens:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setEvidenceLens("all")}
-                    className={`px-3 py-1 rounded text-[12px] font-semibold transition-colors ${
-                      evidenceLens === "all"
-                        ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
-                        : "text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]"
-                    }`}
-                  >
-                    All Evidence
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEvidenceLens("direct")}
-                    className={`px-3 py-1 rounded text-[12px] font-semibold transition-colors ${
-                      evidenceLens === "direct"
-                        ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
-                        : "text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]"
-                    }`}
-                  >
-                    Direct Evidence Only
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEvidenceLens("reviews")}
-                    className={`px-3 py-1 rounded text-[12px] font-semibold transition-colors ${
-                      evidenceLens === "reviews"
-                        ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
-                        : "text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]"
-                    }`}
-                  >
-                    Reviews & Commentary
-                  </button>
-                </div>
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-[#d2c2cb] px-5 py-3 bg-[#f0eee9]">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-['Work_Sans'] text-xs">
+                <label className="cs-toggle flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={directOnly}
+                    onChange={(e) => setDirectOnly(e.target.checked)}
+                    className="rounded-none border-[#d2c2cb] text-[#3a0f34]"
+                  />
+                  <span className="font-medium text-[#3a0f34]">Direct evidence only</span>
+                </label>
+
+                <label className="cs-toggle flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showReviews}
+                    onChange={(e) => setShowReviews(e.target.checked)}
+                    className="rounded-none border-[#d2c2cb] text-[#3a0f34]"
+                  />
+                  <span className="font-medium text-[#3a0f34]">Show reviews & commentary</span>
+                </label>
               </div>
 
               <p className="cs-mono text-[12px] text-[#72636d]" aria-live="polite">
@@ -712,7 +679,7 @@ export const ClaimscapePage: React.FC = () => {
               summaries={summaries}
               selectedPmid={selectedPmid}
               onSelectPaper={(pmid) => setSelectedPmid(pmid)}
-              evidenceLens={evidenceLens}
+              showReviews={showReviews}
             />
 
             {/* Legend Bar */}

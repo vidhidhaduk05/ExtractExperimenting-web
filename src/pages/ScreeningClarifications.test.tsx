@@ -156,9 +156,9 @@ describe("ScreeningPage Clarifications Checklist & Desktop Notification Integrat
     );
   };
 
-  it("renders the AI Screening Clarifications Checklist banner on Screening Dashboard", async () => {
+  it("renders the Co-Scientist Screening Clarifications Checklist banner on Screening Dashboard", async () => {
     renderScreening();
-    expect(await screen.findByText("AI Screening Clarifications Checklist")).toBeInTheDocument();
+    expect(await screen.findByText("Co-Scientist Screening Clarifications Checklist")).toBeInTheDocument();
     expect(screen.getByText("1 Pending")).toBeInTheDocument();
   });
 
@@ -209,7 +209,7 @@ describe("ScreeningPage Clarifications Checklist & Desktop Notification Integrat
 
     // Should not render the checklist section
     await waitFor(() => {
-      expect(screen.queryByText("AI Screening Clarifications Checklist")).not.toBeInTheDocument();
+      expect(screen.queryByText("Co-Scientist Screening Clarifications Checklist")).not.toBeInTheDocument();
     });
   });
 });
