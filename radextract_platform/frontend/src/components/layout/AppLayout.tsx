@@ -2,7 +2,7 @@ import { Outlet, NavLink, useParams, useLocation, Link } from "react-router-dom"
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useState, useEffect } from "react";
-import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, ShieldAlert, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles, Bell, Bookmark } from "lucide-react";
+import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, ShieldAlert, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles, Mail, Bookmark } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ErrorBoundary } from "../common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "../common/ClarificationNotificationCenter";
@@ -456,6 +456,7 @@ export function AppLayout() {
   const [apiInfo, setApiInfo] = useState<ApiConnectionInfo>(getApiConnectionInfo());
 
   useEffect(() => { setIsMobileMenuOpen(false); }, [pathname]);
+  useEffect(() => { setIsClarificationDrawerOpen(false); }, [projectId]);
 
   useEffect(() => {
     return subscribeApiConnection((info) => {
@@ -619,9 +620,9 @@ export function AppLayout() {
       {/* Main content with top bar */}
       <main className="flex-1 overflow-y-auto flex flex-col min-w-0 bg-[#FAF9F3]">
         {/* Top Announcement & Header */}
-        <header className="bg-[#FAF9F3]/90 backdrop-blur-md border-b border-black/[0.08] px-4 sm:px-6 py-2.5 sticky top-0 z-30 transition-colors">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <header data-app-header className="bg-[#FAF9F3]/90 backdrop-blur-md border-b border-black/[0.08] px-4 sm:px-6 py-2.5 sticky top-0 z-30 transition-colors">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               {/* Mobile menu trigger */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -643,7 +644,7 @@ export function AppLayout() {
                 </button>
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span className="h-2 w-2 rounded-full bg-[#141413] animate-pulse" />
                 <span className="font-serif text-sm font-medium text-[#141413] truncate">
                   {projectId ? `Project: ${projectId}` : "RadExtract Lab"}
@@ -654,7 +655,7 @@ export function AppLayout() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {/* Permanent Backend Indicator */}
               {(() => {
                 const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname.includes("github.io"));
@@ -700,13 +701,15 @@ export function AppLayout() {
               {projectId && (
                 <button
                   onClick={() => setIsClarificationDrawerOpen(true)}
-                  className="relative p-2 rounded-full hover:bg-black/5 text-[#6B665E] hover:text-[#141413] transition-colors"
+                  className="clarification-inbox-trigger"
                   title={`Clarification Inbox (${pendingClarifications.length} pending)`}
-                  aria-label="Clarification Inbox"
+                  aria-label={`Clarification inbox, ${pendingClarifications.length} pending`}
+                  aria-expanded={isClarificationDrawerOpen}
+                  aria-controls="clarification-inbox"
                 >
-                  <Bell className="h-4 w-4" />
+                  <Mail className="h-4 w-4" aria-hidden="true" />
                   {pendingClarifications.length > 0 && (
-                    <span className="absolute top-1 right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-purple-600 text-white text-[9px] font-mono font-bold">
+                    <span className="clarification-pending-badge">
                       {pendingClarifications.length}
                     </span>
                   )}

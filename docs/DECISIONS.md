@@ -175,3 +175,11 @@ This document is the canonical ledger of all engineering, architectural, scienti
   * Project `70df98b2-c4f2-4b07-8077-591ec173935e` displays 0 studies and 0 batches with clear empty state.
   * Real imports accurately populate the database, link to title/abstract screening, and can be inspected or safely undone with impact preview.
   * 8/8 automated backend integration tests pass in `test_import_batches.py`.
+
+## 2026-10-26 — Five-second clarification announcements and persistent inbox
+
+- New clarification questions use one compact toast below the header at the upper right, including on screening routes. Questions arriving in the same poll share a grouped announcement; later batches queue one at a time.
+- Five seconds measures unpaused popup visibility only. Hover, keyboard focus, and hidden tabs pause that countdown. Minimize and timeout never answer, dismiss, exclude, or change screening continuation policy.
+- The existing header control uses an envelope and the shared server-pending query for its count. Viewing the inbox does not resolve questions; only a successful answer save removes a pending question. Failed saves retain it with retry feedback.
+- Announcement IDs alone persist per project in local storage, with an in-memory fallback when storage is unavailable. Questions and history remain server-backed. An open inbox receives new questions quietly and stays open until the reviewer closes it.
+- Clarification surfaces follow the master theme, responsive controls, polite announcements, keyboard focus handling, and reduced motion. Backend screening and eligibility logic are unchanged.
