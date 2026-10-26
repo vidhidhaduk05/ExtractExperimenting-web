@@ -161,13 +161,10 @@ async def get_current_user_optional(
     token: Optional[str] = Depends(oauth2_scheme),
     db: DBBackend = Depends(get_db),
 ) -> Optional[dict]:
-    """Like get_current_user but returns None instead of raising 401."""
+    """Like get_current_user but returns None if token is missing. Raises 401 if invalid token is provided."""
     if not token:
         return None
-    try:
-        return await get_current_user(token, db)
-    except HTTPException:
-        return None
+    return await get_current_user(token, db)
 
 
 # ── Session management (refresh tokens) ──
