@@ -29,6 +29,9 @@ export interface AnnotationInput {
 }
 
 export function collaborationAvailability(): string | null {
+  const token = typeof localStorage !== "undefined" ? localStorage.getItem("token") : null;
+  if (!token) return "Sign in to access record collaboration.";
+  if (shouldUseDemoFallback()) return "Record collaboration requires a connected backend.";
   return null;
 }
 

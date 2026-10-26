@@ -224,6 +224,37 @@ class TestPicoExtraction:
         pico_data = pico_r.json()
         assert pico_data["population"] == "Patients with liver cancer."
 
+    def test_extract_persists_criteria(self, client, project):
+        """Uploading protocol persists inclusion and exclusion criteria to the project."""
+        content = (
+            "Population: Patients with intracranial aneurysm.\n"
+            "Index Test: Flow diverter stent.\n"
+            "Inclusion Criteria:\n"
+            "- Confirmed unruptured aneurysm >= 5mm\n"
+            "- Age >= 18\n\n"
+            "Exclusion Criteria:\n"
+            "- Prior stent placement\n"
+            "- Active bleeding\n"
+        )
+        r = client.post(
+            f"/api/projects/{project}/pico/extract",
+            files={"file": ("protocol.txt", content.encode(), "text/plain")},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert len(data.get("inclusion", [])) >= 2
+        assert len(data.get("exclusion", [])) >= 2
+
+        # Check criteria endpoint returns saved criteria
+        crit_r = client.get(f"/api/projects/{project}/criteria")
+        assert crit_r.status_code == 200
+        crit_data = crit_r.json()
+        assert len(crit_data["inclusion"]) >= 2
+        assert any("aneurysm" in c["text"].lower() for c in crit_data["inclusion"])
+        assert len(crit_data["exclusion"]) >= 2
+        assert any("stent" in c["text"].lower() for c in crit_data["exclusion"])
+
+
 
 # ── PubMed fetch endpoint ──
 

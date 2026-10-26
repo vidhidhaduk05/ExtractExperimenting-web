@@ -231,16 +231,93 @@ def _criteria_lines(lines: list[str]) -> list[str]:
         "any one of the following",
         "studies included",
         "period window",
+        "eligibility criteria were",
+        "inclusion criteria were",
+        "exclusion criteria were",
+        "the following criteria",
+        "to be eligible",
+        "must meet all",
+        "must meet at least",
     )
     criteria = []
     for line in lines:
-        low = line.lower().lstrip("-•* ").strip()
+        cleaned = re.sub(r"^[\s\-•*–—\d\.\)\(\]]+", "", line).strip()
+        low = cleaned.lower()
         if any(low.startswith(prefix) for prefix in skip_prefixes):
             continue
-        if len(low) < 12:
+        if len(cleaned) < 8:
             continue
-        criteria.append(line.lstrip("-•* ").strip())
+        criteria.append(cleaned)
     return criteria
+
+
+def _extract_criteria_sections(text: str) -> tuple[list[str], list[str]]:
+    """Extract inclusion and exclusion criteria lists from protocol text."""
+    inc_headers = [
+        "inclusion criteria",
+        "criteria for inclusion",
+        "eligibility criteria - inclusion",
+        "study inclusion criteria",
+        "selection criteria - inclusion",
+        "inclusion:",
+        "1.1 inclusion",
+        "1. inclusion",
+    ]
+    exc_headers = [
+        "exclusion criteria",
+        "criteria for exclusion",
+        "eligibility criteria - exclusion",
+        "study exclusion criteria",
+        "selection criteria - exclusion",
+        "non-inclusion criteria",
+        "non-eligibility criteria",
+        "exclusion:",
+        "1.2 exclusion",
+        "2. exclusion",
+    ]
+    subsequent_sections = [
+        "operational",
+        "search strategy",
+        "search methods",
+        "data extraction",
+        "variable schema",
+        "variables",
+        "analysis plan",
+        "statistical analysis",
+        "methods",
+        "methodology",
+        "study design",
+        "intervention",
+        "outcome",
+        "ethics",
+        "funding",
+        "1.3",
+        "2. search",
+        "2. ",
+        "3. ",
+        "4. ",
+    ]
+
+    inc_lines = _section_body(text, inc_headers, exc_headers + subsequent_sections)
+    exc_lines = _section_body(text, exc_headers, subsequent_sections)
+
+    if not inc_lines:
+        inc_match = re.search(
+            r"(?im)^(?:#+\s*)?(?:[0-9\.]+\s*)?(?:inclusion\s+criteria|criteria\s+for\s+inclusion|eligibility\s+criteria\s*[-–:]\s*inclusion)\s*:?\s*\n((?:[ \t]*[-•*0-9\.\)][^\n]+\n?)+)",
+            text,
+        )
+        if inc_match:
+            inc_lines = [l.strip() for l in inc_match.group(1).split("\n") if l.strip()]
+
+    if not exc_lines:
+        exc_match = re.search(
+            r"(?im)^(?:#+\s*)?(?:[0-9\.]+\s*)?(?:exclusion\s+criteria|criteria\s+for\s+exclusion|eligibility\s+criteria\s*[-–:]\s*exclusion)\s*:?\s*\n((?:[ \t]*[-•*0-9\.\)][^\n]+\n?)+)",
+            text,
+        )
+        if exc_match:
+            exc_lines = [l.strip() for l in exc_match.group(1).split("\n") if l.strip()]
+
+    return _criteria_lines(inc_lines), _criteria_lines(exc_lines)
 
 
 def _db_key(label: str) -> str:
@@ -458,14 +535,15 @@ def _find_keyword_match(text: str, field_or_patterns: str | list[str]) -> str:
 
 
 def extract_pico_from_text(text: str) -> dict:
-    """Extract PICO elements from protocol text.
+    """Extract PICO elements and criteria from protocol text.
 
     Args:
         text: Full text content of the protocol document.
 
     Returns:
         Dict with keys: population, index_test, comparator, outcome,
-        study_design, research_question, hypothesis, extraction_confidence.
+        study_design, research_question, hypothesis, extraction_confidence,
+        inclusion, exclusion, search_strings, variables.
     """
     if not text or not text.strip():
         return _empty_pico()
@@ -474,25 +552,40 @@ def extract_pico_from_text(text: str) -> dict:
     result = _empty_pico()
     result["extraction_confidence"] = "low"
 
-    # Try section header detection first, then fall back to keyword patterns
+    # 1. Try section header detection first, then fall back to keyword patterns
     for field, headers in PICO_HEADERS.items():
         content = _find_section_content(text, headers)
         if not content:
             content = _find_keyword_match(text, field)
         result[field] = content
 
+    # 2. Extract explicit inclusion and exclusion criteria sections
+    inc, exc = _extract_criteria_sections(text)
+    if inc:
+        result["inclusion"] = inc
+    if exc:
+        result["exclusion"] = exc
+
+    # 3. Descriptive case review override if applicable
     result = _apply_descriptive_protocol(text, result)
 
     # Calculate confidence based on how many elements were found
     pico_fields = ["population", "index_test", "comparator", "outcome", "study_design"]
     found_count = sum(1 for f in pico_fields if result.get(f))
 
-    # If NLP regex extraction is incomplete, attempt LLM-assisted extraction
-    if (found_count < 3 or not result.get("hypothesis")) and len(text.strip()) > 30:
+    # 4. If NLP regex extraction is incomplete, attempt LLM/Laya-assisted extraction
+    need_llm = (
+        found_count < 3
+        or not result.get("hypothesis")
+        or not result.get("inclusion")
+        or not result.get("exclusion")
+    ) and len(text.strip()) > 30
+
+    if need_llm:
         try:
             from services.tool_calling_client import ToolCallingClient
             client = ToolCallingClient()
-            prompt = f"""You are a clinical systematic review expert. Analyze the following study protocol document and extract the PICO elements, research question, and hypothesis.
+            prompt = f"""You are a clinical systematic review expert. Analyze the following study protocol document and extract the PICO elements, research question, hypothesis, and eligibility criteria (inclusion and exclusion criteria).
 
 Protocol Document Text:
 {text[:8000]}
@@ -505,14 +598,32 @@ Return JSON with exact keys:
   "outcome": "primary and secondary outcomes assessed",
   "study_design": "study design type (e.g. RCT, prospective cohort)",
   "research_question": "primary clinical research question",
-  "hypothesis": "study hypothesis"
+  "hypothesis": "study hypothesis",
+  "inclusion": ["clear, individual inclusion criterion 1", "inclusion criterion 2"],
+  "exclusion": ["clear, individual exclusion criterion 1", "exclusion criterion 2"]
 }}"""
-            llm_res = client._fallback_prompt_parse(prompt, max_tokens=1024)
+            llm_res = client._fallback_prompt_parse(prompt, max_tokens=1500)
             if isinstance(llm_res, dict):
                 for k in ["population", "index_test", "comparator", "outcome", "study_design", "research_question", "hypothesis"]:
                     if not result.get(k) and llm_res.get(k):
                         result[k] = str(llm_res[k]).strip()
+                if not result.get("inclusion") and isinstance(llm_res.get("inclusion"), list):
+                    result["inclusion"] = [str(x).strip() for x in llm_res["inclusion"] if str(x).strip()]
+                if not result.get("exclusion") and isinstance(llm_res.get("exclusion"), list):
+                    result["exclusion"] = [str(x).strip() for x in llm_res["exclusion"] if str(x).strip()]
                 found_count = sum(1 for f in pico_fields if result.get(f))
+        except Exception:
+            pass
+
+    # 5. If criteria are still missing, auto-draft criteria from extracted PICO
+    if (not result.get("inclusion") or not result.get("exclusion")) and (result.get("population") or result.get("index_test")):
+        try:
+            from services.search_string_generator import generate_criteria_from_pico
+            draft = generate_criteria_from_pico(result)
+            if not result.get("inclusion") and draft.get("inclusion"):
+                result["inclusion"] = [item["text"] for item in draft["inclusion"]]
+            if not result.get("exclusion") and draft.get("exclusion"):
+                result["exclusion"] = [item["text"] for item in draft["exclusion"]]
         except Exception:
             pass
 

@@ -247,3 +247,59 @@ class TestExtractPicoFromFile:
         bad_file.write_text("some content")
         with pytest.raises(ValueError, match="Unsupported"):
             extract_pico_from_file(str(bad_file), "document.xyz")
+
+    def test_extract_standard_protocol_with_explicit_criteria(self, tmp_path):
+        """Standard clinical protocol with explicit inclusion and exclusion criteria."""
+        content = """
+Clinical Protocol: Endovascular Mechanical Thrombectomy in Acute Ischemic Stroke
+
+Population:
+Adult patients aged 18 years or older presenting with confirmed acute ischemic stroke.
+
+Intervention:
+Direct aspiration mechanical thrombectomy within 6 hours of symptom onset.
+
+Comparator:
+Intravenous thrombolysis with recombinant tissue plasminogen activator (tPA).
+
+Primary Outcome:
+Functional independence defined as modified Rankin Scale (mRS) score 0-2 at 90 days.
+
+Study Design:
+Multicenter prospective randomized controlled trial.
+
+Inclusion Criteria:
+- Age >= 18 years
+- Baseline NIHSS score >= 6
+- Confirmed large vessel occlusion (LVO) of the internal carotid artery or middle cerebral artery (M1 segment)
+- Time from symptom onset to groin puncture <= 6 hours
+
+Exclusion Criteria:
+- Evidence of intracranial hemorrhage on baseline non-contrast CT
+- Large core infarction defined as ASPECTS < 6
+- Severe contrast allergy or renal insufficiency requiring hemodialysis
+- Pregnancy or active bleeding diathesis
+"""
+        result = extract_pico_from_text(content)
+        assert len(result["inclusion"]) >= 3
+        assert any("age" in c.lower() for c in result["inclusion"])
+        assert any("large vessel occlusion" in c.lower() or "lvo" in c.lower() for c in result["inclusion"])
+
+        assert len(result["exclusion"]) >= 3
+        assert any("intracranial hemorrhage" in c.lower() for c in result["exclusion"])
+        assert any("aspects" in c.lower() for c in result["exclusion"])
+
+    def test_extract_protocol_auto_generates_criteria_when_missing(self):
+        """Protocol text without explicit criteria sections should auto-draft criteria from PICO."""
+        content = """
+Population: Patients with symptomatic intracranial atherosclerotic stenosis.
+Index Test: High-resolution vessel wall MRI.
+Comparator: Digital subtraction angiography.
+Outcome: Luminal stenosis percentage and plaque intraplaque hemorrhage.
+Study Design: Prospective cross-sectional diagnostic accuracy study.
+"""
+        result = extract_pico_from_text(content)
+        assert len(result["inclusion"]) > 0
+        assert any("atherosclerotic stenosis" in c.lower() for c in result["inclusion"])
+        assert len(result["exclusion"]) > 0
+

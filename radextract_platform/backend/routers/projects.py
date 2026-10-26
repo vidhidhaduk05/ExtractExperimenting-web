@@ -491,22 +491,41 @@ def _persist_protocol_extraction(conn, project_id: str, result: dict) -> None:
         "outcome": result.get("outcome") or "",
         "study_design": result.get("study_design") or "",
     }
+
+    if (not inclusion or not exclusion) and has_pico:
+        try:
+            from services.search_string_generator import generate_criteria_from_pico
+            draft = generate_criteria_from_pico(pico)
+            if not inclusion and draft.get("inclusion"):
+                inclusion = [item["text"] for item in draft["inclusion"]]
+                result["inclusion"] = inclusion
+            if not exclusion and draft.get("exclusion"):
+                exclusion = [item["text"] for item in draft["exclusion"]]
+                result["exclusion"] = exclusion
+        except Exception:
+            pass
+
     sets = ["pico_json = ?", "hypothesis = ?", "research_question = ?"]
     params = [
         json.dumps(pico),
         result.get("hypothesis") or "",
         result.get("research_question") or "",
     ]
-    if has_structure:
+    if inclusion or exclusion:
         sets.extend([
             "inclusion_criteria_json = ?",
             "exclusion_criteria_json = ?",
-            "search_strings_json = ?",
-            "exclusion_reasons_json = ?",
         ])
         params.extend([
             json.dumps([{"id": str(uuid.uuid4()), "text": text} for text in inclusion]),
             json.dumps([{"id": str(uuid.uuid4()), "text": text} for text in exclusion]),
+        ])
+    if strings or exclusion:
+        sets.extend([
+            "search_strings_json = ?",
+            "exclusion_reasons_json = ?",
+        ])
+        params.extend([
             json.dumps(strings),
             json.dumps([
                 {"code": _slug_code(text), "label": text}

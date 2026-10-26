@@ -147,18 +147,15 @@ export function ScreeningPage() {
     return projectClarifications;
   }, [projectClarifications, pendingClarifications, answeredClarifications, checklistFilter]);
 
-  // Reviewer identity - seamless active Co-Scientist reviewer (no mandatory sign-in roadblock)
+  // Reviewer identity
   const authToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const { data: currentReviewerData } = useQuery({
-    queryKey: ["screening-reviewer", authToken], queryFn: api.getCurrentUser,
+  const { data: currentReviewer, error: reviewerError } = useQuery({
+    queryKey: ["screening-reviewer", authToken],
+    queryFn: api.getCurrentUser,
+    enabled: !!authToken,
     retry: false,
   });
-  const currentReviewer = currentReviewerData || {
-    user_id: "usr_default_coscientist",
-    username: "Co-Scientist Reviewer",
-    role: "owner"
-  };
-  const reviewerName = currentReviewer.username || "Co-Scientist Reviewer";
+  const reviewerName = currentReviewer?.username || "";
 
   // Highlight toggles & Keywords drawer state
   const [showHighlights, setShowHighlights] = useState(true);
@@ -532,6 +529,11 @@ export function ScreeningPage() {
     // Prevent duplicate submissions while a save is in flight
     if (decisionMutation.isPending) return;
 
+    if (!currentReviewer) {
+      setSaveError("Sign in with a valid account to save screening decisions.");
+      return;
+    }
+
     const currentStudyId = targetStudyId || selectedStudy?.study_id;
     if (!currentStudyId) return;
     const targetStudy = studyList.find(study => study.study_id === currentStudyId);
@@ -641,7 +643,7 @@ export function ScreeningPage() {
         return;
       }
 
-      if (decisionMutation.isPending) return;
+      if (decisionMutation.isPending || !currentReviewer) return;
 
       if (e.key === "i" || e.key === "I" || e.key === "1") {
         e.preventDefault();
@@ -1243,7 +1245,11 @@ export function ScreeningPage() {
         </div>
       )}
 
-
+      {!currentReviewer && (
+        <div role="alert" className="px-6 py-3 text-sm text-amber-800 bg-amber-50">
+          Sign in with a valid account to save screening decisions.
+        </div>
+      )}
 
       {/* Compact Single-Line Filter & Search Toolbar */}
       <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-2">
