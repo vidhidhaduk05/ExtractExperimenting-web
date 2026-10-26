@@ -817,6 +817,67 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       } catch (e) {}
       return decObj as unknown as T;
     }
+    if (path.includes("/pico/from-question")) {
+      const q = (body.question || "").trim();
+      const projectId = path.split("/")[2] || "proj_pam_current";
+
+      let pop = "Patients with target condition";
+      let ind = "Diagnostic intervention";
+      let comp = "Standard of care comparator";
+      let out = "Diagnostic accuracy, sensitivity, and clinical outcomes";
+      let des = "Systematic review and comparative observational studies";
+
+      const popMatch = q.match(/(?:in|among|for)\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:with|undergoing|treated)|[?,.]|$)/i);
+      if (popMatch) pop = popMatch[1].trim();
+
+      const compMatch = q.match(/(?:vs|versus|compared\s+(?:to|with))\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:in|for|among)|[?,.]|$)/i);
+      if (compMatch) comp = compMatch[1].trim();
+
+      const indMatch = q.match(/(?:is|does|can)\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:more|better|effective|superior|comparable|accurate|vs|versus)|[?,.]|$)/i);
+      if (indMatch) ind = indMatch[1].trim();
+
+      const outMatch = q.match(/(?:for\s+detecting|detecting|predicting|reducing|evaluating|measuring)\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:in|among)|[?,.]|$)/i);
+      if (outMatch) out = outMatch[1].trim();
+
+      const extractedPico = {
+        population: pop,
+        index_test: ind,
+        comparator: comp,
+        outcome: out,
+        study_design: des,
+      };
+
+      const extractedHyp = `${ind} provides superior diagnostic yield compared to ${comp} in ${pop}.`;
+      const secondaryHyp = [
+        `${ind} reduces equivocal diagnostic interpretations compared to ${comp}.`,
+        `Safety profiles and adverse event rates are comparable between ${ind} and ${comp}.`,
+      ];
+
+      const ambiguities: string[] = [];
+      if (!compMatch) ambiguities.push("Comparator not explicitly contrasted; verify standard of care or control.");
+      if (pop.split(" ").length < 3) ambiguities.push("Population description is brief; confirm eligibility criteria (e.g. age, disease severity).");
+
+      if (body.persist !== false) {
+        try {
+          localStorage.setItem(`radextract_pico_${projectId}`, JSON.stringify(extractedPico));
+          localStorage.setItem(`radextract_hyp_${projectId}`, JSON.stringify({
+            hypothesis: extractedHyp,
+            research_question: q,
+            secondary_hypotheses: secondaryHyp.map(txt => ({ text: txt, type: "alternative", status: "pending" }))
+          }));
+        } catch (e) {}
+      }
+
+      return {
+        project_id: projectId,
+        pico: extractedPico,
+        hypothesis: extractedHyp,
+        null_hypothesis: `There is no significant difference between ${ind} and ${comp} in ${pop}.`,
+        secondary_hypotheses: secondaryHyp,
+        ambiguities,
+        missing_fields: [],
+      } as unknown as T;
+    }
     if (path.includes("/search-from-question")) {
       const q = (body.question || "").trim();
       const projectId = path.split("/")[2] || "proj_pam_current";
@@ -1972,6 +2033,22 @@ export interface ResearchQuestionResponse {
     study_design: string;
   };
   strings: Record<string, string>;
+}
+
+export interface PicoFromQuestionResponse {
+  project_id: string;
+  pico: {
+    population: string;
+    index_test: string;
+    comparator: string;
+    outcome: string;
+    study_design: string;
+  };
+  hypothesis?: string;
+  null_hypothesis?: string;
+  secondary_hypotheses?: string[];
+  ambiguities?: string[];
+  missing_fields?: string[];
 }
 
 // ── PubMed Fetch ──
@@ -3332,6 +3409,13 @@ export const api = {
     request<SearchStringsResponse>(`/projects/${projectId}/search-strings`),
   generateSearchStrings: (projectId: string) =>
     request<SearchStringsResponse>(`/projects/${projectId}/search-strings/generate`, { method: "POST" }),
+
+  // Research Question → PICO Elements Only (Stage 1)
+  generatePicoFromQuestion: (projectId: string, question: string, persist = true) =>
+    request<PicoFromQuestionResponse>(`/projects/${projectId}/pico/from-question`, {
+      method: "POST",
+      body: JSON.stringify({ question, persist }),
+    }),
 
   // Research Question → PICO + Search Strings
   searchFromQuestion: (projectId: string, question: string) =>

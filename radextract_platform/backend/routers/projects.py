@@ -18,6 +18,7 @@ from models import (
     Criterion, CriteriaUpdate, CriteriaResponse,
     SearchStringsResponse,
     ResearchQuestionRequest, ResearchQuestionResponse,
+    PicoFromQuestionRequest, PicoFromQuestionResponse,
     PicoExtractionResponse,
     PubMedFetchRequest, PubMedFetchResponse,
     OpenAlexFetchRequest,
@@ -802,6 +803,89 @@ async def search_from_question(
         strings=strings,
         hypothesis=hypothesis,
         secondary_hypotheses=secondary,
+    )
+
+
+@router.post("/projects/{project_id}/pico/from-question", response_model=PicoFromQuestionResponse)
+async def generate_pico_from_question(
+    project_id: str,
+    body: PicoFromQuestionRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Generate editable PICO framework fields from a plain-language research question.
+
+    Identifies ambiguity and missing information without generating or overwriting
+    search strings prematurely.
+    """
+    from services import search_string_generator
+
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_access(conn, project_id, user, min_role="editor")
+
+    if not body.question or not body.question.strip():
+        raise HTTPException(status_code=400, detail="Research question is required.")
+
+    try:
+        result = await run_in_threadpool(search_string_generator.extract_pico_from_question, body.question.strip())
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"PICO extraction failed: {str(exc)}") from exc
+
+    pico = result.get("pico", {})
+    hypothesis = result.get("hypothesis", "")
+    null_hypothesis = result.get("null_hypothesis", "")
+    secondary = result.get("secondary_hypotheses", [])
+
+    # Identify missing fields
+    missing_fields = []
+    field_labels = {
+        "population": "Population / Participants (P)",
+        "index_test": "Intervention / Index Test (I)",
+        "comparator": "Comparator / Reference Standard (C)",
+        "outcome": "Outcome / Primary Endpoint (O)",
+        "study_design": "Study Design (S)",
+    }
+    for k, label in field_labels.items():
+        if not pico.get(k) or not str(pico.get(k)).strip():
+            missing_fields.append(label)
+
+    # Detect ambiguity signals
+    ambiguities = []
+    comp_val = str(pico.get("comparator", "")).lower().strip()
+    if not comp_val or comp_val in ["none", "n/a", "no comparator", "standard care"]:
+        ambiguities.append("Comparator is not explicitly contrasted; please verify reference standard or control.")
+    pop_val = str(pico.get("population", "")).strip()
+    if len(pop_val.split()) < 3 and pop_val:
+        ambiguities.append("Population description is brief; confirm eligibility limits (e.g. age, disease severity, imaging modality).")
+    out_val = str(pico.get("outcome", "")).strip()
+    if out_val and not any(w in out_val.lower() for w in ["rate", "sensitivity", "survival", "score", "time", "accuracy", "mortality", "safety", "recurrence"]):
+        ambiguities.append("Outcome measurement criteria or operational metrics are not explicitly quantified.")
+
+    if body.persist:
+        pico_json = json.dumps(pico)
+        secondary_objs = [
+            {"text": txt, "type": "alternative", "status": "pending"}
+            for txt in secondary
+        ]
+        secondary_json = json.dumps(secondary_objs)
+        conn.execute(
+            "UPDATE projects SET pico_json = ?, research_question = ?, hypothesis = ?, secondary_hypotheses_json = ? WHERE project_id = ?",
+            (pico_json, body.question.strip(), hypothesis, secondary_json, project_id),
+        )
+        conn.commit()
+
+    return PicoFromQuestionResponse(
+        project_id=project_id,
+        pico=pico,
+        hypothesis=hypothesis,
+        null_hypothesis=null_hypothesis,
+        secondary_hypotheses=secondary,
+        ambiguities=ambiguities,
+        missing_fields=missing_fields,
     )
 
 

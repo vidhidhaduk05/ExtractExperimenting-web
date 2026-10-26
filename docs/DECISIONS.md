@@ -152,6 +152,17 @@ This document is the canonical ledger of all engineering, architectural, scienti
 * **Impact**:
   * Pure, clean evidence mapping experience with 1-click tier switching.
   * Resilient project navigation guaranteed across all network states.
-  * 100% adherence to Master Theme and zero fake names.
+---
 
-
+## 13. Three-Stage Sequential PICO Setup & Protocol Review Architecture
+* **Date**: 2026-10-26
+* **Decision**: Refactor the PICO setup experience into three disciplined sequential stages:
+  1. **Stage 1 (Set Up Your PICO)**: Exactly three entry methods (Method A: Protocol document upload via `api.extractPico`; Method B: Single research question input with 'Generate PICO' via `api.generatePicoFromQuestion`; Method C: Direct manual entry). All methods converge on ONE shared editable PICO record with adaptive framework terminology (Diagnostic Accuracy vs Intervention/Therapy). The original question remains visible and editable, hypotheses are housed in an optional expandable accordion, and method switching confirms before replacing populated fields. Primary action: 'Save & Continue to Review'.
+  2. **Stage 2 (Review Your Protocol)**: Single primary button 'Review My Protocol'. Dynamically selects AI reviewer perspectives based on question domain, specialty, and study design, with a configurable execution limit (3–4 reviewers) and explicit relevance explanations. Clear disclosure identifies perspectives as AI models (agreement does not prove scientific validity). Consolidated findings are partitioned into 4 distinct buckets (Missing/Ambiguous info, Conflicting criteria, Methodological concerns, Search omissions) with Accept/Edit/Dismiss controls. Eligibility criteria remain editable with 'Draft Eligibility Criteria'. Stale review detection flags prior reviews if PICO or criteria are altered.
+  3. **Stage 3 (Generate Search Strings)**: Single primary button 'Generate Search Strings' (strictly separated from executing live searches). Generates syntax-calibrated queries across 9 database tabs (PubMed, Ovid MEDLINE, Embase.com, Ovid Embase, Cochrane, Web of Science, Scopus, CINAHL, OpenAlex) with live syntax validation and copy/save controls. Manually edited queries are protected from accidental regeneration, and PICO modifications mark existing queries as out of date while preserving manual edits.
+* **Rationale**:
+  * Eliminates cognitive overload, duplicated question entry, and competing primary actions.
+  * Guarantees clinical rigor and traceability across systematic review protocol development.
+* **Impact**:
+  * Streamlined, intuitive workflow strictly adhering to Master Theme design tokens.
+  * Zero schema migrations needed; 100% backwards compatible with existing saved project records.
