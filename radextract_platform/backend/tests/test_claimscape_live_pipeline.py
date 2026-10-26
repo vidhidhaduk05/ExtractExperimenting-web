@@ -120,6 +120,64 @@ def test_legacy_cache_cannot_answer_live_request(monkeypatch, tmp_path):
     assert result["cached"] is False
 
 
+def test_memory_cache_evicts_least_recently_used(monkeypatch):
+    monkeypatch.setattr(pipeline, "_CLAIMSCAPE_CACHE_MAX_ENTRIES", 2)
+    pipeline._memory_cache_put("a", {"engine": "local_laya_onnx"})
+    pipeline._memory_cache_put("b", {"engine": "heuristic_fallback"})
+    assert pipeline._memory_cache_get("a")["engine"] == "local_laya_onnx"
+    pipeline._memory_cache_put("c", {"engine": "local_laya_onnx"})
+    assert pipeline._memory_cache_get("b") is None
+    assert set(pipeline._CLAIMSCAPE_CACHE) == {"a", "c"}
+
+
+def test_memory_cache_updates_do_not_evict_other_entries(monkeypatch):
+    monkeypatch.setattr(pipeline, "_CLAIMSCAPE_CACHE_MAX_ENTRIES", 2)
+    pipeline._memory_cache_put("a", {"total": 1})
+    pipeline._memory_cache_put("b", {"total": 2})
+    pipeline._memory_cache_put("a", {"total": 3})
+    assert pipeline._memory_cache_get("a") == {"total": 3}
+    assert pipeline._memory_cache_get("b") == {"total": 2}
+
+
+def test_memory_cache_does_not_mutate_response_metadata():
+    original = {"cached": False, "engine": "local_laya_onnx"}
+    pipeline._memory_cache_put("a", original)
+    original["cached"] = True
+    response = pipeline._memory_cache_get("a")
+    assert response["cached"] is False
+    response["cached"] = True
+    assert pipeline._memory_cache_get("a")["cached"] is False
+
+
+def test_memory_cache_concurrent_access_stays_bounded(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+
+    monkeypatch.setattr(pipeline, "_CLAIMSCAPE_CACHE_MAX_ENTRIES", 4)
+
+    def access(index):
+        key = str(index % 12)
+        pipeline._memory_cache_put(key, {"total": index})
+        result = pipeline._memory_cache_get(key)
+        assert result is None or isinstance(result["total"], int)
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        list(executor.map(access, range(400)))
+    assert len(pipeline._CLAIMSCAPE_CACHE) <= 4
+
+
+def test_evicted_result_is_served_from_disk(monkeypatch):
+    monkeypatch.setattr(pipeline, "_CLAIMSCAPE_CACHE_MAX_ENTRIES", 1)
+    requests = mock_pubmed(monkeypatch)
+    first = pipeline.evaluate_claim_fast("Treatment improves survival")
+    pipeline.evaluate_claim_fast("Treatment reduces pain")
+    disk = pipeline.evaluate_claim_fast("Treatment improves survival")
+    assert len(requests) == 4
+    assert disk["cached"] is True
+    assert disk["papers"] == first["papers"]
+    assert disk["engine"] == first["engine"]
+    assert len(pipeline._CLAIMSCAPE_CACHE) == 1
+
+
 def test_sample_size_extraction():
     # 1. Systematic Review
     meta_res = pipeline._extract_sample_size(

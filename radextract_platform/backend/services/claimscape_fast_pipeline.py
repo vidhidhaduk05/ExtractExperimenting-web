@@ -17,6 +17,7 @@ import time
 import math
 import hashlib
 import logging
+from threading import Lock
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -37,6 +38,29 @@ logger = logging.getLogger("claimscape.pipeline")
 
 # Multi-tier caching
 _CLAIMSCAPE_CACHE: Dict[str, Dict[str, Any]] = {}
+_CLAIMSCAPE_CACHE_MAX_ENTRIES = 128
+_CLAIMSCAPE_CACHE_LOCK = Lock()
+
+
+def _memory_cache_get(key: str) -> Optional[Dict[str, Any]]:
+    """Return a copy and refresh recency while holding the cache lock."""
+    with _CLAIMSCAPE_CACHE_LOCK:
+        result = _CLAIMSCAPE_CACHE.pop(key, None)
+        if result is None:
+            return None
+        _CLAIMSCAPE_CACHE[key] = result
+        return dict(result)
+
+
+def _memory_cache_put(key: str, result: Dict[str, Any]) -> None:
+    """Bound retained results using dictionary insertion order as LRU order."""
+    with _CLAIMSCAPE_CACHE_LOCK:
+        _CLAIMSCAPE_CACHE.pop(key, None)
+        _CLAIMSCAPE_CACHE[key] = dict(result)
+        while len(_CLAIMSCAPE_CACHE) > _CLAIMSCAPE_CACHE_MAX_ENTRIES:
+            del _CLAIMSCAPE_CACHE[next(iter(_CLAIMSCAPE_CACHE))]
+
+
 CACHE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "claimscape_cache"))
 os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -633,9 +657,9 @@ def evaluate_claim_fast(
     ).encode("utf-8")).hexdigest()
 
     # Tier 1: In-memory cache (< 0.1 ms)
-    if cache_key in _CLAIMSCAPE_CACHE:
+    res = _memory_cache_get(cache_key)
+    if res is not None:
         logger.info("ClaimScape served from memory cache: %s", search_query)
-        res = dict(_CLAIMSCAPE_CACHE[cache_key])
         res["cached"] = True
         return res
 
@@ -645,7 +669,7 @@ def evaluate_claim_fast(
         try:
             with open(disk_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                _CLAIMSCAPE_CACHE[cache_key] = data
+                _memory_cache_put(cache_key, data)
                 data["cached"] = True
                 logger.info("ClaimScape served from disk cache: %s", search_query)
                 return data
@@ -697,7 +721,7 @@ def evaluate_claim_fast(
                         "cached": False,
                         "engine": "claimscape_live_v1",
                     }
-                    _CLAIMSCAPE_CACHE[cache_key] = res_payload
+                    _memory_cache_put(cache_key, res_payload)
                     try:
                         with open(disk_path, "w", encoding="utf-8") as f:
                             json.dump(res_payload, f, ensure_ascii=False)
@@ -877,7 +901,7 @@ def evaluate_claim_fast(
     }
 
     # Save to memory & persistent disk cache
-    _CLAIMSCAPE_CACHE[cache_key] = result
+    _memory_cache_put(cache_key, result)
     try:
         with open(disk_path, "w", encoding="utf-8") as f:
             json.dump(result, f)
