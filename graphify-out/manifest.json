@@ -1362,9 +1362,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1792279735.8456478,
-    "seen": 1792279857.5395648,
-    "ast_hash": "9aa4bda7cab4bc798d67c9f2c622d043",
+    "mtime": 1792974967.472448,
+    "seen": 1792975288.6080885,
+    "ast_hash": "bbd5b7a1fe9f51ab3cffd41a3b49286b",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -1374,9 +1374,9 @@
     "semantic_hash": ""
   },
   "GEMINI.md": {
-    "mtime": 1792279735.8476477,
-    "seen": 1792279857.5425637,
-    "ast_hash": "88bac52a65dd98b044a65e6fed2c71a9",
+    "mtime": 1792974981.9634697,
+    "seen": 1792975288.6080885,
+    "ast_hash": "f8757669231cadc6c4f7d500a5a279a0",
     "semantic_hash": ""
   },
   "PLANS/Improvements_Precision_Cost_Deployment.md": {
@@ -2028,9 +2028,9 @@
     "semantic_hash": ""
   },
   ".agents/rules/coding_standards_coherence.md": {
-    "mtime": 1792282559.3471596,
-    "seen": 1792286207.3932078,
-    "ast_hash": "e015a6f461c695c7a5100caaa8afc32f",
+    "mtime": 1792974996.8135052,
+    "seen": 1792975288.5764575,
+    "ast_hash": "81e2ae7c73476230435bda90fe116c3a",
     "semantic_hash": ""
   },
   ".agents/rules/jev.md": {
@@ -5229,6 +5229,36 @@
     "mtime": 1792973213.8898225,
     "seen": 1792973424.6009827,
     "ast_hash": "429913e3a4879da5d19c5e6778684430",
+    "semantic_hash": ""
+  },
+  ".agents/rules/master_theme.md": {
+    "mtime": 1792974955.4841168,
+    "seen": 1792975288.5764575,
+    "ast_hash": "e823e6a85eb5bdf9d705d240116c3654",
+    "semantic_hash": ""
+  },
+  "Website for software/rayan/rayyan_review_overview.html": {
+    "mtime": 1792973706.3742836,
+    "seen": 1792975288.6235487,
+    "ast_hash": "bb31b6f1a065f7bed7f8174146334f19",
+    "semantic_hash": ""
+  },
+  "Website for software/rayan/rayyan_user_dashboard.html": {
+    "mtime": 1792973706.3753896,
+    "seen": 1792975288.6235487,
+    "ast_hash": "f59b4c9f72d04eb44e2355bb154563f0",
+    "semantic_hash": ""
+  },
+  "Website for software/rayan/rayyan_workbench.html": {
+    "mtime": 1792973706.376604,
+    "seen": 1792975288.6235487,
+    "ast_hash": "ebda7b7c54a6f405b36e7c3c9deebc63",
+    "semantic_hash": ""
+  },
+  "docs/MASTER_THEME.md": {
+    "mtime": 1792960595.6232436,
+    "seen": 1792975288.6290255,
+    "ast_hash": "ea1abb93088f442fa4a3a559f00da08c",
     "semantic_hash": ""
   }
 }
