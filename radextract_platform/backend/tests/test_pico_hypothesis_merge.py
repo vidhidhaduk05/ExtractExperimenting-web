@@ -110,6 +110,17 @@ class TestCriteria:
         assert r.status_code == 404
 
 
+@pytest.fixture(autouse=True)
+def mock_ai_search(monkeypatch):
+    """Mock generate_ai_search_strings for search string tests when LLM is offline."""
+    from services import search_string_generator
+
+    def mock_gen(pico, research_question=""):
+        return search_string_generator.generate_search_strings(pico)
+
+    monkeypatch.setattr(search_string_generator, "generate_ai_search_strings", mock_gen)
+
+
 # ── Search string endpoints ──
 
 MOCK_SEARCH_STRINGS = {
