@@ -249,12 +249,14 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
 
     # Strategy 3: Title similarity + author/year
     titles = [s.get("title", "") for s in studies]
+    title_lens = [len(t) for t in titles]
     years = [s.get("publication_year") for s in studies]
     authors = [s.get("authors", "") for s in studies]
 
     for i in range(len(studies)):
         t_i = titles[i]
-        if not t_i:
+        len_i = title_lens[i]
+        if not len_i:
             continue
         y_i = years[i]
         a_i = authors[i]
@@ -264,7 +266,15 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                 continue  # already grouped
 
             t_j = titles[j]
-            if not t_j:
+            len_j = title_lens[j]
+            if not len_j:
+                continue
+
+            # Bolt Optimization: Fast C-level length upper-bound check before title similarity comparison.
+            # SequenceMatcher / Levenshtein ratio upper bound is 2 * min(|a|, |b|) / (|a| + |b|).
+            # Skipping function calls for titles with dissimilar lengths improves pair evaluation efficiency.
+            min_len = len_i if len_i < len_j else len_j
+            if (2 * min_len) / (len_i + len_j) < TITLE_SIMILARITY_THRESHOLD:
                 continue
 
             sim = _title_similarity(t_i, t_j)
