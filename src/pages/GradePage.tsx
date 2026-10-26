@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type GradeAssessment, type GradeFactor } from "../lib/api";
@@ -249,8 +249,14 @@ function GradeDetail({ gradeId }: { gradeId: string }) {
 
   if (!grade) return null;
 
-  const downgrading = grade.factors.filter((f) => f.factor_type === "downgrading");
-  const upgrading = grade.factors.filter((f) => f.factor_type === "upgrading");
+  const downgrading = useMemo(
+    () => grade.factors.filter((f) => f.factor_type === "downgrading"),
+    [grade.factors]
+  );
+  const upgrading = useMemo(
+    () => grade.factors.filter((f) => f.factor_type === "upgrading"),
+    [grade.factors]
+  );
 
   return (
     <div className="space-y-4">

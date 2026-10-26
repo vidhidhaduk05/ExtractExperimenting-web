@@ -56,11 +56,14 @@ export function CuratedExcelModal({
       // Ingest benchmark PAM extractions
       const targetStudies = availablePapers.length > 0 ? availablePapers : DEMO_STUDIES.map(s => ({ id: s.study_id, shortId: s.study_id, title: s.title, filename: s.pdf_path || "" }));
       
+      // Bolt Optimization: Pre-build O(1) Map for DEMO_VARIABLES lookup to avoid linear searches inside nested study/extraction loop
+      const demoVariablesMap = new Map(DEMO_VARIABLES.map((v) => [v.variable_id, v]));
+
       let populatedCount = 0;
       for (const paper of targetStudies) {
         const benchmarkExts = (DEMO_EXTRACTIONS as any)[paper.id] || (DEMO_EXTRACTIONS as any)["study_chua_2021"] || [];
         for (const ext of benchmarkExts) {
-          const varDef = DEMO_VARIABLES.find(v => v.variable_id === ext.variable_id);
+          const varDef = demoVariablesMap.get(ext.variable_id);
           try {
             await api.recordExtractionDecision({
               project_id: projectId,
@@ -193,8 +196,11 @@ export function CuratedExcelModal({
       // Sheet 1: Active Study
       const currentPaper = availablePapers.find(p => p.id === selectedStudyId) || availablePapers[0];
       const activeStudyExts = (DEMO_EXTRACTIONS as any)[selectedStudyId] || [];
+      // Bolt Optimization: Pre-build O(1) Map for activeStudyExts to avoid O(V * E) linear search overhead
+      const activeStudyExtMap = new Map(activeStudyExts.map((e: any) => [e.variable_id, e]));
+
       const s1Data = DEMO_VARIABLES.map(v => {
-        const found = activeStudyExts.find((e: any) => e.variable_id === v.variable_id);
+        const found = activeStudyExtMap.get(v.variable_id);
         return {
           "Study ID": selectedStudyId,
           "Study Title": currentPaper?.title || "Intracranial PAM Study",
@@ -211,6 +217,13 @@ export function CuratedExcelModal({
       XLSX.utils.book_append_sheet(wb, ws1, "Current_Study_Extractions");
 
       // Sheet 2: Multi-Study Matrix
+      // Bolt Optimization: Pre-build O(1) Maps for each paper's extractions to avoid O(V * P * E) nested find operations
+      const paperExtMaps = new Map<string, Map<string, any>>();
+      availablePapers.forEach((paper) => {
+        const exts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+        paperExtMaps.set(paper.id, new Map(exts.map((e: any) => [e.variable_id, e])));
+      });
+
       const matrixData = DEMO_VARIABLES.map(v => {
         const row: any = {
           "Variable ID": v.variable_id,
@@ -218,8 +231,7 @@ export function CuratedExcelModal({
           "Section": v.section,
         };
         availablePapers.forEach((paper, idx) => {
-          const exts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
-          const match = exts.find((e: any) => e.variable_id === v.variable_id);
+          const match = paperExtMaps.get(paper.id)?.get(v.variable_id);
           row[`#${idx + 1} ${paper.title.split("(")[0].trim()}`] = match?.value || "NR";
         });
         return row;
