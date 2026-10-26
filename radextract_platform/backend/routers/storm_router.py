@@ -41,12 +41,14 @@ class ProtocolDeliberateRequest(BaseModel):
     research_question: Optional[str] = Field(default="", description="Research question")
     topic: str = Field(default="clinical medicine", description="General or specialized clinical topic")
     gathered_studies: Optional[List[Dict[str, Any]]] = Field(default=None, description="ClaimScape evidence base")
+    max_reviewers: Optional[int] = Field(default=4, description="Configurable execution limit for AI reviewers to control latency")
 
 
 class ResolvePersonasRequest(BaseModel):
     topic: str = Field(default="clinical medicine", description="Clinical topic")
     pico: Optional[Dict[str, Any]] = Field(default=None, description="PICO elements")
     gathered_studies: Optional[List[Dict[str, Any]]] = Field(default=None, description="ClaimScape evidence base")
+    max_reviewers: Optional[int] = Field(default=4, description="Configurable limit for personas")
 
 
 @router.get("/health")
@@ -72,11 +74,12 @@ def list_personas(topic: Optional[str] = Query(None, description="Optional topic
 
 @router.post("/resolve-personas")
 def resolve_personas(req: ResolvePersonasRequest):
-    """Dynamically resolve 4 multidisciplinary personas based on protocol & ClaimScape gathered literature."""
+    """Dynamically resolve multidisciplinary personas based on protocol & ClaimScape gathered literature."""
     return resolve_personas_for_protocol(
         pico=req.pico,
         topic=req.topic,
-        gathered_studies=req.gathered_studies
+        gathered_studies=req.gathered_studies,
+        max_reviewers=req.max_reviewers or 4
     )
 
 
@@ -113,7 +116,8 @@ def deliberate_protocol(req: ProtocolDeliberateRequest):
             criteria=req.criteria,
             research_question=req.research_question,
             topic=req.topic,
-            gathered_studies=req.gathered_studies
+            gathered_studies=req.gathered_studies,
+            max_reviewers=req.max_reviewers or 4
         )
         return result
     except Exception as e:

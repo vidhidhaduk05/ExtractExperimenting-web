@@ -195,6 +195,23 @@ This document is the canonical ledger of all engineering, architectural, scienti
   * **Backend**: 1,189/1,189 tests passed with 0 failures across the complete pytest suite.
   * Merged and synchronized cleanly with `origin/main` on `vidhidhaduk05/ExtractExperimenting-web`.
 
+---
+
+## 15. Three-Stage Sequential PICO Setup & Protocol Review Architecture
+* **Date**: 2026-10-26 (Branch `codex/pico-workflow-cleanup`)
+* **Decision**: Refactor the PICO setup experience into three disciplined sequential stages:
+  1. **Stage 1 (Set Up Your PICO)**: Exactly three entry methods (Method A: Protocol document upload via `api.extractPico`; Method B: Single research question input with 'Generate PICO' via `api.generatePicoFromQuestion`; Method C: Direct manual entry). All methods converge on ONE shared editable PICO record with adaptive framework terminology (Diagnostic Accuracy vs Intervention/Therapy). The original question remains visible and editable, hypotheses are housed in an optional expandable accordion, and method switching confirms before replacing populated fields. Primary action: 'Save & Continue to Review'.
+  2. **Stage 2 (Review Your Protocol)**: Single primary button 'Review My Protocol'. Dynamically selects AI reviewer perspectives based on question domain, specialty, and study design, with a configurable execution limit (3–4 reviewers) and explicit relevance explanations. Clear disclosure identifies perspectives as AI models (agreement does not prove scientific validity). Consolidated findings are partitioned into 4 distinct buckets (Missing/Ambiguous info, Conflicting criteria, Methodological concerns, Search omissions) with Accept/Edit/Dismiss controls. Eligibility criteria remain editable with 'Draft Eligibility Criteria'. Stale review detection flags prior reviews if PICO or criteria are altered.
+  3. **Stage 3 (Generate Search Strings)**: Single primary button 'Generate Search Strings' (strictly separated from executing live searches). Generates syntax-calibrated queries across 9 database tabs (PubMed, Ovid MEDLINE, Embase.com, Ovid Embase, Cochrane, Web of Science, Scopus, CINAHL, OpenAlex) with live syntax validation and copy/save controls. Manually edited queries are protected from accidental regeneration, and PICO modifications mark existing queries as out of date while preserving manual edits.
+* **Rationale**:
+  * Eliminates cognitive overload, duplicated question entry, and competing primary actions.
+  * Guarantees clinical rigor and traceability across systematic review protocol development.
+* **Impact**:
+  * Streamlined, intuitive workflow strictly adhering to Master Theme design tokens.
+  * Zero schema migrations needed; 100% backwards compatible with existing saved project records.
+
+---
+
 ## 2026-10-26 — Five-second clarification announcements and persistent inbox
 
 - New clarification questions use one compact toast below the header at the upper right, including on screening routes. Questions arriving in the same poll share a grouped announcement; later batches queue one at a time.
@@ -202,6 +219,8 @@ This document is the canonical ledger of all engineering, architectural, scienti
 - The existing header control uses an envelope and the shared server-pending query for its count. Viewing the inbox does not resolve questions; only a successful answer save removes a pending question. Failed saves retain it with retry feedback.
 - Announcement IDs alone persist per project in local storage, with an in-memory fallback when storage is unavailable. Questions and history remain server-backed. An open inbox receives new questions quietly and stays open until the reviewer closes it.
 - Clarification surfaces follow the master theme, responsive controls, polite announcements, keyboard focus handling, and reduced motion. Backend screening and eligibility logic are unchanged.
+
+---
 
 ## 2026-10-26 — Claim-first evidence map and optional review prefill
 

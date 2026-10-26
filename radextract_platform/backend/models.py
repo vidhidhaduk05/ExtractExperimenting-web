@@ -139,6 +139,21 @@ class ResearchQuestionResponse(BaseModel):
     secondary_hypotheses: list[str] = Field(default_factory=list)
 
 
+class PicoFromQuestionRequest(BaseModel):
+    question: str
+    persist: bool = True
+
+
+class PicoFromQuestionResponse(BaseModel):
+    project_id: str
+    pico: dict = Field(default_factory=dict)
+    hypothesis: str = ""
+    null_hypothesis: str = ""
+    secondary_hypotheses: list[str] = Field(default_factory=list)
+    ambiguities: list[str] = Field(default_factory=list)
+    missing_fields: list[str] = Field(default_factory=list)
+
+
 # ── PICO Extraction ──
 
 class PicoExtractionResponse(BaseModel):

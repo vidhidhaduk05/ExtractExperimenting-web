@@ -529,17 +529,45 @@ def detect_clinical_domain(
     return best_domain, labels.get(best_domain, "Universal Clinical Medicine")
 
 
+def _generate_persona_relevance(persona: Dict[str, Any], domain: str, text: str) -> str:
+    """Generate a concise, clinically grounded justification for why this AI reviewer was selected."""
+    text_lower = text.lower()
+    role = persona.get("role", persona.get("name", ""))
+
+    if "radiolog" in role.lower() or "imaging" in role.lower():
+        if "mri" in text_lower:
+            return "Selected to evaluate MRI acquisition parameters, contrast timing, and diagnostic imaging thresholds."
+        elif "ct" in text_lower:
+            return "Selected to assess CT protocol parameters, slice thickness calibration, and diagnostic interpretation criteria."
+        elif "mammograph" in text_lower or "tomosynthesis" in text_lower or "bi-rads" in text_lower:
+            return "Selected to evaluate BI-RADS diagnostic thresholds, breast density masking, and recall rate standards."
+        return "Selected to review index test specifications, diagnostic threshold standards, and imaging methodology."
+
+    if "surgeon" in role.lower() or "surgical" in role.lower():
+        return "Selected to evaluate anatomical resection criteria, margin status, surgical conversion rates, and operative endpoints."
+
+    if "biostatistic" in role.lower() or "methodolog" in role.lower():
+        return "Selected to evaluate study design validity, risk of verification/confounding bias, and meta-analytic synthesis models."
+
+    if "oncolog" in role.lower() or "medical" in role.lower() or "neurolog" in role.lower() or "cardiolog" in role.lower() or "pulmonolog" in role.lower():
+        return "Selected to examine clinical disease trajectory, patient eligibility, systemic medication protocols, and long-term clinical outcomes."
+
+    return f"Selected as domain specialist to review {persona.get('focus', 'clinical and methodological criteria')[:80]}."
+
+
 def resolve_personas_for_protocol(
     pico: Optional[Dict[str, Any]] = None,
     topic: str = "",
-    gathered_studies: Optional[List[Dict[str, Any]]] = None
+    gathered_studies: Optional[List[Dict[str, Any]]] = None,
+    max_reviewers: int = 4
 ) -> List[Dict[str, Any]]:
-    """Dynamically assign 4 multidisciplinary clinical specialist personas based on study data and protocol."""
+    """Dynamically assign tailored, non-redundant clinical specialist personas based on protocol text and requirements."""
     pico_text = ""
     if pico:
         for k in ("population", "index_test", "comparator", "outcome", "study_design"):
             pico_text += " " + str(pico.get(k, ""))
 
+    full_context = f"{topic} {pico_text}"
     domain_key, _ = detect_clinical_domain(pico_text, topic, gathered_studies)
 
     persona_map = {
@@ -551,7 +579,42 @@ def resolve_personas_for_protocol(
         "universal": UNIVERSAL_PERSONAS
     }
 
-    return persona_map.get(domain_key, UNIVERSAL_PERSONAS)
+    base_list = persona_map.get(domain_key, UNIVERSAL_PERSONAS)
+
+    # Check for procedural/surgical cues in the protocol
+    has_surgical_cue = any(w in full_context.lower() for w in [
+        "surgery", "surgical", "resection", "lumpectomy", "mastectomy", "biopsy",
+        "thrombectomy", "stent", "bypass", "vats", "lobectomy", "hepatectomy", "operative"
+    ])
+
+    limit = max(2, min(int(max_reviewers or 4), len(base_list)))
+    selected: List[Dict[str, Any]] = []
+
+    for p in base_list:
+        p_role = p.get("role", "").lower()
+        # If surgery is not relevant and reviewer limit is tight (<4), omit surgical specialist in favor of others
+        if ("surgical" in p_role or "surgeon" in p_role) and not has_surgical_cue and limit < len(base_list):
+            continue
+
+        annotated = dict(p)
+        annotated["is_ai_perspective"] = True
+        annotated["relevance_reason"] = _generate_persona_relevance(p, domain_key, full_context)
+        selected.append(annotated)
+        if len(selected) >= limit:
+            break
+
+    # Ensure at least 2 distinct roles if filter was too aggressive
+    if len(selected) < 2:
+        for p in base_list:
+            if not any(s.get("id") == p.get("id") for s in selected):
+                annotated = dict(p)
+                annotated["is_ai_perspective"] = True
+                annotated["relevance_reason"] = _generate_persona_relevance(p, domain_key, full_context)
+                selected.append(annotated)
+            if len(selected) >= min(2, len(base_list)):
+                break
+
+    return selected
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -690,8 +753,9 @@ def deliberate_study_flaws(
         verdict_badge = "✅ Multi-Specialty Clinical Consensus"
         verdict_color = "#16a34a"
 
+    panel_str = ", ".join(p.get("role", "Specialist") for p in personas)
     grand_rounds_summary = (
-        f"Multi-perspective Grand Rounds conducted across 4 specialties ({personas[0]['role']}, {personas[1]['role']}, {personas[2]['role']}, {personas[3]['role']}). "
+        f"Multi-perspective Grand Rounds conducted across {len(personas)} specialties ({panel_str}). "
         f"Laya System-1 preliminary flaw probability: {int(laya_summary['flaw_probability']*100)}%. "
         f"{len(design_flaws)} methodological design flaw(s) identified."
     )
@@ -719,7 +783,8 @@ def deliberate_protocol_flaws(
     criteria: Optional[Dict[str, Any]] = None,
     research_question: Optional[str] = None,
     topic: str = "clinical medicine",
-    gathered_studies: Optional[List[Dict[str, Any]]] = None
+    gathered_studies: Optional[List[Dict[str, Any]]] = None,
+    max_reviewers: int = 4
 ) -> Dict[str, Any]:
     """Critique a study protocol from dynamically assigned clinical perspectives and output 1-click suggestions."""
     pico = pico or {}
@@ -742,9 +807,9 @@ def deliberate_protocol_flaws(
         f"{inclusion_texts} {exclusion_texts}"
     )
 
-    # 1. Dynamically identify clinical domain & assign 4 specialist personas
+    # 1. Dynamically identify clinical domain & assign tailored specialist personas
     domain_key, domain_label = detect_clinical_domain(full_protocol_text, topic, gathered_studies)
-    personas = resolve_personas_for_protocol(pico, topic, gathered_studies)
+    personas = resolve_personas_for_protocol(pico, topic, gathered_studies, max_reviewers=max_reviewers)
 
     # 2. Run Laya Fast System-1 Triage on the Protocol
     laya_summary = run_laya_fast_triage(
@@ -1039,11 +1104,45 @@ def deliberate_protocol_flaws(
         verdict_badge = "✅ Methodologically Rigorous Protocol"
         verdict_color = "#16a34a"
 
+    def _categorize_flaw(flaw: Dict[str, Any]) -> str:
+        code = str(flaw.get("flaw_code", "")).upper()
+        title = str(flaw.get("title", "")).upper()
+        desc = str(flaw.get("description", "")).upper()
+        combined = f"{code} {title} {desc}"
+
+        if any(k in combined for k in ["SEARCH", "MESH", "SYNONYM", "KEYWORD", "QUERY", "OMISSION"]):
+            return "search_omissions"
+        if any(k in combined for k in ["CONFLICT", "CRITERIA_DISCORDANCE", "MUTUALLY_EXCLUSIVE", "INCLUSION_EXCLUSION"]):
+            return "conflicting_criteria"
+        if any(k in combined for k in ["AMBIGUITY", "UNSPECIFIED", "MISSING", "UNDEFINED", "THRESHOLD", "CUTOFF"]):
+            return "missing_ambiguous"
+        return "methodological_concerns"
+
+    findings_by_category: Dict[str, List[Dict[str, Any]]] = {
+        "missing_ambiguous": [],
+        "conflicting_criteria": [],
+        "methodological_concerns": [],
+        "search_omissions": [],
+    }
+
+    for flaw in design_flaws:
+        cat = _categorize_flaw(flaw)
+        flaw["category"] = cat
+        flaw_suggs = [
+            s for s in suggestions
+            if s.get("flaw_title") == flaw.get("title") or s.get("id") == flaw.get("suggestion_id")
+        ]
+        findings_by_category[cat].append({
+            "flaw": flaw,
+            "suggestions": flaw_suggs,
+        })
+
+    panel_str = ", ".join(p.get("role", "Specialist") for p in personas)
     grand_rounds_summary = (
-        f"Multi-specialty clinical review convened for {domain_label}. "
-        f"Assigned specialist panel: {personas[0]['role']}, {personas[1]['role']}, {personas[2]['role']}, {personas[3]['role']}. "
+        f"Multi-specialty clinical protocol review convened for {domain_label}. "
+        f"Assigned panel ({len(personas)} AI roles): {panel_str}. "
         f"Protocol Rigor Score: {rigor_score}/100. "
-        f"{len(design_flaws)} potential methodological design flaw(s) identified with {len(suggestions)} 1-click refinement suggestion(s)."
+        f"{len(design_flaws)} potential issue(s) identified with {len(suggestions)} actionable refinement suggestion(s)."
     )
 
     prisma_conformance = evaluate_prisma2020_conformance(
@@ -1067,9 +1166,11 @@ def deliberate_protocol_flaws(
         "suggestions": suggestions,
         "total_suggestions": len(suggestions),
         "personas": personas,
+        "findings_by_category": findings_by_category,
         "persona_opinions": persona_opinions,
         "grand_rounds_summary": grand_rounds_summary,
-        "prisma_conformance": prisma_conformance
+        "prisma_conformance": prisma_conformance,
+        "ai_disclosure": "These perspectives and findings are generated by AI models to assist protocol planning. They do not constitute independent human peer review or establish scientific validity."
     }
 
 

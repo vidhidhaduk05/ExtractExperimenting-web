@@ -1231,14 +1231,21 @@ def _simple_pico_extraction(question: str) -> dict:
             rest = q[:compound_match.start()].strip()
             rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
         else:
-            # Check trailing population clause: "... in/among/for <population>"
-            pop_trailing = re.search(r"\s+(?:in|among|for)\s+([a-zA-Z0-9\s\-_()]+)$", q, re.IGNORECASE)
+            # Check trailing population clause: "... in/among <population>"
+            pop_trailing = re.search(r"\s+(?:in|among)\s+([a-zA-Z0-9\s\-_()]+)$", q, re.IGNORECASE)
             if pop_trailing:
                 pico["population"] = _clean_phrase(pop_trailing.group(1))
                 rest = q[:pop_trailing.start()].strip()
                 rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
             else:
-                rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
+                # Check trailing "for <population>" only if not followed by gerund/action words (e.g. detecting, evaluating)
+                pop_trailing_for = re.search(r"\s+for\s+(?!(?:detecting|diagnosing|evaluating|identifying|measuring|treating|predicting)\b)([a-zA-Z0-9\s\-_()]+)$", q, re.IGNORECASE)
+                if pop_trailing_for:
+                    pico["population"] = _clean_phrase(pop_trailing_for.group(1))
+                    rest = q[:pop_trailing_for.start()].strip()
+                    rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
+                else:
+                    rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
 
     # 2. Pattern A: Non-inferiority: "X is non-inferior to Y in/for Z"
     non_inf_match = re.search(
