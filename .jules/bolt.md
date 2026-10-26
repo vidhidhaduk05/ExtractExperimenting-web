@@ -9,3 +9,7 @@
 ## 2026-03-31 - Memoizing Trace Tree Traversals in Interactive Page Root Components
 **Learning:** Performing recursive tree walks or array flattening at the root level of interactive pages (such as `CitationTelephonePage`) re-executes on every keystroke in form fields (e.g. manuscript or claim text inputs) or state toggles, allocating new array references and causing child graph/tree components to re-render.
 **Action:** Always wrap multi-hop tree gather functions or array flatteners in `useMemo` with minimal dependencies (e.g. `[activeExample]`) to preserve object reference equality across user interaction frames.
+
+## 2026-03-31 - Single-Pass Metrics Aggregation and Memoization for PRISMA Flow
+**Learning:** Performing multiple sequential array `.filter()` iterations on study collections inside root page components creates unnecessary intermediate array allocations and GC overhead on every render frame (e.g. diagram zoom, modal toggle, interval polling).
+**Action:** Combine multi-condition array filters into a single $O(N)$ accumulation pass and wrap the aggregation function call in `useMemo` with data dependencies (`[studies, flow, official]`).

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Prisma2020Sync, type PrismaFlow, type Study } from "../lib/api";
@@ -143,7 +143,8 @@ export function PrismaFlowPage() {
   });
 
   // Dynamically compute live counts from actual studies and screening history
-  const liveData = computeLivePrismaData(studies, flow, official);
+  // Wrap in useMemo to prevent re-computing on non-data re-renders
+  const liveData = useMemo(() => computeLivePrismaData(studies, flow, official), [studies, flow, official]);
 
   // Fetch R-generated SVG when specifically requested
   useEffect(() => {
@@ -1370,79 +1371,73 @@ function FlowArrow({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2:
 function computeLivePrismaData(
   studies: Study[] | undefined,
   flow?: PrismaFlow,
-  official?: Prisma2020Sync
+  _official?: Prisma2020Sync
 ) {
   const studyList = studies || [];
 
   if (studyList.length > 0) {
     const total = studyList.length;
-    const duplicates = studyList.filter((s) => s.is_duplicate === 1 || s.duplicate_of_study_id).length;
-    const nonDuplicates = Math.max(0, total - duplicates);
+    let duplicates = 0;
+    let registers = 0;
+    let records_screened = 0;
+    let records_excluded = 0;
+    let dbr_notretrieved_reports = 0;
+    let dbr_excluded = 0;
+    let new_studies = 0;
 
-    // Registers vs Databases
-    const registers = studyList.filter(
-      (s) => !s.is_duplicate && (s.source_type === "register" || s.source_type === "trials")
-    ).length;
+    const taReasonMap: Record<string, number> = {};
+    const ftReasonMap: Record<string, number> = {};
+
+    // Single pass O(N) traversal over studyList instead of 7 separate array .filter() passes
+    for (let i = 0; i < studyList.length; i++) {
+      const s = studyList[i];
+      const isDup = s.is_duplicate === 1 || Boolean(s.duplicate_of_study_id);
+      if (isDup) {
+        duplicates++;
+        continue;
+      }
+
+      if (s.source_type === "register" || s.source_type === "trials") {
+        registers++;
+      }
+
+      const status = s.screening_status;
+      if (status && status !== "pending") {
+        records_screened++;
+      }
+
+      if (status === "excluded") {
+        const stage = s.screening_stage;
+        if (stage === "ta" || !stage) {
+          records_excluded++;
+          const r = s.screening_reason || "Ineligible based on criteria";
+          taReasonMap[r] = (taReasonMap[r] || 0) + 1;
+        } else if (stage === "ft") {
+          dbr_excluded++;
+          const r = s.screening_reason || "Full-text criteria not met";
+          ftReasonMap[r] = (ftReasonMap[r] || 0) + 1;
+        }
+      } else if (status === "awaiting_pdf") {
+        dbr_notretrieved_reports++;
+      } else if (status === "included") {
+        new_studies++;
+      }
+    }
+
+    const nonDuplicates = Math.max(0, total - duplicates);
     const databases = Math.max(0, nonDuplicates - registers);
 
-    // Screened: all non-duplicate studies that have a screening decision (not pending)
-    const screenedStudies = studyList.filter(
-      (s) => !s.is_duplicate && s.screening_status && s.screening_status !== "pending"
-    );
-    const records_screened = screenedStudies.length;
-
-    // TA Excluded: studies excluded at Title/Abstract stage
-    const taExcludedStudies = studyList.filter(
-      (s) =>
-        !s.is_duplicate &&
-        s.screening_status === "excluded" &&
-        (s.screening_stage === "ta" || !s.screening_stage)
-    );
-    const records_excluded = taExcludedStudies.length;
-
-    // TA exclusion reasons breakdown
-    const taReasonMap: Record<string, number> = {};
-    for (const s of taExcludedStudies) {
-      const r = s.screening_reason || "Ineligible based on criteria";
-      taReasonMap[r] = (taReasonMap[r] || 0) + 1;
-    }
     const ta_excluded_reasons = Object.entries(taReasonMap)
       .map(([reason, count]) => ({ reason, count }))
       .sort((a, b) => b.count - a.count);
 
-    // Reports sought for retrieval: passed TA screening
     const dbr_sought_reports = Math.max(0, records_screened - records_excluded);
-
-    // Reports not retrieved (awaiting full-text pdf)
-    const notRetrievedStudies = studyList.filter(
-      (s) => !s.is_duplicate && s.screening_status === "awaiting_pdf"
-    );
-    const dbr_notretrieved_reports = notRetrievedStudies.length;
-
-    // Reports assessed for eligibility (in full-text stage)
     const dbr_assessed = Math.max(0, dbr_sought_reports - dbr_notretrieved_reports);
 
-    // FT Excluded: studies excluded at Full-Text stage
-    const ftExcludedStudies = studyList.filter(
-      (s) => !s.is_duplicate && s.screening_status === "excluded" && s.screening_stage === "ft"
-    );
-    const dbr_excluded = ftExcludedStudies.length;
-
-    // FT exclusion reasons breakdown
-    const ftReasonMap: Record<string, number> = {};
-    for (const s of ftExcludedStudies) {
-      const r = s.screening_reason || "Full-text criteria not met";
-      ftReasonMap[r] = (ftReasonMap[r] || 0) + 1;
-    }
     const ft_excluded_reasons = Object.entries(ftReasonMap)
       .map(([reason, count]) => ({ reason, count }))
       .sort((a, b) => b.count - a.count);
 
-    // Studies included in review
-    const includedStudies = studyList.filter(
-      (s) => !s.is_duplicate && s.screening_status === "included"
-    );
-    const new_studies = includedStudies.length;
     const total_studies = new_studies;
     const total_studies_ma = new_studies;
 
