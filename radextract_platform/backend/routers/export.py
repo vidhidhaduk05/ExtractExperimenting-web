@@ -42,6 +42,26 @@ async def export_project_xlsx_alias(
     return await export_project(project_id, format="xlsx", include_rob=include_rob, user=user, db=db)
 
 
+@router.get("/projects/{project_id}/export/json")
+@router.get("/export/{project_id}/json")
+async def export_project_json_alias(
+    project_id: str,
+    include_rob: bool = Query(True, description="Include RoB data in export"),
+    user: dict = Depends(get_current_user_optional),
+    db: DBBackend = Depends(get_db),
+):
+    """Export project data (extractions + RoB) as JSON."""
+    check_project_access(db, project_id, user)
+    proj, variables, studies, ext_by_study, rob_by_study = _fetch_export_data(project_id, include_rob, db)
+    return {
+        "project": proj,
+        "variables": variables,
+        "studies": studies,
+        "extractions": ext_by_study,
+        "risk_of_bias": rob_by_study if include_rob else {},
+    }
+
+
 @router.get("/projects/{project_id}/export/srma-workbook")
 @router.get("/projects/{project_id}/export/canonical-srma")
 @router.get("/export/{project_id}/srma-workbook")
@@ -297,12 +317,9 @@ async def export_references(
     if status == "all":
         studies = db.query("studies", {"project_id": project_id}, order_by="title ASC")
     elif status == "excluded":
-        studies = db.query("studies", {"project_id": project_id, "screening_status": "excluded"}, order_by="title ASC")
+        studies = [s for s in db.query("studies", {"project_id": project_id}, order_by="title ASC") if s.get("screening_status") in ("excluded", "ta_excluded", "ft_excluded")]
     else:
-        studies = db.query("studies", {"project_id": project_id, "screening_status": "included"}, order_by="title ASC")
-
-    if not studies:
-        raise HTTPException(status_code=404, detail="No studies found matching the criteria.")
+        studies = [s for s in db.query("studies", {"project_id": project_id}, order_by="title ASC") if s.get("screening_status") in ("included", "ta_included", "ft_included")]
 
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
 

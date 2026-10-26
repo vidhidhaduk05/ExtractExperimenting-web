@@ -258,6 +258,61 @@ async def adjudicate_extraction(
     return dict(row)
 
 
+@router.get("/projects/{project_id}/extractions/grid")
+async def get_extractions_grid(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Return structured extraction matrix (studies, variables, and cell values) for a project."""
+    check_project_access(conn, project_id, user)
+    proj = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+    if not proj:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    variables = [dict(r) for r in conn.execute(
+        "SELECT * FROM variables WHERE project_id = ? ORDER BY order_index ASC", (project_id,)
+    ).fetchall()]
+
+    studies = [dict(r) for r in conn.execute(
+        "SELECT study_id, title, authors, publication_year, journal, doi, pmid FROM studies WHERE project_id = ? ORDER BY created_at DESC", (project_id,)
+    ).fetchall()]
+
+    ext_rows = conn.execute(
+        """SELECT e.* FROM extractions e
+           JOIN studies s ON s.study_id = e.study_id
+           WHERE s.project_id = ?""",
+        (project_id,),
+    ).fetchall()
+
+    cells: dict[str, dict[str, Any]] = {s["study_id"]: {} for s in studies}
+    for r in ext_rows:
+        row = dict(r)
+        sid = row.get("study_id")
+        vid = row.get("variable_id")
+        if sid and vid and sid in cells:
+            is_v = bool(row.get("is_verified"))
+            is_e = bool(row.get("is_edited"))
+            cells[sid][vid] = {
+                "extraction_id": row.get("extraction_id"),
+                "value": row.get("value") or "",
+                "confidence": row.get("confidence") or 0.95,
+                "evidence_quote": row.get("quote") or row.get("evidence_quote") or "",
+                "source_page": row.get("source_page") or 1,
+                "is_verified": is_v,
+                "is_edited": is_e,
+                "verification_status": "modified" if (is_v and is_e) else ("verified" if is_v else "unverified"),
+                "extraction_source": "manual" if is_e else (row.get("extraction_source") or "ai"),
+            }
+
+    return {
+        "project_id": project_id,
+        "variables": variables,
+        "studies": studies,
+        "cells": cells,
+    }
+
+
 # ═══════════════════════════════════════════════════════════════════════
 #  v2.4: Missing Data Summary Endpoint
 # ═══════════════════════════════════════════════════════════════════════
