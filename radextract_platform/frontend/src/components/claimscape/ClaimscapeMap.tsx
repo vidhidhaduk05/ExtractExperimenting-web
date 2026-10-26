@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   ProcessedPaper,
   TierSummary,
@@ -80,9 +80,9 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
   }, [minYear, maxYear]);
 
   // X coordinate projection
-  const scaleX = (date: number) => {
+  const scaleX = useCallback((date: number) => {
     return 14 + ((date - minYear) / (maxYear - minYear)) * Math.max(1, containerWidth - 28);
-  };
+  }, [minYear, maxYear, containerWidth]);
 
   // Compute placed dots for each row using the bee-swarm algorithm
   const rows = useMemo(() => {
@@ -114,7 +114,7 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
           height: rowHeight
         };
       });
-  }, [summaries, evidenceLens, containerWidth, minYear, maxYear]);
+  }, [summaries, evidenceLens, showReviews, scaleX]);
 
   // Find dot nearest to (x, y) for hit-testing
   const findNearest = (
@@ -138,7 +138,11 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
     <div
       ref={containerRef}
       className="cs-map relative select-none"
-      onPointerLeave={() => setHovered(null)}
+      onPointerLeave={() => {
+        if (hovered !== null) {
+          setHovered(null);
+        }
+      }}
     >
       <div className="cs-rows border-b border-[var(--cs-line)]">
         {/* Column Headers for Map and Forest Plot */}
@@ -183,10 +187,17 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                     const localX = e.clientX - rect.left;
                     const localY = e.clientY - rect.top;
                     const match = findNearest(placed, localX, localY);
-                    if (!match || !containerRef.current) {
-                      setHovered(null);
+                    if (!match) {
+                      if (hovered !== null) {
+                        setHovered(null);
+                      }
                       return;
                     }
+                    // Bolt Optimization: Avoid re-rendering component and layout thrashing if hovering same paper dot
+                    if (hovered?.pmid === match.paper.paper.pmid) {
+                      return;
+                    }
+                    if (!containerRef.current) return;
                     const parentRect = containerRef.current.getBoundingClientRect();
                     setHovered({
                       pmid: match.paper.paper.pmid,
@@ -196,7 +207,11 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                       width: parentRect.width
                     });
                   }}
-                  onPointerLeave={() => setHovered(null)}
+                  onPointerLeave={() => {
+                    if (hovered !== null) {
+                      setHovered(null);
+                    }
+                  }}
                   onClick={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const localX = e.clientX - rect.left;

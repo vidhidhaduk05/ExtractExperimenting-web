@@ -3,7 +3,7 @@ import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags } from "../lib/recordCollaboration";
 import { RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
 import {
@@ -326,12 +326,18 @@ export function ScreeningPage() {
     }
   };
 
-  const studyList = Array.isArray(studies) ? studies : [];
+  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
+
+  // Optimize O(1) bookmark lookups and count memoization to avoid O(N*M) linear scans during renders
+  const bookmarkedIdsSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids]);
+  const savedCount = useMemo(() => {
+    return studyList.reduce((acc, s) => (bookmarkedIdsSet.has(s.study_id) ? acc + 1 : acc), 0);
+  }, [studyList, bookmarkedIdsSet]);
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
-      if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
+      if (savedOnly && !bookmarkedIdsSet.has(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
 
       // Stage filter
@@ -390,7 +396,7 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
+  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarkedIdsSet, tagIndex.data, tagFilter]);
 
   // Auto-select first study in filtered set if current selectedStudyId is filtered out
   useEffect(() => {
@@ -724,130 +730,155 @@ export function ScreeningPage() {
   });
 
   // Render Highlighted Text (Abstract or Title) with Priority Resolution & Instant Fallback
-  const renderHighlightedText = (
-    rawText: string,
-    spans: HighlightSpan[] = [],
-    fallbackKeywordsList: ScreeningKeyword[] = [],
-    isTitle: boolean = false
-  ) => {
-    if (!rawText) {
-      return isTitle ? null : <p className="text-gray-400 italic">No abstract available for this study.</p>;
-    }
-    if (!showHighlights) {
-      return isTitle ? (
-        <span className="text-slate-900">{rawText}</span>
-      ) : (
-        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
-      );
-    }
+  // Optimization (Bolt): Wrapped in useCallback to prevent re-instantiating on un-related renders.
+  const renderHighlightedText = useCallback(
+    (
+      rawText: string,
+      spans: HighlightSpan[] = [],
+      fallbackKeywordsList: ScreeningKeyword[] = [],
+      isTitle: boolean = false
+    ) => {
+      if (!rawText) {
+        return isTitle ? null : <p className="text-gray-400 italic">No abstract available for this study.</p>;
+      }
+      if (!showHighlights) {
+        return isTitle ? (
+          <span className="text-slate-900">{rawText}</span>
+        ) : (
+          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
+        );
+      }
 
-    // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
-    let activeSpans = [...spans];
-    if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
-      fallbackKeywordsList.forEach((kw) => {
-        const word = kw.keyword.trim();
-        if (!word) return;
-        try {
-          const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const regex = new RegExp(`\\b${escaped}\\b`, "gi");
-          let match;
-          while ((match = regex.exec(rawText)) !== null) {
-            activeSpans.push({
-              start: match.index,
-              end: match.index + match[0].length,
-              text: match[0],
-              type: kw.keyword_type === "include" ? "include_keyword" : "exclude_keyword",
-              color: kw.keyword_type === "include" ? "green" : "red",
-              confidence: 1.0,
-              label: `${kw.keyword_type === "include" ? "Include" : "Exclude"} keyword: ${kw.keyword}`,
-            });
+      // Combine backend spans with dynamic client-side matching from active keywords if spans are empty
+      const activeSpans = [...spans];
+      if (activeSpans.length === 0 && fallbackKeywordsList.length > 0) {
+        fallbackKeywordsList.forEach((kw) => {
+          const word = kw.keyword.trim();
+          if (!word) return;
+          try {
+            const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+            let match;
+            while ((match = regex.exec(rawText)) !== null) {
+              activeSpans.push({
+                start: match.index,
+                end: match.index + match[0].length,
+                text: match[0],
+                type: kw.keyword_type === "include" ? "include_keyword" : "exclude_keyword",
+                color: kw.keyword_type === "include" ? "green" : "red",
+                confidence: 1.0,
+                label: `${kw.keyword_type === "include" ? "Include" : "Exclude"} keyword: ${kw.keyword}`,
+              });
+            }
+          } catch {
+            // ignore regex errors for special chars
           }
-        } catch {
-          // ignore regex errors for special chars
+        });
+      }
+
+      if (activeSpans.length === 0) {
+        return isTitle ? (
+          <span className="text-slate-900">{rawText}</span>
+        ) : (
+          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
+        );
+      }
+
+      // Resolve character-level priority so keywords (green/red) are never swallowed by broad sentence spans
+      const priorityMap: Record<string, number> = {
+        exclude_keyword: 40,
+        include_keyword: 30,
+        ai_keyword: 20,
+        population: 10,
+        intervention: 10,
+        comparator: 10,
+        outcome: 10,
+      };
+
+      const charSpans: (HighlightSpan | null)[] = new Array(rawText.length).fill(null);
+      for (const span of activeSpans) {
+        const start = Math.max(0, span.start);
+        const end = Math.min(rawText.length, span.end);
+        if (end <= start) continue;
+        const prio = priorityMap[span.type] || 0;
+        for (let i = start; i < end; i++) {
+          const curr = charSpans[i];
+          if (!curr || (priorityMap[curr.type] || 0) < prio) {
+            charSpans[i] = span;
+          }
         }
+      }
+
+      const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
+      let currentSpan = charSpans[0];
+      let currentStart = 0;
+      for (let i = 1; i < rawText.length; i++) {
+        if (charSpans[i] !== currentSpan) {
+          segments.push({ start: currentStart, end: i, span: currentSpan });
+          currentSpan = charSpans[i];
+          currentStart = i;
+        }
+      }
+      segments.push({ start: currentStart, end: rawText.length, span: currentSpan });
+
+      const elements: React.ReactNode[] = segments.map((seg, idx) => {
+        const segText = rawText.substring(seg.start, seg.end);
+        if (!seg.span) {
+          return <span key={`plain-${seg.start}-${idx}`}>{segText}</span>;
+        }
+        const s = seg.span;
+        let colorClass = "bg-yellow-100 text-yellow-900 border-yellow-300";
+        if (s.color === "green" || s.type === "include_keyword") {
+          colorClass = "bg-emerald-100 text-emerald-900 border-emerald-300 font-semibold";
+        } else if (s.color === "red" || s.type === "exclude_keyword") {
+          colorClass = "bg-rose-100 text-rose-900 border-rose-300 font-semibold";
+        } else if (s.color === "purple" || s.type === "population") {
+          colorClass = "bg-purple-100 text-purple-900 border-purple-300";
+        } else if (s.color === "blue" || s.type === "intervention" || s.type === "comparator") {
+          colorClass = "bg-sky-100 text-sky-900 border-sky-300";
+        } else if (s.color === "orange" || s.type === "outcome") {
+          colorClass = "bg-amber-100 text-amber-900 border-amber-300";
+        }
+
+        return (
+          <mark
+            key={`mark-${seg.start}-${idx}`}
+            className={`px-1 py-0.5 rounded border ${isTitle ? "text-base inline" : "text-sm inline"} transition-colors ${colorClass}`}
+            title={`${s.label || s.type} (${s.type})`}
+          >
+            {segText}
+          </mark>
+        );
       });
-    }
 
-    if (activeSpans.length === 0) {
-      return isTitle ? (
-        <span className="text-slate-900">{rawText}</span>
-      ) : (
-        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
-      );
-    }
-
-    // Resolve character-level priority so keywords (green/red) are never swallowed by broad sentence spans
-    const priorityMap: Record<string, number> = {
-      exclude_keyword: 40,
-      include_keyword: 30,
-      ai_keyword: 20,
-      population: 10,
-      intervention: 10,
-      comparator: 10,
-      outcome: 10,
-    };
-
-    const charSpans: (HighlightSpan | null)[] = new Array(rawText.length).fill(null);
-    for (const span of activeSpans) {
-      const start = Math.max(0, span.start);
-      const end = Math.min(rawText.length, span.end);
-      if (end <= start) continue;
-      const prio = priorityMap[span.type] || 0;
-      for (let i = start; i < end; i++) {
-        const curr = charSpans[i];
-        if (!curr || (priorityMap[curr.type] || 0) < prio) {
-          charSpans[i] = span;
-        }
+      if (isTitle) {
+        return <span className="leading-tight">{elements}</span>;
       }
-    }
+      return <div className="text-gray-800 leading-relaxed text-sm whitespace-pre-wrap">{elements}</div>;
+    },
+    [showHighlights]
+  );
 
-    const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
-    let currentSpan = charSpans[0];
-    let currentStart = 0;
-    for (let i = 1; i < rawText.length; i++) {
-      if (charSpans[i] !== currentSpan) {
-        segments.push({ start: currentStart, end: i, span: currentSpan });
-        currentSpan = charSpans[i];
-        currentStart = i;
-      }
-    }
-    segments.push({ start: currentStart, end: rawText.length, span: currentSpan });
+  // Memoized Title & Abstract Highlight Rendering (Bolt Optimization)
+  const renderedTitle = useMemo(() => {
+    if (!selectedStudy) return null;
+    return renderHighlightedText(
+      selectedStudy.title,
+      selectedHighlights?.title_spans || [],
+      keywords,
+      true
+    );
+  }, [selectedStudy, selectedHighlights?.title_spans, keywords, renderHighlightedText]);
 
-    const elements: React.ReactNode[] = segments.map((seg, idx) => {
-      const segText = rawText.substring(seg.start, seg.end);
-      if (!seg.span) {
-        return <span key={`plain-${seg.start}-${idx}`}>{segText}</span>;
-      }
-      const s = seg.span;
-      let colorClass = "bg-yellow-100 text-yellow-900 border-yellow-300";
-      if (s.color === "green" || s.type === "include_keyword") {
-        colorClass = "bg-emerald-100 text-emerald-900 border-emerald-300 font-semibold";
-      } else if (s.color === "red" || s.type === "exclude_keyword") {
-        colorClass = "bg-rose-100 text-rose-900 border-rose-300 font-semibold";
-      } else if (s.color === "purple" || s.type === "population") {
-        colorClass = "bg-purple-100 text-purple-900 border-purple-300";
-      } else if (s.color === "blue" || s.type === "intervention" || s.type === "comparator") {
-        colorClass = "bg-sky-100 text-sky-900 border-sky-300";
-      } else if (s.color === "orange" || s.type === "outcome") {
-        colorClass = "bg-amber-100 text-amber-900 border-amber-300";
-      }
-
-      return (
-        <mark
-          key={`mark-${seg.start}-${idx}`}
-          className={`px-1 py-0.5 rounded border ${isTitle ? "text-base inline" : "text-sm inline"} transition-colors ${colorClass}`}
-          title={`${s.label || s.type} (${s.type})`}
-        >
-          {segText}
-        </mark>
-      );
-    });
-
-    if (isTitle) {
-      return <span className="leading-tight">{elements}</span>;
-    }
-    return <div className="text-gray-800 leading-relaxed text-sm whitespace-pre-wrap">{elements}</div>;
-  };
+  const renderedAbstract = useMemo(() => {
+    if (!selectedStudy) return null;
+    return renderHighlightedText(
+      selectedStudy.abstract,
+      selectedHighlights?.all_spans || [],
+      keywords,
+      false
+    );
+  }, [selectedStudy, selectedHighlights?.all_spans, keywords, renderHighlightedText]);
 
   // Upload single PDF handler
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1284,7 +1315,7 @@ export function ScreeningPage() {
                 onChange={(e) => setSavedOnly(e.target.checked)}
                 className="rounded text-indigo-600 focus:ring-indigo-500"
               />
-              <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
+              <span className="font-medium">Saved ({savedCount})</span>
             </label>
 
             {/* Tag Filter */}
@@ -1836,7 +1867,7 @@ export function ScreeningPage() {
                       <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 leading-snug">
                         {study.title}
                       </h3>
-                      <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
+                      <BookmarkButton saved={bookmarkedIdsSet.has(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
                       {conf !== null && (
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap animate-tag-pop ${
@@ -1954,14 +1985,9 @@ export function ScreeningPage() {
               <div>
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <h2 className="text-base font-bold text-slate-900 leading-tight">
-                    {renderHighlightedText(
-                      selectedStudy.title,
-                      selectedHighlights?.title_spans || [],
-                      keywords,
-                      true
-                    )}
+                    {renderedTitle}
                   </h2>
-                  <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
+                  <BookmarkButton saved={bookmarkedIdsSet.has(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
                   <span
                     className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap animate-tag-pop ${
                       selectedStudy.screening_status === "included" || selectedStudy.screening_status === "ta_included"
@@ -2268,12 +2294,7 @@ export function ScreeningPage() {
 
                 {/* Abstract Text Area */}
                 <div className="bg-slate-50/50 border border-slate-200 rounded-lg p-4 min-h-[140px]">
-                  {renderHighlightedText(
-                    selectedStudy.abstract,
-                    selectedHighlights?.all_spans || [],
-                    keywords,
-                    false
-                  )}
+                  {renderedAbstract}
                 </div>
               </div>
 

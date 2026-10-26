@@ -18,6 +18,11 @@ const DISALLOWED_TAGS = new Set([
   "base",
   "link",
   "meta",
+  "style",
+  "animate",
+  "set",
+  "animatetransform",
+  "animatecolor",
 ]);
 
 const DANGEROUS_URI_ATTRS = new Set(["href", "xlink:href", "src", "action", "data"]);
@@ -35,6 +40,7 @@ export function sanitizeSvg(svgContent: string): string {
     // Basic fallback regex strip for SSR or non-browser environments
     return svgContent
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/<(style|animate|set|animatetransform|animatecolor)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>/gi, "")
       .replace(/\son\w+\s*=\s*(['"])[^'"]*\1/gi, "")
       .replace(/\son\w+\s*=\s*[^\s>]+/gi, "");
   }
@@ -77,10 +83,17 @@ function cleanTree(node: Element) {
       continue;
     }
 
-    // Check URI attributes for dangerous schemes (javascript:, data:text/html)
+    // Check URI attributes for dangerous schemes (javascript:, data:text/html, etc.)
     if (DANGEROUS_URI_ATTRS.has(attrName)) {
-      const value = attr.value.trim().toLowerCase();
-      if (value.startsWith("javascript:") || value.startsWith("data:text/html") || value.startsWith("vbscript:")) {
+      // eslint-disable-next-line no-control-regex
+      const normalized = attr.value.replace(/[\x00-\x1F\x7F-\x9F\s]/g, "").toLowerCase();
+      if (
+        normalized.startsWith("javascript:") ||
+        normalized.startsWith("vbscript:") ||
+        normalized.startsWith("data:text/") ||
+        normalized.startsWith("data:image/svg+xml") ||
+        normalized.startsWith("data:application/")
+      ) {
         node.removeAttribute(attr.name);
       }
     }

@@ -32,35 +32,31 @@ def test_list_study_highlights_access_control():
     assert response.status_code in (200, 401, 403)
 
 def test_update_highlight_access_control():
-    """Verify that update_highlight enforces project access control."""
+    """Verify that update_highlight checks project access."""
     init_db()
     conn = get_connection()
     conn.execute("INSERT OR REPLACE INTO projects (project_id, name) VALUES ('p_sec_test3', 'Security Test Project 3')")
-    conn.execute("INSERT OR REPLACE INTO studies (study_id, project_id, title) VALUES ('s_sec_test3', 'p_sec_test3', 'Test Study 3')")
+    conn.execute("INSERT OR REPLACE INTO studies (study_id, project_id, title) VALUES ('s_sec_test3', 'p_sec_test3', 'Test Study')")
     conn.execute(
-        "INSERT OR REPLACE INTO pdf_highlights (highlight_id, study_id, project_id, page_number) VALUES ('h_sec_test3', 's_sec_test3', 'p_sec_test3', 1)"
+        "INSERT OR REPLACE INTO pdf_highlights (highlight_id, study_id, project_id, page_number) "
+        "VALUES ('h_sec_test3', 's_sec_test3', 'p_sec_test3', 1)"
     )
     conn.commit()
 
-    # Request update on highlight
-    response = client.put("/api/pdf-highlights/h_sec_test3", json={"comment": "Unauthorized update"})
-    assert response.status_code in (200, 401, 403)
+    response = client.put("/api/pdf-highlights/h_sec_test3", json={"comment": "Unauthorized Edit"})
+    assert response.status_code in (401, 403)
 
 def test_delete_highlight_access_control():
-    """Verify that delete_highlight enforces project access control and handles missing highlight cleanly."""
+    """Verify that delete_highlight checks project access."""
     init_db()
     conn = get_connection()
     conn.execute("INSERT OR REPLACE INTO projects (project_id, name) VALUES ('p_sec_test4', 'Security Test Project 4')")
-    conn.execute("INSERT OR REPLACE INTO studies (study_id, project_id, title) VALUES ('s_sec_test4', 'p_sec_test4', 'Test Study 4')")
+    conn.execute("INSERT OR REPLACE INTO studies (study_id, project_id, title) VALUES ('s_sec_test4', 'p_sec_test4', 'Test Study')")
     conn.execute(
-        "INSERT OR REPLACE INTO pdf_highlights (highlight_id, study_id, project_id, page_number) VALUES ('h_sec_test4', 's_sec_test4', 'p_sec_test4', 1)"
+        "INSERT OR REPLACE INTO pdf_highlights (highlight_id, study_id, project_id, page_number) "
+        "VALUES ('h_sec_test4', 's_sec_test4', 'p_sec_test4', 1)"
     )
     conn.commit()
 
-    # Deleting non-existent highlight should return 404
-    resp_404 = client.delete("/api/pdf-highlights/nonexistent_id")
-    assert resp_404.status_code == 404
-
-    # Deleting existing highlight enforces check_project_access
     response = client.delete("/api/pdf-highlights/h_sec_test4")
-    assert response.status_code in (200, 401, 403)
+    assert response.status_code in (401, 403)

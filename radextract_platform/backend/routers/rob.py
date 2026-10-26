@@ -172,7 +172,7 @@ async def get_assessment(
     result = rob_service.get_assessment(assessment_id, db=conn)
     if not result:
         raise HTTPException(status_code=404, detail="Assessment not found")
-    check_project_access(conn, result["project_id"], user)
+    check_project_access(conn, result.get("project_id", ""), user, min_role="viewer")
     return result
 
 
@@ -186,7 +186,7 @@ async def delete_assessment(
     assessment = rob_service.get_assessment(assessment_id, db=conn)
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
-    check_project_access(conn, assessment["project_id"], user, min_role="reviewer")
+    check_project_access(conn, assessment.get("project_id", ""), user, min_role="reviewer")
     success = rob_service.delete_assessment(assessment_id, db=conn)
     if not success:
         raise HTTPException(status_code=404, detail="Assessment not found")
@@ -204,7 +204,7 @@ async def override_assessment_tool(
     assessment = rob_service.get_assessment(assessment_id, db=conn)
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
-    check_project_access(conn, assessment["project_id"], user, min_role="reviewer")
+    check_project_access(conn, assessment.get("project_id", ""), user, min_role="reviewer")
     try:
         return rob_service.change_assessment_tool(assessment_id, body.tool_id, db=conn)
     except ValueError as e:

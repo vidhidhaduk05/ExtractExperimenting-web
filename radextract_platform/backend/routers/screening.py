@@ -50,8 +50,10 @@ async def list_screening(
     project_id: str,
     stage: Optional[str] = Query(None, description="Filter by stage: ta, ft, or all"),
     status: Optional[str] = Query(None, description="Filter by status: pending, included, excluded"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
+    check_project_access(conn, project_id, user)
     query = "SELECT * FROM studies WHERE project_id = ?"
     params = [project_id]
     if stage and stage != "all":
