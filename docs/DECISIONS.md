@@ -154,4 +154,24 @@ This document is the canonical ledger of all engineering, architectural, scienti
   * Resilient project navigation guaranteed across all network states.
   * 100% adherence to Master Theme and zero fake names.
 
+---
 
+## 13. Project-Scoped Import Batches, Reconcilable Provenance & Safe Transactional Undo
+* **Date**: 2026-10-26 (Branch `codex/import-batches-scoping-fix`)
+* **Decision**: Refactor study reference importation and screening history from transient client-side `localStorage` to server-persisted, project-scoped database entities (`import_batches` and `batch_study_contributions`):
+  1. **Project Scoping & Elimination of Hardcoded Mocks**: Completely remove hardcoded mock batch seeds (`ACTA2_Included_103_Studies.ris`, `export_...ris`, `records.ris`). An empty or new project (such as `70df98b2-c4f2-4b07-8077-591ec173935e`) displays an authentic empty state: "No imports yet — import references to get started." Server-side queries strictly filter by `project_id`.
+  2. **Truthful Source Provenance**: Do not infer database sources (e.g., "Scopus", "PubMed") without explicit file headers or user specification. Users can edit batch source metadata directly in the UI via `PATCH /projects/{project_id}/batches/{batch_id}/source`.
+  3. **Strictly Reconciling Counts**: All batch metrics reconcile with processed totals (`total_records = imported_count + duplicate_count + failed_count`).
+  4. **Batch Details & Malformed Records**: `GET /projects/{project_id}/batches/{batch_id}` returns granular record lists, exact duplication/merge outcomes, active study flags, and error snippets.
+  5. **Safe, Transactional Undo with Impact Preview**:
+     * Before undoing, `GET /projects/{project_id}/batches/{batch_id}/undo-preview` computes studies to be removed vs studies retained because they are shared with other active import batches.
+     * Checks for downstream clinical work (screening decisions, data extractions, risk of bias assessments). If downstream work exists, the undo is blocked with HTTP 409 Conflict unless the user confirms with `force=true`.
+     * Batches are marked `status = 'undone'` with `undone_at` timestamp.
+  6. **Master Theme Compliance**: Compact table layout adhering to Stellar Labs / RadExtract Master Theme (`#3a0f34`, `#fbf9f4`, `#ffffff`, `#d2c2cb`, `Serifon Editorial`, `Work Sans`).
+* **Rationale**:
+  * Prevents cross-project contamination and phantom batch history.
+  * Preserves audit trails, PRISMA 2020 record identification provenance, and ensures downstream clinical extraction integrity.
+* **Impact**:
+  * Project `70df98b2-c4f2-4b07-8077-591ec173935e` displays 0 studies and 0 batches with clear empty state.
+  * Real imports accurately populate the database, link to title/abstract screening, and can be inspected or safely undone with impact preview.
+  * 8/8 automated backend integration tests pass in `test_import_batches.py`.

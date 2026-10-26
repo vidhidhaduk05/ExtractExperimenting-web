@@ -653,6 +653,40 @@ CREATE TABLE IF NOT EXISTS search_logs (
     FOREIGN KEY (project_id) REFERENCES projects(project_id)
 );
 
+-- ── Reference Import Batches & Multi-Batch Study Provenance ──
+
+CREATE TABLE IF NOT EXISTS import_batches (
+    batch_id         TEXT PRIMARY KEY,
+    project_id       TEXT NOT NULL,
+    filename         TEXT NOT NULL,
+    source           TEXT DEFAULT 'Unknown',
+    format           TEXT DEFAULT 'Unknown',
+    total_records    INTEGER NOT NULL DEFAULT 0,
+    imported_count   INTEGER NOT NULL DEFAULT 0,
+    duplicate_count  INTEGER NOT NULL DEFAULT 0,
+    merged_count     INTEGER NOT NULL DEFAULT 0,
+    failed_count     INTEGER NOT NULL DEFAULT 0,
+    status           TEXT DEFAULT 'completed', -- completed | completed_with_errors | failed | undone
+    undone_at        TEXT DEFAULT NULL,
+    created_at       TEXT DEFAULT (datetime('now')),
+    created_by       TEXT DEFAULT '',
+    details_json     TEXT DEFAULT '{}',
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS batch_study_contributions (
+    contribution_id  TEXT PRIMARY KEY,
+    batch_id         TEXT NOT NULL,
+    study_id         TEXT NOT NULL,
+    project_id       TEXT NOT NULL,
+    is_primary_creator INTEGER DEFAULT 1,
+    created_at       TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (batch_id) REFERENCES import_batches(batch_id) ON DELETE CASCADE,
+    FOREIGN KEY (study_id) REFERENCES studies(study_id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE,
+    UNIQUE(batch_id, study_id)
+);
+
 -- ── Indexes ──
 
 CREATE INDEX IF NOT EXISTS idx_studies_project ON studies(project_id);
@@ -682,6 +716,10 @@ CREATE INDEX IF NOT EXISTS idx_review_state_user ON user_review_state(user_id);
 CREATE INDEX IF NOT EXISTS idx_review_state_project ON user_review_state(project_id);
 CREATE INDEX IF NOT EXISTS idx_screening_keywords_project ON screening_keywords(project_id);
 CREATE INDEX IF NOT EXISTS idx_search_logs_project ON search_logs(project_id);
+CREATE INDEX IF NOT EXISTS idx_import_batches_project ON import_batches(project_id);
+CREATE INDEX IF NOT EXISTS idx_batch_contributions_batch ON batch_study_contributions(batch_id);
+CREATE INDEX IF NOT EXISTS idx_batch_contributions_study ON batch_study_contributions(study_id);
+CREATE INDEX IF NOT EXISTS idx_batch_contributions_project ON batch_study_contributions(project_id);
 """
 
 # ── Column migrations for existing tables ──
@@ -742,6 +780,7 @@ MIGRATION_COLUMNS = [
     ("rob_signaling_answers", "reviewed_by", "TEXT DEFAULT ''"),
     ("rob_signaling_answers", "reviewed_at", "TEXT DEFAULT ''"),
     ("studies", "pdf_processor_engine", "TEXT DEFAULT ''"),
+    ("studies", "import_batch_id", "TEXT DEFAULT ''"),
 ]
 
 
@@ -833,7 +872,9 @@ def reset_db():
             "project_members",
             "sessions",
             "extraction_decisions",
-            "extractions", "audit_log", "variables", "studies",
+            "extractions", "audit_log", "variables",
+            "batch_study_contributions", "import_batches",
+            "studies",
             "search_logs",
             "projects", "users", "cache_store",
         ]

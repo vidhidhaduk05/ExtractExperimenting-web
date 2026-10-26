@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import uuid
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
@@ -22,6 +23,8 @@ from models import (
     PubMedFetchRequest, PubMedFetchResponse,
     OpenAlexFetchRequest,
     ReferenceUploadResponse, ReferencePreviewResponse, MalformedRecordDetail,
+    ImportBatchResponse, ImportBatchDetailResponse, ImportBatchRecord,
+    UndoImpactPreviewResponse, UndoBatchResponse, UpdateBatchSourceRequest,
     ProjectMemberResponse, ProjectMemberInvite, ProjectMemberUpdate,
     KeywordGroupCreate, KeywordGroupUpdate, KeywordGroupResponse,
     ProjectSettingsUpdate, ProjectSettingsResponse,
@@ -1163,7 +1166,7 @@ async def upload_references(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)
 ):
-    """Upload one or more reference files and import studies.
+    """Upload one or more reference files and import studies with persistent batch tracking.
 
     Supports RIS, BibTeX, CSV with column mapping, PubMed/NBIB, EndNote Tagged,
     EndNote XML, PubMed XML, and Web of Science CIW.
@@ -1185,26 +1188,34 @@ async def upload_references(
         except Exception:
             parsed_mapping = None
 
-    # Collect existing DOIs and titles for dedup across all files
-    existing_dois = set()
-    existing_titles = set()
+    # Collect existing DOIs and titles with their study_id for exact duplicate linking
+    existing_doi_map: dict[str, str] = {}
+    existing_title_map: dict[str, str] = {}
     rows = conn.execute(
-        "SELECT doi, title FROM studies WHERE project_id = ?", (project_id,)
+        "SELECT study_id, doi, title FROM studies WHERE project_id = ?", (project_id,)
     ).fetchall()
     for r in rows:
         if r["doi"]:
-            existing_dois.add(r["doi"].lower())
+            existing_doi_map[r["doi"].lower().strip()] = r["study_id"]
         if r["title"]:
-            existing_titles.add(r["title"].lower().strip())
+            existing_title_map[r["title"].lower().strip()] = r["study_id"]
 
     total_imported = 0
     total_skipped = 0
-    source_names = []
-    errors = []
+    source_names: list[str] = []
+    overall_errors: list[str] = []
     all_malformed: list[MalformedRecordDetail] = []
-    detected_formats = []
+    detected_formats: list[str] = []
+    created_batches: list[ImportBatchResponse] = []
+    all_imported_studies: list[dict] = []
+    created_batch_ids: list[str] = []
+
+    username = user.get("username", "") if user else ""
 
     for file in files:
+        file_batch_id = str(uuid.uuid4())
+        created_batch_ids.append(file_batch_id)
+
         # Read file content
         content_bytes = await file.read()
         try:
@@ -1213,6 +1224,23 @@ async def upload_references(
             content = content_bytes.decode("latin-1")
 
         filename = file.filename or "references.ris"
+        source_names.append(filename)
+
+        file_errors: list[str] = []
+        file_malformed: list[MalformedRecordDetail] = []
+        studies: list[dict] = []
+        file_format = "Unknown"
+        now_formatted = datetime.utcnow().strftime("%d %b %Y %H:%M UTC")
+
+        # Create parent import_batch record first to satisfy foreign key constraints
+        conn.execute(
+            """INSERT INTO import_batches
+               (batch_id, project_id, filename, source, format,
+                total_records, imported_count, duplicate_count, merged_count, failed_count,
+                status, created_at, created_by, details_json)
+               VALUES (?, ?, ?, 'Unknown', 'Unknown', 0, 0, 0, 0, 0, 'importing', ?, ?, '{}')""",
+            (file_batch_id, project_id, filename, now_formatted, username)
+        )
 
         # Parse references with detailed reporting
         try:
@@ -1221,69 +1249,591 @@ async def upload_references(
                 filename=filename,
                 column_mapping=parsed_mapping,
             )
-            detected_formats.append(parse_res.get("format", "Unknown"))
+            file_format = parse_res.get("format", "Unknown")
+            detected_formats.append(file_format)
             studies = parse_res.get("records", [])
             for m in parse_res.get("malformed_records", []):
-                all_malformed.append(
-                    MalformedRecordDetail(
-                        index=m.get("index"),
-                        reason=f"[{filename}] {m.get('reason', 'Malformed')}",
-                        snippet=m.get("snippet")
-                    )
+                md = MalformedRecordDetail(
+                    index=m.get("index"),
+                    reason=f"[{filename}] {m.get('reason', 'Malformed')}",
+                    snippet=m.get("snippet")
                 )
+                file_malformed.append(md)
+                all_malformed.append(md)
         except Exception as e:
-            errors.append(f"Failed to parse {filename}: {str(e)}")
-            continue
+            err_msg = f"Failed to parse {filename}: {str(e)}"
+            file_errors.append(err_msg)
+            overall_errors.append(err_msg)
 
         if not studies:
-            errors.append(f"No valid references found in {filename}")
-            continue
+            err_msg = f"No valid references found in {filename}"
+            if err_msg not in file_errors:
+                file_errors.append(err_msg)
+            if err_msg not in overall_errors:
+                overall_errors.append(err_msg)
 
-        source_names.append(filename)
+        # Detect source truthfully without guessing "Scopus"
+        detected_source = "Unknown"
+        if studies:
+            known_sources = {
+                s.get("source") for s in studies
+                if s.get("source") and s.get("source").lower() not in ("reference upload", "unknown", "")
+            }
+            if len(known_sources) == 1:
+                detected_source = list(known_sources)[0]
 
-        # Import studies, skipping duplicates by DOI or title
-        for study_data in studies:
+        file_imported = 0
+        file_duplicates = 0
+        file_records_details: list[dict] = []
+
+        # Process each reference record
+        for idx, study_data in enumerate(studies, 1):
             doi = study_data.get("doi", "").lower().strip()
             title = study_data.get("title", "").lower().strip()
 
-            # Check for duplicates
-            is_dup = False
-            if doi and doi in existing_dois:
-                is_dup = True
-            elif title and title in existing_titles:
-                is_dup = True
+            matched_study_id: Optional[str] = None
+            match_reason: Optional[str] = None
 
-            if is_dup:
+            if doi and doi in existing_doi_map:
+                matched_study_id = existing_doi_map[doi]
+                match_reason = "doi"
+            elif title and title in existing_title_map:
+                matched_study_id = existing_title_map[title]
+                match_reason = "title"
+
+            if matched_study_id:
+                # Duplicate record - link batch contribution as secondary creator
+                file_duplicates += 1
                 total_skipped += 1
+                try:
+                    conn.execute(
+                        """INSERT OR IGNORE INTO batch_study_contributions
+                           (contribution_id, batch_id, study_id, project_id, is_primary_creator, created_at)
+                           VALUES (?, ?, ?, ?, 0, datetime('now'))""",
+                        (str(uuid.uuid4()), file_batch_id, matched_study_id, project_id)
+                    )
+                except Exception:
+                    pass
+
+                file_records_details.append({
+                    "index": idx,
+                    "study_id": matched_study_id,
+                    "title": study_data.get("title", ""),
+                    "authors": study_data.get("authors", ""),
+                    "publication_year": study_data.get("publication_year"),
+                    "journal": study_data.get("journal", ""),
+                    "doi": study_data.get("doi", ""),
+                    "pmid": study_data.get("pmid", ""),
+                    "status": "duplicate",
+                    "match_reason": match_reason,
+                })
                 continue
 
-            study_id = str(uuid.uuid4())
+            # New unique study to add to intake screening
+            new_study_id = str(uuid.uuid4())
+            final_study_source = detected_source if detected_source != "Unknown" else (study_data.get("source") or "Reference upload")
+
             conn.execute(
                 """INSERT INTO studies
                    (study_id, project_id, title, authors, publication_year, journal,
-                    doi, pmid, abstract, source, study_design, metadata_json)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (study_id, project_id, study_data.get("title", ""),
+                    doi, pmid, abstract, source, study_design, metadata_json,
+                    screening_status, screening_stage, import_batch_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'ta', ?)""",
+                (new_study_id, project_id, study_data.get("title", ""),
                  study_data.get("authors", ""), study_data.get("publication_year"),
                  study_data.get("journal", ""), study_data.get("doi", ""),
                  study_data.get("pmid", ""), study_data.get("abstract", ""),
-                 study_data.get("source", "Reference upload"),
-                 study_data.get("study_design", ""), ""),
+                 final_study_source,
+                 study_data.get("study_design", ""), "", file_batch_id),
             )
+
+            # Link primary contribution
+            conn.execute(
+                """INSERT INTO batch_study_contributions
+                   (contribution_id, batch_id, study_id, project_id, is_primary_creator, created_at)
+                   VALUES (?, ?, ?, ?, 1, datetime('now'))""",
+                (str(uuid.uuid4()), file_batch_id, new_study_id, project_id)
+            )
+
             if doi:
-                existing_dois.add(doi)
+                existing_doi_map[doi] = new_study_id
             if title:
-                existing_titles.add(title)
+                existing_title_map[title] = new_study_id
+
+            file_imported += 1
             total_imported += 1
 
+            study_record = {
+                "study_id": new_study_id,
+                "project_id": project_id,
+                "title": study_data.get("title", ""),
+                "authors": study_data.get("authors", ""),
+                "publication_year": study_data.get("publication_year"),
+                "journal": study_data.get("journal", ""),
+                "doi": study_data.get("doi", ""),
+                "pmid": study_data.get("pmid", ""),
+                "source": final_study_source,
+                "screening_status": "pending",
+                "screening_stage": "ta",
+            }
+            all_imported_studies.append(study_record)
+
+            file_records_details.append({
+                "index": idx,
+                "study_id": new_study_id,
+                "title": study_data.get("title", ""),
+                "authors": study_data.get("authors", ""),
+                "publication_year": study_data.get("publication_year"),
+                "journal": study_data.get("journal", ""),
+                "doi": study_data.get("doi", ""),
+                "pmid": study_data.get("pmid", ""),
+                "status": "added",
+                "match_reason": None,
+            })
+
+        # Calculate reconciling counts for the batch
+        file_failed = len(file_malformed)
+        if file_errors and not studies and file_failed == 0:
+            file_failed = 1
+        file_total = file_imported + file_duplicates + file_failed
+
+        if file_total == 0 and file_errors:
+            batch_status = "failed"
+        elif file_errors or file_malformed:
+            batch_status = "completed_with_errors" if file_imported > 0 else "failed"
+        else:
+            batch_status = "completed"
+
+        details_payload = {
+            "records": file_records_details,
+            "errors": file_errors,
+            "malformed_records": [m.dict() for m in file_malformed],
+        }
+
+        # Update batch with final counts and status
+        conn.execute(
+            """UPDATE import_batches
+               SET source = ?, format = ?, total_records = ?, imported_count = ?,
+                   duplicate_count = ?, merged_count = 0, failed_count = ?,
+                   status = ?, details_json = ?
+               WHERE batch_id = ?""",
+            (detected_source, file_format, file_total, file_imported,
+             file_duplicates, file_failed, batch_status, json.dumps(details_payload),
+             file_batch_id)
+        )
+
+        created_batches.append(ImportBatchResponse(
+            batch_id=file_batch_id,
+            project_id=project_id,
+            filename=filename,
+            source=detected_source,
+            format=file_format,
+            total_records=file_total,
+            imported_count=file_imported,
+            duplicate_count=file_duplicates,
+            merged_count=0,
+            failed_count=file_failed,
+            status=batch_status,
+            undone_at=None,
+            created_at=now_formatted,
+            created_by=username,
+            retained_studies_count=file_imported,
+        ))
+
     conn.commit()
+
     return ReferenceUploadResponse(
         imported_count=total_imported,
         skipped_duplicates=total_skipped,
-        source=", ".join(source_names) if source_names else "unknown",
-        format=", ".join(set(detected_formats)) if detected_formats else None,
-        errors=errors,
+        source=", ".join(source_names) if source_names else "Unknown",
+        format=", ".join(sorted(set(detected_formats))) if detected_formats else None,
+        errors=overall_errors,
         malformed_records=all_malformed,
+        batch_id=created_batch_ids[0] if created_batch_ids else None,
+        batch_ids=created_batch_ids,
+        total_records=total_imported + total_skipped + len(all_malformed),
+        batches=created_batches,
+        imported_studies=all_imported_studies,
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Import Batches & Screening Intake History
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.get("/projects/{project_id}/batches", response_model=list[ImportBatchResponse])
+async def list_import_batches(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)
+):
+    """List all bibliographic reference import batches for a project."""
+    row = conn.execute("SELECT project_id FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_access(conn, project_id, user, min_role="viewer")
+
+    rows = conn.execute(
+        """SELECT batch_id, project_id, filename, source, format,
+                  total_records, imported_count, duplicate_count, merged_count, failed_count,
+                  status, undone_at, created_at, created_by
+           FROM import_batches
+           WHERE project_id = ?
+           ORDER BY created_at DESC""",
+        (project_id,)
+    ).fetchall()
+
+    result: list[ImportBatchResponse] = []
+    for r in rows:
+        b_dict = dict(r)
+        # Calculate how many studies contributed by this batch currently remain in studies table
+        retained_row = conn.execute(
+            """SELECT COUNT(DISTINCT s.study_id) as retained_count
+               FROM studies s
+               JOIN batch_study_contributions bsc ON s.study_id = bsc.study_id
+               WHERE bsc.batch_id = ? AND s.project_id = ?""",
+            (b_dict["batch_id"], project_id)
+        ).fetchone()
+        b_dict["retained_studies_count"] = retained_row["retained_count"] if retained_row else 0
+        result.append(ImportBatchResponse(**b_dict))
+    return result
+
+
+@router.get("/projects/{project_id}/batches/{batch_id}", response_model=ImportBatchDetailResponse)
+async def get_import_batch_detail(
+    project_id: str,
+    batch_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)
+):
+    """Get full details of a specific import batch including parsed records and duplicate outcomes."""
+    check_project_access(conn, project_id, user, min_role="viewer")
+    row = conn.execute(
+        """SELECT batch_id, project_id, filename, source, format,
+                  total_records, imported_count, duplicate_count, merged_count, failed_count,
+                  status, undone_at, created_at, created_by, details_json
+           FROM import_batches
+           WHERE batch_id = ? AND project_id = ?""",
+        (batch_id, project_id)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Import batch not found")
+
+    b_dict = dict(row)
+    details_raw = b_dict.pop("details_json", "{}") or "{}"
+    try:
+        details = json.loads(details_raw)
+    except Exception:
+        details = {}
+
+    # Query currently active study IDs in this project
+    active_study_ids = {
+        s["study_id"] for s in conn.execute(
+            "SELECT study_id FROM studies WHERE project_id = ?", (project_id,)
+        ).fetchall()
+    }
+
+    records: list[ImportBatchRecord] = []
+    for rec in details.get("records", []):
+        sid = rec.get("study_id")
+        rec_copy = dict(rec)
+        rec_copy["study_active"] = bool(sid and sid in active_study_ids)
+        records.append(ImportBatchRecord(**rec_copy))
+
+    retained_row = conn.execute(
+        """SELECT COUNT(DISTINCT s.study_id) as retained_count
+           FROM studies s
+           JOIN batch_study_contributions bsc ON s.study_id = bsc.study_id
+           WHERE bsc.batch_id = ? AND s.project_id = ?""",
+        (batch_id, project_id)
+    ).fetchone()
+    b_dict["retained_studies_count"] = retained_row["retained_count"] if retained_row else 0
+
+    return ImportBatchDetailResponse(
+        **b_dict,
+        records=records,
+        errors=details.get("errors", []),
+        malformed_records=[MalformedRecordDetail(**m) for m in details.get("malformed_records", [])],
+    )
+
+
+@router.patch("/projects/{project_id}/batches/{batch_id}/source", response_model=ImportBatchResponse)
+async def update_batch_source(
+    project_id: str,
+    batch_id: str,
+    body: UpdateBatchSourceRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)
+):
+    """Update the database/source metadata for an import batch and its associated studies."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    row = conn.execute(
+        "SELECT * FROM import_batches WHERE batch_id = ? AND project_id = ?",
+        (batch_id, project_id)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Import batch not found")
+
+    cleaned_source = body.source.strip() or "Unknown"
+    conn.execute(
+        "UPDATE import_batches SET source = ? WHERE batch_id = ? AND project_id = ?",
+        (cleaned_source, batch_id, project_id)
+    )
+    conn.execute(
+        "UPDATE studies SET source = ? WHERE import_batch_id = ? AND project_id = ?",
+        (cleaned_source, batch_id, project_id)
+    )
+    conn.commit()
+
+    updated = conn.execute(
+        "SELECT * FROM import_batches WHERE batch_id = ? AND project_id = ?",
+        (batch_id, project_id)
+    ).fetchone()
+    u_dict = dict(updated)
+    u_dict.pop("details_json", None)
+
+    retained_row = conn.execute(
+        """SELECT COUNT(DISTINCT s.study_id) as retained_count
+           FROM studies s
+           JOIN batch_study_contributions bsc ON s.study_id = bsc.study_id
+           WHERE bsc.batch_id = ? AND s.project_id = ?""",
+        (batch_id, project_id)
+    ).fetchone()
+    u_dict["retained_studies_count"] = retained_row["retained_count"] if retained_row else 0
+
+    return ImportBatchResponse(**u_dict)
+
+
+@router.get("/projects/{project_id}/batches/{batch_id}/undo-preview", response_model=UndoImpactPreviewResponse)
+async def preview_undo_batch(
+    project_id: str,
+    batch_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)
+):
+    """Calculate the exact server-side impact before undoing an import batch."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    batch = conn.execute(
+        "SELECT * FROM import_batches WHERE batch_id = ? AND project_id = ?",
+        (batch_id, project_id)
+    ).fetchone()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Import batch not found")
+
+    if batch["status"] == "undone":
+        return UndoImpactPreviewResponse(
+            batch_id=batch_id,
+            filename=batch["filename"],
+            status="undone",
+            can_undo=False,
+            blocking_reason="Batch has already been undone.",
+            studies_to_remove_count=0,
+            studies_to_remove=[],
+            studies_retained_count=0,
+            studies_retained=[],
+            downstream_work={},
+            has_downstream_work=False,
+        )
+
+    # Get all studies contributed by this batch
+    contributions = conn.execute(
+        """SELECT bsc.study_id, bsc.is_primary_creator, s.title, s.screening_status, s.pdf_path
+           FROM batch_study_contributions bsc
+           LEFT JOIN studies s ON bsc.study_id = s.study_id
+           WHERE bsc.batch_id = ? AND bsc.project_id = ?""",
+        (batch_id, project_id)
+    ).fetchall()
+
+    studies_to_remove: list[dict] = []
+    studies_retained: list[dict] = []
+
+    total_screening_decisions = 0
+    total_extractions = 0
+    total_rob = 0
+    total_pdfs = 0
+
+    for c in contributions:
+        sid = c["study_id"]
+        title = c["title"] or f"Study {sid}"
+
+        # If study no longer exists in studies table, skip
+        if not c["title"]:
+            continue
+
+        # Check if another ACTIVE batch contributed this study
+        other_active = conn.execute(
+            """SELECT ib.batch_id, ib.filename
+               FROM batch_study_contributions bsc
+               JOIN import_batches ib ON bsc.batch_id = ib.batch_id
+               WHERE bsc.study_id = ? AND bsc.batch_id != ? AND ib.status != 'undone' AND ib.project_id = ?""",
+            (sid, batch_id, project_id)
+        ).fetchall()
+
+        if other_active:
+            other_names = [o["filename"] for o in other_active]
+            studies_retained.append({
+                "study_id": sid,
+                "title": title,
+                "reason": f"Also contributed by active batch(es): {', '.join(other_names)}"
+            })
+        else:
+            # Study will be removed. Check downstream work.
+            dec_row = conn.execute("SELECT COUNT(*) as c FROM screening_decisions WHERE study_id = ?", (sid,)).fetchone()
+            n_decisions = dec_row["c"] if dec_row else 0
+            ext_row = conn.execute("SELECT COUNT(*) as c FROM extractions WHERE study_id = ?", (sid,)).fetchone()
+            n_extractions = ext_row["c"] if ext_row else 0
+            rob_row = conn.execute("SELECT COUNT(*) as c FROM rob_assessments WHERE study_id = ?", (sid,)).fetchone()
+            n_rob = rob_row["c"] if rob_row else 0
+            pdf_row = conn.execute("SELECT COUNT(*) as c FROM pdf_documents WHERE study_id = ?", (sid,)).fetchone()
+            has_pdf = bool(c["pdf_path"]) or (pdf_row and pdf_row["c"] > 0)
+            n_pdf = 1 if has_pdf else 0
+
+            # Also check if manual screening status changed
+            if c["screening_status"] in ("included", "excluded"):
+                n_decisions = max(n_decisions, 1)
+
+            total_screening_decisions += n_decisions
+            total_extractions += n_extractions
+            total_rob += n_rob
+            total_pdfs += n_pdf
+
+            studies_to_remove.append({
+                "study_id": sid,
+                "title": title,
+                "screening_status": c["screening_status"],
+                "has_downstream": (n_decisions > 0 or n_extractions > 0 or n_rob > 0 or n_pdf > 0),
+            })
+
+    downstream_work = {
+        "screening_decisions_count": total_screening_decisions,
+        "extractions_count": total_extractions,
+        "rob_assessments_count": total_rob,
+        "pdfs_count": total_pdfs,
+    }
+    has_downstream = any(v > 0 for v in downstream_work.values())
+
+    return UndoImpactPreviewResponse(
+        batch_id=batch_id,
+        filename=batch["filename"],
+        status=batch["status"],
+        can_undo=True,
+        blocking_reason=None,
+        studies_to_remove_count=len(studies_to_remove),
+        studies_to_remove=studies_to_remove,
+        studies_retained_count=len(studies_retained),
+        studies_retained=studies_retained,
+        downstream_work=downstream_work,
+        has_downstream_work=has_downstream,
+    )
+
+
+@router.post("/projects/{project_id}/batches/{batch_id}/undo", response_model=UndoBatchResponse)
+async def undo_import_batch(
+    project_id: str,
+    batch_id: str,
+    force: bool = False,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)
+):
+    """Safely and atomically undo an import batch, protecting shared studies and downstream work."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    batch = conn.execute(
+        "SELECT * FROM import_batches WHERE batch_id = ? AND project_id = ?",
+        (batch_id, project_id)
+    ).fetchone()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Import batch not found")
+
+    # Idempotent: repeated undo requests return safely
+    if batch["status"] == "undone":
+        return UndoBatchResponse(
+            batch_id=batch_id,
+            status="undone",
+            undone_at=batch["undone_at"] or "",
+            studies_removed_count=0,
+            studies_retained_count=0,
+            message=f"Import of {batch['filename']} was already undone."
+        )
+
+    # Preview to verify studies to remove vs retain
+    contributions = conn.execute(
+        """SELECT bsc.study_id, s.title, s.screening_status, s.pdf_path
+           FROM batch_study_contributions bsc
+           LEFT JOIN studies s ON bsc.study_id = s.study_id
+           WHERE bsc.batch_id = ? AND bsc.project_id = ?""",
+        (batch_id, project_id)
+    ).fetchall()
+
+    studies_to_remove_ids = []
+    studies_retained_ids = []
+    has_downstream_work = False
+
+    for c in contributions:
+        sid = c["study_id"]
+        if not c["title"]:
+            continue
+
+        other_active = conn.execute(
+            """SELECT ib.batch_id
+               FROM batch_study_contributions bsc
+               JOIN import_batches ib ON bsc.batch_id = ib.batch_id
+               WHERE bsc.study_id = ? AND bsc.batch_id != ? AND ib.status != 'undone' AND ib.project_id = ?""",
+            (sid, batch_id, project_id)
+        ).fetchall()
+
+        if other_active:
+            studies_retained_ids.append(sid)
+        else:
+            # Check downstream work
+            dec_row = conn.execute("SELECT COUNT(*) as c FROM screening_decisions WHERE study_id = ?", (sid,)).fetchone()
+            n_dec = dec_row["c"] if dec_row else 0
+            ext_row = conn.execute("SELECT COUNT(*) as c FROM extractions WHERE study_id = ?", (sid,)).fetchone()
+            n_ext = ext_row["c"] if ext_row else 0
+            rob_row = conn.execute("SELECT COUNT(*) as c FROM rob_assessments WHERE study_id = ?", (sid,)).fetchone()
+            n_rob = rob_row["c"] if rob_row else 0
+            if n_dec > 0 or n_ext > 0 or n_rob > 0 or c["screening_status"] in ("included", "excluded"):
+                has_downstream_work = True
+            studies_to_remove_ids.append(sid)
+
+    if has_downstream_work and not force:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot undo batch without explicit confirmation: one or more studies have active downstream screening decisions, extractions, or risk-of-bias assessments. Please review the undo preview and confirm force=true."
+        )
+
+    # Atomic removal in transaction
+    for sid in studies_to_remove_ids:
+        for bookmark in conn.query("user_review_state", {"study_id": sid, "stage": "bookmark"}):
+            conn.delete("user_review_state", bookmark["state_id"])
+        for table, pk in (("record_annotations", "annotation_id"), ("study_tag_links", "link_id")):
+            for row in conn.query(table, {"study_id": sid}):
+                conn.delete(table, row[pk])
+        # Clean downstream rows
+        conn.execute("DELETE FROM screening_decisions WHERE study_id = ?", (sid,))
+        conn.execute("DELETE FROM screening_conflicts WHERE study_id = ?", (sid,))
+        conn.execute("DELETE FROM extractions WHERE study_id = ?", (sid,))
+        conn.execute("DELETE FROM extraction_decisions WHERE study_id = ?", (sid,))
+        conn.execute("DELETE FROM rob_assessments WHERE study_id = ?", (sid,))
+        conn.execute("DELETE FROM pdf_highlights WHERE study_id = ?", (sid,))
+        conn.execute("DELETE FROM pdf_documents WHERE study_id = ?", (sid,))
+        conn.execute("DELETE FROM clarification_questions WHERE study_id = ?", (sid,))
+        conn.execute("DELETE FROM meta_analysis_studies WHERE study_id = ?", (sid,))
+        conn.execute("DELETE FROM studies WHERE study_id = ?", (sid,))
+
+    now_iso = datetime.utcnow().strftime("%d %b %Y %H:%M UTC")
+    conn.execute(
+        "UPDATE import_batches SET status = 'undone', undone_at = ? WHERE batch_id = ? AND project_id = ?",
+        (now_iso, batch_id, project_id)
+    )
+    conn.commit()
+
+    return UndoBatchResponse(
+        batch_id=batch_id,
+        status="undone",
+        undone_at=now_iso,
+        studies_removed_count=len(studies_to_remove_ids),
+        studies_retained_count=len(studies_retained_ids),
+        message=f"Batch {batch['filename']} successfully undone on {now_iso}. Removed {len(studies_to_remove_ids)} studies ({len(studies_retained_ids)} retained from other active batches)."
     )
 
 

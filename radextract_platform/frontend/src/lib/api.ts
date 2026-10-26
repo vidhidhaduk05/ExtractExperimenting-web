@@ -1991,6 +1991,72 @@ export interface MalformedRecordDetail {
   snippet?: string;
 }
 
+export interface ImportBatchRecord {
+  index?: number;
+  study_id?: string;
+  title: string;
+  authors?: string;
+  publication_year?: number;
+  journal?: string;
+  doi?: string;
+  pmid?: string;
+  status: "added" | "duplicate" | "error";
+  match_reason?: string;
+  study_active?: boolean;
+}
+
+export interface ImportBatch {
+  batch_id: string;
+  project_id: string;
+  filename: string;
+  source: string;
+  format: string;
+  total_records: number;
+  imported_count: number;
+  duplicate_count: number;
+  merged_count: number;
+  failed_count: number;
+  status: "completed" | "completed_with_errors" | "failed" | "undone" | "importing";
+  undone_at?: string | null;
+  created_at: string;
+  created_by?: string;
+  retained_studies_count?: number;
+}
+
+export interface ImportBatchDetail extends ImportBatch {
+  records: ImportBatchRecord[];
+  errors: string[];
+  malformed_records: MalformedRecordDetail[];
+}
+
+export interface UndoImpactPreview {
+  batch_id: string;
+  filename: string;
+  status: string;
+  can_undo: boolean;
+  blocking_reason?: string | null;
+  studies_to_remove_count: number;
+  studies_to_remove: Array<{ study_id: string; title: string; screening_status?: string; has_downstream?: boolean }>;
+  studies_retained_count: number;
+  studies_retained: Array<{ study_id: string; title: string; reason?: string }>;
+  downstream_work: {
+    screening_decisions_count?: number;
+    extractions_count?: number;
+    rob_assessments_count?: number;
+    pdfs_count?: number;
+  };
+  has_downstream_work: boolean;
+}
+
+export interface UndoBatchResult {
+  batch_id: string;
+  status: string;
+  undone_at: string;
+  studies_removed_count: number;
+  studies_retained_count: number;
+  message: string;
+}
+
 export interface ReferenceUploadResponse {
   imported_count: number;
   skipped_duplicates: number;
@@ -1998,6 +2064,11 @@ export interface ReferenceUploadResponse {
   format?: string;
   errors?: string[];
   malformed_records?: MalformedRecordDetail[];
+  batch_id?: string;
+  batch_ids?: string[];
+  total_records?: number;
+  batches?: ImportBatch[];
+  imported_studies?: any[];
 }
 
 export interface ReferencePreviewResponse {
@@ -3436,13 +3507,38 @@ export const api = {
         headers,
       });
       if (!res.ok) {
-        return fallbackResult;
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Upload failed with HTTP ${res.status}`);
       }
       return (await res.json()) as ReferenceUploadResponse;
-    } catch (err) {
-      return fallbackResult;
+    } catch (err: any) {
+      if (shouldUseDemoFallback()) {
+        return fallbackResult;
+      }
+      throw err;
     }
   },
+
+  // Import Batches & Screening Intake History
+  getImportBatches: (projectId: string) =>
+    request<ImportBatch[]>(`/projects/${projectId}/batches`),
+
+  getImportBatchDetail: (projectId: string, batchId: string) =>
+    request<ImportBatchDetail>(`/projects/${projectId}/batches/${batchId}`),
+
+  updateBatchSource: (projectId: string, batchId: string, source: string) =>
+    request<ImportBatch>(`/projects/${projectId}/batches/${batchId}/source`, {
+      method: "PATCH",
+      body: JSON.stringify({ source }),
+    }),
+
+  previewUndoBatch: (projectId: string, batchId: string) =>
+    request<UndoImpactPreview>(`/projects/${projectId}/batches/${batchId}/undo-preview`),
+
+  undoImportBatch: (projectId: string, batchId: string, force = false) =>
+    request<UndoBatchResult>(`/projects/${projectId}/batches/${batchId}/undo?force=${force}`, {
+      method: "POST",
+    }),
 
   // Keyword Groups (customizable highlighting)
   listKeywordGroups: (projectId: string) =>

@@ -1,12 +1,19 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, saveStoredProjectStudies, type Study } from "../lib/api";
+import {
+  api,
+  saveStoredProjectStudies,
+  type Study,
+  type ImportBatch,
+  type ImportBatchDetail,
+  type UndoImpactPreview,
+} from "../lib/api";
 import { autoIdentifyPdf } from "../lib/pdfAutoIdentifier";
 import {
   Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2,
   Highlighter, FileSpreadsheet, ArrowRight, CheckCircle2, X,
   RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy,
-  ExternalLink, HelpCircle, Undo2, Edit3
+  ExternalLink, HelpCircle, Undo2, Edit3, Search
 } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
 import { useRef, useState, useMemo, useEffect } from "react";
@@ -17,66 +24,445 @@ import { matchesTag, useProjectTags, type TagIndex } from "../lib/recordCollabor
 import { CollaborationDialog, RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
 import { cn } from "../lib/utils";
 
-export interface ImportBatch {
-  id: string;
+function BatchDetailsModal({
+  isOpen,
+  batchId,
+  projectId,
+  onClose,
+}: {
+  isOpen: boolean;
+  batchId: string | null;
   projectId: string;
-  date: string;
-  filename: string;
-  addedCount: number;
-  referencesCount: number;
-  duplicatesCount: number;
-  mergedCount: number;
-  source: string;
-  studyIds: string[];
-  undoneAt?: string | null;
+  onClose: () => void;
+}) {
+  const [filter, setFilter] = useState<"all" | "added" | "duplicate" | "error">("all");
+  const [search, setSearch] = useState("");
+
+  const { data: detail, isLoading, error } = useQuery({
+    queryKey: ["batch_detail", projectId, batchId],
+    queryFn: () => api.getImportBatchDetail(projectId, batchId!),
+    enabled: !!batchId && isOpen,
+  });
+
+  if (!isOpen) return null;
+
+  const records = detail?.records || [];
+  const filteredRecords = records.filter((r) => {
+    if (filter === "added" && r.status !== "added") return false;
+    if (filter === "duplicate" && r.status !== "duplicate") return false;
+    if (filter === "error" && r.status !== "error") return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const matchTitle = (r.title || "").toLowerCase().includes(q);
+      const matchAuthors = (r.authors || "").toLowerCase().includes(q);
+      const matchDoi = (r.doi || "").toLowerCase().includes(q);
+      if (!matchTitle && !matchAuthors && !matchDoi) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+      <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden font-sans">
+        {/* Header */}
+        <div className="p-5 sm:p-6 border-b border-[#d2c2cb] bg-[#fbf9f4] flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] font-semibold uppercase">
+                Batch Details
+              </span>
+              {detail && (
+                <span
+                  className={cn(
+                    "text-[10px] font-mono px-2 py-0.5 rounded-full border",
+                    detail.status === "completed"
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                      : detail.status === "completed_with_errors"
+                      ? "bg-amber-50 text-amber-800 border-amber-200"
+                      : detail.status === "undone"
+                      ? "bg-slate-100 text-slate-700 border-slate-300"
+                      : "bg-rose-50 text-rose-800 border-rose-200"
+                  )}
+                >
+                  {detail.status === "undone" && detail.undone_at
+                    ? `Undone on ${detail.undone_at}`
+                    : detail.status.replace("_", " ").toUpperCase()}
+                </span>
+              )}
+            </div>
+            <h3 className="font-serif text-xl sm:text-2xl font-normal text-[#3a0f34] break-all">
+              {detail?.filename || "Loading batch..."}
+            </h3>
+            <p className="text-xs text-[#62535d] mt-1 font-sans">
+              Imported on {detail?.created_at || "—"} • Source:{" "}
+              <span className="font-medium text-[#4f444b]">{detail?.source || "Unknown"}</span> • Format:{" "}
+              <span className="font-medium text-[#4f444b]">{detail?.format || "Unknown"}</span>
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Summary Counts Strip */}
+        {detail && (
+          <div className="px-6 py-3 bg-[#ffffff] border-b border-[#d2c2cb] flex flex-wrap items-center gap-4 text-xs">
+            <span className="text-[#62535d]">
+              Processed: <strong className="text-[#4f444b]">{detail.total_records}</strong>
+            </span>
+            <span className="text-emerald-700">
+              Newly Added: <strong>{detail.imported_count}</strong>
+            </span>
+            <span className="text-amber-800">
+              Duplicates: <strong>{detail.duplicate_count}</strong>
+            </span>
+            {detail.failed_count > 0 && (
+              <span className="text-rose-700">
+                Failed/Malformed: <strong>{detail.failed_count}</strong>
+              </span>
+            )}
+            <span className="text-[#814d75] ml-auto font-medium">
+              Currently Retained in Project: <strong>{detail.retained_studies_count ?? detail.imported_count}</strong>
+            </span>
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="p-5 sm:p-6 flex-1 overflow-y-auto space-y-4">
+          {isLoading ? (
+            <div className="py-16 text-center text-[#62535d] flex flex-col items-center justify-center gap-2">
+              <Loader2 className="h-7 w-7 text-[#814d75] animate-spin" />
+              <span className="font-serif italic text-sm">Loading records and validation outcomes...</span>
+            </div>
+          ) : error ? (
+            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+              Failed to load batch details: {(error as Error).message}
+            </div>
+          ) : (
+            <>
+              {/* Filter Tabs & Search */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 p-1 bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setFilter("all")}
+                    className={cn(
+                      "px-3 py-1 rounded-lg font-medium transition-colors",
+                      filter === "all" ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs" : "text-[#62535d] hover:text-[#3a0f34]"
+                    )}
+                  >
+                    All ({records.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilter("added")}
+                    className={cn(
+                      "px-3 py-1 rounded-lg font-medium transition-colors",
+                      filter === "added" ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs" : "text-[#62535d] hover:text-[#3a0f34]"
+                    )}
+                  >
+                    Added ({records.filter((r) => r.status === "added").length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilter("duplicate")}
+                    className={cn(
+                      "px-3 py-1 rounded-lg font-medium transition-colors",
+                      filter === "duplicate" ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs" : "text-[#62535d] hover:text-[#3a0f34]"
+                    )}
+                  >
+                    Duplicates ({records.filter((r) => r.status === "duplicate").length})
+                  </button>
+                  {records.some((r) => r.status === "error") && (
+                    <button
+                      type="button"
+                      onClick={() => setFilter("error")}
+                      className={cn(
+                        "px-3 py-1 rounded-lg font-medium transition-colors",
+                        filter === "error" ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs" : "text-[#62535d] hover:text-[#3a0f34]"
+                      )}
+                    >
+                      Errors ({records.filter((r) => r.status === "error").length})
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#81737b]" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search titles, authors, DOI..."
+                    className="w-full sm:w-64 pl-8 pr-3 py-1.5 text-xs rounded-xl border border-[#d2c2cb] bg-[#fbf9f4] text-[#4f444b] focus:outline-none focus:ring-2 focus:ring-[#814d75]"
+                  />
+                </div>
+              </div>
+
+              {/* Records List */}
+              {filteredRecords.length === 0 ? (
+                <div className="py-12 text-center text-[#81737b] text-xs font-serif italic border border-dashed border-[#d2c2cb] rounded-xl">
+                  No records match the current filter.
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
+                  {filteredRecords.map((r, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 rounded-xl border border-[#d2c2cb] bg-[#ffffff] hover:border-[#814d75]/50 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-[10px] text-[#81737b]">#{r.index ?? idx + 1}</span>
+                          <span
+                            className={cn(
+                              "text-[10px] font-mono px-2 py-0.2 rounded-full border",
+                              r.status === "added"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                : r.status === "duplicate"
+                                ? "bg-amber-50 text-amber-800 border-amber-200"
+                                : "bg-rose-50 text-rose-800 border-rose-200"
+                            )}
+                          >
+                            {r.status === "added"
+                              ? "NEWLY ADDED"
+                              : r.status === "duplicate"
+                              ? `DUPLICATE (${r.match_reason?.toUpperCase() || "MATCH"})`
+                              : "MALFORMED"}
+                          </span>
+                          {r.publication_year && (
+                            <span className="font-mono text-[10px] text-[#62535d]">{r.publication_year}</span>
+                          )}
+                          {r.doi && (
+                            <span className="font-mono text-[10px] text-[#81737b] truncate max-w-[200px]" title={r.doi}>
+                              DOI: {r.doi}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="font-serif text-sm font-medium text-[#4f444b] leading-snug">
+                          {r.title || "(Untitled record)"}
+                        </h4>
+                        {r.authors && <p className="text-[11px] text-[#62535d] truncate">{r.authors}</p>}
+                      </div>
+
+                      {/* Right Status / Link */}
+                      <div className="shrink-0 flex items-center gap-2">
+                        {r.study_active && r.study_id ? (
+                          <Link
+                            to={`/projects/${projectId}/studies`}
+                            onClick={onClose}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-[#3a0f34] bg-[#fbf9f4] hover:bg-[#eee7ec] border border-[#d2c2cb] transition-colors"
+                          >
+                            <span>Study Record</span>
+                            <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        ) : r.status === "added" ? (
+                          <span className="text-[11px] font-mono text-[#81737b] px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg">
+                            Removed (Batch undone)
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-mono text-[#81737b] px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg">
+                            Duplicate (Retained primary)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Malformed records section if any */}
+              {detail?.malformed_records && detail.malformed_records.length > 0 && (
+                <div className="mt-4 p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-medium text-amber-900">
+                    <AlertCircle className="h-4 w-4 text-amber-700" />
+                    <span>Malformed Records ({detail.malformed_records.length})</span>
+                  </div>
+                  <div className="space-y-1.5 text-xs text-amber-800">
+                    {detail.malformed_records.map((m, i) => (
+                      <div key={i} className="p-2 rounded-lg bg-white/70 border border-amber-200/80 font-mono text-[11px]">
+                        <div>{m.reason}</div>
+                        {m.snippet && <div className="text-[#81737b] mt-0.5 truncate">{m.snippet}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-[#d2c2cb] bg-[#fbf9f4] flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-medium bg-[#ffffff] border border-[#d2c2cb] text-[#4f444b] hover:bg-[#eee7ec] transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-const getInitialBatches = (pid: string): ImportBatch[] => {
-  try {
-    const saved = localStorage.getItem(`radextract_import_batches_${pid}`);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [
-    {
-      id: `batch_seed_1_${pid}`,
-      projectId: pid,
-      date: "14 Oct 2026",
-      filename: "ACTA2_Included_103_Studies.ris",
-      addedCount: 75,
-      referencesCount: 103,
-      duplicatesCount: 28,
-      mergedCount: 0,
-      source: "Scopus",
-      studyIds: [],
-    },
-    {
-      id: `batch_seed_2_${pid}`,
-      projectId: pid,
-      date: "14 Oct 2026",
-      filename: "export_0b88f950-fa22-4142-bbd2-282685ff0f2f_2026-10-13T194351.786774561.ris",
-      addedCount: 1181,
-      referencesCount: 1226,
-      duplicatesCount: 45,
-      mergedCount: 0,
-      source: "Scopus",
-      undoneAt: "14 Oct 2026",
-      studyIds: [],
-    },
-    {
-      id: `batch_seed_3_${pid}`,
-      projectId: pid,
-      date: "14 Oct 2026",
-      filename: "records.ris",
-      addedCount: 1271,
-      referencesCount: 1396,
-      duplicatesCount: 125,
-      mergedCount: 0,
-      source: "Embase",
-      undoneAt: "18 Oct 2026",
-      studyIds: [],
-    },
-  ];
-};
+function BatchUndoModal({
+  isOpen,
+  batch,
+  projectId,
+  onClose,
+  onSuccess,
+}: {
+  isOpen: boolean;
+  batch: ImportBatch | null;
+  projectId: string;
+  onClose: () => void;
+  onSuccess: (msg: string) => void;
+}) {
+  const [confirmedDownstream, setConfirmedDownstream] = useState(false);
+  const [isUndoing, setIsUndoing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const { data: preview, isLoading } = useQuery({
+    queryKey: ["undo_preview", projectId, batch?.batch_id],
+    queryFn: () => api.previewUndoBatch(projectId, batch!.batch_id),
+    enabled: !!batch && isOpen,
+  });
+
+  if (!isOpen || !batch) return null;
+
+  const handleConfirmUndo = async () => {
+    setIsUndoing(true);
+    setErrorMsg(null);
+    try {
+      const res = await api.undoImportBatch(projectId, batch.batch_id, confirmedDownstream);
+      onSuccess(res.message);
+      onClose();
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to undo batch");
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
+  const hasDownstream = preview?.has_downstream_work;
+  const canProceed = !hasDownstream || confirmedDownstream;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+      <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden font-sans">
+        {/* Header */}
+        <div className="p-5 border-b border-[#d2c2cb] bg-[#fbf9f4] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200">
+              <Undo2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-serif text-lg font-medium text-[#3a0f34]">
+                Confirm Undo Import
+              </h3>
+              <p className="text-xs text-[#62535d] font-mono truncate max-w-xs sm:max-w-md">
+                {batch.filename}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-5 sm:p-6 space-y-4 text-xs text-[#4f444b]">
+          {isLoading ? (
+            <div className="py-8 text-center text-[#62535d] flex flex-col items-center justify-center gap-2">
+              <Loader2 className="h-6 w-6 text-[#814d75] animate-spin" />
+              <span className="font-serif italic">Analyzing study contributions and downstream work...</span>
+            </div>
+          ) : (
+            <>
+              <div className="p-3.5 rounded-xl bg-[#fbf9f4] border border-[#d2c2cb] space-y-2">
+                <div className="font-medium text-[#3a0f34]">Impact Summary:</div>
+                <ul className="list-disc list-inside space-y-1 text-[#62535d]">
+                  <li>
+                    <strong>{preview?.studies_to_remove_count ?? 0}</strong> study record(s) will leave the active project.
+                  </li>
+                  {preview && preview.studies_retained_count > 0 && (
+                    <li className="text-emerald-800">
+                      <strong>{preview.studies_retained_count}</strong> study record(s) will be <em>retained</em> because they are also part of other active imports.
+                    </li>
+                  )}
+                  <li>
+                    Batch history will retain this entry marked as <strong>Inactive (Undone)</strong>.
+                  </li>
+                </ul>
+              </div>
+
+              {/* Downstream warning */}
+              {hasDownstream && (
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 space-y-2.5">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-semibold">Downstream Work Detected:</strong>
+                      <p className="text-[11px] text-amber-800 mt-0.5">
+                        Studies from this batch have active screening decisions or extractions ({preview.downstream_work.screening_decisions_count} decision(s), {preview.downstream_work.extractions_count} extraction(s)).
+                      </p>
+                    </div>
+                  </div>
+                  <label className="flex items-start gap-2 pt-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={confirmedDownstream}
+                      onChange={(e) => setConfirmedDownstream(e.target.checked)}
+                      className="mt-0.5 rounded text-[#3a0f34] focus:ring-[#814d75]"
+                    />
+                    <span className="text-[11px] font-medium text-amber-950">
+                      I understand and confirm that downstream screening decisions and extractions on these studies will be removed.
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              {errorMsg && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                  {errorMsg}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-[#d2c2cb] bg-[#fbf9f4] flex items-center justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isUndoing}
+            className="px-4 py-2 rounded-xl text-xs font-medium bg-[#ffffff] border border-[#d2c2cb] text-[#4f444b] hover:bg-[#eee7ec] transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmUndo}
+            disabled={!canProceed || isUndoing || isLoading}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-700 hover:bg-rose-800 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
+          >
+            {isUndoing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            <span>Confirm & Undo Batch</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean }) {
   const { projectId } = useParams<{ projectId: string }>();
@@ -96,16 +482,21 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
 
   // Direct Drag & Drop and Batch History State
-  const [importBatches, setImportBatches] = useState<ImportBatch[]>(() => getInitialBatches(projectId || "default"));
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessingDirect, setIsProcessingDirect] = useState(false);
   const [directProcessMsg, setDirectProcessMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (projectId) {
-      setImportBatches(getInitialBatches(projectId));
-    }
-  }, [projectId]);
+  // Real Batch History & Undo state
+  const [selectedDetailBatchId, setSelectedDetailBatchId] = useState<string | null>(null);
+  const [selectedUndoBatch, setSelectedUndoBatch] = useState<ImportBatch | null>(null);
+  const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
+  const [editingSourceValue, setEditingSourceValue] = useState("");
+
+  const { data: importBatches = [], isLoading: isBatchesLoading } = useQuery({
+    queryKey: ["import_batches", projectId],
+    queryFn: () => api.getImportBatches(projectId!),
+    enabled: !!projectId,
+  });
 
   const { data: studies, isLoading } = useQuery({
     queryKey: ["studies", projectId],
@@ -141,7 +532,10 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteStudy(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["studies", projectId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import_batches", projectId] });
+    },
   });
 
   const refUploadMutation = useMutation({
@@ -156,6 +550,8 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       }
       setUploadMsg(parts.join(", "));
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import_batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
     },
     onError: (err: Error) => {
       setUploadMsg(`Error: ${err.message}`);
@@ -181,22 +577,14 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       const refFiles = fileArray.filter(f => !f.name.toLowerCase().endsWith(".pdf"));
 
       let totalAdded = 0;
-      let totalRefs = 0;
       let totalDuplicates = 0;
-      const batchStudyIds: string[] = [];
 
       // Reference files (.ris, .bib, .csv, .xml, .nbib, .txt)
       if (refFiles.length > 0) {
         setDirectProcessMsg(`Parsing ${refFiles.length} bibliographic reference file(s)...`);
         const res = await api.uploadReferences(projectId!, refFiles);
-        const added = res.imported_count || 0;
-        const skipped = res.skipped_duplicates || 0;
-        totalAdded += added;
-        totalDuplicates += skipped;
-        totalRefs += (added + skipped);
-        if (res.imported_studies) {
-          batchStudyIds.push(...res.imported_studies.map((s: any) => s.study_id));
-        }
+        totalAdded += res.imported_count || 0;
+        totalDuplicates += res.skipped_duplicates || 0;
       }
 
       // PDF files
@@ -207,7 +595,6 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
           try {
             const identified = await autoIdentifyPdf(pdf, projectId);
             created.push(identified as any);
-            batchStudyIds.push(identified.study_id);
           } catch (e) {
             console.error(e);
           }
@@ -215,44 +602,13 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         if (created.length > 0) {
           await api.bulkAddStudies(projectId!, created);
           totalAdded += created.length;
-          totalRefs += created.length;
         }
       }
 
-      const todayStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-      const mainName = fileArray.length === 1 ? fileArray[0].name : `${fileArray[0].name} (+${fileArray.length - 1} more)`;
-      const sourceGuess = mainName.toLowerCase().includes("embase")
-        ? "Embase"
-        : mainName.toLowerCase().includes("scopus")
-        ? "Scopus"
-        : mainName.toLowerCase().includes("pubmed")
-        ? "PubMed"
-        : refFiles.length > 0
-        ? "RIS File"
-        : "Direct PDF Upload";
-
-      const newBatch: ImportBatch = {
-        id: `batch_${Date.now()}`,
-        projectId: projectId!,
-        date: todayStr,
-        filename: mainName,
-        addedCount: totalAdded,
-        referencesCount: totalRefs || totalAdded,
-        duplicatesCount: totalDuplicates,
-        mergedCount: 0,
-        source: sourceGuess,
-        studyIds: batchStudyIds,
-      };
-
-      const nextBatches = [newBatch, ...importBatches];
-      setImportBatches(nextBatches);
-      try {
-        localStorage.setItem(`radextract_import_batches_${projectId}`, JSON.stringify(nextBatches));
-      } catch (e) {}
-
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
       queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
-      setUploadMsg(`Import successful: ${totalAdded} studies added to screening from ${mainName}.`);
+      queryClient.invalidateQueries({ queryKey: ["import_batches", projectId] });
+      setUploadMsg(`Import successful: ${totalAdded} studies added, ${totalDuplicates} duplicates skipped.`);
     } catch (err: any) {
       setUploadMsg(`Import error: ${err.message || "Failed to process files"}`);
     } finally {
@@ -261,39 +617,15 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
     }
   };
 
-  const handleUndoImport = async (batchId: string) => {
-    const batch = importBatches.find(b => b.id === batchId);
-    if (!batch || batch.undoneAt) return;
-
-    if (!window.confirm(`Undo import of ${batch.filename}? This will remove the studies imported in this batch.`)) {
-      return;
-    }
-
-    const todayStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-    const updated = importBatches.map(b => b.id === batchId ? { ...b, undoneAt: todayStr } : b);
-    setImportBatches(updated);
+  const handleSaveSource = async (batchId: string) => {
     try {
-      localStorage.setItem(`radextract_import_batches_${projectId}`, JSON.stringify(updated));
-    } catch (e) {}
-
-    try {
-      const curStudies = await api.listStudies(projectId!);
-      let remaining: Study[];
-      if (batch.studyIds && batch.studyIds.length > 0) {
-        const toRemove = new Set(batch.studyIds);
-        remaining = curStudies.filter(s => !toRemove.has(s.study_id));
-        for (const id of batch.studyIds) {
-          api.deleteStudy(id).catch(() => {});
-        }
-      } else {
-        remaining = curStudies.slice(0, Math.max(0, curStudies.length - (batch.addedCount || 1)));
-      }
-      saveStoredProjectStudies(projectId!, remaining);
+      await api.updateBatchSource(projectId!, batchId, editingSourceValue);
+      setEditingBatchId(null);
+      queryClient.invalidateQueries({ queryKey: ["import_batches", projectId] });
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
-      setUploadMsg(`Import undone: ${batch.filename} was successfully undone on ${todayStr}.`);
+      setUploadMsg("Batch source metadata updated successfully.");
     } catch (err: any) {
-      console.error("Error undoing import:", err);
+      setUploadMsg(`Failed to update source: ${err.message}`);
     }
   };
 
@@ -597,118 +929,220 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         )}
       </div>
 
-      {/* ── Import Batches History (Covidence-Style Cards with Undo Import) ── */}
-      {importBatches.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-black/[0.08] pb-2">
-            <div className="flex items-center gap-2">
-              <h3 className="font-serif text-lg font-normal text-[#141413]">
-                Import Batches & Screening History
-              </h3>
-              <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-black/[0.05] text-[#6B665E]">
-                {importBatches.length} Batches
-              </span>
-            </div>
-            <span className="text-xs text-[#8A817A] italic font-serif hidden sm:inline">
-              Click "Undo import" on any batch to revert study inclusions
+      {/* ── Import Batches & Screening History (Compact Table + Real Project Data) ── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-[#d2c2cb] pb-2">
+          <div className="flex items-center gap-2">
+            <h3 className="font-serif text-lg font-normal text-[#141413]">
+              Import Batches & Screening History
+            </h3>
+            <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-black/[0.05] text-[#6B665E]">
+              {importBatches.length} {importBatches.length === 1 ? "Batch" : "Batches"}
             </span>
           </div>
-
-          <div className="space-y-4">
-            {importBatches.map((batch) => (
-              <div
-                key={batch.id}
-                className="bg-white border border-black/10 rounded-2xl p-5 sm:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4 transition-all hover:border-black/20"
-              >
-                {/* Header: Date + Filename on Left, Status / Undo Import on Right */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/[0.04] pb-3">
-                  <div>
-                    <div className="text-xs text-[#8A817A] font-sans font-medium">{batch.date}</div>
-                    <div className="text-sm font-semibold font-mono text-[#141413] mt-0.5 break-all">
-                      {batch.filename}
-                    </div>
-                  </div>
-
-                  <div className="shrink-0">
-                    {batch.undoneAt ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans text-slate-500 bg-slate-100 border border-slate-200">
-                        <Check className="h-3.5 w-3.5 text-slate-400" />
-                        <span>Undone on {batch.undoneAt}</span>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleUndoImport(batch.id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-rose-700 bg-black/[0.03] hover:bg-rose-50 border border-black/10 hover:border-rose-200 transition-colors"
-                        title="Revert this batch and remove its studies from review"
-                      >
-                        <Undo2 className="h-3.5 w-3.5 text-slate-500 hover:text-rose-600" />
-                        <span>Undo import</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* 5 Metric Cards in a Row */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {/* Card 1: Added to title and abstract screening */}
-                  <div className="bg-slate-100/70 border border-slate-200/80 rounded-xl p-3.5 flex flex-col justify-between">
-                    <span className="text-[11px] text-slate-600 font-sans leading-tight">
-                      Added to title and abstract screening
-                    </span>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
-                      {batch.addedCount}
-                    </span>
-                  </div>
-
-                  {/* Card 2: References */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <span className="text-[11px] text-slate-600 font-sans leading-tight">
-                      References
-                    </span>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
-                      {batch.referencesCount}
-                    </span>
-                  </div>
-
-                  {/* Card 3: Duplicates */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
-                      <span>Duplicates</span>
-                      <ExternalLink className="h-3 w-3 text-slate-400" />
-                    </div>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
-                      {batch.duplicatesCount}
-                    </span>
-                  </div>
-
-                  {/* Card 4: Merged */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
-                      <span>Merged</span>
-                      <HelpCircle className="h-3 w-3 text-slate-400" />
-                    </div>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
-                      {batch.mergedCount}
-                    </span>
-                  </div>
-
-                  {/* Card 5: Source */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
-                      <span>Source</span>
-                      <Edit3 className="h-3 w-3 text-slate-400" />
-                    </div>
-                    <span className="text-sm sm:text-base font-semibold font-sans text-slate-800 mt-2 truncate" title={batch.source}>
-                      {batch.source}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {importBatches.length > 0 && (
+            <span className="text-xs text-[#81737b] italic font-serif hidden sm:inline">
+              Click "Undo" on any batch to preview impact and safely revert study inclusions
+            </span>
+          )}
         </div>
-      )}
+
+        {importBatches.length === 0 ? (
+          <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl p-8 text-center space-y-3 shadow-2xs">
+            <div className="h-10 w-10 rounded-full bg-[#fbf9f4] border border-[#d2c2cb] text-[#814d75] flex items-center justify-center mx-auto">
+              <FolderPlus className="h-5 w-5" />
+            </div>
+            <h4 className="font-serif text-base font-normal text-[#141413]">
+              No imports yet — import references to get started.
+            </h4>
+            <p className="font-sans text-xs text-[#62535d] max-w-md mx-auto">
+              Upload RIS, BibTeX, PubMed NBIB, CSV, or XML bibliographic references or study PDFs to build this project's literature repository.
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-colors shadow-2xs"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                <span>Import References</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl overflow-hidden shadow-2xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#fbf9f4] border-b border-[#d2c2cb] text-[11px] font-semibold text-[#62535d] tracking-wider uppercase font-sans">
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Filename</th>
+                    <th className="py-3 px-4">Source</th>
+                    <th className="py-3 px-4 text-center">Added</th>
+                    <th className="py-3 px-4 text-center">Duplicates</th>
+                    <th className="py-3 px-4 text-center">Retained</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#d2c2cb]/60 font-sans text-xs">
+                  {importBatches.map((batch) => {
+                    const isUndone = batch.status === "undone" || !!batch.undone_at;
+                    const isEditingThisSource = editingBatchId === batch.batch_id;
+                    const retainedCount = batch.retained_studies_count ?? (isUndone ? 0 : batch.imported_count);
+
+                    return (
+                      <tr
+                        key={batch.batch_id}
+                        className={cn(
+                          "hover:bg-[#fbf9f4]/60 transition-colors",
+                          isUndone && "opacity-70 bg-slate-50/40"
+                        )}
+                      >
+                        {/* Date */}
+                        <td className="py-3 px-4 text-[#62535d] whitespace-nowrap">
+                          {new Date(batch.created_at).toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </td>
+
+                        {/* Filename */}
+                        <td className="py-3 px-4 font-mono font-medium text-[#141413] max-w-[220px] truncate" title={batch.filename}>
+                          {batch.filename}
+                        </td>
+
+                        {/* Source (Editable Inline) */}
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {isEditingThisSource ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={editingSourceValue}
+                                onChange={(e) => setEditingSourceValue(e.target.value)}
+                                className="text-xs px-2 py-1 rounded border border-[#814d75] focus:outline-none focus:ring-1 focus:ring-[#814d75] bg-white font-sans w-28"
+                                placeholder="e.g. PubMed"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveSource(batch.batch_id);
+                                  if (e.key === "Escape") setEditingBatchId(null);
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveSource(batch.batch_id)}
+                                className="p-1 text-emerald-700 hover:bg-emerald-50 rounded"
+                                title="Save Source"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingBatchId(null)}
+                                className="p-1 text-slate-500 hover:bg-slate-100 rounded"
+                                title="Cancel"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 group">
+                              <span className="font-sans text-xs text-[#4f444b] font-medium truncate max-w-[120px]" title={batch.source || "Unspecified"}>
+                                {batch.source || <span className="text-[#81737b] italic font-normal">Unspecified</span>}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingBatchId(batch.batch_id);
+                                  setEditingSourceValue(batch.source || "");
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-[#81737b] hover:text-[#3a0f34] transition-opacity"
+                                title="Edit source"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Added to TA Screening */}
+                        <td className="py-3 px-4 text-center font-mono font-medium text-[#141413]">
+                          {batch.imported_count}
+                        </td>
+
+                        {/* Duplicates */}
+                        <td className="py-3 px-4 text-center font-mono text-[#62535d]">
+                          {batch.duplicate_count}
+                        </td>
+
+                        {/* Retained / Active Studies */}
+                        <td className="py-3 px-4 text-center font-mono font-semibold text-[#3a0f34]">
+                          {retainedCount}
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-3 px-4 text-center whitespace-nowrap">
+                          {isUndone ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 text-slate-600 border border-slate-200" title={batch.undone_at ? `Undone on ${batch.undone_at}` : "Undone"}>
+                              <Check className="h-3 w-3 text-slate-400" />
+                              <span>Undone</span>
+                            </span>
+                          ) : batch.status === "completed_with_errors" ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-amber-50 text-amber-800 border border-amber-200">
+                              <AlertCircle className="h-3 w-3 text-amber-600" />
+                              <span>Errors ({batch.failed_count})</span>
+                            </span>
+                          ) : batch.status === "failed" ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-rose-50 text-rose-800 border border-rose-200">
+                              <AlertCircle className="h-3 w-3 text-rose-600" />
+                              <span>Failed</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <Check className="h-3 w-3 text-emerald-600" />
+                              <span>Active</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedDetailBatchId(batch.batch_id)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-[#4f444b] hover:text-[#3a0f34] bg-white hover:bg-[#eee7ec] border border-[#d2c2cb] transition-colors"
+                              title="View batch details, record items, and duplicate outcomes"
+                            >
+                              <span>Details</span>
+                            </button>
+                            {!isUndone ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedUndoBatch(batch)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-[#d2c2cb] hover:border-rose-200 transition-colors"
+                                title="Revert this batch and remove its studies from review"
+                              >
+                                <Undo2 className="h-3 w-3" />
+                                <span>Undo</span>
+                              </button>
+                            ) : (
+                              <span className="text-[11px] font-mono text-[#81737b] px-2 py-1">
+                                Reverted
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
@@ -780,6 +1214,28 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         onResolved={() => {
           queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
           queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+        }}
+      />
+
+      {/* Batch Details Modal */}
+      <BatchDetailsModal
+        isOpen={!!selectedDetailBatchId}
+        batchId={selectedDetailBatchId}
+        projectId={projectId!}
+        onClose={() => setSelectedDetailBatchId(null)}
+      />
+
+      {/* Batch Undo Modal */}
+      <BatchUndoModal
+        isOpen={!!selectedUndoBatch}
+        batch={selectedUndoBatch}
+        projectId={projectId!}
+        onClose={() => setSelectedUndoBatch(null)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["import_batches", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+          setUploadMsg("Batch successfully undone.");
         }}
       />
     </div>
