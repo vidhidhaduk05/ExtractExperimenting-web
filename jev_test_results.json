@@ -1,0 +1,1807 @@
+[
+  {
+    "route_name": "Landing Page",
+    "path": "/",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "S Stellar Labs",
+        "role": "a",
+        "url_before": "",
+        "url_after": "",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Enter Workspace",
+        "role": "a",
+        "url_before": "",
+        "url_after": "#/projects",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Get in touch \u2192",
+        "role": "a",
+        "url_before": "#/projects",
+        "url_after": "#/projects",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Reset to auto-built query",
+        "role": "button",
+        "url_before": "#/projects",
+        "url_after": "#/projects/p_sec_test",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "on",
+        "role": "input",
+        "url_before": "#/projects/p_sec_test",
+        "url_after": "#/projects/p_sec_test/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Search papers \u2192",
+        "role": "button",
+        "url_before": "#/projects/p_sec_test/export",
+        "url_after": "#/projects/p_sec_test/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Breast imaging \u2197",
+        "role": "button",
+        "url_before": "#/projects/p_sec_test/export",
+        "url_after": "#/projects/p_sec_test/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Stroke imaging \u2197",
+        "role": "button",
+        "url_before": "#/projects/p_sec_test/export",
+        "url_after": "#/projects/p_sec_test/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Chest imaging \u2197",
+        "role": "button",
+        "url_before": "#/projects/p_sec_test/export",
+        "url_after": "#/projects/p_sec_test/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Sleep & memory \u2197",
+        "role": "button",
+        "url_before": "#/projects/p_sec_test/export",
+        "url_after": "#/projects/p_sec_test/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Cardiovascular health \u2197",
+        "role": "button",
+        "url_before": "#/projects/p_sec_test/export",
+        "url_after": "#/projects/p_sec_test/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Mental health \u2197",
+        "role": "button",
+        "url_before": "#/projects/p_sec_test/export",
+        "url_after": "#/projects/p_sec_test/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "CLICK",
+      "target": "1",
+      "choice": "e1",
+      "confidence": 0.5833,
+      "latency_ms": 4106
+    }
+  },
+  {
+    "route_name": "Projects List",
+    "path": "/projects",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#projects",
+        "url_after": "#projects",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#projects",
+        "url_after": "#projects",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "New Project",
+        "role": "a",
+        "url_before": "#projects",
+        "url_after": "#/projects/new",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "ACTIVE PROJECT ID: 4826596b-a6c6- Economic Value of AI in Radiology: A Systematic Review RQ: Economi",
+        "role": "a",
+        "url_before": "#/projects/new",
+        "url_after": "#/projects/new",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "ACTIVE PROJECT ID: 70df98b2-c4f2- GVGVU 10/26/2026",
+        "role": "a",
+        "url_before": "#/projects/new",
+        "url_after": "#/projects/new",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "ACTIVE PROJECT ID: e559eb12-10cb- ACTA2 RQ: PURE ATERIAL MALFORMATION IN BRAIN IMAGING 10/24/2026",
+        "role": "a",
+        "url_before": "#/projects/new",
+        "url_after": "#/projects",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "ACTIVE PROJECT ID: 468cbbb9-e388- Canvas Syndrome Neurological Signs 10/24/2026",
+        "role": "a",
+        "url_before": "#/projects",
+        "url_after": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "ACTIVE PROJECT ID: stroke_sr_ich_ Effect of AI Assistance on Radiologist Performance in Acute Stroke",
+        "role": "a",
+        "url_before": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9",
+        "url_after": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "ACTIVE PROJECT ID: proj_plot_bf9c Plot Verification Project 10/23/2026",
+        "role": "a",
+        "url_before": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9/prisma",
+        "url_after": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9/review",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "ACTIVE PROJECT ID: proj_plot_f06b Plot Verification Project 10/23/2026",
+        "role": "a",
+        "url_before": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9/review",
+        "url_after": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9/rob",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "ACTIVE PROJECT ID: p_sec_test Security Test Project 10/23/2026",
+        "role": "a",
+        "url_before": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9/rob",
+        "url_after": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "ACTIVE PROJECT ID: p_sec_test2 Security Test Project 2 10/23/2026",
+        "role": "a",
+        "url_before": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9/meta-analysis",
+        "url_after": "#/projects/468cbbb9-e388-46c4-8c7c-db555aef33f9/analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "BLOCKED",
+      "target": null,
+      "choice": "BLOCKED",
+      "confidence": 0.1151,
+      "latency_ms": 1738
+    }
+  },
+  {
+    "route_name": "Project Overview",
+    "path": "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Clarification inbox, 0 pending",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Settings",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Open PDF Viewer",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Extraction Sheet",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Matrix EXTRACTION SHEET",
+        "role": "a",
+        "url_before": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "6 Papers DATA EXTRACTION (PDF)",
+        "role": "a",
+        "url_before": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "100 STUDIES",
+        "role": "a",
+        "url_before": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "0 SCREENED IN",
+        "role": "a",
+        "url_before": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "View PRISMA FLOW",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "0 ROB ASSESSMENTS",
+        "role": "a",
+        "url_before": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "DONE",
+      "target": null,
+      "choice": "DONE",
+      "confidence": 0.0239,
+      "latency_ms": 1692
+    }
+  },
+  {
+    "route_name": "Studies Workbench",
+    "path": "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Clarification inbox, 0 pending",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Settings",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Back to Project Dashboard",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "View bookmarked studies",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/bookmarks",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Start Blank Workspace",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Duplicate Review",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Bulk Upload PDFs",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Import Study",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies/new",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Extraction Sheet",
+        "role": "a",
+        "url_before": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies/new",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies/new",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "In-situ PDF Viewer",
+        "role": "a",
+        "url_before": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies/new",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies/new",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "DONE",
+      "target": null,
+      "choice": "DONE",
+      "confidence": 0.018,
+      "latency_ms": 1619
+    }
+  },
+  {
+    "route_name": "Screening Workbench",
+    "path": "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Clarification inbox, 0 pending",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Settings",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Back to Project",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Bulk Upload from Laptop",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Hotkeys ?",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Velvet Stream + Senior Mode LIVE",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Keywords & Highlighting (13)",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Start Stage 1 (Title & Abstract)",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Start Full Co-Scientist Screening",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "TOTAL 100",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "DONE",
+      "target": null,
+      "choice": "DONE",
+      "confidence": 0.2367,
+      "latency_ms": 2763
+    }
+  },
+  {
+    "route_name": "Extraction Sheet Matrix",
+    "path": "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Clarification inbox, 0 pending",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Settings",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Back to Studies",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Prefill Metadata",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Variable Designer",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Blank Template (.xlsx)",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Completed Results (.xlsx)",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "All Statuses Verified Studies Pending Review Studies with Missing (NR)",
+        "role": "select",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Inspector",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Configure Variables",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "DONE",
+      "target": null,
+      "choice": "DONE",
+      "confidence": 0.1896,
+      "latency_ms": 2777
+    }
+  },
+  {
+    "route_name": "PRISMA 2020 Flow",
+    "path": "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Clarification inbox, 0 pending",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Settings",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Back to project",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "SVG",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "PNG",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Word (docx)",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "CSV",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Mermaid",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "on",
+        "role": "input",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "on",
+        "role": "input",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "BLOCKED",
+      "target": null,
+      "choice": "BLOCKED",
+      "confidence": 0.0136,
+      "latency_ms": 1574
+    }
+  },
+  {
+    "route_name": "Risk of Bias (RoB)",
+    "path": "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Clarification inbox, 0 pending",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Settings",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Back to project",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Run Batch RoB",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Add studies",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "url_after": "#/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Run Batch RoB",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "BLOCKED",
+      "target": null,
+      "choice": "BLOCKED",
+      "confidence": 0.01,
+      "latency_ms": 1448
+    }
+  },
+  {
+    "route_name": "Meta-Analysis",
+    "path": "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Clarification inbox, 0 pending",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Settings",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Recalculate",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "DerSimonian-Laird Random-Effects (Recommended) Inverse-Variance Fixed-Effects",
+        "role": "select",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Odds Ratio (OR) Risk Ratio (RR) Mean Difference (MD) Standardized Mean Difference (SMD)",
+        "role": "select",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Run Synthesis",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Generate High-DPI Forest Plot (300 DPI)",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Generate Funnel Plot",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Guided Statistical Analysis (APA 7th)",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "DONE",
+      "target": null,
+      "choice": "DONE",
+      "confidence": 0.0752,
+      "latency_ms": 1971
+    }
+  },
+  {
+    "route_name": "PICO & Hypothesis",
+    "path": "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Clarification inbox, 0 pending",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Settings",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Back to project",
+        "role": "a",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Protocol Document",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Upload Protocol",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Research Question (Auto-Generate PICO)",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "PICO Framework",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Save PICO",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Research Question & Hypothesis",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Add",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "WAIT",
+      "target": null,
+      "choice": "wait",
+      "confidence": 0.0483,
+      "latency_ms": 1962
+    }
+  },
+  {
+    "route_name": "Export",
+    "path": "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Clarification inbox, 0 pending",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Settings",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Export Raw CSV",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Export XLSX",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Export JSON",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Draft Methods",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Draft Results",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Draft All",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Download included studies (.bib)",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "EndNote (RIS)",
+        "role": "button",
+        "url_before": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "url_after": "#projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "DONE",
+      "target": null,
+      "choice": "DONE",
+      "confidence": 0.0278,
+      "latency_ms": 1378
+    }
+  },
+  {
+    "route_name": "Claimscape",
+    "path": "/claimscape",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Reset to auto-built query",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "on",
+        "role": "input",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Map the evidence",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Breast imaging \u2197",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Stroke imaging \u2197",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Chest imaging \u2197",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Sleep & memory \u2197",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Cardiovascular health \u2197",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Mental health \u2197",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Cancer vaccines \u2197",
+        "role": "button",
+        "url_before": "#claimscape",
+        "url_after": "#claimscape",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "WAIT",
+      "target": null,
+      "choice": "wait",
+      "confidence": 0.0314,
+      "latency_ms": 2379
+    }
+  },
+  {
+    "route_name": "Citation Telephone",
+    "path": "/citation-telephone",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#citation-telephone",
+        "url_after": "#citation-telephone",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#citation-telephone",
+        "url_after": "#citation-telephone",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Live Claim Audit",
+        "role": "button",
+        "url_before": "#citation-telephone",
+        "url_after": "#citation-telephone",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Landmark Benchmark Trace",
+        "role": "button",
+        "url_before": "#citation-telephone",
+        "url_after": "#citation-telephone",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "CLICK",
+      "target": "2",
+      "choice": "e2",
+      "confidence": 0.021,
+      "latency_ms": 2118
+    }
+  },
+  {
+    "route_name": "RigorScan",
+    "path": "/rigor-scan",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#rigor-scan",
+        "url_after": "#rigor-scan",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#rigor-scan",
+        "url_after": "#rigor-scan",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "View reference example (Dubowitz et al.)",
+        "role": "button",
+        "url_before": "#rigor-scan",
+        "url_after": "#rigor-scan",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "View reference example (Dubowitz et al.)",
+        "role": "button",
+        "url_before": "#rigor-scan",
+        "url_after": "#rigor-scan",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "CLICK",
+      "target": "1",
+      "choice": "e1",
+      "confidence": 0.2063,
+      "latency_ms": 1372
+    }
+  },
+  {
+    "route_name": "Code Graph",
+    "path": "/graph/code",
+    "title": "Stellar Labs \u2014 From Evidence to the Bedside",
+    "render_ok": true,
+    "initial_errors": [],
+    "initial_net_fails": [],
+    "tested_elements": [
+      {
+        "label": "Minimize sidebar",
+        "role": "button",
+        "url_before": "#graph/code",
+        "url_after": "#graph/code",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Dark Mode",
+        "role": "button",
+        "url_before": "#graph/code",
+        "url_after": "#graph/code",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "All calls (4537) contains (3789) imports (2480) imports_from (1925) rationale_for (1525) references ",
+        "role": "select",
+        "url_before": "#graph/code",
+        "url_after": "#graph/code",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "All code (5202) rationale (1525) document (436) concept (134)",
+        "role": "select",
+        "url_before": "#graph/code",
+        "url_after": "#graph/code",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "50 100 200 500",
+        "role": "select",
+        "url_before": "#graph/code",
+        "url_after": "#graph/code",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Zoom In",
+        "role": "button",
+        "url_before": "#graph/code",
+        "url_after": "#graph/code",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Fit View",
+        "role": "button",
+        "url_before": "#graph/code",
+        "url_after": "#graph/code",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      },
+      {
+        "label": "Toggle Interactivity",
+        "role": "button",
+        "url_before": "#graph/code",
+        "url_after": "#graph/code",
+        "errors": [],
+        "net_fails": [],
+        "dialogs": [],
+        "status": "ok"
+      }
+    ],
+    "laya_decision": {
+      "operation": "DONE",
+      "target": null,
+      "choice": "DONE",
+      "confidence": 0.1782,
+      "latency_ms": 2737
+    }
+  }
+]
