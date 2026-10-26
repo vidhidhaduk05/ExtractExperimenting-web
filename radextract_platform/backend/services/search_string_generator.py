@@ -1220,14 +1220,25 @@ def _simple_pico_extraction(question: str) -> dict:
         pico["population"] = _clean_phrase(lead_match.group(1))
         rest = lead_match.group(2).strip()
     else:
-        # Check trailing population clause: "... in/among/for <population>"
-        pop_trailing = re.search(r"\s+(?:in|among|for)\s+([a-zA-Z0-9\s\-_()]+)$", q, re.IGNORECASE)
-        if pop_trailing:
-            pico["population"] = _clean_phrase(pop_trailing.group(1))
-            rest = q[:pop_trailing.start()].strip()
+        # Check compound outcome + population clause: "... for/to/detecting <outcome> in/among <population>"
+        compound_match = re.search(
+            r"\s+(?:for\s+(?:detecting|diagnosing|identifying|evaluating|reducing|improving)?|to\s+(?:detect|diagnose|identify|evaluate|treat)?|detecting|diagnosing)\s+(.+?)\s+(?:in|among)\s+(.+)$",
+            q, re.IGNORECASE
+        )
+        if compound_match:
+            pico["outcome"] = _clean_phrase(compound_match.group(1))
+            pico["population"] = _clean_phrase(compound_match.group(2))
+            rest = q[:compound_match.start()].strip()
             rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
         else:
-            rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
+            # Check trailing population clause: "... in/among/for <population>"
+            pop_trailing = re.search(r"\s+(?:in|among|for)\s+([a-zA-Z0-9\s\-_()]+)$", q, re.IGNORECASE)
+            if pop_trailing:
+                pico["population"] = _clean_phrase(pop_trailing.group(1))
+                rest = q[:pop_trailing.start()].strip()
+                rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
+            else:
+                rest = re.sub(r"^(?:does|do|can|is|are|will|could)\s+", "", rest, flags=re.IGNORECASE).strip()
 
     # 2. Pattern A: Non-inferiority: "X is non-inferior to Y in/for Z"
     non_inf_match = re.search(
@@ -1271,14 +1282,21 @@ def _simple_pico_extraction(question: str) -> dict:
 
     # 4. Pattern C: Direct comparison: "X compared to/versus/better than Y for/in Z"
     comp_match = re.search(
-        r"^(.+?)\s+(?:versus|vs\.?|compared\s+(?:to|with)|better\s+than|more\s+accurate\s+than)\s+(.+?)(?:\s+(?:for|in|to|detecting|diagnosing|identifying)\s+(.+))?$",
+        r"^(.+?)\s+(?:versus|vs\.?|compared\s+(?:to|with)|better\s+than|more\s+accurate\s+than)\s+(.+)$",
         rest, re.IGNORECASE
     )
     if comp_match:
         pico["index_test"] = _clean_phrase(comp_match.group(1))
-        pico["comparator"] = _clean_phrase(comp_match.group(2))
-        if comp_match.group(3):
-            pico["outcome"] = _clean_phrase(comp_match.group(3))
+        comp_tail = comp_match.group(2).strip()
+        tail_match = re.search(
+            r"^(.+?)\s+(?:for\s+(?:detecting|diagnosing|identifying)?|in\s+(?:detecting|diagnosing|identifying)?|to\s+(?:detect|diagnose|identify)?|detecting|diagnosing|identifying)\s+(.+)$",
+            comp_tail, re.IGNORECASE
+        )
+        if tail_match:
+            pico["comparator"] = _clean_phrase(tail_match.group(1))
+            pico["outcome"] = _clean_phrase(tail_match.group(2))
+        else:
+            pico["comparator"] = _clean_phrase(comp_tail)
         return pico
 
     # 5. Pattern D: "Does X detect/diagnose/identify Y"

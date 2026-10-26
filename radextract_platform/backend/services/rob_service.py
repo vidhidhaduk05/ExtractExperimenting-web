@@ -1085,6 +1085,7 @@ def assess_study_for_batch(
 
 
 ROB_BATCH_RUNS: dict[str, dict] = {}
+ROB_BATCH_THREADS: dict[str, Any] = {}
 
 
 def get_batch_rob_progress(project_id: str, db: Optional[DBBackend] = None) -> dict:
@@ -1141,11 +1142,20 @@ def cancel_batch_rob_run(project_id: str, db: Optional[DBBackend] = None) -> dic
     """Cancel an active batch RoB run."""
     if project_id in ROB_BATCH_RUNS:
         ROB_BATCH_RUNS[project_id]["active"] = False
+    th = ROB_BATCH_THREADS.get(project_id)
+    if th and th.is_alive():
+        th.join(timeout=3.0)
+    if project_id in ROB_BATCH_RUNS:
         ROB_BATCH_RUNS[project_id]["status"] = "cancelled"
     db = db or get_db_backend()
     rows = db.query("rob_runs", {"project_id": project_id, "status": "active"})
     for r in rows:
-        db.update("rob_runs", r["run_id"], {"status": "cancelled", "finished_at": _now()})
+        completed = ROB_BATCH_RUNS.get(project_id, {}).get("completed_studies", r.get("completed_studies", 0))
+        db.update("rob_runs", r["run_id"], {
+            "status": "cancelled",
+            "completed_studies": completed,
+            "finished_at": _now(),
+        })
     db.commit()
     return {"status": "cancelled", "project_id": project_id}
 
@@ -1311,6 +1321,8 @@ def start_batch_rob_run(
         finally:
             worker_db.close()
 
-    threading.Thread(target=_worker, daemon=True).start()
+    t = threading.Thread(target=_worker, daemon=True)
+    ROB_BATCH_THREADS[project_id] = t
+    t.start()
 
     return dict(run_state)

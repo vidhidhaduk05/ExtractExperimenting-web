@@ -352,18 +352,17 @@ def prefill_assessment(
             "warnings": warnings,
         }
 
-    # Attempt local Laya engine first if available
-    laya_result = prefill_assessment_with_laya(
-        tool_key=tool_key,
-        study_metadata=study_metadata,
-        study_text=study_text,
-        is_full_text=used_full_text,
-        warnings=warnings,
-    )
-    if laya_result is not None:
-        return laya_result
-
+    # If no custom model_fn was explicitly provided, attempt local Laya engine first
     if model_fn is None:
+        laya_result = prefill_assessment_with_laya(
+            tool_key=tool_key,
+            study_metadata=study_metadata,
+            study_text=study_text,
+            is_full_text=used_full_text,
+            warnings=warnings,
+        )
+        if laya_result is not None:
+            return laya_result
         model_fn = mock_model_fn
 
     # Process each domain via model_fn fallback

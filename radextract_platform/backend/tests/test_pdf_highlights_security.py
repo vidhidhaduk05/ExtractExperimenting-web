@@ -33,8 +33,10 @@ def test_list_study_highlights_access_control():
 
 def test_update_highlight_access_control():
     """Verify that update_highlight checks project access."""
+    from dependencies import create_access_token
     init_db()
     conn = get_connection()
+    conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES ('unauth_user', 'unauth_user', 'test')")
     conn.execute("INSERT OR REPLACE INTO projects (project_id, name) VALUES ('p_sec_test3', 'Security Test Project 3')")
     conn.execute("INSERT OR REPLACE INTO studies (study_id, project_id, title) VALUES ('s_sec_test3', 'p_sec_test3', 'Test Study')")
     conn.execute(
@@ -43,13 +45,16 @@ def test_update_highlight_access_control():
     )
     conn.commit()
 
-    response = client.put("/api/pdf-highlights/h_sec_test3", json={"comment": "Unauthorized Edit"})
+    token = create_access_token("unauth_user", "unauth_user", "viewer")
+    response = client.put("/api/pdf-highlights/h_sec_test3", json={"comment": "Unauthorized Edit"}, headers={"Authorization": f"Bearer {token}"})
     assert response.status_code in (401, 403)
 
 def test_delete_highlight_access_control():
     """Verify that delete_highlight checks project access."""
+    from dependencies import create_access_token
     init_db()
     conn = get_connection()
+    conn.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES ('unauth_user', 'unauth_user', 'test')")
     conn.execute("INSERT OR REPLACE INTO projects (project_id, name) VALUES ('p_sec_test4', 'Security Test Project 4')")
     conn.execute("INSERT OR REPLACE INTO studies (study_id, project_id, title) VALUES ('s_sec_test4', 'p_sec_test4', 'Test Study')")
     conn.execute(
@@ -58,5 +63,6 @@ def test_delete_highlight_access_control():
     )
     conn.commit()
 
-    response = client.delete("/api/pdf-highlights/h_sec_test4")
+    token = create_access_token("unauth_user", "unauth_user", "viewer")
+    response = client.delete("/api/pdf-highlights/h_sec_test4", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code in (401, 403)

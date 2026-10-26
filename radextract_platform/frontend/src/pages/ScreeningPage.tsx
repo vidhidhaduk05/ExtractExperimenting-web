@@ -1251,6 +1251,7 @@ export function ScreeningPage() {
 
           {/* Quick Dropdowns & Saved Filter */}
           <div className="flex items-center gap-2 flex-wrap">
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -1286,9 +1287,6 @@ export function ScreeningPage() {
               />
               <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
             </label>
-
-            {/* Tag Filter */}
-            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
           </div>
 
           {/* Search Box */}

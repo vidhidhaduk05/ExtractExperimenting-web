@@ -176,6 +176,25 @@ This document is the canonical ledger of all engineering, architectural, scienti
   * Real imports accurately populate the database, link to title/abstract screening, and can be inspected or safely undone with impact preview.
   * 8/8 automated backend integration tests pass in `test_import_batches.py`.
 
+---
+
+## 14. Universal Reliability Hardening & Customer Journey Stabilization (Pre-President Presentation)
+* **Date**: 2026-10-26
+* **Decision**: Complete end-to-end audit and repair across both backend and frontend layers to guarantee 100% green test passes and crash-free navigation across all customer journeys:
+  1. **Frontend API Error Propagation & Demo Fallback Boundary**: Re-scoped `shouldUseDemoFallback()` in `radextract_platform/frontend/src/lib/api.ts` and `src/lib/api.ts` so live requests and unit tests properly throw network/server errors when not explicitly in demo fallback mode, while providing safe `[]` fallbacks for `/batches` and ensuring human-in-the-loop decision writes never silently default to mock responses.
+  2. **Extraction Spreadsheet Workspace**: Guarded optional export endpoints (`api.exportTemplateUrl?.()` and `api.exportProjectXlsxUrl?.()`), stabilized grid queries, and updated test suite assertions.
+  3. **Screening Workspace & Tag Filtering**: Eliminated redundant toolbar components that caused duplicate DOM option lookups, restoring single-instance `<TagFilter />` in `ScreeningPage.tsx` and ensuring rapid hotkey/click deduplication.
+  4. **PDF Security & Authorization Enforcement**: In `test_pdf_highlights_security.py`, authenticated security tests with valid non-member tokens to accurately verify project-level access control on mutating endpoints (`PUT` / `DELETE` `/api/pdf-highlights/{id}`).
+  5. **Docling JSON Cache Lifecycle**: Updated `delete_pdf_data()` in `pdf_service.py` to cleanly remove on-disk `<pdf_basename>.docling.json` alongside database records, preventing stale payload retrieval.
+  6. **Jev Cloud vs Local Laya Provider Precedence**: In `jev_client.py`, enforced API key checks when `jev_provider == "typesafe"`, while preserving offline execution for local Laya ONNX tensor inference.
+  7. **Batch RoB Thread Synchronization**: Replaced fire-and-forget worker thread termination with tracked `ROB_BATCH_THREADS` and a 3-second join on cancellation in `rob_service.py`, eliminating race conditions between in-flight study assessments and progress counts.
+  8. **Compound Research Question PICO Parsing**: Added compound regex parsing (`for detecting <outcome> in <population>`) in `search_string_generator.py` to prevent prepositions from swallowing outcome terms into comparator strings.
+  9. **Universal Editorial Policy & Router Context**: Wrapped `CitationTelephonePage.test.tsx` in `<MemoryRouter>` and refined Laya sanitization regexes to preserve "Model" copy while redacting proprietary engine references.
+* **Verification & Evidence**:
+  * **Frontend**: 22/22 test suites (106/106 tests) passed with 0 failures; `npm run build` completed cleanly in 8.64s.
+  * **Backend**: 1,189/1,189 tests passed with 0 failures across the complete pytest suite.
+  * Merged and synchronized cleanly with `origin/main` on `vidhidhaduk05/ExtractExperimenting-web`.
+
 ## 2026-10-26 — Five-second clarification announcements and persistent inbox
 
 - New clarification questions use one compact toast below the header at the upper right, including on screening routes. Questions arriving in the same poll share a grouped announcement; later batches queue one at a time.
