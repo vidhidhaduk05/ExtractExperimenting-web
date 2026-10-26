@@ -628,18 +628,18 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
 
                   <div className="shrink-0">
                     {batch.undoneAt ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans text-slate-500 bg-slate-100 border border-slate-200">
-                        <Check className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans text-[#62535d] bg-[#eee7ec] border border-[#d2c2cb]">
+                        <Check className="h-3.5 w-3.5 text-[#81737b]" />
                         <span>Undone on {batch.undoneAt}</span>
                       </span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleUndoImport(batch.id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-rose-700 bg-black/[0.03] hover:bg-rose-50 border border-black/10 hover:border-rose-200 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#4f444b] hover:text-rose-700 bg-white hover:bg-rose-50 border border-[#d2c2cb] hover:border-rose-200 transition-colors"
                         title="Revert this batch and remove its studies from review"
                       >
-                        <Undo2 className="h-3.5 w-3.5 text-slate-500 hover:text-rose-600" />
+                        <Undo2 className="h-3.5 w-3.5 text-[#81737b] hover:text-rose-600" />
                         <span>Undo import</span>
                       </button>
                     )}
@@ -649,54 +649,54 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                 {/* 5 Metric Cards in a Row */}
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   {/* Card 1: Added to title and abstract screening */}
-                  <div className="bg-slate-100/70 border border-slate-200/80 rounded-xl p-3.5 flex flex-col justify-between">
-                    <span className="text-[11px] text-slate-600 font-sans leading-tight">
+                  <div className="bg-[#eee7ec] border border-[#d2c2cb] rounded-xl p-3.5 flex flex-col justify-between">
+                    <span className="text-[11px] text-[#62535d] font-sans leading-tight">
                       Added to title and abstract screening
                     </span>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#3a0f34] mt-2">
                       {batch.addedCount}
                     </span>
                   </div>
 
                   {/* Card 2: References */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <span className="text-[11px] text-slate-600 font-sans leading-tight">
+                  <div className="bg-white border border-[#d2c2cb] rounded-xl p-3.5 flex flex-col justify-between">
+                    <span className="text-[11px] text-[#62535d] font-sans leading-tight">
                       References
                     </span>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#3a0f34] mt-2">
                       {batch.referencesCount}
                     </span>
                   </div>
 
                   {/* Card 3: Duplicates */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
+                  <div className="bg-white border border-[#d2c2cb] rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center gap-1 text-[11px] text-[#62535d] font-sans leading-tight">
                       <span>Duplicates</span>
-                      <ExternalLink className="h-3 w-3 text-slate-400" />
+                      <ExternalLink className="h-3 w-3 text-[#81737b]" />
                     </div>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#3a0f34] mt-2">
                       {batch.duplicatesCount}
                     </span>
                   </div>
 
                   {/* Card 4: Merged */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
+                  <div className="bg-white border border-[#d2c2cb] rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center gap-1 text-[11px] text-[#62535d] font-sans leading-tight">
                       <span>Merged</span>
-                      <HelpCircle className="h-3 w-3 text-slate-400" />
+                      <HelpCircle className="h-3 w-3 text-[#81737b]" />
                     </div>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#3a0f34] mt-2">
                       {batch.mergedCount}
                     </span>
                   </div>
 
                   {/* Card 5: Source */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
+                  <div className="bg-white border border-[#d2c2cb] rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center gap-1 text-[11px] text-[#62535d] font-sans leading-tight">
                       <span>Source</span>
-                      <Edit3 className="h-3 w-3 text-slate-400" />
+                      <Edit3 className="h-3 w-3 text-[#81737b]" />
                     </div>
-                    <span className="text-sm sm:text-base font-semibold font-sans text-slate-800 mt-2 truncate" title={batch.source}>
+                    <span className="text-sm sm:text-base font-semibold font-sans text-[#3a0f34] mt-2 truncate" title={batch.source}>
                       {batch.source}
                     </span>
                   </div>
@@ -710,13 +710,13 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
         {bookmarkedOnly ? <span className="font-medium">{(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length} bookmarked studies</span> : <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length})</label>}
-        <span className="text-xs text-slate-500">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
+        <span className="text-xs text-[#81737b]">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
         {bookmarks.error && <span role="alert" className="text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
       </div>
-      {savedOnly && studies && studies.length > 0 && !studies.some(s => bookmarks.ids.includes(s.study_id)) && <p className="text-sm text-slate-500">No saved studies yet. Use the bookmark icon to save a study for later.</p>}
+      {savedOnly && studies && studies.length > 0 && !studies.some(s => bookmarks.ids.includes(s.study_id)) && <p className="text-sm text-[#62535d]">No saved studies yet. Use the bookmark icon to save a study for later.</p>}
       {/* Populated Study Table */}
-      {studies && studies.length > 0 && <p className="text-xs text-slate-500">{visibleStudies.length} matching studies</p>}
-      {tagFilter && studies && studies.length > 0 && visibleStudies.length === 0 && <p className="text-sm text-slate-500">No studies match this tag and the current filters.</p>}
+      {studies && studies.length > 0 && <p className="text-xs text-[#81737b]">{visibleStudies.length} matching studies</p>}
+      {tagFilter && studies && studies.length > 0 && visibleStudies.length === 0 && <p className="text-sm text-[#62535d]">No studies match this tag and the current filters.</p>}
       {studies && studies.length > 0 && (
         <div className="card-phylo overflow-hidden rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
           <div className="overflow-x-auto">

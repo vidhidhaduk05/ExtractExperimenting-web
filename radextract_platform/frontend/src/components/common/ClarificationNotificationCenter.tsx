@@ -8,6 +8,7 @@ import {
 import { Mail, X, CheckCircle2, ChevronRight, ChevronDown, Check, Loader2 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { sanitizeUiCopy } from "../../lib/editorialRules";
+import { BorderBeam } from "./BorderBeam";
 import "./ClarificationNotificationCenter.css";
 
 const EMPTY_QUESTIONS: ClarificationQuestion[] = [];
@@ -68,12 +69,13 @@ function ClarificationToast({ questions, onMinimize, onReview }: {
 
   const first = questions[0];
   return (
-    <section className="clarification-toast" style={{ top: headerBottom }} aria-label="New clarification"
+    <section className="clarification-toast relative overflow-hidden" style={{ top: headerBottom }} aria-label="New clarification"
       data-exiting={remaining <= 150 && !hovered && !focused && !hidden}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onKeyDown={event => event.stopPropagation()}
       onFocusCapture={() => setFocused(true)}
       onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
+      <BorderBeam active={true} duration={7} colorFrom="#814d75" colorTo="#ffdea6" borderWidth={1.5} />
       <div className="clarification-toast-heading">
         <Mail size={18} aria-hidden="true" />
         <strong>Clarification needed</strong>

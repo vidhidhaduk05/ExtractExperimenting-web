@@ -1578,10 +1578,8 @@ async function request<T>(
   try {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
-      // If server returns 404/500/502 on demo or project data, gracefully fallback
-      if (res.status === 404 || res.status >= 500) {
-        console.warn(`[API HTTP ${res.status}] ${base}${path} - Falling back to demo data`);
-        updateApiState({ state: "demo_fallback", apiBase: base });
+      if (shouldUseDemoFallback() && (path === "/projects" || path.startsWith("/projects/")) && (res.status === 403 || res.status === 404 || res.status >= 500)) {
+        console.warn(`[API Falling back to local data for ${path} due to HTTP ${res.status}]`);
         return handleDemoRequest<T>(path, options);
       }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
@@ -1592,14 +1590,12 @@ async function request<T>(
     return data as T;
   } catch (err: any) {
     const msg = err?.message || "Network request failed";
-    console.warn(`[API Connection Failed - Gracefully falling back to demo data] ${base}${path}:`, err);
-    updateApiState({ state: "demo_fallback", apiBase: base, errorMessage: msg });
-    try {
+    console.warn(`[API Connection Failed] ${base}${path}:`, err);
+    updateApiState({ state: "error", apiBase: base, errorMessage: msg });
+    if (shouldUseDemoFallback()) {
       return handleDemoRequest<T>(path, options);
-    } catch (fallbackErr) {
-      console.error(`[Demo Fallback Failed for ${path}]`, fallbackErr);
-      throw err;
     }
+    throw err;
   }
 }
 
@@ -1607,19 +1603,21 @@ async function request<T>(
 async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   if (!token) {
-    return handleDemoRequest<T>(path, options);
+    throw new Error("Sign in to record decisions under your account");
   }
-  try {
-    const res = await fetch(`${getApiBase()}${path}`, {
-      ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) {
-      return handleDemoRequest<T>(path, options);
-    }
-    return res.json();
-  } catch (err: any) {
-    return handleDemoRequest<T>(path, options);
+  const res = await fetch(`${getApiBase()}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...((options.headers as Record<string, string>) || {}),
+    },
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(error.detail || `HTTP ${res.status}`);
   }
+  return res.json();
 }
 
 // ── Types ──
