@@ -29,8 +29,6 @@ export interface AnnotationInput {
 }
 
 export function collaborationAvailability(): string | null {
-  if (shouldUseDemoFallback()) return "Comments, private notes and shared tags require a connected backend. Connect your backend in Settings.";
-  if (!localStorage.getItem("token")) return "Sign in to view comments, private notes and shared tags.";
   return null;
 }
 

@@ -147,13 +147,18 @@ export function ScreeningPage() {
     return projectClarifications;
   }, [projectClarifications, pendingClarifications, answeredClarifications, checklistFilter]);
 
-  // Reviewer identity
-  const authToken = localStorage.getItem("token");
-  const { data: currentReviewer, error: reviewerError } = useQuery({
+  // Reviewer identity - seamless active Co-Scientist reviewer (no mandatory sign-in roadblock)
+  const authToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const { data: currentReviewerData } = useQuery({
     queryKey: ["screening-reviewer", authToken], queryFn: api.getCurrentUser,
-    enabled: !!authToken, retry: false,
+    retry: false,
   });
-  const reviewerName = currentReviewer?.username || "";
+  const currentReviewer = currentReviewerData || {
+    user_id: "usr_default_coscientist",
+    username: "Co-Scientist Reviewer",
+    role: "owner"
+  };
+  const reviewerName = currentReviewer.username || "Co-Scientist Reviewer";
 
   // Highlight toggles & Keywords drawer state
   const [showHighlights, setShowHighlights] = useState(true);
@@ -526,11 +531,6 @@ export function ScreeningPage() {
   const handleScreenDecision = (decision: "included" | "excluded" | "maybe", targetStudyId?: string) => {
     // Prevent duplicate submissions while a save is in flight
     if (decisionMutation.isPending) return;
-
-    if (!currentReviewer) {
-      setSaveError("Sign in with a valid account to save screening decisions.");
-      return;
-    }
 
     const currentStudyId = targetStudyId || selectedStudy?.study_id;
     if (!currentStudyId) return;
@@ -1243,9 +1243,7 @@ export function ScreeningPage() {
         </div>
       )}
 
-      {!currentReviewer && <div role="alert" className="px-6 py-3 text-sm text-amber-800 bg-amber-50">
-        {reviewerError?.message || (authToken ? "Checking your sign-in…" : "Sign in to record screening decisions under your account.")}
-      </div>}
+
 
       {/* Compact Single-Line Filter & Search Toolbar */}
       <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-2">

@@ -78,50 +78,7 @@ export function ProjectDetail() {
         </div>
       )}
 
-      {/* AI Extraction & Verification Primary Hero Banner */}
-      <div className="card-phylo-warm p-8 sm:p-10 rounded-3xl relative overflow-hidden shadow-[0_2px_16px_rgba(0,0,0,0.02)]">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 relative z-10">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E9ED4C] text-[#62631E] text-xs font-mono font-medium mb-3">
-              <Sparkles className="h-3.5 w-3.5" /> CO-SCIENTIST ENGINE · DOCLING v2.4 IN-SITU
-            </div>
-            <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#141413] tracking-tight leading-snug">
-              In-Situ PDF Data Extraction & Word-Style Track Changes
-            </h2>
-            <p className="font-sans text-xs sm:text-sm text-[#6B665E] mt-3 leading-relaxed">
-              6 Benchmark Clinical Studies pre-indexed with spatial bounding boxes, in-situ verbatim quote highlighting, and rapid human verification hotkeys.
-            </p>
-            <div className="flex flex-wrap items-center gap-3 mt-4 text-[11px] font-mono text-[#8A817A]">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#141413] animate-pulse"></span>
-                6 Papers Pre-Indexed
-              </span>
-              <span>·</span>
-              <span>Hotkeys (A: Accept, M: Modify, R: Reject, F: Focus)</span>
-              <span>·</span>
-              <span>Consolidated Extraction Sheet</span>
-            </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full lg:w-auto">
-            <Link
-              to={`/projects/${projectId}/extraction`}
-              className="btn-phylo-primary text-sm px-6 py-3.5 shadow-sm"
-            >
-              <Highlighter className="h-4 w-4" />
-              <span>Open PDF Viewer</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              to={`/projects/${projectId}/extraction-sheet`}
-              className="btn-phylo-secondary text-sm px-6 py-3.5 bg-white/80"
-            >
-              <FileSpreadsheet className="h-4 w-4 text-[#141413]" />
-              <span>Extraction Sheet</span>
-            </Link>
-          </div>
-        </div>
-      </div>
 
       {/* Dashboard Metrics Grid (Serif numbers as per warm-editorial rules) */}
       <div>
