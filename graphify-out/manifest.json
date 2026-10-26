@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1793001196.4389665,
-    "seen": 1793001669.3806484,
-    "ast_hash": "78d63e3d4b08f6edb08ca0d2cccda9b4",
+    "mtime": 1793051171.2619123,
+    "seen": 1793051377.1817088,
+    "ast_hash": "399c3d7a112cbdde9bc4c81853e373b3",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -876,9 +876,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ProjectList.tsx": {
-    "mtime": 1792992150.6123016,
-    "seen": 1792993147.569746,
-    "ast_hash": "bd654084971e6ac7f87c977c643f0ccb",
+    "mtime": 1793051178.5657723,
+    "seen": 1793051377.215538,
+    "ast_hash": "340bb6c283e6c450e59e4f44e3a11d8b",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ReviewGraphPage.tsx": {
@@ -5213,12 +5213,6 @@
     "ast_hash": "f526a16984b9755df0827e560eacbb30",
     "semantic_hash": ""
   },
-  "radextract_platform/backend/.matplotlib_cache/fontlist-v3.11.0.json": {
-    "mtime": 1792988907.8989952,
-    "seen": 1792993147.338453,
-    "ast_hash": "19cc4d8e73f4550cb4f964a4e84af639",
-    "semantic_hash": ""
-  },
   "scripts/seed_pam_live.py": {
     "mtime": 1792991273.360546,
     "seen": 1792993147.5858662,
@@ -5292,9 +5286,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/screening/ExploratoryScreeningView.tsx": {
-    "mtime": 1793010204.8675537,
-    "seen": 1793010308.0755,
-    "ast_hash": "ad82f6f3677243ab0dba32e75f8c7a4f",
+    "mtime": 1793010364.958613,
+    "seen": 1793046656.6253822,
+    "ast_hash": "2807e6e8407aa301e10fc09e38a69335",
     "semantic_hash": ""
   }
 }
