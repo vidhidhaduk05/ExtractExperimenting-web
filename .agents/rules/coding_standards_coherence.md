@@ -24,3 +24,10 @@ description: Mandatory rules for code generation, architectural coherence, graph
   - Mobile/Native stacks: `android-*`, `compose-multiplatform-*`, `dart-flutter-*`, `flutter-*`, `ios-*`, `swift-*`, `swiftui-*`
   - Unrelated backends: `csharp-*`, `dotnet-*`, `fsharp-*`, `quarkus-*`, `laravel-*`, `perl-*`
   - Unrelated hardware/domain tools: `cisco-*`, `homelab-*`, `blender-*`
+
+## 5. Master Theme & UI Aesthetics Coherence
+- **Strict Single Theme**: Every user interface surface, card, modal, notification toast, checklist, and data display must use the Master Theme defined in [`docs/MASTER_THEME.md`](file:///d:/Desktop/Rad%20Extract%20Experimenting/docs/MASTER_THEME.md) and [`.agents/rules/master_theme.md`](file:///d:/Desktop/Rad%20Extract%20Experimenting/.agents/rules/master_theme.md).
+- **Brand Tokens**: Primary Wine (`#3a0f34`), Paper Canvas (`#fbf9f4`), Card White (`#ffffff`), Border (`#d2c2cb`), Editorial Plum (`#814d75`), and Reading Inks (`#4f444b`, `#62535d`).
+- **Typography**: Headings use `Serifon Editorial`, body copy uses `QuadraatSmallCaps`, and controls/labels use `Work Sans`.
+- **Zero Saturated Slop**: No ad-hoc generic Tailwind colors (`bg-blue-600`, `text-indigo-500`), no heavy gradients, and no generic rounded SaaS bubble designs.
+

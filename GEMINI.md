@@ -50,3 +50,10 @@
      4. **Never exact-retry a failure**: Change the diagnosis, context, or strategy before attempting a fix again.
      5. **Satisfy the contract**: Acceptance criteria and required tests gate completion.
      6. **Report what actually happened**: Say what you can or cannot verify; never fabricate certainty.
+
+10. **Mandatory Master Theme Adherence for All UI Elements & Surfaces**:
+   - Every existing screen, newly authored component, notification toast, checklist, dialog, and card across `radextract_platform/frontend` and web repositories **MUST strictly conform to the Master Theme** defined in [`docs/MASTER_THEME.md`](file:///d:/Desktop/Rad%20Extract%20Experimenting/docs/MASTER_THEME.md) and [`.agents/rules/master_theme.md`](file:///d:/Desktop/Rad%20Extract%20Experimenting/.agents/rules/master_theme.md).
+   - **Color System**: Primary Wine (`#3a0f34`), Paper Canvas (`#fbf9f4`), Card White (`#ffffff`), Border Outline (`#d2c2cb`), Editorial Plum (`#814d75`), and Reading Inks (`#4f444b`, `#62535d`, `#81737b`).
+   - **Typography**: `Serifon Editorial` (headings, wordmarks), `QuadraatSmallCaps` (body text, study reading copy), and `Work Sans` (controls, buttons, inputs, labels, metadata).
+   - **Strict Prohibition**: Never introduce arbitrary Tailwind colors (e.g. `bg-blue-600`), neon gradients, or bloated SaaS bubbly UI. Maintain refined academic editorial precision across all viewports (1440px, 903px, 390px).
+
