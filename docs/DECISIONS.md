@@ -80,3 +80,34 @@ This document is the canonical ledger of all engineering, architectural, scienti
 * **Decision**: Introduce real-time notification toasts and a structured dashboard clarification checklist for study screening.
 * **Rationale**:
   * Dual-blind reviewers require prompt notification when disagreements or clarification requests arise, preventing stalled screening pipelines.
+
+---
+
+## 8. Dynamic Clinical Persona Selection for Study Protocol Suggestions (Stanford STORM + LAYA)
+* **Date**: 2026-10-26
+* **Decision**: Dynamically synthesize and assign Stanford STORM clinical specialist personas based on the protocol topic and the empirical study literature gathered in ClaimScape, rather than relying on a static set of roles.
+* **Clinical Specialization Matrix**:
+  * **Breast Imaging & Oncology**: Breast Imaging Radiologist (BI-RADS 3/4/5 criteria, DBT, CEM, breast MRI in dense breasts), Breast Surgical Oncologist (re-excision rate, lumpectomy margins, SLNB vs ALND), Medical Oncologist (neoadjuvant pCR, receptor subtypes ER/PR/HER2), Diagnostic Accuracy Biostatistician (bivariate HSROC, interval cancer, lead-time bias).
+  * **Neurovascular Intervention (PAM Benchmark)**: Neurointerventional Radiologist (catheter access, DSA vs CTA, mTICI 2b vs 2c/3), Stroke Neurologist (ECASS-III sICH criteria, 90-day blinded mRS, onset window), Cerebrovascular Surgeon (aneurysm co-existence, dAVF/AVM exclusion, decompressive craniectomy), Trial Biostatistician (active comparator, attrition bias).
+  * **Thoracic / Pulmonary**: Thoracic Radiologist (Lung-RADS), Interventional Pulmonologist, Thoracic Surgeon, Epidemiologist.
+  * **Cardiovascular**: Interventional Cardiologist (TIMI flow, ARC stent thrombosis), Cardiothoracic Surgeon, Clinical Cardiologist, Cardiovascular Biostatistician.
+  * **Abdominal / GI**: Abdominal Radiologist (LI-RADS), HPB Surgeon, Hepatologist / GI Oncologist, Meta-Analysis Biostatistician.
+  * **Universal Fallback**: Specialized Interventionalist, Medical Lead, Surgeon, Systematic Review Methodologist.
+* **1-Click Human-in-the-Loop Adoption**:
+  * Each identified flaw provides an actionable suggestion with a 1-click button (`[Adopt into Outcome]`, `[+ Add Exclusion Criterion]`, etc.) that immediately updates and persists the PICO / Criteria state.
+* **Impact**:
+  * Ensures multidisciplinary review matches the exact clinical domain of the systematic review.
+  * Preserves the existing UI structure while embedding high-value protocol critique directly into the PICO workflow.
+
+---
+
+## 9. Security Hardening: Direct Resource Authorization on Chart Meta Endpoints
+* **Date**: 2026-10-26 (PR #96, Commit `3310096`, `bff6383`)
+* **Decision**: Add strict project ownership verification (`check_project_access`) on direct resource ID endpoints for chart generation (`/api/charts/forest/from-meta/{meta_id}`, `/api/charts/funnel/from-meta/{meta_id}`, `/api/charts/sroc/from-meta/{meta_id}`).
+* **Rationale**:
+  * Resolves IDOR vulnerability where an attacker with a known `meta_id` could generate analytical charts for a project they do not have permissions to view.
+* **Impact**:
+  * Unauthorized requests receive HTTP 403 Forbidden with `Access denied to project`.
+  * Verified with automated unit tests in `test_charts_security.py`.
+
+
