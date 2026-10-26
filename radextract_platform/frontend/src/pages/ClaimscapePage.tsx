@@ -187,25 +187,30 @@ export const ClaimscapePage: React.FC = () => {
     });
   }, [dataset.papers, judgmentMap]);
 
+  // Share the same eligibility filters across the map, inventory, and inspector.
+  const visiblePapers = useMemo(() => processedPapers.filter((p) =>
+    p.onTopic && p.tier && (!directOnly || p.direct) && (showReviews || p.tier !== "review")
+  ), [processedPapers, directOnly, showReviews]);
+
   // Compute tier summaries and metrics
   const summaries = useMemo(() => {
-    return computeTierSummaries(processedPapers, directOnly);
-  }, [processedPapers, directOnly]);
+    return computeTierSummaries(visiblePapers, false).filter((s) => showReviews || s.id !== "review");
+  }, [visiblePapers, showReviews]);
 
   // Dynamic Headline synthesis
   const headlineData = useMemo(() => {
-    return generateHeadline(summaries, processedPapers.length);
-  }, [summaries, processedPapers]);
+    return generateHeadline(summaries, visiblePapers.length);
+  }, [summaries, visiblePapers]);
 
   // Active selected paper
   const activePaper = useMemo(() => {
-    return processedPapers.find((p) => p.paper.pmid === selectedPmid) || processedPapers[0] || null;
-  }, [processedPapers, selectedPmid]);
+    return visiblePapers.find((p) => p.paper.pmid === selectedPmid) || visiblePapers[0] || null;
+  }, [visiblePapers, selectedPmid]);
 
   // Key KPI stats
   const stats = useMemo(() => {
     const onTopicList = processedPapers.filter((p) => p.onTopic);
-    const mappedList = onTopicList.filter((p) => p.tier && (!directOnly || p.direct));
+    const mappedList = visiblePapers;
     const withVerdictList = mappedList.filter(
       (p) => p.tier && TIER_BY_ID[p.tier]?.counted && (p.category === "supports" || p.category === "contradicts" || p.category === "mixed")
     );
@@ -217,12 +222,11 @@ export const ClaimscapePage: React.FC = () => {
       onMap: mappedList.length,
       withVerdict: withVerdictList.length
     };
-  }, [processedPapers, paperCount, directOnly, dataset.total]);
+  }, [processedPapers, paperCount, visiblePapers, dataset.total]);
 
   // Filtered papers for bottom data table
   const filteredTablePapers = useMemo(() => {
-    return processedPapers
-      .filter((p) => p.onTopic && p.tier && (!directOnly || p.direct))
+    return visiblePapers
       .filter((p) => {
         if (!tableSearch.trim()) return true;
         const q = tableSearch.toLowerCase();
@@ -233,7 +237,7 @@ export const ClaimscapePage: React.FC = () => {
           (p.finding && p.finding.toLowerCase().includes(q))
         );
       });
-  }, [processedPapers, directOnly, tableSearch]);
+  }, [visiblePapers, tableSearch]);
 
   const scrollToMap = () => {
     setTimeout(() => {
@@ -429,64 +433,9 @@ export const ClaimscapePage: React.FC = () => {
       {/* Main Container */}
       <main className="claimscape-theme mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-12 pt-2 sm:px-6 lg:px-8">
         
-        {/* Section 1: Hero & Question Card - Compact 2-Column Editorial Velvet Layout */}
-        <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10 pt-1 pb-2">
-          {/* Left Column: Headline, Restored Description & Legend Bullets */}
-          <div className="max-w-[580px] xl:pt-1">
-            <p className="text-[11px] font-['Work_Sans'] font-bold uppercase tracking-[0.12em] text-[#7c5800] mb-2 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
-              Evidence map for any research claim
-            </p>
-
-            {/* Restored Description Paragraph */}
-            <p className="mt-3 text-[15px] sm:text-[15.5px] text-[#4f444b] font-['Newsreader'] leading-[1.58]">
-              Type a claim and see where the literature stands on it. Up to 300 of the most relevant PubMed abstracts are read, sorted by study design and plotted by year, so you can see which kinds of evidence agree and how consensus shifted over time.
-            </p>
-
-            {/* Restored 3 Bullets with Legend Markers */}
-            <ul className="mt-4 grid gap-2.5 text-[13px] text-[#4f444b] font-['Work_Sans']">
-              <li className="flex items-center gap-2.5">
-                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
-                  <circle r="6" fill="var(--cs-for)" stroke="var(--cs-surface)" strokeWidth="1.5" />
-                </svg>
-                <span>Each dot is a paper, colored by what its abstract reports</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
-                  <circle r="7.5" fill="var(--cs-surface)" />
-                  <path d="M0 -6 A 6 6 0 0 0 0 6 Z" fill="var(--cs-for)" />
-                  <path d="M0 -6 A 6 6 0 0 1 0 6 Z" fill="var(--cs-against)" />
-                </svg>
-                <span>Rows are study designs, each with a verdict and a 95% Wilson interval</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
-                  <circle r="6" fill="var(--cs-against)" stroke="var(--cs-surface)" strokeWidth="1.5" />
-                </svg>
-                <span>Every dot opens the sentence its verdict rests on</span>
-              </li>
-            </ul>
-
-            {/* Compact Technical Pillars Strip */}
-            <div className="mt-5 pt-3 border-t border-[#e4e2dd] flex flex-wrap items-center gap-3 text-[11px] font-['Work_Sans'] text-[#72636d]">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-none bg-[#3a0f34]"></span>
-                PubMed Live Retrieval
-              </span>
-              <span className="w-px h-3 bg-[#d2c2cb]"></span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
-                Co-Scientist Rapid Screening
-              </span>
-              <span className="w-px h-3 bg-[#d2c2cb]"></span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
-                Wilson 95% Confidence
-              </span>
-            </div>
-          </div>
-
-          {/* Right Column: Search Card & Progress */}
+        {/* Section 1: Claim first, followed by the reading guide */}
+        <section className="claim-introduction grid items-start gap-6 pt-1 pb-2">
+          {/* Claim form and progress */}
           <div className="w-full">
             <form
               onSubmit={handleMapEvidence}
@@ -576,6 +525,61 @@ export const ClaimscapePage: React.FC = () => {
               </div>
             )}
           </div>
+          {/* Reading guide and dot legend */}
+          <div className="claim-explanation">
+            <p className="text-[11px] font-['Work_Sans'] font-bold uppercase tracking-[0.12em] text-[#814d75] mb-2 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
+              Evidence map for any research claim
+            </p>
+
+            <h2>How to read the evidence map</h2>
+            <p className="mt-3 text-[15px] sm:text-[15.5px] text-[#4f444b] font-['Newsreader'] leading-[1.58]">
+              Type a claim and see where the literature stands on it. Up to 300 of the most relevant PubMed abstracts are read, sorted by study design and plotted by year, so you can see which kinds of evidence agree and how consensus shifted over time.
+            </p>
+
+            {/* Restored 3 Bullets with Legend Markers */}
+            <ul className="mt-4 grid gap-2.5 text-[13px] text-[#4f444b] font-['Work_Sans']">
+              <li className="flex items-center gap-2.5">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
+                  <circle r="6" fill="var(--cs-for)" stroke="var(--cs-surface)" strokeWidth="1.5" />
+                </svg>
+                <span>Each dot is a paper, colored by what its abstract reports</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
+                  <circle r="7.5" fill="var(--cs-surface)" />
+                  <path d="M0 -6 A 6 6 0 0 0 0 6 Z" fill="var(--cs-for)" />
+                  <path d="M0 -6 A 6 6 0 0 1 0 6 Z" fill="var(--cs-against)" />
+                </svg>
+                <span>Rows are study designs, each with a verdict and a 95% Wilson interval</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
+                  <circle r="6" fill="var(--cs-against)" stroke="var(--cs-surface)" strokeWidth="1.5" />
+                </svg>
+                <span>Every dot opens the sentence its verdict rests on</span>
+              </li>
+            </ul>
+
+            {/* Compact Technical Pillars Strip */}
+            <div className="mt-5 pt-3 border-t border-[#e4e2dd] flex flex-wrap items-center gap-3 text-[11px] font-['Work_Sans'] text-[#72636d]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#3a0f34]"></span>
+                PubMed Live Retrieval
+              </span>
+              <span className="w-px h-3 bg-[#d2c2cb]"></span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
+                Co-Scientist Rapid Screening
+              </span>
+              <span className="w-px h-3 bg-[#d2c2cb]"></span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
+                Wilson 95% Confidence
+              </span>
+            </div>
+          </div>
+
         </section>
 
         {/* Section 2: Dynamic Headline & Stat KPIs */}
@@ -677,7 +681,7 @@ export const ClaimscapePage: React.FC = () => {
             {/* Interactive Bee-Swarm SVG Matrix */}
             <ClaimscapeMap
               summaries={summaries}
-              selectedPmid={selectedPmid}
+              selectedPmid={activePaper?.paper.pmid ?? null}
               onSelectPaper={(pmid) => setSelectedPmid(pmid)}
               showReviews={showReviews}
             />
@@ -762,11 +766,11 @@ export const ClaimscapePage: React.FC = () => {
                 </h3>
               </div>
               <p className="text-[13px] text-[#4f444b] font-['Newsreader'] leading-relaxed">
-                Import these {stats.onMap} mapped PubMed papers directly into your project's PICO screening queue, full-text PDF viewer, and Risk of Bias appraisal matrix.
+                Start a review project with this claim. You can prefill and edit the project name and primary hypothesis, then set up PICO and import studies in the workspace.
               </p>
               <div className="pt-1 flex flex-wrap gap-2">
                 <Link
-                  to="/projects"
+                  to={`/projects/new?${new URLSearchParams({ claim: claim.trim() }).toString()}`}
                   className="font-['Work_Sans'] font-semibold text-xs py-2 px-4 bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] inline-flex items-center gap-1.5 transition-colors"
                 >
                   <span>Launch in Review Workspace</span>
