@@ -11,6 +11,7 @@ study; others are marked as duplicates.
 """
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Optional
 
@@ -20,6 +21,9 @@ from services.db_backend import DBBackend
 from functools import lru_cache
 
 TITLE_SIMILARITY_THRESHOLD = 0.90
+
+# Pre-compiled regex pattern for Unicode-aware alphanumeric cleaning in Strategy 4
+_ALNUM_RE = re.compile(r"[^\w]+|_")
 
 # Try python-Levenshtein (fast C extension), fall back to difflib with length bound pre-check
 try:
@@ -234,7 +238,9 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
     # Strategy 4: alphanumeric title + first author surname + year
     author_year: dict[tuple, list[int]] = {}
     for i, study in enumerate(studies):
-        alnum = "".join(ch for ch in (study.get("title") or "").lower() if ch.isalnum())
+        title = study.get("title") or ""
+        # Bolt performance optimization: Use pre-compiled regex for fast alphanumeric filtering
+        alnum = _ALNUM_RE.sub("", title.lower()) if title else ""
         first = ""
         authors = study.get("authors") or ""
         if authors:
@@ -247,7 +253,7 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
         for j in range(1, len(indices)):
             union(indices[0], indices[j])
 
-    # Strategy 3: Title similarity + author/year
+    # Strategy 5: Title similarity + author/year
     titles = [s.get("title", "") for s in studies]
     title_lens = [len(t) for t in titles]
     years = [s.get("publication_year") for s in studies]
@@ -261,8 +267,12 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
         y_i = years[i]
         a_i = authors[i]
 
+        # Bolt performance optimization: Cache `root_i = find(i)` outside the inner `j` loop
+        # to avoid repeated Union-Find tree traversals across thousands of inner loop iterations.
+        root_i = find(i)
+
         for j in range(i + 1, len(studies)):
-            if find(i) == find(j):
+            if root_i == find(j):
                 continue  # already grouped
 
             t_j = titles[j]
@@ -293,6 +303,8 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                 # If title is 0.90-0.95, require either year match or author overlap > 0.3
                 if sim >= 0.95 or year_match or author_sim > 0.3:
                     union(i, j)
+                    # Update root_i if component changed
+                    root_i = find(root_i)
 
     # Build groups from union-find
     groups: dict[int, list[int]] = {}
