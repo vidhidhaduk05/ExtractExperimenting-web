@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ShimmerSkeleton } from "./ShimmerSkeleton";
-import { LoaderScreen } from "./LoaderScreen";
+import { LoaderScreen, BreathingLoader } from "./LoaderScreen";
 
 describe("ShimmerSkeleton and LoaderScreen", () => {
   it("renders ShimmerSkeleton with correct classes and styles", () => {
@@ -27,5 +27,14 @@ describe("ShimmerSkeleton and LoaderScreen", () => {
     render(<LoaderScreen preset="cards" title="Custom Loading Header" />);
     expect(screen.getByRole("status", { name: "Custom Loading Header" })).toBeTruthy();
     expect(screen.getByText("Custom Loading Header")).toBeTruthy();
+    expect(screen.getByText("Loading")).toBeTruthy();
+  });
+
+  it("renders BreathingLoader with pulse and accessible status role", () => {
+    render(<BreathingLoader label="Synthesizing studies..." sublabel="Consulting Co-Scientist models" />);
+    expect(screen.getByRole("status", { name: "Synthesizing studies..." })).toBeTruthy();
+    expect(screen.getByText("Synthesizing studies...")).toBeTruthy();
+    expect(screen.getByText("Consulting Co-Scientist models")).toBeTruthy();
   });
 });
+

@@ -25,17 +25,20 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { BorderBeam } from "./BorderBeam";
 
 interface ClarificationNotificationCenterProps {
   projectId?: string;
   isDrawerOpen?: boolean;
   onToggleDrawer?: (open: boolean) => void;
+  beamActive?: boolean;
 }
 
 export function ClarificationNotificationCenter({
   projectId,
   isDrawerOpen: externalDrawerOpen,
   onToggleDrawer,
+  beamActive = true,
 }: ClarificationNotificationCenterProps) {
   const location = useLocation();
   const isScreeningPage = location.pathname.includes("/screening");
@@ -226,13 +229,22 @@ export function ClarificationNotificationCenter({
               <div
                 key={q.question_id}
                 className={cn(
-                  "pointer-events-auto w-88 max-w-sm rounded-xl border p-3.5 shadow-2xl backdrop-blur-md transition-all duration-300",
+                  "pointer-events-auto w-88 max-w-sm rounded-xl border p-3.5 shadow-2xl backdrop-blur-md transition-all duration-300 relative overflow-hidden",
                   feedback
                     ? "bg-emerald-50/95 border-emerald-300 text-emerald-950"
-                    : "bg-white/95 dark:bg-[#1E1E1E]/95 border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100"
+                    : "bg-white/95 dark:bg-[#1E1E1E]/95 border-[#d2c2cb] dark:border-white/10 text-[#141413] dark:text-slate-100"
                 )}
                 role="alert"
               >
+                {/* Master Theme Animated Border Beam */}
+                <BorderBeam
+                  active={beamActive && !feedback}
+                  duration={7}
+                  colorFrom="#814d75"
+                  colorTo="#ffdea6"
+                  borderWidth={1.5}
+                />
+
                 {/* Desktop Notification Header */}
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
