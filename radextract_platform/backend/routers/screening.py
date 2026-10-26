@@ -100,6 +100,10 @@ async def update_screening(
     )
     conn.commit()
 
+    # Auto-fill extraction sheet with Study ID, Year, Author, etc. when study is included
+    if body.status == "included":
+        auto_prefill_study_bibliographic_extractions(conn, study_id, row["project_id"])
+
     # Auto-create + AI-prefill RoB when a study is included at full-text stage
     if body.status == "included" and body.stage == "ft":
         from services import rob_service
@@ -476,6 +480,78 @@ async def update_screening_config(project_id: str, body: ScreeningConfigUpdate, 
 #  v2.4: Multi-Reviewer Screening Decisions
 # ═══════════════════════════════════════════════════════════════════════
 
+def auto_prefill_study_bibliographic_extractions(conn: Any, study_id: str, project_id: str):
+    """Auto-fill extraction sheet with Study ID, Year, Author, etc. when study is included."""
+    try:
+        import datetime
+        study = conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+        if not study:
+            return
+        study_dict = dict(study)
+
+        # 1. Compute and ensure study_label is set
+        label = study_dict.get("study_label") or ""
+        if not label:
+            first_author = study_dict.get("authors", "").split(",")[0].split(";")[0].split(" et al")[0].strip() if study_dict.get("authors") else ""
+            year_str = str(study_dict.get("publication_year")) if study_dict.get("publication_year") else ""
+            if first_author and year_str:
+                label = f"{first_author} {year_str}"
+            elif first_author:
+                label = first_author
+            elif study_dict.get("title"):
+                label = study_dict["title"][:28]
+            else:
+                label = study_id[:8]
+            conn.execute("UPDATE studies SET study_label = ? WHERE study_id = ?", (label, study_id))
+
+        # 2. Query project variables
+        variables = conn.execute("SELECT * FROM variables WHERE project_id = ? ORDER BY order_index ASC", (project_id,)).fetchall()
+        now = datetime.datetime.utcnow().isoformat()
+
+        for v in variables:
+            var_id = v["variable_id"]
+            name_norm = v["name"].strip().lower()
+            val = ""
+
+            if name_norm in ("study id", "study label", "study_id", "studylabel", "study"):
+                val = label
+            elif name_norm in ("year", "publication year", "pub year", "pub_year"):
+                val = str(study_dict.get("publication_year") or "")
+            elif name_norm in ("author", "first author", "authors", "lead author"):
+                val = study_dict.get("authors") or ""
+                if "," in val:
+                    val = val.split(",")[0].strip()
+            elif name_norm in ("doi", "article doi"):
+                val = study_dict.get("doi") or ""
+            elif name_norm in ("pmid", "pubmed id"):
+                val = study_dict.get("pmid") or ""
+            elif name_norm in ("journal", "source journal"):
+                val = study_dict.get("journal") or ""
+
+            if val:
+                existing = conn.execute("SELECT * FROM extractions WHERE study_id = ? AND variable_id = ?", (study_id, var_id)).fetchone()
+                if not existing:
+                    conn.execute(
+                        """INSERT INTO extractions
+                           (extraction_id, study_id, variable_id, value, confidence, verification_status, verified_at, verified_by, source_text)
+                           VALUES (?, ?, ?, ?, 0.99, 'verified', ?, 'system_prefill', ?)""",
+                        (str(uuid.uuid4()), study_id, var_id, val, now, f"Bibliographic prefill: {val}"),
+                    )
+                elif not dict(existing).get("is_verified") and dict(existing).get("verification_status") != "verified":
+                    if not dict(existing).get("value"):
+                        conn.execute(
+                            """UPDATE extractions
+                               SET value = ?, verification_status = 'verified', verified_at = ?, verified_by = 'system_prefill'
+                               WHERE extraction_id = ?""",
+                            (val, now, existing["extraction_id"]),
+                        )
+        if hasattr(conn, "commit"):
+            conn.commit()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Failed auto-prefill for included study %s: %s", study_id, e)
+
+
 def _check_and_record_conflict(
     conn: Any,
     study_id: str,
@@ -646,6 +722,10 @@ async def create_screening_decision(
         (body.decision, body.stage,
          body.reason_text or body.reason_code, study_id),
     )
+
+    # Auto-fill extraction sheet with Study ID, Year, Author, etc. when study is included
+    if body.decision == "included":
+        auto_prefill_study_bibliographic_extractions(conn, study_id, body.project_id)
 
     # Auto-create + AI-prefill RoB on full-text inclusion
     if body.decision == "included" and body.stage == "ft":

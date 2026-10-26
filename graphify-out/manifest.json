@@ -6,9 +6,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/database.py": {
-    "mtime": 1792775884.2931845,
-    "seen": 1792777002.011414,
-    "ast_hash": "3d77c7dfd7cfef0d9004a9bf447e739c",
+    "mtime": 1792976073.0954423,
+    "seen": 1792980494.956196,
+    "ast_hash": "39834e6bb8c8fe67816f1318fd615dad",
     "semantic_hash": ""
   },
   "radextract_platform/backend/dependencies.py": {
@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/models.py": {
-    "mtime": 1791927167.3113487,
-    "seen": 1791927525.4089804,
-    "ast_hash": "2944ed9c98f31f121aa54623e2698aa4",
+    "mtime": 1792976485.0868075,
+    "seen": 1792980494.9571955,
+    "ast_hash": "1bfc0406afe155292e44522448fd3d63",
     "semantic_hash": ""
   },
   "radextract_platform/backend/pyproject.toml": {
@@ -294,15 +294,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/export.py": {
-    "mtime": 1791713872.8636918,
-    "seen": 1791714130.8609328,
-    "ast_hash": "092f6af96f4071b86e143d4c7282227e",
+    "mtime": 1792976350.7195597,
+    "seen": 1792980494.9945278,
+    "ast_hash": "e422e84e65d51ce1f576e2edd3cb479b",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/extraction.py": {
-    "mtime": 1791926144.0008662,
-    "seen": 1791927525.427633,
-    "ast_hash": "3daf529dbd170e7a1e69563c1e429a52",
+    "mtime": 1792980344.4373968,
+    "seen": 1792980494.9945278,
+    "ast_hash": "7e3b3fd817e927353250d6a2adb426ed",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/grade.py": {
@@ -366,9 +366,9 @@
     "semantic_hash": "d3327fbdf4184cb26a8c13f46880e191"
   },
   "radextract_platform/backend/routers/screening.py": {
-    "mtime": 1792956069.0112877,
-    "seen": 1792956218.1743264,
-    "ast_hash": "b177e01310514a984229c42fb423b681",
+    "mtime": 1792981795.3572886,
+    "seen": 1792982881.269439,
+    "ast_hash": "803454eca9e33432990924adecd0e94d",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/statistics.py": {
@@ -378,15 +378,15 @@
     "semantic_hash": "00702c0f804b51e9fe1af3cf813f76ff"
   },
   "radextract_platform/backend/routers/studies.py": {
-    "mtime": 1792823398.3145835,
-    "seen": 1792823691.676712,
-    "ast_hash": "368e674bc53947fe21a5924fb845af1c",
+    "mtime": 1792976184.5670035,
+    "seen": 1792980495.0074317,
+    "ast_hash": "90814601a15969b591d882a3c4979772",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/variables.py": {
-    "mtime": 1792968681.9529026,
-    "seen": 1792969918.132325,
-    "ast_hash": "48a92c35d432bf95742c4e2e08209059",
+    "mtime": 1792976499.6240852,
+    "seen": 1792980495.0074317,
+    "ast_hash": "995f34620eef7f8479063903adbe68a1",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/__init__.py": {
@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1792972377.542704,
-    "seen": 1792973424.5877843,
-    "ast_hash": "7a67fa0dde75b27a57ce21f216d607d3",
+    "mtime": 1792977052.339937,
+    "seen": 1792980495.1564248,
+    "ast_hash": "4885a850eb072b7067a85e2f133c9cfc",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -840,9 +840,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PdfViewerPage.tsx": {
-    "mtime": 1792880640.12318,
-    "seen": 1792886070.1477387,
-    "ast_hash": "934586e355e4561989de10d46acaae6d",
+    "mtime": 1792982355.7746198,
+    "seen": 1792982881.4819062,
+    "ast_hash": "d49a9a1cc0d4996de2faf80f149878e6",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PicoHypothesisPage.tsx": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
-    "mtime": 1792973053.328251,
-    "seen": 1792973424.6009827,
-    "ast_hash": "eb57ad3fda0c8b73268833dfcaaa0def",
+    "mtime": 1792981941.0682304,
+    "seen": 1792982881.4959052,
+    "ast_hash": "85b1e0fe613c9562c7c5c6de5a6c4481",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyImport.tsx": {
@@ -1686,15 +1686,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/CodebookDesignerModal.tsx": {
-    "mtime": 1791664521.6019754,
-    "seen": 1791664941.925462,
-    "ast_hash": "2b03852a5232de4376045424a5ae21f4",
+    "mtime": 1792977218.2289839,
+    "seen": 1792980495.1452625,
+    "ast_hash": "e10b6d9f7e20ac1fd64c25d62a2db28c",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/ActualPdfViewer.tsx": {
-    "mtime": 1791664521.5989766,
-    "seen": 1791664941.925462,
-    "ast_hash": "7eab74ea13bacb96191a9ba3aee0904c",
+    "mtime": 1792981472.897854,
+    "seen": 1792982881.4452183,
+    "ast_hash": "92d65f92066ff0cecb86391c66e80c1f",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/pdfLocator.test.ts": {
@@ -1704,9 +1704,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/pdfLocator.ts": {
-    "mtime": 1792279735.9349675,
-    "seen": 1792279857.5075636,
-    "ast_hash": "171febae4571db9b255425ff9cf923d0",
+    "mtime": 1792981413.6496894,
+    "seen": 1792982881.4675534,
+    "ast_hash": "9ca5cc0fb554be0019d73be1f6170988",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/public/papers/Albina-Palmarola_2024_A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery.pdf": {
@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ExtractionSheetPage.tsx": {
-    "mtime": 1792969358.9806721,
-    "seen": 1792969918.2423875,
-    "ast_hash": "7c3d643a1103e58a2dfd1f4325673200",
+    "mtime": 1792982077.92915,
+    "seen": 1792982881.4796922,
+    "ast_hash": "3d3211b6038e7a63bd23589c8f4b2b05",
     "semantic_hash": ""
   },
   ".jules/bolt.md": {
@@ -1890,9 +1890,9 @@
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1792959992.9323218,
-    "seen": 1792962142.1256316,
-    "ast_hash": "718fccae9515722c9c674994acb04632",
+    "mtime": 1792980416.486717,
+    "seen": 1792980495.1911862,
+    "ast_hash": "715161101c3e68d67397d1d5a56f7cc2",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {
@@ -5259,6 +5259,36 @@
     "mtime": 1792960595.6232436,
     "seen": 1792975288.6290255,
     "ast_hash": "ea1abb93088f442fa4a3a559f00da08c",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/seed_dev_db.py": {
+    "mtime": 1792982111.7242947,
+    "seen": 1792982881.2794402,
+    "ast_hash": "dbfa78548356056db8e95e31263f8e63",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_excel_workspace.py": {
+    "mtime": 1792976620.1864228,
+    "seen": 1792980495.0707033,
+    "ast_hash": "82df052d606c997e8f3d69ef5a352f0e",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/public/papers/Albina-Palmarola_2024.pdf": {
+    "mtime": 1791664521.3030052,
+    "seen": 1792982881.737267,
+    "ast_hash": "0fb1d011e1e849028df226342faeacb9",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/public/papers/Brinjikji_2018.pdf": {
+    "mtime": 1791664521.4576511,
+    "seen": 1792982881.7395997,
+    "ast_hash": "75d4a174eb27301453941e7d1cbdbac7",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/public/papers/Deshmukh_2023.pdf": {
+    "mtime": 1791664521.5885935,
+    "seen": 1792982881.7407813,
+    "ast_hash": "b91e1cd886c44c0f8ec234b97b6de595",
     "semantic_hash": ""
   }
 }

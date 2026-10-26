@@ -42,6 +42,9 @@ cookie.txt
 *.sqlite-wal
 radextract.db
 radextract.db.bak-*
+radextract_dev.db
+*.db
+.claimscape-export/
 
 # IDE & OS
 .claude/

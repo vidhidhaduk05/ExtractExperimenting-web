@@ -488,6 +488,11 @@ export function ScreeningPage() {
 
       queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
       queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      if (variables.decision === "included") {
+        queryClient.invalidateQueries({ queryKey: ["extraction-grid", projectId] });
+        queryClient.invalidateQueries({ queryKey: ["extractions", variables.studyId] });
+        queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      }
 
       // Clear the reason selector for the next record ONLY after successful save
       if (variables.decision === "excluded") {

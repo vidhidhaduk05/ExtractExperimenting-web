@@ -74,7 +74,22 @@ async def list_studies(project_id: str, user: Optional[dict] = Depends(get_curre
         "SELECT * FROM studies WHERE project_id = ? ORDER BY created_at DESC",
         (project_id,),
     ).fetchall()
-    return [dict(r) for r in rows]
+    results = []
+    for r in rows:
+        d = dict(r)
+        if not d.get("study_label"):
+            first_author = d.get("authors", "").split(",")[0].split(";")[0].split(" et al")[0].strip() if d.get("authors") else ""
+            year_str = str(d.get("publication_year")) if d.get("publication_year") else ""
+            if first_author and year_str:
+                d["study_label"] = f"{first_author} {year_str}"
+            elif first_author:
+                d["study_label"] = first_author
+            elif d.get("title"):
+                d["study_label"] = d["title"][:30]
+            else:
+                d["study_label"] = d.get("study_id", "Study")[:8]
+        results.append(d)
+    return results
 
 
 @router.post("/projects/{project_id}/studies", response_model=StudyResponse)
@@ -88,14 +103,27 @@ async def create_study(
     if body.project_id != project_id:
         raise HTTPException(status_code=400, detail="project_id mismatch")
     study_id = str(uuid.uuid4())
+    study_label = (body.study_label or "").strip()
+    if not study_label:
+        first_author = body.authors.split(",")[0].split(";")[0].split(" et al")[0].strip() if body.authors else ""
+        year_str = str(body.publication_year) if body.publication_year else ""
+        if first_author and year_str:
+            study_label = f"{first_author} {year_str}"
+        elif first_author:
+            study_label = first_author
+        elif body.title:
+            study_label = body.title[:30]
+        else:
+            study_label = "Study"
+
     conn.execute(
         """INSERT INTO studies
            (study_id, project_id, title, authors, publication_year, journal,
-            doi, pmid, abstract, source, study_design, metadata_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            doi, pmid, abstract, source, study_design, metadata_json, study_label)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (study_id, project_id, body.title, body.authors,
          body.publication_year, body.journal, body.doi, body.pmid,
-         body.abstract, body.source, body.study_design, body.metadata_json),
+         body.abstract, body.source, body.study_design, body.metadata_json, study_label),
     )
     conn.commit()
     return StudyResponse(
@@ -104,6 +132,7 @@ async def create_study(
         journal=body.journal, doi=body.doi, pmid=body.pmid,
         abstract=body.abstract, source=body.source,
         study_design=body.study_design, metadata_json=body.metadata_json,
+        study_label=study_label,
     )
 
 
@@ -117,7 +146,19 @@ async def get_study(study_id: str, user: Optional[dict] = Depends(get_current_us
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Study not found")
-    return dict(row)
+    d = dict(row)
+    if not d.get("study_label"):
+        first_author = d.get("authors", "").split(",")[0].split(";")[0].split(" et al")[0].strip() if d.get("authors") else ""
+        year_str = str(d.get("publication_year")) if d.get("publication_year") else ""
+        if first_author and year_str:
+            d["study_label"] = f"{first_author} {year_str}"
+        elif first_author:
+            d["study_label"] = first_author
+        elif d.get("title"):
+            d["study_label"] = d["title"][:30]
+        else:
+            d["study_label"] = d.get("study_id", "Study")[:8]
+    return d
 
 
 @router.put("/studies/{study_id}", response_model=StudyResponse)
@@ -134,7 +175,7 @@ async def update_study(study_id: str, body: StudyUpdate, user: Optional[dict] = 
     updates = []
     params = []
     for field in ["title", "authors", "publication_year", "journal", "doi",
-                   "pmid", "abstract", "study_design", "screening_status",
+                   "pmid", "abstract", "study_design", "study_label", "screening_status",
                    "screening_reason", "screening_stage", "extraction_status",
                    "pdf_status", "metadata_json"]:
         val = getattr(body, field, None)
@@ -153,7 +194,19 @@ async def update_study(study_id: str, body: StudyUpdate, user: Optional[dict] = 
     row = conn.execute(
         "SELECT * FROM studies WHERE study_id = ?", (study_id,)
     ).fetchone()
-    return dict(row)
+    d = dict(row)
+    if not d.get("study_label"):
+        first_author = d.get("authors", "").split(",")[0].split(";")[0].split(" et al")[0].strip() if d.get("authors") else ""
+        year_str = str(d.get("publication_year")) if d.get("publication_year") else ""
+        if first_author and year_str:
+            d["study_label"] = f"{first_author} {year_str}"
+        elif first_author:
+            d["study_label"] = first_author
+        elif d.get("title"):
+            d["study_label"] = d["title"][:30]
+        else:
+            d["study_label"] = d.get("study_id", "Study")[:8]
+    return d
 
 
 @router.delete("/studies/{study_id}")

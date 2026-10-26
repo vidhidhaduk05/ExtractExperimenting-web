@@ -15,7 +15,7 @@ import {
   RotateCcw, Search, Eye, Filter, Zap, ShieldAlert,
   ZoomIn, ZoomOut, Maximize2, Minimize2, Sliders,
   PanelRightClose, PanelRightOpen, FileSpreadsheet,
-  CheckCheck, ExternalLink
+  CheckCheck, ExternalLink, ListOrdered
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
@@ -81,24 +81,24 @@ export function PdfViewerPage() {
   });
   const allStudies: any[] = useMemo(() => {
     if (dynamicStudies && dynamicStudies.length > 0) {
-      return dynamicStudies.map((s, idx) => ({
-        ...s,
-        id: s.study_id,
-        shortId: `s${idx + 1}`,
-        title: s.title || `Study #${idx + 1}`,
-        filename: s.pdf_path || `${s.title}.pdf`,
-      }));
+      return dynamicStudies.map((s, idx) => {
+        const benchmark = BENCHMARK_PAPERS.find((b) => b.id === s.study_id);
+        return {
+          ...s,
+          id: s.study_id,
+          shortId: `s${idx + 1}`,
+          title: s.title || `Study #${idx + 1}`,
+          filename: s.pdf_path || benchmark?.filename || `${s.title}.pdf`,
+        };
+      });
     }
-    if (projectId === "demo") {
-      return BENCHMARK_PAPERS.map((b) => ({
-        ...b,
-        study_id: b.id,
-        authors: b.title.split("(")[0].trim(),
-        publication_year: 2024,
-        journal: "Journal of NeuroInterventional Surgery",
-      }));
-    }
-    return [];
+    return BENCHMARK_PAPERS.map((b) => ({
+      ...b,
+      study_id: b.id,
+      authors: b.title.split("(")[0].trim(),
+      publication_year: 2024,
+      journal: "Journal of NeuroInterventional Surgery",
+    }));
   }, [dynamicStudies, projectId]);
 
   const [searchParams] = useSearchParams();
@@ -116,23 +116,23 @@ export function PdfViewerPage() {
   const [showErrorAnalysis, setShowErrorAnalysis] = useState<boolean>(false);
   const [reviewerName, setReviewerName] = useState<string>("Expert Reviewer");
   const [pdfZoom, setPdfZoom] = useState<number>(100);
-  const [selectedPaperId, setSelectedPaperId] = useState<string>(() => {
-    const match = allStudies?.find((p: any) => p.study_id === rawTargetStudy || p.shortId === rawTargetStudy);
-    return match ? match.study_id : (allStudies[0]?.study_id || "");
-  });
+  const [selectedPaperId, setSelectedPaperId] = useState<string>(() => rawTargetStudy || "");
   const [customPdfUrl, setCustomPdfUrl] = useState<string | null>(null);
 
-  const activeStudyId = selectedPaperId || (rawTargetStudy ? (allStudies.find((p: any) => p.study_id === rawTargetStudy || p.shortId === rawTargetStudy)?.study_id || rawTargetStudy) : (allStudies[0]?.study_id || ""));
+  // When studyId is present in route/query, it is the canonical active study
+  const activeStudyId = rawTargetStudy || selectedPaperId || (allStudies[0]?.study_id || "");
 
   // Synchronize selected paper with route parameter or query
   useEffect(() => {
-    const target = studyId || searchParams.get("study");
-    if (!target) return;
-    const match = allStudies.find((p: any) => p.study_id === target || p.shortId === target);
-    if (match && match.study_id !== selectedPaperId) {
-      setSelectedPaperId(match.study_id);
+    if (rawTargetStudy && rawTargetStudy !== selectedPaperId) {
+      setSelectedPaperId(rawTargetStudy);
+    } else if (!rawTargetStudy && allStudies.length > 0 && !selectedPaperId) {
+      setSelectedPaperId(allStudies[0].study_id);
     }
-  }, [studyId, searchParams, selectedPaperId]);
+  }, [rawTargetStudy, allStudies, selectedPaperId]);
+
+  // Workspace Layout Mode: Sheet mode (horizontal row matching main spreadsheet) vs Form mode (vertical card list)
+  const [workspaceLayoutMode, setWorkspaceLayoutMode] = useState<"sheet" | "form">("form");
 
   // Collapsible Protocol Rules panel (collapsed by default on extraction side as requested)
   const [showCodebookPanel, setShowCodebookPanel] = useState<boolean>(false);
@@ -185,17 +185,8 @@ export function PdfViewerPage() {
   const highlightRefs = useRef<Record<string, HTMLElement | null>>({});
   const pageRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  // ── Queries ──
-
-  const { data: studyList } = useQuery({
-    queryKey: ["studies", projectId],
-    queryFn: () => api.listStudies(projectId!),
-    enabled: !!projectId,
-  });
-
-  // duplicate allStudies removed
-  const currentStudyIndex = Math.max(0, allStudies.findIndex((s: any) => s.study_id === activeStudyId));
-  const currentStudy = allStudies[currentStudyIndex] || allStudies[0];
+  const currentStudyIndex = Math.max(0, allStudies.findIndex((s: any) => s?.study_id === activeStudyId));
+  const currentStudy = allStudies[currentStudyIndex] || allStudies[0] || null;
 
   const { data: study } = useQuery({
     queryKey: ["study", activeStudyId],
@@ -233,8 +224,11 @@ export function PdfViewerPage() {
     enabled: !!projectId,
   });
 
-  // Ensure first variable is selected on load
-  const variableList = (variables && variables.length > 0) ? variables : DEMO_VARIABLES;
+  // Ensure variable list strictly respects global saved order_index
+  const variableList = useMemo(() => {
+    const list = (variables && variables.length > 0) ? variables : DEMO_VARIABLES;
+    return [...list].sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  }, [variables]);
   useEffect(() => {
     if (!selectedVarId && variableList.length > 0) {
       setSelectedVarId(variableList[0].variable_id);
@@ -258,7 +252,15 @@ export function PdfViewerPage() {
     const fallbackList = (DEMO_EXTRACTIONS as any)[activeStudyId] || (DEMO_EXTRACTIONS as any)["study_birua_2022"] || [];
     const sourceList = (extractions && extractions.length > 0) ? extractions : fallbackList;
     sourceList.forEach((e: any) => {
-      if (e.variable_id) map[e.variable_id] = e;
+      if (e.variable_id) {
+        map[e.variable_id] = {
+          ...e,
+          quote: e.quote || e.source_text || e.evidence_quote || "",
+          source_page: e.source_page || e.page_number || 1,
+          is_verified: e.is_verified ?? (e.verification_status === "verified"),
+          is_edited: e.is_edited ?? false,
+        };
+      }
     });
     return map;
   }, [extractions, activeStudyId]);
@@ -274,11 +276,12 @@ export function PdfViewerPage() {
   // Active Publication PDF URL computation
   const currentPdfUrl = useMemo(() => {
     if (customPdfUrl) return customPdfUrl;
-    const paper = allStudies.find((p: any) => p.study_id === activeStudyId) || allStudies[0];
+    const paper = allStudies.find((p: any) => p?.study_id === activeStudyId || p?.id === activeStudyId || p?.shortId === activeStudyId) || allStudies[0];
     const base = import.meta.env.BASE_URL || "/";
     const cleanBase = base.endsWith("/") ? base : base + "/";
-    return cleanBase + "papers/" + (paper.filename || paper.title + ".pdf");
-  }, [customPdfUrl, activeStudyId]);
+    const fname = paper?.filename || (paper?.pdf_path ? paper.pdf_path : (paper?.title ? `${paper.title}.pdf` : "Birua_2022.pdf"));
+    return cleanBase + "papers/" + fname;
+  }, [customPdfUrl, activeStudyId, allStudies]);
 
   // Map extraction variables to spatial PDF highlights for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -288,9 +291,9 @@ export function PdfViewerPage() {
         id: v.variable_id,
         varIndex: idx + 1,
         label: v.name,
-        quote: ext?.quote || "",
-        pageNumber: ext?.source_page || 1,
-        isVerified: !!ext?.is_verified,
+        quote: ext?.quote || ext?.source_text || ext?.evidence_quote || "",
+        pageNumber: ext?.source_page || ext?.page_number || 1,
+        isVerified: !!(ext?.is_verified ?? (ext?.verification_status === "verified")),
         value: ext?.value,
       };
     });
@@ -321,6 +324,8 @@ export function PdfViewerPage() {
     URL.revokeObjectURL(url);
   };
 
+  const [quoteLocatedToast, setQuoteLocatedToast] = useState<{ show: boolean; message: string } | null>(null);
+
   // ── Find Quote in PDF: Scroll, center, and flash the highlight in ActualPdfViewer ──
   const findQuoteInPdf = useCallback((targetVarId?: string) => {
     const vid = targetVarId || selectedVarId;
@@ -329,6 +334,10 @@ export function PdfViewerPage() {
     if (selectedVarId !== vid) {
       setSelectedVarId(vid);
     }
+
+    const ext = extractionMap[vid];
+    const pageNum = ext?.source_page || 1;
+    const vName = variableList.find((v: any) => v.variable_id === vid)?.name || "Variable";
 
     // 1. Dispatch custom event for ActualPdfViewer
     window.dispatchEvent(new CustomEvent("radextract:find-quote", { detail: { variableId: vid } }));
@@ -342,30 +351,40 @@ export function PdfViewerPage() {
           block: "center",
           inline: "nearest",
         });
-        highlightElement.classList.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+        highlightElement.classList.add("ring-4", "ring-[#814d75]", "scale-105", "shadow-xl");
         setTimeout(() => {
-          highlightElement.classList.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+          highlightElement.classList.remove("ring-4", "ring-[#814d75]", "scale-105", "shadow-xl");
         }, 1500);
       } else {
-        const ext = extractionMap[vid];
-        const pageNum = ext?.source_page || 1;
         const pageElement = document.getElementById(`pdf-page-${pageNum}`);
         if (pageElement) {
           pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
+          pageElement.classList.add("ring-4", "ring-[#814d75]", "shadow-2xl");
+          setTimeout(() => {
+            pageElement.classList.remove("ring-4", "ring-[#814d75]", "shadow-2xl");
+          }, 1500);
           setTimeout(() => {
             const retryEl = document.getElementById(`pdf-highlight-${vid}`);
             if (retryEl) {
               retryEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-              retryEl.classList.add("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+              retryEl.classList.add("ring-4", "ring-[#814d75]", "scale-105", "shadow-xl");
               setTimeout(() => {
-                retryEl.classList.remove("ring-4", "ring-amber-500", "scale-105", "shadow-xl");
+                retryEl.classList.remove("ring-4", "ring-[#814d75]", "scale-105", "shadow-xl");
               }, 1500);
             }
           }, 350);
         }
       }
     });
-  }, [selectedVarId, extractionMap]);
+
+    setQuoteLocatedToast({
+      show: true,
+      message: `Quote located on Page ${pageNum} (${vName})`,
+    });
+    setTimeout(() => {
+      setQuoteLocatedToast(null);
+    }, 2200);
+  }, [selectedVarId, extractionMap, variableList]);
 
   // ── Auto-scroll when selected variable changes ──
   useEffect(() => {
@@ -492,6 +511,8 @@ export function PdfViewerPage() {
       refetchExtractions();
       refetchErrorAnalysis();
       queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["extraction-grid", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["extractions", activeStudyId] });
 
       // Smooth visual confirmation transition on Accept
       if (decision === "accepted") {
@@ -508,12 +529,15 @@ export function PdfViewerPage() {
     }
   };
 
-  // ── Undo Last Decision ──
+  // ── Universal Undo System with Top-Right Small Loader ──
+  const [isUndoing, setIsUndoing] = useState(false);
+  const [undoSuccess, setUndoSuccess] = useState(false);
 
   const handleUndo = useCallback(async () => {
     if (undoStack.length === 0) return;
     const lastAction = undoStack[undoStack.length - 1];
     setUndoStack((prev) => prev.slice(0, -1));
+    setIsUndoing(true);
 
     try {
       await api.recordExtractionDecision({
@@ -542,14 +566,17 @@ export function PdfViewerPage() {
       await refetchExtractions();
       await refetchErrorAnalysis();
       queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["extraction-grid", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["extractions", activeStudyId] });
 
-      // Flash undo toast
-      setUndoToastMessage(`Undone: Reverted "${lastAction.variableName}" to Pending Review`);
-      setTimeout(() => setUndoToastMessage(null), 3000);
+      setIsUndoing(false);
+      setUndoSuccess(true);
+      setTimeout(() => setUndoSuccess(false), 2000);
     } catch (err) {
       console.error("Failed to undo decision:", err);
+      setIsUndoing(false);
     }
-  }, [undoStack, projectId, reviewerName, refetchExtractions, refetchErrorAnalysis, queryClient]);
+  }, [undoStack, projectId, activeStudyId, reviewerName, refetchExtractions, refetchErrorAnalysis, queryClient]);
 
   // ── Accept All High-Confidence (>95%) Extractions ──
   const highConfPendingVariables = useMemo(() => {
@@ -1155,14 +1182,38 @@ export function PdfViewerPage() {
           <div className="border-b border-[#381A61]/10 bg-[#FAF9F3] px-4 py-2.5 shrink-0 flex flex-col gap-2 shadow-2xs z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-[#381A61] uppercase tracking-wide flex items-center gap-1.5 font-mono">
-                  <span className="w-2 h-2 rounded-full bg-[#381A61] animate-pulse" />
-                  Word-Style Track Changes
+                {/* Extraction Layout Switcher: Sheet mode vs Form mode */}
+                <div className="flex bg-[#d2c2cb]/40 p-0.5 rounded-lg border border-[#d2c2cb]">
+                  <button
+                    onClick={() => setWorkspaceLayoutMode("form")}
+                    className={cn(
+                      "px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1 font-['Work_Sans']",
+                      workspaceLayoutMode === "form"
+                        ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                        : "text-[#4f444b] hover:text-[#3a0f34]"
+                    )}
+                    title="Form Mode: readable vertical card list in saved sequence"
+                  >
+                    <ListOrdered className="h-3 w-3" /> Form Mode
+                  </button>
+                  <button
+                    onClick={() => setWorkspaceLayoutMode("sheet")}
+                    className={cn(
+                      "px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1 font-['Work_Sans']",
+                      workspaceLayoutMode === "sheet"
+                        ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                        : "text-[#4f444b] hover:text-[#3a0f34]"
+                    )}
+                    title="Sheet Mode: horizontal extraction row matching main spreadsheet sequence"
+                  >
+                    <FileSpreadsheet className="h-3 w-3" /> Sheet Mode
+                  </button>
+                </div>
+
+                <span className="bg-[#814d75]/15 text-[#3a0f34] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-[#814d75]/30">
+                  Variable {currentVarIndex + 1} of {variableList.length}
                 </span>
-                <span className="bg-[#88A0DC]/20 text-[#381A61] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-[#88A0DC]/35">
-                  Revision {currentVarIndex + 1} of {variableList.length}
-                </span>
-                <span className="text-[11px] font-medium text-[#7C4B73] hidden sm:inline font-serif italic">
+                <span className="text-[11px] font-medium text-[#814d75] hidden sm:inline font-serif italic">
                   · {progressPercent}% Verified
                 </span>
               </div>
@@ -1302,7 +1353,221 @@ export function PdfViewerPage() {
             </div>
           </div>
 
-          {/* Main Card View: All Variables List with Focused Track Changes Card */}
+          {workspaceLayoutMode === "sheet" ? (
+            <div className="flex-1 flex flex-col overflow-hidden bg-[#ffffff]">
+              {/* Horizontal Extraction Spreadsheet for Active Study */}
+              <div className="overflow-x-auto border-b border-[#d2c2cb] bg-[#fbf9f4] p-3 shrink-0">
+                <div className="text-xs font-bold text-[#3a0f34] mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 font-['Serifon_Editorial'] text-sm">
+                    <FileSpreadsheet className="h-4 w-4 text-[#814d75]" />
+                    Active Study Values · Same Sequence as Main Sheet
+                  </span>
+                  <span className="text-[11px] font-normal text-[#62535d] font-['Work_Sans']">
+                    Click any column to jump to its source quote in the PDF
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto border border-[#d2c2cb] rounded-lg bg-[#ffffff] shadow-2xs">
+                  <table className="border-collapse table-fixed text-xs font-['Work_Sans'] w-max min-w-full">
+                    <thead>
+                      <tr className="bg-[#eee7ec] text-[10px] font-mono text-[#62535d] border-b border-[#d2c2cb]">
+                        <th className="p-1.5 w-36 text-left border-r border-[#d2c2cb] font-bold">Study ID</th>
+                        {variableList.map((v: any, idx: number) => (
+                          <th
+                            key={`col-let-${v.variable_id}`}
+                            className="p-1.5 w-44 text-center border-r border-[#d2c2cb] font-bold"
+                          >
+                            {String.fromCharCode(66 + idx)}
+                          </th>
+                        ))}
+                      </tr>
+                      <tr className="bg-[#fbf9f4] text-xs font-['Serifon_Editorial'] text-[#3a0f34] border-b border-[#d2c2cb]">
+                        <th className="p-2.5 w-36 text-left border-r border-[#d2c2cb] font-bold">
+                          {currentStudy?.study_label || currentStudy?.title?.slice(0, 18) || "Study ID"}
+                        </th>
+                        {variableList.map((v: any) => {
+                          const isSelected = v.variable_id === selectedVarId;
+                          return (
+                            <th
+                              key={v.variable_id}
+                              onClick={() => {
+                                setSelectedVarId(v.variable_id);
+                                findQuoteInPdf(v.variable_id);
+                              }}
+                              className={cn(
+                                "p-2.5 w-44 text-left border-r border-[#d2c2cb] font-bold cursor-pointer transition-colors truncate",
+                                isSelected ? "bg-[#ffdea6]/40 text-[#3a0f34]" : "hover:bg-[#eee7ec]"
+                              )}
+                              title={v.name}
+                            >
+                              <div className="truncate">{v.name}</div>
+                              <div className="text-[10px] font-['Work_Sans'] font-normal text-[#62535d] truncate">
+                                {v.section || "General"}
+                              </div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="p-2.5 w-36 text-left border-r border-[#d2c2cb] font-bold bg-[#fbf9f4] text-[#3a0f34]">
+                          {currentStudy?.study_label || "Study Row"}
+                        </td>
+                        {variableList.map((v: any) => {
+                          const ext = extractionMap[v.variable_id];
+                          const isSelected = v.variable_id === selectedVarId;
+                          const isVerified = ext?.is_verified;
+                          return (
+                            <td
+                              key={v.variable_id}
+                              onClick={() => {
+                                setSelectedVarId(v.variable_id);
+                                findQuoteInPdf(v.variable_id);
+                              }}
+                              className={cn(
+                                "p-2.5 w-44 border-r border-[#d2c2cb] cursor-pointer transition-all",
+                                isSelected
+                                  ? "outline-2 outline-[#814d75] outline-offset-[-2px] bg-[#ffdea6]/30 font-bold text-[#3a0f34]"
+                                  : "hover:bg-[#fbf9f4] text-[#4f444b]"
+                              )}
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="truncate">{ext?.value || <span className="text-[#81737b] italic font-normal">NR</span>}</span>
+                                {isVerified && <Check className="h-3 w-3 text-emerald-600 shrink-0" />}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Focused Variable Detailed Review & Evidence Card Below Sheet */}
+              <div className="flex-1 overflow-y-auto p-4 bg-[#fbf9f4]">
+                {currentVar && (
+                  <div className="bg-[#ffffff] rounded-xl border border-[#d2c2cb] shadow-xs p-5 space-y-4 max-w-2xl mx-auto">
+                    <div className="flex items-center justify-between border-b border-[#d2c2cb] pb-3">
+                      <div>
+                        <span className="text-[10px] font-mono text-[#814d75] font-bold uppercase tracking-wide">
+                          Variable #{currentVarIndex + 1} · {currentVar.section || "General"}
+                        </span>
+                        <h3 className="font-['Serifon_Editorial'] text-base font-bold text-[#3a0f34]">
+                          {currentVar.name}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={cn(
+                          "px-2.5 py-0.5 rounded-full text-xs font-bold border",
+                          currentExtraction?.is_verified
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "bg-amber-50 text-amber-900 border-amber-200"
+                        )}>
+                          {currentExtraction?.is_verified ? "Verified Accurate" : "Pending Review"}
+                        </span>
+                        {currentExtraction?.confidence !== undefined && (
+                          <span className="font-mono text-xs font-bold text-[#3a0f34] bg-[#eee7ec] px-2 py-0.5 rounded border border-[#d2c2cb]">
+                            {Math.round((currentExtraction.confidence || 0) * 100)}% Conf
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Value Field & Modification */}
+                    <div>
+                      <label className="block text-xs font-['Work_Sans'] font-bold text-[#3a0f34] mb-1">
+                        Extracted Value
+                      </label>
+                      {editingVarId === currentVar.variable_id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editDraftValue}
+                            onChange={(e) => setEditDraftValue(e.target.value)}
+                            className="flex-1 text-sm font-bold border border-[#814d75] rounded-lg p-2 outline-none"
+                            placeholder="Enter corrected value..."
+                          />
+                          <button
+                            onClick={() => handleSaveInlineEdit(currentVar.variable_id)}
+                            className="px-3 py-2 bg-[#3a0f34] text-[#fbf9f4] text-xs font-bold rounded-lg hover:bg-[#1a0017]"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingVarId(null)}
+                            className="px-3 py-2 bg-[#ffffff] border border-[#d2c2cb] text-xs font-bold rounded-lg hover:bg-[#eee7ec]"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between p-3 bg-[#fbf9f4] rounded-lg border border-[#d2c2cb]">
+                          <span className="text-sm font-bold text-[#3a0f34]">
+                            {currentExtraction?.value || <span className="text-[#81737b] italic font-normal">Not Reported (NR)</span>}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setEditingVarId(currentVar.variable_id);
+                              setEditDraftValue(currentExtraction?.value || "");
+                            }}
+                            className="p-1 rounded text-[#814d75] hover:bg-[#eee7ec]"
+                            title="Edit value inline"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Evidence Quote */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-['Work_Sans'] font-bold text-[#62535d]">
+                          Evidence Quote
+                        </label>
+                        {currentExtraction?.source_page && (
+                          <span className="text-xs font-mono font-bold text-[#814d75]">
+                            Page {currentExtraction.source_page}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-['QuadraatSmallCaps'] text-[#4f444b] italic bg-[#fbf9f4] p-3 rounded-lg border border-[#d2c2cb] leading-relaxed">
+                        {currentExtraction?.quote ? `“${currentExtraction.quote}”` : "No verbatim passage linked."}
+                      </p>
+                    </div>
+
+                    {/* Actions Ribbon for Sheet Mode */}
+                    <div className="flex items-center justify-between pt-2 border-t border-[#d2c2cb]">
+                      <button
+                        onClick={() => findQuoteInPdf(currentVar.variable_id)}
+                        className="px-3 py-1.5 bg-[#ffffff] border border-[#d2c2cb] text-[#3a0f34] text-xs font-bold rounded-lg hover:bg-[#eee7ec] flex items-center gap-1.5"
+                      >
+                        <Eye className="h-3.5 w-3.5 text-[#814d75]" /> Find in PDF
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleDecision("rejected")}
+                          className="px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1"
+                        >
+                          <X className="h-3.5 w-3.5" /> Reject (NR)
+                        </button>
+                        <button
+                          onClick={() => handleDecision("accepted")}
+                          className="px-4 py-1.5 text-xs font-bold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded-lg flex items-center gap-1.5 shadow-2xs"
+                        >
+                          <Check className="h-3.5 w-3.5 text-[#ffdea6]" /> Accept & Next
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+          /* Main Card View: All Variables List with Focused Track Changes Card */
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {variableList.map((v: any, index: number) => {
               const ext = extractionMap[v.variable_id];
@@ -1584,19 +1849,19 @@ export function PdfViewerPage() {
               );
             })}
           </div>
+        )}
 
-          {/* Bottom Keyboard Shortcut Legend */}
-          <div className="bg-[#FAF9F3] border-t border-[#381A61]/10 px-4 py-2.5 shrink-0 flex items-center justify-between text-[11px] text-[#381A61]">
-            <span className="font-semibold text-[#381A61] flex items-center gap-1">
-              <Zap className="h-3.5 w-3.5 text-[#E78429]" /> Hotkeys:
+          {/* Bottom Keyboard Shortcut Legend (Universal Undo Ctrl+Z is active globally and not displayed here per protocol) */}
+          <div className="bg-[#FAF9F3] border-t border-[#d2c2cb] px-4 py-2.5 shrink-0 flex items-center justify-between text-[11px] text-[#4f444b] font-['Work_Sans']">
+            <span className="font-semibold text-[#3a0f34] flex items-center gap-1">
+              <Zap className="h-3.5 w-3.5 text-[#814d75]" /> Hotkeys:
             </span>
             <div className="flex items-center gap-3">
-              <span><kbd className="px-1.5 py-0.5 bg-[#381A61] text-[#F9D14A] rounded font-mono text-[10px] font-bold">A</kbd> or <kbd className="px-1.5 py-0.5 bg-white border border-[#381A61]/15 rounded font-mono text-[10px]">Enter</kbd> Accept</span>
-              <span><kbd className="px-1.5 py-0.5 bg-white border border-[#7C4B73]/30 text-[#7C4B73] rounded font-mono text-[10px] font-bold">M</kbd> Modify</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[#3a0f34] text-[#fbf9f4] rounded font-mono text-[10px] font-bold">A</kbd> or <kbd className="px-1.5 py-0.5 bg-white border border-[#d2c2cb] rounded font-mono text-[10px]">Enter</kbd> Accept</span>
+              <span><kbd className="px-1.5 py-0.5 bg-white border border-[#814d75]/40 text-[#814d75] rounded font-mono text-[10px] font-bold">M</kbd> Modify</span>
               <span><kbd className="px-1.5 py-0.5 bg-[#AB3329]/15 border border-[#AB3329]/30 text-[#AB3329] rounded font-mono text-[10px] font-bold">R</kbd> Reject (NR)</span>
-              <span><kbd className="px-1.5 py-0.5 bg-[#88A0DC]/30 border border-[#88A0DC]/60 text-[#381A61] rounded font-mono text-[10px] font-bold">F</kbd> / <kbd className="px-1.5 py-0.5 bg-[#88A0DC]/30 border border-[#88A0DC]/60 text-[#381A61] rounded font-mono text-[10px] font-bold">Q</kbd> Find Quote</span>
-              <span><kbd className="px-1.5 py-0.5 bg-[#E78429]/20 border border-[#E78429]/40 text-[#E78429] rounded font-mono text-[10px] font-bold">Z</kbd> / <kbd className="px-1.5 py-0.5 bg-[#E78429]/20 border border-[#E78429]/40 text-[#E78429] rounded font-mono text-[10px] font-bold">U</kbd> Undo</span>
-              <span><kbd className="px-1.5 py-0.5 bg-white border border-[#381A61]/15 text-[#381A61] rounded font-mono text-[10px]">↓</kbd> / <kbd className="px-1.5 py-0.5 bg-white border border-[#381A61]/15 text-[#381A61] rounded font-mono text-[10px]">↑</kbd> Navigate</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[#814d75]/15 border border-[#814d75]/35 text-[#3a0f34] rounded font-mono text-[10px] font-bold">F</kbd> / <kbd className="px-1.5 py-0.5 bg-[#814d75]/15 border border-[#814d75]/35 text-[#3a0f34] rounded font-mono text-[10px] font-bold">Q</kbd> Find Quote</span>
+              <span><kbd className="px-1.5 py-0.5 bg-white border border-[#d2c2cb] text-[#4f444b] rounded font-mono text-[10px]">↓</kbd> / <kbd className="px-1.5 py-0.5 bg-white border border-[#d2c2cb] text-[#4f444b] rounded font-mono text-[10px]">↑</kbd> Navigate</span>
             </div>
           </div>
         </section>
@@ -2043,6 +2308,31 @@ export function PdfViewerPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Universal Undo Top-Right Floating Status Pill */}
+      {(isUndoing || undoSuccess) && (
+        <div className="fixed top-3 right-4 z-50 flex items-center gap-2 px-3.5 py-2 bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-lg text-xs font-['Work_Sans'] font-semibold text-[#3a0f34] animate-in fade-in slide-in-from-top-2 duration-150">
+          {isUndoing ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin text-[#814d75]" />
+              <span>Undoing task...</span>
+            </>
+          ) : (
+            <>
+              <Check className="h-4 w-4 text-emerald-600" />
+              <span>Task undone</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Quote Located Toast Notification */}
+      {quoteLocatedToast && (
+        <div className="fixed top-14 right-4 z-50 flex items-center gap-2 px-3.5 py-2 bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-lg text-xs font-['Work_Sans'] font-semibold text-[#3a0f34] animate-in fade-in slide-in-from-top-2 duration-150">
+          <FileText className="h-4 w-4 text-[#814d75]" />
+          <span>{quoteLocatedToast.message}</span>
         </div>
       )}
     </div>

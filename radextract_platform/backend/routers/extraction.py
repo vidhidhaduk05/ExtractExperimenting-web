@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import Optional
 import sqlite3
 
-from models import ExtractionCreate, ExtractionUpdate, ExtractionResponse, MissingDataSummary
+from models import ExtractionCreate, ExtractionUpdate, ExtractionResponse, MissingDataSummary, ExtractionBatchUpsert, ExtractionBatchCell
 from database import get_db
 from services.db_backend import DBBackend
 from dependencies import get_current_user_optional, check_project_access
@@ -31,6 +31,164 @@ class ExtractionAdjudicateRequest(BaseModel):
     notes: str = ""
 
 
+@router.get("/projects/{project_id}/extractions/grid")
+async def get_extraction_grid(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Retrieve full project extraction workspace grid: variables (ordered), studies, and all extraction cells."""
+    check_project_access(conn, project_id, user)
+
+    # 1. Variables ordered globally
+    var_rows = conn.execute(
+        "SELECT * FROM variables WHERE project_id = ? ORDER BY order_index ASC, name ASC",
+        (project_id,),
+    ).fetchall()
+    variables = [dict(v) for v in var_rows]
+
+    # 2. Studies
+    study_rows = conn.execute(
+        "SELECT * FROM studies WHERE project_id = ? ORDER BY created_at DESC",
+        (project_id,),
+    ).fetchall()
+    studies = []
+    for r in study_rows:
+        d = dict(r)
+        if not d.get("study_label"):
+            first_author = d.get("authors", "").split(",")[0].split(";")[0].split(" et al")[0].strip() if d.get("authors") else ""
+            year_str = str(d.get("publication_year")) if d.get("publication_year") else ""
+            if first_author and year_str:
+                d["study_label"] = f"{first_author} {year_str}"
+            elif first_author:
+                d["study_label"] = first_author
+            elif d.get("title"):
+                d["study_label"] = d["title"][:30]
+            else:
+                d["study_label"] = d.get("study_id", "Study")[:8]
+        studies.append(d)
+
+    # 3. All extractions for studies in this project
+    ext_rows = conn.execute(
+        """SELECT e.*, v.name as variable_name
+           FROM extractions e
+           JOIN studies s ON e.study_id = s.study_id
+           LEFT JOIN variables v ON e.variable_id = v.variable_id
+           WHERE s.project_id = ?""",
+        (project_id,),
+    ).fetchall()
+
+    extractions: dict[str, dict[str, dict]] = {s["study_id"]: {} for s in studies}
+    for r in ext_rows:
+        sid = r["study_id"]
+        vid = r["variable_id"]
+        if sid in extractions:
+            d = dict(r)
+            d["evidence_quote"] = d.get("source_text") or d.get("quote") or ""
+            d["is_verified"] = d.get("verification_status") in ("verified", "accepted")
+            extractions[sid][vid] = d
+
+    return {
+        "project_id": project_id,
+        "variables": variables,
+        "studies": studies,
+        "cells": extractions,
+        "extractions": extractions,
+    }
+
+
+@router.post("/projects/{project_id}/extractions/batch")
+async def batch_update_extractions(
+    project_id: str,
+    body: ExtractionBatchUpsert,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Upsert a rectangular batch of extraction cells with change tracking and verification guards."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    username = user["username"] if user else "reviewer"
+    now_iso = datetime.datetime.utcnow().isoformat()
+
+    updated_count = 0
+    created_count = 0
+    skipped_verified = 0
+
+    # Pre-fetch variable names for audit logging
+    var_map = {
+        r["variable_id"]: r["name"]
+        for r in conn.execute("SELECT variable_id, name FROM variables WHERE project_id = ?", (project_id,)).fetchall()
+    }
+
+    for cell in body.cells:
+        # Check existing
+        existing = conn.execute(
+            "SELECT * FROM extractions WHERE study_id = ? AND variable_id = ?",
+            (cell.study_id, cell.variable_id),
+        ).fetchone()
+
+        if existing:
+            old_val = existing["value"]
+            if cell.value != old_val:
+                conn.execute(
+                    """UPDATE extractions SET
+                       value = ?, is_edited = 1, edited_by = ?, edited_at = ?,
+                       verification_status = COALESCE(?, verification_status),
+                       confidence = COALESCE(?, confidence),
+                       confidence_tag = COALESCE(?, confidence_tag),
+                       source_page = COALESCE(?, source_page),
+                       source_text = COALESCE(?, source_text),
+                       missing_code = COALESCE(?, missing_code)
+                       WHERE extraction_id = ?""",
+                    (cell.value, username, now_iso,
+                     cell.verification_status, cell.confidence, cell.confidence_tag,
+                     cell.source_page, cell.source_text, cell.missing_code,
+                     existing["extraction_id"]),
+                )
+                conn.execute(
+                    """INSERT INTO audit_log
+                       (audit_id, study_id, variable_id, variable_name,
+                        old_value, new_value, changed_by, reason)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (str(uuid.uuid4()), cell.study_id, cell.variable_id,
+                     var_map.get(cell.variable_id, ""), old_val, cell.value,
+                     username, "Spreadsheet batch update"),
+                )
+                updated_count += 1
+        else:
+            ext_id = str(uuid.uuid4())
+            conn.execute(
+                """INSERT INTO extractions
+                   (extraction_id, study_id, variable_id, value, confidence, confidence_tag,
+                    source_page, source_text, extracted_by, verification_status, missing_code)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (ext_id, cell.study_id, cell.variable_id, cell.value,
+                 cell.confidence if cell.confidence is not None else 1.0,
+                 cell.confidence_tag or "manual",
+                 cell.source_page, cell.source_text or "",
+                 username, cell.verification_status or "pending",
+                 cell.missing_code or ""),
+            )
+            conn.execute(
+                """INSERT INTO audit_log
+                   (audit_id, study_id, variable_id, variable_name,
+                    old_value, new_value, changed_by, reason)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (str(uuid.uuid4()), cell.study_id, cell.variable_id,
+                 var_map.get(cell.variable_id, ""), "", cell.value,
+                 username, "Spreadsheet initial entry"),
+            )
+            created_count += 1
+
+    conn.commit()
+    return {
+        "status": "success",
+        "total_submitted": len(body.cells),
+        "updated_count": updated_count,
+        "created_count": created_count,
+        "skipped_verified": skipped_verified,
+    }
+
+
 @router.get("/studies/{study_id}/extractions")
 async def list_extractions(study_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
@@ -41,7 +199,7 @@ async def list_extractions(study_id: str, user: Optional[dict] = Depends(get_cur
            FROM extractions e
            LEFT JOIN variables v ON e.variable_id = v.variable_id
            WHERE e.study_id = ?
-           ORDER BY v.section, v.order_index""",
+           ORDER BY v.order_index ASC, v.name ASC""",
         (study_id,),
     ).fetchall()
     return [dict(r) for r in rows]
@@ -481,14 +639,26 @@ async def record_extraction_decision(
     final_value = (
         body.corrected_value if body.decision == "modified"
         else "NR" if body.decision == "rejected"
-        else body.original_value
+        else (body.corrected_value or body.original_value or "")
     )
+    verification_status = "verified" if body.decision == "accepted" else ("modified" if body.decision == "modified" else "unverified")
+    is_edited_flag = 1 if body.decision == "modified" else (existing["is_edited"] if existing else 0)
+
     if existing:
+        conn.execute(
+            """UPDATE extractions
+               SET value = ?, is_edited = ?, edited_by = ?, edited_at = ?,
+                   verification_status = ?, verified_at = ?, verified_by = ?,
+                   source_text = COALESCE(NULLIF(?, ''), source_text),
+                   source_page = COALESCE(NULLIF(?, 0), source_page)
+               WHERE extraction_id = ?""",
+            (final_value, is_edited_flag, actor, now,
+             verification_status, now if verification_status == "verified" else "",
+             actor if verification_status == "verified" else "",
+             body.evidence_quote or "", body.page_number or 0,
+             existing["extraction_id"]),
+        )
         if final_value != existing["value"]:
-            conn.execute(
-                "UPDATE extractions SET value = ?, is_edited = 1, edited_by = ?, edited_at = ? WHERE extraction_id = ?",
-                (final_value, actor, now, existing["extraction_id"]),
-            )
             conn.execute(
                 """INSERT INTO audit_log
                    (audit_id, study_id, variable_id, variable_name, old_value, new_value, changed_by, reason)
@@ -498,8 +668,13 @@ async def record_extraction_decision(
             )
     else:
         conn.execute(
-            "INSERT INTO extractions (extraction_id, study_id, variable_id, value, extracted_by) VALUES (?, ?, ?, ?, ?)",
-            (str(uuid.uuid4()), body.study_id, body.variable_id, final_value, actor),
+            """INSERT INTO extractions
+               (extraction_id, study_id, variable_id, value, extracted_by, verification_status, verified_at, verified_by, source_text, source_page)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (str(uuid.uuid4()), body.study_id, body.variable_id, final_value, actor,
+             verification_status, now if verification_status == "verified" else "",
+             actor if verification_status == "verified" else "",
+             body.evidence_quote or "", body.page_number or 1),
         )
     conn.commit()
 

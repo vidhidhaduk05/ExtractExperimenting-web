@@ -663,6 +663,7 @@ MIGRATION_COLUMNS = [
     ("rob_signaling_answers", "reviewed_by", "TEXT DEFAULT ''"),
     ("rob_signaling_answers", "reviewed_at", "TEXT DEFAULT ''"),
     ("studies", "pdf_processor_engine", "TEXT DEFAULT ''"),
+    ("studies", "study_label", "TEXT DEFAULT ''"),
 ]
 
 

@@ -239,6 +239,7 @@ class StudyCreate(BaseModel):
     abstract: str = ""
     source: str = ""
     study_design: str = ""
+    study_label: str = ""
     metadata_json: str = ""
 
 
@@ -251,6 +252,7 @@ class StudyUpdate(BaseModel):
     pmid: Optional[str] = None
     abstract: Optional[str] = None
     study_design: Optional[str] = None
+    study_label: Optional[str] = None
     screening_status: Optional[str] = None
     screening_reason: Optional[str] = None
     screening_stage: Optional[str] = None
@@ -277,6 +279,7 @@ class StudyResponse(ORMBase):
     abstract: str = ""
     source: str = ""
     study_design: str = ""
+    study_label: str = ""
     pdf_path: str = ""
     pdf_status: str = "none"
     screening_status: str = "pending"
@@ -306,7 +309,7 @@ class VariableCreate(BaseModel):
     range_min: Optional[float] = None
     range_max: Optional[float] = None
     description: str = ""
-    order_index: int = 0
+    order_index: Optional[int] = None
     is_base: bool = False
 
 
@@ -319,6 +322,10 @@ class VariableUpdate(BaseModel):
     range_max: Optional[float] = None
     description: Optional[str] = None
     order_index: Optional[int] = None
+
+
+class VariableReorder(BaseModel):
+    variable_ids: list[str]
 
 
 class VariableResponse(ORMBase):
@@ -339,6 +346,22 @@ class VariableResponse(ORMBase):
 # ═══════════════════════════════════════════════════════════════════════
 #  Extractions
 # ═══════════════════════════════════════════════════════════════════════
+
+class ExtractionBatchCell(BaseModel):
+    study_id: str
+    variable_id: str
+    value: str = ""
+    confidence: Optional[float] = None
+    confidence_tag: Optional[str] = None
+    source_page: Optional[int] = None
+    source_text: Optional[str] = None
+    verification_status: Optional[str] = None
+    missing_code: Optional[str] = None
+
+
+class ExtractionBatchUpsert(BaseModel):
+    cells: list[ExtractionBatchCell]
+
 
 class ExtractionCreate(BaseModel):
     study_id: str

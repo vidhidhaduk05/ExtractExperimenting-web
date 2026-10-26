@@ -433,3 +433,29 @@ The editable copy at D:/Desktop/Website Updated/Stellar_Labs_landing_working_cop
 ## 2026-10-26 — Evidence-backed preset search scopes in separate frontend copies
 
 The seven preset topic buttons in D:/Desktop/Website Updated now use explicit PubMed search strategies rather than keyword-stripping the full question. All seven scopes were verified with live NCBI ESearch; the three radiology presets also retrieved 100 real publications each through the existing frontend PubMed client. The integrated breast-imaging UI rendered the resulting map in a live fallback check. Exact queries, sampled PMIDs and verification counts are stored in Website Updated/presets/research-presets.json. Editable ClaimScape uses src/data/research_presets.json and src/lib/researchPresets.ts; the landing has a synchronized embedded registry. Manual query edits remain authoritative. No papers, verdicts or evidence tiers were fabricated; backend and scientific scoring were unchanged. Empty tiers must remain empty when no relevant retrieved papers populate them. These changes apply only to the separate copies, not the main frontend or backend repository sources.
+
+## 2026-10-26 — Planned PICO setup simplification (user-approved product direction)
+
+Planning only: do not implement, commit, push, or deploy this redesign until explicitly authorized.
+
+Offer exactly three PICO entry routes: upload a protocol and extract its details; enter a research question and generate editable PICO fields; or fill PICO manually. All routes converge on one shared editable PICO record. Do not repeat question entry or duplicate generation actions.
+
+After PICO confirmation, offer multi-specialty AI review with reviewer roles and count selected according to the project's question, methods and evidence requirements rather than a fixed count. Identify these as AI perspectives, explain their selection, and present proposed corrections for user review.
+
+Then show one primary button labeled `Generate Search Strings`, leading to editable database-specific strategies. Distinguish generation from running searches. Replace ambiguous repeated `Generate from PICO` actions. Save behavior, criteria placement, and review limits remain proposed implementation details.
+
+## 2026-10-26 — Interactive Excel Extraction Workspace, Universal Undo, and Automated Prefill
+
+- **Branch**: codex/excel-extraction-workspace.
+- **Extraction Spreadsheet & Variable Ordering**:
+  - Maintained persistent variable order_index across backend schema, APIs, and UI to ensure extraction matrix columns strictly match the codebook sequence.
+  - Implemented Excel export workbook (/projects/{project_id}/export/excel) with formatting, data validation dropdowns for categorical codebook variables, and auto-fit column widths.
+- **PDF Viewer & Quote Locator**:
+  - Fixed active study loading to strictly adhere to the route parameter /studies/:studyId/pdf and resolve benchmark papers by ID.
+  - Bound F / Q hotkeys to trigger instant quote location with toast notification, viewport centering, and plum pulse highlight rings (#814d75).
+  - Added relaxed 1-word and informative keyword fallback in pdfLocator.ts for reliable citation matching across clinical literature.
+- **Universal Undo**:
+  - Bound Ctrl+Z / Cmd+Z globally across the PDF extraction viewer and worksheet.
+  - Configured a lightweight top-right status pill with an animated spinner (Undoing task... -> Task undone) without displaying the shortcut in the public hotkeys legend bar.
+- **Screening to Extraction Auto-Prefill**:
+  - Connected auto_prefill_study_bibliographic_extractions in routers/screening.py on study inclusion, automatically pre-filling bibliographic metadata (Study ID, Year, Author, Country, DOI, PMID) into the extraction worksheet.
