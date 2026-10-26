@@ -48,9 +48,9 @@ const apiListeners: Set<ApiListener> = new Set();
 export const PERMANENT_HPC_BACKEND = "https://verification-enter-attachments-mug.trycloudflare.com";
 
 export function getApiBase(): string {
-  if (typeof window === "undefined") return "/api";
-  const custom = localStorage.getItem("custom_api_base");
+  const custom = typeof localStorage !== "undefined" ? localStorage.getItem("custom_api_base") : null;
   if (custom && custom.trim()) return custom.trim().replace(/\/+$/, "");
+  if (typeof window === "undefined") return "/api";
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") return "/api";
@@ -126,8 +126,10 @@ if (typeof window !== "undefined") {
 }
 
 export function isDemoModeEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem("demo_mode") === "true";
+  if (typeof localStorage !== "undefined") {
+    return localStorage.getItem("demo_mode") === "true";
+  }
+  return false;
 }
 
 export function shouldUseDemoFallback(): boolean {
@@ -163,11 +165,12 @@ function updateApiState(partial: Partial<ApiConnectionInfo>) {
 }
 
 export function setCustomApiBase(url: string | null): void {
-  if (typeof window === "undefined") return;
-  if (url && url.trim()) {
-    localStorage.setItem("custom_api_base", url.trim().replace(/\/+$/, ""));
-  } else {
-    localStorage.removeItem("custom_api_base");
+  if (typeof localStorage !== "undefined") {
+    if (url && url.trim()) {
+      localStorage.setItem("custom_api_base", url.trim().replace(/\/+$/, ""));
+    } else {
+      localStorage.removeItem("custom_api_base");
+    }
   }
   API_BASE = getApiBase();
   updateApiState({
@@ -177,11 +180,12 @@ export function setCustomApiBase(url: string | null): void {
 }
 
 export function setDemoModeEnabled(enabled: boolean): void {
-  if (typeof window === "undefined") return;
-  if (enabled) {
-    localStorage.setItem("demo_mode", "true");
-  } else {
-    localStorage.removeItem("demo_mode");
+  if (typeof localStorage !== "undefined") {
+    if (enabled) {
+      localStorage.setItem("demo_mode", "true");
+    } else {
+      localStorage.removeItem("demo_mode");
+    }
   }
   updateApiState({
     isExplicitDemo: enabled,
@@ -798,6 +802,9 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         project_id: `proj_${Date.now()}`,
         name: body.name || "New Systematic Review",
         description: body.description || "",
+        hypothesis: body.hypothesis || "",
+        research_question: body.research_question || "",
+        pico_json: body.pico_json || "{}",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         status: "active",
@@ -810,6 +817,16 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         localStorage.setItem("radextract_custom_projects", JSON.stringify(stored));
         saveStoredProjectStudies(newProj.project_id, []);
         localStorage.setItem(`radextract_blank_${newProj.project_id}`, "true");
+        if (body.hypothesis) {
+          localStorage.setItem(
+            `radextract_hyp_${newProj.project_id}`,
+            JSON.stringify({
+              hypothesis: body.hypothesis,
+              research_question: body.research_question || "",
+              secondary_hypotheses: [],
+            })
+          );
+        }
       } catch (e) {}
       return newProj as unknown as T;
     }
@@ -1569,60 +1586,61 @@ async function request<T>(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  try {
+  if (path.startsWith("/auth/login")) {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
-      // If server returns 404/500/502 on demo or project data, gracefully fallback
-      if (res.status === 404 || res.status >= 500) {
-        console.warn(`[API HTTP ${res.status}] ${base}${path} - Falling back to demo data`);
-        updateApiState({ state: "demo_fallback", apiBase: base });
-        return handleDemoRequest<T>(path, options);
-      }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }
-    const data = res.status === 204 ? undefined : await res.json();
-    updateApiState({ state: "live", apiBase: base, errorMessage: undefined });
-    return data as T;
+    return (res.status === 204 ? undefined : await res.json()) as T;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, { ...options, headers });
   } catch (err: any) {
     const msg = err?.message || "Network request failed";
-    console.warn(`[API Connection Failed - Gracefully falling back to demo data] ${base}${path}:`, err);
+    console.warn(`[API Connection Failed] ${base}${path}:`, err);
     updateApiState({ state: "demo_fallback", apiBase: base, errorMessage: msg });
-    try {
-      return handleDemoRequest<T>(path, options);
-    } catch (fallbackErr) {
-      console.error(`[Demo Fallback Failed for ${path}]`, fallbackErr);
-      throw err;
-    }
-  }
-}
-
-// Human identity and decision writes seamlessly persist to the backend database
-async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = typeof window !== "undefined" ? (localStorage.getItem("token") || "guest_reviewer_token") : "guest_reviewer_token";
-  try {
-    const res = await fetch(`${getApiBase()}${path}`, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...((options.headers as Record<string, string>) || {}),
-      },
-    });
-    if (!res.ok) {
-      if (shouldUseDemoFallback()) {
-        return handleDemoRequest<T>(path, options);
-      }
-      const error = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(error.detail || `HTTP ${res.status}`);
-    }
-    return res.json();
-  } catch (err: any) {
     if (shouldUseDemoFallback()) {
       return handleDemoRequest<T>(path, options);
     }
     throw err;
   }
+
+  if (!res.ok) {
+    // If server returns 404/500/502 on demo or project data, gracefully fallback
+    if (res.status === 404 || res.status >= 500) {
+      console.warn(`[API HTTP ${res.status}] ${base}${path} - Falling back to demo data`);
+      updateApiState({ state: "demo_fallback", apiBase: base });
+      return handleDemoRequest<T>(path, options);
+    }
+    const error = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(error.detail || `HTTP ${res.status}`);
+  }
+  const data = res.status === 204 ? undefined : await res.json();
+  updateApiState({ state: "live", apiBase: base, errorMessage: undefined });
+  return data as T;
+}
+
+async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = typeof localStorage !== "undefined" ? localStorage.getItem("token") : null;
+  if (!token) {
+    throw new Error("Sign in to record decisions under your account");
+  }
+  const res = await fetch(`${getApiBase()}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...((options.headers as Record<string, string>) || {}),
+    },
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(error.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
 }
 
 // ── Types ──
@@ -3517,15 +3535,61 @@ export const api = {
         ? "Evidence is pooled as descriptive proportions with Wilson 95% CIs. NR values are not imputed."
         : "Targeted endovascular intervention achieves higher definitive lesion control with acceptable complication rates compared to non-interventional management.";
 
+      const finalPop = extracted.population || defaultPopulation;
+      const finalIndex = extracted.index_test || defaultIndexTest;
+      const finalComp = extracted.comparator || defaultComparator;
+      const finalOut = extracted.outcome || defaultOutcome;
+      const finalDesign = extracted.study_design || defaultStudyDesign;
+
+      // Extract explicit inclusion and exclusion criteria sections if available
+      let extractedInclusion: string[] = [];
+      let extractedExclusion: string[] = [];
+      if (fileText && fileText.trim().length > 20) {
+        const incMatch = fileText.match(/(?:inclusion\s+criteria|criteria\s+for\s+inclusion|eligibility\s+criteria\s*[-–:]\s*inclusion)\s*[:\-–]?\s*\n((?:[ \t]*[-•*0-9\.\)][^\n]+\n?)+)/i);
+        if (incMatch && incMatch[1]) {
+          extractedInclusion = incMatch[1]
+            .split("\n")
+            .map((s) => s.replace(/^[ \t]*[-•*0-9\.\)]+/, "").trim())
+            .filter((s) => s.length >= 8);
+        }
+        const excMatch = fileText.match(/(?:exclusion\s+criteria|criteria\s+for\s+exclusion|eligibility\s+criteria\s*[-–:]\s*exclusion)\s*[:\-–]?\s*\n((?:[ \t]*[-•*0-9\.\)][^\n]+\n?)+)/i);
+        if (excMatch && excMatch[1]) {
+          extractedExclusion = excMatch[1]
+            .split("\n")
+            .map((s) => s.replace(/^[ \t]*[-•*0-9\.\)]+/, "").trim())
+            .filter((s) => s.length >= 8);
+        }
+      }
+
+      if (extractedInclusion.length === 0) {
+        extractedInclusion = [
+          `Studies must include patients matching: ${finalPop}`,
+          `Studies must evaluate the index test: ${finalIndex}`,
+          `Studies must report on the outcome: ${finalOut}`,
+          `Studies must use the study design: ${finalDesign}`,
+        ];
+      }
+
+      if (extractedExclusion.length === 0) {
+        extractedExclusion = [
+          "Case reports, editorials, letters, and conference abstracts will be excluded.",
+          "Studies not published in English will be excluded.",
+          "Studies without sufficient data to construct 2x2 tables will be excluded.",
+          `Studies not using ${finalComp} as reference standard will be excluded.`,
+        ];
+      }
+
       return {
-        population: extracted.population || defaultPopulation,
-        index_test: extracted.index_test || defaultIndexTest,
-        comparator: extracted.comparator || defaultComparator,
-        outcome: extracted.outcome || defaultOutcome,
-        study_design: extracted.study_design || defaultStudyDesign,
+        population: finalPop,
+        index_test: finalIndex,
+        comparator: finalComp,
+        outcome: finalOut,
+        study_design: finalDesign,
         research_question: extracted.research_question || defaultQuestion,
         hypothesis: extracted.hypothesis || defaultHypothesis,
-        extraction_confidence: Object.keys(extracted).length >= 3 ? "high" : "high"
+        extraction_confidence: Object.keys(extracted).length >= 3 ? "high" : "high",
+        inclusion: extractedInclusion,
+        exclusion: extractedExclusion,
       };
     };
 

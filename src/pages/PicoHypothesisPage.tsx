@@ -204,6 +204,51 @@ export function PicoHypothesisPage() {
         setResearchQuestionInput(newRq);
       }
       if (newHyp) setHypothesis(newHyp);
+
+      // Auto-fill Inclusion and Exclusion criteria from protocol
+      let nextInclusion: Criterion[] = [];
+      let nextExclusion: Criterion[] = [];
+
+      if (Array.isArray(result.inclusion) && result.inclusion.length > 0) {
+        nextInclusion = result.inclusion.map((item: any, idx: number) => {
+          if (typeof item === "string") {
+            return { id: `inc_${Date.now()}_${idx}`, text: item };
+          }
+          return { id: item.id || `inc_${Date.now()}_${idx}`, text: item.text || String(item) };
+        });
+      }
+
+      if (Array.isArray(result.exclusion) && result.exclusion.length > 0) {
+        nextExclusion = result.exclusion.map((item: any, idx: number) => {
+          if (typeof item === "string") {
+            return { id: `exc_${Date.now()}_${idx}`, text: item };
+          }
+          return { id: item.id || `exc_${Date.now()}_${idx}`, text: item.text || String(item) };
+        });
+      }
+
+      // If criteria were not returned from document extraction, auto-draft from the newly extracted PICO
+      if (nextInclusion.length === 0 && nextExclusion.length === 0 && (newPico.population || newPico.index_test)) {
+        try {
+          const generated = await api.generateCriteria(projectId!);
+          if (generated.inclusion && generated.inclusion.length > 0) {
+            nextInclusion = generated.inclusion;
+          }
+          if (generated.exclusion && generated.exclusion.length > 0) {
+            nextExclusion = generated.exclusion;
+          }
+        } catch (e) {
+          console.warn("Could not auto-generate criteria fallback:", e);
+        }
+      }
+
+      if (nextInclusion.length > 0) {
+        setInclusion(nextInclusion);
+      }
+      if (nextExclusion.length > 0) {
+        setExclusion(nextExclusion);
+      }
+
       setExtractionConfidence(result.extraction_confidence || "medium");
       setExtractionStatus("done");
 
@@ -225,9 +270,16 @@ export function PicoHypothesisPage() {
           secondary_hypotheses: secondary,
         }).catch(() => {});
       }
+      if (nextInclusion.length > 0 || nextExclusion.length > 0) {
+        api.updateCriteria(projectId!, { inclusion: nextInclusion, exclusion: nextExclusion }).catch(() => {});
+      }
 
       queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
       queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
+
+      setReviewToast("Protocol loaded: PICO and eligibility criteria auto-filled.");
+      setTimeout(() => setReviewToast(null), 4000);
     } catch (err: any) {
       setExtractionError(err.message || "Failed to process protocol file.");
       setExtractionStatus("error");
@@ -270,6 +322,18 @@ export function PicoHypothesisPage() {
       }
       if (res.missing_fields && res.missing_fields.length > 0) {
         setMissingFieldsNotice(res.missing_fields);
+      }
+
+      // Auto-draft eligibility criteria if currently empty
+      if (inclusion.length === 0 && exclusion.length === 0 && (newPico.population || newPico.index_test)) {
+        try {
+          const generated = await api.generateCriteria(projectId!);
+          if (generated.inclusion?.length) setInclusion(generated.inclusion);
+          if (generated.exclusion?.length) setExclusion(generated.exclusion);
+          queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
+        } catch (e) {
+          console.warn("Could not draft criteria from question PICO", e);
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
