@@ -330,7 +330,8 @@ export function ScreeningPage() {
     }
   };
 
-  const studyList = Array.isArray(studies) ? studies : [];
+  // Memoize studyList array reference to prevent unnecessary recalculations of filteredStudies
+  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
@@ -780,7 +781,7 @@ export function ScreeningPage() {
       );
     }
 
-    // Resolve character-level priority so keywords (green/red) are never swallowed by broad sentence spans
+    // Resolve priority via Cut-Point Boundary Set algorithm to avoid O(text_length) character array allocations
     const priorityMap: Record<string, number> = {
       exclude_keyword: 40,
       include_keyword: 30,
@@ -791,31 +792,42 @@ export function ScreeningPage() {
       outcome: 10,
     };
 
-    const charSpans: (HighlightSpan | null)[] = new Array(rawText.length).fill(null);
+    const cutsSet = new Set<number>([0, rawText.length]);
     for (const span of activeSpans) {
-      const start = Math.max(0, span.start);
-      const end = Math.min(rawText.length, span.end);
-      if (end <= start) continue;
-      const prio = priorityMap[span.type] || 0;
-      for (let i = start; i < end; i++) {
-        const curr = charSpans[i];
-        if (!curr || (priorityMap[curr.type] || 0) < prio) {
-          charSpans[i] = span;
-        }
+      const s = Math.max(0, span.start);
+      const e = Math.min(rawText.length, span.end);
+      if (e > s) {
+        cutsSet.add(s);
+        cutsSet.add(e);
       }
     }
+    const cuts = Array.from(cutsSet).sort((a, b) => a - b);
 
     const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
-    let currentSpan = charSpans[0];
-    let currentStart = 0;
-    for (let i = 1; i < rawText.length; i++) {
-      if (charSpans[i] !== currentSpan) {
-        segments.push({ start: currentStart, end: i, span: currentSpan });
-        currentSpan = charSpans[i];
-        currentStart = i;
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const segStart = cuts[i];
+      const segEnd = cuts[i + 1];
+      let topSpan: HighlightSpan | null = null;
+      let topPrio = -1;
+
+      for (const span of activeSpans) {
+        const s = Math.max(0, span.start);
+        const e = Math.min(rawText.length, span.end);
+        if (s <= segStart && e >= segEnd) {
+          const prio = priorityMap[span.type] || 0;
+          if (prio > topPrio) {
+            topPrio = prio;
+            topSpan = span;
+          }
+        }
+      }
+
+      if (segments.length > 0 && segments[segments.length - 1].span === topSpan) {
+        segments[segments.length - 1].end = segEnd;
+      } else {
+        segments.push({ start: segStart, end: segEnd, span: topSpan });
       }
     }
-    segments.push({ start: currentStart, end: rawText.length, span: currentSpan });
 
     const elements: React.ReactNode[] = segments.map((seg, idx) => {
       const segText = rawText.substring(seg.start, seg.end);
