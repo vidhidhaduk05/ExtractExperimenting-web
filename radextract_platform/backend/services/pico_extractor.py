@@ -123,7 +123,7 @@ def _looks_like_header(line: str, header_synonyms: list[str]) -> bool:
 
 
 def _find_section_content(text: str, header_synonyms: list[str]) -> str:
-    """Find content following a section header using a line-by-line approach.
+    r"""Find content following a section header using a line-by-line approach.
 
     Handles two formats:
       1. "Header: content on same line"

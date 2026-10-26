@@ -259,10 +259,10 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
             union(indices[0], indices[j])
 
     # Strategy 5: Title similarity + author/year
-    titles = [s.get("title", "") for s in studies]
+    titles = [s.get("title") or "" for s in studies]
     title_lens = [len(t) for t in titles]
     years = [s.get("publication_year") for s in studies]
-    authors = [s.get("authors", "") for s in studies]
+    authors = [s.get("authors") or "" for s in studies]
     # Bolt Optimization: Pre-compute normalized author surname sets once per study
     # prior to the O(N^2) pairwise loop to eliminate redundant re-parsing & regex splits.
     norm_author_sets = [_normalize_authors(a) for a in authors]
