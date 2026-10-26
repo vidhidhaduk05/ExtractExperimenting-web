@@ -9,3 +9,11 @@
 ## 2026-03-31 - Memoizing Trace Tree Traversals in Interactive Page Root Components
 **Learning:** Performing recursive tree walks or array flattening at the root level of interactive pages (such as `CitationTelephonePage`) re-executes on every keystroke in form fields (e.g. manuscript or claim text inputs) or state toggles, allocating new array references and causing child graph/tree components to re-render.
 **Action:** Always wrap multi-hop tree gather functions or array flatteners in `useMemo` with minimal dependencies (e.g. `[activeExample]`) to preserve object reference equality across user interaction frames.
+
+## 2026-03-31 - Range Cut-Point Boundary Merging in Screening Workspace
+**Learning:** Text highlighting in `ScreeningPage` allocated `new Array(rawText.length)` for every abstract and title render frame, running $O(\text{text\_length})$ priority loops on every keystroke or selection change.
+**Action:** Replaced character array allocation with an interval boundary cut-point set algorithm ($O(N \log N + N \cdot K)$) in `renderHighlightedText`, eliminating $O(\text{text\_length})$ memory allocations during screening.
+
+## 2026-03-31 - Memoizing Multi-Pass Flow & Dashboard Aggregation Logic
+**Learning:** Computing live PRISMA diagram counts, dual-reviewer agreement matrices, and filtered study lists at the top-level of pages without `useMemo` causes redundant multi-pass array iterations on every polling interval or UI state change.
+**Action:** Wrapped `computeLivePrismaData` in `PrismaFlowPage`, study filtering & bookmark counts in `StudyList`, agreement/kappa metrics in `DualBlindedDashboard`, and factor classifications in `GradePage` in `useMemo`.

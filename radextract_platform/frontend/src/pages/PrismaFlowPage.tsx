@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Prisma2020Sync, type PrismaFlow, type Study } from "../lib/api";
@@ -143,7 +143,7 @@ export function PrismaFlowPage() {
   });
 
   // Dynamically compute live counts from actual studies and screening history
-  const liveData = computeLivePrismaData(studies, flow, official);
+  const liveData = useMemo(() => computeLivePrismaData(studies, flow, official), [studies, flow, official]);
 
   // Fetch R-generated SVG when specifically requested
   useEffect(() => {

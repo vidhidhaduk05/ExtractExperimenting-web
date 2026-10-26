@@ -791,31 +791,47 @@ export function ScreeningPage() {
       outcome: 10,
     };
 
-    const charSpans: (HighlightSpan | null)[] = new Array(rawText.length).fill(null);
+    // Cut-point boundary set algorithm O(N log N + N * K) instead of O(text.length) char array allocation
+    const boundaryPoints = new Set<number>([0, rawText.length]);
     for (const span of activeSpans) {
-      const start = Math.max(0, span.start);
-      const end = Math.min(rawText.length, span.end);
-      if (end <= start) continue;
-      const prio = priorityMap[span.type] || 0;
-      for (let i = start; i < end; i++) {
-        const curr = charSpans[i];
-        if (!curr || (priorityMap[curr.type] || 0) < prio) {
-          charSpans[i] = span;
-        }
+      const start = Math.max(0, Math.min(rawText.length, span.start));
+      const end = Math.max(0, Math.min(rawText.length, span.end));
+      if (start < end) {
+        boundaryPoints.add(start);
+        boundaryPoints.add(end);
       }
     }
 
+    const sortedBoundaries = Array.from(boundaryPoints).sort((a, b) => a - b);
+
+    // Compute winning span for each interval [b_i, b_{i+1})
     const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
-    let currentSpan = charSpans[0];
-    let currentStart = 0;
-    for (let i = 1; i < rawText.length; i++) {
-      if (charSpans[i] !== currentSpan) {
-        segments.push({ start: currentStart, end: i, span: currentSpan });
-        currentSpan = charSpans[i];
-        currentStart = i;
+    for (let i = 0; i < sortedBoundaries.length - 1; i++) {
+      const segStart = sortedBoundaries[i];
+      const segEnd = sortedBoundaries[i + 1];
+
+      let winningSpan: HighlightSpan | null = null;
+      let winningPrio = -1;
+
+      for (const span of activeSpans) {
+        const start = Math.max(0, Math.min(rawText.length, span.start));
+        const end = Math.max(0, Math.min(rawText.length, span.end));
+        if (start <= segStart && end >= segEnd) {
+          const prio = priorityMap[span.type] || 0;
+          if (prio > winningPrio) {
+            winningPrio = prio;
+            winningSpan = span;
+          }
+        }
+      }
+
+      // Merge with last segment if same span reference or null
+      if (segments.length > 0 && segments[segments.length - 1].span === winningSpan) {
+        segments[segments.length - 1].end = segEnd;
+      } else {
+        segments.push({ start: segStart, end: segEnd, span: winningSpan });
       }
     }
-    segments.push({ start: currentStart, end: rawText.length, span: currentSpan });
 
     const elements: React.ReactNode[] = segments.map((seg, idx) => {
       const segText = rawText.substring(seg.start, seg.end);
