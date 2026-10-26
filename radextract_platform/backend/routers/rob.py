@@ -106,10 +106,12 @@ async def create_assessment(
     study_id: str,
     body: RobAssessmentCreate,
     user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
     """Create a new RoB assessment for a study."""
     if body.study_id != study_id:
         raise HTTPException(status_code=400, detail="study_id mismatch")
+    check_project_access(conn, body.project_id, user, min_role="reviewer")
     try:
         result = rob_service.create_assessment(
             study_id=body.study_id,
@@ -130,8 +132,10 @@ async def auto_create_assessment(
     study_design: str = Query(""),
     outcome_label: str = Query(""),
     user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
     """Auto-select RoB tool based on study design and create assessment."""
+    check_project_access(conn, project_id, user, min_role="reviewer")
     try:
         result = rob_service.auto_select_and_create_assessment(
             study_id=study_id,
@@ -146,24 +150,44 @@ async def auto_create_assessment(
 
 
 @router.get("/studies/{study_id}/rob")
-async def list_study_assessments(study_id: str):
+async def list_study_assessments(
+    study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """List all RoB assessments for a study."""
-    return rob_service.list_assessments_for_study(study_id)
+    study = conn.get("studies", study_id)
+    if study:
+        check_project_access(conn, study["project_id"], user)
+    return rob_service.list_assessments_for_study(study_id, db=conn)
 
 
 @router.get("/assessments/{assessment_id}")
-async def get_assessment(assessment_id: str):
+async def get_assessment(
+    assessment_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Get full assessment detail with all domain judgments and signaling answers."""
-    result = rob_service.get_assessment(assessment_id)
+    result = rob_service.get_assessment(assessment_id, db=conn)
     if not result:
         raise HTTPException(status_code=404, detail="Assessment not found")
+    check_project_access(conn, result["project_id"], user)
     return result
 
 
 @router.delete("/assessments/{assessment_id}")
-async def delete_assessment(assessment_id: str):
+async def delete_assessment(
+    assessment_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Delete a RoB assessment and all its child records."""
-    success = rob_service.delete_assessment(assessment_id)
+    assessment = rob_service.get_assessment(assessment_id, db=conn)
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    check_project_access(conn, assessment["project_id"], user, min_role="reviewer")
+    success = rob_service.delete_assessment(assessment_id, db=conn)
     if not success:
         raise HTTPException(status_code=404, detail="Assessment not found")
     return {"deleted": True, "assessment_id": assessment_id}
@@ -173,9 +197,14 @@ async def delete_assessment(assessment_id: str):
 async def override_assessment_tool(
     assessment_id: str,
     body: RobToolOverrideRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Override or switch the tool used for an assessment."""
+    assessment = rob_service.get_assessment(assessment_id, db=conn)
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    check_project_access(conn, assessment["project_id"], user, min_role="reviewer")
     try:
         return rob_service.change_assessment_tool(assessment_id, body.tool_id, db=conn)
     except ValueError as e:
@@ -189,8 +218,14 @@ async def update_judgment(
     judgment_id: str,
     body: RobDomainJudgmentUpdate,
     user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
     """Update a domain judgment (human override or verification)."""
+    judgment = conn.get("rob_domain_judgments", judgment_id)
+    if judgment:
+        assessment = rob_service.get_assessment(judgment["assessment_id"], db=conn)
+        if assessment:
+            check_project_access(conn, assessment["project_id"], user, min_role="reviewer")
     try:
         result = rob_service.update_domain_judgment(
             judgment_id=judgment_id,
@@ -199,6 +234,7 @@ async def update_judgment(
             support_text=body.support_text,
             human_verified=body.human_verified,
             verified_by=user["username"] if user else "anonymous",
+            db=conn,
         )
         return result
     except ValueError as e:
@@ -211,13 +247,23 @@ async def update_judgment(
 async def update_answer(
     answer_id: str,
     body: RobSignalingAnswerUpdate,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
     """Update a signaling answer and recompute parent domain judgment."""
+    answer = conn.get("rob_signaling_answers", answer_id)
+    if answer:
+        judgment = conn.get("rob_domain_judgments", answer.get("judgment_id"))
+        if judgment:
+            assessment = rob_service.get_assessment(judgment.get("assessment_id"), db=conn)
+            if assessment:
+                check_project_access(conn, assessment["project_id"], user, min_role="reviewer")
     try:
         result = rob_service.update_signaling_answer(
             answer_id=answer_id,
             answer=body.answer,
             human_verified=body.human_verified,
+            db=conn,
         )
         return result
     except ValueError as e:
@@ -230,6 +276,7 @@ async def update_answer(
 async def ai_prefill(
     assessment_id: str,
     body: RobAIPrefillRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
     db: DBBackend = Depends(get_db),
 ):
     """Run AI pre-fill for an assessment.
@@ -241,9 +288,10 @@ async def ai_prefill(
     deterministic mock (no LLM required). Otherwise, would use a real
     LLM backend (configured externally).
     """
-    assessment = rob_service.get_assessment(assessment_id)
+    assessment = rob_service.get_assessment(assessment_id, db=db)
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
+    check_project_access(db, assessment["project_id"], user, min_role="reviewer")
 
     tool_key = assessment["tool"]
 
@@ -296,12 +344,17 @@ async def ai_prefill(
 async def accept_ai_suggestions(
     assessment_id: str,
     user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
     """Accept all AI-suggested answers and recompute judgments.
 
     This is the 'accept all' shortcut — the researcher can still override
     individual answers afterward via PUT /api/rob/answers/{id}.
     """
+    assessment = rob_service.get_assessment(assessment_id, db=conn)
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    check_project_access(conn, assessment["project_id"], user, min_role="reviewer")
     try:
         result = rob_service.accept_ai_suggestions(
             assessment_id,

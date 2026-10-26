@@ -321,3 +321,26 @@ class TestSecurityAccessControl:
         assert client.get(f"/api/rob/projects/{pid}/figure", headers=headers).status_code == 403
         assert client.get(f"/api/rob/projects/{pid}/figures", headers=headers).status_code == 403
         assert client.get(f"/api/rob/projects/{pid}/reporting-profile", headers=headers).status_code == 403
+
+    def test_unauthorized_direct_resource_access_denied(self, client, project_and_study):
+        pid, sid = project_and_study
+        r = client.post(f"/api/rob/studies/{sid}/rob", json={
+            "study_id": sid, "project_id": pid, "tool": "quadas2",
+        })
+        aid = r.json()["assessment_id"]
+        detail = client.get(f"/api/rob/assessments/{aid}").json()
+        jid = detail["domain_judgments"][0]["judgment_id"]
+        ans_id = detail["domain_judgments"][0]["signaling_answers"][0]["answer_id"]
+
+        db = get_connection()
+        db.execute("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES ('unauth_rob_user2', 'unauth_rob_user2', 'test')")
+        db.commit()
+        db.close()
+        token = create_access_token('unauth_rob_user2', 'unauth_rob_user2', 'viewer')
+        headers = {"Authorization": f"Bearer {token}"}
+
+        assert client.get(f"/api/rob/assessments/{aid}", headers=headers).status_code == 403
+        assert client.put(f"/api/rob/assessments/{aid}/tool", json={"tool_id": "rob2"}, headers=headers).status_code == 403
+        assert client.put(f"/api/rob/judgments/{jid}", json={"risk_judgment": "high"}, headers=headers).status_code == 403
+        assert client.put(f"/api/rob/answers/{ans_id}", json={"answer": "yes"}, headers=headers).status_code == 403
+        assert client.delete(f"/api/rob/assessments/{aid}", headers=headers).status_code == 403
