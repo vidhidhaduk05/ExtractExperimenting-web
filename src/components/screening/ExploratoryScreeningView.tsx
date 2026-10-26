@@ -174,10 +174,10 @@ export function ExploratoryScreeningView({
           studyId,
           title: s.title || `Pure Arterial Malformation Cohort (${studyId})`,
           rawAbs: s.abstract || "Clinical systematic review evaluating pure arterial malformations (PAM) managed with coiling vs conservative observation across 5-year angiographic follow-up.",
-          P: s.pico_population || "pure arterial malformations",
-          I: s.pico_intervention || "endovascular intervention",
-          C: s.pico_comparator || "conservative observation",
-          O: s.pico_outcome || "stroke prevention & mRS",
+          P: (s as any).pico_population || "pure arterial malformations",
+          I: (s as any).pico_intervention || "endovascular intervention",
+          C: (s as any).pico_comparator || "conservative observation",
+          O: (s as any).pico_outcome || "stroke prevention & mRS",
           conf,
           type,
           status: rawStatus as any,
@@ -273,10 +273,10 @@ export function ExploratoryScreeningView({
         rawAbs:
           study.abstract ||
           "Retrospective multicenter review evaluating pure arterial malformations (PAM) managed with coiling vs conservative observation across 5-year angiographic follow-up.",
-        P: study.pico_population || "pure arterial malformations",
-        I: study.pico_intervention || "endovascular intervention",
-        C: study.pico_comparator || "conservative observation",
-        O: study.pico_outcome || "stroke prevention & mRS",
+        P: (study as any).pico_population || "pure arterial malformations",
+        I: (study as any).pico_intervention || "endovascular intervention",
+        C: (study as any).pico_comparator || "conservative observation",
+        O: (study as any).pico_outcome || "stroke prevention & mRS",
         conf,
         type,
         status: (study.screening_status as any) || "pending",
@@ -429,14 +429,15 @@ export function ExploratoryScreeningView({
         ? summary.ta_excluded + (summary.ft_excluded || 0)
         : papers.filter((p) => p.type === "remove").length;
 
+    const sumObj = summary as any;
     const total =
-      summary?.total_studies !== undefined && summary.total_studies > 0
-        ? summary.total_studies
+      sumObj?.total_studies !== undefined && sumObj.total_studies > 0
+        ? sumObj.total_studies
         : papers.length;
 
     const judgments =
-      summary?.screened_count !== undefined
-        ? summary.screened_count
+      sumObj?.screened_count !== undefined
+        ? sumObj.screened_count
         : papers.filter((p) => p.status !== "pending" && p.status !== "unscreened").length;
 
     return { total, judgments, keep, unsure, remove };
@@ -808,7 +809,7 @@ export function ExploratoryScreeningView({
 
           {/* ── LEFT VIEW 1: ORIGINAL 3-COLUMN ROSE PAPER GRID ── */}
           {leftViewMode === "cards" ? (
-            <div className="flex-1 overflow-y-auto p-[1px] bg-[#111111] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-[1px] align-content-start max-h-[74vh]">
+            <div className="flex-1 overflow-y-auto p-2.5 sm:p-3 bg-[#FAF8F5] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3 align-content-start max-h-[74vh]">
               {filteredPapers.map((p) => {
                 const isSelected = selectedPaper?.id === p.id;
 
@@ -816,33 +817,48 @@ export function ExploratoryScreeningView({
                   <div
                     key={p.id}
                     onClick={() => setSelectedPaper(p)}
-                    className={`p-3 bg-[#FFFEFB] flex flex-col gap-1.5 cursor-pointer relative transition-all duration-150 min-h-[142px] border-l-4 ${
+                    className={`p-3.5 bg-white rounded-xl flex flex-col justify-between cursor-pointer relative transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] min-h-[168px] ${
+                      seniorMode ? "min-h-[188px]" : ""
+                    } border border-[#E7DFD5] ${
                       p.type === "keep"
-                        ? "border-l-[#2E1231]"
+                        ? "border-l-[4px] border-l-[#2E1231]"
                         : p.type === "unsure"
-                        ? "border-l-[#EAB308]"
-                        : "border-l-[#999999]"
+                        ? "border-l-[4px] border-l-[#EAB308]"
+                        : "border-l-[4px] border-l-[#9CA3AF]"
                     } ${
-                      isSelected ? "bg-[#2E1231] text-white" : "hover:bg-[#FFFEF5]"
+                      isSelected
+                        ? "bg-[#2E1231] text-white border-[#4A204D] ring-2 ring-[#E8C5E0] shadow-[0_12px_28px_-6px_rgba(46,18,49,0.3)] scale-[1.01]"
+                        : "hover:bg-[#FFFEFB] hover:-translate-y-1 hover:shadow-[0_10px_25px_-5px_rgba(46,18,49,0.1)] hover:border-[#814D75]/40 shadow-[0_2px_8px_-2px_rgba(46,18,49,0.05)]"
                     } ${p.isNew && !seniorMode ? "animate-velvetIn" : ""}`}
                   >
                     {/* Top line: Confidence % badge + Turn # */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-1">
                       <span
-                        className={`font-mono text-[10px] font-bold px-1.5 py-0.5 ${
+                        className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs tracking-wider flex items-center gap-1.5 transition-colors duration-200 ${
                           isSelected
                             ? "bg-white text-[#2E1231]"
                             : p.type === "keep"
-                            ? "bg-[#2E1231] text-white"
+                            ? "bg-[#2E1231] text-[#FAF7F2]"
                             : p.type === "unsure"
-                            ? "bg-[#EAB308] text-[#111111]"
-                            : "bg-[#999999] text-white"
+                            ? "bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]"
+                            : "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]"
                         }`}
                       >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isSelected
+                              ? "bg-[#2E1231]"
+                              : p.type === "keep"
+                              ? "bg-emerald-400"
+                              : p.type === "unsure"
+                              ? "bg-amber-500"
+                              : "bg-gray-400"
+                          }`}
+                        />
                         {p.conf}% {p.type.toUpperCase()}
                       </span>
                       <span
-                        className={`font-mono text-[8px] ${
+                        className={`font-mono text-[8px] font-medium ${
                           isSelected ? "text-[#E8C5E0]" : "text-[#777777]"
                         }`}
                       >
@@ -850,29 +866,35 @@ export function ExploratoryScreeningView({
                       </span>
                     </div>
 
-                    {/* Title */}
+                    {/* Title with generous line-height, proper descender clearance, and full legibility */}
                     <h4
-                      className={`font-bold leading-tight line-clamp-2 ${
-                        seniorMode ? "text-[14px]" : "text-[12.5px]"
-                      } ${isSelected ? "text-white" : "text-[#111111]"}`}
-                      style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
+                      className={`font-bold leading-snug line-clamp-3 pb-0.5 min-h-[50px] ${
+                        seniorMode
+                          ? "text-[14.5px] leading-[1.42] min-h-[62px]"
+                          : "text-[12.5px] sm:text-[13px] leading-[1.38]"
+                      } ${isSelected ? "text-white" : "text-[#1F171D]"}`}
+                      style={{
+                        fontFamily: "'EB Garamond', 'Serifon Editorial', Georgia, serif",
+                        wordBreak: "break-word",
+                      }}
+                      title={p.title}
                     >
                       {p.title}
                     </h4>
 
                     {/* Mini PICO tags */}
                     <div
-                      className={`text-[8.5px] line-clamp-2 leading-relaxed ${
-                        isSelected ? "text-[#D0A0C8]" : "text-[#666666]"
+                      className={`text-[8.5px] line-clamp-2 leading-relaxed my-0.5 ${
+                        isSelected ? "text-[#D0A0C8]" : "text-[#5C5559]"
                       }`}
                     >
                       {p.P} • {p.I} • {p.O}
                     </div>
 
                     {/* PICO Match Dots Bar */}
-                    <div className="flex gap-[2px] mt-1">
+                    <div className="flex gap-1 mt-1">
                       <div
-                        className="h-[3px] rounded-xs"
+                        className="h-[3.5px] rounded-full transition-all duration-300"
                         style={{
                           width: `${p.pico.P}%`,
                           backgroundColor: isSelected ? "#FAF7F2" : "#2E1231",
@@ -880,15 +902,15 @@ export function ExploratoryScreeningView({
                         title={`P: ${p.pico.P}%`}
                       />
                       <div
-                        className="h-[3px] rounded-xs"
+                        className="h-[3.5px] rounded-full transition-all duration-300"
                         style={{
                           width: `${p.pico.I}%`,
-                          backgroundColor: isSelected ? "#FAF7F2" : "#111111",
+                          backgroundColor: isSelected ? "#FAF7F2" : "#814D75",
                         }}
                         title={`I: ${p.pico.I}%`}
                       />
                       <div
-                        className="h-[3px] rounded-xs"
+                        className="h-[3.5px] rounded-full transition-all duration-300"
                         style={{
                           width: `${p.pico.C}%`,
                           backgroundColor: isSelected ? "#FAF7F2" : "#EAB308",
@@ -896,7 +918,7 @@ export function ExploratoryScreeningView({
                         title={`C: ${p.pico.C}%`}
                       />
                       <div
-                        className="h-[3px] rounded-xs"
+                        className="h-[3.5px] rounded-full transition-all duration-300"
                         style={{
                           width: `${p.pico.O}%`,
                           backgroundColor: isSelected ? "#FAF7F2" : "#999999",
@@ -907,14 +929,14 @@ export function ExploratoryScreeningView({
 
                     {/* Meta Footer */}
                     <div
-                      className={`mt-auto pt-1.5 border-t flex items-center justify-between font-mono text-[7px] ${
+                      className={`mt-auto pt-2 border-t flex items-center justify-between font-mono text-[7.5px] ${
                         isSelected
                           ? "border-[#4A204D] text-[#E8C5E0]"
-                          : "border-[#EEEEEE] text-[#888888]"
+                          : "border-[#ECE5DC] text-[#7E747B]"
                       }`}
                     >
-                      <span className="truncate max-w-[100px]">{p.author}</span>
-                      <span>
+                      <span className="truncate max-w-[110px] font-medium">{p.author}</span>
+                      <span className="font-medium">
                         {p.year} {p.journal}
                       </span>
                     </div>
@@ -924,7 +946,7 @@ export function ExploratoryScreeningView({
             </div>
           ) : (
             /* ── LEFT VIEW 2: HEATMAP STACK VIEW (CLEAR STUDY ID & CONFIDENCE GRADIENT) ── */
-            <div className="flex-1 overflow-y-auto p-3 bg-[#111111] grid grid-cols-2 sm:grid-cols-3 gap-2 align-content-start max-h-[74vh]">
+            <div className="flex-1 overflow-y-auto p-3 bg-[#FAF8F5] grid grid-cols-2 sm:grid-cols-3 gap-2.5 align-content-start max-h-[74vh]">
               {filteredPapers.map((p) => {
                 const isSelected = selectedPaper?.id === p.id;
                 // Heat color based on confidence %
@@ -941,22 +963,22 @@ export function ExploratoryScreeningView({
                   <div
                     key={p.id}
                     onClick={() => setSelectedPaper(p)}
-                    className={`p-2.5 rounded border transition-all cursor-pointer flex flex-col justify-between min-h-[95px] ${heatBg} ${
-                      isSelected ? "ring-2 ring-white scale-[1.02] shadow-xl" : "hover:opacity-90"
+                    className={`p-3 rounded-xl border transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] cursor-pointer flex flex-col justify-between min-h-[105px] shadow-xs hover:-translate-y-0.5 hover:shadow-md ${heatBg} ${
+                      isSelected ? "ring-2 ring-white scale-[1.02] shadow-xl" : "hover:opacity-95"
                     }`}
                   >
                     <div className="flex items-center justify-between font-mono text-[9px]">
                       {/* Prominent Study ID */}
-                      <span className="font-bold tracking-wider px-1.5 py-0.5 rounded bg-black/30 text-white">
+                      <span className="font-bold tracking-wider px-2 py-0.5 rounded-md bg-black/30 text-white shadow-xs">
                         {p.studyId}
                       </span>
                       <span className="font-bold">{p.conf}%</span>
                     </div>
-                    <div className="text-[11px] font-bold line-clamp-2 mt-1 font-serif leading-tight">
+                    <div className="text-[11.5px] font-bold line-clamp-2 mt-1.5 font-serif leading-[1.38] pb-0.5">
                       {p.title}
                     </div>
                     <div className="flex items-center justify-between text-[7.5px] font-mono mt-1.5 pt-1 border-t border-black/15">
-                      <span className="uppercase font-semibold">{p.type}</span>
+                      <span className="uppercase font-semibold tracking-wider">{p.type}</span>
                       <span>{p.year}</span>
                     </div>
                   </div>
