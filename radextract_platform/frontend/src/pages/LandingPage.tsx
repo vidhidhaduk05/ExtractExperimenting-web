@@ -7,6 +7,7 @@ import { RESEARCH_PRESETS, findResearchPreset } from "../lib/researchPresets";
 import { springRevealFrames } from "../assets/motion/spring";
 import { initializeEdgeMotion } from "../assets/motion/edgeMotion";
 import { initializeLandingCarousel } from "../assets/motion/landingCarousel";
+import { sanitizeHtml } from "../lib/sanitize";
 
 type LandingEventMap = WindowEventMap & DocumentEventMap & GlobalEventHandlersEventMap & MediaQueryListEventMap;
 type LandingWindow = Window & { stellarLenis?: Lenis | null };
@@ -666,5 +667,5 @@ export const LandingPage: React.FC = () => {
     };
   }, [navigate]);
 
-  return <div ref={containerRef} className="stellar-labs-landing-root" dangerouslySetInnerHTML={{ __html: landingMarkup }} />;
+  return <div ref={containerRef} className="stellar-labs-landing-root" dangerouslySetInnerHTML={{ __html: sanitizeHtml(landingMarkup) }} />;
 };
