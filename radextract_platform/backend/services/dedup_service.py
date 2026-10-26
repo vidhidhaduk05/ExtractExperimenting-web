@@ -55,6 +55,7 @@ try:
         return _lev_ratio(a_lower, b_lower)
 except ImportError:
     import difflib
+    from collections import Counter
 
     @lru_cache(maxsize=2048)
     def _title_similarity(a: str, b: str) -> float:
@@ -75,6 +76,15 @@ except ImportError:
         a_lower, b_lower = a.lower(), b.lower()
         if a_lower == b_lower:
             return 1.0
+
+        # Fast path 3: Multiset character count upper bound on SequenceMatcher ratio.
+        # SequenceMatcher finds matching contiguous blocks, so total matched characters M
+        # can never exceed the sum of min character frequencies shared between both strings:
+        # M <= sum((Counter(a_lower) & Counter(b_lower)).values()).
+        # If 2 * common_chars / (la + lb) < threshold, skip SequenceMatcher calculation completely.
+        common_chars = sum((Counter(a_lower) & Counter(b_lower)).values())
+        if (2 * common_chars) / (la + lb) < TITLE_SIMILARITY_THRESHOLD:
+            return 0.0
 
         return difflib.SequenceMatcher(None, a_lower, b_lower).ratio()
 
