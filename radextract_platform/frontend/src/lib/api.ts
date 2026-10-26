@@ -2149,6 +2149,10 @@ export interface PicoExtractionResponse {
   research_question: string;
   hypothesis: string;
   extraction_confidence: string;
+  inclusion?: string[];
+  exclusion?: string[];
+  search_strings?: Record<string, string>;
+  variables?: Array<Record<string, unknown>>;
 }
 
 export interface ProtocolExtractionResponse extends PicoExtractionResponse {
