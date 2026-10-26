@@ -317,9 +317,12 @@ async def export_references(
     if status == "all":
         studies = db.query("studies", {"project_id": project_id}, order_by="title ASC")
     elif status == "excluded":
-        studies = [s for s in db.query("studies", {"project_id": project_id}, order_by="title ASC") if s.get("screening_status") in ("excluded", "ta_excluded", "ft_excluded")]
+        studies = db.query("studies", {"project_id": project_id, "screening_status": "excluded"}, order_by="title ASC")
     else:
-        studies = [s for s in db.query("studies", {"project_id": project_id}, order_by="title ASC") if s.get("screening_status") in ("included", "ta_included", "ft_included")]
+        studies = db.query("studies", {"project_id": project_id, "screening_status": "included"}, order_by="title ASC")
+
+    if not studies:
+        raise HTTPException(status_code=404, detail="No studies found matching the criteria.")
 
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
 
