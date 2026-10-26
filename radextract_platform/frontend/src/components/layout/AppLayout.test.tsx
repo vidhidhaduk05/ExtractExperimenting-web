@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import React from 'react';
 import '@testing-library/jest-dom/vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { api, type ClarificationQuestion } from '../../lib/api';
 import { AppLayout } from './AppLayout';
 
 describe('AppLayout Component', () => {
@@ -12,6 +13,7 @@ describe('AppLayout Component', () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   const renderWithProviders = (ui: React.ReactNode, initialEntries = ['/']) => {
@@ -63,5 +65,28 @@ describe('AppLayout Component', () => {
     renderWithProviders(<AppLayout />);
     const minimizeBtn = screen.getByRole('button', { name: /Minimize sidebar/i });
     expect(minimizeBtn).toBeInTheDocument();
+  });
+
+  it('uses the envelope and keeps the unresolved badge when the inbox is viewed', async () => {
+    const pending: ClarificationQuestion = {
+      question_id: 'header-question', study_id: 'study-one', project_id: 'header-project',
+      study_title: 'Study needing review', stage: 'abstract', question_type: 'population',
+      question_text: 'Does this meet the population criteria?', options: [], pico_aspect: 'population',
+      ai_interim_decision: 'uncertain', ai_interim_confidence: 0.5, ai_interim_reason: 'Review required',
+      status: 'pending', created_at: '2026-10-26',
+    };
+    vi.spyOn(api, 'listClarifications').mockResolvedValue([pending]);
+    renderWithProviders(<AppLayout />, ['/projects/header-project/screening']);
+    const envelope = await screen.findByRole('button', { name: 'Clarification inbox, 1 pending' });
+    expect(envelope.querySelector('.lucide-mail')).toBeInTheDocument();
+    expect(envelope.querySelector('.lucide-bell')).not.toBeInTheDocument();
+    envelope.focus();
+    fireEvent.click(envelope);
+    expect(screen.getByRole('dialog')).toHaveTextContent(pending.question_text);
+    expect(envelope).toHaveAttribute('aria-expanded', 'true');
+    expect(envelope).toHaveAccessibleName('Clarification inbox, 1 pending');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(envelope).toHaveFocus();
+    expect(envelope).toHaveAccessibleName('Clarification inbox, 1 pending');
   });
 });

@@ -194,3 +194,11 @@ This document is the canonical ledger of all engineering, architectural, scienti
   * **Frontend**: 22/22 test suites (106/106 tests) passed with 0 failures; `npm run build` completed cleanly in 8.64s.
   * **Backend**: 1,189/1,189 tests passed with 0 failures across the complete pytest suite.
   * Merged and synchronized cleanly with `origin/main` on `vidhidhaduk05/ExtractExperimenting-web`.
+
+## 2026-10-26 — Five-second clarification announcements and persistent inbox
+
+- New clarification questions use one compact toast below the header at the upper right, including on screening routes. Questions arriving in the same poll share a grouped announcement; later batches queue one at a time.
+- Five seconds measures unpaused popup visibility only. Hover, keyboard focus, and hidden tabs pause that countdown. Minimize and timeout never answer, dismiss, exclude, or change screening continuation policy.
+- The existing header control uses an envelope and the shared server-pending query for its count. Viewing the inbox does not resolve questions; only a successful answer save removes a pending question. Failed saves retain it with retry feedback.
+- Announcement IDs alone persist per project in local storage, with an in-memory fallback when storage is unavailable. Questions and history remain server-backed. An open inbox receives new questions quietly and stays open until the reviewer closes it.
+- Clarification surfaces follow the master theme, responsive controls, polite announcements, keyboard focus handling, and reduced motion. Backend screening and eligibility logic are unchanged.
