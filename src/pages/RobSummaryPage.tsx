@@ -72,7 +72,7 @@ export function RobSummaryPage() {
     },
   });
 
-  if (isLoading) return <div className="p-8 text-gray-400">Loading risk-of-bias summary...</div>;
+  if (isLoading) return <div className="p-8 text-[#81737b] font-sans">Loading risk-of-bias summary...</div>;
 
   const isRunning = robProgress?.status === "running";
   const pendingReviewCount = summary?.pending_human_review_count ?? 0;
@@ -82,7 +82,7 @@ export function RobSummaryPage() {
     <div className="p-8 max-w-7xl mx-auto">
       <Link
         to={`/projects/${projectId}`}
-        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4"
+        className="text-sm text-[#62535d] hover:text-[#3a0f34] flex items-center gap-1 mb-4 font-sans"
       >
         <ArrowLeft className="h-3 w-3" /> Back to project
       </Link>
@@ -90,11 +90,11 @@ export function RobSummaryPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-phylo-blue" />
+          <h1 className="text-2xl font-serif font-bold text-[#3a0f34] flex items-center gap-2">
+            <ShieldCheck className="h-6 w-6 text-[#814d75]" />
             Risk of Bias
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-[#62535d] text-sm mt-1 font-sans">
             {summary?.total_assessments || 0} assessments
             {summary?.tool && ` using ${summary.tool.toUpperCase().replace("-", "-")}`}
           </p>
@@ -127,29 +127,29 @@ export function RobSummaryPage() {
 
       {/* Live Batch RoB Progress Banner */}
       {robProgress && isRunning && (
-        <div className="card p-4.5 mb-6 bg-gradient-to-r from-purple-50 via-indigo-50 to-amber-50 border border-purple-200 shadow-sm animate-pulse">
+        <div className="card p-4.5 mb-6 bg-[#fbf9f4] border border-[#d2c2cb] shadow-xs">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 text-purple-700 animate-spin" />
-              <span className="font-serif font-semibold text-sm text-purple-950">
+              <Loader2 className="h-4 w-4 text-[#814d75] animate-spin" />
+              <span className="font-serif font-semibold text-sm text-[#3a0f34]">
                 Automated Batch RoB Assessment Running
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-200 text-purple-900">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb]">
                 {robProgress.completed_studies} / {robProgress.total_studies} Studies
               </span>
             </div>
             <button
               onClick={() => cancelRunMutation.mutate()}
               disabled={cancelRunMutation.isPending}
-              className="text-xs px-2.5 py-1 rounded-lg border border-red-200 bg-white text-red-700 hover:bg-red-50 flex items-center gap-1 font-medium transition-colors"
+              className="text-xs px-2.5 py-1 rounded-lg border border-[#d2c2cb] bg-white text-[#a42b2b] hover:bg-[#fff2f2] flex items-center gap-1 font-medium font-sans transition-colors"
             >
               <Square className="h-3 w-3" /> Stop Run
             </button>
           </div>
           {/* Progress Bar */}
-          <div className="w-full bg-black/10 rounded-full h-2 overflow-hidden mb-2">
+          <div className="w-full bg-[#eee7ec] rounded-full h-2 overflow-hidden mb-2 border border-[#d2c2cb]">
             <div
-              className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+              className="bg-[#3a0f34] h-2 rounded-full transition-all duration-300"
               style={{
                 width: `${Math.min(
                   100,
@@ -162,13 +162,13 @@ export function RobSummaryPage() {
               }}
             />
           </div>
-          <div className="flex items-center justify-between text-[11px] text-[#6B665E]">
+          <div className="flex items-center justify-between text-[11px] text-[#62535d] font-sans">
             <span>
               Auto-selecting design tool (RoB 2 / ROBINS-I / ROBINS-E / QUADAS-2 / NOS) & pre-filling questions...
             </span>
             {robProgress.flagged_questions_count > 0 && (
-              <span className="text-amber-800 font-semibold flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3 text-amber-600" />
+              <span className="text-[#7c5800] font-semibold flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3 text-[#7c5800]" />
                 {robProgress.flagged_questions_count} questions flagged for human review (confidence &lt; 70%)
               </span>
             )}
@@ -178,16 +178,16 @@ export function RobSummaryPage() {
 
       {/* Filter Toolbar & Human Review Pills */}
       {summary && (summary?.total_assessments ?? 0) > 0 && (
-        <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-black/[0.08] mb-6 flex-wrap">
+        <div className="flex items-center justify-between gap-3 bg-[#ffffff] p-3 rounded-xl border border-[#d2c2cb] mb-6 flex-wrap shadow-xs">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[#6B665E] font-medium">Filter Assessments:</span>
+            <span className="text-xs text-[#62535d] font-medium font-sans">Filter Assessments:</span>
             <button
               onClick={() => setFilterNeedsReview(false)}
               className={cn(
-                "text-xs px-3 py-1 rounded-lg font-medium transition-colors",
+                "text-xs px-3 py-1 rounded-lg font-medium font-sans transition-colors",
                 !filterNeedsReview
-                  ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
-                  : "text-[#6B665E] hover:bg-black/5"
+                  ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                  : "text-[#62535d] hover:bg-[#eee7ec]"
               )}
             >
               All ({summary.total_assessments})
@@ -195,22 +195,22 @@ export function RobSummaryPage() {
             <button
               onClick={() => setFilterNeedsReview(true)}
               className={cn(
-                "text-xs px-3 py-1 rounded-lg font-medium transition-colors flex items-center gap-1.5",
+                "text-xs px-3 py-1 rounded-lg font-medium font-sans transition-colors flex items-center gap-1.5",
                 filterNeedsReview
-                  ? "bg-amber-600 text-white shadow-xs"
-                  : "text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200"
+                  ? "bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb] shadow-xs font-semibold"
+                  : "text-[#7c5800] bg-[#fbf9f4] hover:bg-[#eee7ec] border border-[#d2c2cb]"
               )}
             >
               <AlertTriangle className="h-3.5 w-3.5" />
               <span>Pending Human Review</span>
-              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 font-bold">
+              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-white/40 font-bold">
                 {needingReviewCount || pendingReviewCount}
               </span>
             </button>
           </div>
 
           {(pendingReviewCount > 0 || needingReviewCount > 0) && (
-            <span className="text-xs text-amber-800 font-serif italic flex items-center gap-1">
+            <span className="text-xs text-[#7c5800] font-serif italic flex items-center gap-1">
               ✦ {needingReviewCount || 1} studies have low-confidence questions (&lt; 70%) flagged for human review
             </span>
           )}
@@ -231,10 +231,10 @@ export function RobSummaryPage() {
           <AssessmentList summary={summary} filterNeedsReview={filterNeedsReview} />
         </div>
       ) : (
-        <div className="card p-12 text-center">
-          <ShieldCheck className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 mb-2">No risk-of-bias assessments yet</p>
-          <p className="text-sm text-gray-400 mb-4">
+        <div className="card p-12 text-center bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-xs">
+          <ShieldCheck className="h-12 w-12 text-[#81737b] mx-auto mb-3" />
+          <p className="text-[#3a0f34] font-serif font-semibold mb-2">No risk-of-bias assessments yet</p>
+          <p className="text-sm text-[#62535d] mb-4 font-sans max-w-md mx-auto">
             Screen studies as "included" at full-text, then use the "Run Batch RoB" button
             to automatically select tools and pre-fill signaling questions.
           </p>
@@ -286,18 +286,18 @@ function RobvisPanel({
   loading: boolean;
 }) {
   return (
-    <div className="card p-5">
-      <h2 className="font-semibold mb-1">{title}</h2>
-      <p className="text-xs text-[#6B665E] mb-3">
+    <div className="card p-5 bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-xs">
+      <h2 className="font-serif font-semibold text-[#3a0f34] mb-1">{title}</h2>
+      <p className="text-xs text-[#62535d] mb-3 font-sans">
         Publication figure from the robvis package
         {figure?.tool ? ` (${figure.tool})` : ""}.
       </p>
       {loading ? (
-        <p className="text-sm text-gray-400">Drawing figure...</p>
+        <p className="text-sm text-[#81737b] font-sans">Drawing figure...</p>
       ) : figure?.svg ? (
         <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: sanitizeSvg(figure.svg) }} />
       ) : (
-        <p className="text-sm text-gray-500">{figure?.message || "Figure unavailable."}</p>
+        <p className="text-sm text-[#62535d] font-sans">{figure?.message || "Figure unavailable."}</p>
       )}
     </div>
   );
@@ -314,16 +314,16 @@ function JudgmentDistribution({ summary }: { summary: RobSummary }) {
   if (data.length === 0) return null;
 
   return (
-    <div className="card p-5">
-      <h2 className="font-semibold mb-4">Overall Judgment Distribution</h2>
+    <div className="card p-5 bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-xs">
+      <h2 className="font-serif font-semibold text-[#3a0f34] mb-4">Overall Judgment Distribution</h2>
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E5E2DA" />
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-          <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#d2c2cb" />
+          <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#4f444b" }} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "#4f444b" }} />
           <Tooltip
-            cursor={{ fill: "#F5F3EC" }}
-            contentStyle={{ borderRadius: "8px", border: "1px solid #E5E2DA", fontSize: "13px" }}
+            cursor={{ fill: "#fbf9f4" }}
+            contentStyle={{ borderRadius: "8px", border: "1px solid #d2c2cb", fontSize: "13px", backgroundColor: "#ffffff", color: "#4f444b" }}
           />
           <Bar dataKey="count" radius={[4, 4, 0, 0]}>
             {data.map((entry, idx) => (
@@ -366,63 +366,63 @@ function TrafficLightChart({
   }, [assessments]);
 
   return (
-    <div className="card p-5 overflow-x-auto">
+    <div className="card p-5 overflow-x-auto bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-xs">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold">Traffic-Light Chart</h2>
+        <h2 className="font-serif font-semibold text-[#3a0f34]">Traffic-Light Chart</h2>
         {filterNeedsReview && (
-          <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+          <span className="text-xs text-[#3a0f34] bg-[#ffdea6] px-2.5 py-0.5 rounded border border-[#d2c2cb] font-sans font-medium">
             Showing {assessments.length} studies requiring review
           </span>
         )}
       </div>
 
       {assessments.length === 0 ? (
-        <div className="p-8 text-center text-gray-400 text-xs">
+        <div className="p-8 text-center text-[#81737b] text-xs font-sans">
           No assessments match the current filter.
         </div>
       ) : (
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full text-sm border-collapse font-sans">
           <thead>
             <tr>
-              <th className="text-left px-3 py-2 font-semibold text-gray-600 border-b border-gray-200 sticky left-0 bg-white">
+              <th className="text-left px-3 py-2 font-semibold text-[#3a0f34] border-b border-[#d2c2cb] sticky left-0 bg-[#ffffff]">
                 Study
               </th>
               {domainLabels.map((label, i) => (
                 <th
                   key={i}
-                  className="px-2 py-2 font-semibold text-gray-600 border-b border-gray-200 text-center min-w-[100px]"
+                  className="px-2 py-2 font-semibold text-[#3a0f34] border-b border-[#d2c2cb] text-center min-w-[100px]"
                 >
                   <div className="text-xs leading-tight">{label}</div>
                 </th>
               ))}
-              <th className="px-3 py-2 font-semibold text-gray-600 border-b border-gray-200 text-center">
+              <th className="px-3 py-2 font-semibold text-[#3a0f34] border-b border-[#d2c2cb] text-center">
                 Overall
               </th>
             </tr>
           </thead>
           <tbody>
             {assessments.map((a) => (
-              <tr key={a.assessment_id} className="hover:bg-gray-50">
-                <td className="px-3 py-2 border-b border-gray-100 sticky left-0 bg-white">
+              <tr key={a.assessment_id} className="hover:bg-[#fbf9f4] transition-colors">
+                <td className="px-3 py-2 border-b border-[#d2c2cb]/50 sticky left-0 bg-[#ffffff]">
                   <Link
                     to={`/projects/${summary.project_id}/rob/${a.assessment_id}`}
-                    className="text-phylo-blue hover:underline font-medium line-clamp-1 max-w-[250px] block"
+                    className="text-[#3a0f34] hover:text-[#814d75] hover:underline font-serif font-medium line-clamp-1 max-w-[250px] block"
                   >
                     {a.study_title || "Untitled"}
                   </Link>
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     {a.ai_prefilled && (
-                      <span className="inline-flex items-center gap-0.5 text-[10px] text-phylo-orange">
+                      <span className="inline-flex items-center gap-0.5 text-[10px] text-[#7c5800] font-sans">
                         <Sparkles className="h-2.5 w-2.5" /> Co-Scientist
                       </span>
                     )}
                     {(a.needs_human_review_count ?? 0) > 0 ? (
-                      <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-700 bg-amber-100/80 px-1.5 py-0.2 rounded font-medium">
+                      <span className="inline-flex items-center gap-0.5 text-[10px] text-[#7c5800] bg-[#ffdea6] px-1.5 py-0.2 rounded font-medium border border-[#d2c2cb] font-sans">
                         <AlertTriangle className="h-2.5 w-2.5" /> Review ({a.needs_human_review_count})
                       </span>
                     ) : (
                       a.domains.every((d) => d.human_verified) && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] text-phylo-green">
+                        <span className="inline-flex items-center gap-0.5 text-[10px] text-[#2d6a4f] font-sans font-medium">
                           <CheckCircle className="h-2.5 w-2.5" /> Verified
                         </span>
                       )
@@ -433,7 +433,7 @@ function TrafficLightChart({
                   const domain = domainMapByAssessment.get(a.assessment_id)?.get(dKey);
                   const judgment = domain?.risk_judgment || "pending";
                   return (
-                    <td key={i} className="px-2 py-2 border-b border-gray-100 text-center">
+                    <td key={i} className="px-2 py-2 border-b border-[#d2c2cb]/50 text-center">
                       <Link
                         to={`/projects/${summary.project_id}/rob/${a.assessment_id}`}
                         className="inline-block w-full rounded-md py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-80"
@@ -445,7 +445,7 @@ function TrafficLightChart({
                     </td>
                   );
                 })}
-                <td className="px-3 py-2 border-b border-gray-100 text-center">
+                <td className="px-3 py-2 border-b border-[#d2c2cb]/50 text-center">
                   <span
                     className="inline-block rounded-md px-2 py-1 text-xs font-bold text-white"
                     style={{ backgroundColor: judgmentDotColor(a.overall_judgment) }}
@@ -460,7 +460,7 @@ function TrafficLightChart({
       )}
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-gray-100">
+      <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-[#d2c2cb]">
         {[
           "low",
           "some_concerns",
@@ -477,7 +477,7 @@ function TrafficLightChart({
               className="inline-block w-3 h-3 rounded"
               style={{ backgroundColor: judgmentDotColor(j) }}
             />
-            <span className="text-xs text-gray-500">{judgmentLabel(j)}</span>
+            <span className="text-xs text-[#62535d] font-sans">{judgmentLabel(j)}</span>
           </div>
         ))}
       </div>
@@ -516,32 +516,32 @@ function AssessmentList({
   }
 
   return (
-    <div className="card p-5">
-      <h2 className="font-semibold mb-4">Assessment Details (grouped by study)</h2>
+    <div className="card p-5 bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-xs">
+      <h2 className="font-serif font-semibold text-[#3a0f34] mb-4">Assessment Details (grouped by study)</h2>
       <div className="space-y-3">
         {Object.entries(studyGroups).map(([studyId, group]) => (
-          <div key={studyId} className="border border-gray-100 rounded-lg p-3">
-            <div className="font-medium text-sm mb-1">{group.study_title}</div>
-            <div className="text-xs text-gray-400 mb-2">{group.study_design}</div>
+          <div key={studyId} className="border border-[#d2c2cb] rounded-lg p-3 bg-[#fbf9f4]">
+            <div className="font-serif font-medium text-sm text-[#3a0f34] mb-1">{group.study_title}</div>
+            <div className="text-xs text-[#81737b] mb-2 font-mono">{group.study_design}</div>
             <div className="space-y-1.5">
               {group.assessments.map((a) => (
                 <Link
                   key={a.assessment_id}
                   to={`/projects/${summary.project_id}/rob/${a.assessment_id}`}
-                  className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 hover:bg-gray-100 transition-colors"
+                  className="flex items-center justify-between rounded-md bg-[#ffffff] border border-[#d2c2cb] px-3 py-2 hover:bg-[#eee7ec] transition-colors"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     {a.outcome_label && (
-                      <span className="text-xs text-gray-600">{a.outcome_label}</span>
+                      <span className="text-xs text-[#4f444b] font-sans">{a.outcome_label}</span>
                     )}
                     {a.ai_prefilled && (
-                      <span className="badge bg-phylo-orange/10 text-phylo-orange text-[10px]">
-                        <Sparkles className="h-3 w-3 mr-0.5" /> Co-Scientist
+                      <span className="badge bg-[#ffdea6] text-[#3a0f34] text-[10px] font-sans border border-[#d2c2cb]">
+                        <Sparkles className="h-3 w-3 mr-0.5 text-[#7c5800]" /> Co-Scientist
                       </span>
                     )}
                     {(a.needs_human_review_count ?? 0) > 0 && (
-                      <span className="badge bg-amber-100 text-amber-800 text-[10px] font-medium border border-amber-200">
-                        <AlertTriangle className="h-3 w-3 mr-0.5 text-amber-600" />
+                      <span className="badge bg-[#ffdea6] text-[#7c5800] text-[10px] font-medium border border-[#d2c2cb] font-sans">
+                        <AlertTriangle className="h-3 w-3 mr-0.5 text-[#7c5800]" />
                         {a.needs_human_review_count} Flagged for Review
                       </span>
                     )}

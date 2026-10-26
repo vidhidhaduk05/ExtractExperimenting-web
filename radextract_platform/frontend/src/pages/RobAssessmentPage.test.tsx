@@ -18,9 +18,9 @@ vi.mock('../lib/api', () => ({
     updateAnswer: vi.fn(),
     updateJudgment: vi.fn(),
   },
-  judgmentColor: () => 'bg-[#381A61]',
+  judgmentColor: () => 'bg-[#3a0f34]',
   judgmentLabel: (val: string) => val,
-  judgmentDotColor: () => '#381A61',
+  judgmentDotColor: () => '#3a0f34',
 }));
 
 const mockAssessment = {

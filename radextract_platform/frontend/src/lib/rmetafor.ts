@@ -258,7 +258,7 @@ export function renderRMetaforFunnelPlotSVG(opts: FunnelPlotOptions): string {
   const left99X = getX(overallEffect - 2.576 * maxSE);
   const right99X = getX(overallEffect + 2.576 * maxSE);
 
-  // Shaded 95% pseudo confidence triangle (canonical R metafor shade #ECE9E2)
+  // Shaded 95% pseudo confidence triangle (canonical R metafor shade #eee7ec)
   const funnelTriangle = `${pooledX},${apexY} ${left95X},${baseY} ${right95X},${baseY}`;
 
   // Study points
@@ -307,7 +307,7 @@ export function renderRMetaforFunnelPlotSVG(opts: FunnelPlotOptions): string {
   <line x1="30" y1="68" x2="770" y2="68" stroke="#E2E8F0" stroke-width="1"/>
 
   <!-- Funnel Shading (95% CI Region) -->
-  <polygon points="${funnelTriangle}" fill="#ECE9E2" stroke="#A0AEC0" stroke-width="1.2" stroke-dasharray="4,4"/>
+  <polygon points="${funnelTriangle}" fill="#eee7ec" stroke="#d2c2cb" stroke-width="1.2" stroke-dasharray="4,4"/>
 
   <!-- 99% CI Outer Bounds (Dotted) -->
   <line x1="${pooledX}" y1="${apexY}" x2="${left99X}" y2="${baseY}" stroke="#CBD5E1" stroke-width="1.2" stroke-dasharray="2,3"/>
@@ -342,7 +342,7 @@ export function renderRMetaforFunnelPlotSVG(opts: FunnelPlotOptions): string {
   <rect x="520" y="145" width="230" height="54" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
   <circle cx="536" cy="162" r="5" fill="#0279EE" stroke="#FFFFFF" stroke-width="1.5"/>
   <text x="548" y="166" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#334155">Included Studies (k=${studies.length})</text>
-  <rect x="530" y="178" width="12" height="10" fill="#ECE9E2" stroke="#A0AEC0" stroke-width="1"/>
+  <rect x="530" y="178" width="12" height="10" fill="#eee7ec" stroke="#d2c2cb" stroke-width="1"/>
   <text x="548" y="187" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#334155">Pseudo 95% Confidence Region</text>
 
   <!-- Footer -->

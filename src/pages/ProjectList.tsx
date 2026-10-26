@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, DEMO_PROJECT } from "../lib/api";
-import { Plus, Folder, Calendar, BookOpen, Sparkles, RefreshCw } from "lucide-react";
+import { Plus, Folder, Calendar, Sparkles, RefreshCw } from "lucide-react";
 
 export function ProjectList() {
   const { data: rawProjects, isLoading, error, refetch } = useQuery({

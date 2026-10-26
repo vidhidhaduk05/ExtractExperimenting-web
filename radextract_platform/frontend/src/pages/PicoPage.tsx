@@ -57,19 +57,19 @@ export function PicoPage() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
+      <Link to={`/projects/${projectId}`} className="text-sm text-[#62535d] hover:text-[#3a0f34] flex items-center gap-1 mb-4 font-sans">
         <ArrowLeft className="h-3 w-3" /> Back to project
       </Link>
 
-      <h1 className="text-2xl font-bold mb-1">PICO Framework</h1>
-      <p className="text-gray-500 text-sm mb-6">
+      <h1 className="text-2xl font-serif font-bold text-[#3a0f34] mb-1">PICO Framework</h1>
+      <p className="text-[#62535d] text-sm mb-6 font-sans">
         Define the Population, Index test, Comparator, Outcome, and Study design for your systematic review.
         This framework drives variable auto-generation on the Data Review page.
       </p>
 
       {isLoading && (
-        <div className="flex items-center gap-2 text-gray-400">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+        <div className="flex items-center gap-2 text-[#81737b]">
+          <Loader2 className="h-4 w-4 animate-spin text-[#814d75]" /> Loading...
         </div>
       )}
 
@@ -79,13 +79,13 @@ export function PicoPage() {
           className="space-y-4"
         >
           {fields.map(({ key, label, icon: Icon, placeholder }) => (
-            <div key={key} className="card p-5">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <Icon className="h-4 w-4 text-phylo-blue" />
+            <div key={key} className="card p-5 bg-[#ffffff] border border-[#d2c2cb] rounded-xl">
+              <label className="flex items-center gap-2 text-sm font-serif font-semibold text-[#3a0f34] mb-2">
+                <Icon className="h-4 w-4 text-[#814d75]" />
                 {label}
               </label>
               <textarea
-                className="input min-h-[60px]"
+                className="input min-h-[60px] text-xs w-full bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
                 value={form[key as keyof typeof form]}
                 onChange={(e) => set(key, e.target.value)}
                 placeholder={placeholder}
@@ -94,7 +94,7 @@ export function PicoPage() {
           ))}
 
           {saveMutation.isError && (
-            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-md bg-[#fff2f2] border border-[#d2c2cb] px-4 py-3 text-sm text-[#a42b2b]">
               Error: {(saveMutation.error as Error).message}
             </div>
           )}
@@ -105,21 +105,21 @@ export function PicoPage() {
               Save PICO Framework
             </button>
             {saved && (
-              <span className="flex items-center gap-1 text-sm text-phylo-green">
+              <span className="flex items-center gap-1 text-sm text-[#2d6a4f] font-sans font-medium">
                 <CheckCircle className="h-4 w-4" /> Saved
               </span>
             )}
           </div>
 
           {pico.is_defined && (
-            <div className="card p-4 bg-phylo-cream/30">
-              <p className="text-sm text-gray-600">
+            <div className="card p-4 bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl">
+              <p className="text-sm text-[#62535d] font-sans">
                 PICO is defined. Go to the{" "}
-                <Link to={`/projects/${projectId}/hypothesis`} className="text-phylo-blue hover:underline font-medium">
+                <Link to={`/projects/${projectId}/hypothesis`} className="text-[#814d75] hover:text-[#3a0f34] hover:underline font-medium">
                   Hypothesis page
                 </Link>{" "}
                 to define your research hypothesis, then use{" "}
-                <Link to={`/projects/${projectId}/review`} className="text-phylo-blue hover:underline font-medium">
+                <Link to={`/projects/${projectId}/review`} className="text-[#814d75] hover:text-[#3a0f34] hover:underline font-medium">
                   Data Review
                 </Link>{" "}
                 to auto-generate extraction variables.

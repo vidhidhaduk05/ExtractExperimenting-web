@@ -422,7 +422,7 @@ export const ClaimscapePage: React.FC = () => {
   };
 
   return (
-    <div className="cs min-h-screen bg-[#fbf9f4] text-[#1b1c19] selection:bg-[#66365c]/15 transition-colors duration-200 font-['Newsreader']">
+    <div className="cs min-h-screen bg-[#fbf9f4] text-[#4f444b] selection:bg-[#66365c]/15 transition-colors duration-200 font-['Newsreader']">
       <div className="px-6 pt-3 text-xs font-['Work_Sans'] text-[#72636d]" role="status">{resultSource}</div>
       {scanError && (
         <div role="alert" className="mx-6 mt-3 border border-red-300 bg-red-50 p-3 text-sm text-red-900 font-['Work_Sans']">
@@ -506,7 +506,7 @@ export const ClaimscapePage: React.FC = () => {
                         <span className="relative inline-flex rounded-none h-2.5 w-2.5 bg-[#814d75]"></span>
                       </span>
                     ) : (
-                      <Check className="w-3.5 h-3.5 text-emerald-700" />
+                      <Check className="w-3.5 h-3.5 text-[#7c5800]" />
                     )}
                     <span className="text-[#3a0f34] font-medium text-[12px]">
                       {scanStepLabel || "Analyzing evidence..."}
@@ -516,7 +516,7 @@ export const ClaimscapePage: React.FC = () => {
                     {Math.round(scanProgress)}%
                   </span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden bg-[#e4e2dd]">
+                <div className="h-1.5 w-full overflow-hidden bg-[#d2c2cb]">
                   <div
                     className="h-full bg-gradient-to-r from-[#3a0f34] via-[#814d75] to-[#7c5800] transition-all duration-300 ease-out"
                     style={{ width: `${scanProgress}%` }}
@@ -562,7 +562,7 @@ export const ClaimscapePage: React.FC = () => {
             </ul>
 
             {/* Compact Technical Pillars Strip */}
-            <div className="mt-5 pt-3 border-t border-[#e4e2dd] flex flex-wrap items-center gap-3 text-[11px] font-['Work_Sans'] text-[#72636d]">
+            <div className="mt-5 pt-3 border-t border-[#d2c2cb] flex flex-wrap items-center gap-3 text-[11px] font-['Work_Sans'] text-[#72636d]">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-none bg-[#3a0f34]"></span>
                 PubMed Live Retrieval
@@ -613,7 +613,7 @@ export const ClaimscapePage: React.FC = () => {
               onClick={handleCopyLink}
               className="inline-flex items-center gap-2 border border-[#d2c2cb] bg-white px-3.5 py-2 text-xs font-semibold font-['Work_Sans'] text-[#3a0f34] hover:bg-[#ffdea6] transition-colors shadow-2xs cursor-pointer"
             >
-              {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
+              {copiedLink ? <Check className="w-4 h-4 text-[#7c5800]" /> : <Share2 className="w-4 h-4" />}
               <span>{copiedLink ? "Link copied" : "Copy link"}</span>
             </button>
           </div>
@@ -650,7 +650,7 @@ export const ClaimscapePage: React.FC = () => {
           {/* Section 3: Interactive SVG Scatter Map */}
           <div ref={mapSectionRef} id="claimscape-map-section" className="cs-card overflow-hidden shadow-sm scroll-mt-6 border border-[#d2c2cb]">
             {/* Map Header Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-[#d2c2cb] px-5 py-3 bg-[#f0eee9]">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-[#d2c2cb] px-5 py-3 bg-[#eee7ec]">
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-['Work_Sans'] text-xs">
                 <label className="cs-toggle flex items-center gap-2 cursor-pointer">
                   <input
@@ -758,7 +758,7 @@ export const ClaimscapePage: React.FC = () => {
             </div>
 
             {/* Quick Workspace Integration Card */}
-            <div className="cs-card p-5 sm:p-6 grid gap-3 bg-[#f0eee9] border border-[#d2c2cb]">
+            <div className="cs-card p-5 sm:p-6 grid gap-3 bg-[#eee7ec] border border-[#d2c2cb]">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#3a0f34]" />
                 <h3 className="font-['Bodoni_Moda'] font-medium text-[16px] text-[#3a0f34]">
@@ -809,7 +809,7 @@ export const ClaimscapePage: React.FC = () => {
 
           <div className="overflow-x-auto max-h-[460px] overflow-y-auto">
             <table className="cs-table w-full text-left font-['Work_Sans']">
-              <thead className="bg-[#f0eee9] border-b border-[#d2c2cb] text-[11px] uppercase tracking-wider text-[#72636d]">
+              <thead className="bg-[#eee7ec] border-b border-[#d2c2cb] text-[11px] uppercase tracking-wider text-[#72636d]">
                 <tr>
                   <th className="p-3 w-16">Year</th>
                   <th className="p-3">Title & Publication</th>
@@ -830,12 +830,12 @@ export const ClaimscapePage: React.FC = () => {
                       data-sel={isSel}
                       onClick={() => setSelectedPmid(p.paper.pmid)}
                       className={`cursor-pointer transition-colors ${
-                        isSel ? "bg-[#ffdea6]/35" : "hover:bg-[#f5f3ee]"
+                        isSel ? "bg-[#ffdea6]/35" : "hover:bg-[#eee7ec]"
                       }`}
                     >
                       <td className="p-3 font-mono font-medium text-[12px] text-[#3a0f34]">{year}</td>
                       <td className="p-3">
-                        <p className="font-semibold text-[13px] text-[#1b1c19] line-clamp-1 font-['Newsreader']">
+                        <p className="font-semibold text-[13px] text-[#4f444b] line-clamp-1 font-['Newsreader']">
                           {p.paper.title}
                         </p>
                         <p className="text-[11.5px] text-[#72636d] mt-0.5">

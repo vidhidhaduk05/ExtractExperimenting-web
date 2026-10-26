@@ -30,16 +30,16 @@ const NODE_STYLES: Record<
   string,
   { color: string; bg: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }
 > = {
-  study: { color: "#3b82f6", bg: "#eff6ff", icon: FileText },
-  variable: { color: "#f59e0b", bg: "#fffbeb", icon: VariableIcon },
-  extraction: { color: "#10b981", bg: "#ecfdf5", icon: Table2 },
-  meta_analysis: { color: "#8b5cf6", bg: "#f5f3ff", icon: BarChart3 },
+  study: { color: "#3a0f34", bg: "#eee7ec", icon: FileText },
+  variable: { color: "#814d75", bg: "#fbf9f4", icon: VariableIcon },
+  extraction: { color: "#7c5800", bg: "#ffdea6", icon: Table2 },
+  meta_analysis: { color: "#3a0f34", bg: "#fbf9f4", icon: BarChart3 },
 };
 
 const EDGE_COLORS: Record<string, string> = {
-  has_extraction: "#10b981",
-  value_of: "#f59e0b",
-  includes_study: "#8b5cf6",
+  has_extraction: "#814d75",
+  value_of: "#7c5800",
+  includes_study: "#3a0f34",
 };
 
 export function ReviewGraphPage() {
@@ -77,13 +77,21 @@ export function ReviewGraphPage() {
       );
       // Add direct study→variable links when extractions are hidden
       const studyVarPairs = new Set<string>();
+      const valueOfTargetsBySource = new Map<string, string[]>();
+      graph.links.forEach((l) => {
+        if (l.relation === "value_of") {
+          const list = valueOfTargetsBySource.get(l.source) || [];
+          list.push(l.target);
+          valueOfTargetsBySource.set(l.source, list);
+        }
+      });
+
       graph.links.forEach((l) => {
         if (l.relation === "has_extraction") {
-          // study → extraction
           const studyId = l.source;
-          graph.links.forEach((l2) => {
-            if (l2.source === l.target && l2.relation === "value_of") {
-              const varId = l2.target;
+          const varIds = valueOfTargetsBySource.get(l.target);
+          if (varIds) {
+            varIds.forEach((varId) => {
               const key = `${studyId}->${varId}`;
               if (!studyVarPairs.has(key)) {
                 studyVarPairs.add(key);
@@ -93,8 +101,8 @@ export function ReviewGraphPage() {
                   relation: "extracts",
                 });
               }
-            }
-          });
+            });
+          }
         }
       });
     }
@@ -140,8 +148,8 @@ export function ReviewGraphPage() {
       target: l.target,
       type: "smoothstep",
       style: {
-        stroke: EDGE_COLORS[l.relation] || "#94a3b8",
-        strokeWidth: 1,
+        stroke: EDGE_COLORS[l.relation] || "#d2c2cb",
+        strokeWidth: 1.5,
       },
     }));
 
@@ -151,14 +159,14 @@ export function ReviewGraphPage() {
   const nodeTypes: NodeTypes = useMemo(() => ({ reviewNode: ReviewGraphNodeComponent }), []);
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="p-8 max-w-[1400px] mx-auto bg-[#fbf9f4] min-h-screen text-[#4f444b]">
       {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Share2 className="2h-7 w-7 text-phylo-blue" />
+      <div className="mb-6">
+        <h1 className="text-2xl font-serif font-bold text-[#3a0f34] flex items-center gap-2">
+          <Share2 className="h-7 w-7 text-[#814d75]" />
           Review Data Graph
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-[#62535d] mt-1 font-serif">
           Interactive graph of the review data structure — studies, variables, extractions,
           and meta-analyses and their relationships.
         </p>
@@ -166,7 +174,7 @@ export function ReviewGraphPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           <StatCard label="Total Nodes" value={stats.total_nodes} />
           <StatCard label="Total Links" value={stats.total_links} />
           <StatCard label="Studies" value={stats.node_types.study || 0} />
@@ -176,18 +184,18 @@ export function ReviewGraphPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Filter className="h-4 w-4 text-slate-400" />
-          <span className="text-sm font-medium text-slate-700">Filters</span>
+      <div className="bg-white rounded-xl border border-[#d2c2cb] p-5 mb-6 shadow-xs">
+        <div className="flex items-center gap-2 mb-3 border-b border-[#eee7ec] pb-2">
+          <Filter className="h-4 w-4 text-[#814d75]" />
+          <span className="text-sm font-semibold text-[#3a0f34] font-sans">Filters</span>
         </div>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap items-center gap-5">
           <div>
-            <label className="text-xs text-slate-500 mb-1 block">Node Type</label>
+            <label className="text-xs text-[#62535d] mb-1 block font-sans font-medium">Node Type</label>
             <select
               value={nodeTypeFilter}
               onChange={(e) => setNodeTypeFilter(e.target.value)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-phylo-blue"
+              className="px-3 py-1.5 text-sm rounded-lg border border-[#d2c2cb] bg-white text-[#3a0f34] focus:outline-none focus:ring-2 focus:ring-[#814d75]"
             >
               <option value="">All Types</option>
               <option value="study">Studies</option>
@@ -196,46 +204,46 @@ export function ReviewGraphPage() {
               <option value="meta_analysis">Meta-Analyses</option>
             </select>
           </div>
-          <div className="flex items-end">
-            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+          <div className="flex items-end pt-5">
+            <label className="flex items-center gap-2 text-sm text-[#4f444b] cursor-pointer font-sans">
               <input
                 type="checkbox"
                 checked={showExtractions}
                 onChange={(e) => setShowExtractions(e.target.checked)}
-                className="rounded border-slate-300"
+                className="rounded border-[#d2c2cb] text-[#3a0f34] focus:ring-[#814d75]"
               />
               Show extraction nodes
             </label>
           </div>
         </div>
         {graph && (
-          <p className="text-xs text-slate-400 mt-3">
+          <p className="text-xs text-[#81737b] mt-3 font-sans">
             Showing {nodes.length} nodes and {edges.length} links
           </p>
         )}
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 mb-4">
+      <div className="flex flex-wrap gap-4 mb-4 bg-white/70 p-3 rounded-lg border border-[#d2c2cb]">
         {Object.entries(NODE_STYLES).map(([type, style]) => (
-          <div key={type} className="flex items-center gap-1.5">
+          <div key={type} className="flex items-center gap-2">
             <div
-              className="w-3 h-3 rounded border-2"
+              className="w-3.5 h-3.5 rounded border"
               style={{ borderColor: style.color, backgroundColor: style.bg }}
             />
-            <span className="text-xs text-slate-500 capitalize">{type.replace("_", " ")}</span>
+            <span className="text-xs font-sans text-[#62535d] capitalize">{type.replace("_", " ")}</span>
           </div>
         ))}
       </div>
 
       {/* Graph */}
       <div
-        className="bg-white rounded-xl border border-slate-200 overflow-hidden"
+        className="bg-white rounded-xl border border-[#d2c2cb] overflow-hidden shadow-xs"
         style={{ height: "600px" }}
       >
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-8 w-8 text-phylo-blue animate-spin" />
+            <Loader2 className="h-8 w-8 text-[#814d75] animate-spin" />
           </div>
         ) : graph && graph.nodes.length > 0 ? (
           <ReactFlow
@@ -247,20 +255,20 @@ export function ReviewGraphPage() {
             maxZoom={3}
             proOptions={{ hideAttribution: true }}
           >
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d2c2cb" />
             <Controls />
             <MiniMap
               nodeColor={(n) => {
                 const type = (n.data as unknown as ReviewGraphNode)?.type || "study";
-                return NODE_STYLES[type]?.color || "#3b82f6";
+                return NODE_STYLES[type]?.color || "#3a0f34";
               }}
-              style={{ width: 150, height: 100 }}
+              style={{ width: 150, height: 100, backgroundColor: "#fbf9f4", borderColor: "#d2c2cb" }}
             />
           </ReactFlow>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400">
-            <Share2 className="h-12 w-12 mb-3" />
-            <p className="text-sm">No review data found. Add studies and variables to see the graph.</p>
+          <div className="flex flex-col items-center justify-center h-full text-[#81737b]">
+            <Share2 className="h-12 w-12 mb-3 text-[#d2c2cb]" />
+            <p className="text-sm font-serif">No review data found. Add studies and variables to see the graph.</p>
           </div>
         )}
       </div>
@@ -293,7 +301,7 @@ function ReviewGraphNodeComponent({ data }: { data: any }) {
 
   return (
     <div
-      className="px-3 py-2 rounded-lg border-2 shadow-sm text-xs cursor-pointer hover:shadow-md transition-shadow"
+      className="px-3 py-2 rounded-lg border shadow-xs text-xs cursor-pointer hover:shadow-md transition-shadow font-sans"
       style={{
         borderColor: style.color,
         backgroundColor: style.bg,
@@ -305,7 +313,7 @@ function ReviewGraphNodeComponent({ data }: { data: any }) {
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
       <div className="flex items-center gap-1.5">
         <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: style.color }} />
-        <span className="truncate font-medium text-slate-700">{shortLabel}</span>
+        <span className="truncate font-medium text-[#3a0f34]">{shortLabel}</span>
       </div>
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
     </div>
@@ -316,9 +324,9 @@ function ReviewGraphNodeComponent({ data }: { data: any }) {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-white p-3 rounded-lg border border-slate-200">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="text-lg font-bold text-slate-900 mt-0.5">{value}</p>
+    <div className="bg-white p-3.5 rounded-xl border border-[#d2c2cb] shadow-xs">
+      <p className="text-xs text-[#62535d] font-sans">{label}</p>
+      <p className="text-lg font-serif font-bold text-[#3a0f34] mt-0.5">{value}</p>
     </div>
   );
 }

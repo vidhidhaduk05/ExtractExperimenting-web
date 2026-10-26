@@ -37,24 +37,24 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
       return (
-        <div className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center bg-phylo-paper dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 m-4">
-          <div className="rounded-full bg-red-100 p-4 mb-6">
-            <AlertTriangle className="h-10 w-10 text-red-600" />
+        <div className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center bg-white rounded-xl shadow-xs border border-[#d2c2cb] m-4">
+          <div className="rounded-full bg-[#eee7ec] border border-[#d2c2cb] p-4 mb-5">
+            <AlertTriangle className="h-10 w-10 text-[#814d75]" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          <h2 className="text-2xl font-serif font-bold text-[#3a0f34] mb-2">
             Something went wrong
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
+          <p className="text-[#62535d] font-serif mb-6 max-w-md text-sm">
             An unexpected error occurred while rendering this component.
             {this.state.error && (
-              <span className="block mt-2 p-2 bg-gray-100 dark:bg-gray-800 text-sm font-mono text-left rounded text-gray-800 dark:text-gray-300 overflow-auto max-h-32">
+              <span className="block mt-3 p-3 bg-[#fbf9f4] border border-[#d2c2cb] text-xs font-mono text-left rounded-lg text-[#4f444b] overflow-auto max-h-32">
                 {this.state.error.toString()}
               </span>
             )}
           </p>
           <button
             onClick={this.handleReset}
-            className="btn-primary flex items-center gap-2 px-6 py-2"
+            className="btn-primary flex items-center gap-2 px-6 py-2 text-xs"
           >
             <RefreshCw className="h-4 w-4" />
             Reload Page

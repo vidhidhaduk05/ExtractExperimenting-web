@@ -662,10 +662,10 @@ export function ActualPdfViewer({
                 key={page.pageNumber}
                 id={`pdf-page-${page.pageNumber}`}
                 style={{ width: `${zoom}%`, maxWidth: `${Math.round(850 * (zoom / 100))}px` }}
-                className="bg-white rounded-xs shadow-2xl border border-[#381A61]/15 relative transition-all duration-150 shrink-0 select-text"
+                className="bg-white rounded-xs shadow-2xl border border-[#3a0f34]/15 relative transition-all duration-150 shrink-0 select-text"
               >
                 {/* Visual Page Number Badge in Margin */}
-                <div className="absolute -top-3 left-3 bg-[#381A61] text-[#F9D14A] font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-md shadow-xs z-30 select-none border border-[#7C4B73]/40">
+                <div className="absolute -top-3 left-3 bg-[#3a0f34] text-[#ffdea6] font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-md shadow-xs z-30 select-none border border-[#814d75]/40">
                   Page {page.pageNumber}
                 </div>
 
@@ -704,15 +704,15 @@ export function ActualPdfViewer({
                               height: `${rect.height}%`,
                               mixBlendMode: "multiply",
                               backgroundColor: isActive
-                                ? "rgba(249, 209, 74, 0.25)" // Canary Gold #F9D14A translucent highlight wash
+                                ? "rgba(249, 209, 74, 0.25)" // Canary Gold #ffdea6 translucent highlight wash
                                 : isVerified
-                                ? "rgba(124, 75, 115, 0.10)" // Berry Plum #7C4B73
-                                : "rgba(136, 160, 220, 0.10)", // Soft Periwinkle #88A0DC
+                                ? "rgba(124, 75, 115, 0.10)" // Berry Plum #814d75
+                                : "rgba(136, 160, 220, 0.10)", // Soft Periwinkle #eee7ec
                               border: isActive
-                                ? "2px solid #E78429" // Boundary line all over the highlight block (Tangerine Amber)
+                                ? "2px solid #7c5800" // Boundary line all over the highlight block (Tangerine Amber)
                                 : isVerified
-                                ? "1.5px solid #7C4B73" // Boundary line all over the highlight block (Berry Plum)
-                                : "1.5px dashed #88A0DC", // Boundary line all over the highlight block (Soft Periwinkle)
+                                ? "1.5px solid #814d75" // Boundary line all over the highlight block (Berry Plum)
+                                : "1.5px dashed #eee7ec", // Boundary line all over the highlight block (Soft Periwinkle)
                               boxShadow: isActive
                                 ? "0 0 0 2px rgba(231, 132, 41, 0.2), 0 3px 12px rgba(249, 209, 74, 0.35)"
                                 : "none",
@@ -723,7 +723,7 @@ export function ActualPdfViewer({
                             }}
                             className={cn(
                               "group/highlight hover:brightness-95",
-                              isActive && "ring-1 ring-[#E78429]/40"
+                              isActive && "ring-1 ring-[#7c5800]/40"
                             )}
                             title={`#${overlay.varIndex} ${overlay.label}: ${overlay.value || "Extracted"} (Click to review)`}
                           />
@@ -734,9 +734,9 @@ export function ActualPdfViewer({
                 </div>
 
                 {/* Page Bottom Running Footer */}
-                <div className="bg-[#FAF9F3] border-t border-[#381A61]/10 px-4 py-1.5 flex items-center justify-between text-[10px] font-sans text-[#7C4B73] select-none">
+                <div className="bg-[#fbf9f4] border-t border-[#3a0f34]/10 px-4 py-1.5 flex items-center justify-between text-[10px] font-sans text-[#814d75] select-none">
                   <span className="italic">Actual PDF Page {page.pageNumber} of {numPages}</span>
-                  <span className="font-semibold text-[#381A61]">
+                  <span className="font-semibold text-[#3a0f34]">
                     {overlays.length} active extraction highlight{overlays.length === 1 ? "" : "s"}
                   </span>
                 </div>

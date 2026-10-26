@@ -107,31 +107,31 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a0017]/40 backdrop-blur-xs font-sans">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="api-modal-title"
-        className="bg-[#FAF9F3] border border-black/10 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden text-[#141413] animate-in fade-in zoom-in-95 duration-200"
+        className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl shadow-2xl max-w-lg w-full overflow-hidden text-[#4f444b] animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-black/[0.08] flex items-center justify-between bg-white/60">
+        <div className="px-6 py-4 border-b border-[#d2c2cb] flex items-center justify-between bg-white">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-black/5 text-[#141413]">
+            <div className="p-2 rounded-lg bg-[#3a0f34] text-[#fbf9f4]">
               <Server className="h-5 w-5" />
             </div>
             <div>
-              <h2 id="api-modal-title" className="font-serif text-base font-semibold">
-                Backend API & Server Connection
+              <h2 id="api-modal-title" className="font-serif text-base font-bold text-[#3a0f34]">
+                Backend API &amp; Server Connection
               </h2>
-              <p className="text-xs text-[#8A817A]">
+              <p className="text-xs text-[#62535d]">
                 Configure your FastAPI VPS endpoint or switch to demo mode
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-[#8A817A] hover:text-[#141413] hover:bg-black/5 rounded-full transition-colors"
+            className="p-1.5 text-[#81737b] hover:text-[#3a0f34] hover:bg-[#eee7ec] rounded-full transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="h-4 w-4" />
@@ -141,20 +141,20 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
         {/* Body */}
         <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto text-xs">
           {/* Mode Switcher */}
-          <div className="p-3 rounded-xl border border-black/10 bg-white/80 space-y-2">
-            <span className="font-medium text-xs text-[#141413] block">Platform Operation Mode</span>
+          <div className="p-3 rounded-lg border border-[#d2c2cb] bg-white space-y-2">
+            <span className="font-semibold text-xs text-[#3a0f34] block">Platform Operation Mode</span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setIsDemo(false)}
-                className={`py-2 px-3 rounded-lg border text-left font-medium transition-all ${
+                className={`py-2 px-3 rounded-lg border text-left font-semibold transition-all cursor-pointer ${
                   !isDemo
-                    ? "bg-[#141413] text-[#FAF9F3] border-[#141413] shadow-xs"
-                    : "bg-white text-[#6B665E] border-black/10 hover:border-black/20"
+                    ? "bg-[#3a0f34] text-[#fbf9f4] border-[#3a0f34] shadow-xs"
+                    : "bg-white text-[#62535d] border-[#d2c2cb] hover:bg-[#eee7ec]"
                 }`}
               >
                 <div className="flex items-center gap-1.5">
-                  <span className={`h-2 w-2 rounded-full ${!isDemo ? "bg-emerald-400" : "bg-gray-300"}`} />
+                  <span className={`h-2 w-2 rounded-full ${!isDemo ? "bg-[#ffdea6]" : "bg-[#d2c2cb]"}`} />
                   <span>Live Server Mode</span>
                 </div>
                 <p className="text-[10px] mt-0.5 opacity-80 font-normal">
@@ -165,14 +165,14 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
               <button
                 type="button"
                 onClick={() => setIsDemo(true)}
-                className={`py-2 px-3 rounded-lg border text-left font-medium transition-all ${
+                className={`py-2 px-3 rounded-lg border text-left font-semibold transition-all cursor-pointer ${
                   isDemo
-                    ? "bg-[#141413] text-[#FAF9F3] border-[#141413] shadow-xs"
-                    : "bg-white text-[#6B665E] border-black/10 hover:border-black/20"
+                    ? "bg-[#3a0f34] text-[#fbf9f4] border-[#3a0f34] shadow-xs"
+                    : "bg-white text-[#62535d] border-[#d2c2cb] hover:bg-[#eee7ec]"
                 }`}
               >
                 <div className="flex items-center gap-1.5">
-                  <span className={`h-2 w-2 rounded-full ${isDemo ? "bg-amber-400" : "bg-gray-300"}`} />
+                  <span className={`h-2 w-2 rounded-full ${isDemo ? "bg-[#ffdea6]" : "bg-[#d2c2cb]"}`} />
                   <span>Offline Demo Mode</span>
                 </div>
                 <p className="text-[10px] mt-0.5 opacity-80 font-normal">
@@ -184,9 +184,9 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
 
           {/* Endpoint Input */}
           <div className="space-y-2">
-            <label htmlFor="api-url-input" className="font-medium text-xs text-[#141413] flex items-center justify-between">
+            <label htmlFor="api-url-input" className="font-semibold text-xs text-[#3a0f34] flex items-center justify-between">
               <span>FastAPI Backend Base URL</span>
-              <span className="text-[10px] text-[#8A817A]">Include <code>/api</code></span>
+              <span className="text-[10px] text-[#81737b]">Include <code>/api</code></span>
             </label>
             <div className="flex gap-2">
               <input
@@ -195,21 +195,21 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
                 placeholder="https://api.yourdomain.com/api"
-                className="flex-1 px-3 py-2 bg-white border border-black/15 rounded-xl font-mono text-xs focus:outline-hidden focus:ring-2 focus:ring-black/20 text-[#141413]"
+                className="flex-1 px-3 py-2 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg font-mono text-xs focus:outline-none focus:ring-1 focus:ring-[#814d75] text-[#4f444b]"
               />
               <button
                 type="button"
                 onClick={handleTest}
                 disabled={testing}
-                className="px-3 py-2 bg-black/5 hover:bg-black/10 text-[#141413] font-medium rounded-xl transition-colors shrink-0 flex items-center gap-1.5"
+                className="px-3 py-2 bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] font-semibold rounded-lg transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
               >
-                <Activity className={`h-3.5 w-3.5 ${testing ? "animate-spin text-purple-600" : ""}`} />
+                <Activity className={`h-3.5 w-3.5 ${testing ? "animate-spin text-[#814d75]" : "text-[#814d75]"}`} />
                 {testing ? "Testing..." : "Test"}
               </button>
             </div>
 
             {/* Presets */}
-            <div className="flex items-center gap-2 text-[11px] text-[#8A817A] flex-wrap">
+            <div className="flex items-center gap-2 text-[11px] text-[#62535d] flex-wrap">
               <span>Quick Presets:</span>
               <button
                 type="button"
@@ -227,23 +227,23 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
                   } catch (e) {}
                   setApiUrl("https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/api");
                 }}
-                className="px-2 py-0.5 rounded bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold border border-purple-300 flex items-center gap-1 shadow-2xs transition-colors"
+                className="px-2 py-0.5 rounded bg-[#ffdea6] hover:bg-[#ffd580] text-[#3a0f34] font-semibold border border-[#d2c2cb] flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
                 title="Connect directly to the HPC Tesla V100S GPU running the high-throughput Co-Scientist research inference cluster"
               >
-                <span>⚡ RadExtract Live GPU (HPC)</span>
+                <span>&sim; RadExtract Live GPU (HPC)</span>
               </button>
               <button
                 type="button"
                 onClick={() => setApiUrl("http://localhost:8000/api")}
-                className="hover:underline text-sky-700"
+                className="hover:underline text-[#814d75] cursor-pointer"
               >
                 Localhost:8000
               </button>
-              <span>•</span>
+              <span>&bull;</span>
               <button
                 type="button"
                 onClick={() => setApiUrl("/api")}
-                className="hover:underline text-sky-700"
+                className="hover:underline text-[#814d75] cursor-pointer"
               >
                 Default /api
               </button>
@@ -253,31 +253,31 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
           {/* Health Test Result */}
           {testResult && testResult.tested && (
             <div
-              className={`p-3 rounded-xl border text-xs ${
+              className={`p-3 rounded-lg border text-xs ${
                 testResult.ok
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                  : "bg-rose-50 border-rose-200 text-rose-900"
+                  ? "bg-[#eee7ec] border-[#d2c2cb] text-[#3a0f34]"
+                  : "bg-[#ab3329]/10 border-[#ab3329]/30 text-[#ab3329]"
               }`}
             >
               {testResult.ok ? (
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="h-4 w-4 text-[#3a0f34] shrink-0 mt-0.5" />
                   <div className="space-y-0.5">
-                    <p className="font-semibold">Backend Connection Verified!</p>
-                    <p className="text-[11px] text-emerald-700">
-                      Status: {testResult.statusText} • Version: {testResult.version} • Latency: {testResult.latencyMs}ms
+                    <p className="font-semibold text-[#3a0f34]">Backend Connection Verified!</p>
+                    <p className="text-[11px] text-[#62535d]">
+                      Status: {testResult.statusText} &bull; Version: {testResult.version} &bull; Latency: {testResult.latencyMs}ms
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-start gap-2">
-                  <XCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                  <XCircle className="h-4 w-4 text-[#ab3329] shrink-0 mt-0.5" />
                   <div className="space-y-0.5">
-                    <p className="font-semibold">Connection Failed</p>
-                    <p className="text-[11px] text-rose-700">
+                    <p className="font-semibold text-[#ab3329]">Connection Failed</p>
+                    <p className="text-[11px] text-[#ab3329]">
                       {testResult.error || "Unable to reach endpoint."}
                     </p>
-                    <p className="text-[10px] text-rose-600 mt-1">
+                    <p className="text-[10px] text-[#62535d] mt-1">
                       Check: 1) Is Docker running? 2) Is CORS allowed for your domain? 3) Does Caddy have HTTPS active?
                     </p>
                   </div>
@@ -287,13 +287,13 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
           )}
 
           {/* Authentication Section */}
-          <div className="p-3 rounded-xl border border-black/10 bg-white/80 space-y-2.5">
+          <div className="p-3 rounded-lg border border-[#d2c2cb] bg-white space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-xs flex items-center gap-1.5 text-[#141413]">
-                <Lock className="h-3.5 w-3.5 text-[#8A817A]" />
+              <span className="font-semibold text-xs flex items-center gap-1.5 text-[#3a0f34]">
+                <Lock className="h-3.5 w-3.5 text-[#814d75]" />
                 User Authentication (JWT)
               </span>
-              <span className="text-[10px] text-[#8A817A]">
+              <span className="text-[10px] text-[#81737b]">
                 {localStorage.getItem("token") ? "Logged In" : "Not logged in"}
               </span>
             </div>
@@ -305,27 +305,27 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Username (admin)"
-                  className="px-2.5 py-1.5 bg-white border border-black/15 rounded-lg text-xs"
+                  className="px-2.5 py-1.5 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg text-xs text-[#4f444b] focus:outline-none focus:ring-1 focus:ring-[#814d75]"
                 />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
-                  className="px-2.5 py-1.5 bg-white border border-black/15 rounded-lg text-xs"
+                  className="px-2.5 py-1.5 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg text-xs text-[#4f444b] focus:outline-none focus:ring-1 focus:ring-[#814d75]"
                 />
               </div>
               <div className="flex items-center justify-between">
                 <button
                   type="submit"
                   disabled={loggingIn || !password}
-                  className="px-3 py-1 bg-black/5 hover:bg-black/10 disabled:opacity-50 text-[#141413] font-medium rounded-lg transition-colors flex items-center gap-1"
+                  className="px-3 py-1.5 bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] disabled:opacity-50 font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <LogIn className="h-3 w-3" />
                   {loggingIn ? "Signing In..." : "Sign In to Server"}
                 </button>
                 {authStatus && (
-                  <span className="text-[11px] text-[#6B665E] italic truncate max-w-[200px]">
+                  <span className="text-[11px] text-[#62535d] italic truncate max-w-[200px]">
                     {authStatus}
                   </span>
                 )}
@@ -335,11 +335,11 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-black/[0.08] flex items-center justify-between bg-white/60">
+        <div className="px-6 py-3 border-t border-[#d2c2cb] flex items-center justify-between bg-white">
           <button
             type="button"
             onClick={handleReset}
-            className="text-xs text-[#8A817A] hover:text-[#141413] hover:underline"
+            className="text-xs text-[#814d75] hover:text-[#3a0f34] hover:underline cursor-pointer"
           >
             Reset Defaults
           </button>
@@ -347,16 +347,16 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 rounded-xl border border-black/15 text-[#141413] hover:bg-black/5 transition-colors font-medium text-xs"
+              className="px-3.5 py-1.5 rounded-lg border border-[#d2c2cb] text-[#3a0f34] bg-white hover:bg-[#eee7ec] transition-colors font-semibold text-xs cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="px-4 py-1.5 rounded-xl bg-[#141413] text-[#FAF9F3] hover:bg-[#141413]/90 transition-colors font-medium text-xs shadow-xs"
+              className="px-4 py-1.5 rounded-lg bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-colors font-semibold text-xs shadow-xs cursor-pointer"
             >
-              Save & Apply
+              Save &amp; Apply
             </button>
           </div>
         </div>

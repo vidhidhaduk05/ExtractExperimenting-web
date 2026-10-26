@@ -256,7 +256,7 @@ export function UniversalBulkUploadModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs font-sans animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a0017]/50 backdrop-blur-xs font-sans animate-in fade-in duration-200"
       onDragOver={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -266,23 +266,23 @@ export function UniversalBulkUploadModal({
         e.stopPropagation();
       }}
     >
-      <div className="bg-[#FAF9F3] border border-black/10 rounded-2xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl space-y-6 max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl space-y-6 max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-black/[0.08] pb-4 shrink-0">
+        <div className="flex items-center justify-between border-b border-[#d2c2cb] pb-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-[#141413] text-[#FAF9F3] flex items-center justify-center shadow-xs">
+            <div className="h-10 w-10 rounded-xl bg-[#3a0f34] text-[#fbf9f4] flex items-center justify-center shadow-xs">
               <FolderPlus className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-serif text-xl sm:text-2xl font-normal text-[#141413] tracking-tight">
+                <h3 className="font-serif text-xl sm:text-2xl font-normal text-[#3a0f34] tracking-tight">
                   Bulk Upload from Laptop
                 </h3>
-                <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">
+                <span className="bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb] rounded-md font-sans text-[10px] px-2 py-0.5">
                   MULTI-FILE READY
                 </span>
               </div>
-              <p className="font-serif italic text-xs text-[#6B665E] mt-0.5">
+              <p className="font-serif italic text-xs text-[#62535d] mt-0.5">
                 Drop multiple study PDFs, Excel sheets, or citations directly from your laptop.
               </p>
             </div>
@@ -290,7 +290,7 @@ export function UniversalBulkUploadModal({
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="p-1.5 rounded-full text-black/40 hover:text-black hover:bg-black/5 transition-colors disabled:opacity-40"
+            className="p-1.5 rounded-full text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec] transition-colors disabled:opacity-40"
             title="Close dialog"
           >
             <X className="h-5 w-5" />
@@ -300,8 +300,8 @@ export function UniversalBulkUploadModal({
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto space-y-5 pr-1">
           {/* Target Workflow Switcher */}
-          <div className="bg-white border border-black/10 rounded-xl p-3.5 space-y-2">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#8A817A] block">
+          <div className="bg-white border border-[#d2c2cb] rounded-xl p-3.5 space-y-2">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#81737b] block">
               TARGET DESTINATION IN PROJECT:
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -310,14 +310,14 @@ export function UniversalBulkUploadModal({
                 onClick={() => setTargetWorkflow("extraction")}
                 className={`p-3 rounded-lg border text-left transition-all flex items-start gap-2.5 ${
                   targetWorkflow === "extraction"
-                    ? "bg-[#141413] text-[#FAF9F3] border-[#141413] shadow-xs"
-                    : "bg-white text-[#141413] border-black/10 hover:border-black/30"
+                    ? "bg-[#3a0f34] text-[#fbf9f4] border-[#3a0f34] shadow-xs"
+                    : "bg-white text-[#3a0f34] border-[#d2c2cb] hover:border-[#814d75]"
                 }`}
               >
-                <FileSpreadsheet className={`h-4 w-4 mt-0.5 shrink-0 ${targetWorkflow === "extraction" ? "text-[#E9ED4C]" : "text-[#141413]"}`} />
+                <FileSpreadsheet className={`h-4 w-4 mt-0.5 shrink-0 ${targetWorkflow === "extraction" ? "text-[#ffdea6]" : "text-[#3a0f34]"}`} />
                 <div>
                   <div className="font-serif font-medium text-xs">Direct Data Extraction Sheet</div>
-                  <div className={`text-[11px] mt-0.5 ${targetWorkflow === "extraction" ? "text-[#FAF9F3]/70" : "text-[#6B665E]"}`}>
+                  <div className={`text-[11px] mt-0.5 ${targetWorkflow === "extraction" ? "text-[#fbf9f4]/70" : "text-[#62535d]"}`}>
                     Auto-includes studies and immediately loads them into the extraction matrix & PDF quotes.
                   </div>
                 </div>
@@ -328,14 +328,14 @@ export function UniversalBulkUploadModal({
                 onClick={() => setTargetWorkflow("screening")}
                 className={`p-3 rounded-lg border text-left transition-all flex items-start gap-2.5 ${
                   targetWorkflow === "screening"
-                    ? "bg-[#141413] text-[#FAF9F3] border-[#141413] shadow-xs"
-                    : "bg-white text-[#141413] border-black/10 hover:border-black/30"
+                    ? "bg-[#3a0f34] text-[#fbf9f4] border-[#3a0f34] shadow-xs"
+                    : "bg-white text-[#3a0f34] border-[#d2c2cb] hover:border-[#814d75]"
                 }`}
               >
-                <ShieldCheck className={`h-4 w-4 mt-0.5 shrink-0 ${targetWorkflow === "screening" ? "text-emerald-400" : "text-[#141413]"}`} />
+                <ShieldCheck className={`h-4 w-4 mt-0.5 shrink-0 ${targetWorkflow === "screening" ? "text-[#7c5800]" : "text-[#3a0f34]"}`} />
                 <div>
                   <div className="font-serif font-medium text-xs">Co-Scientist Screening Queue</div>
-                  <div className={`text-[11px] mt-0.5 ${targetWorkflow === "screening" ? "text-[#FAF9F3]/70" : "text-[#6B665E]"}`}>
+                  <div className={`text-[11px] mt-0.5 ${targetWorkflow === "screening" ? "text-[#fbf9f4]/70" : "text-[#62535d]"}`}>
                     Places studies into Title & Abstract screening queue with keyboard hotkeys & Co-Scientist ratings.
                   </div>
                 </div>
@@ -352,8 +352,8 @@ export function UniversalBulkUploadModal({
             onDrop={handleDrop}
             className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer select-none ${
               isDragging
-                ? "border-[#141413] bg-[#E9ED4C]/25 scale-[0.99] ring-4 ring-[#E9ED4C]/30"
-                : "border-black/20 hover:border-black/50 bg-white/70 hover:bg-white shadow-2xs hover:shadow-xs"
+                ? "border-[#3a0f34] bg-[#ffdea6]/30 scale-[0.99] ring-4 ring-[#814d75]/30"
+                : "border-[#d2c2cb] hover:border-[#814d75] bg-white/70 hover:bg-white shadow-2xs hover:shadow-xs"
             }`}
           >
             <input
@@ -373,15 +373,15 @@ export function UniversalBulkUploadModal({
             />
 
             <div className="space-y-3 pointer-events-auto">
-              <div className="h-12 w-12 rounded-full bg-black/[0.05] text-[#141413] flex items-center justify-center mx-auto transition-transform group-hover:scale-105">
-                <Upload className="h-6 w-6 text-[#141413]" />
+              <div className="h-12 w-12 rounded-full bg-[#eee7ec] text-[#3a0f34] flex items-center justify-center mx-auto transition-transform group-hover:scale-105">
+                <Upload className="h-6 w-6 text-[#3a0f34]" />
               </div>
 
               <div>
-                <p className="font-serif text-base font-normal text-[#141413]">
+                <p className="font-serif text-base font-normal text-[#3a0f34]">
                   Click to select or drag & drop files from your laptop
                 </p>
-                <p className="font-sans text-xs text-[#6B665E] mt-1">
+                <p className="font-sans text-xs text-[#62535d] mt-1">
                   Supports selecting multiple files simultaneously (e.g. hold Ctrl or Shift)
                 </p>
               </div>
@@ -395,13 +395,13 @@ export function UniversalBulkUploadModal({
                   }}
                   className="btn-phylo-primary text-xs inline-flex items-center gap-2 cursor-pointer shadow-xs"
                 >
-                  <FolderPlus className="h-3.5 w-3.5 text-[#E9ED4C]" />
+                  <FolderPlus className="h-3.5 w-3.5 text-[#ffdea6]" />
                   <span>Browse Laptop Files</span>
                 </button>
               </div>
 
-              <p className="text-[11px] font-mono text-[#8A817A] pt-1">
-                Supports: <strong className="text-[#141413]">.PDF</strong> (Full text papers) &bull; <strong className="text-[#141413]">.XLSX / .CSV</strong> (Curated datasets) &bull; <strong className="text-[#141413]">.RIS / .BIB</strong> (Citations)
+              <p className="text-[11px] font-mono text-[#81737b] pt-1">
+                Supports: <strong className="text-[#3a0f34]">.PDF</strong> (Full text papers) &bull; <strong className="text-[#3a0f34]">.XLSX / .CSV</strong> (Curated datasets) &bull; <strong className="text-[#3a0f34]">.RIS / .BIB</strong> (Citations)
               </p>
             </div>
           </div>
@@ -409,9 +409,9 @@ export function UniversalBulkUploadModal({
           {/* Queued Files List */}
           {queuedFiles.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-[#6B665E]">
+              <div className="flex items-center justify-between text-xs text-[#62535d]">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-[#141413]">Selected Files ({queuedFiles.length})</span>
+                  <span className="font-medium text-[#3a0f34]">Selected Files ({queuedFiles.length})</span>
                   <span>&bull;</span>
                   <span>{formatFileSize(queuedFiles.reduce((acc, f) => acc + f.size, 0))}</span>
                 </div>
@@ -419,35 +419,35 @@ export function UniversalBulkUploadModal({
                   <button
                     type="button"
                     onClick={clearAllFiles}
-                    className="text-[11px] font-mono text-rose-700 hover:underline"
+                    className="text-[11px] font-mono text-[#ab3329] hover:underline"
                   >
                     Clear All
                   </button>
                 )}
               </div>
 
-              <div className="max-h-52 overflow-y-auto space-y-1.5 border border-black/10 rounded-xl p-2 bg-white/80">
+              <div className="max-h-52 overflow-y-auto space-y-1.5 border border-[#d2c2cb] rounded-xl p-2 bg-white/80">
                 {queuedFiles.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-black/[0.02] border border-black/[0.04]"
+                    className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-[#fbf9f4] border border-[#d2c2cb]"
                   >
                     <div className="flex items-center gap-2.5 truncate pr-3">
                       {item.type === "pdf" ? (
-                        <FileText className="h-4 w-4 text-indigo-600 shrink-0" />
+                        <FileText className="h-4 w-4 text-[#814d75] shrink-0" />
                       ) : item.type === "spreadsheet" ? (
-                        <FileSpreadsheet className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <FileSpreadsheet className="h-4 w-4 text-[#7c5800] shrink-0" />
                       ) : (
-                        <File className="h-4 w-4 text-[#8A817A] shrink-0" />
+                        <File className="h-4 w-4 text-[#81737b] shrink-0" />
                       )}
                       <div className="truncate">
-                        <div className="font-mono text-xs font-medium text-[#141413] truncate">{item.name}</div>
-                        <div className="text-[10px] text-[#8A817A] flex items-center gap-2">
+                        <div className="font-mono text-xs font-medium text-[#3a0f34] truncate">{item.name}</div>
+                        <div className="text-[10px] text-[#81737b] flex items-center gap-2">
                           <span>{formatFileSize(item.size)}</span>
                           {item.identifiedStudy && (
                             <>
                               <span>&bull;</span>
-                              <span className="text-emerald-700 truncate font-serif">
+                              <span className="text-[#7c5800] truncate font-serif">
                                 {item.identifiedStudy.title}
                               </span>
                             </>
@@ -458,22 +458,22 @@ export function UniversalBulkUploadModal({
 
                     <div className="shrink-0 flex items-center gap-2 font-mono text-[11px]">
                       {item.status === "queued" && (
-                        <span className="px-2 py-0.5 rounded-full bg-black/[0.05] text-[#8A817A]">
+                        <span className="px-2 py-0.5 rounded-full bg-[#eee7ec] text-[#81737b]">
                           Ready
                         </span>
                       )}
                       {item.status === "identifying" && (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-full bg-[#ffdea6] text-[#7c5800] flex items-center gap-1">
                           <Loader2 className="h-3 w-3 animate-spin" /> Processing
                         </span>
                       )}
                       {item.status === "success" && (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1 font-medium">
+                        <span className="px-2 py-0.5 rounded-full bg-[#eee7ec] text-[#3a0f34] flex items-center gap-1 font-medium">
                           <CheckCircle2 className="h-3 w-3" /> Converted
                         </span>
                       )}
                       {item.status === "error" && (
-                        <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-full bg-[#ab3329]/10 text-[#ab3329] flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" /> Error
                         </span>
                       )}
@@ -482,7 +482,7 @@ export function UniversalBulkUploadModal({
                         <button
                           type="button"
                           onClick={() => removeFile(item.id)}
-                          className="p-1 text-[#8A817A] hover:text-rose-700 hover:bg-rose-50 rounded"
+                          className="p-1 text-[#81737b] hover:text-[#ab3329] hover:bg-[#ab3329]/10 rounded"
                           title="Remove file"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -497,11 +497,11 @@ export function UniversalBulkUploadModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-3 pt-3 border-t border-black/[0.08] shrink-0">
-          <div className="text-xs text-[#6B665E]">
+        <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#d2c2cb] shrink-0">
+          <div className="text-xs text-[#62535d]">
             {isProcessing ? (
-              <span className="flex items-center gap-1.5 font-medium text-[#141413]">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-600" />
+              <span className="flex items-center gap-1.5 font-medium text-[#3a0f34]">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-[#7c5800]" />
                 Processing {successCount} of {queuedFiles.length} papers...
               </span>
             ) : queuedFiles.length > 0 ? (

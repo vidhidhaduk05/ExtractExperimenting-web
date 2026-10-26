@@ -731,13 +731,13 @@ export function ScreeningPage() {
     isTitle: boolean = false
   ) => {
     if (!rawText) {
-      return isTitle ? null : <p className="text-gray-400 italic">No abstract available for this study.</p>;
+      return isTitle ? null : <p className="text-[#81737b] italic font-serif">No abstract available for this study.</p>;
     }
     if (!showHighlights) {
       return isTitle ? (
-        <span className="text-slate-900">{rawText}</span>
+        <span className="text-[#3a0f34]">{rawText}</span>
       ) : (
-        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
+        <p className="text-[#4f444b] leading-relaxed whitespace-pre-wrap font-serif">{rawText}</p>
       );
     }
 
@@ -770,9 +770,9 @@ export function ScreeningPage() {
 
     if (activeSpans.length === 0) {
       return isTitle ? (
-        <span className="text-slate-900">{rawText}</span>
+        <span className="text-[#3a0f34]">{rawText}</span>
       ) : (
-        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{rawText}</p>
+        <p className="text-[#4f444b] leading-relaxed whitespace-pre-wrap font-serif">{rawText}</p>
       );
     }
 
@@ -819,23 +819,23 @@ export function ScreeningPage() {
         return <span key={`plain-${seg.start}-${idx}`}>{segText}</span>;
       }
       const s = seg.span;
-      let colorClass = "bg-yellow-100 text-yellow-900 border-yellow-300";
+      let colorClass = "bg-[#ffdea6]/50 text-[#3a0f34] border-[#d2c2cb]";
       if (s.color === "green" || s.type === "include_keyword") {
-        colorClass = "bg-emerald-100 text-emerald-900 border-emerald-300 font-semibold";
+        colorClass = "bg-[#3a0f34]/10 text-[#3a0f34] border-[#3a0f34]/30 font-semibold";
       } else if (s.color === "red" || s.type === "exclude_keyword") {
-        colorClass = "bg-rose-100 text-rose-900 border-rose-300 font-semibold";
+        colorClass = "bg-[#ab3329]/10 text-[#ab3329] border-[#ab3329]/30 font-semibold";
       } else if (s.color === "purple" || s.type === "population") {
-        colorClass = "bg-purple-100 text-purple-900 border-purple-300";
+        colorClass = "bg-[#814d75]/15 text-[#814d75] border-[#814d75]/30";
       } else if (s.color === "blue" || s.type === "intervention" || s.type === "comparator") {
-        colorClass = "bg-sky-100 text-sky-900 border-sky-300";
+        colorClass = "bg-[#eee7ec] text-[#3a0f34] border-[#d2c2cb]";
       } else if (s.color === "orange" || s.type === "outcome") {
-        colorClass = "bg-amber-100 text-amber-900 border-amber-300";
+        colorClass = "bg-[#ffdea6]/60 text-[#7c5800] border-[#d2c2cb]";
       }
 
       return (
         <mark
           key={`mark-${seg.start}-${idx}`}
-          className={`px-1 py-0.5 rounded border ${isTitle ? "text-base inline" : "text-sm inline"} transition-colors ${colorClass}`}
+          className={`px-1 py-0.5 rounded border ${isTitle ? "text-base inline font-serif" : "text-sm inline font-serif"} transition-colors ${colorClass}`}
           title={`${s.label || s.type} (${s.type})`}
         >
           {segText}
@@ -844,9 +844,9 @@ export function ScreeningPage() {
     });
 
     if (isTitle) {
-      return <span className="leading-tight">{elements}</span>;
+      return <span className="leading-tight font-serif text-[#3a0f34]">{elements}</span>;
     }
-    return <div className="text-gray-800 leading-relaxed text-sm whitespace-pre-wrap">{elements}</div>;
+    return <div className="text-[#4f444b] leading-relaxed text-sm whitespace-pre-wrap font-serif">{elements}</div>;
   };
 
   // Upload single PDF handler
@@ -2570,7 +2570,7 @@ export function ScreeningPage() {
 
       {/* Keywords & Highlighting Drawer / Modal */}
       {showKeywordsDrawer && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex justify-end">
+        <div className="fixed inset-0 z-50 bg-[#1a0017]/40 backdrop-blur-xs flex justify-end">
           <div className="bg-white w-full max-w-md h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-[#d2c2cb] pb-3">

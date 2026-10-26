@@ -2,14 +2,10 @@ import React, { useState, useRef } from "react";
 import {
   UploadCloud,
   CheckCircle2,
-  AlertTriangle,
-  XCircle,
   HelpCircle,
   RefreshCw,
   Share2,
   AlertOctagon,
-  Search,
-  Filter,
   FileCheck2,
 } from "lucide-react";
 import {
@@ -47,7 +43,7 @@ export const RigorScanPage: React.FC = () => {
       const convertedChecks: RigorCheckItem[] = v.checks.map((c: RigorCheck, idx: number) => {
         const pVal = c.p ?? 0.5;
         const evVal = c.evidence !== undefined && c.evidence !== null ? c.evidence : Math.round(pVal * 100);
-        const col = c.outcome === "good" ? "#2E7D32" : c.outcome === "bad" ? "#C62828" : "#E65100";
+        const col = c.outcome === "good" ? "#3a0f34" : c.outcome === "bad" ? "#be123c" : "#7c5800";
         return {
           id: c.id || `chk-${idx}`,
           spokeId: c.id || `chk-${idx}`,
@@ -194,18 +190,18 @@ export const RigorScanPage: React.FC = () => {
     : [];
 
   return (
-    <div className="rs min-h-screen bg-[var(--rs-card)] text-[var(--rs-ink)] pb-24 font-sans selection:bg-[#F9D14A] selection:text-[#381A61]">
+    <div className="min-h-screen bg-[#fbf9f4] text-[#4f444b] pb-24 font-sans selection:bg-[#ffdea6] selection:text-[#3a0f34]">
       <main className="mx-auto grid w-full max-w-[1380px] grid-cols-[minmax(0,1fr)] gap-8 px-4 pt-6 sm:px-6 lg:px-8">
         {/* Top Header & File Upload */}
         <section className="grid grid-cols-[minmax(0,1fr)] items-end gap-8 pb-1 pt-2 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#381A61] dark:text-[#F9D14A] mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#814d75] mb-2 font-sans">
               Reporting check for research papers
             </p>
-            <h1 className="text-[clamp(36px,5vw,56px)] font-serif font-bold leading-none tracking-tight text-[#381A61] dark:text-[#F9D14A]">
+            <h1 className="text-[clamp(36px,5vw,56px)] font-serif font-bold leading-none tracking-tight text-[#3a0f34]">
               Rigor Scan
             </h1>
-            <p className="mt-3.5 max-w-[60ch] text-[15.5px] rs-soft leading-relaxed">
+            <p className="mt-3.5 max-w-[60ch] text-[15.5px] text-[#62535d] leading-relaxed font-serif">
               Drop in a paper and get a reporting check on its design, statistics, materials, data and claims in seconds. Every result points to the sentence it rests on.
             </p>
           </div>
@@ -213,7 +209,7 @@ export const RigorScanPage: React.FC = () => {
           <div className="flex flex-col gap-3">
             <label
               htmlFor="rs-file"
-              className={`grid cursor-pointer grid-cols-[auto_1fr] items-center gap-3.5 rounded-2xl border-[1.5px] border-dashed px-5 py-4 transition-all border-[var(--rs-line)] rs-panel hover:border-[var(--rs-accent)] group ${isScanning ? "opacity-60 cursor-not-allowed" : ""}`}
+              className={`grid cursor-pointer grid-cols-[auto_1fr] items-center gap-3.5 rounded-xl border border-dashed px-5 py-4 transition-all border-[#d2c2cb] bg-white hover:border-[#3a0f34] shadow-xs group ${isScanning ? "opacity-60 cursor-not-allowed" : ""}`}
             >
               <input
                 id="rs-file"
@@ -225,14 +221,14 @@ export const RigorScanPage: React.FC = () => {
                 onChange={handleFileUpload}
                 className="sr-only"
               />
-              <span className="grid h-[44px] w-[44px] place-items-center rounded-xl bg-[var(--rs-card)] text-[var(--rs-accent)] shadow-sm group-hover:scale-105 transition-transform">
+              <span className="grid h-[44px] w-[44px] place-items-center rounded-xl bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] shadow-xs group-hover:scale-105 transition-transform">
                 <UploadCloud className="w-5 h-5" />
               </span>
               <span>
-                <strong className="block font-semibold text-sm">
+                <strong className="block font-semibold text-sm text-[#3a0f34]">
                   {isScanning ? "Scanning manuscript…" : "Drop a PDF or choose a file"}
                 </strong>
-                <span className="text-xs rs-muted">
+                <span className="text-xs text-[#81737b] font-serif">
                   Read in your browser. The file is never uploaded. Only its text is sent for checking, and nothing is saved.
                 </span>
               </span>
@@ -243,9 +239,9 @@ export const RigorScanPage: React.FC = () => {
                 type="button"
                 disabled={isScanning}
                 onClick={handleLoadReferenceExample}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--rs-line)] bg-[var(--rs-card)] px-3.5 py-1.5 text-xs font-semibold hover:border-zinc-400 disabled:opacity-50 transition-colors shadow-2xs"
+                className="btn-secondary text-xs flex items-center gap-1.5"
               >
-                <FileCheck2 className="w-3.5 h-3.5 text-[#381A61] dark:text-[#F9D14A]" />
+                <FileCheck2 className="w-3.5 h-3.5 text-[#814d75]" />
                 View reference example (Dubowitz et al.)
               </button>
             </div>
@@ -253,28 +249,28 @@ export const RigorScanPage: React.FC = () => {
         </section>
 
         {errorMessage && (
-          <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-950/40 p-4 text-xs font-semibold text-rose-800 dark:text-rose-300">
+          <div role="alert" className="rounded-xl border border-[#814d75] bg-[#eee7ec] p-4 text-xs font-semibold text-[#3a0f34]">
             {errorMessage}
           </div>
         )}
 
         {!activeDataset ? (
-          <section className="rs-card p-10 text-center my-6">
+          <section className="bg-white border border-[#d2c2cb] rounded-xl shadow-xs p-10 text-center my-6">
             <div className="max-w-md mx-auto space-y-4">
-              <div className="w-12 h-12 mx-auto rounded-full bg-[#381A61]/10 dark:bg-[#F9D14A]/10 flex items-center justify-center text-[#381A61] dark:text-[#F9D14A]">
+              <div className="w-12 h-12 mx-auto rounded-full bg-[#eee7ec] border border-[#d2c2cb] flex items-center justify-center text-[#814d75]">
                 <HelpCircle className="w-6 h-6" />
               </div>
-              <h2 className="text-lg font-serif font-bold text-[#381A61] dark:text-[#F9D14A]">
+              <h2 className="text-lg font-serif font-bold text-[#3a0f34]">
                 No manuscript has been scanned yet
               </h2>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              <p className="text-xs text-[#62535d] leading-relaxed font-serif">
                 Upload a PDF file using the dropzone above, or view the reference example to explore the 61 radial spokes, 6 domains, and 74 reporting checks.
               </p>
               <button
                 type="button"
                 disabled={isScanning}
                 onClick={handleLoadReferenceExample}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#381A61] dark:bg-[#F9D14A] text-white dark:text-[#381A61] px-4 py-2 text-xs font-bold shadow-sm hover:opacity-90 disabled:opacity-50"
+                className="btn-primary text-xs inline-flex items-center gap-2"
               >
                 <FileCheck2 className="w-4 h-4" />
                 View reference example (Dubowitz et al.)
@@ -284,41 +280,41 @@ export const RigorScanPage: React.FC = () => {
         ) : (
           <>
             {/* Paper Metadata & Study Type Detection Bar */}
-            <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 border-t border-[var(--rs-line)] pt-4">
+            <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 border-t border-[#d2c2cb] pt-4">
               <div className="grid min-w-0 flex-[1_1_520px] gap-1.5">
-                <div className="flex flex-wrap items-center gap-2 text-xs rs-muted">
-                  <span className="rounded-full bg-[var(--rs-accent-soft)] px-2.5 py-0.5 rs-mono text-[11px] font-bold uppercase tracking-wider text-[var(--rs-accent-ink)]">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[#81737b] font-sans">
+                  <span className="rounded-full bg-[#eee7ec] border border-[#d2c2cb] px-2.5 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-[#3a0f34]">
                     {isReferenceActive ? "Example paper" : "Uploaded Manuscript"}
                   </span>
                   <span>
                     {activeDataset.paper.authors} · {activeDataset.paper.venue} · {activeDataset.paper.year}
                     {scanResult?.engine && (
-                      <span className="ml-2 font-mono font-semibold text-[#381A61] dark:text-[#F9D14A]">
+                      <span className="ml-2 font-mono font-semibold text-[#814d75]">
                         Engine: {scanResult.engine}
                       </span>
                     )}
                   </span>
                 </div>
 
-                <p className="text-[16px] font-semibold tracking-tight text-[var(--rs-ink)]">
+                <p className="text-[16px] font-serif font-bold tracking-tight text-[#3a0f34]">
                   {activeDataset.paper.title}
                 </p>
 
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <span className="mr-0.5 text-xs font-semibold rs-muted">Study type</span>
+                  <span className="mr-0.5 text-xs font-semibold text-[#81737b] font-sans">Study type</span>
                   {activeDataset.gates.map((g) => (
                     <span
                       key={g.id}
                       title={g.on ? "Detected in this paper" : "Not detected"}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-sans ${
                         g.on
-                          ? "border-emerald-300 dark:border-emerald-800/60 bg-[var(--rs-card)] font-medium text-emerald-800 dark:text-emerald-300"
-                          : "border-[var(--rs-line)] rs-muted bg-[var(--rs-card)]"
+                          ? "border-[#d2c2cb] bg-[#eee7ec] font-semibold text-[#3a0f34]"
+                          : "border-[#d2c2cb] text-[#81737b] bg-white"
                       }`}
                     >
                       <span
                         className={`h-[7px] w-[7px] rounded-full ${
-                          g.on ? "bg-emerald-500" : "bg-[var(--rs-na)]"
+                          g.on ? "bg-[#3a0f34]" : "bg-[#d2c2cb]"
                         }`}
                       />
                       {g.label}
@@ -331,7 +327,7 @@ export const RigorScanPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--rs-line)] bg-[var(--rs-card)] px-3.5 py-2 text-xs font-semibold hover:border-zinc-400 transition-colors shadow-2xs"
+                  className="btn-secondary text-xs flex items-center gap-1.5"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   {copied ? "Link Copied!" : "Share results"}
@@ -340,7 +336,7 @@ export const RigorScanPage: React.FC = () => {
                   type="button"
                   onClick={handleReplayScan}
                   disabled={isScanning}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#381A61] dark:bg-[#F9D14A] px-4 py-2 text-xs font-bold text-white dark:text-[#381A61] hover:opacity-90 transition-all shadow-sm"
+                  className="btn-primary text-xs flex items-center gap-1.5"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? "animate-spin" : ""}`} />
                   Replay scan
@@ -349,224 +345,226 @@ export const RigorScanPage: React.FC = () => {
             </section>
 
             {/* Scan Summary Score Card */}
-            <section className="rs-card grid overflow-hidden sm:grid-cols-4 lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,2.2fr)]">
-              <div className="grid gap-0.5 border-[var(--rs-line)] px-4 py-3.5 border-r border-b sm:border-b-0">
-                <span className="inline-flex items-center gap-2 rs-mono text-2xl font-bold">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            <section className="bg-white border border-[#d2c2cb] rounded-xl shadow-xs grid overflow-hidden sm:grid-cols-4 lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,2.2fr)]">
+              <div className="grid gap-0.5 border-[#eee7ec] px-4 py-3.5 border-r border-b sm:border-b-0">
+                <span className="inline-flex items-center gap-2 font-mono text-2xl font-bold text-[#3a0f34]">
+                  <CheckCircle2 className="w-5 h-5 text-[#3a0f34]" />
                   {activeDataset.counts.good}
                 </span>
-                <span className="text-xs rs-muted">in good shape</span>
+                <span className="text-xs text-[#81737b] font-sans">in good shape</span>
               </div>
 
-              <div className="grid gap-0.5 border-[var(--rs-line)] px-4 py-3.5 border-r border-b sm:border-b-0">
-                <span className="inline-flex items-center gap-2 rs-mono text-2xl font-bold">
-                  <span className="w-4 h-4 rounded-full border border-amber-500 overflow-hidden inline-flex items-center">
-                    <span className="w-1/2 h-full bg-amber-500" />
+              <div className="grid gap-0.5 border-[#eee7ec] px-4 py-3.5 border-r border-b sm:border-b-0">
+                <span className="inline-flex items-center gap-2 font-mono text-2xl font-bold text-[#7c5800]">
+                  <span className="w-4 h-4 rounded-full border border-[#7c5800] overflow-hidden inline-flex items-center">
+                    <span className="w-1/2 h-full bg-[#7c5800]" />
                   </span>
                   {activeDataset.counts.mid}
                 </span>
-                <span className="text-xs rs-muted">unclear</span>
+                <span className="text-xs text-[#81737b] font-sans">unclear</span>
               </div>
 
-              <div className="grid gap-0.5 border-[var(--rs-line)] px-4 py-3.5 border-r">
-                <span className="inline-flex items-center gap-2 rs-mono text-2xl font-bold">
-                  <span className="w-4 h-4 rounded-full border-2 border-rose-500" />
+              <div className="grid gap-0.5 border-[#eee7ec] px-4 py-3.5 border-r">
+                <span className="inline-flex items-center gap-2 font-mono text-2xl font-bold text-rose-700">
+                  <span className="w-4 h-4 rounded-full border-2 border-rose-700" />
                   {activeDataset.counts.bad}
                 </span>
-                <span className="text-xs rs-muted">missing or flagged</span>
+                <span className="text-xs text-[#81737b] font-sans">missing or flagged</span>
               </div>
 
-              <div className="grid gap-0.5 border-[var(--rs-line)] px-4 py-3.5 sm:border-r-0 lg:border-r">
-                <span className="inline-flex items-center gap-2 rs-mono text-2xl font-bold">
-                  <span className="w-3.5 h-3.5 rounded-full bg-[var(--rs-na)]" />
+              <div className="grid gap-0.5 border-[#eee7ec] px-4 py-3.5 sm:border-r-0 lg:border-r">
+                <span className="inline-flex items-center gap-2 font-mono text-2xl font-bold text-[#81737b]">
+                  <span className="w-3.5 h-3.5 rounded-full bg-[#d2c2cb]" />
                   {activeDataset.counts.na}
                 </span>
-                <span className="text-xs rs-muted">don't apply to this study</span>
+                <span className="text-xs text-[#81737b] font-sans">don't apply to this study</span>
               </div>
 
-              <div className="grid content-center gap-2 border-t border-[var(--rs-line)] px-5 py-3 sm:col-span-4 lg:col-span-1 lg:border-t-0">
+              <div className="grid content-center gap-2 border-t border-[#eee7ec] px-5 py-3 sm:col-span-4 lg:col-span-1 lg:border-t-0 bg-[#fbf9f4]">
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <div className="grid gap-1 text-[11px] rs-soft font-medium">
-                    <i className="block h-1 overflow-hidden rounded bg-[var(--rs-track)]">
-                      <b className="block h-full rounded bg-[var(--rs-accent)] w-full" />
+                  <div className="grid gap-1 text-[11px] text-[#62535d] font-medium font-sans">
+                    <i className="block h-1 overflow-hidden rounded bg-[#eee7ec]">
+                      <b className="block h-full rounded bg-[#3a0f34] w-full" />
                     </i>
                     Read on device
                   </div>
-                  <div className="grid gap-1 text-[11px] rs-soft font-medium">
-                    <i className="block h-1 overflow-hidden rounded bg-[var(--rs-track)]">
-                      <b className="block h-full rounded bg-[var(--rs-accent)] w-full" />
+                  <div className="grid gap-1 text-[11px] text-[#62535d] font-medium font-sans">
+                    <i className="block h-1 overflow-hidden rounded bg-[#eee7ec]">
+                      <b className="block h-full rounded bg-[#3a0f34] w-full" />
                     </i>
                     Software checks
                   </div>
-                  <div className="grid gap-1 text-[11px] rs-soft font-medium">
-                    <i className="block h-1 overflow-hidden rounded bg-[var(--rs-track)]">
-                      <b className="block h-full rounded bg-[var(--rs-accent)] w-full" />
+                  <div className="grid gap-1 text-[11px] text-[#62535d] font-medium font-sans">
+                    <i className="block h-1 overflow-hidden rounded bg-[#eee7ec]">
+                      <b className="block h-full rounded bg-[#3a0f34] w-full" />
                     </i>
                     Check items
                   </div>
-                  <div className="grid gap-1 text-[11px] rs-soft font-medium">
-                    <i className="block h-1 overflow-hidden rounded bg-[var(--rs-track)]">
-                      <b className="block h-full rounded bg-[var(--rs-accent)] w-full" />
+                  <div className="grid gap-1 text-[11px] text-[#62535d] font-medium font-sans">
+                    <i className="block h-1 overflow-hidden rounded bg-[#eee7ec]">
+                      <b className="block h-full rounded bg-[#3a0f34] w-full" />
                     </i>
                     Link evidence
                   </div>
                 </div>
-                <p className="text-xs rs-soft" aria-live="polite">
+                <p className="text-xs text-[#62535d] font-serif" aria-live="polite">
                   Scan complete. Select any check to see its evidence on the page.
                 </p>
               </div>
             </section>
 
-
-        {/* 2-Column Main Workspace: Reader on Left, Fingerprint & Checks on Right */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column (5 Cols): Reader */}
-          <div className="lg:col-span-5 order-2 lg:order-1">
-            <RigorReader
-              totalPages={activeDataset.paper.pages}
-              selectedCheck={selectedCheck}
-              targetPage={targetPage}
-            />
-          </div>
-
-          {/* Right Column (7 Cols): Rigor Fingerprint + Checklist */}
-          <div className="lg:col-span-7 order-1 lg:order-2 space-y-6">
-            {/* The Radial Spoke Rigor Fingerprint */}
-            <RigorFingerprint
-              completenessIndex={activeDataset.completenessIndex}
-              checks={activeDataset.checks}
-              domains={activeDataset.domains}
-              selectedCheck={selectedCheck}
-              onSelectCheck={handleSelectCheck}
-              selectedDomain={selectedDomain}
-              onSelectDomain={setSelectedDomain}
-              onShowOnPage={(p) => setTargetPage(p)}
-            />
-
-            {/* Checks List Card */}
-            <div className="rs-card">
-              <div className="rs-head">
-                <span>Checks</span>
-                <span>Evidence</span>
+            {/* 2-Column Main Workspace: Reader on Left, Fingerprint & Checks on Right */}
+            <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column (5 Cols): Reader */}
+              <div className="lg:col-span-5 order-2 lg:order-1">
+                <RigorReader
+                  totalPages={activeDataset.paper.pages}
+                  selectedCheck={selectedCheck}
+                  targetPage={targetPage}
+                />
               </div>
 
-              {/* Filter Chips Bar */}
-              <div className="sticky top-0 z-10 flex flex-wrap gap-1.5 border-b border-[var(--rs-line)] bg-[var(--rs-card)]/95 px-3.5 py-2.5 backdrop-blur">
-                <button
-                  type="button"
-                  onClick={() => setFilterMode("all")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                    filterMode === "all"
-                      ? "bg-[#381A61] dark:bg-[#F9D14A] text-white dark:text-[#381A61] border-transparent"
-                      : "border-[var(--rs-line)] bg-[var(--rs-card)] hover:border-zinc-400"
-                  }`}
-                >
-                  All <span className="rs-mono text-[11px] opacity-75">{activeDataset.checks.length}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterMode("bad")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                    filterMode === "bad"
-                      ? "bg-rose-600 text-white border-transparent"
-                      : "border-[var(--rs-line)] bg-[var(--rs-card)] hover:border-zinc-400"
-                  }`}
-                >
-                  Missing or flagged <span className="rs-mono text-[11px] opacity-75">{activeDataset.counts.bad}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterMode("mid")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                    filterMode === "mid"
-                      ? "bg-amber-600 text-white border-transparent"
-                      : "border-[var(--rs-line)] bg-[var(--rs-card)] hover:border-zinc-400"
-                  }`}
-                >
-                  Unclear <span className="rs-mono text-[11px] opacity-75">{activeDataset.counts.mid}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterMode("good")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                    filterMode === "good"
-                      ? "bg-emerald-600 text-white border-transparent"
-                      : "border-[var(--rs-line)] bg-[var(--rs-card)] hover:border-zinc-400"
-                  }`}
-                >
-                  In good shape <span className="rs-mono text-[11px] opacity-75">{activeDataset.counts.good}</span>
-                </button>
-              </div>
+              {/* Right Column (7 Cols): Rigor Fingerprint + Checklist */}
+              <div className="lg:col-span-7 order-1 lg:order-2 space-y-6">
+                {/* The Radial Spoke Rigor Fingerprint */}
+                <RigorFingerprint
+                  completenessIndex={activeDataset.completenessIndex}
+                  checks={activeDataset.checks}
+                  domains={activeDataset.domains}
+                  selectedCheck={selectedCheck}
+                  onSelectCheck={handleSelectCheck}
+                  selectedDomain={selectedDomain}
+                  onSelectDomain={setSelectedDomain}
+                  onShowOnPage={(p) => setTargetPage(p)}
+                />
 
-              {/* Grouped Checks Rows */}
-              <div className="max-h-[640px] overflow-y-auto divide-y divide-[var(--rs-line-soft)]">
-                {checksByDomain.map(({ domain, checks }) => (
-                  <div key={domain.id}>
-                    {/* Domain Sticky Header */}
-                    <div className="sticky top-[47px] z-[5] flex items-baseline justify-between gap-2 border-b border-[var(--rs-line-soft)] bg-[var(--rs-card)]/95 px-4 py-2 backdrop-blur">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--rs-ink)]">
-                        {domain.label}
-                      </h3>
-                      <span className="text-xs font-mono font-bold text-zinc-500">
-                        index {domain.score}
-                      </span>
-                    </div>
-
-                    {/* Check items in this domain */}
-                    {checks.map((c) => {
-                      const isSelected = selectedCheck && c.id === selectedCheck.id;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => handleSelectCheck(c.id)}
-                          aria-current={isSelected}
-                          className="rs-row group"
-                        >
-                          {/* Outcome Status Icon */}
-                          {c.outcome === "good" ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                          ) : c.outcome === "mid" ? (
-                            <span className="w-3.5 h-3.5 rounded-full border border-amber-500 overflow-hidden inline-flex items-center flex-shrink-0">
-                              <span className="w-1/2 h-full bg-amber-500" />
-                            </span>
-                          ) : c.evidence <= 30 ? (
-                            <AlertOctagon className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />
-                          ) : (
-                            <span className="w-3.5 h-3.5 rounded-full border-2 border-rose-500 flex-shrink-0" />
-                          )}
-
-                          {/* Label + Guideline */}
-                          <span className="truncate text-xs font-medium text-[var(--rs-ink)] text-left flex-1">
-                            {c.label}
-                            {c.guideline && (
-                              <em className="ml-1.5 not-italic rs-mono text-[10px] text-zinc-400">
-                                {c.guideline}
-                              </em>
-                            )}
-                          </span>
-
-                          {/* Mini Progress Bar */}
-                          <span className="rs-mini" style={{ "--c": c.color } as any}>
-                            <i style={{ left: "35%" }} />
-                            <i style={{ left: "70%" }} />
-                            <b style={{ width: `${c.evidence}%` }} />
-                          </span>
-
-                          {/* Exact Percentage Text */}
-                          <span className="text-right rs-mono text-xs rs-soft font-semibold w-9 flex-shrink-0">
-                            {c.evidence}%
-                          </span>
-                        </button>
-                      );
-                    })}
+                {/* Checks List Card */}
+                <div className="bg-white border border-[#d2c2cb] rounded-xl shadow-xs overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-[#fbf9f4] border-b border-[#d2c2cb] text-xs font-semibold text-[#3a0f34] font-sans">
+                    <span>Checks</span>
+                    <span>Evidence</span>
                   </div>
-                ))}
+
+                  {/* Filter Chips Bar */}
+                  <div className="sticky top-0 z-10 flex flex-wrap gap-1.5 border-b border-[#eee7ec] bg-white/95 px-3.5 py-2.5 backdrop-blur">
+                    <button
+                      type="button"
+                      onClick={() => setFilterMode("all")}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all font-sans ${
+                        filterMode === "all"
+                          ? "bg-[#3a0f34] text-[#fbf9f4] border-transparent"
+                          : "border-[#d2c2cb] bg-white text-[#4f444b] hover:bg-[#eee7ec]"
+                      }`}
+                    >
+                      All <span className="font-mono text-[11px] opacity-75">{activeDataset.checks.length}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterMode("bad")}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all font-sans ${
+                        filterMode === "bad"
+                          ? "bg-rose-700 text-white border-transparent"
+                          : "border-[#d2c2cb] bg-white text-[#4f444b] hover:bg-[#eee7ec]"
+                      }`}
+                    >
+                      Missing or flagged <span className="font-mono text-[11px] opacity-75">{activeDataset.counts.bad}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterMode("mid")}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all font-sans ${
+                        filterMode === "mid"
+                          ? "bg-[#7c5800] text-white border-transparent"
+                          : "border-[#d2c2cb] bg-white text-[#4f444b] hover:bg-[#eee7ec]"
+                      }`}
+                    >
+                      Unclear <span className="font-mono text-[11px] opacity-75">{activeDataset.counts.mid}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterMode("good")}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all font-sans ${
+                        filterMode === "good"
+                          ? "bg-[#3a0f34] text-[#fbf9f4] border-transparent"
+                          : "border-[#d2c2cb] bg-white text-[#4f444b] hover:bg-[#eee7ec]"
+                      }`}
+                    >
+                      In good shape <span className="font-mono text-[11px] opacity-75">{activeDataset.counts.good}</span>
+                    </button>
+                  </div>
+
+                  {/* Grouped Checks Rows */}
+                  <div className="max-h-[640px] overflow-y-auto divide-y divide-[#eee7ec]">
+                    {checksByDomain.map(({ domain, checks }) => (
+                      <div key={domain.id}>
+                        {/* Domain Sticky Header */}
+                        <div className="sticky top-[47px] z-[5] flex items-baseline justify-between gap-2 border-b border-[#eee7ec] bg-[#fbf9f4]/95 px-4 py-2 backdrop-blur">
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-[#3a0f34] font-sans">
+                            {domain.label}
+                          </h3>
+                          <span className="text-xs font-mono font-bold text-[#81737b]">
+                            index {domain.score}
+                          </span>
+                        </div>
+
+                        {/* Check items in this domain */}
+                        {checks.map((c) => {
+                          const isSelected = selectedCheck && c.id === selectedCheck.id;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => handleSelectCheck(c.id)}
+                              aria-current={isSelected}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors border-b border-[#eee7ec]/60 ${
+                                isSelected ? "bg-[#eee7ec] border-l-4 border-l-[#3a0f34]" : "hover:bg-[#eee7ec]/40"
+                              }`}
+                            >
+                              {/* Outcome Status Icon */}
+                              {c.outcome === "good" ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#3a0f34] flex-shrink-0" />
+                              ) : c.outcome === "mid" ? (
+                                <span className="w-3.5 h-3.5 rounded-full border border-[#7c5800] overflow-hidden inline-flex items-center flex-shrink-0">
+                                  <span className="w-1/2 h-full bg-[#7c5800]" />
+                                </span>
+                              ) : c.evidence <= 30 ? (
+                                <AlertOctagon className="w-3.5 h-3.5 text-rose-700 flex-shrink-0" />
+                              ) : (
+                                <span className="w-3.5 h-3.5 rounded-full border-2 border-rose-700 flex-shrink-0" />
+                              )}
+
+                              {/* Label + Guideline */}
+                              <span className="truncate text-xs font-medium text-[#4f444b] text-left flex-1 font-sans">
+                                {c.label}
+                                {c.guideline && (
+                                  <em className="ml-1.5 not-italic font-mono text-[10px] text-[#81737b]">
+                                    {c.guideline}
+                                  </em>
+                                )}
+                              </span>
+
+                              {/* Mini Progress Bar */}
+                              <span className="w-16 h-1.5 rounded-full bg-[#eee7ec] overflow-hidden border border-[#d2c2cb]/40 flex-shrink-0">
+                                <b
+                                  className="block h-full bg-[#3a0f34]"
+                                  style={{ width: `${c.evidence}%` }}
+                                />
+                              </span>
+
+                              {/* Exact Percentage Text */}
+                              <span className="text-right font-mono text-xs text-[#62535d] font-semibold w-9 flex-shrink-0">
+                                {c.evidence}%
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </section>
-        </>
+            </section>
+          </>
         )}
       </main>
     </div>

@@ -58,19 +58,19 @@ export function HypothesisPage() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
+      <Link to={`/projects/${projectId}`} className="text-sm text-[#62535d] hover:text-[#3a0f34] flex items-center gap-1 mb-4 font-sans">
         <ArrowLeft className="h-3 w-3" /> Back to project
       </Link>
 
-      <h1 className="text-2xl font-bold mb-1">Research Hypothesis</h1>
-      <p className="text-gray-500 text-sm mb-6">
+      <h1 className="text-2xl font-serif font-bold text-[#3a0f34] mb-1">Research Hypothesis</h1>
+      <p className="text-[#62535d] text-sm mb-6 font-sans">
         Define your primary and secondary hypotheses. These guide variable auto-generation
         and help structure the evidence synthesis.
       </p>
 
       {isLoading && (
-        <div className="flex items-center gap-2 text-gray-400">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+        <div className="flex items-center gap-2 text-[#81737b]">
+          <Loader2 className="h-4 w-4 animate-spin text-[#814d75]" /> Loading...
         </div>
       )}
 
@@ -80,13 +80,13 @@ export function HypothesisPage() {
           className="space-y-4"
         >
           {/* Research Question */}
-          <div className="card p-5">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <HelpCircle className="h-4 w-4 text-phylo-blue" />
+          <div className="card p-5 bg-[#ffffff] border border-[#d2c2cb] rounded-xl">
+            <label className="flex items-center gap-2 text-sm font-serif font-semibold text-[#3a0f34] mb-2">
+              <HelpCircle className="h-4 w-4 text-[#814d75]" />
               Research Question
             </label>
             <textarea
-              className="input min-h-[60px]"
+              className="input min-h-[60px] text-xs w-full bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
               value={researchQuestion}
               onChange={(e) => setResearchQuestion(e.target.value)}
               placeholder="e.g., What is the diagnostic accuracy of CT compared to MRI for detecting liver metastases in patients with colorectal cancer?"
@@ -94,13 +94,13 @@ export function HypothesisPage() {
           </div>
 
           {/* Primary Hypothesis */}
-          <div className="card p-5">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <Lightbulb className="h-4 w-4 text-phylo-orange" />
+          <div className="card p-5 bg-[#ffffff] border border-[#d2c2cb] rounded-xl">
+            <label className="flex items-center gap-2 text-sm font-serif font-semibold text-[#3a0f34] mb-2">
+              <Lightbulb className="h-4 w-4 text-[#7c5800]" />
               Primary Hypothesis
             </label>
             <textarea
-              className="input min-h-[80px]"
+              className="input min-h-[80px] text-xs w-full bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
               value={hypothesis}
               onChange={(e) => setHypothesis(e.target.value)}
               placeholder="e.g., MRI has superior diagnostic accuracy compared to CT for the detection of liver metastases in colorectal cancer patients."
@@ -108,36 +108,36 @@ export function HypothesisPage() {
           </div>
 
           {/* Secondary Hypotheses */}
-          <div className="card p-5">
+          <div className="card p-5 bg-[#ffffff] border border-[#d2c2cb] rounded-xl">
             <div className="flex items-center justify-between mb-3">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Lightbulb className="h-4 w-4 text-gray-400" />
+              <label className="flex items-center gap-2 text-sm font-serif font-semibold text-[#3a0f34]">
+                <Lightbulb className="h-4 w-4 text-[#81737b]" />
                 Secondary Hypotheses
               </label>
               <button
                 type="button"
                 onClick={addSecondary}
-                className="text-xs text-phylo-blue hover:underline flex items-center gap-1"
+                className="text-xs text-[#814d75] hover:text-[#3a0f34] hover:underline flex items-center gap-1 font-medium font-sans"
               >
                 <Plus className="h-3 w-3" /> Add
               </button>
             </div>
 
             {secondary.length === 0 && (
-              <p className="text-sm text-gray-400">No secondary hypotheses defined.</p>
+              <p className="text-sm text-[#81737b] font-sans">No secondary hypotheses defined.</p>
             )}
 
             <div className="space-y-3">
               {secondary.map((h, i) => (
                 <div key={i} className="flex gap-2 items-start">
                   <textarea
-                    className="input min-h-[40px] flex-1 text-sm"
+                    className="input min-h-[40px] flex-1 text-xs bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
                     value={h.text}
                     onChange={(e) => updateSecondary(i, "text", e.target.value)}
                     placeholder="Secondary hypothesis text..."
                   />
                   <select
-                    className="input w-28 text-xs"
+                    className="input w-28 text-xs bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2 font-sans"
                     value={h.type}
                     onChange={(e) => updateSecondary(i, "type", e.target.value)}
                   >
@@ -145,7 +145,7 @@ export function HypothesisPage() {
                     <option value="null">Null</option>
                   </select>
                   <select
-                    className="input w-28 text-xs"
+                    className="input w-28 text-xs bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2 font-sans"
                     value={h.status}
                     onChange={(e) => updateSecondary(i, "status", e.target.value)}
                   >
@@ -156,7 +156,7 @@ export function HypothesisPage() {
                   <button
                     type="button"
                     onClick={() => removeSecondary(i)}
-                    className="text-gray-400 hover:text-red-500 mt-1"
+                    className="text-[#81737b] hover:text-[#a42b2b] mt-1 p-1 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -166,7 +166,7 @@ export function HypothesisPage() {
           </div>
 
           {saveMutation.isError && (
-            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-md bg-[#fff2f2] border border-[#d2c2cb] px-4 py-3 text-sm text-[#a42b2b]">
               Error: {(saveMutation.error as Error).message}
             </div>
           )}
@@ -177,17 +177,17 @@ export function HypothesisPage() {
               Save Hypothesis
             </button>
             {saved && (
-              <span className="flex items-center gap-1 text-sm text-phylo-green">
+              <span className="flex items-center gap-1 text-sm text-[#2d6a4f] font-sans font-medium">
                 <CheckCircle className="h-4 w-4" /> Saved
               </span>
             )}
           </div>
 
           {(hypothesis || researchQuestion) && (
-            <div className="card p-4 bg-phylo-cream/30">
-              <p className="text-sm text-gray-600">
+            <div className="card p-4 bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl">
+              <p className="text-sm text-[#62535d] font-sans">
                 Hypothesis defined. Use{" "}
-                <Link to={`/projects/${projectId}/review`} className="text-phylo-blue hover:underline font-medium">
+                <Link to={`/projects/${projectId}/review`} className="text-[#814d75] hover:text-[#3a0f34] hover:underline font-medium">
                   Data Review
                 </Link>{" "}
                 to auto-generate extraction variables from your PICO framework and hypothesis.

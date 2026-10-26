@@ -56,50 +56,46 @@ export function HypothesisProgressBar({ isPending, isSuccess }: HypothesisProgre
   if (!isPending && !isSuccess) return null;
 
   return (
-    <div className="mb-4 p-4 bg-gradient-to-r from-blue-50/95 via-indigo-50/90 to-purple-50/95 border border-blue-200/90 rounded-xl shadow-sm transition-all duration-300">
+    <div className="mb-4 p-4 bg-[#eee7ec] border border-[#d2c2cb] rounded-xl shadow-xs transition-all duration-300">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2.5">
           {isSuccess && !isPending ? (
-            <div className="flex items-center justify-center h-5 w-5 rounded-full bg-emerald-100 text-emerald-600">
-              <CheckCircle2 className="h-4 w-4" />
+            <div className="flex items-center justify-center h-5 w-5 rounded-full bg-[#fbf9f4] border border-[#d2c2cb] text-[#3a0f34]">
+              <CheckCircle2 className="h-4 w-4 text-[#814d75]" />
             </div>
           ) : (
             <div className="relative flex items-center justify-center">
-              <Loader2 className="h-4 w-4 animate-spin text-phylo-blue" />
-              <Sparkles className="h-2 w-2 text-indigo-500 absolute -top-0.5 -right-0.5 animate-pulse" />
+              <Loader2 className="h-4 w-4 animate-spin text-[#814d75]" />
+              <Sparkles className="h-2 w-2 text-[#3a0f34] absolute -top-0.5 -right-0.5 animate-pulse" />
             </div>
           )}
-          <span className="text-xs font-semibold text-gray-800">
+          <span className="text-xs font-semibold text-[#3a0f34] font-sans">
             {isSuccess && !isPending ? "Hypotheses generated & synchronized!" : stage}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
-          <span className="font-semibold text-phylo-blue">
+        <div className="flex items-center gap-2 text-xs font-medium text-[#62535d] font-sans">
+          <span className="font-semibold text-[#3a0f34]">
             {isSuccess && !isPending ? "100%" : `${Math.round(progress)}%`}
           </span>
           <span>•</span>
-          <span className="font-mono text-gray-500">{elapsed}s</span>
+          <span className="font-mono text-[#81737b]">{elapsed}s</span>
         </div>
       </div>
 
-      {/* Animated Gradient Progress Bar */}
-      <div className="w-full bg-gray-200/90 h-2.5 rounded-full overflow-hidden p-0.5 shadow-inner">
+      {/* Progress Bar */}
+      <div className="w-full bg-[#fbf9f4] border border-[#d2c2cb]/70 h-2.5 rounded-full overflow-hidden p-0.5">
         <div
-          className={`h-full rounded-full transition-all duration-300 ease-out ${
-            isSuccess && !isPending
-              ? "bg-emerald-500"
-              : "bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 animate-pulse"
-          }`}
+          className="h-full rounded-full transition-all duration-300 ease-out bg-[#3a0f34]"
           style={{ width: isSuccess && !isPending ? "100%" : `${progress}%` }}
         />
       </div>
 
-      <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
-        <span className="flex items-center gap-1.5 font-medium text-gray-600">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+      <div className="mt-2 flex items-center justify-between text-[11px] text-[#81737b] font-sans">
+        <span className="flex items-center gap-1.5 font-medium text-[#4f444b]">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#3a0f34] animate-ping" />
           Active local GPU reasoning engine
         </span>
-        <span className="text-gray-400">Please do not refresh</span>
+        <span className="font-mono text-[#81737b]">Zero external API dependencies</span>
       </div>
     </div>
   );

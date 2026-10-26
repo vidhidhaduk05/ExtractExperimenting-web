@@ -375,13 +375,13 @@ export function PicoHypothesisPage() {
     <div className="p-8 max-w-4xl mx-auto">
       <Link
         to={`/projects/${projectId}`}
-        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4"
+        className="text-sm text-[#62535d] hover:text-[#3a0f34] flex items-center gap-1 mb-4 font-sans"
       >
         <ArrowLeft className="h-3 w-3" /> Back to project
       </Link>
 
-      <h1 className="text-2xl font-bold mb-1">PICO & Hypothesis</h1>
-      <p className="text-gray-500 text-sm mb-6">
+      <h1 className="text-2xl font-serif font-bold text-[#3a0f34] mb-1">PICO & Hypothesis</h1>
+      <p className="text-[#62535d] text-sm mb-6 font-sans">
         Upload a study protocol to auto-extract PICO elements, define your research
         question and hypotheses, generate inclusion/exclusion criteria, and build
         database-specific search strings.
@@ -397,7 +397,7 @@ export function PicoHypothesisPage() {
         onToggle={() => toggleSection("protocol")}
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-[#62535d] font-sans">
             Upload a study protocol (PDF, DOCX, or TXT) to automatically extract PICO
             elements, research question, and hypothesis via NLP analysis.
           </p>
@@ -414,27 +414,27 @@ export function PicoHypothesisPage() {
               const file = e.dataTransfer.files?.[0];
               if (file) handleProtocolUpload(file);
             }}
-            className={`rounded-2xl border-2 border-dashed p-5 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 ${
+            className={`rounded-xl border-2 border-dashed p-5 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 ${
               isDragging
-                ? "border-[#381A61] bg-[#88A0DC]/10"
-                : "border-[#381A61]/15 bg-[#F2F1EB]/30 hover:border-[#381A61]/30"
+                ? "border-[#3a0f34] bg-[#eee7ec]/40"
+                : "border-[#d2c2cb] bg-[#fbf9f4] hover:border-[#814d75]"
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#381A61]/10 flex items-center justify-center text-[#381A61] shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-[#eee7ec] flex items-center justify-center text-[#3a0f34] shrink-0 border border-[#d2c2cb]">
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-[#141413]">
+                <p className="text-xs font-serif font-bold text-[#3a0f34]">
                   {uploadedFileName ? (
-                    <span className="flex items-center gap-1.5 text-[#381A61]">
+                    <span className="flex items-center gap-1.5 text-[#3a0f34]">
                       <span>{uploadedFileName}</span>
                     </span>
                   ) : (
                     "Select a protocol file or drag & drop here"
                   )}
                 </p>
-                <p className="text-[11px] text-black/50 mt-0.5">
+                <p className="text-[11px] font-sans text-[#81737b] mt-0.5">
                   Supports PDF, DOCX, TXT, MD, RTF (up to 50MB)
                 </p>
               </div>
@@ -455,7 +455,7 @@ export function PicoHypothesisPage() {
               <button
                 type="button"
                 id="btn-upload-protocol"
-                className="btn-palette-primary cursor-pointer !px-4 !py-2 text-xs font-bold shadow-sm inline-flex items-center gap-2"
+                className="px-4 py-2 rounded-lg bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] font-medium font-sans text-xs inline-flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={extractionStatus === "loading"}
               >
@@ -470,8 +470,8 @@ export function PicoHypothesisPage() {
           </div>
 
           {extractionStatus === "loading" && (
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#88A0DC]/15 border border-[#88A0DC]/30 text-xs font-medium text-[#381A61]">
-              <Loader2 className="h-4 w-4 animate-spin text-[#381A61]" />
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#fbf9f4] border border-[#d2c2cb] text-xs font-medium text-[#3a0f34] font-sans">
+              <Loader2 className="h-4 w-4 animate-spin text-[#814d75]" />
               <span>Analyzing protocol text and extracting PICO elements via NLP...</span>
             </div>
           )}
@@ -479,30 +479,30 @@ export function PicoHypothesisPage() {
           {extractionStatus === "done" && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-600" />
-                <span className="text-sm font-semibold text-emerald-800">Protocol Successfully Extracted</span>
+                <CheckCircle className="h-4 w-4 text-[#2d6a4f]" />
+                <span className="text-sm font-serif font-semibold text-[#2d6a4f]">Protocol Successfully Extracted</span>
                 {extractionConfidence && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb]">
                     {extractionConfidence.toUpperCase()} CONFIDENCE
                   </span>
                 )}
               </div>
-              <div className="rounded-xl bg-emerald-50/70 border border-emerald-200 px-4 py-3 text-xs text-emerald-900 leading-relaxed">
-                PICO elements, research question, and hypothesis have been auto-populated below from <strong className="font-semibold">{uploadedFileName || "your protocol"}</strong>. Review and edit as needed, then click Save on each section.
+              <div className="rounded-lg bg-[#fbf9f4] border border-[#d2c2cb] px-4 py-3 text-xs text-[#4f444b] font-sans leading-relaxed">
+                PICO elements, research question, and hypothesis have been auto-populated below from <strong className="font-semibold text-[#3a0f34]">{uploadedFileName || "your protocol"}</strong>. Review and edit as needed, then click Save on each section.
               </div>
             </div>
           )}
 
           {extractionStatus === "error" && (
-            <div className="flex items-center justify-between rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+            <div className="flex items-center justify-between rounded-lg bg-[#fff2f2] border border-[#d2c2cb] px-4 py-3 text-xs text-[#a42b2b]">
+              <div className="flex items-center gap-2 font-sans">
+                <AlertCircle className="h-4 w-4 text-[#a42b2b] shrink-0" />
                 <span>{extractionError || "Failed to extract protocol. Please try again."}</span>
               </div>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="underline font-semibold hover:text-red-900"
+                className="underline font-semibold text-[#3a0f34] hover:text-[#1a0017] font-sans"
               >
                 Try Again
               </button>
@@ -521,13 +521,13 @@ export function PicoHypothesisPage() {
         onToggle={() => toggleSection("protocol")}
       >
         <div className="space-y-3">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-[#62535d] font-sans">
             Type your research question in plain English and let the Co-Scientist extract PICO
             elements and generate database-specific search strings automatically.
           </p>
           <div className="flex items-start gap-3">
             <textarea
-              className="input min-h-[80px] flex-1"
+              className="input min-h-[80px] flex-1 text-xs bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
               placeholder="e.g., Is MRI more accurate than CT for detecting liver metastases in patients with colorectal cancer?"
               value={researchQuestionInput}
               onChange={(e) => setResearchQuestionInput(e.target.value)}
@@ -552,10 +552,10 @@ export function PicoHypothesisPage() {
           </div>
           {questionResult && (
             <div
-              className={`rounded-md px-4 py-3 text-sm ${
+              className={`rounded-lg px-4 py-3 text-sm font-sans border border-[#d2c2cb] ${
                 questionResult.startsWith("Error")
-                  ? "bg-red-50 border border-red-200 text-red-700"
-                  : "bg-green-50 border border-green-200 text-green-700"
+                  ? "bg-[#fff2f2] text-[#a42b2b]"
+                  : "bg-[#f4fbf7] text-[#2d6a4f]"
               }`}
             >
               {questionResult}
@@ -574,8 +574,8 @@ export function PicoHypothesisPage() {
         onToggle={() => toggleSection("pico")}
       >
         {picoLoading ? (
-          <div className="flex items-center gap-2 text-gray-400">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+          <div className="flex items-center gap-2 text-[#81737b] font-sans">
+            <Loader2 className="h-4 w-4 animate-spin text-[#814d75]" /> Loading...
           </div>
         ) : (
           <form
@@ -587,12 +587,12 @@ export function PicoHypothesisPage() {
           >
             {picoFields.map(({ key, label, icon: Icon, placeholder }) => (
               <div key={key}>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
-                  <Icon className="h-4 w-4 text-phylo-blue" />
+                <label className="flex items-center gap-2 text-sm font-serif font-semibold text-[#3a0f34] mb-1.5">
+                  <Icon className="h-4 w-4 text-[#814d75]" />
                   {label}
                 </label>
                 <textarea
-                  className="input min-h-[60px]"
+                  className="input min-h-[60px] text-xs w-full bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
                   value={picoForm[key as keyof typeof picoForm]}
                   onChange={(e) => setPicoField(key, e.target.value)}
                   placeholder={placeholder}
@@ -610,7 +610,7 @@ export function PicoHypothesisPage() {
                 Save PICO
               </button>
               {picoSaved && (
-                <span className="flex items-center gap-1 text-sm text-phylo-green">
+                <span className="flex items-center gap-1 text-sm text-[#2d6a4f] font-sans font-medium">
                   <CheckCircle className="h-4 w-4" /> Saved
                 </span>
               )}
@@ -637,12 +637,12 @@ export function PicoHypothesisPage() {
         >
           {/* Research Question */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
-              <HelpCircle className="h-4 w-4 text-phylo-blue" />
+            <label className="flex items-center gap-2 text-sm font-serif font-semibold text-[#3a0f34] mb-1.5">
+              <HelpCircle className="h-4 w-4 text-[#814d75]" />
               Research Question
             </label>
             <textarea
-              className="input min-h-[60px]"
+              className="input min-h-[60px] text-xs w-full bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
               value={researchQuestion}
               onChange={(e) => setResearchQuestion(e.target.value)}
               placeholder="e.g., What is the diagnostic accuracy of CT compared to MRI for detecting liver metastases in patients with colorectal cancer?"
@@ -651,12 +651,12 @@ export function PicoHypothesisPage() {
 
           {/* Primary Hypothesis */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
-              <Lightbulb className="h-4 w-4 text-phylo-orange" />
+            <label className="flex items-center gap-2 text-sm font-serif font-semibold text-[#3a0f34] mb-1.5">
+              <Lightbulb className="h-4 w-4 text-[#7c5800]" />
               Primary Hypothesis
             </label>
             <textarea
-              className="input min-h-[80px]"
+              className="input min-h-[80px] text-xs w-full bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
               value={hypothesis}
               onChange={(e) => setHypothesis(e.target.value)}
               placeholder="e.g., MRI has superior diagnostic accuracy compared to CT for the detection of liver metastases in colorectal cancer patients."
@@ -666,34 +666,34 @@ export function PicoHypothesisPage() {
           {/* Secondary Hypotheses */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Lightbulb className="h-4 w-4 text-gray-400" />
+              <label className="flex items-center gap-2 text-sm font-serif font-semibold text-[#3a0f34]">
+                <Lightbulb className="h-4 w-4 text-[#81737b]" />
                 Secondary Hypotheses
               </label>
               <button
                 type="button"
                 onClick={addSecondary}
-                className="text-xs text-phylo-blue hover:underline flex items-center gap-1"
+                className="text-xs text-[#814d75] hover:text-[#3a0f34] hover:underline flex items-center gap-1 font-sans font-medium"
               >
                 <Plus className="h-3 w-3" /> Add
               </button>
             </div>
 
             {secondary.length === 0 && (
-              <p className="text-sm text-gray-400">No secondary hypotheses defined.</p>
+              <p className="text-sm text-[#81737b] font-sans">No secondary hypotheses defined.</p>
             )}
 
             <div className="space-y-2">
               {secondary.map((h, i) => (
                 <div key={i} className="flex gap-2 items-start">
                   <textarea
-                    className="input min-h-[40px] flex-1 text-sm"
+                    className="input min-h-[40px] flex-1 text-xs bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
                     value={h.text}
                     onChange={(e) => updateSecondary(i, "text", e.target.value)}
                     placeholder="Secondary hypothesis text..."
                   />
                   <select
-                    className="input w-28 text-xs"
+                    className="input w-28 text-xs bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2 font-sans"
                     value={h.type}
                     onChange={(e) => updateSecondary(i, "type", e.target.value)}
                   >
@@ -701,7 +701,7 @@ export function PicoHypothesisPage() {
                     <option value="null">Null</option>
                   </select>
                   <select
-                    className="input w-28 text-xs"
+                    className="input w-28 text-xs bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2 font-sans"
                     value={h.status}
                     onChange={(e) => updateSecondary(i, "status", e.target.value)}
                   >
@@ -712,7 +712,7 @@ export function PicoHypothesisPage() {
                   <button
                     type="button"
                     onClick={() => removeSecondary(i)}
-                    className="text-gray-400 hover:text-red-500 mt-1"
+                    className="text-[#81737b] hover:text-[#a42b2b] mt-1 p-1 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -731,7 +731,7 @@ export function PicoHypothesisPage() {
               Save Hypothesis
             </button>
             {hypSaved && (
-              <span className="flex items-center gap-1 text-sm text-phylo-green">
+              <span className="flex items-center gap-1 text-sm text-[#2d6a4f] font-sans font-medium">
                 <CheckCircle className="h-4 w-4" /> Saved
               </span>
             )}
@@ -750,11 +750,11 @@ export function PicoHypothesisPage() {
       >
         <div className="space-y-4">
           {/* Warning banner: auto-generated search strings require expert review */}
-          <div className="rounded-lg border border-phylo-orange/30 bg-phylo-orange/5 px-4 py-3 flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-phylo-orange shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <span className="font-semibold text-phylo-orange">Auto-generated search strings are a starting point.</span>{" "}
-              <span className="text-gray-600">
+          <div className="rounded-lg border border-[#d2c2cb] bg-[#fbf9f4] px-4 py-3 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-[#7c5800] shrink-0 mt-0.5" />
+            <div className="text-sm font-sans">
+              <span className="font-semibold text-[#7c5800]">Auto-generated search strings are a starting point.</span>{" "}
+              <span className="text-[#62535d]">
                 The Co-Scientist selects the search concepts and synonyms from your PICO. Basic syntax checks and an automatic repair step help catch formatting errors; searches have not been tested in the databases.
                 They must be reviewed and refined by a medical librarian or systematic review methodologist
                 before use in a formal search. Synonym coverage, database-specific syntax, and field tags
@@ -778,7 +778,7 @@ export function PicoHypothesisPage() {
               Generate from PICO
             </button>
             {criteriaGenerateMutation.isError && (
-              <span className="text-sm text-red-600">
+              <span className="text-sm text-[#a42b2b] font-sans">
                 {(criteriaGenerateMutation.error as Error).message}
               </span>
             )}
@@ -787,26 +787,26 @@ export function PicoHypothesisPage() {
           {/* Inclusion criteria */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-semibold text-gray-700">Inclusion Criteria</h4>
+              <h4 className="text-sm font-serif font-semibold text-[#3a0f34]">Inclusion Criteria</h4>
               <button
                 type="button"
                 onClick={() => addCriterion("inclusion")}
-                className="text-xs text-phylo-blue hover:underline flex items-center gap-1"
+                className="text-xs text-[#814d75] hover:text-[#3a0f34] hover:underline flex items-center gap-1 font-sans font-medium"
               >
                 <Plus className="h-3 w-3" /> Add
               </button>
             </div>
             {inclusion.length === 0 && (
-              <p className="text-sm text-gray-400">No inclusion criteria defined.</p>
+              <p className="text-sm text-[#81737b] font-sans">No inclusion criteria defined.</p>
             )}
             <div className="space-y-2">
               {inclusion.map((c, i) => (
                 <div key={c.id} className="flex gap-2 items-start">
-                  <span className="text-sm font-medium text-gray-400 mt-2 w-6 shrink-0">
+                  <span className="text-sm font-medium text-[#81737b] mt-2 w-6 shrink-0 font-mono">
                     {i + 1}.
                   </span>
                   <textarea
-                    className="input min-h-[36px] flex-1 text-sm"
+                    className="input min-h-[36px] flex-1 text-xs bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
                     value={c.text}
                     onChange={(e) => updateCriterion("inclusion", i, e.target.value)}
                     placeholder="Inclusion criterion..."
@@ -814,7 +814,7 @@ export function PicoHypothesisPage() {
                   <button
                     type="button"
                     onClick={() => removeCriterion("inclusion", i)}
-                    className="text-gray-400 hover:text-red-500 mt-1"
+                    className="text-[#81737b] hover:text-[#a42b2b] mt-1 p-1 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -826,26 +826,26 @@ export function PicoHypothesisPage() {
           {/* Exclusion criteria */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-semibold text-gray-700">Exclusion Criteria</h4>
+              <h4 className="text-sm font-serif font-semibold text-[#3a0f34]">Exclusion Criteria</h4>
               <button
                 type="button"
                 onClick={() => addCriterion("exclusion")}
-                className="text-xs text-phylo-blue hover:underline flex items-center gap-1"
+                className="text-xs text-[#814d75] hover:text-[#3a0f34] hover:underline flex items-center gap-1 font-sans font-medium"
               >
                 <Plus className="h-3 w-3" /> Add
               </button>
             </div>
             {exclusion.length === 0 && (
-              <p className="text-sm text-gray-400">No exclusion criteria defined.</p>
+              <p className="text-sm text-[#81737b] font-sans">No exclusion criteria defined.</p>
             )}
             <div className="space-y-2">
               {exclusion.map((c, i) => (
                 <div key={c.id} className="flex gap-2 items-start">
-                  <span className="text-sm font-medium text-gray-400 mt-2 w-6 shrink-0">
+                  <span className="text-sm font-medium text-[#81737b] mt-2 w-6 shrink-0 font-mono">
                     {i + 1}.
                   </span>
                   <textarea
-                    className="input min-h-[36px] flex-1 text-sm"
+                    className="input min-h-[36px] flex-1 text-xs bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] focus:border-[#814d75] rounded-lg p-2.5 font-sans"
                     value={c.text}
                     onChange={(e) => updateCriterion("exclusion", i, e.target.value)}
                     placeholder="Exclusion criterion..."
@@ -853,7 +853,7 @@ export function PicoHypothesisPage() {
                   <button
                     type="button"
                     onClick={() => removeCriterion("exclusion", i)}
-                    className="text-gray-400 hover:text-red-500 mt-1"
+                    className="text-[#81737b] hover:text-[#a42b2b] mt-1 p-1 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -877,7 +877,7 @@ export function PicoHypothesisPage() {
               Save Criteria
             </button>
             {criteriaSaved && (
-              <span className="flex items-center gap-1 text-sm text-phylo-green">
+              <span className="flex items-center gap-1 text-sm text-[#2d6a4f] font-sans font-medium">
                 <CheckCircle className="h-4 w-4" /> Saved
               </span>
             )}
@@ -895,7 +895,9 @@ export function PicoHypothesisPage() {
         onToggle={() => toggleSection("search")}
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">AI designs each search for the database interface shown below. It can omit unnecessary PICO blocks and choose suitable synonyms and proximity searches. Basic syntax is checked automatically; review the strategy and subject headings before running it.</p>
+          <p className="text-sm text-[#62535d] font-sans">
+            AI designs each search for the database interface shown below. It can omit unnecessary PICO blocks and choose suitable synonyms and proximity searches. Basic syntax is checked automatically; review the strategy and subject headings before running it.
+          </p>
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -911,14 +913,14 @@ export function PicoHypothesisPage() {
               Generate from PICO
             </button>
             {stringsGenerateMutation.isError && (
-              <span className="text-sm text-red-600">
+              <span className="text-sm text-[#a42b2b] font-sans">
                 {(stringsGenerateMutation.error as Error).message}
               </span>
             )}
           </div>
 
           {/* Database tabs */}
-          <div className="flex flex-wrap gap-1 border-b border-gray-200">
+          <div className="flex flex-wrap gap-1 border-b border-[#d2c2cb]">
             {DATABASES.map((db) => (
               <button
                 key={db.key}
@@ -928,10 +930,10 @@ export function PicoHypothesisPage() {
                   setFetchResult(null);
                   setUploadResult(null);
                 }}
-                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-3 py-2 text-sm font-medium font-sans border-b-2 transition-colors ${
                   activeDb === db.key
-                    ? "border-phylo-blue text-phylo-blue"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                    ? "border-[#3a0f34] text-[#3a0f34]"
+                    : "border-transparent text-[#62535d] hover:text-[#3a0f34]"
                 }`}
               >
                 {db.label}
@@ -944,17 +946,17 @@ export function PicoHypothesisPage() {
             {currentDbString ? (
               <>
                 <div className="relative">
-                  <pre className="input min-h-[120px] whitespace-pre-wrap font-mono text-xs bg-gray-50 overflow-x-auto">
+                  <pre className="input min-h-[120px] whitespace-pre-wrap font-mono text-xs bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] overflow-x-auto rounded-lg p-3">
                     {currentDbString}
                   </pre>
                 </div>
 
                 {/* User-requested verification notice under search string */}
-                <div className="flex items-center gap-2.5 p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs text-amber-900 dark:text-amber-200 font-medium shadow-2xs">
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div className="flex items-center gap-2.5 p-3 bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl text-xs text-[#3a0f34] font-medium font-sans shadow-xs">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-[#7c5800]" />
                   <div>
-                    <span className="font-bold uppercase tracking-wider text-[11px] text-amber-700 dark:text-amber-300 block">Verify before moving forward</span>
-                    <span>Review Boolean operators, MeSH syntax, and concept synonyms above before querying PubMed or initiating batch reference ingestion.</span>
+                    <span className="font-bold uppercase tracking-wider text-[11px] text-[#7c5800] block">Verify before moving forward</span>
+                    <span className="text-[#62535d]">Review Boolean operators, MeSH syntax, and concept synonyms above before querying PubMed or initiating batch reference ingestion.</span>
                   </div>
                 </div>
 
@@ -966,7 +968,7 @@ export function PicoHypothesisPage() {
                     onClick={() => handleCopy(activeDb, currentDbString)}
                   >
                     {copiedDb === activeDb ? (
-                      <CheckCircle className="h-4 w-4 text-phylo-green" />
+                      <CheckCircle className="h-4 w-4 text-[#2d6a4f]" />
                     ) : (
                       <Copy className="h-4 w-4" />
                     )}
@@ -979,9 +981,9 @@ export function PicoHypothesisPage() {
                       href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(currentDbString)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-secondary flex items-center gap-1.5 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                      className="btn-secondary flex items-center gap-1.5 text-[#3a0f34] border-[#d2c2cb] hover:bg-[#eee7ec]"
                     >
-                      <ExternalLink className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                      <ExternalLink className="h-3.5 w-3.5 text-[#814d75]" />
                       <span>Test in PubMed</span>
                     </a>
                   )}
@@ -1009,11 +1011,11 @@ export function PicoHypothesisPage() {
                   {/* Reference Import Button (all formats) */}
                   <button
                     type="button"
-                    className="btn-secondary flex items-center gap-1.5 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                    className="btn-secondary flex items-center gap-1.5 border-[#d2c2cb] text-[#3a0f34] hover:bg-[#eee7ec]"
                     onClick={() => setIsImportModalOpen(true)}
                     title="Import reference files: RIS, BibTeX, CSV with mapping, PubMed/NBIB, EndNote (.enw/.xml), PubMed XML, Web of Science CIW"
                   >
-                    <FileUp className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                    <FileUp className="h-4 w-4 text-[#814d75]" />
                     <span>Import References</span>
                   </button>
                 </div>
@@ -1021,10 +1023,10 @@ export function PicoHypothesisPage() {
                 {/* Fetch result */}
                 {fetchResult && (
                   <div
-                    className={`rounded-md px-4 py-3 text-sm ${
+                    className={`rounded-lg px-4 py-3 text-sm font-sans border border-[#d2c2cb] ${
                       fetchResult.startsWith("Error")
-                        ? "bg-red-50 border border-red-200 text-red-700"
-                        : "bg-green-50 border border-green-200 text-green-700"
+                        ? "bg-[#fff2f2] text-[#a42b2b]"
+                        : "bg-[#f4fbf7] text-[#2d6a4f]"
                     }`}
                   >
                     {fetchResult}
@@ -1032,7 +1034,7 @@ export function PicoHypothesisPage() {
                 )}
               </>
             ) : (
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-[#81737b] font-sans">
                 No search string generated yet. Click "Generate from PICO" to create
                 database-specific search strings.
               </p>
@@ -1073,19 +1075,19 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="card mb-4">
+    <div className="card mb-4 bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-xs">
       <button
         type="button"
         onClick={onToggle}
-        className="flex items-center gap-2 w-full px-5 py-4 text-left hover:bg-gray-50 transition-colors rounded-t-lg"
+        className="flex items-center gap-2 w-full px-5 py-4 text-left hover:bg-[#fbf9f4] transition-colors rounded-t-xl"
       >
         {isOpen ? (
-          <ChevronDown className="h-4 w-4 text-gray-400" />
+          <ChevronDown className="h-4 w-4 text-[#81737b]" />
         ) : (
-          <ChevronRight className="h-4 w-4 text-gray-400" />
+          <ChevronRight className="h-4 w-4 text-[#81737b]" />
         )}
-        <Icon className="h-4 w-4 text-phylo-blue" />
-        <span className="font-semibold text-gray-800">{title}</span>
+        <Icon className="h-4 w-4 text-[#814d75]" />
+        <span className="font-serif font-semibold text-[#3a0f34]">{title}</span>
       </button>
       {isOpen && <div className="px-5 pb-5">{children}</div>}
     </div>
@@ -1094,7 +1096,7 @@ function SectionCard({
 
 function ErrorBanner({ msg }: { msg: string }) {
   return (
-    <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+    <div className="rounded-lg bg-[#fff2f2] border border-[#d2c2cb] px-4 py-3 text-sm text-[#a42b2b] font-sans">
       Error: {msg}
     </div>
   );

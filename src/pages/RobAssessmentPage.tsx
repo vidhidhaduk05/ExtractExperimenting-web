@@ -292,11 +292,11 @@ export function RobAssessmentPage() {
           block: "center",
           inline: "nearest",
         });
-        highlightElement.classList.remove("ring-4", "ring-[#F9D14A]", "animate-pulse");
+        highlightElement.classList.remove("ring-4", "ring-[#ffdea6]", "animate-pulse");
         void highlightElement.offsetWidth;
-        highlightElement.classList.add("ring-4", "ring-[#F9D14A]", "animate-pulse");
+        highlightElement.classList.add("ring-4", "ring-[#ffdea6]", "animate-pulse");
         setTimeout(() => {
-          highlightElement.classList.remove("ring-4", "ring-[#F9D14A]", "animate-pulse");
+          highlightElement.classList.remove("ring-4", "ring-[#ffdea6]", "animate-pulse");
         }, 2500);
       }
     });
@@ -464,8 +464,8 @@ export function RobAssessmentPage() {
     }
   }, [isReviewMode, assessment]);
 
-  if (isLoading) return <div className="p-8 text-gray-400">Loading risk of bias assessment...</div>;
-  if (!assessment) return <div className="p-8 text-gray-400">Assessment not found.</div>;
+  if (isLoading) return <div className="p-8 text-[#81737b] font-sans">Loading risk of bias assessment...</div>;
+  if (!assessment) return <div className="p-8 text-[#81737b] font-sans">Assessment not found.</div>;
 
   const toolDef = assessment.tool_definition;
   const hasAiSuggestions = assessment.domain_judgments.some((dj) =>
@@ -490,37 +490,37 @@ export function RobAssessmentPage() {
     : assessment.domain_judgments;
 
   return (
-    <div className="flex flex-col h-screen bg-[#ECE9E2] overflow-hidden font-sans">
+    <div className="flex flex-col h-screen bg-[#fbf9f4] overflow-hidden font-sans">
       {/* ── TOP NAV HEADER (Extraction Theme) ── */}
-      <header className="bg-[#FAF9F3] border-b border-[#381A61]/10 px-5 py-2.5 shrink-0 flex items-center justify-between shadow-xs z-30">
+      <header className="bg-[#ffffff] border-b border-[#d2c2cb] px-5 py-2.5 shrink-0 flex items-center justify-between shadow-xs z-30">
         <div className="flex items-center gap-3">
           <Link
             to={`/projects/${projectId}/rob`}
-            className="text-xs font-semibold text-[#381A61] hover:text-[#381A61] flex items-center gap-1.5 bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 px-3 py-1.5 rounded-xl border border-[#88A0DC]/40 transition-colors shadow-2xs"
+            className="text-xs font-semibold text-[#3a0f34] hover:text-[#1a0017] flex items-center gap-1.5 bg-[#eee7ec] hover:bg-[#d2c2cb] px-3 py-1.5 rounded-lg border border-[#d2c2cb] transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Back to RoB Summary
           </Link>
-          <div className="h-4 w-px bg-[#381A61]/15" />
+          <div className="h-4 w-px bg-[#d2c2cb]" />
 
           <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-[#381A61]/10 text-[#381A61]">
+            <span className="p-1.5 rounded-lg bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb]">
               <ShieldCheck className="h-4 w-4" />
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-serif font-bold text-[#381A61] text-sm sm:text-base leading-tight truncate max-w-md">
+                <h1 className="font-serif font-bold text-[#3a0f34] text-sm sm:text-base leading-tight truncate max-w-md">
                   {toolDef?.full_name || assessment.tool.toUpperCase()} Assessment
                 </h1>
                 <button
                   onClick={() => setShowToolModal(true)}
-                  className="text-[10px] px-2 py-0.5 rounded-md border border-[#381A61]/20 bg-white hover:bg-black/5 text-[#381A61] flex items-center gap-1 font-medium shadow-2xs"
+                  className="text-[10px] px-2 py-0.5 rounded-md border border-[#d2c2cb] bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] flex items-center gap-1 font-medium font-sans"
                   title="Change assessment tool"
                 >
                   <Settings2 className="h-2.5 w-2.5" />
                   <span>Tool</span>
                 </button>
               </div>
-              <p className="text-[11px] text-[#6B665E] font-serif italic truncate max-w-md">
+              <p className="text-[11px] text-[#62535d] font-serif italic truncate max-w-md">
                 {study?.title || "Evaluating Study Publication"}
               </p>
             </div>
@@ -528,23 +528,23 @@ export function RobAssessmentPage() {
         </div>
 
         {/* Center Progress Bar & Overall Judgment */}
-        <div className="hidden lg:flex items-center gap-3 bg-white border border-[#381A61]/10 px-4 py-1.5 rounded-full shadow-2xs">
-          <div className="text-xs font-medium text-[#381A61]">
-            Verified: <span className="font-bold text-[#7C4B73] font-mono">{verifiedCount}/{allSignalingQuestions.length}</span>
+        <div className="hidden lg:flex items-center gap-3 bg-[#ffffff] border border-[#d2c2cb] px-4 py-1.5 rounded-full shadow-xs">
+          <div className="text-xs font-medium text-[#3a0f34]">
+            Verified: <span className="font-bold text-[#814d75] font-mono">{verifiedCount}/{allSignalingQuestions.length}</span>
           </div>
-          <div className="w-24 bg-[#88A0DC]/25 rounded-full h-2 overflow-hidden">
+          <div className="w-24 bg-[#eee7ec] rounded-full h-2 overflow-hidden border border-[#d2c2cb]">
             <div
-              className="bg-gradient-to-r from-[#381A61] to-[#7C4B73] h-2 rounded-full transition-all duration-300"
+              className="bg-[#3a0f34] h-2 rounded-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <span className="text-[11px] font-bold text-[#381A61] font-mono">{progressPercent}%</span>
+          <span className="text-[11px] font-bold text-[#3a0f34] font-mono">{progressPercent}%</span>
 
-          <div className="h-3 w-px bg-[#381A61]/20 mx-1" />
+          <div className="h-3 w-px bg-[#d2c2cb] mx-1" />
 
           {/* Overall Judgment Pill */}
           <span
-            className="inline-flex items-center rounded-md px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs"
+            className="inline-flex items-center rounded-md px-2.5 py-0.5 text-[11px] font-bold text-white shadow-xs"
             style={{ backgroundColor: judgmentDotColor(assessment.overall_judgment) }}
           >
             Overall: {judgmentLabel(assessment.overall_judgment)}
@@ -554,18 +554,18 @@ export function RobAssessmentPage() {
         {/* Right Controls */}
         <div className="flex items-center gap-2">
           {/* Review Mode Toggle Switch */}
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-black/[0.08] shadow-2xs">
-            <label className="text-xs font-medium text-[#141413] flex items-center gap-1.5 cursor-pointer">
+          <div className="flex items-center gap-2 bg-[#ffffff] px-3 py-1.5 rounded-lg border border-[#d2c2cb] shadow-xs">
+            <label className="text-xs font-medium text-[#3a0f34] flex items-center gap-1.5 cursor-pointer font-sans">
               <input
                 type="checkbox"
                 checked={isReviewMode}
                 onChange={(e) => setIsReviewMode(e.target.checked)}
-                className="rounded text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                className="rounded text-[#3a0f34] focus:ring-[#814d75] accent-[#3a0f34] h-3.5 w-3.5"
               />
               <span className="hidden sm:inline">Review Flagged</span>
             </label>
             {flaggedCount > 0 && (
-              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-200">
+              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-[#ffdea6] text-[#3a0f34] font-bold border border-[#d2c2cb]">
                 {flaggedCount}
               </span>
             )}
@@ -574,7 +574,7 @@ export function RobAssessmentPage() {
           {/* Toggle PDF View Column */}
           <button
             onClick={() => setShowPdfPanel(!showPdfPanel)}
-            className="p-1.5 rounded-xl bg-white border border-[#381A61]/15 text-[#381A61] hover:bg-[#88A0DC]/20 transition-colors shadow-2xs"
+            className="p-1.5 rounded-lg bg-[#ffffff] border border-[#d2c2cb] text-[#3a0f34] hover:bg-[#eee7ec] transition-colors shadow-xs"
             title={showPdfPanel ? "Collapse PDF Viewer" : "Open PDF Viewer"}
           >
             {showPdfPanel ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
@@ -582,7 +582,7 @@ export function RobAssessmentPage() {
 
           <button
             onClick={() => deleteMutation.mutate()}
-            className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-black/5 transition-colors"
+            className="text-[#81737b] hover:text-[#a42b2b] p-1.5 rounded-lg hover:bg-[#fff2f2] transition-colors"
             title="Delete assessment"
           >
             <Trash2 className="h-4 w-4" />
@@ -596,7 +596,7 @@ export function RobAssessmentPage() {
             COLUMN 1: ACTUAL PDF PUBLICATION VIEWER & HIGHLIGHTS (LEFT)
         ══════════════════════════════════════════════════════════ */}
         {showPdfPanel && (
-          <section className="w-[50%] lg:w-[54%] border-r border-[#381A61]/10 bg-[#ECE9E2] flex flex-col h-full overflow-hidden transition-all duration-300">
+          <section className="w-[50%] lg:w-[54%] border-r border-[#d2c2cb] bg-[#fbf9f4] flex flex-col h-full overflow-hidden transition-all duration-300">
             <ActualPdfViewer
               pdfUrl={currentPdfUrl}
               highlights={pdfHighlightItems}
@@ -627,19 +627,19 @@ export function RobAssessmentPage() {
         {/* ══════════════════════════════════════════════════════════
             COLUMN 2: TRACK CHANGES VERIFICATION CARDS (RIGHT)
         ══════════════════════════════════════════════════════════ */}
-        <section className="flex-1 bg-[#F2F1EB] flex flex-col h-full overflow-hidden min-w-0">
+        <section className="flex-1 bg-[#fbf9f4] flex flex-col h-full overflow-hidden min-w-0">
           {/* Word Track Changes Review Ribbon Bar */}
-          <div className="border-b border-[#381A61]/10 bg-[#FAF9F3] px-4 py-2.5 shrink-0 flex flex-col gap-2 shadow-2xs z-10">
+          <div className="border-b border-[#d2c2cb] bg-[#ffffff] px-4 py-2.5 shrink-0 flex flex-col gap-2 shadow-xs z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-[#381A61] uppercase tracking-wide flex items-center gap-1.5 font-mono">
-                  <span className="w-2 h-2 rounded-full bg-[#381A61] animate-pulse" />
+                <span className="text-xs font-bold text-[#3a0f34] uppercase tracking-wide flex items-center gap-1.5 font-mono">
+                  <span className="w-2 h-2 rounded-full bg-[#3a0f34] animate-pulse" />
                   Word-Style Track Changes
                 </span>
-                <span className="bg-[#88A0DC]/20 text-[#381A61] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-[#88A0DC]/35">
+                <span className="bg-[#eee7ec] text-[#3a0f34] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-[#d2c2cb] font-mono">
                   Question {(allSignalingQuestions.findIndex((q) => q.answer.question_key === selectedQuestionKey) + 1) || 1} of {allSignalingQuestions.length}
                 </span>
-                <span className="text-[11px] font-medium text-[#7C4B73] hidden sm:inline font-serif italic">
+                <span className="text-[11px] font-medium text-[#814d75] hidden sm:inline font-serif italic">
                   · {progressPercent}% Verified
                 </span>
               </div>
@@ -650,13 +650,13 @@ export function RobAssessmentPage() {
                 <button
                   onClick={() => prefillMutation.mutate()}
                   disabled={prefillMutation.isPending}
-                  className="px-2.5 py-1.5 text-xs font-bold text-[#381A61] bg-[#F9D14A] hover:bg-[#F9D14A]/90 border border-[#E78429]/40 rounded-xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs ring-1 ring-[#F9D14A]/50"
+                  className="px-2.5 py-1.5 text-xs font-bold text-[#3a0f34] bg-[#ffdea6] hover:bg-[#ffe7be] border border-[#d2c2cb] rounded-lg flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs font-sans"
                   title="Run Co-Scientist to evaluate signaling questions and extract supporting quotes"
                 >
                   {prefillMutation.isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Sparkles className="h-3.5 w-3.5 text-[#381A61]" />
+                    <Sparkles className="h-3.5 w-3.5 text-[#7c5800]" />
                   )}
                   <span>Run Co-Scientist</span>
                 </button>
@@ -666,13 +666,13 @@ export function RobAssessmentPage() {
                   <button
                     onClick={() => acceptAiMutation.mutate()}
                     disabled={acceptAiMutation.isPending}
-                    className="px-2.5 py-1.5 text-xs font-bold text-white bg-[#381A61] hover:bg-[#4E2487] rounded-xl flex items-center gap-1.5 transition-all shadow-xs"
+                    className="px-2.5 py-1.5 text-xs font-bold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded-lg flex items-center gap-1.5 transition-all shadow-xs font-sans"
                     title="Confirm and verify all Co-Scientist recorded answers"
                   >
                     {acceptAiMutation.isPending ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
-                      <CheckCircle className="h-3.5 w-3.5 text-[#F9D14A]" />
+                      <CheckCircle className="h-3.5 w-3.5 text-[#ffdea6]" />
                     )}
                     <span>Accept All</span>
                   </button>
@@ -681,20 +681,20 @@ export function RobAssessmentPage() {
                 {/* Find Quote in PDF Button in Ribbon */}
                 <button
                   onClick={() => findQuoteInPdf(selectedQuestionKey || undefined)}
-                  className="px-2.5 py-1.5 text-xs font-bold text-[#381A61] bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 border border-[#88A0DC]/40 rounded-xl flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                  className="px-2.5 py-1.5 text-xs font-bold text-[#3a0f34] bg-[#ffffff] hover:bg-[#eee7ec] border border-[#d2c2cb] rounded-lg flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs font-sans"
                   title="Find & jump to quote in PDF (Hotkey: F or Q)"
                 >
-                  <Eye className="h-3.5 w-3.5 text-[#381A61]" />
+                  <Eye className="h-3.5 w-3.5 text-[#814d75]" />
                   <span className="hidden sm:inline">Find Quote</span>
-                  <kbd className="text-[10px] bg-white border border-[#88A0DC]/60 px-1 rounded font-mono text-[#381A61] font-bold">F</kbd>
+                  <kbd className="text-[10px] bg-[#fbf9f4] border border-[#d2c2cb] px-1 rounded font-mono text-[#3a0f34] font-bold">F</kbd>
                 </button>
 
-                <div className="h-4 w-px bg-[#381A61]/15 mx-0.5" />
+                <div className="h-4 w-px bg-[#d2c2cb] mx-0.5" />
 
                 {/* Previous Question Button */}
                 <button
                   onClick={navigateToPrevQuestion}
-                  className="p-1.5 rounded-lg text-[#381A61] hover:bg-[#381A61]/5 transition-colors"
+                  className="p-1.5 rounded-lg text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
                   title="Previous Question (Hotkey: [ or ↑ or K)"
                 >
                   <ChevronRight className="h-4 w-4 rotate-180" />
@@ -703,7 +703,7 @@ export function RobAssessmentPage() {
                 {/* Next Question Button */}
                 <button
                   onClick={navigateToNextQuestion}
-                  className="p-1.5 rounded-lg text-[#381A61] hover:bg-[#381A61]/5 transition-colors"
+                  className="p-1.5 rounded-lg text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
                   title="Next Question (Hotkey: ] or ↓ or J)"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -714,10 +714,10 @@ export function RobAssessmentPage() {
                   onClick={handleUndo}
                   disabled={undoStack.length === 0}
                   className={cn(
-                    "px-2 py-1 text-xs font-bold rounded-xl flex items-center gap-1 transition-all shadow-2xs",
+                    "px-2 py-1 text-xs font-bold rounded-lg flex items-center gap-1 transition-all font-sans",
                     undoStack.length > 0
-                      ? "bg-[#E78429]/15 hover:bg-[#E78429]/25 text-[#E78429] border border-[#E78429]/30 cursor-pointer active:scale-95"
-                      : "bg-slate-100 text-slate-400 border border-slate-200 opacity-60 cursor-not-allowed"
+                      ? "bg-[#ffdea6] hover:bg-[#ffe7be] text-[#3a0f34] border border-[#d2c2cb] cursor-pointer active:scale-95 shadow-xs"
+                      : "bg-[#eee7ec] text-[#81737b] border border-[#d2c2cb] opacity-60 cursor-not-allowed"
                   )}
                   title="Undo last change (Hotkey: Z or U)"
                 >
@@ -728,9 +728,9 @@ export function RobAssessmentPage() {
             </div>
 
             {/* Word Review Progress Bar */}
-            <div className="w-full bg-[#88A0DC]/20 rounded-full h-1 overflow-hidden flex">
+            <div className="w-full bg-[#eee7ec] rounded-full h-1 overflow-hidden flex border border-[#d2c2cb]">
               <div
-                className="bg-gradient-to-r from-[#381A61] to-[#7C4B73] h-1 transition-all duration-300"
+                className="bg-[#3a0f34] h-1 transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -738,12 +738,12 @@ export function RobAssessmentPage() {
 
           {/* Notification banner if prefill executed */}
           {prefillMsg && (
-            <div className="px-4 py-2 bg-[#F9D14A]/20 border-b border-[#F9D14A] text-xs text-[#381A61] flex items-center justify-between">
+            <div className="px-4 py-2 bg-[#fbf9f4] border-b border-[#d2c2cb] text-xs text-[#3a0f34] flex items-center justify-between font-sans">
               <div className="flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-[#E78429]" />
+                <Sparkles className="h-3.5 w-3.5 text-[#7c5800]" />
                 <span>{prefillMsg}</span>
               </div>
-              <button onClick={() => setPrefillMsg("")} className="text-[#381A61] font-bold text-xs hover:underline">
+              <button onClick={() => setPrefillMsg("")} className="text-[#3a0f34] font-bold text-xs hover:underline">
                 ✕
               </button>
             </div>
@@ -751,13 +751,13 @@ export function RobAssessmentPage() {
 
           {/* NOS Star rating if applicable */}
           {isNosTool && (
-            <div className="mx-4 mt-3 p-3 bg-amber-50/70 border border-amber-200 rounded-xl shadow-2xs shrink-0">
+            <div className="mx-4 mt-3 p-3 bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl shadow-xs shrink-0 font-sans">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-amber-900 flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                <span className="font-semibold text-[#3a0f34] flex items-center gap-1">
+                  <Star className="h-3.5 w-3.5 fill-[#7c5800] text-[#7c5800]" />
                   Newcastle-Ottawa Scale (NOS) Rating:
                 </span>
-                <span className="font-bold text-amber-950">
+                <span className="font-bold text-[#3a0f34]">
                   {totalNosStars} / 9 Stars — {totalNosStars >= 7 ? "Good Quality" : totalNosStars >= 5 ? "Fair Quality" : "Poor Quality"}
                 </span>
               </div>
@@ -775,33 +775,33 @@ export function RobAssessmentPage() {
               ).length;
 
               return (
-                <div key={dj.judgment_id} className="rounded-2xl border border-[#381A61]/10 bg-white shadow-xs overflow-hidden">
+                <div key={dj.judgment_id} className="rounded-xl border border-[#d2c2cb] bg-[#ffffff] shadow-xs overflow-hidden">
                   {/* Domain Header Accordion */}
-                  <div className="flex items-center justify-between px-4 py-3 bg-[#FAF9F3] border-b border-[#381A61]/10">
+                  <div className="flex items-center justify-between px-4 py-3 bg-[#fbf9f4] border-b border-[#d2c2cb]">
                     <button
                       onClick={() => toggleDomain(dj.domain_key)}
                       className="flex items-center gap-2.5 text-left flex-1 hover:opacity-80 transition-opacity"
                     >
                       {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-[#7C4B73]" />
+                        <ChevronDown className="h-4 w-4 text-[#814d75]" />
                       ) : (
-                        <ChevronRight className="h-4 w-4 text-[#7C4B73]" />
+                        <ChevronRight className="h-4 w-4 text-[#814d75]" />
                       )}
                       <div>
-                        <span className="font-serif font-bold text-sm text-[#381A61]">{dj.domain_label}</span>
-                        <div className="text-[11px] text-[#6B665E]">
+                        <span className="font-serif font-bold text-sm text-[#3a0f34]">{dj.domain_label}</span>
+                        <div className="text-[11px] text-[#62535d] font-sans">
                           {dj.signaling_answers.length} signaling questions
                         </div>
                       </div>
                       {flaggedInDomain > 0 ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1 ml-2">
-                          <AlertTriangle className="h-2.5 w-2.5 text-amber-600" />
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#ffdea6] text-[#7c5800] border border-[#d2c2cb] flex items-center gap-1 ml-2 font-sans">
+                          <AlertTriangle className="h-2.5 w-2.5 text-[#7c5800]" />
                           {flaggedInDomain} needs review
                         </span>
                       ) : (
                         allVerified && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#7C4B73]/15 text-[#7C4B73] border border-[#7C4B73]/30 flex items-center gap-1 ml-2">
-                            <CheckCircle className="h-2.5 w-2.5 text-[#7C4B73]" />
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#2d6a4f]/10 text-[#2d6a4f] border border-[#2d6a4f]/20 flex items-center gap-1 ml-2 font-sans">
+                            <CheckCircle className="h-2.5 w-2.5 text-[#2d6a4f]" />
                             All Verified
                           </span>
                         )
@@ -809,7 +809,7 @@ export function RobAssessmentPage() {
                     </button>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-semibold text-[#6B665E]">Domain Judgment:</span>
+                      <span className="text-[11px] font-semibold text-[#62535d] font-sans">Domain Judgment:</span>
                       <DomainJudgmentSelect
                         judgment={dj}
                         judgmentOptions={toolDef?.judgment_options || []}
@@ -822,7 +822,7 @@ export function RobAssessmentPage() {
 
                   {/* Domain Signaling Questions Body */}
                   {isExpanded && domainDef && (
-                    <div className="p-4 space-y-3.5 bg-[#FAF9F3]/40">
+                    <div className="p-4 space-y-3.5 bg-[#ffffff]">
                       {domainDef.signaling_questions.map((sq) => {
                         const sa = dj.signaling_answers.find((a) => a.question_key === sq.key);
                         if (!sa) return null;
@@ -843,44 +843,44 @@ export function RobAssessmentPage() {
                               findQuoteInPdf(sa.question_key);
                             }}
                             className={cn(
-                              "rounded-2xl border transition-all cursor-pointer duration-200",
+                              "rounded-xl border transition-all cursor-pointer duration-200",
                               isTransitioning
-                                ? "bg-[#7C4B73]/10 border-2 border-[#7C4B73] shadow-lg ring-4 ring-[#7C4B73]/30 scale-[1.005]"
+                                ? "bg-[#eee7ec] border-2 border-[#814d75] shadow-lg ring-2 ring-[#814d75]/30 scale-[1.005]"
                                 : isSelected
                                 ? isFlagged
-                                  ? "bg-white border-2 border-[#E78429] shadow-lg ring-4 ring-[#E78429]/30"
-                                  : "bg-white border-2 border-[#381A61] shadow-lg ring-4 ring-[#F9D14A]/60"
+                                  ? "bg-white border-2 border-[#7c5800] shadow-md ring-2 ring-[#ffdea6]"
+                                  : "bg-white border-2 border-[#3a0f34] shadow-md ring-2 ring-[#814d75]/30"
                                 : isFlagged
-                                ? "bg-white/95 border border-[#E78429]/40 hover:border-[#E78429] shadow-xs"
-                                : "bg-white/90 border border-[#381A61]/10 hover:border-[#7C4B73]/40 shadow-2xs"
+                                ? "bg-[#ffffff] border border-[#7c5800]/40 hover:border-[#7c5800] shadow-xs"
+                                : "bg-[#ffffff] border border-[#d2c2cb] hover:border-[#814d75] shadow-2xs"
                             )}
                           >
                             {/* Card Header */}
                             <div className={`p-3 border-b flex items-center justify-between transition-colors ${
                               isFlagged && !isVerified
-                                ? "bg-[#E78429]/10 border-[#E78429]/25"
-                                : "border-[#381A61]/10 bg-[#FAF9F3]"
+                                ? "bg-[#fff9f0] border-[#d2c2cb]"
+                                : "border-[#d2c2cb] bg-[#fbf9f4]"
                             }`}>
                               <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-mono text-[#7C4B73] font-bold">
+                                <span className="text-[11px] font-mono text-[#814d75] font-bold">
                                   {sq.key.toUpperCase()}
                                 </span>
-                                <span className="font-serif font-bold text-[#381A61] text-xs sm:text-sm">
+                                <span className="font-serif font-bold text-[#3a0f34] text-xs sm:text-sm">
                                   {sq.text}
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-2 shrink-0">
                                 {isVerified ? (
-                                  <span className="text-[10px] font-bold text-[#7C4B73] bg-[#7C4B73]/15 border border-[#7C4B73]/30 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-                                    <Check className="h-3 w-3 text-[#7C4B73]" /> Verified by Human
+                                  <span className="text-[10px] font-bold text-[#2d6a4f] bg-[#2d6a4f]/10 border border-[#2d6a4f]/20 px-2.5 py-0.5 rounded-full flex items-center gap-1 font-sans shadow-2xs">
+                                    <Check className="h-3 w-3 text-[#2d6a4f]" /> Verified by Human
                                   </span>
                                 ) : isFlagged ? (
-                                  <span className="text-[10px] font-bold text-[#E78429] bg-[#E78429]/15 border border-[#E78429]/35 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-                                    <AlertTriangle className="h-3 w-3 text-[#E78429]" /> Needs Review
+                                  <span className="text-[10px] font-bold text-[#7c5800] bg-[#ffdea6] border border-[#d2c2cb] px-2.5 py-0.5 rounded-full flex items-center gap-1 font-sans shadow-2xs">
+                                    <AlertTriangle className="h-3 w-3 text-[#7c5800]" /> Needs Review
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-semibold text-[#6B665E] bg-[#88A0DC]/10 border border-[#88A0DC]/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <span className="text-[10px] font-semibold text-[#62535d] bg-[#eee7ec] border border-[#d2c2cb] px-2 py-0.5 rounded-full flex items-center gap-1 font-sans">
                                     Assisted by Co-Scientist
                                   </span>
                                 )}
@@ -888,10 +888,10 @@ export function RobAssessmentPage() {
                                 {sa.ai_confidence && (
                                   <span
                                     className={cn(
-                                      "text-[10px] font-mono px-2 py-0.5 rounded-md font-bold",
+                                      "text-[10px] font-mono px-2 py-0.5 rounded-md font-bold border",
                                       isFlagged
-                                        ? "text-[#E78429] bg-[#E78429]/15 border border-[#E78429]/35"
-                                        : "text-[#381A61] bg-[#F9D14A]/30 border border-[#F9D14A]"
+                                        ? "text-[#7c5800] bg-[#ffdea6] border-[#d2c2cb]"
+                                        : "text-[#3a0f34] bg-[#eee7ec] border-[#d2c2cb]"
                                     )}
                                   >
                                     {confPercent}% Conf
@@ -900,31 +900,31 @@ export function RobAssessmentPage() {
                               </div>
                             </div>
 
-                            {/* Card Body: Recorded Answer Banner & Track Changes Diff */}
+                            {/* Card Body: Recorded Answer Display & Track Changes Diff */}
                             <div className="p-3.5 space-y-2.5">
                               {/* Prominent Recorded Answer Display */}
-                              <div className="bg-[#FAF9F3] border border-[#381A61]/10 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                              <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg p-2.5 flex items-center justify-between text-xs">
                                 <div className="flex items-center gap-2 min-w-0">
-                                  <CheckCircle className="h-4 w-4 text-[#7C4B73] shrink-0" />
-                                  <span className="font-semibold text-[#381A61]">
+                                  <CheckCircle className="h-4 w-4 text-[#814d75] shrink-0" />
+                                  <span className="font-semibold text-[#3a0f34] font-sans">
                                     Recorded Answer:
                                   </span>
-                                  <span className="font-mono font-bold text-[#381A61] bg-white px-2.5 py-0.5 rounded-md border border-[#7C4B73]/30 shadow-2xs">
+                                  <span className="font-mono font-bold text-[#3a0f34] bg-white px-2.5 py-0.5 rounded-md border border-[#d2c2cb] shadow-2xs">
                                     {formatAnswer(sa.answer || sa.ai_answer || "Not Answered")}
                                   </span>
                                 </div>
-                                <span className="text-[10px] text-[#7C4B73] font-serif italic shrink-0">
+                                <span className="text-[10px] text-[#814d75] font-serif italic shrink-0">
                                   {isVerified ? "Human Verified ✓" : "Auto-Recorded (Pending Verification)"}
                                 </span>
                               </div>
 
                               {/* Supporting Verbatim Source Quote Highlight */}
                               {sa.ai_quote && (
-                                <div className="text-xs text-[#381A61] bg-[#F9D14A]/15 p-2.5 rounded-r-xl border-l-3 border-[#E78429] border-y border-r border-[#E78429]/20 italic flex items-start gap-2 font-serif">
-                                  <QuoteIcon className="h-3.5 w-3.5 text-[#E78429] shrink-0 mt-0.5" />
+                                <div className="text-xs text-[#4f444b] bg-[#fbf9f4] p-2.5 rounded-r-lg border-l-4 border-[#7c5800] border-y border-r border-[#d2c2cb] italic flex items-start gap-2 font-serif">
+                                  <QuoteIcon className="h-3.5 w-3.5 text-[#7c5800] shrink-0 mt-0.5" />
                                   <span className="flex-1 leading-relaxed">"{sa.ai_quote}"</span>
                                   {sa.ai_page && (
-                                    <span className="text-[10px] font-mono text-[#7C4B73] font-bold shrink-0 ml-1">
+                                    <span className="text-[10px] font-mono text-[#814d75] font-bold shrink-0 ml-1">
                                       P.{sa.ai_page}
                                     </span>
                                   )}
@@ -933,8 +933,8 @@ export function RobAssessmentPage() {
 
                               {/* Inline Modification Controls */}
                               {editingAnswerId === sa.answer_id && (
-                                <div className="p-3 bg-[#88A0DC]/10 border border-[#88A0DC]/35 rounded-xl space-y-2">
-                                  <label className="text-xs font-bold text-[#381A61]">
+                                <div className="p-3 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg space-y-2">
+                                  <label className="text-xs font-bold text-[#3a0f34] font-sans">
                                     Select Ground-Truth Answer:
                                   </label>
                                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -944,10 +944,10 @@ export function RobAssessmentPage() {
                                         type="button"
                                         onClick={() => setEditDraftAnswer(opt)}
                                         className={cn(
-                                          "text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors",
+                                          "text-xs px-2.5 py-1 rounded-lg border font-medium font-sans transition-colors",
                                           editDraftAnswer === opt
-                                            ? "bg-[#381A61] text-white border-[#381A61] font-bold"
-                                            : "bg-white text-[#381A61] border-[#88A0DC]/40 hover:bg-[#88A0DC]/25"
+                                            ? "bg-[#3a0f34] text-[#fbf9f4] border-[#3a0f34] font-bold"
+                                            : "bg-white text-[#3a0f34] border-[#d2c2cb] hover:bg-[#eee7ec]"
                                         )}
                                       >
                                         {formatAnswer(opt)}
@@ -958,16 +958,16 @@ export function RobAssessmentPage() {
                                     <button
                                       type="button"
                                       onClick={() => setEditingAnswerId(null)}
-                                      className="px-3 py-1 text-xs text-[#6B665E] hover:bg-black/5 rounded-lg"
+                                      className="px-3 py-1 text-xs text-[#62535d] hover:bg-[#eee7ec] rounded-lg font-sans"
                                     >
                                       Cancel
                                     </button>
                                     <button
                                       type="button"
                                       onClick={() => handleDecision(sa, "modified", editDraftAnswer)}
-                                      className="px-4 py-1 text-xs font-bold text-white bg-[#381A61] hover:bg-[#4E2487] rounded-xl shadow-xs flex items-center gap-1"
+                                      className="px-4 py-1 text-xs font-bold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded-lg shadow-xs flex items-center gap-1 font-sans"
                                     >
-                                      <Check className="h-3.5 w-3.5 text-[#F9D14A]" /> Save & Next
+                                      <Check className="h-3.5 w-3.5 text-[#ffdea6]" /> Save & Next
                                     </button>
                                   </div>
                                 </div>
@@ -975,7 +975,7 @@ export function RobAssessmentPage() {
 
                               {/* Word Track Changes Action Bar (when selected) */}
                               {isSelected && editingAnswerId !== sa.answer_id && (
-                                <div className="pt-2 flex items-center justify-between border-t border-[#381A61]/10 flex-wrap gap-2">
+                                <div className="pt-2 flex items-center justify-between border-t border-[#d2c2cb] flex-wrap gap-2">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     {/* Accept Button */}
                                     <button
@@ -983,11 +983,11 @@ export function RobAssessmentPage() {
                                         e.stopPropagation();
                                         handleDecision(sa, "accepted");
                                       }}
-                                      className="px-3.5 py-1.5 text-xs font-bold text-white bg-[#381A61] hover:bg-[#4E2487] rounded-xl shadow-xs flex items-center gap-1.5 transition-all active:scale-95"
+                                      className="px-3.5 py-1.5 text-xs font-bold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded-lg shadow-xs flex items-center gap-1.5 transition-all active:scale-95 font-sans"
                                       title="Accept and verify this answer (Hotkey: A or Enter)"
                                     >
-                                      <Check className="h-3.5 w-3.5 text-[#F9D14A]" />
-                                      <span>Accept <span className="text-[10px] text-[#F9D14A] font-mono">(A)</span></span>
+                                      <Check className="h-3.5 w-3.5 text-[#ffdea6]" />
+                                      <span>Accept <span className="text-[10px] text-[#ffdea6] font-mono">(A)</span></span>
                                     </button>
 
                                     {/* Modify Button */}
@@ -997,10 +997,10 @@ export function RobAssessmentPage() {
                                         setEditingAnswerId(sa.answer_id);
                                         setEditDraftAnswer(sa.answer || sa.ai_answer || "");
                                       }}
-                                      className="px-3 py-1.5 text-xs font-bold text-[#7C4B73] bg-[#7C4B73]/10 hover:bg-[#7C4B73]/20 border border-[#7C4B73]/30 active:scale-95 rounded-xl flex items-center gap-1.5 transition-all"
+                                      className="px-3 py-1.5 text-xs font-bold text-[#3a0f34] bg-[#ffffff] hover:bg-[#eee7ec] border border-[#d2c2cb] active:scale-95 rounded-lg flex items-center gap-1.5 transition-all font-sans"
                                       title="Modify Value (Hotkey: M)"
                                     >
-                                      <Edit3 className="h-3 w-3 text-[#7C4B73]" />
+                                      <Edit3 className="h-3 w-3 text-[#814d75]" />
                                       <span>Modify <span className="text-[10px] font-mono">(M)</span></span>
                                     </button>
 
@@ -1010,10 +1010,10 @@ export function RobAssessmentPage() {
                                         e.stopPropagation();
                                         handleDecision(sa, "rejected");
                                       }}
-                                      className="px-3.5 py-1.5 text-xs font-bold text-[#AB3329] bg-[#AB3329]/10 hover:bg-[#AB3329]/20 border border-[#AB3329]/30 active:scale-95 rounded-xl flex items-center gap-1.5 transition-all"
+                                      className="px-3.5 py-1.5 text-xs font-bold text-[#a42b2b] bg-[#fff2f2] hover:bg-[#ffe5e5] border border-[#d2c2cb] active:scale-95 rounded-lg flex items-center gap-1.5 transition-all font-sans"
                                       title="Reject / Mark No Information (Hotkey: R)"
                                     >
-                                      <X className="h-3 w-3 text-[#AB3329]" />
+                                      <X className="h-3 w-3 text-[#a42b2b]" />
                                       <span>Reject (NR) <span className="text-[10px] font-mono">(R)</span></span>
                                     </button>
                                   </div>
@@ -1024,12 +1024,12 @@ export function RobAssessmentPage() {
                                       e.stopPropagation();
                                       findQuoteInPdf(sa.question_key);
                                     }}
-                                    className="text-xs font-bold text-[#381A61] hover:text-[#381A61] bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 border border-[#88A0DC]/40 flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
+                                    className="text-xs font-bold text-[#3a0f34] hover:text-[#1a0017] bg-[#ffffff] hover:bg-[#eee7ec] border border-[#d2c2cb] flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all shadow-xs active:scale-95 cursor-pointer font-sans"
                                     title="Scroll and flash quote highlight in PDF (Hotkey: F or Q)"
                                   >
-                                    <Eye className="h-3.5 w-3.5 text-[#381A61]" />
+                                    <Eye className="h-3.5 w-3.5 text-[#814d75]" />
                                     <span>Find Quote</span>
-                                    <kbd className="text-[10px] bg-white border border-[#88A0DC]/60 text-[#381A61] px-1 py-0.2 rounded font-mono font-bold">F</kbd>
+                                    <kbd className="text-[10px] bg-[#fbf9f4] border border-[#d2c2cb] text-[#3a0f34] px-1 py-0.2 rounded font-mono font-bold">F</kbd>
                                   </button>
                                 </div>
                               )}
@@ -1041,11 +1041,11 @@ export function RobAssessmentPage() {
                       {/* Domain Support Text */}
                       {!isReviewMode && (
                         <div className="pt-2">
-                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                          <label className="block text-xs font-medium text-[#62535d] mb-1 font-sans">
                             Domain Support & Justification
                           </label>
                           <textarea
-                            className="input text-xs min-h-[50px] w-full bg-white"
+                            className="input text-xs min-h-[50px] w-full bg-[#fbf9f4] border border-[#d2c2cb] text-[#4f444b] rounded-lg p-2 font-sans"
                             defaultValue={dj.support_text}
                             placeholder="Notes supporting this domain judgment..."
                             onBlur={(e) => {
@@ -1068,17 +1068,17 @@ export function RobAssessmentPage() {
           </div>
 
           {/* Bottom Keyboard Shortcut Legend */}
-          <div className="bg-[#FAF9F3] border-t border-[#381A61]/10 px-4 py-2 shrink-0 flex items-center justify-between text-[11px] text-[#381A61]">
-            <span className="font-semibold text-[#381A61] flex items-center gap-1">
-              <Zap className="h-3.5 w-3.5 text-[#E78429]" /> RoB Hotkeys:
+          <div className="bg-[#ffffff] border-t border-[#d2c2cb] px-4 py-2 shrink-0 flex items-center justify-between text-[11px] text-[#3a0f34] font-sans">
+            <span className="font-semibold text-[#3a0f34] flex items-center gap-1">
+              <Zap className="h-3.5 w-3.5 text-[#7c5800]" /> RoB Hotkeys:
             </span>
             <div className="flex items-center gap-3">
-              <span><kbd className="px-1.5 py-0.5 bg-[#381A61] text-[#F9D14A] rounded font-mono text-[10px] font-bold">A</kbd> or <kbd className="px-1.5 py-0.5 bg-white border border-[#381A61]/15 rounded font-mono text-[10px]">Enter</kbd> Accept</span>
-              <span><kbd className="px-1.5 py-0.5 bg-white border border-[#7C4B73]/30 text-[#7C4B73] rounded font-mono text-[10px] font-bold">M</kbd> Modify</span>
-              <span><kbd className="px-1.5 py-0.5 bg-[#AB3329]/15 border border-[#AB3329]/30 text-[#AB3329] rounded font-mono text-[10px] font-bold">R</kbd> Reject</span>
-              <span><kbd className="px-1.5 py-0.5 bg-[#88A0DC]/30 border border-[#88A0DC]/60 text-[#381A61] rounded font-mono text-[10px] font-bold">F</kbd> Find Quote</span>
-              <span><kbd className="px-1.5 py-0.5 bg-[#E78429]/20 border border-[#E78429]/40 text-[#E78429] rounded font-mono text-[10px] font-bold">Z</kbd> Undo</span>
-              <span><kbd className="px-1.5 py-0.5 bg-white border border-[#381A61]/15 text-[#381A61] rounded font-mono text-[10px]">↓</kbd> / <kbd className="px-1.5 py-0.5 bg-white border border-[#381A61]/15 text-[#381A61] rounded font-mono text-[10px]">↑</kbd> Navigate</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[#3a0f34] text-[#ffdea6] rounded font-mono text-[10px] font-bold">A</kbd> or <kbd className="px-1.5 py-0.5 bg-white border border-[#d2c2cb] rounded font-mono text-[10px]">Enter</kbd> Accept</span>
+              <span><kbd className="px-1.5 py-0.5 bg-white border border-[#d2c2cb] text-[#3a0f34] rounded font-mono text-[10px] font-bold">M</kbd> Modify</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[#fff2f2] border border-[#d2c2cb] text-[#a42b2b] rounded font-mono text-[10px] font-bold">R</kbd> Reject</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[#eee7ec] border border-[#d2c2cb] text-[#3a0f34] rounded font-mono text-[10px] font-bold">F</kbd> Find Quote</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[#ffdea6] border border-[#d2c2cb] text-[#3a0f34] rounded font-mono text-[10px] font-bold">Z</kbd> Undo</span>
+              <span><kbd className="px-1.5 py-0.5 bg-white border border-[#d2c2cb] text-[#3a0f34] rounded font-mono text-[10px]">↓</kbd> / <kbd className="px-1.5 py-0.5 bg-white border border-[#d2c2cb] text-[#3a0f34] rounded font-mono text-[10px]">↑</kbd> Navigate</span>
             </div>
           </div>
         </section>
@@ -1086,21 +1086,21 @@ export function RobAssessmentPage() {
 
       {/* Tool Switcher Modal */}
       {showToolModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-black/10">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a0017]/40 backdrop-blur-xs">
+          <div className="bg-[#ffffff] rounded-xl p-6 max-w-md w-full shadow-2xl border border-[#d2c2cb]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-serif font-bold text-base text-[#141413]">
+              <h3 className="font-serif font-bold text-base text-[#3a0f34]">
                 Switch Assessment Tool
               </h3>
               <button
                 onClick={() => setShowToolModal(false)}
-                className="p-1 rounded-full text-gray-400 hover:text-gray-700"
+                className="p-1 rounded-full text-[#81737b] hover:text-[#3a0f34]"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <p className="text-xs text-gray-600 mb-4 leading-relaxed">
+            <p className="text-xs text-[#62535d] mb-4 leading-relaxed font-sans">
               Select an alternative Risk of Bias tool. Changing the tool will reset signaling questions
               and recompute domain judgments according to the new instrument.
             </p>
@@ -1112,10 +1112,10 @@ export function RobAssessmentPage() {
                   <label
                     key={t.key}
                     className={cn(
-                      "flex items-start gap-3 p-3 rounded-xl border text-xs cursor-pointer transition-all",
+                      "flex items-start gap-3 p-3 rounded-lg border text-xs cursor-pointer transition-all font-sans",
                       isSelected
-                        ? "bg-purple-50/80 border-purple-500 text-purple-950 font-medium"
-                        : "bg-white border-black/10 hover:border-black/20 text-[#141413]"
+                        ? "bg-[#fbf9f4] border-[#3a0f34] text-[#3a0f34] font-medium"
+                        : "bg-white border-[#d2c2cb] hover:border-[#814d75] text-[#4f444b]"
                     )}
                   >
                     <input
@@ -1124,11 +1124,11 @@ export function RobAssessmentPage() {
                       value={t.key}
                       checked={isSelected}
                       onChange={() => setSelectedNewTool(t.key)}
-                      className="mt-0.5 text-purple-600 focus:ring-purple-500"
+                      className="mt-0.5 text-[#3a0f34] focus:ring-[#814d75] accent-[#3a0f34]"
                     />
                     <div>
-                      <div className="font-semibold text-xs">{t.name}</div>
-                      <div className="text-[11px] text-[#6B665E]">{t.full_name}</div>
+                      <div className="font-semibold text-xs text-[#3a0f34]">{t.name}</div>
+                      <div className="text-[11px] text-[#62535d]">{t.full_name}</div>
                     </div>
                   </label>
                 );

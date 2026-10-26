@@ -147,7 +147,7 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
     >
       <div className="cs-rows border-b border-[var(--cs-line)]">
         {/* Column Headers for Map and Forest Plot */}
-        <div className="cs-row bg-[var(--cs-panel)] border-b border-[var(--cs-line)] text-[11px] font-bold uppercase tracking-wider text-[#6B665E] dark:text-[#968F84] max-lg:hidden">
+        <div className="cs-row bg-[var(--cs-panel)] border-b border-[var(--cs-line)] text-[11px] font-bold uppercase tracking-wider text-[#62535d] dark:text-[#81737b] max-lg:hidden">
           <div className="lab !py-2.5">
             <span>Study Design Hierarchy</span>
           </div>
@@ -170,7 +170,7 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
             >
               {/* Left Label */}
               <div className="lab">
-                <span className="text-[13.5px] font-semibold text-[#381A61] dark:text-[#FAF9F3] leading-snug">
+                <span className="text-[13.5px] font-semibold text-[#3a0f34] dark:text-[#fbf9f4] leading-snug">
                   {tier?.label || summary.label}
                 </span>
                 <span className="cs-mono text-[11.5px] cs-muted">
@@ -331,7 +331,7 @@ interface DotSymbolProps {
   r: number;
 }
 
-const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, r }) => {
+const DotSymbol: React.FC<DotSymbolProps> = React.memo(({ category, direct, strength, r }) => {
   const opacity =
     category === "supports" || category === "contradicts" || category === "mixed"
       ? 0.45 + 0.55 * Math.min(1, Math.max(0, (strength - 0.6) / 0.4))
@@ -414,10 +414,10 @@ const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, r }) 
       strokeWidth={2}
     />
   );
-};
+});
 
 // Row verdict & Wilson score interval summary
-const RowSummary: React.FC<{ summary: TierSummary }> = ({ summary }) => {
+const RowSummary: React.FC<{ summary: TierSummary }> = React.memo(({ summary }) => {
   const { supports, mixed, contradicts } = summary.counts;
 
   if (!summary.papers.length) {
@@ -521,7 +521,7 @@ const RowSummary: React.FC<{ summary: TierSummary }> = ({ summary }) => {
       </p>
     </>
   );
-};
+});
 
 // Hover tooltip box
 interface TooltipProps {
@@ -583,14 +583,14 @@ const Tooltip: React.FC<TooltipProps> = ({ paper, left, top, width }) => {
       </p>
 
       {paper.finding && (
-        <p className="mt-1.5 text-[12px] cs-soft italic line-clamp-2 border-l-2 border-[#381A61] dark:border-[#F9D14A] pl-2">
+        <p className="mt-1.5 text-[12px] cs-soft italic line-clamp-2 border-l-2 border-[#3a0f34] dark:border-[#ffdea6] pl-2">
           "{paper.finding}"
         </p>
       )}
 
       <div className="mt-2 text-[11px] cs-muted flex items-center justify-between">
         <span>{paper.direct ? "Direct evidence" : "Indirect model/proxy"}</span>
-        <span className="text-[#381A61] dark:text-[#F9D14A] font-bold">Click to inspect</span>
+        <span className="text-[#3a0f34] dark:text-[#ffdea6] font-bold">Click to inspect</span>
       </div>
     </div>
   );
