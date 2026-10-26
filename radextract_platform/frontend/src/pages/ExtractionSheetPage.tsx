@@ -798,6 +798,9 @@ export function ExtractionSheetPage() {
           {/* Excel Exports Dropdown / Actions */}
           <a
             href={api.exportTemplateUrl ? api.exportTemplateUrl(projectId || "demo") : "#"}
+            onClick={(e) => {
+              if (!api.exportTemplateUrl) e.preventDefault();
+            }}
             download
             className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#ffffff]/10 hover:bg-[#ffffff]/20 text-[#fbf9f4] border border-[#ffffff]/20 transition-all flex items-center gap-1.5 shadow-2xs"
             title="Download blank extraction template (.xlsx) with exact saved column sequence"
@@ -807,6 +810,9 @@ export function ExtractionSheetPage() {
 
           <a
             href={api.exportProjectXlsxUrl ? api.exportProjectXlsxUrl(projectId || "demo") : "#"}
+            onClick={(e) => {
+              if (!api.exportProjectXlsxUrl) e.preventDefault();
+            }}
             download
             className="px-3 py-1.5 text-xs font-['Work_Sans'] font-bold rounded-lg bg-[#814d75] hover:bg-[#814d75]/90 text-[#fbf9f4] border border-[#d2c2cb]/40 transition-all flex items-center gap-1.5 shadow-xs"
             title="Download completed extraction results workbook (.xlsx) with linked Evidence sheet"

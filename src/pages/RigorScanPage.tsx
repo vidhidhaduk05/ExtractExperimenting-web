@@ -170,7 +170,9 @@ export const RigorScanPage: React.FC = () => {
   };
 
   const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href);
+    try {
+      navigator.clipboard?.writeText(window.location.href)?.catch(() => {});
+    } catch (_) {}
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
