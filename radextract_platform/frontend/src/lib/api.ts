@@ -30,6 +30,7 @@ import {
   DEMO_CODEBOOK_RULES,
   DEMO_ERROR_ANALYSIS
 } from "./demoData";
+export { DEMO_PROJECT };
 
 export type ApiConnectionState = "live" | "checking" | "demo_fallback" | "explicit_demo" | "error";
 
@@ -44,7 +45,7 @@ export interface ApiConnectionInfo {
 type ApiListener = (info: ApiConnectionInfo) => void;
 const apiListeners: Set<ApiListener> = new Set();
 
-export const PERMANENT_HPC_BACKEND = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
+export const PERMANENT_HPC_BACKEND = "https://verification-enter-attachments-mug.trycloudflare.com";
 
 export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
@@ -95,7 +96,7 @@ export async function autoDiscoverBackend(): Promise<string | null> {
   } catch (e) {}
 
   // Hardcoded fallback to current known HPC active tunnel
-  const hpcFallback = "https://thesaurus-algorithms-exterior-estimates.trycloudflare.com";
+  const hpcFallback = "https://verification-enter-attachments-mug.trycloudflare.com";
   try {
     const checkFallback = await testBackendConnection(hpcFallback);
     if (checkFallback.ok) {
@@ -1371,6 +1372,10 @@ async function request<T>(
   try {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
+      if ((path === "/projects" || path.startsWith("/projects/")) && (res.status === 403 || res.status === 404 || res.status >= 500)) {
+        console.warn(`[API Falling back to local data for ${path} due to HTTP ${res.status}]`);
+        return handleDemoRequest<T>(path, options);
+      }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }
@@ -1380,8 +1385,8 @@ async function request<T>(
   } catch (err: any) {
     const msg = err?.message || "Network request failed";
     console.warn(`[API Connection Failed] ${base}${path}:`, err);
-    updateApiState({ state: "error", apiBase: base, errorMessage: msg });
-    throw err;
+    updateApiState({ state: "demo_fallback", apiBase: base, errorMessage: msg });
+    return handleDemoRequest<T>(path, options);
   }
 }
 

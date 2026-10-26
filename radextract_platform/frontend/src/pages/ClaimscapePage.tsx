@@ -93,8 +93,6 @@ export const ClaimscapePage: React.FC = () => {
   const [period, setPeriod] = useState<string>("");
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [includeCommentary, setIncludeCommentary] = useState<boolean>(false);
-  const [directOnly, setDirectOnly] = useState<boolean>(false);
-  const [showReviews, setShowReviews] = useState<boolean>(true);
   const [selectedExample, setSelectedExample] = useState<string>("hrt");
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
@@ -164,8 +162,10 @@ export const ClaimscapePage: React.FC = () => {
   // Selected paper in inspector (default to landmark WHI trial)
   const [selectedPmid, setSelectedPmid] = useState<string>("12117397");
 
-  // Active Specialist Lens & LAYA Flaw Alert Filter
-  const [activeLens, setActiveLens] = useState<string>("all");
+  // Active Evidence Lens: "all" | "direct" | "reviews"
+  const [evidenceLens, setEvidenceLens] = useState<"all" | "direct" | "reviews">("all");
+  const isDirectOnly = evidenceLens === "direct";
+  const isReviewsOnly = evidenceLens === "reviews";
 
   // Map judgments by PMID
   const judgmentMap = useMemo(() => {
@@ -192,8 +192,8 @@ export const ClaimscapePage: React.FC = () => {
 
   // Compute tier summaries and metrics
   const summaries = useMemo(() => {
-    return computeTierSummaries(processedPapers, directOnly);
-  }, [processedPapers, directOnly]);
+    return computeTierSummaries(processedPapers, isDirectOnly);
+  }, [processedPapers, isDirectOnly]);
 
   // Dynamic Headline synthesis
   const headlineData = useMemo(() => {
@@ -208,7 +208,12 @@ export const ClaimscapePage: React.FC = () => {
   // Key KPI stats
   const stats = useMemo(() => {
     const onTopicList = processedPapers.filter((p) => p.onTopic);
-    const mappedList = onTopicList.filter((p) => p.tier && (!directOnly || p.direct));
+    const mappedList = onTopicList.filter((p) => {
+      if (!p.tier) return false;
+      if (isReviewsOnly) return p.tier === "review";
+      if (isDirectOnly) return p.direct && p.tier !== "review";
+      return true;
+    });
     const withVerdictList = mappedList.filter(
       (p) => p.tier && TIER_BY_ID[p.tier]?.counted && (p.category === "supports" || p.category === "contradicts" || p.category === "mixed")
     );
@@ -220,12 +225,17 @@ export const ClaimscapePage: React.FC = () => {
       onMap: mappedList.length,
       withVerdict: withVerdictList.length
     };
-  }, [processedPapers, paperCount, directOnly, dataset.total]);
+  }, [processedPapers, paperCount, isDirectOnly, isReviewsOnly, dataset.total]);
 
   // Filtered papers for bottom data table
   const filteredTablePapers = useMemo(() => {
     return processedPapers
-      .filter((p) => p.onTopic && p.tier && (!directOnly || p.direct))
+      .filter((p) => {
+        if (!p.onTopic || !p.tier) return false;
+        if (isReviewsOnly) return p.tier === "review";
+        if (isDirectOnly) return p.direct && p.tier !== "review";
+        return true;
+      })
       .filter((p) => {
         if (!tableSearch.trim()) return true;
         const q = tableSearch.toLowerCase();
@@ -236,7 +246,7 @@ export const ClaimscapePage: React.FC = () => {
           (p.finding && p.finding.toLowerCase().includes(q))
         );
       });
-  }, [processedPapers, directOnly, tableSearch]);
+  }, [processedPapers, isDirectOnly, isReviewsOnly, tableSearch]);
 
   const scrollToMap = () => {
     setTimeout(() => {
@@ -640,90 +650,54 @@ export const ClaimscapePage: React.FC = () => {
               <dd className="text-[11px] text-[#72636d] font-['Work_Sans']">sorted by study type</dd>
             </div>
             <div className="grid gap-0.5 px-4 py-3.5 border-l border-[#d2c2cb]">
-              <dt className="text-[11px] uppercase tracking-wider text-[#72636d] font-bold font-['Work_Sans']">With a verdict</dt>
+              <dt className="text-[11px] uppercase tracking-wider text-[#72636d] font-bold font-['Work_Sans']">Analyzed</dt>
               <dd className="text-[26px] font-['Bodoni_Moda'] font-normal tracking-tight text-[#3a0f34]">{stats.withVerdict}</dd>
-              <dd className="text-[11px] text-[#72636d] font-['Work_Sans']">counted in Wilson CI</dd>
+              <dd className="text-[11px] text-[#72636d] font-['Work_Sans']">evidence synthesis</dd>
             </div>
           </dl>
 
           {/* Section 3: Interactive SVG Scatter Map */}
           <div ref={mapSectionRef} id="claimscape-map-section" className="cs-card overflow-hidden shadow-sm scroll-mt-6 border border-[#d2c2cb]">
             {/* Map Header Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-[#d2c2cb] px-5 py-3 bg-[#f0eee9]">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-['Work_Sans'] text-xs">
-                <label className="cs-toggle flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={directOnly}
-                    onChange={(e) => setDirectOnly(e.target.checked)}
-                    className="rounded-none border-[#d2c2cb] text-[#3a0f34]"
-                  />
-                  <span className="font-medium text-[#3a0f34]">Direct evidence only</span>
-                </label>
-
-                <label className="cs-toggle flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showReviews}
-                    onChange={(e) => setShowReviews(e.target.checked)}
-                    className="rounded-none border-[#d2c2cb] text-[#3a0f34]"
-                  />
-                  <span className="font-medium text-[#3a0f34]">Show reviews & commentary</span>
-                </label>
-
-                {/* Clinical Specialist Lens & LAYA Flaw Filter */}
-                <div className="flex items-center gap-1 bg-[#e4dfd8] px-1.5 py-0.5 rounded border border-[#d2c2cb] ml-2">
-                  <span className="text-[10px] font-bold text-[#3a0f34] uppercase tracking-wider pr-1">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-[#d2c2cb] px-5 py-3 bg-[#fbf9f4]">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-['Work_Sans'] text-xs">
+                {/* Evidence Lens Selector */}
+                <div className="flex items-center gap-1 bg-[#ffffff] p-1 rounded-md border border-[#d2c2cb] shadow-2xs">
+                  <span className="text-[11px] font-bold text-[#3a0f34] uppercase tracking-wider px-2">
                     ⚡ Lens:
                   </span>
                   <button
                     type="button"
-                    onClick={() => setActiveLens("all")}
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                      activeLens === "all" ? "bg-[#3a0f34] text-white shadow-xs" : "text-[#5e5359] hover:text-[#3a0f34]"
+                    onClick={() => setEvidenceLens("all")}
+                    className={`px-3 py-1 rounded text-[12px] font-semibold transition-colors ${
+                      evidenceLens === "all"
+                        ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                        : "text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]"
                     }`}
                   >
-                    All
+                    All Evidence
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveLens("flaw_alert")}
-                    title="Highlight studies with methodological design flaws flagged by LAYA"
-                    className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors flex items-center gap-1 ${
-                      activeLens === "flaw_alert" ? "bg-amber-600 text-white shadow-xs" : "text-amber-800 hover:bg-amber-100"
+                    onClick={() => setEvidenceLens("direct")}
+                    className={`px-3 py-1 rounded text-[12px] font-semibold transition-colors ${
+                      evidenceLens === "direct"
+                        ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                        : "text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]"
                     }`}
                   >
-                    <span>⚠️ Flaws ({processedPapers.filter((p) => p.hasFlawWarning || (p.layaFlawProb ?? 0) >= 0.40).length})</span>
+                    Direct Evidence Only
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveLens("interventional")}
-                    title="Neurointerventionalist: Recanalization & Device Performance"
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                      activeLens === "interventional" ? "bg-purple-900 text-white shadow-xs" : "text-[#5e5359] hover:text-[#3a0f34]"
+                    onClick={() => setEvidenceLens("reviews")}
+                    className={`px-3 py-1 rounded text-[12px] font-semibold transition-colors ${
+                      evidenceLens === "reviews"
+                        ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                        : "text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]"
                     }`}
                   >
-                    🧠 Interventional
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLens("stroke_neurology")}
-                    title="Stroke Neurologist: Clinical Independence & Safety"
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                      activeLens === "stroke_neurology" ? "bg-blue-900 text-white shadow-xs" : "text-[#5e5359] hover:text-[#3a0f34]"
-                    }`}
-                  >
-                    🩺 Neurology
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLens("biostatistics")}
-                    title="Trial Biostatistician: Risk of Bias & Endpoint Validity"
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                      activeLens === "biostatistics" ? "bg-emerald-900 text-white shadow-xs" : "text-[#5e5359] hover:text-[#3a0f34]"
-                    }`}
-                  >
-                    📐 Biostat
+                    Reviews & Commentary
                   </button>
                 </div>
               </div>
@@ -738,8 +712,7 @@ export const ClaimscapePage: React.FC = () => {
               summaries={summaries}
               selectedPmid={selectedPmid}
               onSelectPaper={(pmid) => setSelectedPmid(pmid)}
-              showReviews={showReviews}
-              activeLens={activeLens}
+              evidenceLens={evidenceLens}
             />
 
             {/* Legend Bar */}

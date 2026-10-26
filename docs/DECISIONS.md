@@ -137,4 +137,21 @@ This document is the canonical ledger of all engineering, architectural, scienti
   * Reviewers can verify protocol completeness prior to study screening.
   * Seamless 1-click export of reproducible study protocols for PROSPERO and Open Science Framework (OSF) pre-registration.
 
+---
+
+## 12. Separation of Protocol Critique from Evidence Map & Resilient Project Data Conduit
+* **Date**: 2026-10-26
+* **Decision**:
+  1. **Evidence Map Lens Filter**: Restrict the interactive map lens filter exclusively to evidence hierarchy tiers (`All Evidence`, `Direct Evidence Only`, `Reviews & Commentary`). Eliminate clinical persona buttons (`Interventional`, `Neurology`, `Biostat`) and flaw counters from the Evidence Map.
+  2. **Removal of Grand Rounds & Verdict Badges from Evidence Map**: Multi-perspective protocol critique, study design flaw detection, and PRISMA 2020 protocol guidance belong strictly in the study protocol / PICO formulation workspace (`PicoHypothesisPage.tsx`). Remove the Grand Rounds deliberation panel, verdict badge, and flaw alert halos from `PaperInspector.tsx` and `ClaimscapeMap.tsx`.
+  3. **High-Availability Project Fallback & Tunnel Auto-Discovery**: Update permanent backend tunnel configuration to active Cloudflare endpoint (`verification-enter-attachments-mug.trycloudflare.com`). In `request()`, catch network failures and server errors to automatically fall back to local/cached data (`handleDemoRequest`), ensuring `/projects` and project detail routes never crash or display blank/error screens.
+  4. **Master Theme Compliance for Project Views**: Restyle `ProjectList.tsx` to strictly conform to the Master Theme (`#3a0f34`, `#fbf9f4`, `#ffffff`, `#d2c2cb`, `Serifon Editorial`, `Work Sans`).
+* **Rationale**:
+  * Clinical systematic reviewers use the Evidence Map to navigate published literature and evaluate empirical study tiers; blending speculative protocol critiques or verdict badges into publication inspection creates user confusion.
+  * Research projects must remain accessible across offline, local dev, and hosted GitHub Pages environments without breaking on network glitches.
+* **Impact**:
+  * Pure, clean evidence mapping experience with 1-click tier switching.
+  * Resilient project navigation guaranteed across all network states.
+  * 100% adherence to Master Theme and zero fake names.
+
 

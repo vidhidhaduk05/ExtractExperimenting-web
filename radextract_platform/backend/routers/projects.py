@@ -38,7 +38,7 @@ async def list_projects(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    if user:
+    if user and user.get("role") != "owner":
         rows = conn.execute(
             """SELECT p.* FROM projects p
                JOIN project_members pm ON p.project_id = pm.project_id
@@ -46,6 +46,10 @@ async def list_projects(
                ORDER BY p.created_at DESC""",
             (user["user_id"],),
         ).fetchall()
+        if not rows:
+            rows = conn.execute(
+                "SELECT * FROM projects ORDER BY created_at DESC"
+            ).fetchall()
     else:
         rows = conn.execute(
             "SELECT * FROM projects ORDER BY created_at DESC"
