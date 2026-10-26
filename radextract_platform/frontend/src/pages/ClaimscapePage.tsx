@@ -272,7 +272,7 @@ export const ClaimscapePage: React.FC = () => {
           return prev + 6;
         }
         if (prev < 70) {
-          setScanStepLabel("Reading abstracts with Laya System-1 ONNX model...");
+          setScanStepLabel("Synthesizing abstracts with Co-Scientist inference engine...");
           return prev + 4;
         }
         if (prev < 92) {
@@ -320,7 +320,7 @@ export const ClaimscapePage: React.FC = () => {
         });
         setSelectedPmid(res.papers[0]?.pmid || "");
         setEvalSpeed(res.elapsed_ms);
-        setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: ${res.engine || "Laya System-1"}`);
+        setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: Co-Scientist Engine`);
         finishScan();
         return;
       }
@@ -328,7 +328,7 @@ export const ClaimscapePage: React.FC = () => {
       // Backend not running on this domain/host, proceed to direct client-side live PubMed
     }
 
-    // Step 2: Query Live PubMed directly via NCBI E-Utilities with Laya System-1 Inference
+    // Step 2: Query Live PubMed directly via NCBI E-Utilities with Co-Scientist Inference
     try {
       const liveRes = await fetchLivePubMedEvidence(activeClaim, activeQuery, paperCount);
       if (Array.isArray(liveRes?.papers) && liveRes.papers.length > 0) {
@@ -340,7 +340,7 @@ export const ClaimscapePage: React.FC = () => {
           judgments: liveRes.judgments,
         });
         setSelectedPmid(liveRes.papers[0]?.pmid || "");
-        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Laya System-1`);
+        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Co-Scientist Engine`);
         finishScan();
         return;
       } else {
@@ -476,7 +476,7 @@ export const ClaimscapePage: React.FC = () => {
               <span className="w-px h-3 bg-[#d2c2cb]"></span>
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
-                Laya Fast Screening
+                Co-Scientist Rapid Screening
               </span>
               <span className="w-px h-3 bg-[#d2c2cb]"></span>
               <span className="flex items-center gap-1.5">
@@ -586,7 +586,7 @@ export const ClaimscapePage: React.FC = () => {
                 <p className="cs-eyebrow text-[#7c5800] font-bold">Synthesized Map Headline</p>
                 {evalSpeed !== null && (
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-[#ffdea6] text-[#7c5800] border border-[#7c5800]/30 inline-flex items-center gap-1 shadow-2xs">
-                    <span>⚡ Laya Fast Pipeline:</span>
+                    <span>⚡ Co-Scientist Rapid Pipeline:</span>
                     <span>{evalSpeed < 10 ? `${evalSpeed.toFixed(1)}ms (Cached)` : `${(evalSpeed / 1000).toFixed(2)}s`}</span>
                   </span>
                 )}

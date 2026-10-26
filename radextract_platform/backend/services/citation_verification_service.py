@@ -53,7 +53,7 @@ def is_valid_doi(doi: str) -> bool:
 
 
 def is_valid_pmid(pmid: str) -> bool:
-    """Validate PubMed ID (numeric 1-9 digits).
+    r"""Validate PubMed ID (numeric 1-9 digits).
 
     Performance note: Replaced regex re.match(r"^\d{1,9}$", clean) with C-level str.isdigit()
     and length bounds (~2.8x speedup).

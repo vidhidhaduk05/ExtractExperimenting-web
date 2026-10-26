@@ -1158,3 +1158,97 @@
   border: 1.5px dashed var(--c);
   border-radius: 6px;
 }
+
+/* ── Border Beam & Breathing Animations ── */
+@keyframes border-beam-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes breathing-pulse {
+  0%, 100% {
+    transform: scale(0.992);
+    opacity: 0.88;
+    filter: drop-shadow(0 0 0px rgba(129, 77, 117, 0));
+  }
+  50% {
+    transform: scale(1.008);
+    opacity: 1;
+    filter: drop-shadow(0 0 16px rgba(129, 77, 117, 0.22));
+  }
+}
+
+@keyframes breathing-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(58, 15, 52, 0.15);
+    opacity: 0.75;
+  }
+  50% {
+    box-shadow: 0 0 18px 4px rgba(129, 77, 117, 0.3);
+    opacity: 1;
+  }
+}
+
+.animate-border-beam {
+  animation: border-beam-spin var(--duration, 8s) linear infinite;
+}
+
+.animate-breathing {
+  animation: breathing-pulse 3.5s ease-in-out infinite;
+}
+
+.breathing-glow {
+  animation: breathing-glow 2.8s ease-in-out infinite;
+}
+
+@keyframes velvetIn {
+  0% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-velvetIn {
+  animation: velvetIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes velvetLanding {
+  0% {
+    transform: translateY(-8px) scale(0.985);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-velvet-landing {
+  animation: velvetLanding 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes rhythmicPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(0.97);
+  }
+}
+
+.animate-rhythmic-pulse {
+  animation: rhythmicPulse 2s ease-in-out infinite;
+}
+
+
+

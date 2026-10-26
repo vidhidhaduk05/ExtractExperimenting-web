@@ -6,9 +6,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/database.py": {
-    "mtime": 1792985225.4841676,
-    "seen": 1792987867.895344,
-    "ast_hash": "39834e6bb8c8fe67816f1318fd615dad",
+    "mtime": 1792991754.7629993,
+    "seen": 1792993147.340508,
+    "ast_hash": "40f2b41568fd8e8d403ca8fd352ddbcb",
     "semantic_hash": ""
   },
   "radextract_platform/backend/dependencies.py": {
@@ -420,10 +420,10 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/chart_engine.py": {
-    "mtime": 1791664521.05644,
-    "seen": 1791664941.925462,
-    "ast_hash": "9c4fa45f10da5bb079c821cd9f225256",
-    "semantic_hash": "9c4fa45f10da5bb079c821cd9f225256"
+    "mtime": 1792996473.660594,
+    "seen": 1792996957.3612514,
+    "ast_hash": "bcf97ff468d29e1fba9952bed4f1c2e1",
+    "semantic_hash": ""
   },
   "radextract_platform/backend/services/citation_service.py": {
     "mtime": 1791664521.0582125,
@@ -780,15 +780,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/layout/AppLayout.tsx": {
-    "mtime": 1792968687.5441403,
-    "seen": 1792969918.2266018,
-    "ast_hash": "d62b32a22fea00c2d4964f3d1e48fcf3",
+    "mtime": 1792994770.874802,
+    "seen": 1792994782.068738,
+    "ast_hash": "7ae2b720331422dc2848d0819a5880fe",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1792985225.5124893,
-    "seen": 1792987868.040884,
-    "ast_hash": "4885a850eb072b7067a85e2f133c9cfc",
+    "mtime": 1793001196.4389665,
+    "seen": 1793001669.3806484,
+    "ast_hash": "78d63e3d4b08f6edb08ca0d2cccda9b4",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -840,15 +840,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PdfViewerPage.tsx": {
-    "mtime": 1792985225.5200217,
-    "seen": 1792987868.053117,
-    "ast_hash": "d49a9a1cc0d4996de2faf80f149878e6",
+    "mtime": 1792994553.4758675,
+    "seen": 1792994782.1053522,
+    "ast_hash": "af4bb517e6c42353c1028ef2c02d8018",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PicoHypothesisPage.tsx": {
-    "mtime": 1792882092.0132568,
-    "seen": 1792886070.1477387,
-    "ast_hash": "1053d8bb9185b0783088db9907e625be",
+    "mtime": 1792994474.656353,
+    "seen": 1792994782.1053522,
+    "ast_hash": "69b38d9d989f021ebc611b790e854faf",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PicoPage.tsx": {
@@ -858,27 +858,27 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PrismaFlowPage.tsx": {
-    "mtime": 1792279735.9429662,
-    "seen": 1792279857.5195663,
-    "ast_hash": "ecba93a39852476ac0940b03c804e425",
+    "mtime": 1793001326.897045,
+    "seen": 1793001669.3938477,
+    "ast_hash": "1c88de9c718c247c9aabaf125f3db267",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ProjectCreate.tsx": {
-    "mtime": 1791664521.6985235,
-    "seen": 1791664941.925462,
-    "ast_hash": "47f9ef3723d5ac837ce6ed2007a6002a",
+    "mtime": 1792994432.8712356,
+    "seen": 1792994782.1053522,
+    "ast_hash": "e5dcb70a6a3202ea0371dcec31ad1658",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ProjectDetail.tsx": {
-    "mtime": 1792950202.2058573,
-    "seen": 1792951085.2436671,
-    "ast_hash": "59507b1c824b8948f8cbb4ddad08a05f",
+    "mtime": 1792994397.2181773,
+    "seen": 1792994782.1053522,
+    "ast_hash": "9840522cba8ae400fc0f79150f58cd4c",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ProjectList.tsx": {
-    "mtime": 1792349108.0402496,
-    "seen": 1792349706.83711,
-    "ast_hash": "29d63fd8210b6be93d8b08a7b4b3b1c5",
+    "mtime": 1792992150.6123016,
+    "seen": 1792993147.569746,
+    "ast_hash": "bd654084971e6ac7f87c977c643f0ccb",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ReviewGraphPage.tsx": {
@@ -894,21 +894,21 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/RobAssessmentPage.tsx": {
-    "mtime": 1792880640.139832,
-    "seen": 1792886070.1520286,
-    "ast_hash": "4cb654417b7cd3e9b4187073341f2426",
+    "mtime": 1792994024.1855862,
+    "seen": 1792994782.1083815,
+    "ast_hash": "c3ba4b0353490cf72b15ec2580532b5c",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/RobSummaryPage.tsx": {
-    "mtime": 1792279735.945972,
-    "seen": 1792279857.5235639,
-    "ast_hash": "bbdfd16730a4a108446e615d5e45453c",
+    "mtime": 1792994363.9550457,
+    "seen": 1792994782.1083815,
+    "ast_hash": "46822bc980d4039027d2e5df312458fa",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
-    "mtime": 1792985664.264843,
-    "seen": 1792987868.0604424,
-    "ast_hash": "da53b2e50dd9f8b2aa0b3b50d00c5fc3",
+    "mtime": 1793008019.0805593,
+    "seen": 1793008102.3630943,
+    "ast_hash": "4212001e7586bc7c564739f5ae97a9d5",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyImport.tsx": {
@@ -918,9 +918,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyList.tsx": {
-    "mtime": 1792968687.5480943,
-    "seen": 1792969918.2423875,
-    "ast_hash": "21b1bbc8ea95d5846d2f7929e84701f5",
+    "mtime": 1792994314.3243127,
+    "seen": 1792994782.112725,
+    "ast_hash": "180248d871a7d2533c44012fc807d553",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/vite-env.d.ts": {
@@ -954,9 +954,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/vite.config.ts": {
-    "mtime": 1792279735.9489684,
-    "seen": 1792279857.5335634,
-    "ast_hash": "0bb091f654efddd505b185038ddfced8",
+    "mtime": 1792989518.235382,
+    "seen": 1792993147.5803008,
+    "ast_hash": "c478f43d2e6b5fa6ab81059e58c9e8ae",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_ai_integration.py": {
@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/citation_verification_service.py": {
-    "mtime": 1792985579.3891406,
-    "seen": 1792987867.94579,
-    "ast_hash": "7b6092f4e0d0d965dd3149df616e9a83",
+    "mtime": 1793010240.223386,
+    "seen": 1793010307.9337924,
+    "ast_hash": "42890f146b42cc70ec9b3d485c57b605",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/coded_extraction_service.py": {
@@ -1362,9 +1362,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1792974967.472448,
-    "seen": 1792975288.6080885,
-    "ast_hash": "bbd5b7a1fe9f51ab3cffd41a3b49286b",
+    "mtime": 1792993654.4898412,
+    "seen": 1792994782.2446094,
+    "ast_hash": "6e9911f0163c456cf20c79ecb176f241",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -1374,9 +1374,9 @@
     "semantic_hash": ""
   },
   "GEMINI.md": {
-    "mtime": 1792974981.9634697,
-    "seen": 1792975288.6080885,
-    "ast_hash": "f8757669231cadc6c4f7d500a5a279a0",
+    "mtime": 1792993667.1449378,
+    "seen": 1792994782.2446094,
+    "ast_hash": "709be12dcc188d35662d85d415ed189b",
     "semantic_hash": ""
   },
   "PLANS/Improvements_Precision_Cost_Deployment.md": {
@@ -1620,9 +1620,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/demoData.ts": {
-    "mtime": 1792279735.9319866,
-    "seen": 1792279857.5065644,
-    "ast_hash": "920a78c1a78cf6335171e1512d65e237",
+    "mtime": 1792994811.5355089,
+    "seen": 1792994965.6416688,
+    "ast_hash": "276c7e5ef7d0be02fb796319a31b655d",
     "semantic_hash": ""
   },
   ".github/workflows/deploy-pages.yml": {
@@ -1686,15 +1686,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/CodebookDesignerModal.tsx": {
-    "mtime": 1792985225.5124893,
-    "seen": 1792987868.0308013,
-    "ast_hash": "fc3601728f93399318a1188de7d1b348",
+    "mtime": 1792994663.686327,
+    "seen": 1792994782.059437,
+    "ast_hash": "56f229ae3a4b4bb66efb5da6c5f2aa53",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/ActualPdfViewer.tsx": {
-    "mtime": 1792985225.501338,
-    "seen": 1792987868.0287936,
-    "ast_hash": "92d65f92066ff0cecb86391c66e80c1f",
+    "mtime": 1792991958.9683676,
+    "seen": 1792993147.5256617,
+    "ast_hash": "232eb6c46e25174285758cedae2df147",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/pdfLocator.test.ts": {
@@ -1758,9 +1758,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/UniversalBulkUploadModal.tsx": {
-    "mtime": 1791664521.6101868,
-    "seen": 1791664941.925462,
-    "ast_hash": "9ce056b8312184afd8a60291c161e394",
+    "mtime": 1792994224.560392,
+    "seen": 1792994782.0676775,
+    "ast_hash": "15c9fbe995b49b96a864b6c9e54401e3",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/pdfAutoIdentifier.ts": {
@@ -1782,9 +1782,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/ClarificationNotificationCenter.tsx": {
-    "mtime": 1792972499.4250612,
-    "seen": 1792973424.5815785,
-    "ast_hash": "6f3ccf4369401f8262693fcfdffde599",
+    "mtime": 1793002597.225427,
+    "seen": 1793002906.1563642,
+    "ast_hash": "2e4bfbc08fe9e720f3f862bd6ebacc11",
     "semantic_hash": ""
   },
   ".agents/jules_auto_merge.py": {
@@ -1884,15 +1884,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/ApiSettingsModal.tsx": {
-    "mtime": 1792798406.2873333,
-    "seen": 1792799941.5523481,
-    "ast_hash": "480c352cedf96c07fdb58db26bc251fd",
+    "mtime": 1792994200.0366552,
+    "seen": 1792994782.0576913,
+    "ast_hash": "863a34f38badb34a2dbfe55a8580cf04",
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1792985225.4277558,
-    "seen": 1792987868.0604424,
-    "ast_hash": "0b5d18f0b18c6934596431f472a84b83",
+    "mtime": 1792993618.5890698,
+    "seen": 1792994782.1299722,
+    "ast_hash": "7696495154205e1a0008e57a156e1a6c",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {
@@ -2160,9 +2160,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/prisma_service.py": {
-    "mtime": 1791704480.4600732,
-    "seen": 1791709178.895539,
-    "ast_hash": "94ef823372575cba2adfd7a8130697b0",
+    "mtime": 1792998697.4851434,
+    "seen": 1792999046.084202,
+    "ast_hash": "8692936c191fea6ac1d5ae06050b258c",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_prisma_service.py": {
@@ -2592,9 +2592,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ClaimscapePage.tsx": {
-    "mtime": 1792960197.1135318,
-    "seen": 1792962142.1144402,
-    "ast_hash": "57e35adffe446714dc3720c22c61c83c",
+    "mtime": 1792994789.7174735,
+    "seen": 1792994965.657464,
+    "ast_hash": "b5cbad09f6de68bb87fee0fa93b61019",
     "semantic_hash": ""
   },
   ".agents/rules/gravitas-invariants.md": {
@@ -3744,9 +3744,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/CitationTelephonePage.tsx": {
-    "mtime": 1792434440.06453,
-    "seen": 1792434522.96519,
-    "ast_hash": "7b7263f5ad2a98d0c4d9f6120257abeb",
+    "mtime": 1792994148.938664,
+    "seen": 1792994782.0977976,
+    "ast_hash": "68fc9a95542a67c275c5b8f31f47be7c",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/RigorScanPage.tsx": {
@@ -3792,9 +3792,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/CitationTelephonePage.test.tsx": {
-    "mtime": 1792349202.4853375,
-    "seen": 1792349706.8341115,
-    "ast_hash": "8106e0a974a8f5c16db790eff698a613",
+    "mtime": 1792994168.3614335,
+    "seen": 1792994782.0977976,
+    "ast_hash": "51fec5772a1a815a43adeaebf91fd1d8",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/RigorScanPage.test.tsx": {
@@ -3804,9 +3804,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/pubmedLiveClient.ts": {
-    "mtime": 1792361887.952581,
-    "seen": 1792362150.3663945,
-    "ast_hash": "f6651dc1ec0db3c863646dfca5ae6c9a",
+    "mtime": 1792994723.1837485,
+    "seen": 1792994782.0835917,
+    "ast_hash": "3924d88fbc97fcd0ec23328ca1f9c191",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/citation/TrailGraphView.tsx": {
@@ -3894,9 +3894,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/LandingPage.tsx": {
-    "mtime": 1792965719.0717633,
-    "seen": 1792966003.043595,
-    "ast_hash": "e90ff156f100fb65bddad99abb816501",
+    "mtime": 1792992306.3922627,
+    "seen": 1792993147.5650547,
+    "ast_hash": "7924080ffee8e9e1ca228ce14094421c",
     "semantic_hash": ""
   },
   "Website for software/10.24.26_Website_landing_page.html": {
@@ -5046,9 +5046,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/landing_body.html": {
-    "mtime": 1792960284.676138,
-    "seen": 1792962142.1997516,
-    "ast_hash": "be3d20ed665118fd7f906ef7dde73d63",
+    "mtime": 1792992252.9477458,
+    "seen": 1792993147.9728794,
+    "ast_hash": "787f941443a2a15209e5b66a88fff6bc",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/assets/motion/rhythm.js": {
@@ -5112,15 +5112,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/LoaderScreen.tsx": {
-    "mtime": 1792962383.7796867,
-    "seen": 1792962590.8839633,
-    "ast_hash": "1935cda27f4453c5c97a35edc167525c",
+    "mtime": 1793002555.541344,
+    "seen": 1793002906.1583645,
+    "ast_hash": "faff3baba59c99fd480456d3643e73d2",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/ShimmerSkeleton.test.tsx": {
-    "mtime": 1792962483.8799262,
-    "seen": 1792962590.89821,
-    "ast_hash": "5ecff8f3f66a57f65ee7ce7d7956ec10",
+    "mtime": 1793002643.378934,
+    "seen": 1793002906.159364,
+    "ast_hash": "c5ac8837d8602f653c7f43ce70450bcb",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/common/ShimmerSkeleton.tsx": {
@@ -5130,9 +5130,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningClarifications.test.tsx": {
-    "mtime": 1792973213.8898225,
-    "seen": 1792973424.6009827,
-    "ast_hash": "429913e3a4879da5d19c5e6778684430",
+    "mtime": 1792993968.6062465,
+    "seen": 1792994782.1083815,
+    "ast_hash": "a1d2f7fc59d2b992453439ca5f4f678f",
     "semantic_hash": ""
   },
   ".agents/rules/master_theme.md": {
@@ -5211,6 +5211,90 @@
     "mtime": 1792987433.270408,
     "seen": 1792987868.0604424,
     "ast_hash": "f526a16984b9755df0827e560eacbb30",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/.matplotlib_cache/fontlist-v3.11.0.json": {
+    "mtime": 1792988907.8989952,
+    "seen": 1792993147.338453,
+    "ast_hash": "19cc4d8e73f4550cb4f964a4e84af639",
+    "semantic_hash": ""
+  },
+  "scripts/seed_pam_live.py": {
+    "mtime": 1792991273.360546,
+    "seen": 1792993147.5858662,
+    "ast_hash": "913fa9136c969a844564eaf64af3448d",
+    "semantic_hash": ""
+  },
+  "PLANS/software_design_master_plan.md": {
+    "mtime": 1792993154.1733706,
+    "seen": 1792993279.052206,
+    "ast_hash": "b562b36b158637e8e77163b3b0a3470a",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/lib/editorialRules.ts": {
+    "mtime": 1792993567.9738505,
+    "seen": 1792994782.081253,
+    "ast_hash": "5157ef6a5a60ee751639f345d444cc97",
+    "semantic_hash": ""
+  },
+  ".agents/rules/universal_ui_rules.md": {
+    "mtime": 1792993548.6491284,
+    "seen": 1792994782.1361206,
+    "ast_hash": "adac70a2092b4ad2ca9e2149cb31e2f8",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/lib/editorialRules.test.ts": {
+    "mtime": 1792994838.5540478,
+    "seen": 1792994965.6416688,
+    "ast_hash": "a9893bb936d1d876987e49ae4a15c093",
+    "semantic_hash": ""
+  },
+  "PLANS/Future Plans/README.md": {
+    "mtime": 1792994883.765361,
+    "seen": 1792994965.808323,
+    "ast_hash": "71376faa88bbe360d5626bd275f57aed",
+    "semantic_hash": ""
+  },
+  "PLANS/Future Plans/future_plans_for_security.md": {
+    "mtime": 1792994704.4287124,
+    "seen": 1792994965.808323,
+    "ast_hash": "688966f4ca7f553306d4a5b8983d090a",
+    "semantic_hash": ""
+  },
+  "PLANS/Future Plans/future_plans_for_website.md": {
+    "mtime": 1793008032.9537957,
+    "seen": 1793008102.470033,
+    "ast_hash": "c43e6b47127a2c135209f8293d3e7b7f",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/common/BorderBeam.test.tsx": {
+    "mtime": 1793002610.5564198,
+    "seen": 1793002906.1563642,
+    "ast_hash": "2d864043268680d69a5043d9d0bad620",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/common/BorderBeam.tsx": {
+    "mtime": 1793002514.664851,
+    "seen": 1793002906.1563642,
+    "ast_hash": "08573628055063220fe5338ec7b695fa",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/common/Card.tsx": {
+    "mtime": 1793002496.3325956,
+    "seen": 1793002906.1563642,
+    "ast_hash": "8a9ebe88379a5fd7046581bd5de6aac4",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/screening/ExploratoryScreeningView.test.tsx": {
+    "mtime": 1793009067.4035468,
+    "seen": 1793009413.1944025,
+    "ast_hash": "d9c7d30c349b833e6e537e52509632a1",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/screening/ExploratoryScreeningView.tsx": {
+    "mtime": 1793010204.8675537,
+    "seen": 1793010308.0755,
+    "ast_hash": "ad82f6f3677243ab0dba32e75f8c7a4f",
     "semantic_hash": ""
   }
 }

@@ -184,12 +184,12 @@ export function RobAssessmentPage() {
     }
   }, [selectedQuestionKey, allSignalingQuestions]);
 
-  // Pre-fill mutation with local Laya
+  // Pre-fill mutation with Co-Scientist
   const prefillMutation = useMutation({
     mutationFn: () => api.aiPrefill(assessmentId!, study?.abstract || "", ""),
     onSuccess: (result) => {
       setPrefillMsg(
-        `Laya AI auto-recorded ${result.questions_prefilled} answers across ${result.domains_prefilled} domains ` +
+        `Co-Scientist auto-recorded ${result.questions_prefilled} answers across ${result.domains_prefilled} domains ` +
           `(avg confidence: ${(result.avg_confidence * 100).toFixed(0)}%, ${result.used_full_text ? "full text" : "abstract"} mode).`
       );
       queryClient.invalidateQueries({ queryKey: ["rob-assessment", assessmentId] });
@@ -198,12 +198,12 @@ export function RobAssessmentPage() {
     onError: (e: Error) => setPrefillMsg(`Error: ${e.message}`),
   });
 
-  // Accept all AI mutation
+  // Accept all Co-Scientist recommendations mutation
   const acceptAiMutation = useMutation({
     mutationFn: () => api.acceptAi(assessmentId!),
     onSuccess: (result) => {
       setPrefillMsg(
-        `Verified and confirmed ${result.answers_accepted} AI-inferred answers. Domain and overall judgments updated.`
+        `Verified and confirmed ${result.answers_accepted} Co-Scientist recommendations. Domain and overall judgments updated.`
       );
       queryClient.invalidateQueries({ queryKey: ["rob-assessment", assessmentId] });
       queryClient.invalidateQueries({ queryKey: ["rob-summary", projectId] });
@@ -644,30 +644,30 @@ export function RobAssessmentPage() {
                 </span>
               </div>
 
-              {/* Fast Action Ribbon Buttons: Laya AI Pre-Fill, Accept All AI, Undo */}
+              {/* Fast Action Ribbon Buttons: Co-Scientist Pre-Fill, Accept All, Undo */}
               <div className="flex items-center gap-1.5">
-                {/* Laya Pre-fill Button */}
+                {/* Co-Scientist Pre-fill Button */}
                 <button
                   onClick={() => prefillMutation.mutate()}
                   disabled={prefillMutation.isPending}
                   className="px-2.5 py-1.5 text-xs font-bold text-[#381A61] bg-[#F9D14A] hover:bg-[#F9D14A]/90 border border-[#E78429]/40 rounded-xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs ring-1 ring-[#F9D14A]/50"
-                  title="Run local Laya engine to evaluate signaling questions and extract supporting quotes"
+                  title="Run Co-Scientist to evaluate signaling questions and extract supporting quotes"
                 >
                   {prefillMutation.isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Sparkles className="h-3.5 w-3.5 text-[#381A61]" />
                   )}
-                  <span>Run Laya AI</span>
+                  <span>Run Co-Scientist</span>
                 </button>
 
-                {/* Accept All AI Button */}
+                {/* Accept All Button */}
                 {hasAiSuggestions && (
                   <button
                     onClick={() => acceptAiMutation.mutate()}
                     disabled={acceptAiMutation.isPending}
                     className="px-2.5 py-1.5 text-xs font-bold text-white bg-[#381A61] hover:bg-[#4E2487] rounded-xl flex items-center gap-1.5 transition-all shadow-xs"
-                    title="Confirm and verify all AI recorded answers"
+                    title="Confirm and verify all Co-Scientist recorded answers"
                   >
                     {acceptAiMutation.isPending ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -881,7 +881,7 @@ export function RobAssessmentPage() {
                                   </span>
                                 ) : (
                                   <span className="text-[10px] font-semibold text-[#6B665E] bg-[#88A0DC]/10 border border-[#88A0DC]/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                    Auto-Recorded by Laya
+                                    Assisted by Co-Scientist
                                   </span>
                                 )}
 

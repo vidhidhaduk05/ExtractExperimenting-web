@@ -8,6 +8,7 @@ export interface LoaderScreenProps {
   title?: string;
   subtitle?: string;
   fullScreen?: boolean;
+  breathing?: boolean;
   className?: string;
 }
 
@@ -16,18 +17,21 @@ export const LoaderScreen: React.FC<LoaderScreenProps> = ({
   title = 'Loading content...',
   subtitle = 'Please wait while resources are synthesized',
   fullScreen = false,
+  breathing = true,
   className = '',
 }) => {
   const containerClass = fullScreen
-    ? 'fixed inset-0 z-50 flex flex-col bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm p-6 md:p-12 overflow-y-auto'
+    ? 'fixed inset-0 z-50 flex flex-col bg-[#fbf9f4]/95 dark:bg-[#1E1E1E]/95 backdrop-blur-sm p-6 md:p-12 overflow-y-auto'
     : 'w-full py-8 px-4 flex flex-col gap-6';
 
+  const breathingClass = breathing ? 'animate-breathing' : '';
+
   const renderCards = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl mx-auto">
+    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl mx-auto ${breathingClass}`}>
       {[1, 2, 3, 4, 5, 6].map((i) => (
         <div
           key={i}
-          className="border border-gray-200 dark:border-gray-800 rounded-xl p-5 bg-white dark:bg-gray-900 shadow-xs flex flex-col gap-4"
+          className="border border-[#d2c2cb] rounded-xl p-5 bg-white shadow-xs flex flex-col gap-4 transition-all"
         >
           <div className="flex items-center gap-3">
             <ShimmerSkeleton circle width={42} height={42} />
@@ -41,7 +45,7 @@ export const LoaderScreen: React.FC<LoaderScreenProps> = ({
             <ShimmerSkeleton height={14} width="92%" />
             <ShimmerSkeleton height={14} width="75%" />
           </div>
-          <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center">
+          <div className="pt-3 border-t border-[#eee7ec] flex justify-between items-center">
             <ShimmerSkeleton height={20} width={80} borderRadius={6} />
             <ShimmerSkeleton height={28} width={90} borderRadius={8} />
           </div>
@@ -51,12 +55,12 @@ export const LoaderScreen: React.FC<LoaderScreenProps> = ({
   );
 
   const renderTable = () => (
-    <div className="w-full max-w-6xl mx-auto border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-900 shadow-xs">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+    <div className={`w-full max-w-6xl mx-auto border border-[#d2c2cb] rounded-xl overflow-hidden bg-white shadow-xs ${breathingClass}`}>
+      <div className="p-4 border-b border-[#eee7ec] flex justify-between items-center bg-[#fbf9f4]">
         <ShimmerSkeleton height={24} width={180} />
         <ShimmerSkeleton height={32} width={240} borderRadius={8} />
       </div>
-      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+      <div className="divide-y divide-[#eee7ec]">
         {[1, 2, 3, 4, 5, 6, 7].map((row) => (
           <div key={row} className="px-6 py-4 flex items-center gap-4">
             <ShimmerSkeleton width={32} height={20} borderRadius={4} />
@@ -74,7 +78,7 @@ export const LoaderScreen: React.FC<LoaderScreenProps> = ({
   );
 
   const renderClaimscape = () => (
-    <div className="w-full max-w-5xl mx-auto flex flex-col gap-6">
+    <div className={`w-full max-w-5xl mx-auto flex flex-col gap-6 ${breathingClass}`}>
       <div className="border border-[#d2c2cb] rounded-lg p-6 bg-[#fbf9f4] shadow-xs flex flex-col gap-4">
         <ShimmerSkeleton height={24} width={220} borderRadius={4} />
         <ShimmerSkeleton height={48} width="100%" borderRadius={6} />
@@ -108,7 +112,7 @@ export const LoaderScreen: React.FC<LoaderScreenProps> = ({
   );
 
   const renderArticle = () => (
-    <div className="w-full max-w-3xl mx-auto flex flex-col gap-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-8 rounded-xl shadow-xs">
+    <div className={`w-full max-w-3xl mx-auto flex flex-col gap-6 bg-white border border-[#d2c2cb] p-8 rounded-xl shadow-xs ${breathingClass}`}>
       <ShimmerSkeleton height={36} width="85%" />
       <div className="flex items-center gap-3">
         <ShimmerSkeleton circle width={36} height={36} />
@@ -117,7 +121,7 @@ export const LoaderScreen: React.FC<LoaderScreenProps> = ({
           <ShimmerSkeleton height={11} width={100} />
         </div>
       </div>
-      <div className="flex flex-col gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+      <div className="flex flex-col gap-3 pt-4 border-t border-[#eee7ec]">
         <ShimmerSkeleton height={16} width="100%" />
         <ShimmerSkeleton height={16} width="96%" />
         <ShimmerSkeleton height={16} width="92%" />
@@ -137,12 +141,20 @@ export const LoaderScreen: React.FC<LoaderScreenProps> = ({
       {(title || subtitle) && (
         <div className="max-w-6xl mx-auto w-full mb-2 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">{title}</h3>
-            {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
+            <h3
+              className="text-base font-semibold text-[#141413] tracking-tight"
+              style={{ fontFamily: 'Serifon Editorial, Georgia, serif' }}
+            >
+              {title}
+            </h3>
+            {subtitle && <p className="text-xs text-[#62535d] mt-0.5">{subtitle}</p>}
           </div>
-          <div className="flex items-center gap-2 text-xs font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            Loading
+          <div className="flex items-center gap-2 text-xs font-medium text-[#4f444b] bg-[#eee7ec] border border-[#d2c2cb] px-3 py-1.5 rounded-full">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#814d75] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#3a0f34] breathing-glow" />
+            </span>
+            <span className="font-serif italic text-[#3a0f34]">Loading</span>
           </div>
         </div>
       )}
@@ -152,6 +164,40 @@ export const LoaderScreen: React.FC<LoaderScreenProps> = ({
       {preset === 'claimscape' && renderClaimscape()}
       {preset === 'article' && renderArticle()}
       {preset === 'default' && renderCards()}
+    </div>
+  );
+};
+
+/**
+ * BreathingLoader Component
+ * Lightweight breathing pulse loader for inline, card-level, or page-level loading states.
+ */
+export const BreathingLoader: React.FC<{
+  label?: string;
+  sublabel?: string;
+  className?: string;
+}> = ({ label = 'Loading...', sublabel, className = '' }) => {
+  return (
+    <div
+      role="status"
+      aria-label={label}
+      className={`flex flex-col items-center justify-center p-8 gap-3 animate-breathing ${className}`}
+    >
+      <div className="relative flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-2 border-[#d2c2cb] border-t-[#3a0f34] animate-spin" />
+        <div className="absolute w-8 h-8 rounded-full bg-[#814d75]/15 breathing-glow flex items-center justify-center">
+          <div className="w-3 h-3 rounded-full bg-[#3a0f34]" />
+        </div>
+      </div>
+      <div className="text-center">
+        <p
+          className="text-sm font-semibold text-[#3a0f34] tracking-tight"
+          style={{ fontFamily: 'Serifon Editorial, Georgia, serif' }}
+        >
+          {label}
+        </p>
+        {sublabel && <p className="text-xs text-[#62535d] mt-0.5">{sublabel}</p>}
+      </div>
     </div>
   );
 };

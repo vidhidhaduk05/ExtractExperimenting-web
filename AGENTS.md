@@ -62,3 +62,9 @@
    - **Typography**: `Serifon Editorial` (headings, wordmarks), `QuadraatSmallCaps` (body text, study reading copy), and `Work Sans` (controls, buttons, inputs, labels, metadata).
    - **Strict Prohibition**: Never introduce arbitrary Tailwind colors (e.g. `bg-blue-600`), neon gradients, or bloated SaaS bubbly UI. Maintain refined academic editorial precision across all viewports (1440px, 903px, 390px).
 
+11. **Mandatory Universal UI Rules: Zero Patented Method Disclosures & "Co-Scientist" Standard**:
+   - Strictly adhere to [`.agents/rules/universal_ui_rules.md`](file:///d:/Desktop/Rad%20Extract%20Experimenting/.agents/rules/universal_ui_rules.md) and [`radextract_platform/frontend/src/lib/editorialRules.ts`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/frontend/src/lib/editorialRules.ts).
+   - **Patented Methods Secrecy**: NEVER mention "Biomni", "Laya", "Storm", or proprietary algorithm names on the website, UI components, modals, buttons, tooltips, or public documentation.
+   - **Universal Terminology**: NEVER use generic "AI" in user-facing copy. Always use **"Co-Scientist"** (e.g. *Co-Scientist Screening*, *Co-Scientist Decision*, *Co-Scientist Recommendation*, *Co-Scientist Pre-Fill*).
+
+

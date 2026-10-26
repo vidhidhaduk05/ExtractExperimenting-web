@@ -107,3 +107,4 @@ scratch/
 .tmp-*
 *.log
 frontend-preview*
+.matplotlib_cache/

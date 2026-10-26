@@ -459,3 +459,13 @@ Then show one primary button labeled `Generate Search Strings`, leading to edita
   - Configured a lightweight top-right status pill with an animated spinner (Undoing task... -> Task undone) without displaying the shortcut in the public hotkeys legend bar.
 - **Screening to Extraction Auto-Prefill**:
   - Connected auto_prefill_study_bibliographic_extractions in routers/screening.py on study inclusion, automatically pre-filling bibliographic metadata (Study ID, Year, Author, Country, DOI, PMID) into the extraction worksheet.
+
+## 2026-10-26 — Universal UI Rules: Zero Disclosure of Patented Methods & "Co-Scientist" Standard
+- **Patented & Proprietary Method Protection**:
+  - The proprietary algorithms and research synthesis pipelines powering the platform are patented intellectual property.
+  - Mandated zero customer-facing disclosure of internal method and architecture names. Under no circumstances may terms such as `Biomni`, `Laya`, or `Storm` appear on any user-facing surface, screen, button, tooltip, modal, or log display.
+  - Implemented single-source-of-truth guard and sanitizer in [`radextract_platform/frontend/src/lib/editorialRules.ts`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/frontend/src/lib/editorialRules.ts) and codified repository-wide policy in [`.agents/rules/universal_ui_rules.md`](file:///d:/Desktop/Rad%20Extract%20Experimenting/.agents/rules/universal_ui_rules.md).
+- **Universal Vocabulary Standard**:
+  - Replaced generic "AI" terminology across the entire UI with **"Co-Scientist"** (e.g., *Co-Scientist Screening*, *Co-Scientist Decision*, *Co-Scientist Recommendation*, *Co-Scientist Pre-Fill*, *Co-Scientist Verification*).
+  - All current and future frontend components must conform strictly to these rules.
+

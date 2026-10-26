@@ -206,7 +206,7 @@ export function PicoHypothesisPage() {
     mutationFn: (question: string) => api.searchFromQuestion(projectId!, question),
     onSuccess: (data) => {
       setQuestionResult(
-        `PICO extracted and AI search strings generated for the supported database interfaces.`
+        `PICO extracted and Co-Scientist search strings generated for the supported database interfaces.`
       );
       queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
       queryClient.invalidateQueries({ queryKey: ["search-strings", projectId] });
@@ -522,7 +522,7 @@ export function PicoHypothesisPage() {
       >
         <div className="space-y-3">
           <p className="text-sm text-gray-500">
-            Type your research question in plain English and let AI extract PICO
+            Type your research question in plain English and let the Co-Scientist extract PICO
             elements and generate database-specific search strings automatically.
           </p>
           <div className="flex items-start gap-3">
@@ -755,7 +755,7 @@ export function PicoHypothesisPage() {
             <div className="text-sm">
               <span className="font-semibold text-phylo-orange">Auto-generated search strings are a starting point.</span>{" "}
               <span className="text-gray-600">
-                AI chooses the search concepts and synonyms from your PICO. Basic syntax checks and an automatic repair step help catch formatting errors; searches have not been tested in the databases.
+                The Co-Scientist selects the search concepts and synonyms from your PICO. Basic syntax checks and an automatic repair step help catch formatting errors; searches have not been tested in the databases.
                 They must be reviewed and refined by a medical librarian or systematic review methodologist
                 before use in a formal search. Synonym coverage, database-specific syntax, and field tags
                 may require adjustment for your specific research question.

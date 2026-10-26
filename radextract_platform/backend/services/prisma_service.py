@@ -211,97 +211,131 @@ def generate_prisma_2020_svg(flow_data: Dict[str, Any]) -> str:
     incl = inc_data.get("studies_in_review", 0)
     meta = inc_data.get("studies_in_meta_analysis", 0)
 
+    db_records = id_data.get("database_records", total_id)
+    reg_records = id_data.get("registers", 0)
+    excluded_auto = scr_data.get("excluded_automatic", 0)
+    sought_reports = max(0, screened - ta_excl)
+    not_retrieved = elig_data.get("reports_not_retrieved", max(0, sought_reports - ft_assessed))
+
     # Format exclusion reason strings
     ta_reasons = scr_data.get("excluded_with_reasons", [])
     ta_reasons_lines = [f"{r['reason']}: {r['count']}" for r in ta_reasons[:4]]
     ta_reasons_text = "\n".join(ta_reasons_lines) if ta_reasons_lines else "None specified"
 
     ft_reasons = elig_data.get("excluded_reasons", [])
-    ft_reasons_lines = [f"{r['reason']}: {r['count']}" for r in ft_reasons[:5]]
-    ft_reasons_text = "\n".join(ft_reasons_lines) if ft_reasons_lines else "None specified"
+    ft_reasons_lines = [f"{r['reason']} (n = {r['count']})" for r in ft_reasons[:5]]
+    if not ft_reasons_lines:
+        ft_reasons_lines = ["Criteria not met: 0"]
 
-    # SVG layout
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 680" width="100%" height="100%" style="background:#ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    # Full Official PRISMA 2020 SVG layout (Matching estech.shinyapps.io/prisma_flowdiagram)
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 750" width="100%" height="100%" style="background:#ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <title>PRISMA 2020 Flow Diagram</title>
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#4b5563" />
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#000000" />
     </marker>
-    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.06"/>
-    </filter>
   </defs>
 
-  <!-- Title Header -->
-  <text x="450" y="32" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">PRISMA 2020 Flow Diagram for Systematic Reviews</text>
+  <!-- Left Phase Banners (Official PRISMA 2020 vertical headers) -->
+  <rect x="15" y="55" width="85" height="95" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="57" y="107" font-size="11" font-weight="700" fill="#000000" text-anchor="middle" transform="rotate(-90, 57, 107)">IDENTIFICATION</text>
 
-  <!-- Phase Banners (Left column) -->
-  <rect x="20" y="55" width="120" height="130" rx="6" fill="#f3f4f6" stroke="#e5e7eb"/>
-  <text x="80" y="125" font-size="13" font-weight="600" fill="#374151" text-anchor="middle">Identification</text>
+  <rect x="15" y="165" width="85" height="355" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="57" y="342" font-size="11" font-weight="700" fill="#000000" text-anchor="middle" transform="rotate(-90, 57, 342)">SCREENING</text>
 
-  <rect x="20" y="200" width="120" height="135" rx="6" fill="#f3f4f6" stroke="#e5e7eb"/>
-  <text x="80" y="272" font-size="13" font-weight="600" fill="#374151" text-anchor="middle">Screening</text>
+  <rect x="15" y="535" width="85" height="110" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="57" y="590" font-size="11" font-weight="700" fill="#000000" text-anchor="middle" transform="rotate(-90, 57, 590)">INCLUDED</text>
 
-  <rect x="20" y="350" width="120" height="150" rx="6" fill="#f3f4f6" stroke="#e5e7eb"/>
-  <text x="80" y="430" font-size="13" font-weight="600" fill="#374151" text-anchor="middle">Eligibility</text>
+  <!-- Column 1 Header Banner -->
+  <rect x="120" y="15" width="730" height="28" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="485" y="34" font-size="12" font-weight="700" fill="#000000" text-anchor="middle">Identification of new studies via databases and registers</text>
 
-  <rect x="20" y="515" width="120" height="130" rx="6" fill="#f3f4f6" stroke="#e5e7eb"/>
-  <text x="80" y="585" font-size="13" font-weight="600" fill="#374151" text-anchor="middle">Included</text>
+  <!-- Phase 1: Identification (Row 1) -->
+  <rect x="120" y="55" width="340" height="95" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="135" y="78" font-size="11" font-weight="600" fill="#000000">Records identified from*:</text>
+  <text x="145" y="100" font-size="11" fill="#000000">Databases (n = {db_records})</text>
+  <text x="145" y="122" font-size="11" fill="#000000">Registers (n = {reg_records})</text>
 
-  <!-- Phase 1: Identification Boxes -->
-  <rect x="180" y="60" width="310" height="65" rx="6" fill="#ffffff" stroke="#0279ee" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="195" y="85" font-size="13" font-weight="600" fill="#111827">Records identified from databases</text>
-  <text x="195" y="108" font-size="14" font-weight="700" fill="#0279ee">n = {total_id}</text>
+  <!-- Arrow from Records identified to Records removed before screening -->
+  <path d="M 460 102 L 505 102" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow)"/>
 
-  <rect x="540" y="60" width="310" height="65" rx="6" fill="#fff5f5" stroke="#ef4444" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="555" y="85" font-size="13" font-weight="600" fill="#991b1b">Duplicate records removed</text>
-  <text x="555" y="108" font-size="14" font-weight="700" fill="#ef4444">n = {dups_rem}</text>
+  <rect x="510" y="55" width="340" height="95" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="525" y="75" font-size="11" font-weight="600" fill="#000000">Records removed before screening:</text>
+  <text x="535" y="96" font-size="10.5" fill="#000000">Duplicate records removed (n = {dups_rem})</text>
+  <text x="535" y="115" font-size="10.5" fill="#000000">Records marked ineligible by automation (n = {excluded_auto})</text>
+  <text x="535" y="134" font-size="10.5" fill="#000000">Records removed for other reasons (n = 0)</text>
 
-  <path d="M 335 125 L 335 155 L 490 155" fill="none" stroke="#4b5563" stroke-width="1.5"/>
-  <path d="M 695 125 L 695 155 L 540 155" fill="none" stroke="#4b5563" stroke-width="1.5"/>
-  <path d="M 335 125 L 335 205" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Arrow down from Identification to Screening -->
+  <path d="M 290 150 L 290 180" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow)"/>
 
-  <!-- Phase 2: Screening Boxes -->
-  <rect x="180" y="210" width="310" height="65" rx="6" fill="#ffffff" stroke="#0279ee" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="195" y="235" font-size="13" font-weight="600" fill="#111827">Records screened (Title / Abstract)</text>
-  <text x="195" y="258" font-size="14" font-weight="700" fill="#0279ee">n = {screened}</text>
+  <!-- Phase 2: Screening (Row 2 - Records screened) -->
+  <rect x="120" y="180" width="340" height="55" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="290" y="203" font-size="11.5" font-weight="600" fill="#000000" text-anchor="middle">Records screened</text>
+  <text x="290" y="222" font-size="12" font-weight="700" fill="#000000" text-anchor="middle">(n = {screened})</text>
 
-  <!-- Arrow right to TA Excluded -->
-  <path d="M 490 242 L 535 242" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Arrow right to Records excluded -->
+  <path d="M 460 207 L 505 207" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow)"/>
 
-  <rect x="540" y="200" width="310" height="110" rx="6" fill="#fff5f5" stroke="#ef4444" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="555" y="224" font-size="13" font-weight="600" fill="#991b1b">Records excluded</text>
-  <text x="555" y="244" font-size="14" font-weight="700" fill="#ef4444">n = {ta_excl}</text>
-  <text x="555" y="265" font-size="11" fill="#4b5563" font-weight="500">Exclusion reasons:</text>
-  <text x="555" y="282" font-size="11" fill="#6b7280">{ta_reasons_lines[0] if len(ta_reasons_lines) > 0 else "Not specified"}</text>
-  <text x="555" y="298" font-size="11" fill="#6b7280">{ta_reasons_lines[1] if len(ta_reasons_lines) > 1 else ""}</text>
+  <rect x="510" y="180" width="340" height="55" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="680" y="203" font-size="11.5" font-weight="600" fill="#000000" text-anchor="middle">Records excluded**</text>
+  <text x="680" y="222" font-size="12" font-weight="700" fill="#000000" text-anchor="middle">(n = {ta_excl})</text>
 
-  <!-- Arrow down from Screening to Eligibility -->
-  <path d="M 335 275 L 335 355" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Arrow down from Records screened to Reports sought for retrieval -->
+  <path d="M 290 235 L 290 265" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow)"/>
 
-  <!-- Phase 3: Eligibility Boxes -->
-  <rect x="180" y="360" width="310" height="65" rx="6" fill="#ffffff" stroke="#0279ee" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="195" y="385" font-size="13" font-weight="600" fill="#111827">Full-text articles assessed for eligibility</text>
-  <text x="195" y="408" font-size="14" font-weight="700" fill="#0279ee">n = {ft_assessed}</text>
+  <!-- Phase 2: Screening (Row 3 - Reports sought for retrieval) -->
+  <rect x="120" y="265" width="340" height="55" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="290" y="288" font-size="11.5" font-weight="600" fill="#000000" text-anchor="middle">Reports sought for retrieval</text>
+  <text x="290" y="307" font-size="12" font-weight="700" fill="#000000" text-anchor="middle">(n = {sought_reports})</text>
 
-  <!-- Arrow right to FT Excluded -->
-  <path d="M 490 392 L 535 392" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Arrow right to Reports not retrieved -->
+  <path d="M 460 292 L 505 292" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow)"/>
 
-  <rect x="540" y="350" width="310" height="120" rx="6" fill="#fff5f5" stroke="#ef4444" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="555" y="374" font-size="13" font-weight="600" fill="#991b1b">Full-text articles excluded</text>
-  <text x="555" y="394" font-size="14" font-weight="700" fill="#ef4444">n = {ft_excl}</text>
-  <text x="555" y="415" font-size="11" fill="#4b5563" font-weight="500">Exclusion reasons:</text>
-  <text x="555" y="432" font-size="11" fill="#6b7280">{ft_reasons_lines[0] if len(ft_reasons_lines) > 0 else "Not specified"}</text>
-  <text x="555" y="448" font-size="11" fill="#6b7280">{ft_reasons_lines[1] if len(ft_reasons_lines) > 1 else ""}</text>
-  <text x="555" y="464" font-size="11" fill="#6b7280">{ft_reasons_lines[2] if len(ft_reasons_lines) > 2 else ""}</text>
+  <rect x="510" y="265" width="340" height="55" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="680" y="288" font-size="11.5" font-weight="600" fill="#000000" text-anchor="middle">Reports not retrieved</text>
+  <text x="680" y="307" font-size="12" font-weight="700" fill="#000000" text-anchor="middle">(n = {not_retrieved})</text>
 
-  <!-- Arrow down from Eligibility to Included -->
-  <path d="M 335 425 L 335 525" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Arrow down from Reports sought to Reports assessed for eligibility -->
+  <path d="M 290 320 L 290 350" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow)"/>
 
-  <!-- Phase 4: Included Boxes -->
-  <rect x="180" y="530" width="310" height="95" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="195" y="555" font-size="13" font-weight="600" fill="#14532d">Studies included in review</text>
-  <text x="195" y="578" font-size="14" font-weight="700" fill="#16a34a">n = {incl}</text>
-  <text x="195" y="602" font-size="12" fill="#15803d">Reports in meta-analysis: n = {meta}</text>
+  <!-- Phase 2: Screening (Row 4 - Reports assessed for eligibility) -->
+  <rect x="120" y="350" width="340" height="60" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="290" y="374" font-size="11.5" font-weight="600" fill="#000000" text-anchor="middle">Reports assessed for eligibility</text>
+  <text x="290" y="394" font-size="12" font-weight="700" fill="#000000" text-anchor="middle">(n = {ft_assessed})</text>
+
+  <!-- Arrow right to Reports excluded with reasons -->
+  <path d="M 460 380 L 505 380" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <rect x="510" y="350" width="340" height="150" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="525" y="372" font-size="11" font-weight="600" fill="#000000">Reports excluded (n = {ft_excl}):</text>
+  <text x="535" y="393" font-size="10.5" fill="#000000">{ft_reasons_lines[0] if len(ft_reasons_lines) > 0 else ""}</text>
+  <text x="535" y="412" font-size="10.5" fill="#000000">{ft_reasons_lines[1] if len(ft_reasons_lines) > 1 else ""}</text>
+  <text x="535" y="431" font-size="10.5" fill="#000000">{ft_reasons_lines[2] if len(ft_reasons_lines) > 2 else ""}</text>
+  <text x="535" y="450" font-size="10.5" fill="#000000">{ft_reasons_lines[3] if len(ft_reasons_lines) > 3 else ""}</text>
+  <text x="535" y="469" font-size="10.5" fill="#000000">{ft_reasons_lines[4] if len(ft_reasons_lines) > 4 else ""}</text>
+
+  <!-- Arrow down from Reports assessed to Included -->
+  <path d="M 290 410 L 290 535" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <!-- Phase 3: Included (Row 5 - Included studies) -->
+  <rect x="120" y="535" width="340" height="70" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="290" y="558" font-size="11.5" font-weight="600" fill="#000000" text-anchor="middle">New studies included in review</text>
+  <text x="290" y="575" font-size="12" font-weight="700" fill="#000000" text-anchor="middle">(n = {incl})</text>
+  <text x="290" y="593" font-size="10.5" fill="#333333" text-anchor="middle">Reports of new included studies (n = {incl})</text>
+
+  <!-- Arrow right to Total studies included in review -->
+  <path d="M 460 570 L 505 570" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <rect x="510" y="535" width="340" height="70" rx="0" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <text x="680" y="558" font-size="11.5" font-weight="600" fill="#000000" text-anchor="middle">Total studies included in review</text>
+  <text x="680" y="575" font-size="12" font-weight="700" fill="#000000" text-anchor="middle">(n = {incl})</text>
+  <text x="680" y="593" font-size="10.5" fill="#333333" text-anchor="middle">Reports in meta-analysis (n = {meta})</text>
+
+  <!-- Footnotes at Bottom -->
+  <text x="120" y="635" font-size="9" fill="#444444">*Consider, if feasible to do so, reporting the number of records identified from each database or register searched rather than the total number.</text>
+  <text x="120" y="650" font-size="9" fill="#444444">**If automation tools were used, indicate how many records were excluded by a human and how many were excluded by automation tools.</text>
+  <text x="120" y="668" font-size="9" fill="#666666">From: Page MJ, McKenzie JE, Bossuyt PM, et al. The PRISMA 2020 statement: an updated guideline for reporting systematic reviews. BMJ 2021;372:n71. doi: 10.1136/bmj.n71</text>
+  <text x="120" y="683" font-size="9" fill="#666666">For more information, visit: http://www.prisma-statement.org/</text>
 
 </svg>"""
     return svg

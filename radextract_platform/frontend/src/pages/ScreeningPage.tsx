@@ -65,13 +65,15 @@ import {
   CheckSquare,
   CheckCircle2,
   ChevronDown,
+  Sliders,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
-
+import { ExploratoryScreeningView } from "../components/screening/ExploratoryScreeningView";
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const [viewMode, setViewMode] = useState<"standard" | "exploratory">("standard");
   const bookmarks = useBookmarks(projectId);
   const tagIndex = useProjectTags(projectId);
   const [tagFilter, setTagFilter] = useState("");
@@ -867,6 +869,20 @@ export function ScreeningPage() {
     }
   };
 
+  if (viewMode === "exploratory") {
+    return (
+      <ExploratoryScreeningView
+        projectId={projectId}
+        projectStudies={studies}
+        summary={summary}
+        exclusionReasons={exclusionReasons}
+        onScreenStudy={(payload) => decisionMutation.mutateAsync(payload)}
+        isDecisionPending={decisionMutation.isPending}
+        onSwitchToStandard={() => setViewMode("standard")}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Header */}
@@ -883,7 +899,7 @@ export function ScreeningPage() {
             <div>
               <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                 <ShieldCheck className="w-6 h-6 text-indigo-600" />
-                AI Screening Workspace
+                Co-Scientist Screening Workspace
               </h1>
               <p className="text-xs text-slate-500">
                 Multi-Stage Screening: Title &rarr; Abstract &rarr; Full-Text with Rayyan-Style Highlighting
@@ -914,6 +930,19 @@ export function ScreeningPage() {
               <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-indigo-200/70 text-indigo-900 rounded font-bold">?</kbd>
             </button>
 
+            {/* View Switcher: Exploratory Velvet + Senior Mode */}
+            <button
+              onClick={() => setViewMode("exploratory")}
+              className="px-3.5 py-2 text-xs font-bold text-[#2E1231] bg-[#FAF7F2] border-2 border-[#2E1231] hover:bg-[#E8C5E0]/40 rounded-lg flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+              title="Switch to Velvet Exploratory View with Senior Doctor Mode, Toggles, and Step-by-Step Process Trace"
+            >
+              <Sliders className="w-3.5 h-3.5 text-amber-600" />
+              <span>Velvet Stream + Senior Mode</span>
+              <span className="text-[10px] font-mono uppercase bg-[#2E1231] text-white px-1.5 py-0.2 rounded font-bold">
+                Live
+              </span>
+            </button>
+
             <button
               onClick={() => setShowKeywordsDrawer(true)}
               className="px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-1.5 shadow-sm transition-all"
@@ -929,7 +958,7 @@ export function ScreeningPage() {
                     onClick={() => resumeMutation.mutate()}
                     disabled={resumeMutation.isPending || cancelMutation.isPending}
                     className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Resume AI screening from current study"
+                    title="Resume Co-Scientist screening from current study"
                   >
                     {resumeMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -942,7 +971,7 @@ export function ScreeningPage() {
                     onClick={() => cancelMutation.mutate()}
                     disabled={cancelMutation.isPending || resumeMutation.isPending}
                     className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Stop AI screening run completely"
+                    title="Stop Co-Scientist screening run completely"
                   >
                     {cancelMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -971,7 +1000,7 @@ export function ScreeningPage() {
                     onClick={() => cancelMutation.mutate()}
                     disabled={cancelMutation.isPending || pauseMutation.isPending}
                     className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Stop AI screening run completely"
+                    title="Stop Co-Scientist screening run completely"
                   >
                     {cancelMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1008,7 +1037,7 @@ export function ScreeningPage() {
                   ) : (
                     <Sparkles className="w-4 h-4" />
                   )}
-                  Start Full AI Screening
+                  Start Full Co-Scientist Screening
                 </button>
               </>
             )}
@@ -1140,7 +1169,7 @@ export function ScreeningPage() {
         )}
       </header>
 
-      {/* Live AI screening progress & controls */}
+      {/* Live Co-Scientist screening progress & controls */}
       {progress?.active && (
         <div className={`border-b px-6 py-2.5 transition-colors ${
           progress.paused ? "bg-amber-50/95 border-amber-200" : "bg-indigo-50 border-indigo-200"
@@ -1157,7 +1186,7 @@ export function ScreeningPage() {
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
                 )}
                 <span className={`font-semibold shrink-0 ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
-                  AI screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
+                  Co-Scientist screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
                 </span>
                 <span className={`truncate ${progress.paused ? "text-amber-800" : "text-indigo-700"}`}>
                   {progress.paused
@@ -1441,12 +1470,12 @@ export function ScreeningPage() {
         </div>
       )}
 
-      {/* ── AI SCREENING CLARIFICATIONS & REVIEWER CHECKLIST ── */}
+      {/* ── CO-SCIENTIST SCREENING CLARIFICATIONS & REVIEWER CHECKLIST ── */}
       {projectClarifications.length > 0 && (
         <section
           id="clarifications-checklist"
           className="max-w-7xl w-full mx-auto px-4 md:px-6 pt-3"
-          aria-label="AI Screening Clarifications Checklist"
+          aria-label="Co-Scientist Screening Clarifications Checklist"
         >
           <div className="bg-white border border-purple-200/90 rounded-xl shadow-xs overflow-hidden transition-all">
             {/* Checklist Ribbon Header */}
@@ -1458,14 +1487,14 @@ export function ScreeningPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-bold text-slate-900 tracking-tight">
-                      AI Screening Clarifications Checklist
+                      Co-Scientist Screening Clarifications Checklist
                     </h2>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
                       {pendingClarifications.length} Pending
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    Review and clarify ambiguous PICO criteria flagged by AI screener
+                    Review and clarify ambiguous PICO criteria flagged by Co-Scientist screener
                   </p>
                 </div>
               </div>
@@ -1629,7 +1658,7 @@ export function ScreeningPage() {
                                 <div>
                                   <p className="font-bold">Clarification recorded and study re-evaluated!</p>
                                   <p className="text-[11px] text-emerald-800 mt-0.5">
-                                    AI Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% confidence)
+                                    Co-Scientist Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% confidence)
                                   </p>
                                   {feedback.final_reason_text && (
                                     <p className="text-[10px] text-emerald-700 italic mt-0.5">{feedback.final_reason_text}</p>
@@ -1897,10 +1926,10 @@ export function ScreeningPage() {
                                 ? "bg-rose-50 text-rose-700"
                                 : "bg-amber-50 text-amber-700"
                             }`}
-                            title={isJustDone ? "Screened in the current run" : "Screened by AI"}
+                            title={isJustDone ? "Screened in the current run" : "Screened by Co-Scientist"}
                           >
                             <CheckCircle className="w-3 h-3" />
-                            AI screened: {study.ai_decision}
+                            Co-Scientist screened: {study.ai_decision}
                           </span>
                         )}
 
@@ -1998,14 +2027,14 @@ export function ScreeningPage() {
                 </div>
               </div>
 
-              {/* AI Verdict & Confidence Card */}
+              {/* Co-Scientist Verdict & Confidence Card */}
               {selectedStudy.ai_decision && (
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Bot className="w-4 h-4 text-indigo-600" />
                       <span className="text-xs font-bold text-slate-800">
-                        AI Recommendation: <span className="capitalize">{selectedStudy.ai_decision}</span>
+                        Co-Scientist Recommendation: <span className="capitalize">{selectedStudy.ai_decision}</span>
                       </span>
                     </div>
                     {selectedStudy.ai_confidence && (
@@ -2045,7 +2074,7 @@ export function ScreeningPage() {
                 <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
               </details>
 
-              {/* Biomni Clarification Questions Panel */}
+              {/* Co-Scientist Clarification Questions Panel */}
               {(studyClarifications.length > 0 || selectedStudy.screening_status === "awaiting_clarification" || selectedStudy.ai_decision === "maybe") && (
                 <div className="bg-gradient-to-r from-purple-50/90 to-indigo-50/90 border-2 border-purple-300 rounded-xl p-4 space-y-3 shadow-xs animate-tag-pop">
                   <div className="flex items-center justify-between">
@@ -2054,7 +2083,7 @@ export function ScreeningPage() {
                         <Bot className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="block text-purple-900 font-bold">Biomni AI Clarification Request</span>
+                        <span className="block text-purple-900 font-bold">Co-Scientist Clarification Request</span>
                         <span className="text-[10px] text-purple-600 font-normal">Ambiguous eligibility against PICO criteria &bull; Human clarification needed</span>
                       </div>
                     </div>
@@ -2161,13 +2190,13 @@ export function ScreeningPage() {
                   ) : (
                     <div className="bg-white border border-purple-100 rounded-lg p-3 space-y-3">
                       <p className="text-xs font-semibold text-slate-800">
-                        Biomni is uncertain whether this study meets the Population (pure arterial malformation without nidus) or Intervention criteria. Please clarify:
+                        The Co-Scientist requires clarification whether this study meets the Population (pure arterial malformation without nidus) or Intervention criteria. Please clarify:
                       </p>
                       <div className="space-y-1.5">
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
                           <input
                             type="radio"
-                            name="biomni-clarify"
+                            name="coscientist-clarify"
                             value="included"
                             checked={selectedOption === "included"}
                             onChange={() => setSelectedOption("included")}
@@ -2178,7 +2207,7 @@ export function ScreeningPage() {
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
                           <input
                             type="radio"
-                            name="biomni-clarify"
+                            name="coscientist-clarify"
                             value="excluded"
                             checked={selectedOption === "excluded"}
                             onChange={() => setSelectedOption("excluded")}
@@ -2189,7 +2218,7 @@ export function ScreeningPage() {
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
                           <input
                             type="radio"
-                            name="biomni-clarify"
+                            name="coscientist-clarify"
                             value="pdf"
                             checked={selectedOption === "pdf"}
                             onChange={() => setSelectedOption("pdf")}
