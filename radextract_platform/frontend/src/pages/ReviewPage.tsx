@@ -462,12 +462,14 @@ function VariableManagementPanel({
   const sections = ["Cohort_Level", "Protocol_Level", "Outcome_Level", "Other"];
 
   // Group variables by section
-  const grouped = variables.reduce((acc, v) => {
-    const sec = v.section || "Other";
-    if (!acc[sec]) acc[sec] = [];
-    acc[sec].push(v);
-    return acc;
-  }, {} as Record<string, any[]>);
+  const grouped = useMemo(() => {
+    return variables.reduce((acc, v) => {
+      const sec = v.section || "Other";
+      if (!acc[sec]) acc[sec] = [];
+      acc[sec].push(v);
+      return acc;
+    }, {} as Record<string, any[]>);
+  }, [variables]);
 
   return (
     <div className="card p-6 mb-6">

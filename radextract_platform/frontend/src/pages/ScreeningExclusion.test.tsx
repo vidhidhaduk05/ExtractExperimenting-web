@@ -174,7 +174,7 @@ describe("ScreeningPage Exclusion Reason Validation (Task 27)", () => {
   });
 
   it("retains the original record stage when retrying a failed full-text save", async () => {
-    vi.mocked(api.listScreening).mockResolvedValue([{ ...mockStudies[0], screening_stage: "ft" }] as any);
+    vi.mocked(api.listScreening).mockResolvedValue([{ ...mockStudies[0], screening_stage: "ft", screening_status: "ta_included" }] as any);
     vi.mocked(api.screeningDecision).mockRejectedValueOnce(new Error("Save interrupted"));
     renderScreeningPage();
     fireEvent.click(await screen.findByRole("button", { name: /Include Study/i }));

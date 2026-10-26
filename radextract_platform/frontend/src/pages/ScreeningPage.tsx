@@ -275,9 +275,11 @@ export function ScreeningPage() {
   const [extractingStudyId, setExtractingStudyId] = useState<string | null>(null);
 
   // Map study_id -> existing RoB assessment (for Start RoB / View RoB rendering)
-  const robByStudy = new Map(
-    (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
-  );
+  const robByStudy = useMemo(() => {
+    return new Map(
+      (robSummary?.assessments || []).map((a: any) => [a.study_id, a])
+    );
+  }, [robSummary?.assessments]);
 
   const handleStartRob = async (study: Study) => {
     setRobStarting((prev) => ({ ...prev, [study.study_id]: true }));
@@ -1282,6 +1284,8 @@ export function ScreeningPage() {
 
           {/* Quick Dropdowns & Saved Filter */}
           <div className="flex items-center gap-2 flex-wrap">
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
+
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
