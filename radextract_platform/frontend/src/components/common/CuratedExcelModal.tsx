@@ -152,9 +152,14 @@ export function CuratedExcelModal({
         const page = columnMapping.pageNumber ? Number(row[columnMapping.pageNumber]) || 1 : Number(row["Page Number"] || row["Page"]) || 1;
         const studyVal = columnMapping.studyName ? row[columnMapping.studyName] : row["Study ID"] || row["Study"] || targetStudyId;
 
+        const demoVarNameMap = new Map<string, any>();
+        DEMO_VARIABLES.forEach((v) => {
+          demoVarNameMap.set(v.name.toLowerCase(), v);
+        });
+
         if (varName && val !== undefined) {
           // Resolve variable ID
-          const matchedVar = DEMO_VARIABLES.find(v => v.name.toLowerCase() === String(varName).toLowerCase()) || {
+          const matchedVar = demoVarNameMap.get(String(varName).toLowerCase()) || {
             variable_id: `v_custom_${String(varName).toLowerCase().replace(/[^a-z0-9]/g, "_")}`,
             name: String(varName),
           };
@@ -190,11 +195,21 @@ export function CuratedExcelModal({
     try {
       const wb = XLSX.utils.book_new();
 
+      // Build extractions map for O(1) lookups
+      const extMap = new Map<string, any>();
+      Object.entries(DEMO_EXTRACTIONS).forEach(([sId, exts]: [string, any]) => {
+        (exts || []).forEach((e: any) => {
+          if (e.variable_id) extMap.set(`${sId}:${e.variable_id}`, e);
+        });
+      });
+
       // Sheet 1: Active Study
-      const currentPaper = availablePapers.find(p => p.id === selectedStudyId) || availablePapers[0];
-      const activeStudyExts = (DEMO_EXTRACTIONS as any)[selectedStudyId] || [];
+      const paperMap = new Map<string, any>();
+      availablePapers.forEach((p) => paperMap.set(p.id, p));
+      const currentPaper = paperMap.get(selectedStudyId) || availablePapers[0];
+
       const s1Data = DEMO_VARIABLES.map(v => {
-        const found = activeStudyExts.find((e: any) => e.variable_id === v.variable_id);
+        const found = extMap.get(`${selectedStudyId}:${v.variable_id}`);
         return {
           "Study ID": selectedStudyId,
           "Study Title": currentPaper?.title || "Intracranial PAM Study",
@@ -218,8 +233,7 @@ export function CuratedExcelModal({
           "Section": v.section,
         };
         availablePapers.forEach((paper, idx) => {
-          const exts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
-          const match = exts.find((e: any) => e.variable_id === v.variable_id);
+          const match = extMap.get(`${paper.id}:${v.variable_id}`);
           row[`#${idx + 1} ${paper.title.split("(")[0].trim()}`] = match?.value || "NR";
         });
         return row;
