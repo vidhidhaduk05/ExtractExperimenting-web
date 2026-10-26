@@ -21,7 +21,10 @@ from typing import List, Dict, Any, Optional, Tuple
 
 import httpx
 import numpy as np
-import onnxruntime as ort
+try:
+    import onnxruntime as ort
+except ImportError:
+    ort = None
 
 from config import settings
 
@@ -56,7 +59,7 @@ def _get_laya_model():
     global _laya_instance, _laya_failed
     if _laya_instance is not None:
         return _laya_instance
-    if _laya_failed:
+    if _laya_failed or ort is None:
         return None
 
     try:
