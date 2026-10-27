@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from database import get_db
-from dependencies import get_current_user_optional, check_project_access
+from dependencies import get_current_user_optional, require_project_access, check_project_access
 from services import grade_service
 from services.db_backend import DBBackend
 
@@ -48,6 +48,7 @@ async def create_grade(
     conn: DBBackend = Depends(get_db),
 ):
     """Create a new GRADE assessment with all 8 factors initialized."""
+    require_project_access(conn, project_id, user, min_role="reviewer")
     # Auto-determine starting level if not provided
     starting_level = body.starting_level
     if not starting_level:
@@ -74,36 +75,59 @@ async def list_grade(
     conn: DBBackend = Depends(get_db),
 ):
     """List all GRADE assessments for a project."""
-    check_project_access(conn, project_id, user)
+    require_project_access(conn, project_id, user, min_role="viewer")
     return grade_service.list_grade_assessments(project_id, db=conn)
 
 
 @router.get("/grade/{grade_id}")
-async def get_grade(grade_id: str, conn: DBBackend = Depends(get_db)):
+async def get_grade(
+    grade_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Get GRADE assessment detail with all factors."""
     result = grade_service.get_grade_assessment(grade_id, db=conn)
     if not result:
         raise HTTPException(status_code=404, detail="GRADE assessment not found")
+    require_project_access(conn, result["project_id"], user, min_role="viewer")
     return result
 
 
 @router.delete("/grade/{grade_id}")
-async def delete_grade(grade_id: str, conn: DBBackend = Depends(get_db)):
+async def delete_grade(
+    grade_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Delete a GRADE assessment and all its factors."""
-    success = grade_service.delete_grade_assessment(grade_id, db=conn)
-    if not success:
+    assessment = grade_service.get_grade_assessment(grade_id, db=conn)
+    if not assessment:
         raise HTTPException(status_code=404, detail="GRADE assessment not found")
+    require_project_access(conn, assessment["project_id"], user, min_role="reviewer")
+    grade_service.delete_grade_assessment(grade_id, db=conn)
     return {"deleted": True, "grade_id": grade_id}
 
 
 # ── Factor updates ──
 
 @router.put("/grade/factors/{factor_id}")
-async def update_grade_factor(factor_id: str, body: GradeFactorUpdate, conn: DBBackend = Depends(get_db)):
+async def update_grade_factor(
+    factor_id: str,
+    body: GradeFactorUpdate,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Update a single GRADE factor's rating and rationale.
 
     Automatically recomputes the certainty rating after the update.
     """
+    factor = conn.get("grade_factors", factor_id)
+    if not factor:
+        raise HTTPException(status_code=404, detail="Factor not found")
+    gid = factor.get("grade_id") or factor.get("assessment_id")
+    assessment = grade_service.get_grade_assessment(gid, db=conn) if gid else None
+    if assessment:
+        require_project_access(conn, assessment["project_id"], user, min_role="reviewer")
     result = grade_service.update_factor(factor_id, body.rating, body.rationale, db=conn)
     if not result:
         raise HTTPException(status_code=404, detail="Factor not found")
@@ -132,6 +156,29 @@ async def compute_grade_certainty(grade_id: str, conn: DBBackend = Depends(get_d
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+# ── Finalization ──
+
+@router.post("/grade/{grade_id}/finalize")
+async def finalize_grade(
+    grade_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Finalize a GRADE assessment (locked for reporting).
+
+    Strictly requires that synthesis has completed for this outcome.
+    """
+    assessment = grade_service.get_grade_assessment(grade_id, db=conn)
+    if not assessment:
+        raise HTTPException(status_code=404, detail="GRADE assessment not found")
+    require_project_access(conn, assessment["project_id"], user, min_role="reviewer")
+    try:
+        result = grade_service.finalize_grade_assessment(grade_id, user=user, db=conn)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ── Summary of Findings ──

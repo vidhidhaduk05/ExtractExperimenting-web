@@ -189,3 +189,33 @@ def test_endpoint_matches_service(client):
     assert "text/csv" in csv_response.headers["content-type"]
     assert b"database_results" in csv_response.content
     assert b",1\n" in csv_response.content or b",1\r\n" in csv_response.content
+
+
+def test_reproduction_one_imported_unscreened_record(client):
+    """CHECK: one imported, unscreened record → identified=1, screened=0, pending=1."""
+    # 1. Test via build_prisma2020_sync directly
+    studies = [_study("PubMed", "pending", "ta")]
+    payload = build_prisma2020_sync(studies)
+    assert payload["counts"]["identified"] == 1
+    assert payload["counts"]["screened"] == 0
+    assert payload["counts"]["pending"] == 1
+
+    # 2. Test end-to-end via API endpoint
+    created = client.post("/api/projects", json={"name": "Reproduction Project"})
+    project_id = created.json()["project_id"]
+    client.post(
+        f"/api/projects/{project_id}/studies",
+        json={
+            "project_id": project_id,
+            "title": "Unscreened Imported Record",
+            "source": "PubMed",
+        },
+    )
+
+    response = client.get(f"/api/projects/{project_id}/prisma/prisma2020")
+    assert response.status_code == 200
+    counts = response.json()["counts"]
+    assert counts["identified"] == 1
+    assert counts["screened"] == 0
+    assert counts["pending"] == 1
+

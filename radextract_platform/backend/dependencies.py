@@ -345,6 +345,27 @@ def check_project_access(conn: Any, project_id: str, user: Optional[dict], min_r
         )
 
 
+def require_project_access(conn: Any, project_id: str, user: Optional[dict], min_role: str = "viewer") -> dict:
+    """Enforce strict project access:
+    - 401 if anonymous (user is None)
+    - 403 if user lacks min_role on the project
+    Returns the authenticated user dict.
+    """
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user_id = user.get("user_id") or user.get("sub", "")
+    if not can_user_access_project(user_id, project_id, conn, min_role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Insufficient permissions (requires {min_role} role)",
+        )
+    return user
+
+
 def resolve_study_project_id(conn: Any, study_id: str) -> Optional[str]:
     """Get project_id for a study."""
     db = conn if hasattr(conn, "get") else get_db_backend()

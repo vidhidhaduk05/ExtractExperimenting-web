@@ -221,3 +221,94 @@ class TestGradeAuthorization:
         r_export = client.get(f"/api/projects/{pid}/grade/export?format=csv", headers=non_member_headers)
         assert r_export.status_code == 403
         assert "Insufficient permissions" in r_export.json()["detail"]
+
+    def test_anonymous_and_member_grade_access(self, client, project_with_study):
+        pid, _, _ = project_with_study
+        r_create = client.post(f"/api/projects/{pid}/grade", json={"outcome_label": "Auth Check Outcome"})
+        assert r_create.status_code == 200
+        grade_id = r_create.json()["grade_id"]
+
+        # Anonymous client without auth header
+        anon_client = TestClient(app)
+
+        # 1. Anonymous GET -> 401
+        r_anon_get = anon_client.get(f"/api/grade/{grade_id}")
+        assert r_anon_get.status_code == 401
+
+        # 2. Anonymous DELETE -> 401
+        r_anon_del = anon_client.delete(f"/api/grade/{grade_id}")
+        assert r_anon_del.status_code == 401
+
+        # Non-member client
+        from dependencies import create_access_token, create_user
+        non_mem = create_user("non_member_user", "pass", role="reviewer")
+        non_mem_token = create_access_token(non_mem["user_id"], non_mem["username"], non_mem["role"])
+        non_mem_client = TestClient(app)
+        non_mem_client.headers.update({"Authorization": f"Bearer {non_mem_token}"})
+
+        # 3. Non-member GET -> 403
+        r_non_get = non_mem_client.get(f"/api/grade/{grade_id}")
+        assert r_non_get.status_code == 403
+
+        # 4. Non-member DELETE -> 403
+        r_non_del = non_mem_client.delete(f"/api/grade/{grade_id}")
+        assert r_non_del.status_code == 403
+
+        # Member client (client fixture is authenticated as rev1 member)
+        # 5. Member GET -> 200
+        r_mem_get = client.get(f"/api/grade/{grade_id}")
+        assert r_mem_get.status_code == 200
+        assert r_mem_get.json()["grade_id"] == grade_id
+
+        # 6. Member DELETE -> 200
+        r_mem_del = client.delete(f"/api/grade/{grade_id}")
+        assert r_mem_del.status_code == 200
+        assert r_mem_del.json()["deleted"] is True
+
+
+class TestGradeWorkflowAndFinalization:
+
+    def test_grade_final_impossible_before_synthesis_and_export_labels_descriptive(self, client, project_with_study):
+        pid, sid, aid = project_with_study
+
+        # 1. Create a GRADE assessment for an outcome before synthesis has run
+        r_create = client.post(f"/api/projects/{pid}/grade", json={"outcome_label": "Unsynthesized Outcome"})
+        assert r_create.status_code == 200
+        grade_data = r_create.json()
+        gid = grade_data["grade_id"]
+        assert grade_data["status"] == "draft"
+
+        # 2. CHECK: Finalizing before synthesis must fail (400)
+        r_fin_fail = client.post(f"/api/grade/{gid}/finalize")
+        assert r_fin_fail.status_code == 400
+        assert "Cannot finalize GRADE assessment: synthesis" in r_fin_fail.json()["detail"]
+
+        # 3. Simulate synthesis running for this outcome (e.g. meta-analysis created with cannot_pool)
+        conn = get_connection()
+        mid = str(uuid.uuid4())
+        conn.execute(
+            "INSERT INTO meta_analyses (meta_id, project_id, outcome_label, results_json) VALUES (?, ?, 'Unsynthesized Outcome', '{\"status\": \"cannot_pool\"}')",
+            (mid, pid),
+        )
+        conn.commit()
+        conn.close()
+
+        # 4. Now finalization succeeds
+        r_fin_ok = client.post(f"/api/grade/{gid}/finalize")
+        assert r_fin_ok.status_code == 200
+        final_data = r_fin_ok.json()
+        assert final_data["status"] == "final"
+        assert final_data["finalized_at"] != ""
+
+        # 5. CHECK: Export labels descriptive-synthesis review correctly
+        r_export_json = client.get(f"/api/projects/{pid}/export/json")
+        assert r_export_json.status_code == 200
+        exp_json = r_export_json.json()
+        assert exp_json["is_descriptive_synthesis"] is True
+        assert exp_json["synthesis_label"] == "Descriptive Synthesis (Narrative Pooling)"
+
+        r_export_csv = client.get(f"/api/projects/{pid}/export?format=csv")
+        assert r_export_csv.status_code == 200
+        assert "Descriptive Synthesis (Narrative Pooling)" in r_export_csv.text
+
+

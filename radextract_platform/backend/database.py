@@ -357,6 +357,9 @@ CREATE TABLE IF NOT EXISTS grade_assessments (
     meta_analysis_id  TEXT,
     certainty_rating  TEXT DEFAULT 'high',
     starting_level    TEXT DEFAULT 'high',
+    status            TEXT DEFAULT 'draft',
+    finalized_at      TEXT DEFAULT '',
+    finalized_by      TEXT DEFAULT '',
     n_studies         INTEGER DEFAULT 0,
     n_participants    INTEGER DEFAULT 0,
     effect_estimate   TEXT DEFAULT '',
@@ -808,6 +811,9 @@ MIGRATION_COLUMNS = [
     ("studies", "tracing_status", "TEXT DEFAULT 'none'"),
     ("extractions", "tracing_status", "TEXT DEFAULT 'none'"),
     ("extractions", "verification_note", "TEXT DEFAULT ''"),
+    ("grade_assessments", "status", "TEXT DEFAULT 'draft'"),
+    ("grade_assessments", "finalized_at", "TEXT DEFAULT ''"),
+    ("grade_assessments", "finalized_by", "TEXT DEFAULT ''"),
 ]
 
 

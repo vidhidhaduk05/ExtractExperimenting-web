@@ -163,6 +163,19 @@ def _named_sources(pairs: Sequence[Tuple[str, int]]) -> bool:
     return any(name.lower() != "unspecified" for name, _ in pairs)
 
 
+def _has_ta_decision(row: Mapping[str, Any]) -> bool:
+    """Check if record has a recorded Title/Abstract decision."""
+    if row.get("has_ta_decision"):
+        return True
+    status = _text(row.get("screening_status")).lower()
+    stage = _text(row.get("screening_stage")).lower()
+    if status in ("included", "excluded"):
+        return True
+    if stage == "ft":
+        return True
+    return False
+
+
 def build_prisma2020_sync(
     studies: Sequence[Mapping[str, Any]],
     meta_studies: int = 0,
@@ -205,10 +218,19 @@ def build_prisma2020_sync(
     )
     database_results = len(dbr_database)
     register_results = len(dbr_register)
-    records_screened = database_results + register_results - duplicates - excluded_automatic
+
+    # Event-derived TA screening: only records with a recorded TA decision
+    dbr_pending_ta = sum(
+        1 for row in dbr_rows
+        if not _is_duplicate(row) and not _has_ta_decision(row) and not _is_automation(row)
+    )
+    records_screened = sum(
+        1 for row in dbr_rows
+        if not _is_duplicate(row) and _has_ta_decision(row) and not _is_automation(row)
+    )
     dbr_sought = records_screened - ta_excluded
     dbr_assessed = ft_excluded + dbr_included
-    dbr_notretrieved = dbr_open
+    dbr_notretrieved = max(0, dbr_sought - dbr_assessed)
     dbr_confirmed_notretrieved = max(0, dbr_notretrieved - dbr_awaiting_pdf)
 
     other_by_kind = {"website": [], "organisation": [], "citation": []}
@@ -221,15 +243,25 @@ def build_prisma2020_sync(
         row for row, outcome in zip(other_flat, other_outcomes)
         if outcome in {"ta_excluded", "ft_excluded", "automation"}
     ]
+    other_pending_ta = sum(
+        1 for row in other_flat
+        if not _has_ta_decision(row) and not _is_automation(row)
+    )
+    other_screened = len(other_flat) - other_pending_ta
     other_open = sum(1 for outcome in other_outcomes if outcome == "open")
-    other_sought = len(other_flat)
+    other_sought = len(other_flat) - other_pending_ta
     other_assessed = other_sought - other_open
+    if other_assessed < 0:
+        other_assessed = 0
 
     ft_rows = [
         row for row, outcome in zip(dbr_rows, dbr_outcomes) if outcome == "ft_excluded"
     ]
     total_studies = dbr_included + other_included
     total_studies_ma = max(0, min(int(meta_studies or 0), total_studies))
+
+    total_identified = (database_results + register_results - duplicates) + len(other_flat)
+    total_pending = dbr_pending_ta + (dbr_sought - dbr_assessed) + other_pending_ta + max(0, other_sought - other_assessed)
 
     db_pairs = _source_pairs(dbr_database)
     reg_pairs = _source_pairs(dbr_register)
@@ -298,6 +330,13 @@ def build_prisma2020_sync(
         )
 
     counts = {
+        "identified": total_identified,
+        "screened": records_screened + other_screened,
+        "retrieved": dbr_sought + other_sought,
+        "assessed_ft": dbr_assessed + other_assessed,
+        "included": total_studies,
+        "analysed": total_studies_ma,
+        "pending": total_pending,
         "database_results": database_results,
         "register_results": register_results,
         "duplicates": duplicates,
@@ -368,25 +407,45 @@ def render_prisma2020_csv(fields: Mapping[str, str]) -> str:
 def sync_prisma2020(project_id: str, db) -> Dict[str, Any]:
     """Load a project's studies and return the official PRISMA2020 payload."""
     study_rows = db.execute(
-        """SELECT source, is_duplicate, screening_status, screening_stage,
+        """SELECT study_id, source, is_duplicate, screening_status, screening_stage,
                   screening_reason, pdf_status
            FROM studies WHERE project_id = ?""",
         (project_id,),
     ).fetchall()
     studies = [dict(row) for row in study_rows]
+
+    # Query recorded screening decisions
+    try:
+        dec_rows = db.execute(
+            """SELECT DISTINCT study_id, stage FROM screening_decisions WHERE project_id = ?""",
+            (project_id,),
+        ).fetchall()
+        ta_sids = {r["study_id"] for r in dec_rows if (r["stage"] or "").lower() == "ta"}
+        ft_sids = {r["study_id"] for r in dec_rows if (r["stage"] or "").lower() == "ft"}
+        for s in studies:
+            sid = s.get("study_id")
+            if sid in ta_sids:
+                s["has_ta_decision"] = True
+            if sid in ft_sids:
+                s["has_ft_decision"] = True
+    except Exception:
+        pass
+
     meta_studies = 0
     try:
+        # Step 10: analysed = DISTINCT studies in the actual pooled analysis (not "has extraction")
         meta_row = db.execute(
-            """SELECT COUNT(DISTINCT s.study_id) as c FROM studies s
-               JOIN extractions e ON s.study_id = e.study_id
-               WHERE s.project_id = ? AND s.screening_status = 'included'
-               AND s.is_duplicate = 0""",
+            """SELECT COUNT(DISTINCT mas.study_id) as c
+               FROM meta_analysis_studies mas
+               JOIN meta_analyses ma ON mas.meta_id = ma.meta_id
+               WHERE ma.project_id = ? AND mas.included = 1""",
             (project_id,),
         ).fetchone()
         if meta_row is not None:
             meta_studies = int(meta_row["c"] or 0)
     except Exception as exc:
         logger.warning("PRISMA2020 meta-analysis count unavailable: %s", exc)
+
     payload = build_prisma2020_sync(studies, meta_studies=meta_studies)
     payload["project_id"] = project_id
     return payload

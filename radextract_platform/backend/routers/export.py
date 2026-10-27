@@ -42,6 +42,22 @@ async def export_project_xlsx_alias(
     return await export_project(project_id, format="xlsx", include_rob=include_rob, user=user, db=db)
 
 
+def _get_synthesis_label(project_id: str, db: DBBackend) -> tuple[str, str]:
+    """Return (synthesis_type, synthesis_label) for the project."""
+    try:
+        metas = db.query("meta_analyses", {"project_id": project_id})
+        if metas:
+            has_pooled = any(
+                (m.get("status") == "pooled" or (m.get("pooled_effect") is not None and m.get("status") != "cannot_pool"))
+                for m in metas
+            )
+            if has_pooled:
+                return "quantitative_meta_analysis", "Quantitative Meta-Analysis"
+    except Exception:
+        pass
+    return "descriptive_synthesis", "Descriptive Synthesis (Narrative Pooling)"
+
+
 @router.get("/projects/{project_id}/export/json")
 @router.get("/export/{project_id}/json")
 async def export_project_json_alias(
@@ -53,12 +69,16 @@ async def export_project_json_alias(
     """Export project data (extractions + RoB) as JSON."""
     check_project_access(db, project_id, user)
     proj, variables, studies, ext_by_study, rob_by_study = _fetch_export_data(project_id, include_rob, db)
+    synth_type, synth_label = _get_synthesis_label(project_id, db)
     return {
         "project": proj,
         "variables": variables,
         "studies": studies,
         "extractions": ext_by_study,
         "risk_of_bias": rob_by_study if include_rob else {},
+        "synthesis_type": synth_type,
+        "synthesis_label": synth_label,
+        "is_descriptive_synthesis": synth_type == "descriptive_synthesis",
     }
 
 
@@ -160,6 +180,8 @@ def _fetch_export_data(project_id: str, include_rob: bool, db: DBBackend):
 async def _export_csv(project_id: str, timestamp: str, include_rob: bool, db: DBBackend) -> Response:
     proj, variables, studies, ext_by_study, rob_by_study = _fetch_export_data(project_id, include_rob, db)
 
+    synth_type, synth_label = _get_synthesis_label(project_id, db)
+
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -168,6 +190,7 @@ async def _export_csv(project_id: str, timestamp: str, include_rob: bool, db: DB
     headers += [f"{v.get('section', '')}/{v.get('name', '')}" for v in variables]
     if include_rob:
         headers += ["RoB Tool", "RoB Overall"]
+    headers += ["Synthesis Strategy"]
     writer.writerow(headers)
 
     for s in studies:
@@ -188,6 +211,7 @@ async def _export_csv(project_id: str, timestamp: str, include_rob: bool, db: DB
             rob = rob_by_study.get(study_id, {})
             row.append(rob.get("tool", ""))
             row.append(rob.get("overall_judgment", ""))
+        row.append(synth_label)
         writer.writerow(row)
 
     csv_bytes = output.getvalue().encode("utf-8")

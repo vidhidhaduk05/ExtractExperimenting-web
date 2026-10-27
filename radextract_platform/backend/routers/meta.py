@@ -192,11 +192,12 @@ async def get_project_meta_analysis_synthesis(
         se_val = None
 
         if mas_row:
-            m_eff = mas_row.get("effect_size")
-            m_var = mas_row.get("variance")
-            m_se = mas_row.get("se")
-            m_cil = mas_row.get("ci_lower")
-            m_ciu = mas_row.get("ci_upper")
+            keys = mas_row.keys()
+            m_eff = mas_row["effect_size"] if "effect_size" in keys else None
+            m_var = mas_row["variance"] if "variance" in keys else None
+            m_se = mas_row["se"] if "se" in keys else None
+            m_cil = mas_row["ci_lower"] if "ci_lower" in keys else None
+            m_ciu = mas_row["ci_upper"] if "ci_upper" in keys else None
             if m_eff is not None:
                 effect_val = float(m_eff)
             if m_cil is not None:
@@ -303,8 +304,15 @@ async def get_project_meta_analysis_synthesis(
             })
 
     k = len(extracted_studies)
-    if k == 0:
+    if k < 2:
+        reason = (
+            "At least 2 studies with complete extracted effect data are required for statistical pooling."
+            if k == 1
+            else "No studies with complete extracted effect data available for meta-analysis pooling."
+        )
         return {
+            "status": "cannot_pool",
+            "reason": reason,
             "pooled_effect": None,
             "ci_lower": None,
             "ci_upper": None,
@@ -316,7 +324,7 @@ async def get_project_meta_analysis_synthesis(
             "model": model,
             "studies": [],
             "excluded_missing_data": excluded_missing_data,
-            "message": "No studies with complete extracted effect data available for meta-analysis pooling."
+            "message": reason,
         }
 
     # Meta-analysis pooling
@@ -369,6 +377,7 @@ async def get_project_meta_analysis_synthesis(
         ci_upper = float(theta_pooled + 1.96 * se_pooled)
 
     return {
+        "status": "pooled",
         "pooled_effect": round(pooled_effect, 4),
         "ci_lower": round(ci_lower, 4),
         "ci_upper": round(ci_upper, 4),
