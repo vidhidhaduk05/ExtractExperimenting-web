@@ -94,6 +94,8 @@ class HypothesisResponse(BaseModel):
     hypothesis: str = ""
     research_question: str = ""
     secondary_hypotheses: list[SecondaryHypothesis] = Field(default_factory=list)
+    generation_source: str = "template"   # "llm" | "template" | "failed"
+    generation_error: str = ""
 
 
 # ── PubMed API Key ──

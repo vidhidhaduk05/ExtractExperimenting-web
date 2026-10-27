@@ -2193,6 +2193,8 @@ export interface HypothesisResponse {
   hypothesis: string;
   research_question: string;
   secondary_hypotheses: SecondaryHypothesis[];
+  generation_source?: string; // "llm" | "template" | "failed"
+  generation_error?: string;
 }
 
 export interface HypothesisUpdate {
