@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
-import { DEMO_EXTRACTIONS, DEMO_VARIABLES, DEMO_STUDIES } from "../../lib/demoData";
+import { DEMO_EXTRACTIONS, DEMO_VARIABLES } from "../../lib/demoData";
 
 export interface CuratedExcelModalProps {
   projectId: string;
@@ -54,7 +54,7 @@ export function CuratedExcelModal({
     try {
       setIsParsing(true);
       // Ingest benchmark PAM extractions
-      const targetStudies = availablePapers.length > 0 ? availablePapers : DEMO_STUDIES.map(s => ({ id: s.study_id, shortId: s.study_id, title: s.title, filename: s.pdf_path || "" }));
+      const targetStudies = availablePapers;
       
       let populatedCount = 0;
       for (const paper of targetStudies) {

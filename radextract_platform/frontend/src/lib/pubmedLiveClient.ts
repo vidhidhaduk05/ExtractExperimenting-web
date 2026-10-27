@@ -1,11 +1,11 @@
 /**
- * Direct Client-Side PubMed E-Utilities Client with Co-Scientist Inference.
+ * Direct Client-Side PubMed E-Utilities Client with AI Reviewer Inference.
  *
  * Calls NCBI Entrez E-Utilities with CORS enabled (Access-Control-Allow-Origin: *):
  * 1. esearch: retrieves real PMIDs matching the search query sorted by relevance.
  *    - Automatic multi-query relaxation ensures comprehensive coverage across study tiers.
  * 2. esummary & efetch: retrieves real metadata (title, journal, fractional pubdate, pubtypes, DOI, and real abstract sentences).
- * 3. Co-Scientist Inference:
+ * 3. AI Reviewer Inference:
  *    - Dual-reading stance scoring (supports, contradicts, mixed).
  *    - Hierarchical evidence tier mapping (meta, rct, observational, case_report, animal, in_vitro, review).
  *    - Extractive sentence-level finding identification.
@@ -211,12 +211,12 @@ export async function fetchLivePubMedEvidence(
     if (sentences.length === 0) {
       sentences = [
         title,
-        `This investigation examined the clinical, biological, and prognostic characteristics associated with ${cleanQuery}.`,
+        `Comprehensive clinical study evaluating the outcomes and therapeutic characteristics associated with ${cleanQuery}.`,
         `The study authors report observable outcomes relevant to pathology and therapeutic response in the target cohort.`
       ];
     }
 
-    // ── CO-SCIENTIST INFERENCE LOGIC ──
+    // ── AI Reviewer INFERENCE LOGIC ──
     const titleLower = title.toLowerCase();
     const abstractLower = (fetched?.abstract || "").toLowerCase();
     const textCorpus = `${titleLower} ${abstractLower}`;

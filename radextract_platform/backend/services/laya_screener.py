@@ -15,8 +15,8 @@ import re
 from typing import Any, Optional
 
 from config import settings
-from services import jev_client
-from services.jev_client import JevError
+from services import laya_client
+from services.laya_client import JevError
 
 logger = logging.getLogger("jev_screener")
 
@@ -255,7 +255,7 @@ def screen(
 
     Returns a result dict, or None when Jev is disabled, cannot screen (no PICO), or fails.
     """
-    if not jev_client.is_jev_enabled():
+    if not laya_client.is_jev_enabled():
         return None
     try:
         return _screen(stage, title, abstract, full_text, pico, exclusion_reasons)
@@ -289,7 +289,7 @@ def _screen(stage, title, abstract, full_text, pico, exclusion_reasons) -> Optio
     state = build_state(stage, title, abstract, full_text or "", fields)
     questions = build_questions(stage, fields, exclusion_reasons)
     try:
-        answers = jev_client.ask(state, questions)
+        answers = laya_client.ask(state, questions)
     except JevError as e:
         logger.warning("Jev screening failed (%s stage): %s", stage, e)
         return None
@@ -344,7 +344,7 @@ def jev_gate(extract, adapt=None):
 
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
-            if jev_client.jev_mode() == "off":
+            if laya_client.jev_mode() == "off":
                 return fn(*args, **kwargs)
             try:
                 bound = sig.bind(*args, **kwargs)
@@ -353,10 +353,10 @@ def jev_gate(extract, adapt=None):
             except Exception:
                 logger.exception("Jev gate could not read arguments; using LLM path")
                 return fn(*args, **kwargs)
-            if spec is None or not jev_client.is_jev_enabled():
+            if spec is None or not laya_client.is_jev_enabled():
                 return fn(*args, **kwargs)
             stage, jev_kwargs = spec
-            if jev_client.jev_mode() == "on":
+            if laya_client.jev_mode() == "on":
                 res = screen(stage, **jev_kwargs)
                 if res is not None:
                     return adapt(res) if adapt else res

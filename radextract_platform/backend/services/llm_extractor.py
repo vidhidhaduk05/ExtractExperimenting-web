@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 from config import settings
 from services.json_utils import parse_json_from_text
 from services.tool_calling_client import ToolCallingClient
-from services.jev_screener import jev_gate
+from services.laya_screener import jev_gate
 
 logger = logging.getLogger("aide_extractor")
 

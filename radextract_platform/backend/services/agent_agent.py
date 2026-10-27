@@ -65,7 +65,7 @@ def is_antigravity_available() -> bool:
 # Tool registry
 # ──────────────────────────────────────────────────────────────────────
 
-from services.antigravity_tools import (
+from services.agent_tools import (
     get_study,
     get_project,
     get_pdf_text,
@@ -213,7 +213,7 @@ def create_agent_config(
             "Install with: pip install google-antigravity"
         )
 
-    from services.antigravity_schemas import StudyProcessingResult
+    from services.agent_schemas import StudyProcessingResult
 
     # Resolve API key
     resolved_key = (

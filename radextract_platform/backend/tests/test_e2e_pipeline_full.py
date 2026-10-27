@@ -29,7 +29,11 @@ def setup_e2e_db(tmp_path, monkeypatch):
 
 
 def test_complete_e2e_scientific_pipeline():
+    from dependencies import create_access_token, create_user
+    u = create_user("e2e_user", "pass", role="owner")
+    token = create_access_token(u["user_id"], u["username"], u["role"])
     client = TestClient(app)
+    client.headers.update({"Authorization": f"Bearer {token}"})
     db = get_db_backend()
 
     # Step 1: Create Project & Formulate PICO

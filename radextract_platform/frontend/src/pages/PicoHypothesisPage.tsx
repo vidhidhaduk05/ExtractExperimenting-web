@@ -98,7 +98,7 @@ export function PicoHypothesisPage() {
     if (hyp) {
       setHypothesis(hyp.hypothesis || "");
       if (hyp.generation_source && hyp.generation_source !== "llm" && hyp.hypothesis) {
-        setGenWarning(hyp.generation_error || "Hypothesis was formulated using a heuristic fallback template rather than Co-Scientist active reasoning. Review API settings or refine PICO criteria.");
+        setGenWarning(hyp.generation_error || "Hypothesis was formulated using a heuristic fallback template rather than AI Reviewer active reasoning. Review API settings or refine PICO criteria.");
       } else {
         setGenWarning("");
       }
@@ -212,7 +212,7 @@ export function PicoHypothesisPage() {
     mutationFn: (question: string) => api.searchFromQuestion(projectId!, question),
     onSuccess: (data) => {
       setQuestionResult(
-        `PICO extracted and Co-Scientist search strings generated for the supported database interfaces.`
+        `PICO extracted and AI Reviewer search strings generated for the supported database interfaces.`
       );
       queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
       queryClient.invalidateQueries({ queryKey: ["search-strings", projectId] });
@@ -528,7 +528,7 @@ export function PicoHypothesisPage() {
       >
         <div className="space-y-3">
           <p className="text-sm text-gray-500">
-            Type your research question in plain English and let the Co-Scientist extract PICO
+            Type your research question in plain English and let the AI Reviewer extract PICO
             elements and generate database-specific search strings automatically.
           </p>
           <div className="flex items-start gap-3">
@@ -768,7 +768,7 @@ export function PicoHypothesisPage() {
             <div className="text-sm">
               <span className="font-semibold text-phylo-orange">Auto-generated search strings are a starting point.</span>{" "}
               <span className="text-gray-600">
-                The Co-Scientist selects the search concepts and synonyms from your PICO. Basic syntax checks and an automatic repair step help catch formatting errors; searches have not been tested in the databases.
+                The AI Reviewer selects the search concepts and synonyms from your PICO. Basic syntax checks and an automatic repair step help catch formatting errors; searches have not been tested in the databases.
                 They must be reviewed and refined by a medical librarian or systematic review methodologist
                 before use in a formal search. Synonym coverage, database-specific syntax, and field tags
                 may require adjustment for your specific research question.

@@ -37,7 +37,6 @@ import {
   Upload,
   FileText,
   Shield,
-  ShieldCheck,
   Check,
   ExternalLink,
   HelpCircle,
@@ -73,10 +72,18 @@ import {
 import { cn } from "../lib/utils";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
 import { ExploratoryScreeningView } from "../components/screening/ExploratoryScreeningView";
+import { CompactScreeningSplitView } from "../components/screening/CompactScreeningSplitView";
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [viewMode, setViewMode] = useState<"standard" | "exploratory">("standard");
+  const [layoutMode, setLayoutMode] = useState<"classic" | "compact">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("screening_layout");
+      if (saved === "classic" || saved === "compact") return saved;
+    }
+    return "classic";
+  });
   const bookmarks = useBookmarks(projectId);
   const tagIndex = useProjectTags(projectId);
   const [tagFilter, setTagFilter] = useState("");
@@ -186,7 +193,7 @@ export function ScreeningPage() {
     return projectClarifications;
   }, [projectClarifications, pendingClarifications, answeredClarifications, checklistFilter]);
 
-  // Reviewer identity - seamless active Co-Scientist reviewer (no mandatory sign-in roadblock)
+  // Reviewer identity - seamless active AI Reviewer reviewer (no mandatory sign-in roadblock)
   const authToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const { data: currentReviewerData } = useQuery({
     queryKey: ["screening-reviewer", authToken], queryFn: api.getCurrentUser,
@@ -194,10 +201,10 @@ export function ScreeningPage() {
   });
   const currentReviewer = currentReviewerData || {
     user_id: "usr_default_coscientist",
-    username: "Co-Scientist Reviewer",
+    username: "AI Reviewer Reviewer",
     role: "owner"
   };
-  const reviewerName = currentReviewer.username || "Co-Scientist Reviewer";
+  const reviewerName = currentReviewer.username || "AI Reviewer Reviewer";
 
   // Highlight toggles & Keywords drawer state
   const [showHighlights, setShowHighlights] = useState(true);
@@ -558,10 +565,22 @@ export function ScreeningPage() {
         setExcludeReasonText("");
       }
 
-      // Advance to next study in filtered list ONLY after the server confirms a successful save
+      // Advance to next undecided study in filtered list ONLY after the server confirms a successful save
       const currentIndex = filteredStudies.findIndex((s) => s.study_id === variables.studyId);
-      if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
+      const nextUndecided = filteredStudies.slice(currentIndex + 1).find(
+        (s) => !s.screening_status || s.screening_status === "pending" || s.screening_status === "awaiting_clarification"
+      );
+      if (nextUndecided) {
+        setSelectedStudyId(nextUndecided.study_id);
+      } else if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
         setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
+      } else {
+        const priorUndecided = filteredStudies.find(
+          (s) => !s.screening_status || s.screening_status === "pending" || s.screening_status === "awaiting_clarification"
+        );
+        if (priorUndecided && priorUndecided.study_id !== variables.studyId) {
+          setSelectedStudyId(priorUndecided.study_id);
+        }
       }
     },
     onError: (err: any, variables) => {
@@ -694,21 +713,27 @@ export function ScreeningPage() {
 
       if (decisionMutation.isPending) return;
 
-      if (e.key === "i" || e.key === "I" || e.key === "1") {
+      if (e.key === "ArrowUp" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        handleSelectPreviousStudy();
+      } else if (e.key === "ArrowDown" || e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        handleSelectNextStudy();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handleSelectPreviousStudy();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleSelectNextStudy();
+      } else if (e.key === "i" || e.key === "I" || e.key === "1") {
         e.preventDefault();
         handleScreenDecision("included");
       } else if (e.key === "e" || e.key === "E" || e.key === "2") {
         e.preventDefault();
         handleScreenDecision("excluded");
-      } else if (e.key === "m" || e.key === "M" || e.key === "3" || e.key === "u" || e.key === "U") {
+      } else if (e.key === "u" || e.key === "U" || e.key === "m" || e.key === "M" || e.key === "3") {
         e.preventDefault();
         handleScreenDecision("maybe");
-      } else if (e.key === "ArrowLeft" || e.key === "j" || e.key === "J") {
-        e.preventDefault();
-        handleSelectPreviousStudy();
-      } else if (e.key === "ArrowRight" || e.key === "k" || e.key === "K") {
-        e.preventDefault();
-        handleSelectNextStudy();
       } else if (e.key === "?" || (e.shiftKey && e.key === "/")) {
         e.preventDefault();
         setShowHotkeysModal(true);
@@ -778,7 +803,7 @@ export function ScreeningPage() {
 
   // Render Highlighted Text (Abstract or Title) with Priority Resolution & Instant Fallback
   const renderHighlightedText = (
-    rawText: string,
+    rawText: string | undefined = "",
     spans: HighlightSpan[] = [],
     fallbackKeywordsList: ScreeningKeyword[] = [],
     isTitle: boolean = false
@@ -961,7 +986,7 @@ export function ScreeningPage() {
             <div>
               <h1 className="text-xl font-bold font-['Serifon_Editorial'] text-[#3a0f34] flex items-center gap-2">
                 <ShieldCheck className="w-6 h-6 text-[#814d75]" />
-                Co-Scientist Screening Workspace
+                Systematic Screening Workspace
               </h1>
               <p className="text-xs text-[#62535d]">
                 Multi-Stage Screening: Title &rarr; Abstract &rarr; Full-Text with Rayyan-Style Highlighting
@@ -980,6 +1005,43 @@ export function ScreeningPage() {
               <FolderPlus className="w-3.5 h-3.5 text-[#ffdea6]" />
               <span>Bulk Upload from Laptop</span>
             </button>
+
+            {/* View Layout Toggle: Classic vs Compact Split */}
+            <div className="flex items-center border border-[#d2c2cb] rounded bg-[#ffffff] p-0.5 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setLayoutMode("classic");
+                  localStorage.setItem("screening_layout", "classic");
+                }}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-semibold rounded transition-all cursor-pointer",
+                  layoutMode === "classic"
+                    ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                    : "text-[#62535d] hover:text-[#3a0f34]"
+                )}
+                title="Classic multi-card screening layout"
+              >
+                Classic
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLayoutMode("compact");
+                  localStorage.setItem("screening_layout", "compact");
+                }}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-semibold rounded transition-all flex items-center gap-1 cursor-pointer",
+                  layoutMode === "compact"
+                    ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                    : "text-[#62535d] hover:text-[#3a0f34]"
+                )}
+                title="Compact split-panel screening view (table left, reading pane right)"
+              >
+                <ArrowLeftRight className="w-3 h-3" />
+                <span>Compact Split</span>
+              </button>
+            </div>
 
             {/* Hotkeys Cheatsheet Button */}
             <button
@@ -1020,7 +1082,7 @@ export function ScreeningPage() {
                     onClick={() => resumeMutation.mutate()}
                     disabled={resumeMutation.isPending || cancelMutation.isPending}
                     className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Resume Co-Scientist screening from current study"
+                    title="Resume AI Screening from current study"
                   >
                     {resumeMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1033,7 +1095,7 @@ export function ScreeningPage() {
                     onClick={() => cancelMutation.mutate()}
                     disabled={cancelMutation.isPending || resumeMutation.isPending}
                     className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Stop Co-Scientist screening run completely"
+                    title="Stop AI Screening run completely"
                   >
                     {cancelMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1062,7 +1124,7 @@ export function ScreeningPage() {
                     onClick={() => cancelMutation.mutate()}
                     disabled={cancelMutation.isPending || pauseMutation.isPending}
                     className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Stop Co-Scientist screening run completely"
+                    title="Stop AI Screening run completely"
                   >
                     {cancelMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1099,7 +1161,7 @@ export function ScreeningPage() {
                   ) : (
                     <Sparkles className="w-4 h-4" />
                   )}
-                  Start Full Co-Scientist Screening
+                  Start Full AI Screening
                 </button>
               </>
             )}
@@ -1231,7 +1293,7 @@ export function ScreeningPage() {
         )}
       </header>
 
-      {/* Live Co-Scientist screening progress & controls */}
+      {/* Live AI Screening progress & controls */}
       {progress?.active && (
         <div className={`border-b px-6 py-2.5 transition-colors ${
           progress.paused ? "bg-amber-50/95 border-amber-200" : "bg-indigo-50 border-indigo-200"
@@ -1248,7 +1310,7 @@ export function ScreeningPage() {
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
                 )}
                 <span className={`font-semibold shrink-0 ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
-                  Co-Scientist screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
+                  AI Screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
                 </span>
                 <span className={`truncate ${progress.paused ? "text-amber-800" : "text-indigo-700"}`}>
                   {progress.paused
@@ -1670,12 +1732,12 @@ export function ScreeningPage() {
         </div>
       )}
 
-      {/* ── CO-SCIENTIST SCREENING CLARIFICATIONS & REVIEWER CHECKLIST ── */}
+      {/* ── AI Screening CLARIFICATIONS & REVIEWER CHECKLIST ── */}
       {projectClarifications.length > 0 && (
         <section
           id="clarifications-checklist"
           className="max-w-7xl w-full mx-auto px-4 md:px-6 pt-3"
-          aria-label="Co-Scientist Screening Clarifications Checklist"
+          aria-label="AI Screening Clarifications Checklist"
         >
           <div className="bg-[#ffffff] border border-[#d2c2cb] rounded overflow-hidden transition-all">
             {/* Checklist Ribbon Header */}
@@ -1687,14 +1749,14 @@ export function ScreeningPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-['Serifon_Editorial'] font-bold text-[#3a0f34] tracking-tight">
-                      Co-Scientist Screening Clarifications Checklist
+                      AI Screening Clarifications Checklist
                     </h2>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#ffdea6]/50 text-[#7c5800] border border-[#d2c2cb]">
                       {pendingClarifications.length} Pending
                     </span>
                   </div>
                   <p className="text-[11px] text-[#62535d] font-['Work_Sans']">
-                    Review and clarify ambiguous PICO criteria flagged by Co-Scientist screener
+                    Review and clarify ambiguous PICO criteria flagged by AI Reviewer screener
                   </p>
                 </div>
               </div>
@@ -1858,7 +1920,7 @@ export function ScreeningPage() {
                                 <div>
                                   <p className="font-bold">Clarification recorded and study re-evaluated!</p>
                                   <p className="text-[11px] text-emerald-800 mt-0.5">
-                                    Co-Scientist Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% confidence)
+                                    AI Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% confidence)
                                   </p>
                                   {feedback.final_reason_text && (
                                     <p className="text-[10px] text-emerald-700 italic mt-0.5">{feedback.final_reason_text}</p>
@@ -1951,7 +2013,7 @@ export function ScreeningPage() {
                                   const opt = q.options.find((o) => o.value === curSelected);
                                   answerClarificationMutation.mutate({
                                     questionId: q.question_id,
-                                    answer: curSelected,
+                                    answer: curSelected || "",
                                     label: opt?.label,
                                     freetext: curNotes,
                                   });
@@ -1986,8 +2048,53 @@ export function ScreeningPage() {
         </section>
       )}
 
-      {/* Main Two-Pane Screening Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      {/* Main Screening Workspace (Compact Split vs Classic) */}
+      {layoutMode === "compact" ? (
+        <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4">
+          <CompactScreeningSplitView
+            studies={filteredStudies}
+            selectedStudy={selectedStudy}
+            onSelectStudy={setSelectedStudyId}
+            onScreenDecision={handleScreenDecision}
+            isDecisionPending={decisionMutation.isPending}
+            saveError={saveError}
+            failedDecision={failedDecision}
+            onRetry={handleRetry}
+            excludeReasonCode={excludeReasonCode}
+            setExcludeReasonCode={(code) => {
+              setExcludeReasonCode(code);
+              if (code) setReasonError(null);
+            }}
+            excludeReasonText={excludeReasonText}
+            setExcludeReasonText={setExcludeReasonText}
+            reasonError={reasonError}
+            exclusionReasons={exclusionReasons}
+            keywords={keywords}
+            selectedHighlights={selectedHighlights}
+            showHighlights={showHighlights}
+            onToggleHighlights={() => setShowHighlights(!showHighlights)}
+            renderHighlightedText={renderHighlightedText}
+            studyClarifications={studyClarifications}
+            onAnswerClarification={(data) => {
+              answerClarificationMutation.mutate({
+                questionId: data.questionId,
+                answer: data.answer,
+                label: data.label,
+                freetext: data.freetext,
+              });
+            }}
+            isAnsweringClarification={answerClarificationMutation.isPending}
+            onPdfUpload={handlePdfUpload}
+            uploadingPdf={uploadingPdf}
+            uploadError={uploadError}
+            bookmarkSet={bookmarkSet}
+            bookmarks={bookmarks}
+            projectId={projectId!}
+          />
+        </main>
+      ) : (
+        /* Main Two-Pane Screening Workspace (Classic) */
+        <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* Left Column: Study List (5 cols) */}
         <div className="lg:col-span-5 bg-[#ffffff] border border-[#d2c2cb] rounded flex flex-col h-[calc(100vh-185px)] sticky top-[135px]">
           <div className="px-4 py-2.5 border-b border-[#d2c2cb] flex items-center justify-between bg-[#fbf9f4] rounded-t">
@@ -2126,10 +2233,10 @@ export function ScreeningPage() {
                                 ? "bg-rose-50 text-rose-700"
                                 : "bg-amber-50 text-amber-700"
                             }`}
-                            title={isJustDone ? "Screened in the current run" : "Screened by Co-Scientist"}
+                            title={isJustDone ? "Screened in the current run" : "Screened by AI Reviewer"}
                           >
                             <CheckCircle className="w-3 h-3" />
-                            Co-Scientist screened: {study.ai_decision}
+                            AI Reviewer screened: {study.ai_decision}
                           </span>
                         )}
 
@@ -2227,14 +2334,14 @@ export function ScreeningPage() {
                 </div>
               </div>
 
-              {/* Co-Scientist Verdict & Confidence Card */}
+              {/* AI Reviewer Verdict & Confidence Card */}
               {selectedStudy.ai_decision && (
                 <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-[#814d75] fill-[#814d75]/15" aria-hidden="true" />
                       <span className="text-xs font-bold text-[#3a0f34]">
-                        Co-Scientist Recommendation: <span className="capitalize">{selectedStudy.ai_decision}</span>
+                        AI Reviewer Recommendation: <span className="capitalize">{selectedStudy.ai_decision}</span>
                       </span>
                     </div>
                     {selectedStudy.ai_confidence && (
@@ -2274,7 +2381,7 @@ export function ScreeningPage() {
                 <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
               </details>
 
-              {/* Co-Scientist Clarification Questions Panel */}
+              {/* AI Reviewer Clarification Questions Panel */}
               {(studyClarifications.length > 0 || selectedStudy.screening_status === "awaiting_clarification" || selectedStudy.ai_decision === "maybe") && (
                 <div className="bg-[#fbf9f4] border border-[#814d75] rounded-xl p-4 space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
@@ -2283,7 +2390,7 @@ export function ScreeningPage() {
                         <Shield className="w-3.5 h-3.5 fill-[#fbf9f4]/20" aria-hidden="true" />
                       </div>
                       <div>
-                        <span className="block text-[#3a0f34] font-bold">Co-Scientist Clarification Request</span>
+                        <span className="block text-[#3a0f34] font-bold">AI Reviewer Clarification Request</span>
                         <span className="text-[10px] text-[#62535d] font-normal">Ambiguous eligibility against PICO criteria &bull; Human clarification needed</span>
                       </div>
                     </div>
@@ -2390,7 +2497,7 @@ export function ScreeningPage() {
                   ) : (
                     <div className="bg-white border border-purple-100 rounded-lg p-3 space-y-3">
                       <p className="text-xs font-semibold text-slate-800">
-                        The Co-Scientist requires clarification whether this study meets the Population (pure arterial malformation without nidus) or Intervention criteria. Please clarify:
+                        The AI Reviewer requires clarification whether this study meets the Population (pure arterial malformation without nidus) or Intervention criteria. Please clarify:
                       </p>
                       <div className="space-y-1.5">
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
@@ -2806,6 +2913,7 @@ export function ScreeningPage() {
           )}
         </div>
       </main>
+      )}
 
       {/* Keywords & Highlighting Drawer / Modal */}
       {showKeywordsDrawer && (

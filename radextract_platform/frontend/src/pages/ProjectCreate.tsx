@@ -98,7 +98,7 @@ export function ProjectCreate() {
                 Automatically launch RoB batch phase after screening completes
               </div>
               <div className="text-[11px] text-[#6B665E] leading-relaxed mt-0.5">
-                When background Co-Scientist screening completes for all included studies, automatically select the appropriate tool (RoB 2, ROBINS-I, ROBINS-E, QUADAS-2, NOS) based on study design and pre-fill signaling questions using full text.
+                When background AI Screening completes for all included studies, automatically select the appropriate tool (RoB 2, ROBINS-I, ROBINS-E, QUADAS-2, NOS) based on study design and pre-fill signaling questions using full text.
               </div>
             </div>
           </label>
@@ -123,7 +123,7 @@ export function ProjectCreate() {
                 className="w-full accent-purple-600"
               />
               <p className="text-[11px] text-[#6B665E]">
-                Questions where Co-Scientist confidence is below {Math.round(form.robConfidenceThreshold * 100)}% will be flagged with an amber badge for human verification on the RoB assessment page.
+                Questions where AI Reviewer confidence is below {Math.round(form.robConfidenceThreshold * 100)}% will be flagged with an amber badge for human verification on the RoB assessment page.
               </p>
             </div>
           )}

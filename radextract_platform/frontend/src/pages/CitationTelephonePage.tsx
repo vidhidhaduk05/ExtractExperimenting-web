@@ -152,7 +152,7 @@ export const CitationTelephonePage: React.FC = () => {
       const res = await api.evaluateCitationTelephoneClaim(citingClaim, sourcePassage, "");
       setEvalResult(res);
     } catch (err: any) {
-      setEvalError(err?.message || "Co-Scientist service is currently unavailable");
+      setEvalError(err?.message || "AI Reviewer service is currently unavailable");
       setEvalResult(null);
     } finally {
       setIsComparing(false);
@@ -239,7 +239,7 @@ export const CitationTelephonePage: React.FC = () => {
                 </button>
               </div>
               <span className="text-xs text-zinc-500">
-                {activeTab === "audit" ? "Co-Scientist Verification Engine" : "K-Dense Ground Truth Multi-Hop Trace"}
+                {activeTab === "audit" ? "AI Reviewer Verification Engine" : "K-Dense Ground Truth Multi-Hop Trace"}
               </span>
             </div>
 
@@ -286,7 +286,7 @@ export const CitationTelephonePage: React.FC = () => {
               </>
             ) : (
               <div className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Audit any citing sentence against its cited source passage using the Co-Scientist verification engine. Extract citations from manuscript text or evaluate claim alignment directly.
+                Audit any citing sentence against its cited source passage using the AI Reviewer verification engine. Extract citations from manuscript text or evaluate claim alignment directly.
               </div>
             )}
           </div>
@@ -367,7 +367,7 @@ export const CitationTelephonePage: React.FC = () => {
                   <h2 className="text-sm font-bold uppercase tracking-wider text-[#381A61] dark:text-[#F9D14A]">
                     2. Claim vs Source Evaluation
                   </h2>
-                  <span className="text-xs text-zinc-500">Co-Scientist Citation Verification</span>
+                  <span className="text-xs text-zinc-500">AI Reviewer Citation Verification</span>
                 </div>
 
                 {evalError && (

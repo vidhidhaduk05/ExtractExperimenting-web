@@ -14,23 +14,23 @@ describe("ExploratoryScreeningView", () => {
     expect(screen.getByText(/SHOW PROCESS:/i)).toBeTruthy();
     expect(screen.getByText(/PICO HIGHLIGHTS:/i)).toBeTruthy();
     expect(screen.getByText(/FAST MODE:/i)).toBeTruthy();
-    expect(screen.getByText(/SENIOR MODE:/i)).toBeTruthy();
+    expect(screen.getByText(/READING COMFORT MODE:/i)).toBeTruthy();
   });
 
-  it("activates Senior Mode on one click and reveals transparent Co-Scientist process trace", () => {
+  it("activates READING COMFORT MODE on one click and reveals transparent AI Reviewer process trace", () => {
     render(<ExploratoryScreeningView />);
 
-    const seniorButton = screen.getByRole("button", { name: /SENIOR MODE:/i });
+    const seniorButton = screen.getByRole("button", { name: /READING COMFORT MODE:/i });
     expect(seniorButton).toBeTruthy();
 
-    // Click Senior Mode
+    // Click READING COMFORT MODE
     fireEvent.click(seniorButton);
 
     // Prompt banner should not be visible per user instruction
     expect(screen.queryByText(/Senior Clinician View Active:/i)).toBeNull();
 
     // SHOW PROCESS trace (Rose Section 2) should automatically activate
-    expect(screen.getByText(/Co-Scientist Reasoning Trace/i)).toBeTruthy();
+    expect(screen.getByText(/AI Reviewer Reasoning Trace/i)).toBeTruthy();
     expect(screen.getByText(/Step 1 — Ingestion:/i)).toBeTruthy();
   });
 
@@ -77,7 +77,7 @@ describe("ExploratoryScreeningView", () => {
     expect(handleSwitch).toHaveBeenCalledTimes(1);
   });
 
-  it("renders 6 KPI boxes matching Velvet Editorial standard", () => {
+  it("renders 6 KPI boxes matching Academic Editorial standard", () => {
     render(<ExploratoryScreeningView />);
 
     expect(screen.getByText("TURN / PAPERS")).toBeTruthy();

@@ -128,8 +128,8 @@ export function ExploratoryScreeningView({
   // 4. FAST MODE: ON = 350ms (21/sec for demo), OFF = 900ms (calm)
   const [fastMode, setFastMode] = useState(true);
 
-  // 5. SENIOR MODE: One-click comfort: font size 15px, slower 1.2s cadence, shows banner, enables process trace
-  const [seniorMode, setSeniorMode] = useState(false);
+  // 5. READING COMFORT MODE: One-click comfort: font size 15px, slower 1.2s cadence, shows banner, enables process trace
+  const [readingComfortMode, setreadingComfortMode] = useState(false);
 
   // Discrete left panel view mode: original 'cards' or 'heatmap'
   const [leftViewMode, setLeftViewMode] = useState<"cards" | "heatmap">("cards");
@@ -169,13 +169,13 @@ export function ExploratoryScreeningView({
 
   // Speed calculation based on toggles
   const effectiveSpeedMs = useMemo(() => {
-    if (seniorMode) return 1200; // Calm 1.2s for senior clinicians
+    if (readingComfortMode) return 1200; // Calm 1.2s for senior clinicians
     return fastMode ? 450 : 900; // 450ms cadence or 900ms calm cadence
-  }, [seniorMode, fastMode]);
+  }, [readingComfortMode, fastMode]);
 
-  // When Senior Mode is toggled ON, automatically reveal step-by-step reasoning trace
-  const handleToggleSeniorMode = () => {
-    setSeniorMode((prev) => {
+  // When READING COMFORT MODE is toggled ON, automatically reveal step-by-step reasoning trace
+  const handleTogglereadingComfortMode = () => {
+    setreadingComfortMode((prev) => {
       const next = !prev;
       if (next) {
         setShowProcess(true);
@@ -229,7 +229,7 @@ export function ExploratoryScreeningView({
     const studyId = selectedPaper.studyId || String(selectedPaper.id);
     const stage: "ta" | "ft" = selectedPaper.status === "included" ? "ft" : "ta";
     const code = decision === "excluded" ? (reasonCode || selectedExcludeReason) : undefined;
-    const text = decision === "excluded" ? `Exclusion applied in Velvet Screening: ${code}` : undefined;
+    const text = decision === "excluded" ? `Exclusion applied in Editorial Screening: ${code}` : undefined;
 
     try {
       if (onScreenStudy) {
@@ -390,7 +390,7 @@ export function ExploratoryScreeningView({
   return (
     <div
       className={`min-h-screen bg-[#FAF7F2] text-[#111111] font-sans transition-all duration-300 ${
-        seniorMode ? "text-[15px]" : "text-[13px]"
+        readingComfortMode ? "text-[15px]" : "text-[13px]"
       }`}
       style={{
         fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
@@ -418,8 +418,8 @@ export function ExploratoryScreeningView({
               steal the <em className="text-[#2E1231] not-italic">whole literature</em>
             </h1>
             <p className="font-mono text-[9px] uppercase tracking-wider text-[#666666] mt-1">
-              Co-Scientist Systematic Screening • Velvet Editorial •{" "}
-              {seniorMode ? "Senior Clinician Mode Active" : "High-Throughput Mode"}
+              AI Reviewer Systematic Screening • Academic Editorial •{" "}
+              {readingComfortMode ? "Senior Clinician Mode Active" : "High-Throughput Mode"}
             </p>
           </div>
         </div>
@@ -506,39 +506,39 @@ export function ExploratoryScreeningView({
           {/* Toggle 4: FAST MODE */}
           <label
             className={`inline-flex items-center gap-2 cursor-pointer select-none bg-white px-2.5 py-1 rounded border border-[#111111] shadow-2xs hover:bg-[#FFFEF5] ${
-              seniorMode ? "opacity-40 pointer-events-none" : ""
+              readingComfortMode ? "opacity-40 pointer-events-none" : ""
             }`}
             title="ON = 350ms (21/sec, demo speed), OFF = 900ms (calm)"
           >
             <input
               type="checkbox"
-              checked={fastMode && !seniorMode}
+              checked={fastMode && !readingComfortMode}
               onChange={(e) => setFastMode(e.target.checked)}
-              disabled={seniorMode}
+              disabled={readingComfortMode}
               className="accent-[#2E1231] w-3.5 h-3.5 cursor-pointer"
             />
             <span className="font-bold text-[#111111] flex items-center gap-1">
               <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
               FAST MODE:{" "}
-              <span className={fastMode && !seniorMode ? "text-amber-700" : "text-[#777777]"}>
-                {fastMode && !seniorMode ? "ON (350ms)" : "OFF (900ms)"}
+              <span className={fastMode && !readingComfortMode ? "text-amber-700" : "text-[#777777]"}>
+                {fastMode && !readingComfortMode ? "ON (350ms)" : "OFF (900ms)"}
               </span>
             </span>
           </label>
 
-          {/* Toggle 5: SENIOR MODE */}
+          {/* Toggle 5: READING COMFORT MODE */}
           <button
             type="button"
-            onClick={handleToggleSeniorMode}
+            onClick={handleTogglereadingComfortMode}
             className={`inline-flex items-center gap-2 px-3 py-1 rounded border-2 transition-all cursor-pointer font-bold select-none ${
-              seniorMode
+              readingComfortMode
                 ? "bg-[#2E1231] text-white border-[#2E1231] shadow-md scale-105"
                 : "bg-white text-[#2E1231] border-[#2E1231] hover:bg-[#E8C5E0]/40"
             }`}
             title="One click: makes text larger (15px), slower (1.2s), shows transparent reasoning trace, and reduces flashing"
           >
             <UserCheck className="w-3.5 h-3.5" />
-            <span>SENIOR MODE: {seniorMode ? "ON (ACTIVE)" : "OFF"}</span>
+            <span>READING COMFORT MODE: {readingComfortMode ? "ON (ACTIVE)" : "OFF"}</span>
           </button>
         </div>
       </div>
@@ -547,7 +547,7 @@ export function ExploratoryScreeningView({
       {/* Toast Feedback */}
       {toastMessage && (
         <div
-          className={`animate-velvet-landing fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded border-2 shadow-xl flex items-center gap-2 font-mono text-xs font-bold ${
+          className={`animate-tag-pop fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded border-2 shadow-xl flex items-center gap-2 font-mono text-xs font-bold ${
             toastMessage.type === "success"
               ? "bg-[#2E1231] text-white border-[#E8C5E0]"
               : toastMessage.type === "uncertain"
@@ -638,7 +638,7 @@ export function ExploratoryScreeningView({
             className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1"
             style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
           >
-            {seniorMode ? "8" : fastMode ? "21" : "12"}
+            {readingComfortMode ? "8" : fastMode ? "21" : "12"}
           </div>
         </div>
       </div>
@@ -691,7 +691,7 @@ export function ExploratoryScreeningView({
                     key={p.id}
                     onClick={() => setSelectedPaper(p)}
                     className={`p-3.5 bg-white rounded-xl flex flex-col justify-between cursor-pointer relative transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] min-h-[168px] ${
-                      seniorMode ? "min-h-[188px]" : ""
+                      readingComfortMode ? "min-h-[188px]" : ""
                     } border border-[#E7DFD5] ${
                       p.type === "keep"
                         ? "border-l-[4px] border-l-[#2E1231]"
@@ -702,7 +702,7 @@ export function ExploratoryScreeningView({
                       isSelected
                         ? "bg-[#2E1231] text-white border-[#4A204D] ring-2 ring-[#E8C5E0] shadow-[0_12px_28px_-6px_rgba(46,18,49,0.3)] scale-[1.01]"
                         : "hover:bg-[#FFFEFB] hover:-translate-y-1 hover:shadow-[0_10px_25px_-5px_rgba(46,18,49,0.1)] hover:border-[#814D75]/40 shadow-[0_2px_8px_-2px_rgba(46,18,49,0.05)]"
-                    } ${p.isNew && !seniorMode ? "animate-velvetIn" : ""}`}
+                    } ${p.isNew && !readingComfortMode ? "animate-tag-pop" : ""}`}
                   >
                     {/* Top line: Confidence % badge + Turn # */}
                     <div className="flex items-center justify-between mb-1">
@@ -742,7 +742,7 @@ export function ExploratoryScreeningView({
                     {/* Title with generous line-height, proper descender clearance, and full legibility */}
                     <h4
                       className={`font-bold leading-snug line-clamp-3 pb-0.5 min-h-[50px] ${
-                        seniorMode
+                        readingComfortMode
                           ? "text-[14.5px] leading-[1.42] min-h-[62px]"
                           : "text-[12.5px] sm:text-[13px] leading-[1.38]"
                       } ${isSelected ? "text-white" : "text-[#1F171D]"}`}
@@ -967,7 +967,7 @@ export function ExploratoryScreeningView({
 
                   <h3
                     className={`font-bold leading-snug text-[#111111] ${
-                      seniorMode ? "text-lg" : "text-base"
+                      readingComfortMode ? "text-lg" : "text-base"
                     }`}
                     style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
                   >
@@ -986,13 +986,13 @@ export function ExploratoryScreeningView({
                   </div>
                 </div>
 
-                {/* ── ROSE SECTION 2: STEP-BY-STEP CO-SCIENTIST PROCESS TRACE (PROVES NOT A BLACK BOX) ── */}
+                {/* ── ROSE SECTION 2: STEP-BY-STEP AI Reviewer PROCESS TRACE (PROVES NOT A BLACK BOX) ── */}
                 {showProcess && (
                   <div className="p-4 bg-[#FFFEF5] border-b border-[#111111] animate-fadeIn">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#2E1231] flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-[#2E1231]" />
-                        Co-Scientist Reasoning Trace (Transparent Justification)
+                        AI Reviewer Reasoning Trace (Transparent Justification)
                       </span>
                       <span className="font-mono text-[8px] text-[#9A6B00] bg-[#FEF3C7] px-1.5 py-0.5 rounded font-bold">
                         VERIFIED TRACE
@@ -1039,7 +1039,7 @@ export function ExploratoryScreeningView({
                         <Check className="w-4 h-4 text-[#2E1231] shrink-0 mt-0.5" />
                         <div>
                           <span className="font-bold text-[#2E1231]">
-                            Step 4 — Final Co-Scientist Verdict:
+                            Step 4 — Final AI Reviewer Verdict:
                           </span>{" "}
                           <span
                             className={`font-mono text-xs font-bold uppercase px-2 py-0.5 rounded ${
@@ -1139,7 +1139,7 @@ export function ExploratoryScreeningView({
                   </div>
                   <p
                     className={`leading-relaxed text-[#111111] ${
-                      seniorMode ? "text-[15px] leading-8" : "text-[12px] leading-6"
+                      readingComfortMode ? "text-[15px] leading-8" : "text-[12px] leading-6"
                     }`}
                   >
                     {renderHighlightedAbstract(selectedPaper.rawAbs, selectedPaper)}
@@ -1254,7 +1254,7 @@ export function ExploratoryScreeningView({
               <span className="w-2 h-2 rounded-xs bg-[#999999]" /> O Outcome
             </span>
             <span className="ml-auto text-[#777777] hidden sm:inline">
-              Velvet Editorial Theme • Academic Precision
+              Academic Editorial Theme • Academic Precision
             </span>
           </div>
         </div>

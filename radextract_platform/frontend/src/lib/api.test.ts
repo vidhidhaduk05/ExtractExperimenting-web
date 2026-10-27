@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
 import { api, API_BASE, shouldUseDemoFallback } from './api';
-import { DEMO_PROJECT, DEMO_STUDIES, DEMO_PRISMA, DEMO_SCREENING_SUMMARY, DEMO_REVIEW_MATRIX } from './demoData';
+import { DEMO_PROJECT, DEMO_PRISMA, DEMO_SCREENING_SUMMARY, DEMO_REVIEW_MATRIX } from './demoData';
 
 if (typeof localStorage === 'undefined') {
   let store: Record<string, string> = {};

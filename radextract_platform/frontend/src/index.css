@@ -1210,7 +1210,7 @@
   animation: breathing-glow 2.8s ease-in-out infinite;
 }
 
-@keyframes velvetIn {
+@keyframes EditorialIn {
   0% {
     transform: translateY(-6px);
     opacity: 0;
@@ -1221,11 +1221,11 @@
   }
 }
 
-.animate-velvetIn {
-  animation: velvetIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+.animate-tag-pop {
+  animation: EditorialIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes velvetLanding {
+@keyframes EditorialLanding {
   0% {
     transform: translateY(-8px) scale(0.985);
     opacity: 0;
@@ -1236,8 +1236,8 @@
   }
 }
 
-.animate-velvet-landing {
-  animation: velvetLanding 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+.animate-tag-pop {
+  animation: EditorialLanding 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 @keyframes rhythmicPulse {

@@ -117,18 +117,18 @@ class MockAgent:
 
 class TestIsAntigravityAvailable:
     def test_returns_false_when_sdk_not_installed(self, fresh_settings):
-        from services.antigravity_agent import is_antigravity_available
+        from services.agent_agent import is_antigravity_available
         # SDK is not installed in test env
         assert is_antigravity_available() is False
 
     def test_returns_false_when_disabled(self, fresh_settings, monkeypatch):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         monkeypatch.setattr(settings, "antigravity_enabled", False)
         assert mod.is_antigravity_available() is False
 
     def test_returns_true_when_installed_and_enabled(self, fresh_settings, monkeypatch):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         monkeypatch.setattr(settings, "antigravity_enabled", True)
         assert mod.is_antigravity_available() is True
@@ -140,13 +140,13 @@ class TestIsAntigravityAvailable:
 
 class TestCreateAgentConfig:
     def test_raises_when_sdk_not_available(self, fresh_settings, monkeypatch):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", False)
         with pytest.raises(RuntimeError, match="not installed"):
             mod.create_agent_config(api_key="test-key")
 
     def test_raises_when_no_api_key(self, fresh_settings, monkeypatch):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         # Patch the SDK classes to MagicMock so config construction works
         monkeypatch.setattr(mod, "_LocalAgentConfig", MagicMock())
@@ -160,7 +160,7 @@ class TestCreateAgentConfig:
                 mod.create_agent_config()
 
     def test_builds_config_with_api_key(self, fresh_settings, monkeypatch):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         mock_config_cls = MagicMock()
         mock_config_instance = MagicMock()
@@ -190,12 +190,12 @@ class TestCreateAgentConfig:
 
 class TestRunScreeningExtractionAgent:
     def test_raises_when_not_available(self, fresh_settings):
-        from services.antigravity_agent import run_screening_extraction_agent
+        from services.agent_agent import run_screening_extraction_agent
         with pytest.raises(RuntimeError, match="not available"):
             asyncio.run(run_screening_extraction_agent("s1", "p1"))
 
     def test_returns_structured_output(self, fresh_settings, monkeypatch, mock_agent_response):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         monkeypatch.setattr(settings, "antigravity_enabled", True)
         monkeypatch.setattr(settings, "antigravity_api_key", "test-key")
@@ -216,7 +216,7 @@ class TestRunScreeningExtractionAgent:
         assert "follow_up_duration" in result["extractions"]["gaps"]
 
     def test_falls_back_to_text_when_no_structured_output(self, fresh_settings, monkeypatch):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         monkeypatch.setattr(settings, "antigravity_enabled", True)
         monkeypatch.setattr(settings, "antigravity_api_key", "test-key")
@@ -232,7 +232,7 @@ class TestRunScreeningExtractionAgent:
         assert "could not process" in result["summary"].lower()
 
     def test_handles_agent_exception(self, fresh_settings, monkeypatch):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         monkeypatch.setattr(settings, "antigravity_enabled", True)
         monkeypatch.setattr(settings, "antigravity_api_key", "test-key")
@@ -260,12 +260,12 @@ class TestRunScreeningExtractionAgent:
 
 class TestRunBatchAgent:
     def test_raises_when_not_available(self, fresh_settings):
-        from services.antigravity_agent import run_batch_agent
+        from services.agent_agent import run_batch_agent
         with pytest.raises(RuntimeError, match="not available"):
             asyncio.run(run_batch_agent(["s1", "s2"], "p1"))
 
     def test_processes_multiple_studies(self, fresh_settings, monkeypatch, mock_agent_response):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         monkeypatch.setattr(settings, "antigravity_enabled", True)
         monkeypatch.setattr(settings, "antigravity_api_key", "test-key")
@@ -298,7 +298,7 @@ class TestRunBatchAgent:
         assert len(result["results"]) == 2
 
     def test_handles_per_study_errors(self, fresh_settings, monkeypatch):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         monkeypatch.setattr(settings, "antigravity_enabled", True)
         monkeypatch.setattr(settings, "antigravity_api_key", "test-key")
@@ -351,7 +351,7 @@ class TestAgentRouter:
 
     def test_screen_and_extract_returns_404_for_missing_study(self, client, monkeypatch):
         # Enable antigravity
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         monkeypatch.setattr(settings, "antigravity_enabled", True)
 
@@ -361,7 +361,7 @@ class TestAgentRouter:
         assert r.status_code == 404
 
     def test_batch_rejects_empty_study_ids(self, client, monkeypatch):
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         monkeypatch.setattr(settings, "antigravity_enabled", True)
 
@@ -399,7 +399,7 @@ class TestAgentRouter:
 
     def test_get_batch_status_integration_flow(self, client, monkeypatch, mock_agent_response):
         """Test full flow: POST /api/agent/batch and polling GET /api/agent/batch/{job_id}."""
-        import services.antigravity_agent as mod
+        import services.agent_agent as mod
         monkeypatch.setattr(mod, "_SDK_AVAILABLE", True)
         monkeypatch.setattr(settings, "antigravity_enabled", True)
         monkeypatch.setattr(settings, "antigravity_api_key", "test-key")

@@ -1,6 +1,6 @@
 import { 
   DEMO_PROJECT, 
-  DEMO_STUDIES, 
+  PREVIEW_STUDIES, 
   DEMO_PRISMA,
   DEMO_PRISMA2020, 
   DEMO_SCREENING_SUMMARY, 
@@ -196,7 +196,7 @@ export async function testBackendConnection(targetUrl?: string): Promise<{
 }
 
 export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[] {
-  if (typeof window === "undefined") return projectId === "demo" ? [...DEMO_STUDIES] : [];
+  if (typeof window === "undefined") return projectId === "demo" ? [...PREVIEW_STUDIES] : [];
   try {
     const isBlank = localStorage.getItem(`radextract_blank_${projectId}`) === "true";
     if (isBlank) {
@@ -207,7 +207,7 @@ export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[]
     if (saved) return JSON.parse(saved);
   } catch (e) {}
   if (projectId === "demo") {
-    return [...DEMO_STUDIES];
+    return [...PREVIEW_STUDIES];
   }
   return [];
 }
@@ -1092,7 +1092,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   }
   if (path.includes("/extractions/grid")) {
     const studies = getStoredProjectStudies("proj_pam_current");
-    const studyList = studies.length > 0 ? studies : DEMO_STUDIES;
+    const studyList = studies.length > 0 ? studies : PREVIEW_STUDIES;
     const gridStudies = studyList.map((s, idx) => ({
       study_id: s.study_id || (s as any).id,
       study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || (s as any).year || 2024}`,
@@ -1272,7 +1272,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         } catch (e) {}
       }
     }
-    const matchDemo = DEMO_STUDIES.find((s) => s.study_id === studyId);
+    const matchDemo = PREVIEW_STUDIES.find((s) => s.study_id === studyId);
     if (matchDemo) return matchDemo as unknown as T;
     return null as unknown as T;
   }
@@ -1637,6 +1637,8 @@ export interface Study {
   extraction_status: string;
   pdf_status: string;
   pdf_path: string;
+  study_label?: string | null;
+  source_type?: string | null;
   is_duplicate?: boolean | number;
   duplicate_of_study_id?: string | null;
   ai_priority_score?: number | null;
@@ -4271,7 +4273,7 @@ export const api = {
       method: "POST",
     }),
 
-  // Citation Telephone (Co-Scientist Verification)
+  // Citation Telephone (AI Reviewer Verification)
   auditCitationTelephoneText: (text: string) =>
     request<{
       references: Record<number, string>;

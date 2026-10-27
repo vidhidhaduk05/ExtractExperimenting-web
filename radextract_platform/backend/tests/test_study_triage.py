@@ -3,7 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import create_app
-from services.clinical_storm_service import (
+from services.study_triage_service import (
     CLINICAL_PERSONAS,
     run_laya_fast_triage,
     deliberate_study_flaws,
@@ -184,7 +184,7 @@ def test_storm_router_endpoints(client):
 
 
 def test_prisma2020_conformance_evaluation():
-    from services.clinical_storm_service import evaluate_prisma2020_conformance
+    from services.study_triage_service import evaluate_prisma2020_conformance
     res = evaluate_prisma2020_conformance(
         pico={
             "population": "Adult patients with suspected acute ischemic stroke",

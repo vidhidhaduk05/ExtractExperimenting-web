@@ -93,7 +93,7 @@ def _get_laya_model():
 
     # First attempt via jev_client if available
     try:
-        from services.jev_client import _get_laya_engine
+        from services.laya_client import _get_laya_engine
         engine = _get_laya_engine()
         if engine is not None:
             _laya_instance = engine
@@ -876,7 +876,7 @@ def evaluate_claim_fast(
 
     # 4. Attach Laya Fast Triage Flaw Risk & Specialty Lens to each article
     try:
-        from services.clinical_storm_service import run_laya_fast_triage
+        from services.study_triage_service import run_laya_fast_triage
         for art in articles:
             triage = run_laya_fast_triage(art.get("title", ""), art.get("abstract", ""), clean_claim)
             art["laya_flaw_probability"] = triage.get("flaw_probability", 0.15)

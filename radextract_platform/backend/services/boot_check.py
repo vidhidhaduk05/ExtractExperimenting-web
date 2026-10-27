@@ -147,7 +147,7 @@ def check_storage_directories() -> Dict[str, Any]:
 
 def check_laya_model() -> Dict[str, Any]:
     """Check whether Laya local ONNX weights exist and are ready for evidence tracing."""
-    from services.jev_client import _get_laya_model_dir
+    from services.laya_client import _get_laya_model_dir
 
     model_dir = _get_laya_model_dir()
     if not model_dir:

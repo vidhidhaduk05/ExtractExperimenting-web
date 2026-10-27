@@ -924,7 +924,7 @@ export function CodebookDesignerModal({
                           value={currentVar.description || ""}
                           onChange={(e) => handleUpdateCurrentRule("definition", e.target.value)}
                           className="w-full text-sm font-['Work_Sans'] border border-[#d2c2cb] rounded-lg p-2.5 text-[#3a0f34] bg-[#ffffff] focus:outline-none focus:ring-2 focus:ring-[#814d75]"
-                          placeholder="Short instructions for human or Co-Scientist extraction"
+                          placeholder="Short instructions for human or AI Reviewer extraction"
                         />
                       </div>
                     </div>

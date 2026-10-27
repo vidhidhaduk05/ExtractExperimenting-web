@@ -258,8 +258,8 @@ def evaluate_passage_with_laya(
 
     # 1. Attempt via Jev Cloud API (with seamless Laya backup)
     try:
-        from services import jev_client
-        answers, engine_used = jev_client.ask_with_engine(state, questions)
+        from services import laya_client
+        answers, engine_used = laya_client.ask_with_engine(state, questions)
     except Exception as exc:
         logger.warning("Jev/Laya client failed (%s), checking direct local model fallback", exc)
         if laya is not None:

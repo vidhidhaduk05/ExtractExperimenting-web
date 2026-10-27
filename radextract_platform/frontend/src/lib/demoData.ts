@@ -37,7 +37,7 @@ export const DEMO_PROJECT: Project = {
   status: "active",
 };
 
-export const DEMO_STUDIES: Study[] = [
+export const PREVIEW_STUDIES: Study[] = [
   {
     study_id: "study_birua_2022",
     project_id: "proj_pam_current",
@@ -804,7 +804,7 @@ export const DEMO_PRISMA_MERMAID = {
 };
 
 export const DEMO_MULTI_DATABASE_SEARCH = {
-  results: DEMO_STUDIES,
+  results: PREVIEW_STUDIES,
   total_found: 10,
   deduplicated_count: 4,
   sources: {

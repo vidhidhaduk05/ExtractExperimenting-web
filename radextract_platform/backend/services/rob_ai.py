@@ -229,8 +229,8 @@ def prefill_assessment_with_laya(
 ) -> Optional[dict]:
     """Assess study signaling questions via TypeSafe Jev Cloud API with local Laya fallback."""
     try:
-        from services import jev_client
-        if not jev_client.is_jev_enabled():
+        from services import laya_client
+        if not laya_client.is_jev_enabled():
             return None
 
         tool = get_tool(tool_key)
@@ -261,7 +261,7 @@ def prefill_assessment_with_laya(
                 }
                 sq_map[sq.key] = (domain, sq)
 
-        answers_from_engine, engine_used = jev_client.ask_with_engine(state, questions_payload)
+        answers_from_engine, engine_used = laya_client.ask_with_engine(state, questions_payload)
 
         # Assemble results by domain
         domains_result: dict[str, dict[str, Any]] = {}

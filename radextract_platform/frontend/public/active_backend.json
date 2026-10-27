@@ -1,8 +1,8 @@
 {
-  "backend_url": "https://vhs-reactions-likely-fairfield.trycloudflare.com",
-  "api_url": "https://vhs-reactions-likely-fairfield.trycloudflare.com/api",
-  "health_url": "https://vhs-reactions-likely-fairfield.trycloudflare.com/health",
-  "updated_at": "2026-10-27T12:10:02Z",
+  "backend_url": "https://housewares-prefer-radar-ruby.trycloudflare.com",
+  "api_url": "https://housewares-prefer-radar-ruby.trycloudflare.com/api",
+  "health_url": "https://housewares-prefer-radar-ruby.trycloudflare.com/health",
+  "updated_at": "2026-10-27T17:05:10Z",
   "status": "online",
   "model": "biomni-r0"
 }

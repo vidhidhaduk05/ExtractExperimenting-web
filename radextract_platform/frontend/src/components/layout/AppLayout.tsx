@@ -6,6 +6,7 @@ import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, ShieldAlert, 
 import { cn } from "../../lib/utils";
 import { ErrorBoundary } from "../common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "../common/ClarificationNotificationCenter";
+import { StageTabs } from "./StageTabs";
 import { subscribeApiConnection, ApiConnectionInfo, getApiConnectionInfo } from "../../lib/api";
 
 const navItems = [
@@ -47,7 +48,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
-  // Co-Scientist Configuration State
+  // AI Reviewer Configuration State
   const [provider, setProvider] = useState<"antigravity" | "local">("local");
   const [localEndpoint, setLocalEndpoint] = useState<string>("http://127.0.0.1:18000/v1");
   const [localModelName, setLocalModelName] = useState<string>("coscientist-v1");
@@ -114,7 +115,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
         model_name: provider === "local" ? localModelName : antigravityModel,
         api_key: customKey || undefined,
       });
-      setTestResult(res || { success: true, message: "Co-Scientist connection verified!" });
+      setTestResult(res || { success: true, message: "AI Reviewer connection verified!" });
     } catch (err: any) {
       setTestResult({ success: false, message: err?.message || "Connection failed." });
     } finally {
@@ -155,7 +156,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
             <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
                 <Wrench className="h-4 w-4 text-phylo-blue" />
-                System & Co-Scientist Engine Settings
+                System & AI Reviewer Engine Settings
               </h3>
               <button
                 onClick={() => setIsOpen(false)}
@@ -175,7 +176,7 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >
-                Co-Scientist Engine & Keys
+                AI Reviewer Engine & Keys
               </button>
               <button
                 onClick={() => setActiveTab("pubmed")}
@@ -545,7 +546,7 @@ export function AppLayout() {
                   <span className="tag-phylo-yellow text-[9px] px-1.5 py-0.2 tracking-wider">LAB</span>
                 </div>
                 <span className="text-[10px] text-[#6B665E] font-sans truncate">
-                  Co-Scientist for Biomedical Lit
+                  AI Reviewer for Biomedical Lit
                 </span>
               </div>
             )}
@@ -717,7 +718,8 @@ export function AppLayout() {
           </div>
         </header>
 
-
+        {/* Stage tab strip on project routes */}
+        {projectId && <StageTabs />}
 
         <div className="flex-1 overflow-y-auto">
           <ErrorBoundary>

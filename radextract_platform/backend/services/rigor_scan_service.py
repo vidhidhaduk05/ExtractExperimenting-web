@@ -428,7 +428,7 @@ def run_full_rigor_scan(
     # Pre-collect questions for batched Laya System-1 evaluation (sub-second response)
     laya_answers = {}
     try:
-        from services import jev_client
+        from services import laya_client
         candidate_q = {}
         for spec in specs[:30]:
             cid = spec.get("id")
@@ -448,7 +448,7 @@ def run_full_rigor_scan(
                     "abstract": text[:3500],
                 }
             }
-            laya_answers, eng = jev_client.ask_with_engine(laya_state, candidate_q)
+            laya_answers, eng = laya_client.ask_with_engine(laya_state, candidate_q)
             engine_used = eng
     except Exception as e:
         logger.debug("Batched Laya inference fallback to grounded sentences: %s", e)

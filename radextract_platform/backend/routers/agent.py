@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 from database import get_db
 from dependencies import check_project_access, get_current_user_optional
 from services.db_backend import DBBackend
-from services.antigravity_agent import (
+from services.agent_agent import (
     is_antigravity_available,
     run_screening_extraction_agent,
     run_batch_agent,
@@ -107,7 +107,7 @@ _batch_jobs: dict[str, dict] = {}
 @router.get("/status", response_model=AgentStatusResponse)
 async def get_agent_status():
     """Check whether the Antigravity agent layer is available."""
-    from services.antigravity_agent import _SDK_AVAILABLE, _max_concurrent
+    from services.agent_agent import _SDK_AVAILABLE, _max_concurrent
     from config import settings
 
     return AgentStatusResponse(

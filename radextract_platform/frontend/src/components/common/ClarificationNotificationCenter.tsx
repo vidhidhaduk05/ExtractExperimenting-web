@@ -112,7 +112,7 @@ export function ClarificationNotificationCenter({
         answer,
         answer_label: answerLabel,
         answer_freetext: answerFreetext,
-        answered_by: "Reviewer (Co-Scientist Consultation)",
+        answered_by: "Reviewer (AI Reviewer Consultation)",
       }),
     onSuccess: (result, variables) => {
       setSuccessFeedback((prev) => ({ ...prev, [variables.questionId]: result }));
@@ -254,7 +254,7 @@ export function ClarificationNotificationCenter({
                       <Sparkles className="h-3 w-3" />
                     </div>
                     <span className="text-[11px] font-bold text-[#3a0f34] truncate">
-                      Co-Scientist Screening Clarification
+                      AI Screening Clarification
                     </span>
                     <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase font-semibold bg-[#eee7ec] text-[#814d75] shrink-0">
                       {q.stage}
@@ -420,7 +420,7 @@ export function ClarificationNotificationCenter({
                       Clarification Inbox
                     </h2>
                     <p className="text-[11px] text-[#6B665E]">
-                      Human-in-the-loop decisions for Co-Scientist screening ambiguity
+                      Human-in-the-loop decisions for AI Screening ambiguity
                     </p>
                   </div>
                 </div>
@@ -492,7 +492,7 @@ export function ClarificationNotificationCenter({
                     </p>
                     <p className="text-xs text-[#8A817A] mt-1">
                       {activeDrawerTab === "pending"
-                        ? "Background Co-Scientist screening proceeds automatically without blocking."
+                        ? "Background AI Screening proceeds automatically without blocking."
                         : "Answered questions will be preserved here."}
                     </p>
                   </div>

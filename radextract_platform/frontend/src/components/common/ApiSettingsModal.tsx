@@ -228,7 +228,7 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
                   setApiUrl("https://thesaurus-algorithms-exterior-estimates.trycloudflare.com/api");
                 }}
                 className="px-2 py-0.5 rounded bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold border border-purple-300 flex items-center gap-1 shadow-2xs transition-colors"
-                title="Connect directly to the HPC Tesla V100S GPU running the high-throughput Co-Scientist research inference cluster"
+                title="Connect directly to the HPC Tesla V100S GPU running the high-throughput AI Reviewer research inference cluster"
               >
                 <span>⚡ RadExtract Live GPU (HPC)</span>
               </button>

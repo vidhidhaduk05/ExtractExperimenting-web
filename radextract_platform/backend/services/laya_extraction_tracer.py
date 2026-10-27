@@ -15,7 +15,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from services.jev_client import ask, is_jev_enabled
+from services.laya_client import ask, is_jev_enabled
 
 logger = logging.getLogger(__name__)
 

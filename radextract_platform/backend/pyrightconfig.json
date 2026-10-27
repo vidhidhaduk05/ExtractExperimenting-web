@@ -1,0 +1,8 @@
+{
+  "venvPath": "/home/vd00026/Desktop/Software",
+  "venv": ".venv",
+  "extraPaths": [
+    "/home/vd00026/Desktop/Software/radextract_platform/backend",
+    "/home/vd00026/Desktop/Software/laya"
+  ]
+}

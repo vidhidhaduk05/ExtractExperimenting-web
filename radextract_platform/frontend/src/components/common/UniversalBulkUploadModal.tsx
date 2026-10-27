@@ -334,9 +334,9 @@ export function UniversalBulkUploadModal({
               >
                 <ShieldCheck className={`h-4 w-4 mt-0.5 shrink-0 ${targetWorkflow === "screening" ? "text-emerald-400" : "text-[#141413]"}`} />
                 <div>
-                  <div className="font-serif font-medium text-xs">Co-Scientist Screening Queue</div>
+                  <div className="font-serif font-medium text-xs">AI Screening Queue</div>
                   <div className={`text-[11px] mt-0.5 ${targetWorkflow === "screening" ? "text-[#FAF9F3]/70" : "text-[#6B665E]"}`}>
-                    Places studies into Title & Abstract screening queue with keyboard hotkeys & Co-Scientist ratings.
+                    Places studies into Title & Abstract screening queue with keyboard hotkeys & AI Reviewer ratings.
                   </div>
                 </div>
               </button>

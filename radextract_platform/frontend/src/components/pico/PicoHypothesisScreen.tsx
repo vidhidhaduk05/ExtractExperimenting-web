@@ -211,7 +211,7 @@ export default function PicoHypothesisScreen() {
               </span>
             </div>
             <div className="text-[11px] text-[#eee7ec] font-normal">
-              Co-Scientist for Biomedical Literature &amp; Meta-Analysis
+              AI Reviewer for Biomedical Literature &amp; Meta-Analysis
             </div>
           </div>
         </div>

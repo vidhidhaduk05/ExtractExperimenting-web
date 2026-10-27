@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from services.clinical_storm_service import (
+from services.study_triage_service import (
     CLINICAL_PERSONAS,
     deliberate_study_flaws,
     deliberate_protocol_flaws,
@@ -129,7 +129,7 @@ def deliberate_protocol(req: ProtocolDeliberateRequest):
 def export_protocol(req: ProtocolDeliberateRequest):
     """Export study protocol conforming to PRISMA 2020 / PROSPERO standards (adapted from RevAIse/prismAId)."""
     try:
-        from services.clinical_storm_service import export_prisma2020_protocol
+        from services.study_triage_service import export_prisma2020_protocol
         return export_prisma2020_protocol(
             pico=req.pico,
             hypothesis=req.hypothesis,

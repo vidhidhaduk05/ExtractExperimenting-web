@@ -4,7 +4,7 @@ import uuid
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any
 import sqlite3
 
 from models import ExtractionCreate, ExtractionUpdate, ExtractionResponse, MissingDataSummary
