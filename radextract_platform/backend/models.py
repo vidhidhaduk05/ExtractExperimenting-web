@@ -704,8 +704,9 @@ class DuplicateMatch(BaseModel):
     abstract: str = ""
     is_duplicate: int = 0
     screening_status: str = "pending"
-    match_reason: str  # "doi" | "pmid" | "title_similarity" | "author_year"
+    match_reason: str  # "doi" | "pmid" | "nct" | "exact_title_author_year" | "fuzzy_title_corroborated" | ...
     similarity_score: float = 0.0
+    tier: str = ""  # "T0" | "T1" | "T2" | "T3" | "T4" | "conflict" | "human_review"
 
 
 class DuplicateGroup(BaseModel):
@@ -729,6 +730,8 @@ class DeduplicationResult(BaseModel):
     duplicate_groups: list[DuplicateGroup] = Field(default_factory=list)
     total_duplicates: int
     duplicates_marked: int
+    tier_breakdown: dict = Field(default_factory=dict)   # tier -> merged count
+    review_queue_size: int = 0
 
 
 class DuplicateResolveRequest(BaseModel):

@@ -140,6 +140,24 @@ def get_prisma_2020_data(project_id: str, db) -> Dict[str, Any]:
     ai_count = decisions_stats["ai_decisions"] if decisions_stats else 0
     human_count = decisions_stats["human_decisions"] if decisions_stats else 0
 
+    # Duplicates removed by tier (dedup_plan §7 / zoplicate plan §4):
+    # T0/T1/T2 auto merges vs human-accepted merges, from the dedup audit log.
+    # Rejected pairs count as unique records (never marked), so they are
+    # naturally excluded here.
+    duplicates_removed_by_tier: Dict[str, int] = {}
+    try:
+        for row in db.execute(
+            """SELECT tier, COUNT(*) AS c FROM dedup_audit
+               WHERE project_id = ? AND action IN ('auto_merge', 'accept_merge')
+               GROUP BY tier""",
+            (project_id,),
+        ).fetchall():
+            r = dict(row) if not isinstance(row, dict) else row
+            tier = r.get("tier") or "unspecified"
+            duplicates_removed_by_tier[tier] = duplicates_removed_by_tier.get(tier, 0) + r["c"]
+    except Exception:
+        pass  # dedup_audit table may not exist in older databases
+
     return {
         "project_id": project_id,
         "identification": {
@@ -147,6 +165,7 @@ def get_prisma_2020_data(project_id: str, db) -> Dict[str, Any]:
             "registers": 0,
             "other_sources": 0,
             "duplicates_removed": duplicates_removed,
+            "duplicates_removed_by_tier": duplicates_removed_by_tier,
             "records_after_duplicates": records_after_dups,
             "total": total_records,
         },

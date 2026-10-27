@@ -318,6 +318,189 @@ async def resolve_duplicate(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+# ═══════════════════════════════════════════════════════════════════════
+#  Zoplicate-style dedup review sheet + Merge All
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.get("/projects/{project_id}/dedup/candidates")
+async def get_dedup_candidates(
+    project_id: str,
+    status: str = Query("pending", description="pending | accepted | rejected | keep_both | all"),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Candidate rows for the accept/reject review sheet, with side-by-side
+    field diffs and stats. Rejected groups are backed by the non_duplicates
+    memory and never reappear as pending."""
+    check_project_access(conn, project_id, user)
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    from services.dedup_service import get_candidate_groups
+    try:
+        return get_candidate_groups(project_id, status=status, db=conn)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/{group_id}/accept")
+async def accept_dedup_group(
+    project_id: str,
+    group_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Accept (merge) a candidate group: master wins conflicts, missing
+    fields filled from duplicates, duplicates soft-marked, audit row written."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.dedup_service import accept_group
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        return accept_group(project_id, group_id, db=conn, actor=actor)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/{group_id}/reject")
+async def reject_dedup_group(
+    project_id: str,
+    group_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Reject a candidate group as not-duplicates. Every pair is recorded in
+    the non_duplicates memory and never flagged again."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.dedup_service import reject_group
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        return reject_group(project_id, group_id, db=conn, actor=actor)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/{group_id}/keep-both")
+async def keep_both_dedup_group(
+    project_id: str,
+    group_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Keep both records: unmark any duplicate flags inside the group and
+    close it as keep_both (reversible)."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.dedup_service import keep_both_group
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        return keep_both_group(project_id, group_id, db=conn, actor=actor)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/{group_id}/set-master")
+async def set_dedup_group_master(
+    project_id: str,
+    group_id: str,
+    payload: dict,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Choose a different master for a pending group."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    master_study_id = (payload or {}).get("master_study_id", "")
+    if not master_study_id:
+        raise HTTPException(status_code=400, detail="master_study_id is required")
+    from services.dedup_service import set_group_master
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        return set_group_master(project_id, group_id, master_study_id, db=conn, actor=actor)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/merge-all")
+async def merge_all_dedup(
+    project_id: str,
+    payload: dict,
+    background_tasks: BackgroundTasks,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Bulk-merge pending duplicate groups (Zoplicate BulkMergeController port).
+
+    body: { master_strategy: "most_complete"|"newest"|"oldest"|"has_decision",
+            dry_run: bool }
+    Dry-run returns the full merge plan for a confirm dialog without executing.
+    Records with human decisions are skipped and reported."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    from services.dedup_service import merge_all as _merge_all
+    from starlette.concurrency import run_in_threadpool
+    payload = payload or {}
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        result = await run_in_threadpool(
+            _merge_all,
+            project_id,
+            payload.get("master_strategy", "most_complete"),
+            bool(payload.get("include_auto", True)),
+            bool(payload.get("dry_run", False)),
+            conn,
+            actor,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/projects/{project_id}/dedup/merge-all/status")
+async def merge_all_status(
+    project_id: str,
+    run_id: str = Query(..., description="Run id returned by merge-all"),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Progress for a merge-all run (Zoplicate activeRun pattern)."""
+    check_project_access(conn, project_id, user)
+    from services.dedup_service import get_merge_all_status
+    try:
+        run = get_merge_all_status(run_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if run.get("project_id") != project_id:
+        raise HTTPException(status_code=404, detail="Run does not belong to this project")
+    return run
+
+
+@router.post("/projects/{project_id}/dedup/merge-all/pause")
+async def merge_all_pause(
+    project_id: str,
+    payload: dict,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Request a pause of a running merge-all (checked between groups)."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.dedup_service import pause_merge_all
+    run_id = (payload or {}).get("run_id", "")
+    if not run_id:
+        raise HTTPException(status_code=400, detail="run_id is required")
+    try:
+        run = pause_merge_all(run_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if run.get("project_id") != project_id:
+        raise HTTPException(status_code=404, detail="Run does not belong to this project")
+    return run
+
 
 # ═══════════════════════════════════════════════════════════════════════
 #  v2.4: Exclusion Reason Taxonomy

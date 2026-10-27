@@ -70,6 +70,11 @@ TABLE_PK = {
     "reporting_profile_assessments": "profile_assessment_id",
     "reporting_profile_items": "profile_item_id",
     "extraction_decisions": "decision_id",
+    "dedup_groups": "group_id",
+    "non_duplicates": "non_dup_id",
+    "dedup_audit": "audit_id",
+    "dedup_merge_plans": "plan_id",
+    "dedup_merge_runs": "run_id",
 }
 
 # Tables that have project_id for GSI
