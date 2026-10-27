@@ -241,3 +241,22 @@ This document is the canonical ledger of all engineering, architectural, scienti
 - **Meta-Analysis Pooling Guard**: In `create_meta_analysis` and `_run_analysis`, pooling studies that share a duplicate family in `dedup_groups` is blocked with 409 conflict, reporting conflicting group IDs to prevent double-counting cohort bias.
 - **Gold-Set Evaluator**: Shipped `scripts/eval_dedup_gold.py` providing Wilson score 95% confidence intervals, precision, recall, review-workload estimates, and a >=0.99 precision gate, explicitly outputting the required disclaimer that no real-world labeled gold set exists yet.
 - **Import-Time Shortcut Safety**: Routed intake exact DOI/title matching through conflict checks (differing PMIDs, differing DOIs on title match, numeric title discrepancies, and non-duplicate rejection history) while preserving the intake reconciliation invariant (`total = imported + duplicates + failed`).
+
+---
+
+## 2026-10-27 — ClaimScape Evidence Map Complete Laya Command Set and Offline Transparency
+
+- **Local Laya ONNX Engine**: Downloaded and verified full Laya ONNX weights (`laya/models/laya.onnx` ~3.8 MB and `laya.onnx.data` ~1.6 GB) from `receptron/laya-onnx`. Configured `_get_laya_model` and `_get_laya_engine` to load locally without remote network dependencies.
+- **Complete Command Set**: Implemented the k-dense 5-question method in `claimscape_fast_pipeline.py`:
+  - `onTopic`: Empirical investigation of claim relationship.
+  - `stance` & `stanceCheck`: Expanded to 4 options including `mixed` ("some results agree and others disagree") and `no_result`.
+  - `direct`: Evaluates same population, exposure/intervention, and outcome directly (replaces previous tier-based heuristic for Laya evaluations).
+  - `finding`: Splits abstracts into sentences prefixed `S01|`, `S02|`, etc., querying the model to select the sentence reporting the paper's own result bearing most directly on the claim, storing both index and exact sentence text as `findingSentence`.
+- **Judgment Admission & Consensus Rules**:
+  - Paper plotted iff `onTopic >= 0.5`.
+  - Direct evidence iff `direct >= 0.5`.
+  - Verdict counts iff `stance` and `stanceCheck` choose the exact same option and average probability >= 0.60; otherwise categorized as `unclear`.
+- **Search Hygiene & Retraction Filtering**: Added retraction filtering `NOT (Retracted Publication[pt] OR Retraction of Publication[pt] OR Published Erratum[pt] OR Expression of Concern[pt])` and search-term validation halting with HTTP 400 on unrecognized terms/quoted phrases.
+- **Third-Party Opt-In Guard**: Secured remote scan bypass behind `settings.claimscape_remote_scan` (default `False`), preventing automatic external requests to `k-dense.ai`.
+- **Transparent Offline Banner**: Frontend `ClaimscapePage` inspects `/api/claimscape/status` on mount and renders a master-theme banner when `status != "ready"` notifying users that verdicts are keyword approximations rather than presenting fallbacks as model readings.
+

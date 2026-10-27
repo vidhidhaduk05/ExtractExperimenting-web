@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     jev_exclude_threshold: float = 0.85   # P(mismatch / hard-exclude) needed to exclude
     jev_clarify_band: float = 0.15        # |P - 0.5| below this counts as genuinely ambiguous
 
+    # ClaimScape Fast Pipeline
+    claimscape_remote_scan: bool = os.environ.get("CLAIMSCAPE_REMOTE_SCAN", "false").lower() == "true"
+
     # File storage
     upload_root: str = os.environ.get("UPLOAD_ROOT") or os.environ.get("RADEXTRACT_UPLOAD_ROOT") or str(Path(__file__).parent / "uploads")
     export_root: str = os.environ.get("EXPORT_ROOT") or os.environ.get("RADEXTRACT_EXPORT_ROOT") or str(Path(__file__).parent / "exports")

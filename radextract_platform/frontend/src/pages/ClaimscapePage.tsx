@@ -101,6 +101,26 @@ export const ClaimscapePage: React.FC = () => {
   const [scanError, setScanError] = useState("");
   const [resultSource, setResultSource] = useState("Evidence synthesis active · 300 publications analyzed across study designs");
   const [evalSpeed, setEvalSpeed] = useState<number | null>(null);
+  const [layaStatus, setLayaStatus] = useState<string>("checking");
+
+  // Read Laya model status on mount
+  useEffect(() => {
+    let active = true;
+    api.getClaimscapeStatus()
+      .then((res) => {
+        if (active) {
+          setLayaStatus(res?.status || "offline");
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setLayaStatus("offline");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Typewriter suggestions when input is empty
   const suggestions = [
@@ -324,7 +344,14 @@ export const ClaimscapePage: React.FC = () => {
         });
         setSelectedPmid(res.papers[0]?.pmid || "");
         setEvalSpeed(res.elapsed_ms);
-        setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: Co-Scientist Engine`);
+        const isFallback = res.engine === "heuristic_fallback" || res.engine === "mixed_laya_heuristic";
+        if (isFallback) {
+          setLayaStatus("offline");
+          setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: Keyword Fallback (Laya Offline)`);
+        } else {
+          setLayaStatus("ready");
+          setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: Local Laya ONNX`);
+        }
         finishScan();
         return;
       }
@@ -427,6 +454,14 @@ export const ClaimscapePage: React.FC = () => {
       {scanError && (
         <div role="alert" className="mx-6 mt-3 border border-red-300 bg-red-50 p-3 text-sm text-red-900 font-['Work_Sans']">
           {scanError}
+        </div>
+      )}
+      {layaStatus !== "ready" && layaStatus !== "checking" && (
+        <div role="alert" className="mx-6 mt-3 border border-[#d2c2cb] bg-[#ffdea6]/35 p-3.5 text-sm text-[#7c5800] font-['Work_Sans'] flex items-center gap-2.5 rounded-lg">
+          <ShieldAlert className="w-4 h-4 text-[#7c5800] shrink-0" />
+          <span>
+            <strong>Laya model offline</strong> — verdicts are keyword approximations.
+          </span>
         </div>
       )}
 

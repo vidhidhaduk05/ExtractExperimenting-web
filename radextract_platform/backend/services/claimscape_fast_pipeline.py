@@ -498,12 +498,30 @@ def _batch_eval_laya(laya_model: Any, articles: List[Dict[str, Any]], clean_clai
         items = []
 
         for p_idx, art in enumerate(chunk_articles):
+            sents = art.get("sentences", [])
+            if not sents and art.get("abstract"):
+                sents = _split_sentences(art["abstract"])
+                art["sentences"] = sents
+
+            # Prefix abstract sentences with S01|, S02|, etc.
+            prefixed_abstract = " ".join(f"S{i+1:02d}| {s}" for i, s in enumerate(sents)) if sents else art.get("abstract", "")
             state = {
                 "claim": clean_claim,
-                "paper": {"title": art.get("title", ""), "abstract": art.get("abstract", "")}
+                "paper": {"title": art.get("title", ""), "abstract": prefixed_abstract}
             }
-            for qid in qids:
-                q = _to_internal(q_defs[qid])
+
+            paper_q_defs = dict(q_defs)
+            if sents:
+                # Cap finding sentence choices to fit within head_max_len
+                sents_for_finding = sents[:25]
+                paper_q_defs["finding"] = {
+                    "type": "choice",
+                    "criteria": {f"S{i+1:02d}": s for i, s in enumerate(sents_for_finding)},
+                    "instructions": "Which sentence of the abstract reports this paper's own result that bears most directly on the claim?"
+                }
+
+            for qid, q_def in paper_q_defs.items():
+                q = _to_internal(q_def)
                 seq, markers = laya_model._build_sequence(state, q)
                 items.append({
                     "p_idx": p_idx,
@@ -564,70 +582,86 @@ def _batch_eval_laya(laya_model: Any, articles: List[Dict[str, Any]], clean_clai
             if q["t"] == "choice":
                 keys = list(q.get("crit", {}).keys())
                 paper_answers[p_idx][qid] = {
-                    k_name: round(float(p[idx]), 4) for idx, k_name in enumerate(keys)
+                    keys[idx]: round(float(p[idx]), 4) for idx in range(min(k, len(keys)))
                 }
 
         for p_idx, art in enumerate(chunk_articles):
             pmid = art["pmid"]
             ans = paper_answers.get(p_idx, {})
-            on_topic_p = ans.get("onTopic", {}).get("yes", 0.92)
+            on_topic_p = float(ans.get("onTopic", {}).get("yes", 0.92))
+            # Real direct evidence question response from Laya
+            direct_p = float(ans.get("direct", {}).get("yes", 0.85))
+
             st_p = ans.get("stance", {})
             st_check_p = ans.get("stanceCheck", st_p)
 
-            supports_p = float(st_p.get("supports", 0.33))
-            contradicts_p = float(st_p.get("contradicts", 0.33))
-            no_result_p = float(st_p.get("no_result", 0.34))
+            supports_p = float(st_p.get("supports", 0.0))
+            contradicts_p = float(st_p.get("contradicts", 0.0))
             mixed_p = float(st_p.get("mixed", 0.0))
+            no_result_p = float(st_p.get("no_result", 0.0))
 
             chk_supports = float(st_check_p.get("supports", supports_p))
             chk_contradicts = float(st_check_p.get("contradicts", contradicts_p))
-            chk_no_result = float(st_check_p.get("no_result", no_result_p))
             chk_mixed = float(st_check_p.get("mixed", mixed_p))
+            chk_no_result = float(st_check_p.get("no_result", no_result_p))
 
-            tier = art.get("tier", "obs")
-            if tier in ("meta", "rct", "trial", "obs"):
-                direct_p = min(0.96, max(0.55, round(float(on_topic_p) * 0.95, 2)))
-            elif tier == "case":
-                direct_p = 0.45
-            elif tier in ("animal", "in_vitro"):
-                direct_p = 0.20
-            else:
-                direct_p = 0.35
-
-            # Extractive finding sentence selection
+            # Finding sentence extracted directly from Laya choice
             sents = art.get("sentences", [])
-            finding = None
-            if sents:
-                claim_words = set(clean_claim.lower().split())
-                best_s = sents[0]
-                best_score = -1
-                for s in sents:
-                    s_low = s.lower()
-                    mult = 1.8 if any(w in s_low for w in ["conclude", "found that", "associated with", "reduced", "increased", "significantly", "demonstrated", "observed", "results"]) else 1.0
-                    overlap = sum(1 for w in claim_words if w in s_low)
-                    sc = overlap * mult
-                    if sc > best_score:
-                        best_score = sc
-                        best_s = s
-                finding = best_s
+            finding_ans = ans.get("finding", {})
+            finding_sentence = None
+            finding_dict = None
+            if finding_ans and sents:
+                chosen_opt_id = max(finding_ans.items(), key=lambda kv: kv[1])[0]
+                m_id = re.match(r"^S(\d+)$", chosen_opt_id)
+                if m_id:
+                    s_idx = int(m_id.group(1)) - 1
+                    if 0 <= s_idx < len(sents):
+                        finding_sentence = sents[s_idx]
+                        finding_dict = {
+                            "index": s_idx,
+                            "confidence": float(finding_ans[chosen_opt_id]),
+                        }
+            if finding_sentence:
+                art["findingText"] = finding_sentence
+
+            # Admission & stance consensus rules (Phase 3)
+            # Verdict counts iff stance and stanceCheck pick the SAME option AND their average probability >= 0.60; otherwise unclear.
+            top_st = max(st_p.items(), key=lambda kv: kv[1])[0] if st_p else "unclear"
+            top_chk = max(st_check_p.items(), key=lambda kv: kv[1])[0] if st_check_p else "unclear"
+
+            avg_probs = {}
+            for k in ("supports", "contradicts", "mixed", "no_result"):
+                avg_probs[k] = (st_p.get(k, 0.0) + st_check_p.get(k, 0.0)) / 2.0
+
+            top_avg_k, top_avg_p = max(avg_probs.items(), key=lambda kv: kv[1]) if avg_probs else ("unclear", 0.0)
+
+            agree = (top_st == top_chk)
+            if agree and top_st == top_avg_k and top_avg_p >= 0.60:
+                category = top_avg_k
+            else:
+                category = "unclear"
 
             judgments.append({
                 "pmid": pmid,
                 "onTopic": float(on_topic_p),
                 "direct": float(direct_p),
+                "category": category,
+                "agree": bool(agree),
+                "strength": round(float(top_avg_p), 4),
                 "stance": {
                     "supports": supports_p,
                     "contradicts": contradicts_p,
-                    "no_result": no_result_p,
                     "mixed": mixed_p,
+                    "no_result": no_result_p,
                 },
                 "stanceCheck": {
                     "supports": chk_supports,
                     "contradicts": chk_contradicts,
-                    "no_result": chk_no_result,
                     "mixed": chk_mixed,
+                    "no_result": chk_no_result,
                 },
-                "findingSentence": finding,
+                "finding": finding_dict,
+                "findingSentence": finding_sentence,
             })
 
     return judgments
@@ -681,8 +715,8 @@ def evaluate_claim_fast(
     api_key = api_key or getattr(settings, "ncbi_api_key", "")
 
     # 0. Live ClaimScape Scan Engine
-    # When connected to the live web, query the ClaimScape scan service for sub-6s complete literature synthesis
-    if isinstance(getattr(client, "_transport", None), httpx.HTTPTransport):
+    # When connected to the live web, optionally query the remote ClaimScape scan service if opt-in enabled
+    if getattr(settings, "claimscape_remote_scan", False) and isinstance(getattr(client, "_transport", None), httpx.HTTPTransport):
         try:
             scan_url = "https://www.k-dense.ai/api/claimscape/scan"
             scan_resp = client.post(
@@ -732,7 +766,7 @@ def evaluate_claim_fast(
             logger.debug("Live ClaimScape scan bypassed: %s", e)
 
     # 1. PubMed E-Search (Retmax up to count)
-    filter_tail = "hasabstract AND english[la] NOT ((review[pt] NOT systematic[sb]) OR editorial[pt] OR comment[pt] OR letter[pt] OR news[pt])"
+    filter_tail = "hasabstract AND english[la] NOT ((review[pt] NOT systematic[sb]) OR editorial[pt] OR comment[pt] OR letter[pt] OR news[pt]) NOT (Retracted Publication[pt] OR Retraction of Publication[pt] OR Published Erratum[pt] OR Expression of Concern[pt])"
     full_term = f"({search_query}) AND {filter_tail}"
 
     params = {
@@ -749,14 +783,44 @@ def evaluate_claim_fast(
         resp = client.get("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi", params=params)
         resp.raise_for_status()
         data = resp.json()
-        esearch_res = data["esearchresult"]
+        esearch_res = data.get("esearchresult", {})
         if data.get("error") or esearch_res.get("ERROR"):
-            raise ValueError("PubMed reported a search error")
-        total_pubmed = int(esearch_res["count"])
-        raw_pmids = esearch_res["idlist"]
+            raise RuntimeError("PubMed reported a search error")
+
+        # Search-term validation: if esearch response contains ErrorList / QuotedPhraseNotFound / ignored-term fields,
+        # STOP and return a 400 naming the unrecognized term - never silently search without it
+        error_list = esearch_res.get("ErrorList") or {}
+        warning_list = esearch_res.get("WarningList") or {}
+
+        unrecognized = []
+        for field in ("PhraseNotFound", "FieldNotFound"):
+            vals = error_list.get(field, [])
+            if isinstance(vals, str):
+                vals = [vals]
+            unrecognized.extend(vals)
+
+        for field in ("QuotedPhraseNotFound", "OutputMessage"):
+            vals = warning_list.get(field, [])
+            if isinstance(vals, str):
+                vals = [vals]
+            if field == "QuotedPhraseNotFound":
+                unrecognized.extend(vals)
+            elif field == "OutputMessage":
+                for msg in vals:
+                    if any(k in msg.lower() for k in ("ignored", "not found", "unknown phrase")):
+                        unrecognized.append(msg)
+
+        if unrecognized:
+            bad_terms = ", ".join(f"'{u}'" for u in unrecognized)
+            raise ValueError(f"Unrecognized search term or quoted phrase in PubMed query: {bad_terms}")
+
+        total_pubmed = int(esearch_res.get("count", 0))
+        raw_pmids = esearch_res.get("idlist", [])
         if not isinstance(raw_pmids, list) or total_pubmed < 0 or (total_pubmed > 0 and not raw_pmids):
-            raise ValueError("PubMed returned an incomplete search response")
+            raise RuntimeError("PubMed returned an incomplete search response")
         pmids = [str(x) for x in raw_pmids]
+    except ValueError:
+        raise
     except Exception as e:
         logger.error("PubMed esearch failed: %s", e)
         raise RuntimeError("PubMed search failed; please retry") from e
@@ -817,20 +881,30 @@ def evaluate_claim_fast(
         "stance": {
             "type": "choice",
             "criteria": {
-                "supports": "findings support the claim assertion or confirm benefit/association",
-                "contradicts": "findings contradict the claim assertion, show harm, or refute relationship",
-                "no_result": "findings show no significant association, null result, or no difference"
+                "supports": "an effect in the direction the claim states (or no effect, when the claim asserts none)",
+                "contradicts": "no effect where the claim asserts one, an effect in the opposite direction, or harm where the claim asserts benefit",
+                "mixed": "some results agree with the claim and others disagree, across outcomes, doses, subgroups or time",
+                "no_result": "the paper reports no result bearing on the claim (protocol, method, or review without a conclusion)"
             },
-            "instructions": "What do the empirical findings say about the claim?"
+            "instructions": "What do the paper's own results say about the claim?"
         },
         "stanceCheck": {
             "type": "choice",
             "criteria": {
-                "supports": "evidence agrees with the claim assertion",
-                "contradicts": "evidence refutes or disagrees with the claim assertion",
-                "no_result": "evidence is inconclusive, neutral, or reports no difference"
+                "supports": "an effect in the direction the claim states (or no effect, when the claim asserts none)",
+                "contradicts": "no effect where the claim asserts one, an effect in the opposite direction, or harm where the claim asserts benefit",
+                "mixed": "some results agree with the claim and others disagree, across outcomes, doses, subgroups or time",
+                "no_result": "the paper reports no result bearing on the claim (protocol, method, or review without a conclusion)"
             },
-            "instructions": "Does the evidence in this study agree with the claim assertion?"
+            "instructions": "Taken as a whole, which way does the paper's evidence point on the claim?"
+        },
+        "direct": {
+            "type": "choice",
+            "criteria": {
+                "yes": "same population, exposure/intervention, and outcome that the claim names",
+                "no": "different population, species or laboratory model, or a stand-in exposure or outcome"
+            },
+            "instructions": "Does the paper test the claim directly?"
         }
     }
 
@@ -854,24 +928,40 @@ def evaluate_claim_fast(
                 continue
             text = (art.get("title", "") + " " + art.get("abstract", "")).lower()
             if any(w in text for w in ["reduced", "decreased risk", "benefit", "protective", "efficacy", "effective", "improved"]):
-                sup, con, nr = 0.75, 0.15, 0.10
+                sup, con, mix, nr = 0.70, 0.10, 0.10, 0.10
             elif any(w in text for w in ["increased risk", "harm", "worse", "ineffective", "failed to"]):
-                sup, con, nr = 0.15, 0.75, 0.10
+                sup, con, mix, nr = 0.10, 0.70, 0.10, 0.10
+            elif any(w in text for w in ["mixed", "conflicting", "inconsistent", "heterogeneous"]):
+                sup, con, mix, nr = 0.20, 0.20, 0.50, 0.10
             elif any(w in text for w in ["no significant", "no association", "not observed", "no difference"]):
-                sup, con, nr = 0.10, 0.20, 0.70
+                sup, con, mix, nr = 0.10, 0.10, 0.10, 0.70
             else:
-                sup, con, nr = 0.33, 0.33, 0.34
+                sup, con, mix, nr = 0.25, 0.25, 0.25, 0.25
 
             sents = art.get("sentences", [])
             tier = art.get("tier", "obs")
             direct_p = 0.90 if tier in ("meta", "rct", "trial", "obs") else 0.45 if tier == "case" else 0.20
+
+            st_dict = {"supports": sup, "contradicts": con, "mixed": mix, "no_result": nr}
+            top_k, top_p = max(st_dict.items(), key=lambda kv: kv[1])
+            cat = top_k if top_p >= 0.60 else "unclear"
+
+            finding_s = sents[0] if sents else None
+            finding_d = {"index": 0, "confidence": 0.5} if sents else None
+            if finding_s:
+                art["findingText"] = finding_s
+
             judgments.append({
                 "pmid": art["pmid"],
                 "onTopic": 0.92,
                 "direct": direct_p,
-                "stance": {"supports": sup, "contradicts": con, "no_result": nr},
-                "stanceCheck": {"supports": sup, "contradicts": con, "no_result": nr},
-                "findingSentence": sents[0] if sents else None,
+                "category": cat,
+                "agree": True,
+                "strength": top_p,
+                "stance": st_dict,
+                "stanceCheck": st_dict,
+                "finding": finding_d,
+                "findingSentence": finding_s,
             })
 
     # 4. Attach Laya Fast Triage Flaw Risk & Specialty Lens to each article

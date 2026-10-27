@@ -225,3 +225,137 @@ def test_hypothesis_normalization():
     assert pipeline._normalize_claim_hypothesis("Are ADHD diagnosed people more likely to have autoimmune disease?") == "ADHD diagnosed people are more likely to have autoimmune disease"
     assert pipeline._normalize_claim_hypothesis("Does metformin extend lifespan in humans?") == "metformin extends lifespan in humans"
     assert pipeline._normalize_claim_hypothesis("Is aspirin effective in preventing stroke?") == "aspirin is effective in preventing stroke"
+
+
+def test_laya_loaded_path_answers_all_questions_and_finding_sentence(monkeypatch):
+    """(a) Laya-loaded path produces judgments with all five questions answered and a real finding sentence."""
+    from services.jev_client import _get_laya_engine
+    real_model = _get_laya_engine()
+    assert real_model is not None, "Local Laya ONNX model should be loaded"
+    monkeypatch.setattr(pipeline, "_get_laya_model", lambda: real_model)
+
+    sample_xml = """<PubmedArticleSet><PubmedArticle><MedlineCitation>
+    <PMID>123</PMID><Article><ArticleTitle>Sleep deprivation and working memory</ArticleTitle>
+    <Abstract><AbstractText>Sleep loss is common worldwide. We tested working memory after sleep deprivation. Subjects with 24 hours of wakefulness experienced significant working memory deterioration (p &lt; 0.01). Restorative sleep returned performance to baseline levels.</AbstractText></Abstract>
+    </Article></MedlineCitation></PubmedArticle></PubmedArticleSet>"""
+    mock_pubmed(monkeypatch, xml=sample_xml)
+
+    result = pipeline.evaluate_claim_fast("Can sleeping less cause memory loss?", query="sleep loss memory")
+    assert result["engine"] == "local_laya_onnx"
+    assert len(result["judgments"]) == 1
+    j = result["judgments"][0]
+
+    # Verify all 5 questions answered
+    assert "onTopic" in j and isinstance(j["onTopic"], float)
+    assert "direct" in j and isinstance(j["direct"], float)
+    assert "stance" in j and "mixed" in j["stance"]
+    assert "stanceCheck" in j and "mixed" in j["stanceCheck"]
+    assert "finding" in j and j["finding"] is not None
+    assert "index" in j["finding"]
+
+    # Real finding sentence extracted, not blind sents[0]
+    assert j["findingSentence"] is not None
+    assert isinstance(j["findingSentence"], str)
+    assert len(j["findingSentence"]) > 10
+
+
+def test_model_unavailable_sets_heuristic_fallback(monkeypatch):
+    """(b) Model-unavailable path sets engine: 'heuristic_fallback' AND the response flags it."""
+    monkeypatch.setattr(pipeline, "_get_laya_model", lambda: None)
+    mock_pubmed(monkeypatch)
+    result = pipeline.evaluate_claim_fast("Treatment improves survival")
+    assert result["engine"] == "heuristic_fallback"
+    assert len(result["judgments"]) == 1
+    j = result["judgments"][0]
+    assert j["onTopic"] == 0.92
+    assert "supports" in j["stance"]
+    assert "mixed" in j["stance"]
+
+
+def test_unclear_rule_when_stance_and_check_disagree(monkeypatch):
+    """(c) Unclear-rule test: mocked model output where stance=supports (0.7) and stanceCheck=contradicts (0.6) -> unclear."""
+    class MockLaya:
+        pass
+
+    monkeypatch.setattr(pipeline, "_get_laya_model", lambda: MockLaya())
+
+    def mock_batch_eval(laya_model, articles, hypothesis, q_defs):
+        return [{
+            "pmid": articles[0]["pmid"],
+            "onTopic": 0.95,
+            "direct": 0.90,
+            "category": "unclear",  # stance (supports) != stanceCheck (contradicts) -> unclear
+            "agree": False,
+            "strength": 0.40,
+            "stance": {"supports": 0.70, "contradicts": 0.10, "mixed": 0.10, "no_result": 0.10},
+            "stanceCheck": {"supports": 0.10, "contradicts": 0.60, "mixed": 0.10, "no_result": 0.20},
+            "finding": {"index": 0, "confidence": 0.8},
+            "findingSentence": "Some finding sentence.",
+        }]
+
+    monkeypatch.setattr(pipeline, "_batch_eval_laya", mock_batch_eval)
+    mock_pubmed(monkeypatch)
+    result = pipeline.evaluate_claim_fast("Treatment improves survival")
+    assert result["engine"] == "local_laya_onnx"
+    assert len(result["judgments"]) == 1
+    j = result["judgments"][0]
+    assert j["category"] == "unclear"
+    assert j["agree"] is False
+
+
+def test_retraction_filter_present_in_esearch_params(monkeypatch):
+    """(d) Retraction-filter present in the esearch params."""
+    requests = mock_pubmed(monkeypatch)
+    pipeline.evaluate_claim_fast("Aspirin reduces stroke")
+    assert len(requests) >= 1
+    esearch_req = requests[0]
+    term = esearch_req.url.params.get("term", "")
+    assert "hasabstract AND english[la]" in term
+    assert "NOT (Retracted Publication[pt]" in term
+    assert "Retraction of Publication[pt]" in term
+    assert "Published Erratum[pt]" in term
+    assert "Expression of Concern[pt]" in term
+
+
+def test_remote_scan_flag_off_prevents_k_dense_call(monkeypatch):
+    """(e) Remote-scan flag off -> no external call to k-dense.ai."""
+    from config import settings
+    monkeypatch.setattr(settings, "claimscape_remote_scan", False)
+
+    external_called = []
+    def handle(request):
+        if "k-dense.ai" in str(request.url):
+            external_called.append(str(request.url))
+            return httpx.Response(200, text="")
+        if request.url.path.endswith("esearch.fcgi"):
+            return httpx.Response(200, json={"esearchresult": {"count": "1", "idlist": ["123"]}})
+        return httpx.Response(200, text=ARTICLE_XML)
+
+    client = httpx.Client(transport=httpx.MockTransport(handle))
+    monkeypatch.setattr(pipeline, "_get_http_client", lambda: client)
+
+    result = pipeline.evaluate_claim_fast("Treatment improves survival")
+    assert len(external_called) == 0
+    assert result["engine"] in ("local_laya_onnx", "heuristic_fallback")
+
+
+def test_search_term_validation_unrecognized_returns_400(monkeypatch):
+    """Search-term validation: if esearch response contains QuotedPhraseNotFound, return 400."""
+    search_with_warning = {
+        "esearchresult": {
+            "count": "0",
+            "idlist": [],
+            "WarningList": {
+                "QuotedPhraseNotFound": ["sleepdeprivatoin"],
+                "OutputMessage": []
+            }
+        }
+    }
+    mock_pubmed(monkeypatch, search=search_with_warning)
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+    resp = client.post("/api/claimscape/evaluate", json={"claim": "Sleeping less causes memory loss", "query": "\"sleepdeprivatoin\""})
+    assert resp.status_code == 400
+    assert "sleepdeprivatoin" in resp.json()["detail"]
+
