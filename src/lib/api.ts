@@ -2161,6 +2161,12 @@ export interface HypothesisUpdate {
 export interface Criterion {
   id: string;
   text: string;
+  direction?: 'inclusion' | 'exclusion';
+  rule_mode?: 'strict' | 'weighted';
+  threshold?: number;
+  score_source?: 'keyword' | 'model' | 'hybrid';
+  enabled?: boolean;
+  version?: number;
 }
 
 export interface CriteriaResponse {
@@ -3549,6 +3555,14 @@ export const api = {
     request<CriteriaResponse>(`/projects/${projectId}/criteria`, { method: "PUT", body: JSON.stringify(data) }),
   generateCriteria: (projectId: string) =>
     request<CriteriaResponse>(`/projects/${projectId}/criteria/generate`, { method: "POST" }),
+  getThresholdCriteria: (projectId: string) =>
+    request<{ project_id: string; criteria: Criterion[] }>(`/projects/${projectId}/threshold-criteria`),
+  updateThresholdCriteria: (projectId: string, data: { criteria: Criterion[] }) =>
+    request<{ project_id: string; criteria: Criterion[] }>(`/projects/${projectId}/threshold-criteria`, { method: "PUT", body: JSON.stringify(data) }),
+  evaluateStudyCriteria: (projectId: string, data: { study_id: string; scores: Record<string, number | null> }) =>
+    request<{ study_id: string; decision: string; fired: any[]; flagged_unscored: string[] }>(`/projects/${projectId}/criteria/evaluate-study`, { method: "POST", body: JSON.stringify(data) }),
+  getValidationBounds: (projectId: string, k: number = 0, n: number = 100, alpha: number = 0.05) =>
+    request<{ k_false_negatives: number; n_samples: number; alpha: number; confidence_level: number; clopper_pearson_upper_bound: number }>(`/projects/${projectId}/criteria/validation-bounds?k=${k}&n=${n}&alpha=${alpha}`),
 
   // Search Strings
   getSearchStrings: (projectId: string) =>

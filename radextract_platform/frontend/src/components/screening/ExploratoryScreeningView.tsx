@@ -62,59 +62,48 @@ interface StreamPaper {
   };
 }
 
-const BASE_BIOMEDICAL_DATA = [
-  {
-    studyId: "PAM-2024-01",
-    P: "pure arterial malformation patients",
-    I: "endovascular coiling & flow diversion",
-    C: "conservative surveillance",
-    O: "angiographic obliteration & stroke prevention",
-    abs: "In pure arterial malformation patients, endovascular coiling & flow diversion compared to conservative surveillance achieved superior angiographic obliteration & stroke prevention without secondary ischemic deficit.",
-  },
-  {
-    studyId: "PAM-2024-02",
-    P: "type 2 diabetes patients",
-    I: "SGLT2 inhibitors",
-    C: "placebo",
-    O: "kidney outcomes & albuminuria reduction",
-    abs: "In type 2 diabetes patients, SGLT2 inhibitors compared to placebo improved kidney outcomes & albuminuria reduction significantly over 36 months.",
-  },
-  {
-    studyId: "PAM-2024-03",
-    P: "intracranial aneurysm cohorts",
-    I: "microsurgical clipping",
-    C: "endovascular embolization",
-    O: "complete occlusion rate",
-    abs: "Among intracranial aneurysm cohorts, microsurgical clipping versus endovascular embolization demonstrated higher complete occlusion rate with comparable 90-day modified Rankin scores.",
-  },
-  {
-    studyId: "PAM-2024-04",
-    P: "elderly vascular dementia adults",
-    I: "Mediterranean neuroprotective diet",
-    C: "standard western diet",
-    O: "cognitive trajectory preservation",
-    abs: "Among elderly vascular dementia adults, Mediterranean neuroprotective diet versus standard western diet preserved cognitive trajectory preservation and executive function indices over 4 years.",
-  },
-  {
-    studyId: "PAM-2024-05",
-    P: "acute ischemic stroke subjects",
-    I: "tenecteplase thrombolysis",
-    C: "alteplase standard-of-care",
-    O: "functional independence at 90 days",
-    abs: "In acute ischemic stroke subjects, tenecteplase thrombolysis compared to alteplase standard-of-care increased functional independence at 90 days with reduced intracranial hemorrhage incidence.",
-  },
-  {
-    studyId: "PAM-2024-06",
-    P: "cerebral cavernous malformation cases",
-    I: "propranolol pharmacotherapy",
-    C: "clinical observation",
-    O: "recurrent microhemorrhage rate",
-    abs: "In cerebral cavernous malformation cases, propranolol pharmacotherapy compared to clinical observation reduced recurrent microhemorrhage rate across long-term MRI gradient echo follow-up.",
-  },
-];
+function studyToStreamPaper(s: Study, turn: number): StreamPaper {
+  const studyId = s.study_id || (s as any).id || `study-${turn}`;
+  const rawStatus = (s.screening_status || "pending").toLowerCase();
+  let conf = 75;
+  if (typeof s.ai_confidence === "number") {
+    conf = s.ai_confidence > 1 ? Math.round(s.ai_confidence) : Math.round(s.ai_confidence * 100);
+  } else if (s.ai_decision === "include") conf = 88;
+  else if (s.ai_decision === "maybe") conf = 65;
+  else if (s.ai_decision === "exclude") conf = 35;
 
-function rnd<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+  const type: "keep" | "unsure" | "remove" =
+    rawStatus === "included" || s.ai_decision === "include"
+      ? "keep"
+      : rawStatus === "maybe" || rawStatus === "uncertain" || rawStatus === "awaiting_clarification" || s.ai_decision === "maybe"
+      ? "unsure"
+      : "remove";
+
+  return {
+    id: studyId,
+    turn,
+    studyId,
+    title: s.title || `Study ${studyId}`,
+    rawAbs: s.abstract || "No abstract available for this study.",
+    P: (s as any).pico_population || "Target population",
+    I: (s as any).pico_intervention || "Evaluated intervention",
+    C: (s as any).pico_comparator || "Comparator",
+    O: (s as any).pico_outcome || "Clinical outcome",
+    conf,
+    type,
+    status: rawStatus as any,
+    year: s.publication_year || 2024,
+    journal: s.journal || "Medical Journal",
+    author: s.authors || "Review Authors",
+    isNew: false,
+    pico: {
+      P: conf,
+      I: Math.max(50, conf - 5),
+      C: Math.max(40, conf - 15),
+      O: Math.max(50, conf - 8),
+      bias: conf > 80 ? "Low" : "Med",
+    },
+  };
 }
 
 export function ExploratoryScreeningView({
@@ -148,84 +137,30 @@ export function ExploratoryScreeningView({
   // Active filter tab: 'all' | 'keep' | 'unsure' | 'remove'
   const [filter, setFilter] = useState<"all" | "keep" | "unsure" | "remove">("all");
 
-  // Stream & study state
+  // Stream & study state initialized with real project studies
   const [papers, setPapers] = useState<StreamPaper[]>(() => {
-    if (projectStudies.length > 0) {
-      return projectStudies.map((s, idx) => {
-        const studyId = s.study_id || (s as any).id || `study-${idx + 1}`;
-        const rawStatus = (s.screening_status || "pending").toLowerCase();
-        let conf = 75;
-        if (typeof s.ai_confidence === "number") {
-          conf = s.ai_confidence > 1 ? Math.round(s.ai_confidence) : Math.round(s.ai_confidence * 100);
-        } else if (s.ai_decision === "include") conf = 88;
-        else if (s.ai_decision === "maybe") conf = 65;
-        else if (s.ai_decision === "exclude") conf = 35;
-
-        const type: "keep" | "unsure" | "remove" =
-          rawStatus === "included" || s.ai_decision === "include"
-            ? "keep"
-            : rawStatus === "maybe" || rawStatus === "uncertain" || rawStatus === "awaiting_clarification" || s.ai_decision === "maybe"
-            ? "unsure"
-            : "remove";
-
-        return {
-          id: studyId,
-          turn: idx + 1,
-          studyId,
-          title: s.title || `Pure Arterial Malformation Cohort (${studyId})`,
-          rawAbs: s.abstract || "Clinical systematic review evaluating pure arterial malformations (PAM) managed with coiling vs conservative observation across 5-year angiographic follow-up.",
-          P: (s as any).pico_population || "pure arterial malformations",
-          I: (s as any).pico_intervention || "endovascular intervention",
-          C: (s as any).pico_comparator || "conservative observation",
-          O: (s as any).pico_outcome || "stroke prevention & mRS",
-          conf,
-          type,
-          status: rawStatus as any,
-          year: s.publication_year || 2023,
-          journal: s.journal || "Journal of Neurosurgery",
-          author: s.authors || "Dhaduk et al.",
-          isNew: false,
-          pico: {
-            P: 72 + ((idx * 7) % 22),
-            I: 68 + ((idx * 5) % 25),
-            C: 55 + ((idx * 9) % 35),
-            O: 70 + ((idx * 4) % 24),
-            bias: conf > 80 ? "Low" : "Med",
-          },
-        };
-      });
-    }
-
-    return BASE_BIOMEDICAL_DATA.map((b, idx) => ({
-      id: idx + 1,
-      turn: idx + 1,
-      studyId: b.studyId,
-      title: `${b.P} + ${b.I} → ${b.O}`,
-      rawAbs: b.abs,
-      P: b.P,
-      I: b.I,
-      C: b.C,
-      O: b.O,
-      conf: 72 + (idx * 5) % 24,
-      type: idx % 3 === 0 ? "keep" : idx % 3 === 1 ? "unsure" : "remove",
-      status: idx % 3 === 0 ? "included" : idx % 3 === 1 ? "awaiting_clarification" : "excluded",
-      year: 2021 + (idx % 4),
-      journal: ["Lancet", "NEJM", "JAMA", "Stroke", "AJNR"][idx % 5],
-      author: ["Smith et al.", "Chen et al.", "Patel et al.", "Kaufmann et al.", "Dhaduk et al."][idx % 5],
-      isNew: false,
-      pico: {
-        P: 75 + (idx * 4) % 20,
-        I: 70 + (idx * 3) % 25,
-        C: 55 + (idx * 5) % 35,
-        O: 72 + (idx * 2) % 22,
-        bias: idx % 2 === 0 ? "Low" : "Med",
-      },
-    }));
+    return projectStudies.map((s, idx) => studyToStreamPaper(s, idx + 1));
   });
 
   const [selectedPaper, setSelectedPaper] = useState<StreamPaper | null>(() => papers[0] || null);
   const [turn, setTurn] = useState(() => (papers.length > 0 ? papers.length : 1));
   const turnRef = useRef(papers.length > 0 ? papers.length : 1);
+  const nextStudyIndexRef = useRef(0);
+
+  // Keep papers and selectedPaper synchronized when projectStudies query updates
+  useEffect(() => {
+    if (projectStudies.length > 0) {
+      const realPapers = projectStudies.map((s, idx) => studyToStreamPaper(s, idx + 1));
+      setPapers(realPapers);
+      setSelectedPaper((prev) => {
+        if (!prev) return realPapers[0];
+        const match = realPapers.find((p) => p.studyId === prev.studyId);
+        return match || realPapers[0];
+      });
+      setTurn(realPapers.length);
+      turnRef.current = realPapers.length;
+    }
+  }, [projectStudies]);
 
   // Decision & exclusion state
   const [selectedExcludeReason, setSelectedExcludeReason] = useState<string>("EXC_POPULATION");
@@ -235,7 +170,7 @@ export function ExploratoryScreeningView({
   // Speed calculation based on toggles
   const effectiveSpeedMs = useMemo(() => {
     if (seniorMode) return 1200; // Calm 1.2s for senior clinicians
-    return fastMode ? 350 : 900; // 350ms rapid demo or 900ms calm cadence
+    return fastMode ? 450 : 900; // 450ms cadence or 900ms calm cadence
   }, [seniorMode, fastMode]);
 
   // When Senior Mode is toggled ON, automatically reveal step-by-step reasoning trace
@@ -249,99 +184,37 @@ export function ExploratoryScreeningView({
     });
   };
 
-  // Convert real project studies or biomedical base into stream papers
-  const generateNextPaper = (): StreamPaper => {
+  // Stanford SLIDERS batched stream: advance through real project studies
+  const advanceNextRealPaper = (): StreamPaper | null => {
+    if (projectStudies.length === 0) return null;
     turnRef.current += 1;
-    const currentTurn = turnRef.current;
 
-    if (projectStudies.length > 0 && Math.random() > 0.3) {
-      const study = rnd(projectStudies);
-      const studyId = study.study_id || (study as any).id || `study-${currentTurn}`;
-      const conf = Math.floor(Math.random() * 32) + 65;
-      const type: "keep" | "unsure" | "remove" =
-        study.screening_status === "included" || conf > 78
-          ? "keep"
-          : study.screening_status === "maybe" || conf > 62
-          ? "unsure"
-          : "remove";
+    // Prioritize pending studies in sequential order
+    const pendingIdx = projectStudies.findIndex(
+      (s, idx) => idx >= nextStudyIndexRef.current && (s.screening_status === "pending" || !s.screening_status)
+    );
+    const targetIdx = pendingIdx >= 0 ? pendingIdx : (nextStudyIndexRef.current % projectStudies.length);
+    nextStudyIndexRef.current = (targetIdx + 1) % projectStudies.length;
 
-      return {
-        id: currentTurn,
-        turn: currentTurn,
-        studyId,
-        title: study.title || "Pure Arterial Malformation Diagnostic Cohort",
-        rawAbs:
-          study.abstract ||
-          "Retrospective multicenter review evaluating pure arterial malformations (PAM) managed with coiling vs conservative observation across 5-year angiographic follow-up.",
-        P: (study as any).pico_population || "pure arterial malformations",
-        I: (study as any).pico_intervention || "endovascular intervention",
-        C: (study as any).pico_comparator || "conservative observation",
-        O: (study as any).pico_outcome || "stroke prevention & mRS",
-        conf,
-        type,
-        status: (study.screening_status as any) || "pending",
-        year: study.publication_year || 2023,
-        journal: study.journal || "Journal of Neurosurgery",
-        author: study.authors || "Dhaduk et al.",
-        isNew: true,
-        pico: {
-          P: 72 + Math.floor(Math.random() * 24),
-          I: 68 + Math.floor(Math.random() * 28),
-          C: 55 + Math.floor(Math.random() * 38),
-          O: 70 + Math.floor(Math.random() * 26),
-          bias: rnd(["Low", "Med", "High"]),
-        },
-      };
-    }
-
-    const b = rnd(BASE_BIOMEDICAL_DATA);
-    const conf = Math.floor(Math.random() * 35) + 60;
-    const type: "keep" | "unsure" | "remove" = conf > 78 ? "keep" : conf > 62 ? "unsure" : "remove";
-
-    return {
-      id: currentTurn,
-      turn: currentTurn,
-      studyId: `${b.studyId}-${currentTurn}`,
-      title: `${b.P} + ${b.I} → ${b.O}`,
-      rawAbs: b.abs,
-      P: b.P,
-      I: b.I,
-      C: b.C,
-      O: b.O,
-      conf,
-      type,
-      status: type === "keep" ? "included" : type === "unsure" ? "awaiting_clarification" : "excluded",
-      year: 2021 + Math.floor(Math.random() * 4),
-      journal: rnd(["Lancet", "NEJM", "JAMA", "Stroke", "AJNR"]),
-      author: rnd(["Smith et al.", "Chen et al.", "Patel et al.", "Kaufmann et al."]),
-      isNew: true,
-      pico: {
-        P: 70 + Math.floor(Math.random() * 25),
-        I: 60 + Math.floor(Math.random() * 30),
-        C: 45 + Math.floor(Math.random() * 40),
-        O: 65 + Math.floor(Math.random() * 30),
-        bias: rnd(["Low", "Med", "High"]),
-      },
-    };
+    const study = projectStudies[targetIdx];
+    const paper = studyToStreamPaper(study, turnRef.current);
+    paper.isNew = true;
+    return paper;
   };
 
-  // Stream interval effect
+  // Stream interval effect over real project studies
   useEffect(() => {
-    if (!liveStream) return;
+    if (!liveStream || projectStudies.length === 0) return;
 
     const interval = setInterval(() => {
-      const nextPaper = generateNextPaper();
+      const nextPaper = advanceNextRealPaper();
+      if (!nextPaper) return;
       setTurn(turnRef.current);
-      setPapers((prev) => {
-        const nextList = [nextPaper, ...prev];
-        return nextList.length > 60 ? nextList.slice(0, 60) : nextList;
-      });
-
-      setSelectedPaper((prev) => (!prev || Math.random() > 0.4 ? nextPaper : prev));
+      setSelectedPaper(nextPaper);
 
       setTimeout(() => {
         setPapers((current) =>
-          current.map((p) => (p.id === nextPaper.id ? { ...p, isNew: false } : p))
+          current.map((p) => (p.studyId === nextPaper.studyId ? { ...p, isNew: false } : p))
         );
       }, 700);
     }, effectiveSpeedMs);

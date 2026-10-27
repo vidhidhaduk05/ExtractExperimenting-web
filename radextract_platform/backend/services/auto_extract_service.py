@@ -350,6 +350,7 @@ def auto_extract(study_id: str, project_id: str, reviewer: str = "auto", db: Opt
         src_page = item.get("source_page")
         tracing_status = item.get("tracing_status", "none")
         verification_note = item.get("verification_note", "")
+        quote = item.get("source_text") or ""
 
         # §1.2 Quote/provenance verification guardrail
         if quote and val not in ("-99", "-77", "-88", None, ""):

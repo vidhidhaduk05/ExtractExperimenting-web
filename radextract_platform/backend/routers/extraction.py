@@ -17,6 +17,20 @@ router = APIRouter(prefix="/api", tags=["extraction"])
 
 # ── Dual-reviewer models ──
 
+class BatchCellItem(BaseModel):
+    study_id: str
+    variable_id: str
+    value: str
+    evidence_quote: Optional[str] = None
+    source_page: Optional[int] = 1
+    confidence: Optional[float] = None
+    verification_status: Optional[str] = None
+
+
+class BatchExtractionRequest(BaseModel):
+    cells: list[BatchCellItem]
+
+
 class ExtractionVerifyRequest(BaseModel):
     """Second reviewer verification of a primary extraction."""
     agree: bool = True
@@ -297,11 +311,11 @@ async def get_extractions_grid(
                 "extraction_id": row.get("extraction_id"),
                 "value": row.get("value") or "",
                 "confidence": row.get("confidence") or 0.95,
-                "evidence_quote": row.get("quote") or row.get("evidence_quote") or "",
+                "evidence_quote": row.get("source_text") or row.get("quote") or row.get("evidence_quote") or "",
                 "source_page": row.get("source_page") or 1,
-                "is_verified": is_v,
+                "is_verified": is_v or row.get("verification_status") in ("verified", "adjudicated"),
                 "is_edited": is_e,
-                "verification_status": "modified" if (is_v and is_e) else ("verified" if is_v else "unverified"),
+                "verification_status": row.get("verification_status") or ("modified" if (is_v and is_e) else ("verified" if is_v else "unverified")),
                 "extraction_source": "manual" if is_e else (row.get("extraction_source") or "ai"),
             }
 
@@ -310,6 +324,158 @@ async def get_extractions_grid(
         "variables": variables,
         "studies": studies,
         "cells": cells,
+    }
+
+
+@router.post("/projects/{project_id}/extractions/batch")
+async def batch_update_extractions(
+    project_id: str,
+    body: BatchExtractionRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Batch upsert extraction cells directly from the spreadsheet editor."""
+    check_project_access(conn, project_id, user)
+    proj = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+    if not proj:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    username = user["username"] if user else "reviewer"
+    now = datetime.datetime.utcnow().isoformat()
+    saved_count = 0
+    skipped_count = 0
+    failed_count = 0
+    details = []
+
+    valid_studies = {
+        r["study_id"]
+        for r in conn.execute(
+            "SELECT study_id FROM studies WHERE project_id = ?", (project_id,)
+        ).fetchall()
+    }
+    valid_vars = {
+        r["variable_id"]: r["name"]
+        for r in conn.execute(
+            "SELECT variable_id, name FROM variables WHERE project_id = ?", (project_id,)
+        ).fetchall()
+    }
+
+    for cell in body.cells:
+        sid = cell.study_id
+        vid = cell.variable_id
+
+        if sid not in valid_studies or vid not in valid_vars:
+            failed_count += 1
+            details.append({
+                "study_id": sid,
+                "variable_id": vid,
+                "status": "failed",
+                "error": "Study or variable does not belong to project",
+            })
+            continue
+
+        existing = conn.execute(
+            "SELECT * FROM extractions WHERE study_id = ? AND variable_id = ?",
+            (sid, vid),
+        ).fetchone()
+
+        v_name = valid_vars.get(vid, "")
+        ver_status = cell.verification_status or (
+            "verified" if (existing and existing["verification_status"] == "verified") else "unverified"
+        )
+
+        if existing:
+            ext_id = existing["extraction_id"]
+            old_val = existing["value"] or ""
+            new_val = cell.value
+
+            if old_val != new_val:
+                conn.execute(
+                    """INSERT INTO audit_log
+                       (audit_id, study_id, variable_id, variable_name,
+                        old_value, new_value, changed_by, reason)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (str(uuid.uuid4()), sid, vid, v_name, old_val, new_val, username, "Spreadsheet batch update"),
+                )
+
+            conn.execute(
+                """UPDATE extractions SET
+                   value = ?,
+                   source_text = COALESCE(?, source_text),
+                   source_page = COALESCE(?, source_page),
+                   confidence = COALESCE(?, confidence),
+                   verification_status = ?,
+                   is_edited = 1,
+                   edited_by = ?,
+                   edited_at = ?,
+                   verified_at = CASE WHEN ? = 'verified' THEN ? ELSE verified_at END
+                   WHERE extraction_id = ?""",
+                (
+                    new_val,
+                    cell.evidence_quote,
+                    cell.source_page,
+                    cell.confidence,
+                    ver_status,
+                    username,
+                    now,
+                    ver_status,
+                    now,
+                    ext_id,
+                ),
+            )
+            saved_count += 1
+            details.append({
+                "study_id": sid,
+                "variable_id": vid,
+                "extraction_id": ext_id,
+                "status": "updated",
+            })
+        else:
+            ext_id = str(uuid.uuid4())
+            conn.execute(
+                """INSERT INTO extractions
+                   (extraction_id, study_id, variable_id, value,
+                    confidence, source_page, source_text, verification_status,
+                    is_edited, edited_by, edited_at, extracted_by, extracted_at,
+                    verified_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)""",
+                (
+                    ext_id,
+                    sid,
+                    vid,
+                    cell.value,
+                    cell.confidence if cell.confidence is not None else 1.0,
+                    cell.source_page or 1,
+                    cell.evidence_quote or "",
+                    ver_status,
+                    username,
+                    now,
+                    username,
+                    now,
+                    now if ver_status == "verified" else "",
+                ),
+            )
+            conn.execute(
+                """INSERT INTO audit_log
+                   (audit_id, study_id, variable_id, variable_name,
+                    old_value, new_value, changed_by, reason)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (str(uuid.uuid4()), sid, vid, v_name, "", cell.value, username, "Spreadsheet batch insert"),
+            )
+            saved_count += 1
+            details.append({
+                "study_id": sid,
+                "variable_id": vid,
+                "extraction_id": ext_id,
+                "status": "inserted",
+            })
+
+    conn.commit()
+    return {
+        "saved_count": saved_count,
+        "skipped_verified_count": skipped_count,
+        "failed_count": failed_count,
+        "details": details,
     }
 
 

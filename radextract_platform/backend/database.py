@@ -768,6 +768,7 @@ MIGRATION_COLUMNS = [
     # v2.3: criteria + search strings columns
     ("projects", "inclusion_criteria_json", "TEXT DEFAULT '[]'"),
     ("projects", "exclusion_criteria_json", "TEXT DEFAULT '[]'"),
+    ("projects", "criteria_json", "TEXT DEFAULT '[]'"),
     ("projects", "search_strings_json", "TEXT DEFAULT '{}'"),
     # v2.4: screening config + exclusion taxonomy
     ("projects", "screening_config_json", "TEXT DEFAULT '{}'"),

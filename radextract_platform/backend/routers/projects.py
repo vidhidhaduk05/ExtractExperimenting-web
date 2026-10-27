@@ -666,6 +666,21 @@ async def get_criteria(project_id: str,
         exclusion = json.loads(row["exclusion_criteria_json"]) if row["exclusion_criteria_json"] else []
     except json.JSONDecodeError:
         pass
+
+    if not inclusion and not exclusion:
+        from services.criterion_evaluator import DEFAULT_CRITERIA
+        for c in DEFAULT_CRITERIA:
+            c_dict = c.dict()
+            if c.direction == "exclusion":
+                exclusion.append(c_dict)
+            else:
+                inclusion.append(c_dict)
+        conn.execute(
+            "UPDATE projects SET inclusion_criteria_json = ?, exclusion_criteria_json = ? WHERE project_id = ?",
+            (json.dumps(inclusion), json.dumps(exclusion), project_id),
+        )
+        conn.commit()
+
     return CriteriaResponse(
         project_id=project_id,
         inclusion=[Criterion(**c) for c in inclusion],

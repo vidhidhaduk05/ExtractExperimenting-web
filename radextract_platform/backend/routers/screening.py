@@ -27,6 +27,17 @@ from models import (
     AbstractHighlightsResponse,
     ScreeningKeywordCreate,
     ScreeningKeywordResponse,
+    CriterionItem,
+    CriteriaListResponse,
+    CriteriaUpdateRequest,
+    StudyEvaluateRequest,
+    StudyEvaluateResponse,
+)
+from services.criterion_evaluator import (
+    Criterion,
+    DEFAULT_CRITERIA,
+    evaluate_study_against_criteria,
+    compute_clopper_pearson_upper_bound,
 )
 from services.signal_generator import generate_signals
 from services.signal_prefilter import prefilter_study
@@ -426,7 +437,7 @@ async def get_screening_config(project_id: str, user: Optional[dict] = Depends(g
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user)
 
-    config = {"blind_mode": True, "n_reviewers": 2, "conflict_mode": "manual"}
+    config = {"blind_mode": False, "n_reviewers": 1, "conflict_mode": "single"}
     if row["screening_config_json"]:
         try:
             config = json.loads(row["screening_config_json"])
@@ -435,16 +446,16 @@ async def get_screening_config(project_id: str, user: Optional[dict] = Depends(g
 
     return ScreeningConfigResponse(
         project_id=project_id,
-        blind_mode=config.get("blind_mode", True),
-        n_reviewers=config.get("n_reviewers", 2),
-        conflict_mode=config.get("conflict_mode", "manual"),
+        blind_mode=config.get("blind_mode", False),
+        n_reviewers=config.get("n_reviewers", 1),
+        conflict_mode=config.get("conflict_mode", "single"),
     )
 
 
 @router.put("/projects/{project_id}/screening-config", response_model=ScreeningConfigResponse)
 async def update_screening_config(project_id: str, body: ScreeningConfigUpdate, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
-    """Update the multi-reviewer screening configuration."""
+    """Update the screening configuration."""
     row = conn.execute(
         "SELECT screening_config_json FROM projects WHERE project_id = ?", (project_id,)
     ).fetchone()
@@ -452,7 +463,7 @@ async def update_screening_config(project_id: str, body: ScreeningConfigUpdate, 
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user)
 
-    config = {"blind_mode": True, "n_reviewers": 2, "conflict_mode": "manual"}
+    config = {"blind_mode": False, "n_reviewers": 1, "conflict_mode": "single"}
     if row["screening_config_json"]:
         try:
             config = json.loads(row["screening_config_json"])
@@ -480,6 +491,164 @@ async def update_screening_config(project_id: str, body: ScreeningConfigUpdate, 
 
 
 # ═══════════════════════════════════════════════════════════════════════
+#  Threshold-Based Criterion Evaluation API Endpoints
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.get("/projects/{project_id}/threshold-criteria", response_model=CriteriaListResponse)
+async def get_project_threshold_criteria(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Retrieve continuous threshold criteria list for a project."""
+    check_project_access(conn, project_id, user)
+    row = conn.execute(
+        "SELECT criteria_json, inclusion_criteria_json, exclusion_criteria_json FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    crit_list = []
+    if row["criteria_json"]:
+        try:
+            crit_list = json.loads(row["criteria_json"])
+        except Exception:
+            pass
+    if not crit_list:
+        # Load from inclusion and exclusion or DEFAULT_CRITERIA
+        inc = []
+        exc = []
+        try:
+            inc = json.loads(row["inclusion_criteria_json"]) if row["inclusion_criteria_json"] else []
+        except Exception:
+            pass
+        try:
+            exc = json.loads(row["exclusion_criteria_json"]) if row["exclusion_criteria_json"] else []
+        except Exception:
+            pass
+        for c in inc:
+            c.setdefault("direction", "inclusion")
+            crit_list.append(c)
+        for c in exc:
+            c.setdefault("direction", "exclusion")
+            crit_list.append(c)
+    if not crit_list:
+        crit_list = [c.dict() for c in DEFAULT_CRITERIA]
+        conn.execute(
+            "UPDATE projects SET criteria_json = ? WHERE project_id = ?",
+            (json.dumps(crit_list), project_id),
+        )
+        conn.commit()
+
+    return CriteriaListResponse(
+        project_id=project_id,
+        criteria=[CriterionItem(**c) for c in crit_list],
+    )
+
+
+@router.put("/projects/{project_id}/threshold-criteria", response_model=CriteriaListResponse)
+async def update_project_threshold_criteria(
+    project_id: str,
+    body: CriteriaUpdateRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Update continuous threshold criteria configuration for a project."""
+    check_project_access(conn, project_id, user, min_role="reviewer")
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    crit_dicts = [c.dict() for c in body.criteria]
+    conn.execute(
+        "UPDATE projects SET criteria_json = ? WHERE project_id = ?",
+        (json.dumps(crit_dicts), project_id),
+    )
+    conn.commit()
+
+    return CriteriaListResponse(
+        project_id=project_id,
+        criteria=body.criteria,
+    )
+
+
+@router.post("/projects/{project_id}/criteria/evaluate-study", response_model=StudyEvaluateResponse)
+async def evaluate_study_criteria(
+    project_id: str,
+    body: StudyEvaluateRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Evaluate a study against project criteria with continuous threshold logic."""
+    check_project_access(conn, project_id, user)
+    row = conn.execute(
+        "SELECT criteria_json, inclusion_criteria_json, exclusion_criteria_json FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    crit_list = []
+    if row["criteria_json"]:
+        try:
+            crit_list = [Criterion(**c) for c in json.loads(row["criteria_json"])]
+        except Exception:
+            pass
+    if not crit_list:
+        inc = []
+        exc = []
+        try:
+            inc = json.loads(row["inclusion_criteria_json"]) if row["inclusion_criteria_json"] else []
+        except Exception:
+            pass
+        try:
+            exc = json.loads(row["exclusion_criteria_json"]) if row["exclusion_criteria_json"] else []
+        except Exception:
+            pass
+        for c in inc:
+            c.setdefault("direction", "inclusion")
+            crit_list.append(Criterion(**c))
+        for c in exc:
+            c.setdefault("direction", "exclusion")
+            crit_list.append(Criterion(**c))
+    if not crit_list:
+        crit_list = list(DEFAULT_CRITERIA)
+
+    result = evaluate_study_against_criteria(
+        scores=body.scores,
+        criteria=crit_list,
+    )
+    return StudyEvaluateResponse(
+        study_id=body.study_id,
+        decision=result["decision"],
+        fired=result["fired"],
+        flagged_unscored=result["flagged_unscored"],
+    )
+
+
+@router.get("/projects/{project_id}/criteria/validation-bounds")
+async def get_validation_bounds(
+    project_id: str,
+    k: int = Query(0, description="Observed false negatives"),
+    n: int = Query(100, description="Sample size"),
+    alpha: float = Query(0.05, description="Significance level"),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Compute Clopper-Pearson exact binomial confidence upper bound for missed inclusions."""
+    check_project_access(conn, project_id, user)
+    upper_bound = compute_clopper_pearson_upper_bound(k, n, alpha=alpha)
+    return {
+        "k_false_negatives": k,
+        "n_samples": n,
+        "alpha": alpha,
+        "confidence_level": 1.0 - alpha,
+        "clopper_pearson_upper_bound": upper_bound,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════
 #  v2.4: Multi-Reviewer Screening Decisions
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -494,7 +663,21 @@ def _check_and_record_conflict(
     """Auto-detect conflicts or sync consensus decisions for a study stage.
 
     Returns True if conflict is detected/unresolved, False otherwise.
+    In Single-Reviewer mode (n_reviewers <= 1 or conflict_mode == 'single'), conflict detection is bypassed.
     """
+    proj_row = conn.execute(
+        "SELECT screening_config_json FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if proj_row and proj_row["screening_config_json"]:
+        try:
+            cfg = json.loads(proj_row["screening_config_json"])
+            if cfg.get("n_reviewers", 1) <= 1 or cfg.get("conflict_mode") == "single":
+                return False
+        except Exception:
+            return False
+    else:
+        # Default is single-reviewer mode: bypass conflicts
+        return False
     raw_decisions = conn.execute(
         """SELECT * FROM screening_decisions
            WHERE study_id = ? AND stage = ?""",

@@ -19,6 +19,8 @@ import {
   type ClarificationOption,
   type ClarificationAnswerResponse,
   type BatchUploadResult,
+  type Criterion,
+  type CriteriaResponse,
 } from "../lib/api";
 import {
   ArrowLeft,
@@ -112,6 +114,42 @@ export function ScreeningPage() {
     queryFn: () => (projectId ? api.listClarifications(projectId).catch(() => []) : Promise.resolve([])),
     enabled: !!projectId,
   });
+
+  // Project Criteria with Continuous Threshold Sliders (τ ∈ [0, 1])
+  const { data: criteriaData, refetch: refetchCriteria } = useQuery<CriteriaResponse>({
+    queryKey: ["project-criteria", projectId],
+    queryFn: () =>
+      projectId
+        ? api.getCriteria(projectId).catch(() => ({ project_id: projectId, inclusion: [], exclusion: [] }))
+        : Promise.resolve({ project_id: "", inclusion: [], exclusion: [] }),
+    enabled: !!projectId,
+  });
+  const [localInclusion, setLocalInclusion] = useState<Criterion[]>([]);
+  const [localExclusion, setLocalExclusion] = useState<Criterion[]>([]);
+  const [criteriaSaving, setCriteriaSaving] = useState(false);
+  const [criteriaSaveSuccess, setCriteriaSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (criteriaData) {
+      setLocalInclusion(criteriaData.inclusion || []);
+      setLocalExclusion(criteriaData.exclusion || []);
+    }
+  }, [criteriaData]);
+
+  const handleSaveCriteria = async () => {
+    if (!projectId) return;
+    setCriteriaSaving(true);
+    try {
+      await api.updateCriteria(projectId, { inclusion: localInclusion, exclusion: localExclusion });
+      setCriteriaSaveSuccess(true);
+      setTimeout(() => setCriteriaSaveSuccess(false), 2200);
+      refetchCriteria();
+    } catch (e) {
+      console.error("Failed to save criteria:", e);
+    } finally {
+      setCriteriaSaving(false);
+    }
+  };
 
   const [isChecklistExpanded, setIsChecklistExpanded] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -1450,39 +1488,179 @@ export function ScreeningPage() {
                   </div>
                 </div>
 
-                {/* Mandatory Inclusion & Explicit Exclusion */}
-                <div className="space-y-2.5 pt-1">
-                  <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg">
-                    <span className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                      Mandatory Inclusion Criteria
-                    </span>
-                    <ul className="text-[11px] text-emerald-800 space-y-1 list-disc list-inside">
-                      <li>Human subjects (in vivo) with radiographically confirmed intracranial PAM.</li>
-                      <li>Reports angiographic details (DSA, CTA, or 3T MRA) and clinical management.</li>
-                      <li>Peer-reviewed original research, cohort studies, or clinical case series.</li>
-                    </ul>
+                {/* Mandatory Inclusion & Explicit Exclusion with Continuous Threshold Sliders (τ ∈ [0, 1]) */}
+                <div className="space-y-3 pt-1">
+                  {/* Inclusion Criteria with Sliders */}
+                  <div className="p-3 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#3a0f34] flex items-center gap-1.5 text-[11px]">
+                        <CheckCircle className="w-3.5 h-3.5 text-[#814d75]" />
+                        Inclusion Criteria (Threshold Sliders)
+                      </span>
+                      <span className="text-[10px] text-[#62535d] font-mono">
+                        {localInclusion.length} active
+                      </span>
+                    </div>
+
+                    {localInclusion.length === 0 ? (
+                      <p className="text-[11px] text-[#62535d] italic">No inclusion criteria configured.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {localInclusion.map((c, idx) => (
+                          <div key={c.id || idx} className="p-2 bg-white border border-[#d2c2cb] rounded space-y-1.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="text-[11px] font-medium text-[#4f444b] leading-tight">
+                                {c.text}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...localInclusion];
+                                  updated[idx] = {
+                                    ...updated[idx],
+                                    rule_mode: updated[idx].rule_mode === "strict" ? "weighted" : "strict",
+                                  };
+                                  setLocalInclusion(updated);
+                                }}
+                                className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold uppercase transition-colors cursor-pointer ${
+                                  c.rule_mode === "strict"
+                                    ? "bg-[#3a0f34] text-[#fbf9f4]"
+                                    : "bg-[#eee7ec] text-[#814d75] border border-[#d2c2cb]"
+                                }`}
+                                title="Click to toggle strict vs weighted"
+                              >
+                                {c.rule_mode || "weighted"}
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-0.5">
+                              <span className="text-[10px] font-mono text-[#62535d] shrink-0">
+                                τ = {(c.threshold ?? 0.8).toFixed(2)}
+                              </span>
+                              <input
+                                type="range"
+                                min="0.0"
+                                max="1.0"
+                                step="0.05"
+                                value={c.threshold ?? 0.8}
+                                onChange={(e) => {
+                                  const updated = [...localInclusion];
+                                  updated[idx] = {
+                                    ...updated[idx],
+                                    threshold: parseFloat(e.target.value),
+                                  };
+                                  setLocalInclusion(updated);
+                                }}
+                                className="w-full h-1.5 bg-[#d2c2cb] rounded-lg appearance-none cursor-pointer accent-[#3a0f34]"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="p-3 bg-rose-50/60 border border-rose-200 rounded-lg">
-                    <span className="font-bold text-rose-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
-                      <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                      Explicit Exclusion Disqualifiers
-                    </span>
-                    <ul className="text-[11px] text-rose-800 space-y-1 list-disc list-inside">
-                      <li>Classic AVMs with parenchymal nidus or early draining cortical veins.</li>
-                      <li>Dural arteriovenous fistulas (dAVF) or cavernous hemangiomas without PAM.</li>
-                      <li>Animal models, in vitro hydrodynamic bench studies, or non-English abstracts.</li>
-                    </ul>
+                  {/* Exclusion Criteria with Sliders */}
+                  <div className="p-3 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#3a0f34] flex items-center gap-1.5 text-[11px]">
+                        <XCircle className="w-3.5 h-3.5 text-[#814d75]" />
+                        Exclusion Criteria (Threshold Sliders)
+                      </span>
+                      <span className="text-[10px] text-[#62535d] font-mono">
+                        {localExclusion.length} active
+                      </span>
+                    </div>
+
+                    {localExclusion.length === 0 ? (
+                      <p className="text-[11px] text-[#62535d] italic">No exclusion criteria configured.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {localExclusion.map((c, idx) => (
+                          <div key={c.id || idx} className="p-2 bg-white border border-[#d2c2cb] rounded space-y-1.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="text-[11px] font-medium text-[#4f444b] leading-tight">
+                                {c.text}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...localExclusion];
+                                  updated[idx] = {
+                                    ...updated[idx],
+                                    rule_mode: updated[idx].rule_mode === "strict" ? "weighted" : "strict",
+                                  };
+                                  setLocalExclusion(updated);
+                                }}
+                                className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold uppercase transition-colors cursor-pointer ${
+                                  c.rule_mode === "strict"
+                                    ? "bg-[#3a0f34] text-[#fbf9f4]"
+                                    : "bg-[#eee7ec] text-[#814d75] border border-[#d2c2cb]"
+                                }`}
+                                title="Click to toggle strict vs weighted"
+                              >
+                                {c.rule_mode || "weighted"}
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-0.5">
+                              <span className="text-[10px] font-mono text-[#62535d] shrink-0">
+                                τ = {(c.threshold ?? 0.9).toFixed(2)}
+                              </span>
+                              <input
+                                type="range"
+                                min="0.0"
+                                max="1.0"
+                                step="0.05"
+                                value={c.threshold ?? 0.9}
+                                onChange={(e) => {
+                                  const updated = [...localExclusion];
+                                  updated[idx] = {
+                                    ...updated[idx],
+                                    threshold: parseFloat(e.target.value),
+                                  };
+                                  setLocalExclusion(updated);
+                                }}
+                                className="w-full h-1.5 bg-[#d2c2cb] rounded-lg appearance-none cursor-pointer accent-[#3a0f34]"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Drawer Footer */}
-              <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
+              {/* Drawer Footer with Save Criteria button */}
+              <div className="p-3 bg-[#fbf9f4] border-t border-[#d2c2cb] flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveCriteria}
+                  disabled={criteriaSaving}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    criteriaSaveSuccess
+                      ? "bg-emerald-700 text-white"
+                      : "bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017]"
+                  }`}
+                >
+                  {criteriaSaving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : criteriaSaveSuccess ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Saved!</span>
+                    </>
+                  ) : (
+                    <span>Save Criteria</span>
+                  )}
+                </button>
                 <button
                   onClick={() => setIsProtocolSliderOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-semibold text-[#4f444b] bg-white border border-[#d2c2cb] rounded hover:bg-[#eee7ec] transition-colors cursor-pointer"
                 >
                   Close Ribbon
                 </button>

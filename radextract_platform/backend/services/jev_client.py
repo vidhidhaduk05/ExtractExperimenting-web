@@ -90,14 +90,12 @@ def jev_mode() -> str:
 
 
 def is_jev_enabled() -> bool:
-    """True when screening should be attempted via configured primary or fallback provider."""
+    """True when screening or evidence tracing should be attempted via configured primary or fallback provider."""
     if jev_mode() == "off":
         return False
     if time.monotonic() < _open_until:
         return False
-    provider = getattr(settings, "jev_provider", "typesafe").lower()
-    if provider == "typesafe":
-        return bool(_api_key())
+    # If either remote TypeSafe API key or local Laya ONNX bundle exists, Jev/Laya is enabled
     return bool(_api_key()) or bool(_get_laya_model_dir())
 
 

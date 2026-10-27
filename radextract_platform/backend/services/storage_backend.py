@@ -86,19 +86,34 @@ class LocalStorage(StorageBackend):
         return str(path)
 
     def get_bytes(self, key: str) -> Optional[bytes]:
-        path = self._full_path(key)
-        if not path.exists():
+        if os.path.isabs(key) and os.path.exists(key):
+            return Path(key).read_bytes()
+        try:
+            path = self._full_path(key)
+            if not path.exists():
+                return None
+            return path.read_bytes()
+        except Exception:
             return None
-        return path.read_bytes()
 
     def get_file_path(self, key: str) -> Optional[str]:
-        path = self._full_path(key)
-        if not path.exists():
+        if os.path.isabs(key) and os.path.exists(key):
+            return key
+        try:
+            path = self._full_path(key)
+            if not path.exists():
+                return None
+            return str(path)
+        except Exception:
             return None
-        return str(path)
 
     def file_exists(self, key: str) -> bool:
-        return self._full_path(key).exists()
+        if os.path.isabs(key) and os.path.exists(key):
+            return True
+        try:
+            return self._full_path(key).exists()
+        except Exception:
+            return False
 
     def delete_file(self, key: str) -> bool:
         path = self._full_path(key)

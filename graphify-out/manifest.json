@@ -72,9 +72,9 @@
     "semantic_hash": ""
   },
   "public/active_backend.json": {
-    "mtime": 1793099702.2697973,
-    "seen": 1793101850.1816936,
-    "ast_hash": "0ed49fa238393e6f597ff0fafe24e11d",
+    "mtime": 1793112415.2333329,
+    "seen": 1793113709.8202283,
+    "ast_hash": "3b116a4c3b82fdff529bea1e1915f955",
     "semantic_hash": ""
   },
   "radextract_platform/backend/config.py": {
@@ -114,9 +114,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/database.py": {
-    "mtime": 1793096526.2406957,
-    "seen": 1793101850.1819785,
-    "ast_hash": "e71b9d6cc7c59824d149e7cb2f437cee",
+    "mtime": 1793113931.4474962,
+    "seen": 1793114697.9582038,
+    "ast_hash": "930e9f77ea99ed5ee7ea352de2f428fc",
     "semantic_hash": ""
   },
   "radextract_platform/backend/dependencies.py": {
@@ -138,9 +138,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/models.py": {
-    "mtime": 1793101358.5292053,
-    "seen": 1793101850.182038,
-    "ast_hash": "6da4b4c1740d0bcdb113dc78e6148566",
+    "mtime": 1793114332.1427438,
+    "seen": 1793114697.9583561,
+    "ast_hash": "557988e88688d8b5ab1fd85f68855143",
     "semantic_hash": ""
   },
   "radextract_platform/backend/profiles/mtr_rc.json": {
@@ -432,9 +432,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/extraction.py": {
-    "mtime": 1793011215.586294,
-    "seen": 1793069794.1348994,
-    "ast_hash": "fdefb515ac3f607759ab4aa4629fda98",
+    "mtime": 1793112530.6840355,
+    "seen": 1793113709.824739,
+    "ast_hash": "f3dae2c6b24cba76577a8cd51bbc6e32",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/fulltext.py": {
@@ -474,9 +474,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/projects.py": {
-    "mtime": 1793099404.4219196,
-    "seen": 1793101850.1856973,
-    "ast_hash": "9643dac9ed39bb6d5fb0302f13bca7e4",
+    "mtime": 1793114366.3329766,
+    "seen": 1793114697.9622014,
+    "ast_hash": "77f28bdb49025b4e8fb7e09495d99a50",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/pubmed.py": {
@@ -522,9 +522,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/screening.py": {
-    "mtime": 1793101317.0459473,
-    "seen": 1793101850.1860206,
-    "ast_hash": "1daf16a3aca47cd0c28d224fbf9dbfe0",
+    "mtime": 1793114398.187169,
+    "seen": 1793114697.9625776,
+    "ast_hash": "37ee2ec16da055f4e5b2d88c0f05da54",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/settings.py": {
@@ -666,9 +666,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/auto_extract_service.py": {
-    "mtime": 1793096522.923675,
-    "seen": 1793101850.187114,
-    "ast_hash": "204c04b8e5ab020f89a65d114e0f9ea3",
+    "mtime": 1793114309.9966109,
+    "seen": 1793114697.9638917,
+    "ast_hash": "d18e7abdd7ee026e8fe42552fa373b25",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/biomni_service.py": {
@@ -822,9 +822,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/jev_client.py": {
-    "mtime": 1792996456.5672958,
-    "seen": 1793069794.135059,
-    "ast_hash": "a1365c4744fa3b7dbfdbedb96a1a568e",
+    "mtime": 1793114322.012683,
+    "seen": 1793114697.9652407,
+    "ast_hash": "685eaa67783d9d5e9e1a3e4e42fb5176",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/jev_screener.py": {
@@ -930,9 +930,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/prisma2020_sync.py": {
-    "mtime": 1792944096.20633,
-    "seen": 1793069794.1351018,
-    "ast_hash": "879b2cf068c9b4798f603d892bacee3f",
+    "mtime": 1793113441.271526,
+    "seen": 1793113709.8297799,
+    "ast_hash": "d14c3217a192ba25db2db7de6acf0aee",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/prisma_export_service.py": {
@@ -1080,9 +1080,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/storage_backend.py": {
-    "mtime": 1793096522.929675,
-    "seen": 1793101850.1902711,
-    "ast_hash": "1c6eaff61df9ab129b5d16bf27d334c4",
+    "mtime": 1793113741.919351,
+    "seen": 1793114697.967367,
+    "ast_hash": "8a218496b0eb75bd5f713f7f6d815c7b",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/tool_calling_client.py": {
@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/public/active_backend.json": {
-    "mtime": 1793099702.2707975,
-    "seen": 1793101850.196389,
-    "ast_hash": "0ed49fa238393e6f597ff0fafe24e11d",
+    "mtime": 1793112415.2333329,
+    "seen": 1793113709.8381584,
+    "ast_hash": "3b116a4c3b82fdff529bea1e1915f955",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/App.tsx": {
@@ -2040,9 +2040,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1793101365.388248,
-    "seen": 1793101850.1993217,
-    "ast_hash": "73f2fba9b5acd227b0ce4c92dd6943c6",
+    "mtime": 1793114471.1666086,
+    "seen": 1793114697.9771934,
+    "ast_hash": "78ff25eaceabf143284f298baa6d0cd5",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/bookmarks.test.ts": {
@@ -2238,9 +2238,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ExportPage.tsx": {
-    "mtime": 1793091435.817753,
-    "seen": 1793091496.0336437,
-    "ast_hash": "7105f45a27dbc383d8068203f257876d",
+    "mtime": 1793112415.1743326,
+    "seen": 1793113709.8429406,
+    "ast_hash": "5a156062d72e6b0e973531509eee4d15",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ExtractionSheetPage.test.tsx": {
@@ -2256,9 +2256,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/GradePage.tsx": {
-    "mtime": 1793091435.8187532,
-    "seen": 1793091496.0337036,
-    "ast_hash": "98e1875d8846879660be1246cc364969",
+    "mtime": 1793112415.1743326,
+    "seen": 1793113709.8430517,
+    "ast_hash": "8ea80d20ec7bf82b9af4d5c5f185bcce",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/HypothesisPage.tsx": {
@@ -2274,9 +2274,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/MetaAnalysisPage.tsx": {
-    "mtime": 1793091435.8197532,
-    "seen": 1793091496.0337646,
-    "ast_hash": "c54cd15d85f1e10f27060d74b2d1d990",
+    "mtime": 1793113334.2158785,
+    "seen": 1793113709.8431633,
+    "ast_hash": "797d4909ae558914809d2fcd6e8da3e2",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PdfViewerPage.tsx": {
@@ -2310,9 +2310,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ProjectDetail.tsx": {
-    "mtime": 1793091435.8247533,
-    "seen": 1793091496.0337791,
-    "ast_hash": "2930a0b044e35820af4c0029cafc7c42",
+    "mtime": 1793112415.1753325,
+    "seen": 1793113709.8434322,
+    "ast_hash": "71723dbbccf8772a5ce49eba77d8a523",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ProjectList.tsx": {
@@ -2376,9 +2376,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
-    "mtime": 1793099404.4389198,
-    "seen": 1793101850.2021103,
-    "ast_hash": "b98dccb89e470ef32bc2ffb30b9a7ced",
+    "mtime": 1793114587.7702787,
+    "seen": 1793114697.9801507,
+    "ast_hash": "4856c41b3438ed243af5e3a31aaccdd0",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyImport.tsx": {
@@ -2448,9 +2448,9 @@
     "semantic_hash": ""
   },
   "tsconfig.json": {
-    "mtime": 1793099538.0237625,
-    "seen": 1793101850.2060678,
-    "ast_hash": "5608c3738e890436261c8d8f93343fed",
+    "mtime": 1793102423.2526925,
+    "seen": 1793113709.8526027,
+    "ast_hash": "98c7645bd8df7af535cb36912e342375",
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
@@ -3726,9 +3726,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/screening/ExploratoryScreeningView.tsx": {
-    "mtime": 1793050131.4783695,
-    "seen": 1793069794.13555,
-    "ast_hash": "2807e6e8407aa301e10fc09e38a69335",
+    "mtime": 1793113341.0669198,
+    "seen": 1793113709.840678,
+    "ast_hash": "dfb5adb15d450985d5c577701cca0cb1",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ClaimscapePage.test.tsx": {
@@ -4121,96 +4121,6 @@
     "ast_hash": "2e7e745c4966e2a48d07b5418fe2a63c",
     "semantic_hash": ""
   },
-  "Data Extreaction Sheet Maker/skills_clinical-data-extraction_SKILL_V4.md": {
-    "mtime": 1792964303.028727,
-    "seen": 1793069794.1358743,
-    "ast_hash": "0ac83663494a5c7a9e169dcccd21c11c",
-    "semantic_hash": ""
-  },
-  "Data Extreaction Sheet Maker/skills_systematic-review-screener_SKILL ASReview and Clinical trials.md": {
-    "mtime": 1792964333.3249152,
-    "seen": 1793069794.1358767,
-    "ast_hash": "6acf8b48478bdc6452b120b15a3e97d7",
-    "semantic_hash": ""
-  },
-  "TESTING/Logistic Stuff/Manuscript writing skill - peer review.md": {
-    "mtime": 1792940645.1654253,
-    "seen": 1793069794.1358974,
-    "ast_hash": "da12a0c0f0cc42d0adf7b6fb2f2cf102",
-    "semantic_hash": ""
-  },
-  "TESTING/Logistic Stuff/SKILL.md": {
-    "mtime": 1792940645.1664252,
-    "seen": 1793069794.1358993,
-    "ast_hash": "da12a0c0f0cc42d0adf7b6fb2f2cf102",
-    "semantic_hash": ""
-  },
-  "Website for software/how-it-works.html": {
-    "mtime": 1792279986.4442513,
-    "seen": 1793069794.1359015,
-    "ast_hash": "5bb870125e10890f1867324c7438dc3d",
-    "semantic_hash": ""
-  },
-  "Website for software/index.html": {
-    "mtime": 1792279986.4452515,
-    "seen": 1793069794.1359036,
-    "ast_hash": "dfc7cd5ed6633e751e18714b7dc7fa2f",
-    "semantic_hash": ""
-  },
-  "Website for software/version2.html": {
-    "mtime": 1792279986.4772515,
-    "seen": 1793069794.1359055,
-    "ast_hash": "6cfddabcb012a0cd20eb75cc6bbdc9d2",
-    "semantic_hash": ""
-  },
-  "Website for software/version_1_website.html": {
-    "mtime": 1792279986.4792516,
-    "seen": 1793069794.1359076,
-    "ast_hash": "febb8df31d810c5d072f903ce456f619",
-    "semantic_hash": ""
-  },
-  "Website for software/version_1_website_portable.html": {
-    "mtime": 1792279986.5092518,
-    "seen": 1793069794.1359096,
-    "ast_hash": "05c88cf767041872a3d4d5d1c87e0e26",
-    "semantic_hash": ""
-  },
-  "Website for software/version_2_website_portable.html": {
-    "mtime": 1792279986.537252,
-    "seen": 1793069794.1359117,
-    "ast_hash": "580661a6270b2d62af17cb0e0ef74388",
-    "semantic_hash": ""
-  },
-  "Website for software/waitlist.html": {
-    "mtime": 1792279986.539252,
-    "seen": 1793069794.1359134,
-    "ast_hash": "b208a7919dcc2187beaf056d59e3e741",
-    "semantic_hash": ""
-  },
-  "Website for software/website_docs_DESIGN_SYSTEM.md": {
-    "mtime": 1792279986.540252,
-    "seen": 1793069794.1359155,
-    "ast_hash": "6658fcaf10e45dfdd923ade7cc50f0c6",
-    "semantic_hash": ""
-  },
-  "graphify-out/converted/PROTOCOL_1b729936.md": {
-    "mtime": 1793069753.2124717,
-    "seen": 1793069794.135925,
-    "ast_hash": "20765547abd0cc66cd1d67e67aa650b8",
-    "semantic_hash": ""
-  },
-  "graphify-out/converted/extraction_sheet_template_4e05c06a.md": {
-    "mtime": 1793069753.087471,
-    "seen": 1793069794.1359372,
-    "ast_hash": "9ccf8f38893710f43220e28756d6c63e",
-    "semantic_hash": ""
-  },
-  "graphify-out/converted/roadmap_Founder_Roadmap_SR_AI_SaaS (1)_836a92da.md": {
-    "mtime": 1793069753.4554732,
-    "seen": 1793069794.1359394,
-    "ast_hash": "fc0c8ad7b32c3d8cfc2cfd453994461f",
-    "semantic_hash": ""
-  },
   "jev-ultrafast/AGENTS.md": {
     "mtime": 1793009328.0751467,
     "seen": 1793069794.1359413,
@@ -4331,78 +4241,6 @@
     "ast_hash": "78fa9ca4574237fdb36a973d84612d4f",
     "semantic_hash": ""
   },
-  "TEST/Albina-Palmarola_2024_A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery.pdf": {
-    "mtime": 1792788254.5150673,
-    "seen": 1793069794.1360438,
-    "ast_hash": "0fb1d011e1e849028df226342faeacb9",
-    "semantic_hash": ""
-  },
-  "TEST/Birua_2022_Pure Artery Malformation of Posterior Cerebral Artery with Dysplastic Internal Carotid Artery.pdf": {
-    "mtime": 1792788254.5190675,
-    "seen": 1793069794.136046,
-    "ast_hash": "98e8c5768a9bff0c868e25ac829c0e4d",
-    "semantic_hash": ""
-  },
-  "TEST/Brinjikji_2018_Pure arterial malformations.pdf": {
-    "mtime": 1792788254.5240674,
-    "seen": 1793069794.1360478,
-    "ast_hash": "75d4a174eb27301453941e7d1cbdbac7",
-    "semantic_hash": ""
-  },
-  "TEST/Chua_2021_Endovascular treatment of a ruptured posterior fossa pure arterial malformation illustrative case.pdf": {
-    "mtime": 1792788254.5290675,
-    "seen": 1793069794.1360502,
-    "ast_hash": "41c33e44744da16efb8eafe724ed9c3e",
-    "semantic_hash": ""
-  },
-  "TEST/Deshmukh_2023_Pure Arterial Malformation (PAM) Case Report and Review of Literature.pdf": {
-    "mtime": 1792788254.5330675,
-    "seen": 1793069794.1360524,
-    "ast_hash": "b91e1cd886c44c0f8ec234b97b6de595",
-    "semantic_hash": ""
-  },
-  "TEST/Feliciano_2014_Color-coded digital subtraction angiography in the management of a rare case of middle cerebral artery pure arterial malformation. A technical and case report.pdf": {
-    "mtime": 1792788254.5360675,
-    "seen": 1793069794.1360548,
-    "ast_hash": "87256717e07673ffc07360e2095314ee",
-    "semantic_hash": ""
-  },
-  "TESTING/files/Albina-Palmarola_2024_A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery.pdf": {
-    "mtime": 1792818151.549995,
-    "seen": 1793069794.136057,
-    "ast_hash": "0fb1d011e1e849028df226342faeacb9",
-    "semantic_hash": ""
-  },
-  "TESTING/files/Birua_2022_Pure Artery Malformation of Posterior Cerebral Artery with Dysplastic Internal Carotid Artery.pdf": {
-    "mtime": 1792818151.551995,
-    "seen": 1793069794.136059,
-    "ast_hash": "98e8c5768a9bff0c868e25ac829c0e4d",
-    "semantic_hash": ""
-  },
-  "TESTING/files/Brinjikji_2018_Pure arterial malformations.pdf": {
-    "mtime": 1792818151.554995,
-    "seen": 1793069794.1360612,
-    "ast_hash": "75d4a174eb27301453941e7d1cbdbac7",
-    "semantic_hash": ""
-  },
-  "TESTING/files/Chua_2021_Endovascular treatment of a ruptured posterior fossa pure arterial malformation illustrative case.pdf": {
-    "mtime": 1792818151.556995,
-    "seen": 1793069794.1360636,
-    "ast_hash": "41c33e44744da16efb8eafe724ed9c3e",
-    "semantic_hash": ""
-  },
-  "TESTING/files/Deshmukh_2023_Pure Arterial Malformation (PAM) Case Report and Review of Literature.pdf": {
-    "mtime": 1792818151.559995,
-    "seen": 1793069794.1360655,
-    "ast_hash": "b91e1cd886c44c0f8ec234b97b6de595",
-    "semantic_hash": ""
-  },
-  "TESTING/files/Feliciano_2014_Color-coded digital subtraction angiography in the management of a rare case of middle cerebral artery pure arterial malformation. A technical and case report.pdf": {
-    "mtime": 1792818151.560995,
-    "seen": 1793069794.1360676,
-    "ast_hash": "87256717e07673ffc07360e2095314ee",
-    "semantic_hash": ""
-  },
   "papers/Albina-Palmarola_2024_A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery.pdf": {
     "mtime": 1792341527.284026,
     "seen": 1793069794.1360698,
@@ -4449,36 +4287,6 @@
     "mtime": 1792971044.3416793,
     "seen": 1793069794.1361399,
     "ast_hash": "fbcc333127d6d336b4f166102b5b5e3b",
-    "semantic_hash": ""
-  },
-  "Website for software/BrowserOS - Open-Source AI Browser _ Privacy-First Alternative_files/logo-with-orange-text.png": {
-    "mtime": 1792279986.4132512,
-    "seen": 1793069794.136142,
-    "ast_hash": "03a4b4c3e6b554d3b7254acc66d7a0af",
-    "semantic_hash": ""
-  },
-  "Website for software/BrowserOS - Open-Source AI Browser _ Privacy-First Alternative_files/logo-with-orange-text.svg": {
-    "mtime": 1792279986.4162512,
-    "seen": 1793069794.1361442,
-    "ast_hash": "35d2c2ccf1239f5bced981f4b96964c5",
-    "semantic_hash": ""
-  },
-  "Website for software/BrowserOS - Open-Source AI Browser _ Privacy-First Alternative_files/square-rounded.svg": {
-    "mtime": 1792279986.4242513,
-    "seen": 1793069794.1361465,
-    "ast_hash": "93b7161c70e83a9a16f1d63a21a29215",
-    "semantic_hash": ""
-  },
-  "Website for software/dashboard.png": {
-    "mtime": 1792279986.4372513,
-    "seen": 1793069794.1361487,
-    "ast_hash": "81264b74f3152eafe711b6bde7dc0ddb",
-    "semantic_hash": ""
-  },
-  "Website for software/extraction.png": {
-    "mtime": 1792279986.4422514,
-    "seen": 1793069794.136151,
-    "ast_hash": "854056de1fde24a9839ab136f4a9c4c7",
     "semantic_hash": ""
   },
   "jev-ultrafast/docs/banner.svg": {
@@ -4584,9 +4392,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/AppShell.tsx": {
-    "mtime": 1793099404.4239197,
-    "seen": 1793101850.1968286,
-    "ast_hash": "e682f1f5c1f0f97019d3aa2b4e311ae0",
+    "mtime": 1793112415.1723325,
+    "seen": 1793113709.838575,
+    "ast_hash": "31a4527a17f4da2ae0cea972c0d91b7a",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/todos.py": {
@@ -4674,9 +4482,9 @@
     "semantic_hash": ""
   },
   "src/components/AppShell.tsx": {
-    "mtime": 1793102313.1030066,
-    "seen": 1793102407.5035205,
-    "ast_hash": "e682f1f5c1f0f97019d3aa2b4e311ae0",
+    "mtime": 1793112415.1763327,
+    "seen": 1793113709.8479898,
+    "ast_hash": "31a4527a17f4da2ae0cea972c0d91b7a",
     "semantic_hash": ""
   },
   "src/components/citation/PassageInspector.tsx": {
@@ -4896,9 +4704,9 @@
     "semantic_hash": ""
   },
   "src/components/screening/ExploratoryScreeningView.tsx": {
-    "mtime": 1793102313.1240067,
-    "seen": 1793102407.5035944,
-    "ast_hash": "2807e6e8407aa301e10fc09e38a69335",
+    "mtime": 1793113286.223573,
+    "seen": 1793113709.8496583,
+    "ast_hash": "dfb5adb15d450985d5c577701cca0cb1",
     "semantic_hash": ""
   },
   "src/components/todos/TodosPanel.test.tsx": {
@@ -4956,9 +4764,9 @@
     "semantic_hash": ""
   },
   "src/lib/api.ts": {
-    "mtime": 1793102313.1410067,
-    "seen": 1793102407.503614,
-    "ast_hash": "3b5dd1d8986a7b811007038e1d7c9972",
+    "mtime": 1793114465.474574,
+    "seen": 1793114697.9862795,
+    "ast_hash": "78ff25eaceabf143284f298baa6d0cd5",
     "semantic_hash": ""
   },
   "src/lib/bookmarks.test.ts": {
@@ -5160,9 +4968,9 @@
     "semantic_hash": ""
   },
   "src/pages/ExportPage.tsx": {
-    "mtime": 1793102313.161007,
-    "seen": 1793102407.503677,
-    "ast_hash": "7105f45a27dbc383d8068203f257876d",
+    "mtime": 1793112415.1783326,
+    "seen": 1793113709.8514578,
+    "ast_hash": "5a156062d72e6b0e973531509eee4d15",
     "semantic_hash": ""
   },
   "src/pages/ExtractionSheetPage.test.tsx": {
@@ -5178,9 +4986,9 @@
     "semantic_hash": ""
   },
   "src/pages/GradePage.tsx": {
-    "mtime": 1793102313.164007,
-    "seen": 1793102407.5036826,
-    "ast_hash": "98e1875d8846879660be1246cc364969",
+    "mtime": 1793112415.1793327,
+    "seen": 1793113709.8515491,
+    "ast_hash": "8ea80d20ec7bf82b9af4d5c5f185bcce",
     "semantic_hash": ""
   },
   "src/pages/HypothesisPage.tsx": {
@@ -5196,9 +5004,9 @@
     "semantic_hash": ""
   },
   "src/pages/MetaAnalysisPage.tsx": {
-    "mtime": 1793102313.1650069,
-    "seen": 1793102407.503688,
-    "ast_hash": "c54cd15d85f1e10f27060d74b2d1d990",
+    "mtime": 1793113323.7738152,
+    "seen": 1793113709.8516362,
+    "ast_hash": "797d4909ae558914809d2fcd6e8da3e2",
     "semantic_hash": ""
   },
   "src/pages/PdfViewerPage.tsx": {
@@ -5232,9 +5040,9 @@
     "semantic_hash": ""
   },
   "src/pages/ProjectDetail.tsx": {
-    "mtime": 1793102313.170007,
-    "seen": 1793102407.5036998,
-    "ast_hash": "2930a0b044e35820af4c0029cafc7c42",
+    "mtime": 1793112415.1803327,
+    "seen": 1793113709.851853,
+    "ast_hash": "71723dbbccf8772a5ce49eba77d8a523",
     "semantic_hash": ""
   },
   "src/pages/ProjectList.tsx": {
@@ -5298,9 +5106,9 @@
     "semantic_hash": ""
   },
   "src/pages/ScreeningPage.tsx": {
-    "mtime": 1793102313.176007,
-    "seen": 1793102407.5037212,
-    "ast_hash": "b98dccb89e470ef32bc2ffb30b9a7ced",
+    "mtime": 1793114582.4522467,
+    "seen": 1793114697.9886255,
+    "ast_hash": "4856c41b3438ed243af5e3a31aaccdd0",
     "semantic_hash": ""
   },
   "src/pages/StudyImport.tsx": {
@@ -5349,6 +5157,222 @@
     "mtime": 1793102313.0990064,
     "seen": 1793102407.5139165,
     "ast_hash": "f0402b67b6ce880f65666bb49e841696",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/services/criterion_evaluator.py": {
+    "mtime": 1793112757.8614016,
+    "seen": 1793113709.8279157,
+    "ast_hash": "2f92defaad0ee80ec2f236ea8fdfb66b",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_criterion_evaluator.py": {
+    "mtime": 1793112779.0765307,
+    "seen": 1793113709.8325357,
+    "ast_hash": "756b95ef80159b6bf9d02762a796077b",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_extraction_batch.py": {
+    "mtime": 1793112509.570907,
+    "seen": 1793113709.8330665,
+    "ast_hash": "073d3bda44b2867cf78200bcc24a9311",
+    "semantic_hash": ""
+  },
+  "archive/Data Extreaction Sheet Maker/skills_clinical-data-extraction_SKILL_V4.md": {
+    "mtime": 1793112415.248333,
+    "seen": 1793113709.8532145,
+    "ast_hash": "0ac83663494a5c7a9e169dcccd21c11c",
+    "semantic_hash": ""
+  },
+  "archive/Data Extreaction Sheet Maker/skills_systematic-review-screener_SKILL ASReview and Clinical trials.md": {
+    "mtime": 1793112415.2493331,
+    "seen": 1793113709.8532178,
+    "ast_hash": "6acf8b48478bdc6452b120b15a3e97d7",
+    "semantic_hash": ""
+  },
+  "archive/TESTING/Logistic Stuff/Manuscript writing skill - peer review.md": {
+    "mtime": 1793112415.2743332,
+    "seen": 1793113709.8532207,
+    "ast_hash": "da12a0c0f0cc42d0adf7b6fb2f2cf102",
+    "semantic_hash": ""
+  },
+  "archive/TESTING/Logistic Stuff/SKILL.md": {
+    "mtime": 1793112415.2743332,
+    "seen": 1793113709.8532228,
+    "ast_hash": "da12a0c0f0cc42d0adf7b6fb2f2cf102",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/how-it-works.html": {
+    "mtime": 1793112415.3303335,
+    "seen": 1793113709.8532255,
+    "ast_hash": "5bb870125e10890f1867324c7438dc3d",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/index.html": {
+    "mtime": 1793112415.3303335,
+    "seen": 1793113709.8532276,
+    "ast_hash": "dfc7cd5ed6633e751e18714b7dc7fa2f",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/version2.html": {
+    "mtime": 1793112415.3603337,
+    "seen": 1793113709.8532295,
+    "ast_hash": "6cfddabcb012a0cd20eb75cc6bbdc9d2",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/version_1_website.html": {
+    "mtime": 1793112415.3623338,
+    "seen": 1793113709.8532314,
+    "ast_hash": "febb8df31d810c5d072f903ce456f619",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/version_1_website_portable.html": {
+    "mtime": 1793112415.389334,
+    "seen": 1793113709.853233,
+    "ast_hash": "05c88cf767041872a3d4d5d1c87e0e26",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/version_2_website_portable.html": {
+    "mtime": 1793112415.417334,
+    "seen": 1793113709.8532352,
+    "ast_hash": "580661a6270b2d62af17cb0e0ef74388",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/waitlist.html": {
+    "mtime": 1793112415.418334,
+    "seen": 1793113709.8532372,
+    "ast_hash": "b208a7919dcc2187beaf056d59e3e741",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/website_docs_DESIGN_SYSTEM.md": {
+    "mtime": 1793112415.420334,
+    "seen": 1793113709.8532393,
+    "ast_hash": "6658fcaf10e45dfdd923ade7cc50f0c6",
+    "semantic_hash": ""
+  },
+  "graphify-out/converted/PROTOCOL_8de7bcad.md": {
+    "mtime": 1793113663.2728696,
+    "seen": 1793113709.8533602,
+    "ast_hash": "20765547abd0cc66cd1d67e67aa650b8",
+    "semantic_hash": ""
+  },
+  "graphify-out/converted/extraction_sheet_template_bcebbf7c.md": {
+    "mtime": 1793113663.170869,
+    "seen": 1793113709.8535392,
+    "ast_hash": "9ccf8f38893710f43220e28756d6c63e",
+    "semantic_hash": ""
+  },
+  "graphify-out/converted/roadmap_Founder_Roadmap_SR_AI_SaaS (1)_2b2ce282.md": {
+    "mtime": 1793113663.5318713,
+    "seen": 1793113709.853542,
+    "ast_hash": "fc0c8ad7b32c3d8cfc2cfd453994461f",
+    "semantic_hash": ""
+  },
+  "archive/TEST/Albina-Palmarola_2024_A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery.pdf": {
+    "mtime": 1793112415.253333,
+    "seen": 1793113709.8556874,
+    "ast_hash": "0fb1d011e1e849028df226342faeacb9",
+    "semantic_hash": ""
+  },
+  "archive/TEST/Birua_2022_Pure Artery Malformation of Posterior Cerebral Artery with Dysplastic Internal Carotid Artery.pdf": {
+    "mtime": 1793112415.257333,
+    "seen": 1793113709.8556905,
+    "ast_hash": "98e8c5768a9bff0c868e25ac829c0e4d",
+    "semantic_hash": ""
+  },
+  "archive/TEST/Brinjikji_2018_Pure arterial malformations.pdf": {
+    "mtime": 1793112415.2623332,
+    "seen": 1793113709.8556933,
+    "ast_hash": "75d4a174eb27301453941e7d1cbdbac7",
+    "semantic_hash": ""
+  },
+  "archive/TEST/Chua_2021_Endovascular treatment of a ruptured posterior fossa pure arterial malformation illustrative case.pdf": {
+    "mtime": 1793112415.2673333,
+    "seen": 1793113709.8556957,
+    "ast_hash": "41c33e44744da16efb8eafe724ed9c3e",
+    "semantic_hash": ""
+  },
+  "archive/TEST/Deshmukh_2023_Pure Arterial Malformation (PAM) Case Report and Review of Literature.pdf": {
+    "mtime": 1793112415.2713332,
+    "seen": 1793113709.8556976,
+    "ast_hash": "b91e1cd886c44c0f8ec234b97b6de595",
+    "semantic_hash": ""
+  },
+  "archive/TEST/Feliciano_2014_Color-coded digital subtraction angiography in the management of a rare case of middle cerebral artery pure arterial malformation. A technical and case report.pdf": {
+    "mtime": 1793112415.273333,
+    "seen": 1793113709.8557003,
+    "ast_hash": "87256717e07673ffc07360e2095314ee",
+    "semantic_hash": ""
+  },
+  "archive/TESTING/files/Albina-Palmarola_2024_A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery.pdf": {
+    "mtime": 1793112415.279333,
+    "seen": 1793113709.8557026,
+    "ast_hash": "0fb1d011e1e849028df226342faeacb9",
+    "semantic_hash": ""
+  },
+  "archive/TESTING/files/Birua_2022_Pure Artery Malformation of Posterior Cerebral Artery with Dysplastic Internal Carotid Artery.pdf": {
+    "mtime": 1793112415.2833333,
+    "seen": 1793113709.8557048,
+    "ast_hash": "98e8c5768a9bff0c868e25ac829c0e4d",
+    "semantic_hash": ""
+  },
+  "archive/TESTING/files/Brinjikji_2018_Pure arterial malformations.pdf": {
+    "mtime": 1793112415.2873333,
+    "seen": 1793113709.8557067,
+    "ast_hash": "75d4a174eb27301453941e7d1cbdbac7",
+    "semantic_hash": ""
+  },
+  "archive/TESTING/files/Chua_2021_Endovascular treatment of a ruptured posterior fossa pure arterial malformation illustrative case.pdf": {
+    "mtime": 1793112415.2923334,
+    "seen": 1793113709.8557086,
+    "ast_hash": "41c33e44744da16efb8eafe724ed9c3e",
+    "semantic_hash": ""
+  },
+  "archive/TESTING/files/Deshmukh_2023_Pure Arterial Malformation (PAM) Case Report and Review of Literature.pdf": {
+    "mtime": 1793112415.2963333,
+    "seen": 1793113709.8557107,
+    "ast_hash": "b91e1cd886c44c0f8ec234b97b6de595",
+    "semantic_hash": ""
+  },
+  "archive/TESTING/files/Feliciano_2014_Color-coded digital subtraction angiography in the management of a rare case of middle cerebral artery pure arterial malformation. A technical and case report.pdf": {
+    "mtime": 1793112415.2983334,
+    "seen": 1793113709.8557131,
+    "ast_hash": "87256717e07673ffc07360e2095314ee",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/BrowserOS - Open-Source AI Browser _ Privacy-First Alternative_files/logo-with-orange-text.png": {
+    "mtime": 1793112415.3053334,
+    "seen": 1793113709.857147,
+    "ast_hash": "03a4b4c3e6b554d3b7254acc66d7a0af",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/BrowserOS - Open-Source AI Browser _ Privacy-First Alternative_files/logo-with-orange-text.svg": {
+    "mtime": 1793112415.3073335,
+    "seen": 1793113709.8571503,
+    "ast_hash": "35d2c2ccf1239f5bced981f4b96964c5",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/BrowserOS - Open-Source AI Browser _ Privacy-First Alternative_files/square-rounded.svg": {
+    "mtime": 1793112415.3133335,
+    "seen": 1793113709.8571525,
+    "ast_hash": "93b7161c70e83a9a16f1d63a21a29215",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/dashboard.png": {
+    "mtime": 1793112415.3233335,
+    "seen": 1793113709.8571546,
+    "ast_hash": "81264b74f3152eafe711b6bde7dc0ddb",
+    "semantic_hash": ""
+  },
+  "archive/Website for software/extraction.png": {
+    "mtime": 1793112415.3293335,
+    "seen": 1793113709.8571563,
+    "ast_hash": "854056de1fde24a9839ab136f4a9c4c7",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_criteria_api.py": {
+    "mtime": 1793114433.4843817,
+    "seen": 1793114697.9685338,
+    "ast_hash": "1a0ebf5cf4ed6ad25b8bbbe70b1d9863",
     "semantic_hash": ""
   },
   "laya/yarn.lock": {

@@ -198,12 +198,18 @@ def build_prisma2020_sync(
     ft_excluded = dbr_count("ft_excluded")
     dbr_included = dbr_count("included")
     dbr_open = dbr_count("open")
+    dbr_awaiting_pdf = sum(
+        1 for row in dbr_rows
+        if _text(row.get("screening_status")).lower() in ("awaiting_pdf", "awaiting_retrieval")
+        or _text(row.get("pdf_status")).lower() == "pending"
+    )
     database_results = len(dbr_database)
     register_results = len(dbr_register)
     records_screened = database_results + register_results - duplicates - excluded_automatic
     dbr_sought = records_screened - ta_excluded
     dbr_assessed = ft_excluded + dbr_included
     dbr_notretrieved = dbr_open
+    dbr_confirmed_notretrieved = max(0, dbr_notretrieved - dbr_awaiting_pdf)
 
     other_by_kind = {"website": [], "organisation": [], "citation": []}
     for kind, row in other_rows:
@@ -315,6 +321,8 @@ def build_prisma2020_sync(
         "total_studies_ma": total_studies_ma,
         "open_dbr": dbr_open,
         "open_other": other_open,
+        "dbr_awaiting_retrieval": dbr_awaiting_pdf,
+        "dbr_confirmed_notretrieved": dbr_confirmed_notretrieved,
         "other_duplicates_omitted": other_duplicates,
     }
     return {

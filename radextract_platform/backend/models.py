@@ -108,6 +108,12 @@ class PubMedKeyUpdate(BaseModel):
 class Criterion(BaseModel):
     id: str
     text: str
+    direction: str = "inclusion"  # "inclusion" | "exclusion"
+    rule_mode: str = "weighted"   # "strict" | "weighted"
+    threshold: float = 0.90
+    score_source: str = "model"   # "keyword" | "model" | "hybrid"
+    enabled: bool = True
+    version: int = 1
 
 
 class CriteriaUpdate(BaseModel):
@@ -765,9 +771,9 @@ class ExclusionReasonsResponse(BaseModel):
 # ═══════════════════════════════════════════════════════════════════════
 
 class ScreeningConfig(BaseModel):
-    blind_mode: bool = True
-    n_reviewers: int = 2
-    conflict_mode: str = "manual"  # "manual" | "auto_majority"
+    blind_mode: bool = False
+    n_reviewers: int = 1
+    conflict_mode: str = "single"  # "single" | "manual" | "auto_majority"
 
 
 class ScreeningConfigUpdate(BaseModel):
@@ -778,9 +784,41 @@ class ScreeningConfigUpdate(BaseModel):
 
 class ScreeningConfigResponse(BaseModel):
     project_id: str
-    blind_mode: bool = True
-    n_reviewers: int = 2
-    conflict_mode: str = "manual"
+    blind_mode: bool = False
+    n_reviewers: int = 1
+    conflict_mode: str = "single"
+
+
+class CriterionItem(BaseModel):
+    id: str
+    text: str
+    direction: str = "inclusion"  # "inclusion" | "exclusion"
+    rule_mode: str = "weighted"   # "strict" | "weighted"
+    threshold: float = 0.90
+    score_source: str = "model"   # "keyword" | "model" | "hybrid"
+    enabled: bool = True
+    version: int = 1
+
+
+class CriteriaListResponse(BaseModel):
+    project_id: str
+    criteria: list[CriterionItem]
+
+
+class CriteriaUpdateRequest(BaseModel):
+    criteria: list[CriterionItem]
+
+
+class StudyEvaluateRequest(BaseModel):
+    study_id: str
+    scores: dict[str, Optional[float]]
+
+
+class StudyEvaluateResponse(BaseModel):
+    study_id: str
+    decision: str
+    fired: list[dict[str, Any]]
+    flagged_unscored: list[str]
 
 
 class ScreeningUpdate(BaseModel):
