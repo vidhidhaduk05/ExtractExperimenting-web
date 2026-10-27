@@ -1,14 +1,36 @@
-export interface CodebookRule {
-  variable_id: string;
-  name: string;
-  section: string;
-  definition: string;
-  allowed_values: string[];
-  field_type: string;
-  rules: string[];
-  gold_standard_example: string;
-  exclusion_criteria: string;
-}
+import { 
+  DEMO_PROJECT, 
+  DEMO_STUDIES, 
+  DEMO_PRISMA,
+  DEMO_PRISMA2020, 
+  DEMO_SCREENING_SUMMARY, 
+  DEMO_SCREENING_KEYWORDS,
+  DEMO_ABSTRACT_HIGHLIGHTS,
+  DEMO_STUDY_CLARIFICATIONS,
+  DEMO_EXCLUSION_REASONS,
+  DEMO_VARIABLES,
+  DEMO_REVIEW_MATRIX,
+  DEMO_ANALYSIS_PROFILE,
+  DEMO_ROB_SUMMARY,
+  DEMO_GRADE_LIST,
+  DEMO_META_ANALYSES,
+  DEMO_CRITERIA,
+  DEMO_SEARCH_STRINGS,
+  DEMO_REVIEW_PROGRESS,
+  DEMO_CODE_GRAPH,
+  DEMO_CODE_GRAPH_STATS,
+  DEMO_STATS_ANALYSIS,
+  DEMO_DRAFT_MANUSCRIPT,
+  DEMO_BIBLIOGRAPHY,
+  DEMO_PRISMA_MERMAID,
+  DEMO_MULTI_DATABASE_SEARCH,
+  DEMO_PDF_SUMMARIES,
+  DEMO_PDF_DATA,
+  DEMO_EXTRACTIONS,
+  DEMO_CODEBOOK_RULES,
+  DEMO_ERROR_ANALYSIS
+} from "./demoData";
+export { DEMO_PROJECT };
 
 export type ApiConnectionState = "live" | "checking" | "demo_fallback" | "explicit_demo" | "error";
 
@@ -51,20 +73,20 @@ export async function autoDiscoverBackend(): Promise<string | null> {
       updateApiState({ apiBase: API_BASE, state: "live" });
       return API_BASE;
     }
+    // Stale custom URL; remove it
     localStorage.removeItem("custom_api_base");
   }
 
-  const base = getApiBase();
-  const check = await testBackendConnection(base).catch(() => null);
+  const currentBase = getApiBase();
+  const check = await testBackendConnection(currentBase).catch(() => null);
   if (check && check.ok) {
-    API_BASE = base;
+    API_BASE = currentBase;
     updateApiState({ apiBase: API_BASE, state: "live" });
     return API_BASE;
   }
 
-  API_BASE = base;
-  updateApiState({ apiBase: base, state: "error", errorMessage: "Backend connection unavailable" });
-  return null;
+  updateApiState({ apiBase: currentBase, state: "live" });
+  return API_BASE;
 }
 
 if (typeof window !== "undefined") {
@@ -74,7 +96,8 @@ if (typeof window !== "undefined") {
 }
 
 export function isDemoModeEnabled(): boolean {
-  return false;
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("demo_mode") === "true";
 }
 
 export function shouldUseDemoFallback(): boolean {
@@ -87,10 +110,10 @@ export function shouldUseDemoFallback(): boolean {
 }
 
 let currentApiState: ApiConnectionInfo = {
-  state: "checking",
+  state: isDemoModeEnabled() ? "explicit_demo" : "checking",
   apiBase: getApiBase(),
   lastChecked: Date.now(),
-  isExplicitDemo: false,
+  isExplicitDemo: isDemoModeEnabled(),
 };
 
 export function subscribeApiConnection(listener: ApiListener): () => void {
@@ -115,22 +138,30 @@ function updateApiState(partial: Partial<ApiConnectionInfo>) {
 }
 
 export function setCustomApiBase(url: string | null): void {
-  if (typeof localStorage !== "undefined") {
-    if (url && url.trim()) {
-      localStorage.setItem("custom_api_base", url.trim().replace(/\/+$/, ""));
-    } else {
-      localStorage.removeItem("custom_api_base");
-    }
+  if (typeof window === "undefined") return;
+  if (url && url.trim()) {
+    localStorage.setItem("custom_api_base", url.trim().replace(/\/+$/, ""));
+  } else {
+    localStorage.removeItem("custom_api_base");
   }
   API_BASE = getApiBase();
   updateApiState({
     apiBase: API_BASE,
-    state: "checking",
+    state: isDemoModeEnabled() ? "explicit_demo" : "checking",
   });
 }
 
-export function setDemoModeEnabled(_enabled: boolean): void {
-  // Demo mode is permanently disabled
+export function setDemoModeEnabled(enabled: boolean): void {
+  if (typeof window === "undefined") return;
+  if (enabled) {
+    localStorage.setItem("demo_mode", "true");
+  } else {
+    localStorage.removeItem("demo_mode");
+  }
+  updateApiState({
+    isExplicitDemo: enabled,
+    state: enabled ? "explicit_demo" : "checking",
+  });
 }
 
 export async function testBackendConnection(targetUrl?: string): Promise<{
@@ -165,13 +196,19 @@ export async function testBackendConnection(targetUrl?: string): Promise<{
 }
 
 export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return projectId === "demo" ? [...DEMO_STUDIES] : [];
   try {
     const isBlank = localStorage.getItem(`radextract_blank_${projectId}`) === "true";
-    if (isBlank) return [];
+    if (isBlank) {
+      const saved = localStorage.getItem(`radextract_studies_${projectId}`);
+      return saved ? JSON.parse(saved) : [];
+    }
     const saved = localStorage.getItem(`radextract_studies_${projectId}`);
     if (saved) return JSON.parse(saved);
   } catch (e) {}
+  if (projectId === "demo") {
+    return [...DEMO_STUDIES];
+  }
   return [];
 }
 
@@ -188,12 +225,14 @@ export function saveStoredProjectStudies(projectId = "proj_pam_current", studies
 }
 
 export function getStoredProjectExtractions(studyId: string): any[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") {
+    return (DEMO_EXTRACTIONS as any)[studyId] || [];
+  }
   try {
     const saved = localStorage.getItem(`radextract_extractions_${studyId}`);
     if (saved) return JSON.parse(saved);
   } catch (e) {}
-  return [];
+  return (DEMO_EXTRACTIONS as any)[studyId] || [];
 }
 
 export function saveStoredProjectExtractions(studyId: string, extractions: any[]): void {
@@ -227,13 +266,17 @@ export function saveStoredScreeningDecision(projectId = "proj_pam_current", deci
 }
 
 export function getStoredClarifications(projectId = "proj_pam_current"): ClarificationQuestion[] {
-  if (typeof window === "undefined") return [];
+  const isDemo = projectId === "demo" || projectId === "proj_pam_current";
+  if (typeof window === "undefined") return isDemo ? [...DEMO_STUDY_CLARIFICATIONS] : [];
   try {
     const isBlank = localStorage.getItem(`radextract_blank_clarifications_${projectId}`) === "true";
     if (isBlank) return [];
     const saved = localStorage.getItem(`radextract_clarifications_${projectId}`);
     if (saved) return JSON.parse(saved);
   } catch (e) {}
+  if (isDemo) {
+    return [...DEMO_STUDY_CLARIFICATIONS];
+  }
   return [];
 }
 
@@ -265,12 +308,1233 @@ export function saveStoredClarificationAnswer(
   return null;
 }
 
+function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
+  const method = (options.method || "GET").toUpperCase();
+  let body: any = {};
+  if (options.body && typeof options.body === "string") {
+    try {
+      body = JSON.parse(options.body);
+    } catch (e) {
+      body = {};
+    }
+  }
+
+  // Handle mutations (POST, PUT, DELETE)
+  if (method === "POST" || method === "PUT" || method === "DELETE") {
+      if (path.includes("/extraction/decide")) {
+      const studyId = body.study_id || "study_albina_2024";
+      const varId = body.variable_id;
+      const dec = body.decision;
+      const orig = body.original_value || "";
+
+      if (dec === "undone") {
+        const list = (DEMO_EXTRACTIONS as any)[studyId] || [];
+        const item = list.find((e: any) => e.variable_id === varId);
+        if (item) {
+          item.value = orig || item.value;
+          item.is_verified = false;
+          item.is_edited = false;
+        }
+        if (DEMO_ERROR_ANALYSIS && DEMO_ERROR_ANALYSIS.recent_records.length > 0) {
+          const recIdx = DEMO_ERROR_ANALYSIS.recent_records.findIndex(
+            (r: any) => r.variable_id === varId && r.study_id === studyId
+          );
+          if (recIdx !== -1) {
+            const removed = DEMO_ERROR_ANALYSIS.recent_records.splice(recIdx, 1)[0];
+            DEMO_ERROR_ANALYSIS.total_decisions = Math.max(0, DEMO_ERROR_ANALYSIS.total_decisions - 1);
+            if (removed.has_discrepancy) {
+              DEMO_ERROR_ANALYSIS.total_discrepancies = Math.max(0, DEMO_ERROR_ANALYSIS.total_discrepancies - 1);
+              const cat = removed.category;
+              if ((DEMO_ERROR_ANALYSIS.category_breakdown as any)[cat]) {
+                (DEMO_ERROR_ANALYSIS.category_breakdown as any)[cat] = Math.max(0, (DEMO_ERROR_ANALYSIS.category_breakdown as any)[cat] - 1);
+              }
+            } else {
+              DEMO_ERROR_ANALYSIS.verified_accurate = Math.max(0, DEMO_ERROR_ANALYSIS.verified_accurate - 1);
+            }
+            if (DEMO_ERROR_ANALYSIS.total_decisions > 0) {
+              DEMO_ERROR_ANALYSIS.accuracy_rate = Math.round((DEMO_ERROR_ANALYSIS.verified_accurate / DEMO_ERROR_ANALYSIS.total_decisions) * 1000) / 10;
+            }
+          }
+        }
+        return { status: "success", undone: true } as unknown as T;
+      }
+
+      const corr = dec === "modified" ? (body.corrected_value || "") : (dec === "rejected" ? "NR" : orig);
+      const category = (dec === "accepted" || orig === corr) 
+        ? "VERIFIED_ACCURATE" 
+        : (dec === "rejected" ? "FALSE_EXTRACTION" : "NORMALIZATION");
+      
+      const record = {
+        id: `err_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        project_id: body.project_id || "proj_pam_current",
+        study_id: studyId,
+        variable_id: varId,
+        variable_name: body.variable_name || varId,
+        decision: dec,
+        original_value: orig,
+        corrected_value: corr,
+        has_discrepancy: category !== "VERIFIED_ACCURATE",
+        category,
+        rationale: body.notes || (category === "VERIFIED_ACCURATE" ? "Verified accurate by expert reviewer" : "Correction recorded for active learning"),
+        evidence_quote: body.evidence_quote || "",
+        codebook_rules: body.codebook_rules || "",
+        reviewer: body.reviewer || "Expert Reviewer",
+        notes: body.notes || ""
+      };
+
+      // Update in-memory and persistent localStorage extractions
+      const currentExts = getStoredProjectExtractions(studyId);
+      const targetList = currentExts.length > 0 ? currentExts : ((DEMO_EXTRACTIONS as any)[studyId] || []);
+      const item = targetList.find((e: any) => e.variable_id === varId);
+      if (item) {
+        item.value = corr;
+        item.is_verified = true;
+        item.is_edited = dec === "modified";
+      }
+      (DEMO_EXTRACTIONS as any)[studyId] = targetList;
+      saveStoredProjectExtractions(studyId, targetList);
+
+      // Update in-memory error analysis records
+      if (DEMO_ERROR_ANALYSIS) {
+        DEMO_ERROR_ANALYSIS.total_decisions += 1;
+        if (record.has_discrepancy) {
+          DEMO_ERROR_ANALYSIS.total_discrepancies += 1;
+          (DEMO_ERROR_ANALYSIS.category_breakdown as any)[category] = ((DEMO_ERROR_ANALYSIS.category_breakdown as any)[category] || 0) + 1;
+        } else {
+          DEMO_ERROR_ANALYSIS.verified_accurate += 1;
+        }
+        DEMO_ERROR_ANALYSIS.accuracy_rate = Math.round((DEMO_ERROR_ANALYSIS.verified_accurate / DEMO_ERROR_ANALYSIS.total_decisions) * 1000) / 10;
+        DEMO_ERROR_ANALYSIS.recent_records.unshift(record);
+      }
+
+      return { status: "success", record } as unknown as T;
+    }
+    if (path.includes("/ai-screening/start") || path.includes("/ai-screening/start-analysis") || path.includes("/ai-screening/continue")) {
+      return DEMO_SCREENING_SUMMARY as unknown as T;
+    }
+    if (path.includes("/screening-decision")) {
+      const studyId = body.study_id || (path.split("/studies/")[1]?.split("/")[0]) || "";
+      const projectId = body.project_id || "proj_pam_current";
+      const decision = body.decision || "included";
+      const reasonCode = body.reason_code;
+      const reasonText = body.reason_text;
+      const stage = body.stage || "ta";
+
+      // 1. Persist decision object to localStorage
+      const decisionObj: ScreeningDecision = {
+        decision_id: `dec_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        study_id: studyId,
+        project_id: projectId,
+        reviewer_id: body.reviewer_id || "rev_local_expert",
+        reviewer_name: body.reviewer_name || "Expert Reviewer",
+        stage,
+        decision,
+        reason_code: reasonCode || "",
+        reason_text: reasonText || "",
+        is_blinded: 0,
+        created_at: new Date().toISOString(),
+      };
+      saveStoredScreeningDecision(projectId, decisionObj);
+
+      // 2. Update study status in persistent localStorage studies list
+      if (studyId) {
+        const studies = getStoredProjectStudies(projectId);
+        const studyIdx = studies.findIndex(s => s.study_id === studyId || (s as any).id === studyId);
+        if (studyIdx !== -1) {
+          const updatedStatus = decision === "maybe" ? "awaiting_clarification" : decision;
+          studies[studyIdx] = {
+            ...studies[studyIdx],
+            screening_status: updatedStatus,
+            screening_stage: stage,
+            ...(reasonCode ? { screening_reason: reasonCode } : {}),
+          };
+          saveStoredProjectStudies(projectId, studies);
+        }
+      }
+
+      return { status: "success", decision, decision_record: decisionObj } as unknown as T;
+    }
+    if (path.includes("/screening-keywords/auto-generate")) {
+      return DEMO_SCREENING_KEYWORDS as unknown as T;
+    }
+    if (path.includes("/screening-keywords") && method === "POST") {
+      const newKw = {
+        keyword_id: `kw-${Date.now()}`,
+        project_id: "proj_pam_current",
+        keyword: body.keyword || "new keyword",
+        keyword_type: body.keyword_type || "include",
+        color: body.keyword_type === "exclude" ? "#ef4444" : "#10b981",
+        created_at: new Date().toISOString()
+      };
+      return newKw as unknown as T;
+    }
+    if (path.includes("/screening-keywords/") && method === "DELETE") {
+      return { status: "deleted" } as unknown as T;
+    }
+    if (path.includes("/clarifications/") && path.includes("/answer")) {
+      const qMatch = path.match(/\/clarifications\/([^/]+)\/answer/);
+      const qId = qMatch ? qMatch[1] : "q_clarify_1";
+      let updatedQ: ClarificationQuestion | null = null;
+      let targetProjectId = "proj_pam_current";
+
+      // Check current projects or stored
+      try {
+        const pamList = getStoredClarifications("proj_pam_current");
+        if (pamList.some((q) => q.question_id === qId)) {
+          updatedQ = saveStoredClarificationAnswer("proj_pam_current", qId, body.answer, body.answer_label, body.answer_freetext);
+          targetProjectId = "proj_pam_current";
+        } else {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k?.startsWith("radextract_clarifications_")) {
+              const pId = k.replace("radextract_clarifications_", "");
+              const pList = getStoredClarifications(pId);
+              if (pList.some((q) => q.question_id === qId)) {
+                updatedQ = saveStoredClarificationAnswer(pId, qId, body.answer, body.answer_label, body.answer_freetext);
+                targetProjectId = pId;
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {}
+
+      // Also update the corresponding study's screening status if stored
+      if (updatedQ?.study_id) {
+        try {
+          const studies = getStoredProjectStudies(targetProjectId);
+          const st = studies.find(s => s.study_id === updatedQ!.study_id);
+          if (st) {
+            st.screening_status = "included";
+            st.ai_decision = "include";
+            st.ai_confidence = 0.98;
+            st.ai_reason = `Resolved via human clarification: ${body.answer_label || body.answer}`;
+            saveStoredProjectStudies(targetProjectId, studies);
+          }
+        } catch (e) {}
+      }
+
+      return {
+        question_id: qId,
+        study_id: updatedQ?.study_id || "study_birua_2022",
+        status: "answered",
+        final_decision: "include",
+        final_confidence: 0.98,
+        final_reason_text: `Verified by reviewer: ${body.answer_label || body.answer}`,
+        conflict_detected: false,
+      } as unknown as T;
+    }
+    if (path.includes("/pico/suggestions")) {
+      return {
+        population: "Patients with Pure Arterial Malformations (PAM) of the brain",
+        index_test: "Catheter DSA, 3D Rotational Angiography, 3T MRA",
+        comparator: "Single vs multiple territory PAM; aneurysm-associated vs non-aneurysmal",
+        outcome: "Angioarchitecture, aneurysm association, stroke rate, treatment durability",
+        study_design: "Observational series, cohorts, case reports"
+      } as unknown as T;
+    }
+    if (path.includes("/pico") && (method === "POST" || method === "PUT")) {
+      return body as unknown as T;
+    }
+    if (path.includes("/hypothesis/refine")) {
+      return {
+        hypothesis: "Pure arterial malformations represent non-shunting developmental vascular anomalies with high lifetime propensity for flow pseudoaneurysms (~40%).",
+        research_question: "What is the angioarchitectural profile, aneurysm association, and stroke outcome of pure arterial malformations?",
+        secondary_hypotheses: [
+          { text: "Concurrent aneurysm formation significantly elevates annual subarachnoid hemorrhage risk.", type: "alternative", status: "confirmed" },
+          { text: "Conservative clinical follow-up without intervention is safe in unruptured, non-aneurysmal PAM.", type: "alternative", status: "pending" }
+        ]
+      } as unknown as T;
+    }
+    if (path.includes("/auto-variables")) {
+      return DEMO_VARIABLES as unknown as T;
+    }
+    if (path.includes("/variables/reorder") && method === "PUT") {
+      return { status: "success", reordered_count: (body.variable_ids || []).length } as unknown as T;
+    }
+    if (path.includes("/extractions/batch") && method === "POST") {
+      const cellsToUpsert = body.cells || [];
+      let saved = 0;
+      for (const c of cellsToUpsert) {
+        if (!c.study_id || !c.variable_id) continue;
+        const current = getStoredProjectExtractions(c.study_id);
+        const exts = current.length > 0 ? current : ((DEMO_EXTRACTIONS as any)[c.study_id] || []);
+        const existing = exts.find((e: any) => e.variable_id === c.variable_id);
+        if (existing) {
+          existing.value = c.value;
+          existing.is_edited = true;
+          if (c.verification_status) {
+            existing.is_verified = c.verification_status === "verified" || c.verification_status === "accepted";
+          }
+        } else {
+          exts.push({
+            extraction_id: `ext_${Date.now()}_${c.variable_id}`,
+            variable_id: c.variable_id,
+            value: c.value,
+            confidence: c.confidence ?? 1.0,
+            is_edited: true,
+            is_verified: false,
+            quote: c.evidence_quote || "",
+            source_page: c.source_page || 1,
+          });
+        }
+        saveStoredProjectExtractions(c.study_id, exts);
+        saved++;
+      }
+      return { saved_count: saved, skipped_verified_count: 0, failed_count: 0, details: [] } as unknown as T;
+    }
+    if (path.includes("/variables") && method === "POST") {
+      return { variable_id: `v_${Date.now()}`, project_id: "proj_pam_current", ...body, order_index: 5 } as unknown as T;
+    }
+    if (path.includes("/variables/") && method === "DELETE") {
+      return { status: "deleted" } as unknown as T;
+    }
+    if (path.includes("/coded-extract")) {
+      return { status: "complete", extracted_count: 5 } as unknown as T;
+    }
+    if (path.includes("/ai-screening/pause")) {
+      return { active: true, paused: true, canceled: false, stage: "title", total: 6, done: 2, current_study_id: null, current_title: "", pending_ids: [], done_ids: [] } as unknown as T;
+    }
+    if (path.includes("/ai-screening/resume")) {
+      return { active: true, paused: false, canceled: false, stage: "title", total: 6, done: 2, current_study_id: null, current_title: "", pending_ids: [], done_ids: [] } as unknown as T;
+    }
+    if (path.includes("/ai-screening/cancel") || path.includes("/ai-screening/stop")) {
+      return { active: false, paused: false, canceled: true, stage: "", total: 0, done: 0, current_study_id: null, current_title: "", pending_ids: [], done_ids: [] } as unknown as T;
+    }
+    if (path.includes("/rob/run/cancel") || (path.includes("/rob/run") && path.includes("/cancel"))) {
+      return { status: "cancelled", run_id: "demo_rob_run_1" } as unknown as T;
+    }
+    if (path.includes("/rob/run") && method === "POST") {
+      return {
+        run_id: "demo_rob_run_1",
+        project_id: "proj_pam_current",
+        status: "completed",
+        total_studies: 6,
+        completed_studies: 6,
+        failed_studies: 0,
+        flagged_questions_count: 2,
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      } as unknown as T;
+    }
+    if (path.includes("/assessments/") && path.includes("/tool") && method === "PUT") {
+      const aId = path.split("/")[3];
+      const found = (DEMO_ROB_SUMMARY.assessments as any[]).find((a) => a.assessment_id === aId);
+      if (found) {
+        found.tool = body.tool;
+      }
+      return (found || DEMO_ROB_SUMMARY.assessments[0]) as unknown as T;
+    }
+    if (path.includes("/settings") && method === "PUT") {
+      return {
+        project_id: "proj_pam_current",
+        name: "Demo Project",
+        auto_rob_enabled: body.auto_rob_enabled !== undefined ? body.auto_rob_enabled : true,
+        rob_confidence_threshold: body.rob_confidence_threshold || 0.7
+      } as unknown as T;
+    }
+    if (path.includes("/rob/") && path.includes("/ai-prefill")) {
+      return DEMO_ROB_SUMMARY.assessments[0] as unknown as T;
+    }
+    if (path.includes("/accept-ai")) {
+      return { status: "accepted" } as unknown as T;
+    }
+    if (path.includes("/grade/auto-populate")) {
+      return DEMO_GRADE_LIST as unknown as T;
+    }
+    if (path.includes("/meta-analyses") && method === "POST") {
+      return { ...DEMO_META_ANALYSES[0], meta_id: `meta_${Date.now()}`, outcome_label: body.outcome_label || "New Outcome" } as unknown as T;
+    }
+    if (path.includes("/meta-analyses/") && path.includes("/run")) {
+      return {
+        status: "completed",
+        pooled_effect: 0.38,
+        pooled_ci_lower: 0.24,
+        pooled_ci_upper: 0.54,
+        i_squared: 31.4,
+        q_statistic: 7.29,
+        q_p_value: 0.200
+      } as unknown as T;
+    }
+    if (path.includes("/stats/analyze")) {
+      return DEMO_STATS_ANALYSIS as unknown as T;
+    }
+    if (path.includes("/scientific-export/draft-manuscript")) {
+      return DEMO_DRAFT_MANUSCRIPT as unknown as T;
+    }
+    if (path.includes("/scientific-export/bibliography")) {
+      return DEMO_BIBLIOGRAPHY as unknown as T;
+    }
+    if (path.includes("/scientific-export/prisma-mermaid")) {
+      return DEMO_PRISMA_MERMAID as unknown as T;
+    }
+    if (path.includes("/search/multi-database")) {
+      return DEMO_MULTI_DATABASE_SEARCH as unknown as T;
+    }
+    if (path.includes("/settings/llm-config/test")) {
+      return {
+        success: true,
+        provider: body.provider || "antigravity",
+        model: body.model_name || "gemini-2.5-flash",
+        latency_ms: 74,
+        message: "Verified successfully! Antigravity Cloud AI Agent connection verified."
+      } as unknown as T;
+    }
+    if (path.includes("/settings/llm-config/reset")) {
+      try {
+        localStorage.removeItem("radextract_llm_settings");
+      } catch (e) {}
+      return {
+        status: "success",
+        message: "Reset to Antigravity defaults successfully.",
+        config: {
+          provider: "antigravity",
+          active_model: "gemini-2.5-flash",
+          active_endpoint: "https://generativelanguage.googleapis.com/v1beta",
+          active_key_masked: "AQ.Ab8RN6...GYqKKg",
+          is_default_key: true,
+          temperature: 0.1
+        }
+      } as unknown as T;
+    }
+    if (path.includes("/settings/llm-config") && method === "POST") {
+      try {
+        localStorage.setItem("radextract_llm_settings", JSON.stringify(body));
+      } catch (e) {}
+      return {
+        status: "success",
+        message: "AI model configuration updated successfully.",
+        config: {
+          provider: body.provider || "antigravity",
+          active_model: body.provider === "local" ? (body.local_model_name || "llama3.3") : (body.antigravity_model || "gemini-2.5-flash"),
+          active_endpoint: body.provider === "local" ? (body.local_endpoint_url || "http://localhost:11434/v1") : "https://generativelanguage.googleapis.com/v1beta",
+          active_key_masked: body.custom_api_key ? (body.custom_api_key.slice(0, 4) + "..." + body.custom_api_key.slice(-4)) : "AQ.Ab8RN6...GYqKKg",
+          is_default_key: !body.custom_api_key,
+          temperature: body.temperature ?? 0.1
+        }
+      } as unknown as T;
+    }
+    if (path.includes("/biomni/doi/supplementary")) {
+      return {
+        success: true,
+        doi: body.doi || "10.1016/j.wneu.2024.01.015",
+        title: "A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery",
+        has_supplementary: true,
+        supplementary_links: [
+          { url: "https://doi.org/10.1016/j.wneu.2024.01.015", type: "application/pdf", label: "Supplementary Table S1 (DSA Angiographic Flow Parameters)" },
+          { url: "https://doi.org/10.1016/j.wneu.2024.01.015", type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", label: "Supplementary Dataset S2 (Raw Follow-up)" }
+        ]
+      } as unknown as T;
+    }
+    if (path.includes("/studies") && method === "POST") {
+      const projectId = body.project_id || "proj_pam_current";
+      const newStudy: Study = {
+        study_id: body.study_id || `study_custom_${Date.now()}`,
+        project_id: projectId,
+        title: body.title || "Newly Imported Study",
+        authors: body.authors || "Author et al.",
+        publication_year: Number(body.publication_year) || 2024,
+        journal: body.journal || "Journal of Neurosurgery",
+        doi: body.doi || "",
+        pmid: body.pmid || "",
+        abstract: body.abstract || "",
+        source: body.source || "PDF Auto-Extraction",
+        study_design: body.study_design || "diagnostic accuracy",
+        screening_status: body.screening_status || "included",
+        screening_stage: body.screening_stage || "fulltext",
+        screening_reason: body.screening_reason || "",
+        extraction_status: body.extraction_status || "complete",
+        pdf_status: body.pdf_status || "parsed",
+        pdf_path: body.pdf_path || "document.pdf",
+        ai_priority_score: 0.95,
+        ai_confidence: 0.96,
+        ai_decision: "include"
+      };
+      const cur = getStoredProjectStudies(projectId);
+      const updated = [newStudy, ...cur.filter((s: Study) => s.study_id !== newStudy.study_id)];
+      saveStoredProjectStudies(projectId, updated);
+      return newStudy as unknown as T;
+    }
+    if (path.includes("/studies/") && method === "DELETE") {
+      const studyId = path.split("/").pop();
+      const projectId = "proj_pam_current";
+      const cur = getStoredProjectStudies(projectId);
+      const updated = cur.filter((s: Study) => s.study_id !== studyId);
+      saveStoredProjectStudies(projectId, updated);
+      return { status: "deleted" } as unknown as T;
+    }
+    if (path.includes("/upload-references")) {
+      return { imported_count: 5, skipped_duplicates: 1, errors: [] } as unknown as T;
+    }
+    if ((path === "/projects" || path.startsWith("/projects?")) && method === "POST") {
+      const newProj = {
+        project_id: `proj_${Date.now()}`,
+        name: body.name || "New Systematic Review",
+        description: body.description || "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        status: "active",
+        auto_rob_enabled: true,
+        rob_confidence_threshold: 0.7,
+      };
+      try {
+        const stored = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
+        stored.push(newProj);
+        localStorage.setItem("radextract_custom_projects", JSON.stringify(stored));
+        saveStoredProjectStudies(newProj.project_id, []);
+        localStorage.setItem(`radextract_blank_${newProj.project_id}`, "true");
+      } catch (e) {}
+      return newProj as unknown as T;
+    }
+    if (path.includes("/screening-decision")) {
+      const studyId = path.split("/")[2];
+      const projectId = body.project_id || "proj_pam_current";
+      const studies = getStoredProjectStudies(projectId);
+      const updated = studies.map((s) => {
+        if (s.study_id === studyId) {
+          return {
+            ...s,
+            screening_status: body.decision,
+            screening_reason: body.reason_text || body.reason_code || s.screening_reason,
+            screening_stage: body.stage || s.screening_stage,
+          };
+        }
+        return s;
+      });
+      saveStoredProjectStudies(projectId, updated);
+      const decId = `dec_${studyId}_${body.reviewer_id || "reviewer_1"}`;
+      const decObj = {
+        decision_id: decId,
+        study_id: studyId,
+        project_id: projectId,
+        reviewer_id: body.reviewer_id || "reviewer_1",
+        reviewer_name: body.reviewer_name || "Reviewer 1",
+        decision: body.decision,
+        reason_code: body.reason_code || "",
+        reason_text: body.reason_text || "",
+        stage: body.stage || "ta",
+        created_at: new Date().toISOString(),
+      };
+      try {
+        const allDecs = JSON.parse(localStorage.getItem(`radextract_decisions_${projectId}`) || "[]");
+        const filtered = allDecs.filter((d: any) => d.decision_id !== decId);
+        filtered.push(decObj);
+        localStorage.setItem(`radextract_decisions_${projectId}`, JSON.stringify(filtered));
+        saveStoredScreeningDecision(projectId, decObj as any);
+      } catch (e) {}
+      return decObj as unknown as T;
+    }
+    if (path.includes("/search-from-question")) {
+      const q = (body.question || "").trim();
+      const projectId = path.split("/")[2] || "proj_pam_current";
+
+      let pop = "Patients with target condition";
+      let ind = "Diagnostic intervention";
+      let comp = "Standard of care comparator";
+      let out = "Diagnostic accuracy, sensitivity, and clinical outcomes";
+      let des = "Systematic review and comparative observational studies";
+
+      const popMatch = q.match(/(?:in|among|for)\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:with|undergoing|treated)|[?,.]|$)/i);
+      if (popMatch) pop = popMatch[1].trim();
+
+      const compMatch = q.match(/(?:vs|versus|compared\s+(?:to|with))\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:in|for|among)|[?,.]|$)/i);
+      if (compMatch) comp = compMatch[1].trim();
+
+      const indMatch = q.match(/(?:is|does|can)\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:more|better|effective|superior|comparable|accurate|vs|versus)|[?,.]|$)/i);
+      if (indMatch) ind = indMatch[1].trim();
+
+      const outMatch = q.match(/(?:for\s+detecting|detecting|predicting|reducing|evaluating|measuring)\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:in|among)|[?,.]|$)/i);
+      if (outMatch) out = outMatch[1].trim();
+
+      const extractedPico = {
+        population: pop,
+        index_test: ind,
+        comparator: comp,
+        outcome: out,
+        study_design: des,
+      };
+
+      const extractedHyp = {
+        hypothesis: `${ind} provides superior diagnostic yield and outcome discrimination compared to ${comp} in ${pop}.`,
+        research_question: q,
+        secondary_hypotheses: [
+          { text: `${ind} reduces equivocal diagnostic interpretations compared to ${comp}.`, type: "alternative", status: "pending" },
+          { text: `Safety profiles and complication frequencies are comparable between ${ind} and ${comp}.`, type: "alternative", status: "pending" },
+        ],
+      };
+
+      try {
+        localStorage.setItem(`radextract_pico_${projectId}`, JSON.stringify(extractedPico));
+        localStorage.setItem(`radextract_hyp_${projectId}`, JSON.stringify(extractedHyp));
+      } catch (e) {}
+
+      return {
+        status: "success",
+        pico: extractedPico,
+        hypothesis: extractedHyp,
+        message: "PICO elements and clinical hypotheses extracted successfully.",
+      } as unknown as T;
+    }
+    if (path.includes("/pico") && (method === "PUT" || method === "POST")) {
+      const projectId = path.split("/")[2] || "proj_pam_current";
+      try {
+        localStorage.setItem(`radextract_pico_${projectId}`, JSON.stringify(body));
+      } catch (e) {}
+      return body as unknown as T;
+    }
+    if (path.includes("/hypothesis") && (method === "PUT" || method === "POST")) {
+      const projectId = path.split("/")[2] || "proj_pam_current";
+      try {
+        localStorage.setItem(`radextract_hyp_${projectId}`, JSON.stringify(body));
+      } catch (e) {}
+      return body as unknown as T;
+    }
+    return { status: "success" } as unknown as T;
+  }
+
+  // Handle GET queries
+  if (path.includes("/settings/llm-config")) {
+    let saved: any = null;
+    try {
+      saved = JSON.parse(localStorage.getItem("radextract_llm_settings") || "null");
+    } catch (e) {}
+    return {
+      status: "success",
+      config: {
+        provider: saved?.provider || "antigravity",
+        active_model: saved?.provider === "local" ? (saved?.local_model_name || "llama3.3") : (saved?.antigravity_model || "gemini-2.5-flash"),
+        active_endpoint: saved?.provider === "local" ? (saved?.local_endpoint_url || "http://localhost:11434/v1") : "https://generativelanguage.googleapis.com/v1beta",
+        active_key_masked: saved?.custom_api_key ? (saved.custom_api_key.slice(0, 4) + "..." + saved.custom_api_key.slice(-4)) : "AQ.Ab8RN6...GYqKKg",
+        is_default_key: !saved?.custom_api_key,
+        local_endpoint_url: saved?.local_endpoint_url || "http://localhost:11434/v1",
+        local_model_name: saved?.local_model_name || "llama3.3",
+        antigravity_model: saved?.antigravity_model || "gemini-2.5-flash",
+        temperature: saved?.temperature ?? 0.1,
+        timeout_seconds: 60,
+        has_key: true
+      }
+    } as unknown as T;
+  }
+  if (path.includes("/studies/pubmed-lookup/")) {
+    const pmid = path.split("/").pop() || "35928114";
+    return {
+      pmid,
+      title: "Endovascular Treatment of a Ruptured Posterior Fossa Pure Arterial Malformation: Illustrative Case",
+      authors: "Chua et al.",
+      publication_year: 2021,
+      journal: "Journal of Neurosurgery: Case Lessons",
+      doi: "10.3171/CASE2123",
+      abstract: "A 59-year-old female presented with severe subarachnoid hemorrhage due to a ruptured PICA pure arterial malformation with an associated flow pseudoaneurysm successfully treated with targeted parent-artery preserving coiling.",
+      study_design: "case_report"
+    } as unknown as T;
+  }
+  if (path.includes("/analysis/profile") || path.includes("/analysis")) {
+    return DEMO_ANALYSIS_PROFILE as unknown as T;
+  }
+  if (path.includes("/rob/run/progress") || (path.includes("/rob/run") && path.includes("/progress"))) {
+    return {
+      run_id: "demo_rob_run_1",
+      project_id: "proj_pam_current",
+      status: "idle",
+      total_studies: 6,
+      completed_studies: 6,
+      failed_studies: 0,
+      flagged_questions_count: 2,
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString()
+    } as unknown as T;
+  }
+  if (path.includes("/settings")) {
+    return {
+      project_id: "proj_pam_current",
+      name: "Demo Project",
+      auto_rob_enabled: true,
+      rob_confidence_threshold: 0.7
+    } as unknown as T;
+  }
+  if (path.includes("/rob/tools/auto-select")) {
+    return {
+      tool: "rob2",
+      confidence: 0.95,
+      alternatives: ["robins_i", "nos"]
+    } as unknown as T;
+  }
+  if (path.includes("/rob/summary") || path.includes("/rob-summary")) {
+    return DEMO_ROB_SUMMARY as unknown as T;
+  }
+  if (path.match(/\/rob\/[^/]+$/)) {
+    const id = path.split("/").pop();
+    const found = DEMO_ROB_SUMMARY.assessments.find((a: any) => a.assessment_id === id);
+    return (found || DEMO_ROB_SUMMARY.assessments[0]) as unknown as T;
+  }
+  if (path.includes("/grade")) {
+    return DEMO_GRADE_LIST as unknown as T;
+  }
+  if (path.includes("/meta-analyses")) {
+    return DEMO_META_ANALYSES as unknown as T;
+  }
+  if (path.includes("/criteria")) {
+    return DEMO_CRITERIA as unknown as T;
+  }
+  if (path.includes("/search-strings")) {
+    return DEMO_SEARCH_STRINGS as unknown as T;
+  }
+  if (path.includes("/review/progress")) {
+    return DEMO_REVIEW_PROGRESS as unknown as T;
+  }
+  if (path.includes("/review/matrix") || path.includes("/review")) {
+    return DEMO_REVIEW_MATRIX as unknown as T;
+  }
+  if (path.includes("/screening-keywords")) {
+    return DEMO_SCREENING_KEYWORDS as unknown as T;
+  }
+  if (path.includes("/abstract-highlights")) {
+    return DEMO_ABSTRACT_HIGHLIGHTS.default as unknown as T;
+  }
+  if (path.includes("/screening-decisions")) {
+    const studyId = path.split("/studies/")[1]?.split("/")[0];
+    const projectId = path.split("/projects/")[1]?.split("/")[0] || "proj_pam_current";
+    const allDecisions = getStoredScreeningDecisions(projectId);
+    if (studyId) {
+      return allDecisions.filter(d => d.study_id === studyId) as unknown as T;
+    }
+    return allDecisions as unknown as T;
+  }
+  if (path.includes("/clarifications/stats")) {
+    const projectId = path.split("/projects/")[1]?.split("/")[0];
+    const questions = projectId ? getStoredClarifications(projectId) : [];
+    const pending = questions.filter(q => q.status === "pending").length;
+    const answered = questions.filter(q => q.status === "answered").length;
+    return {
+      project_id: projectId || "default",
+      total: questions.length,
+      pending,
+      answered,
+      expired: 0,
+      by_type: { eligibility: questions.length > 0 ? 1 : 0, study_design: questions.length > 1 ? 1 : 0, intervention: 0 },
+      by_stage: { abstract: questions.length > 0 ? 1 : 0, fulltext: questions.length > 1 ? 1 : 0 }
+    } as unknown as T;
+  }
+  if (path.includes("/clarifications")) {
+    const projectId = path.split("/projects/")[1]?.split("/")[0];
+    const studyMatch = path.match(/\/studies\/([^/]+)\/clarifications/);
+    if (studyMatch) {
+      const studyId = studyMatch[1];
+      const allQ = projectId ? getStoredClarifications(projectId) : getStoredClarifications("proj_pam_current");
+      return allQ.filter(q => q.study_id === studyId) as unknown as T;
+    }
+    const questions = projectId ? getStoredClarifications(projectId) : [];
+    if (path.includes("status=pending")) {
+      return questions.filter((q) => q.status === "pending") as unknown as T;
+    }
+    return questions as unknown as T;
+  }
+  if (path.includes("/exclusion-reasons")) {
+    return DEMO_EXCLUSION_REASONS as unknown as T;
+  }
+  if (path.includes("/graphify/code/stats") || path.includes("/code/stats")) {
+    return DEMO_CODE_GRAPH_STATS as unknown as T;
+  }
+  if (path.includes("/graphify") || path.includes("/graph")) {
+    return DEMO_CODE_GRAPH as unknown as T;
+  }
+  if (path.includes("/ai-screening/summary") || path.includes("/screening/summary") || path.includes("/screening-summary") || path.includes("/screening/status")) {
+    return DEMO_SCREENING_SUMMARY as unknown as T;
+  }
+  if (path.includes("/ai-screening/progress")) {
+    return {
+      active: false,
+      stage: "",
+      total: 128,
+      done: 128,
+      current_study_id: null,
+      current_title: "",
+      pending_ids: [],
+      done_ids: []
+    } as unknown as T;
+  }
+  if (path.includes("/variables")) {
+    return DEMO_VARIABLES as unknown as T;
+  }
+  const studyAliasMap: Record<string, string> = {
+    s1: "study_birua_2022",
+    s2: "study_albina_2024",
+    s3: "study_brinjikji_2018",
+    s4: "study_chua_2021",
+    s5: "study_deshmukh_2023",
+    s6: "study_feliciano_2014",
+  };
+
+  if (path.includes("/pdf-summary")) {
+    const rawStudyId = path.split("/").filter(Boolean)[1] || "";
+    const resolvedId = (DEMO_PDF_SUMMARIES as any)[rawStudyId] ? rawStudyId : studyAliasMap[rawStudyId];
+    if (resolvedId && (DEMO_PDF_SUMMARIES as any)[resolvedId]) {
+      return (DEMO_PDF_SUMMARIES as any)[resolvedId] as unknown as T;
+    }
+    return null as unknown as T;
+  }
+  if (path.includes("/pdf-data")) {
+    const rawStudyId = path.split("/").filter(Boolean)[1] || "";
+    const resolvedId = (DEMO_PDF_DATA as any)[rawStudyId] ? rawStudyId : studyAliasMap[rawStudyId];
+    if (resolvedId && (DEMO_PDF_DATA as any)[resolvedId]) {
+      return (DEMO_PDF_DATA as any)[resolvedId] as unknown as T;
+    }
+    return null as unknown as T;
+  }
+  if (path.includes("/extractions/grid")) {
+    const studies = getStoredProjectStudies("proj_pam_current");
+    const studyList = studies.length > 0 ? studies : DEMO_STUDIES;
+    const gridStudies = studyList.map((s, idx) => ({
+      study_id: s.study_id || (s as any).id,
+      study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || (s as any).year || 2024}`,
+      title: s.title || `Study ${idx + 1}`,
+      authors: s.authors || "",
+      publication_year: (s as any).publication_year || (s as any).year || null,
+      journal: s.journal || "",
+      doi: s.doi || "",
+      pmid: s.pmid || "",
+    }));
+    const cells: Record<string, Record<string, any>> = {};
+    for (const st of gridStudies) {
+      cells[st.study_id] = {};
+      const exts = getStoredProjectExtractions(st.study_id);
+      const srcList = exts.length > 0 ? exts : ((DEMO_EXTRACTIONS as any)[st.study_id] || []);
+      for (const e of srcList) {
+        if (e.variable_id) {
+          cells[st.study_id][e.variable_id] = {
+            extraction_id: e.extraction_id || `ext_${st.study_id}_${e.variable_id}`,
+            value: e.value || "",
+            confidence: e.confidence ?? 0.95,
+            evidence_quote: e.quote || e.evidence_quote || "",
+            source_page: e.source_page || 1,
+            is_verified: !!e.is_verified,
+            is_edited: !!e.is_edited,
+            verification_status: e.is_verified ? (e.is_edited ? "modified" : "verified") : "unverified",
+            extraction_source: e.is_edited ? "manual" : (e.extraction_source || "ai"),
+          };
+        }
+      }
+    }
+    return {
+      project_id: "proj_pam_current",
+      variables: DEMO_VARIABLES,
+      studies: gridStudies,
+      cells,
+    } as unknown as T;
+  }
+  if (path.includes("/extractions") || path.includes("/coded-extract")) {
+    const rawStudyId = path.split("/").filter(Boolean)[1] || "";
+    const resolvedId = (DEMO_EXTRACTIONS as any)[rawStudyId] ? rawStudyId : studyAliasMap[rawStudyId];
+    const stored = rawStudyId ? getStoredProjectExtractions(rawStudyId) : [];
+    if (stored && stored.length > 0) {
+      return stored as unknown as T;
+    }
+    if (resolvedId && (DEMO_EXTRACTIONS as any)[resolvedId]) {
+      return (DEMO_EXTRACTIONS as any)[resolvedId] as unknown as T;
+    }
+    return [] as unknown as T;
+  }
+  if (path.includes("/pdf-highlights")) {
+    return [] as unknown as T;
+  }
+  if (path.includes("/codebook/rules") || path.includes("/codebook")) {
+    return DEMO_CODEBOOK_RULES as unknown as T;
+  }
+  if (path.includes("/extraction/error-analysis")) {
+    return DEMO_ERROR_ANALYSIS as unknown as T;
+  }
+  if (path.includes("/extraction/export-training-data")) {
+    return [
+      {
+        messages: [
+          { role: "system", content: "You are an expert biomedical data extractor adhering strictly to codebook rules." },
+          { role: "user", content: "Extract Vessel Involved from: 'Catheter digital subtraction angiography (DSA) revealed an anomalous vessel branching from the right internal carotid artery conforming to an accessory MCA.'" },
+          { role: "assistant", content: JSON.stringify({ variable: "Vessel Involved", extracted_value: "Accessory MCA", status: "VERIFIED" }, null, 2) }
+        ],
+        metadata: { category: "VERIFIED_ACCURATE", timestamp: "2026-10-05T20:00:00Z" }
+      }
+    ] as unknown as T;
+  }
+  if (path.includes("/studies/deduplicate/resolve") && method === "POST") {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    const studies = getStoredProjectStudies(projectId);
+    const { action, primary_study_id, duplicate_study_id, merged_fields } = (body || {}) as any;
+
+    const updated = studies.map((s) => {
+      if (s.study_id === primary_study_id) {
+        const next = { ...s, is_duplicate: 0, duplicate_of_study_id: "" };
+        if (action === "merge_metadata" && merged_fields) {
+          Object.assign(next, merged_fields);
+        }
+        return next;
+      }
+      if (s.study_id === duplicate_study_id) {
+        if (action === "keep_both" || action === "revert_duplicate") {
+          return {
+            ...s,
+            is_duplicate: 0,
+            duplicate_of_study_id: "",
+            screening_status: "pending",
+            screening_reason: "",
+          };
+        } else if (action === "keep_primary" || action === "merge_metadata") {
+          return {
+            ...s,
+            is_duplicate: 1,
+            duplicate_of_study_id: primary_study_id,
+            screening_status: "excluded",
+            screening_reason: action === "merge_metadata" ? "Duplicate publication (merged into primary)" : "Duplicate publication",
+          };
+        }
+      }
+      return s;
+    });
+    saveStoredProjectStudies(projectId, updated);
+    return {
+      status: "success",
+      action: action || "keep_primary",
+      message: `Resolution '${action}' applied successfully.`,
+      primary_study_id,
+      duplicate_study_id,
+      updated_fields: merged_fields ? Object.keys(merged_fields) : [],
+    } as unknown as T;
+  }
+
+  if (path.includes("/studies/duplicates") || path.includes("/studies/deduplicate")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    const studies = getStoredProjectStudies(projectId);
+    const groups: DuplicateGroup[] = [];
+
+    if (studies.length >= 2) {
+      const s1 = studies[0];
+      const s2 = studies[1];
+      groups.push({
+        group_id: "grp_demo_1",
+        canonical_study_id: s1.study_id,
+        canonical_title: s1.title,
+        canonical_doi: s1.doi || "10.1055/s-0042-1750831",
+        canonical_pmid: s1.pmid || "35928812",
+        canonical_authors: s1.authors || "Birua et al.",
+        canonical_year: s1.publication_year || 2022,
+        canonical_journal: s1.journal || "Asian Journal of Neurosurgery",
+        canonical_abstract: s1.abstract || "Pure arterial malformations (PAMs) are unusual vascular lesions of the brain consisting of coiled arterial loops. We present a rare PCA PAM coexisting with dysplastic internal carotid artery managed conservatively.",
+        canonical_is_duplicate: s1.is_duplicate ? 1 : 0,
+        canonical_screening_status: s1.screening_status || "included",
+        duplicates: [
+          {
+            study_id: s2.study_id,
+            title: s2.title || `${s1.title} [Preprint / Conference Edition]`,
+            doi: s2.doi || s1.doi || "10.1055/s-0042-1750831",
+            pmid: s2.pmid || s1.pmid || "35928812",
+            authors: s2.authors || s1.authors || "Birua et al.",
+            publication_year: s2.publication_year || 2022,
+            journal: s2.journal || "ResearchSquare Clinical Preprints",
+            abstract: s2.abstract || "Pure arterial malformations (PAMs) of the posterior circulation. Coiled arterial loops with dysplastic ICA.",
+            is_duplicate: s2.is_duplicate ? 1 : 0,
+            screening_status: s2.screening_status || "pending",
+            match_reason: s1.doi && s2.doi && s1.doi === s2.doi ? "doi" : "title_similarity",
+            similarity_score: 0.985,
+          },
+        ],
+      });
+    }
+
+    return {
+      project_id: projectId,
+      total_studies: studies.length,
+      duplicate_groups: groups,
+      total_duplicates: groups.reduce((acc, g) => acc + g.duplicates.length, 0),
+      duplicates_marked: groups.reduce((acc, g) => acc + g.duplicates.filter((d) => d.is_duplicate === 1).length, 0),
+    } as unknown as T;
+  }
+
+  if (path.match(/\/studies\/[^/]+$/)) {
+    const studyId = path.split("/").pop();
+    const all = getStoredProjectStudies();
+    const found = all.find((s: Study) => s.study_id === studyId);
+    if (found) return found as unknown as T;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith("radextract_studies_")) {
+        try {
+          const list: Study[] = JSON.parse(localStorage.getItem(k) || "[]");
+          const m = list.find((s) => s.study_id === studyId);
+          if (m) return m as unknown as T;
+        } catch (e) {}
+      }
+    }
+    const matchDemo = DEMO_STUDIES.find((s) => s.study_id === studyId);
+    if (matchDemo) return matchDemo as unknown as T;
+    return null as unknown as T;
+  }
+  if (path.includes("/studies")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    return getStoredProjectStudies(projectId) as unknown as T;
+  }
+  if (path.includes("/prisma/prisma2020")) {
+    return DEMO_PRISMA2020 as unknown as T;
+  }
+  if (path.includes("/prisma")) {
+    return DEMO_PRISMA as unknown as T;
+  }
+  if (path.includes("/screening")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    return getStoredProjectStudies(projectId) as unknown as T;
+  }
+  if (path.includes("/search-strings/generate") || path.includes("/search-strings")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    let p = "";
+    let i = "";
+    try {
+      const stored = JSON.parse(localStorage.getItem(`radextract_pico_${projectId}`) || "{}");
+      p = stored.population || "";
+      i = stored.index_test || "";
+    } catch (e) {}
+    if (!p && !i && (projectId === "demo" || projectId === "proj_pam_current")) {
+      p = "patients with pure arterial malformations";
+      i = "angiography";
+    }
+    const popClean = p.replace(/^patients\s+with\s+/i, "").trim() || "target condition";
+    const intClean = i.trim() || "intervention";
+    return {
+      project_id: projectId,
+      strings: {
+        pubmed: `("${popClean}"[MeSH Terms] OR "${popClean}"[tiab]) AND ("${intClean}"[MeSH Terms] OR "${intClean}"[tiab])`,
+        embase: `('${popClean}'/exp OR '${popClean}':ab,ti) AND ('${intClean}'/exp OR '${intClean}':ab,ti)`,
+        cochrane: `(${popClean}):ti,ab,kw AND (${intClean}):ti,ab,kw`,
+        web_of_science: `TS=(("${popClean}") AND ("${intClean}"))`,
+        scopus: `TITLE-ABS-KEY(("${popClean}") AND ("${intClean}"))`,
+        cinahl: `(MH "${popClean}+" OR TI "${popClean}") AND (MH "${intClean}+" OR TI "${intClean}")`
+      }
+    } as unknown as T;
+  }
+  if (path.includes("/pico")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    if (projectId !== "demo" && projectId !== "proj_pam_current") {
+      try {
+        const stored = localStorage.getItem(`radextract_pico_${projectId}`);
+        if (stored) return JSON.parse(stored) as unknown as T;
+      } catch (e) {}
+      return { population: "", index_test: "", comparator: "", outcome: "", study_design: "" } as unknown as T;
+    }
+    return JSON.parse(DEMO_PROJECT.pico_json) as unknown as T;
+  }
+  if (path.includes("/hypothesis")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    if (projectId !== "demo" && projectId !== "proj_pam_current") {
+      try {
+        const stored = localStorage.getItem(`radextract_hyp_${projectId}`);
+        if (stored) return JSON.parse(stored) as unknown as T;
+      } catch (e) {}
+      return { hypothesis: "", research_question: "", secondary_hypotheses: [] } as unknown as T;
+    }
+    return {
+      hypothesis: DEMO_PROJECT.hypothesis,
+      research_question: DEMO_PROJECT.research_question,
+      secondary_hypotheses: [
+        { text: "PAM lesions harbor distinct angioarchitectural phenotypes with differential rupture hazards.", type: "alternative", status: "confirmed" },
+        { text: "Flow pseudoaneurysms develop predominantly at arterial loop apexes subject to high hemodynamic wall shear stress.", type: "alternative", status: "confirmed" }
+      ]
+    } as unknown as T;
+  }
+  if (path === "/stats/analyze" || path.includes("/stats/analyze")) {
+    return DEMO_STATS_ANALYSIS as unknown as T;
+  }
+  if (path === "/scientific-export/draft-manuscript" || path.includes("/scientific-export/draft-manuscript")) {
+    return DEMO_DRAFT_MANUSCRIPT as unknown as T;
+  }
+  if (path === "/scientific-export/bibliography" || path.includes("/scientific-export/bibliography")) {
+    return DEMO_BIBLIOGRAPHY as unknown as T;
+  }
+  if (path === "/scientific-export/prisma-mermaid" || path.includes("/scientific-export/prisma-mermaid")) {
+    return DEMO_PRISMA_MERMAID as unknown as T;
+  }
+  if (path === "/search/multi-database" || path.includes("/search/multi-database")) {
+    return DEMO_MULTI_DATABASE_SEARCH as unknown as T;
+  }
+  if (path === "/projects" || path.startsWith("/projects?")) {
+    let custom: any[] = [];
+    try {
+      custom = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
+    } catch (e) {}
+    return [DEMO_PROJECT, ...custom] as unknown as T;
+  }
+  if (path.match(/\/projects\/[^/]+$/)) {
+    const pId = path.split("/").pop();
+    if (pId === DEMO_PROJECT.project_id) return DEMO_PROJECT as unknown as T;
+    try {
+      const custom = JSON.parse(localStorage.getItem("radextract_custom_projects") || "[]");
+      const found = custom.find((p: any) => p.project_id === pId);
+      if (found) return found as unknown as T;
+    } catch (e) {}
+    return { ...DEMO_PROJECT, project_id: pId || "proj_new", name: "Custom Project" } as unknown as T;
+  }
+  if (path.includes("/auth/login")) {
+    return {
+      access_token: "demo_jwt_token_sample",
+      refresh_token: "demo_refresh_token_sample",
+      user_id: "demo_user_1",
+      username: body.username || "admin",
+      role: "owner"
+    } as unknown as T;
+  }
+  if (path.includes("/auth/me")) {
+    return {
+      user_id: "demo_user_1",
+      username: "admin",
+      email: "admin@example.com",
+      role: "owner"
+    } as unknown as T;
+  }
+  if (path.includes("/prisma/prisma2020")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    const studies = getStoredProjectStudies(projectId);
+    const total = studies.length;
+    const dups = studies.filter(s => s.is_duplicate === 1 || s.duplicate_of_study_id).length;
+    const nonDups = Math.max(0, total - dups);
+    const regs = studies.filter(s => !s.is_duplicate && (s.source_type === "register" || s.source_type === "trials")).length;
+    const dbs = Math.max(0, nonDups - regs);
+    const screened = studies.filter(s => !s.is_duplicate && s.screening_status && s.screening_status !== "pending").length;
+    const taExcl = studies.filter(s => !s.is_duplicate && s.screening_status === "excluded" && (s.screening_stage === "ta" || !s.screening_stage)).length;
+    const sought = Math.max(0, screened - taExcl);
+    const notRetrieved = studies.filter(s => !s.is_duplicate && s.screening_status === "awaiting_pdf").length;
+    const assessed = Math.max(0, sought - notRetrieved);
+    const ftExcl = studies.filter(s => !s.is_duplicate && s.screening_status === "excluded" && s.screening_stage === "ft").length;
+    const included = studies.filter(s => !s.is_duplicate && s.screening_status === "included").length;
+
+    const ftReasonsMap: Record<string, number> = {};
+    for (const s of studies.filter(s => !s.is_duplicate && s.screening_status === "excluded" && s.screening_stage === "ft")) {
+      const r = s.screening_reason || "Full-text criteria not met";
+      ftReasonsMap[r] = (ftReasonsMap[r] || 0) + 1;
+    }
+    const dbrExcludedStr = Object.entries(ftReasonsMap).map(([r, c]) => `${r}, ${c}`).join("; ") || "0";
+
+    return {
+      project_id: projectId,
+      app_url: "https://estech.shinyapps.io/prisma_flowdiagram/",
+      shiny_url: "https://estech.shinyapps.io/prisma_flowdiagram/",
+      citation: "Haddaway, N. R., et al. (2022). PRISMA2020. Campbell Systematic Reviews.",
+      fields: {
+        database_results: String(dbs),
+        register_results: String(regs),
+        duplicates: String(dups),
+        records_screened: String(screened),
+        records_excluded: String(taExcl),
+        dbr_sought_reports: String(sought),
+        dbr_notretrieved_reports: String(notRetrieved),
+        dbr_assessed: String(assessed),
+        dbr_excluded: dbrExcludedStr,
+        new_studies: String(included),
+        total_studies: String(included),
+        total_studies_ma: String(included),
+      },
+      options: { previous: 0, other: 0, dbDetail: 0, regDetail: 1, metaAnalysis: 1 },
+      counts: {
+        database_results: dbs,
+        register_results: regs,
+        duplicates: dups,
+        excluded_automatic: 0,
+        records_screened: screened,
+        records_excluded: taExcl,
+        dbr_sought_reports: sought,
+        dbr_notretrieved_reports: notRetrieved,
+        dbr_assessed: assessed,
+        dbr_excluded: ftExcl,
+        new_studies: included,
+        total_studies: included,
+        total_studies_ma: included,
+        website_results: 0,
+        organisation_results: 0,
+        citations_results: 0,
+        other_sought_reports: 0,
+        other_notretrieved_reports: 0,
+        other_assessed: 0,
+        other_excluded: 0,
+        other_included: 0,
+        open_dbr: 0,
+        open_other: 0,
+        other_duplicates_omitted: 0,
+      },
+      notes: [],
+    } as unknown as T;
+  }
+  if (path.includes("/prisma")) {
+    const projectId = path.split("/")[2] || "proj_pam_current";
+    const studies = getStoredProjectStudies(projectId);
+    const total = studies.length;
+    const dups = studies.filter(s => s.is_duplicate === 1 || s.duplicate_of_study_id).length;
+    const nonDups = Math.max(0, total - dups);
+    const screened = studies.filter(s => !s.is_duplicate && s.screening_status && s.screening_status !== "pending").length;
+    const taExcl = studies.filter(s => !s.is_duplicate && s.screening_status === "excluded" && (s.screening_stage === "ta" || !s.screening_stage)).length;
+    const ftAssessed = Math.max(0, screened - taExcl);
+    const ftExcl = studies.filter(s => !s.is_duplicate && s.screening_status === "excluded" && s.screening_stage === "ft").length;
+    const included = studies.filter(s => !s.is_duplicate && s.screening_status === "included").length;
+
+    const taReasonsMap: Record<string, number> = {};
+    for (const s of studies.filter(s => !s.is_duplicate && s.screening_status === "excluded" && (s.screening_stage === "ta" || !s.screening_stage))) {
+      const r = s.screening_reason || "Ineligible based on criteria";
+      taReasonsMap[r] = (taReasonsMap[r] || 0) + 1;
+    }
+
+    const ftReasonsMap: Record<string, number> = {};
+    for (const s of studies.filter(s => !s.is_duplicate && s.screening_status === "excluded" && s.screening_stage === "ft")) {
+      const r = s.screening_reason || "Full-text criteria not met";
+      ftReasonsMap[r] = (ftReasonsMap[r] || 0) + 1;
+    }
+
+    return {
+      project_id: projectId,
+      identification: {
+        database_records: nonDups,
+        registers: 0,
+        other_sources: 0,
+        duplicates_removed: dups,
+        records_after_duplicates: nonDups,
+        total,
+      },
+      screening: {
+        records_screened: screened,
+        records_excluded: taExcl,
+        excluded_with_reasons: Object.entries(taReasonsMap).map(([reason, count]) => ({ reason, count })),
+      },
+      eligibility: {
+        full_text_assessed: ftAssessed,
+        full_text_excluded: ftExcl,
+        excluded_reasons: Object.entries(ftReasonsMap).map(([reason, count]) => ({ reason, count })),
+      },
+      included: {
+        studies_in_review: included,
+        studies_in_meta_analysis: included,
+      },
+      pending: studies.filter(s => !s.is_duplicate && (s.screening_status === "pending" || !s.screening_status)).length,
+      audit: {
+        human_decisions: screened,
+        ai_decisions: 0,
+        total_decisions: screened,
+      },
+    } as unknown as T;
+  }
+
+  return {} as unknown as T;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
   const isBrowser = typeof window !== "undefined";
   const base = getApiBase();
+
+  // Demo data is available when explicitly selected in connection settings
+  if (shouldUseDemoFallback()) {
+    updateApiState({
+      state: isDemoModeEnabled() ? "explicit_demo" : "demo_fallback",
+      apiBase: base,
+      isExplicitDemo: isDemoModeEnabled(),
+    });
+    return handleDemoRequest<T>(path, options);
+  }
 
   const token = isBrowser ? localStorage.getItem("token") : null;
   const headers: Record<string, string> = {
@@ -279,7 +1543,7 @@ async function request<T>(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  if (path.startsWith("/auth/login")) {
+  try {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
       if (res.status === 405 || (res.status === 404 && isBrowser && window.location.hostname.includes("github.io"))) {
@@ -289,32 +1553,22 @@ async function request<T>(
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }
-    return (res.status === 204 ? undefined : await res.json()) as T;
-  }
-
-  let res: Response;
-  try {
-    res = await fetch(`${base}${path}`, { ...options, headers });
+    const data = res.status === 204 ? undefined : await res.json();
+    updateApiState({ state: "live", apiBase: base, errorMessage: undefined });
+    return data as T;
   } catch (err: any) {
     if (isBrowser && (window.location.hostname.includes("github.io") || err?.message?.includes("405"))) {
       console.warn(`[API Error Fallback] Handled client-side for ${path}:`, err);
       return handleDemoRequest<T>(path, options);
     }
     const msg = err?.message || "Network request failed";
-    console.warn(`[API Connection Failed] ${base}${path}:`, err);
+    console.error(`[API Error] ${base}${path}:`, err);
     updateApiState({ state: "error", apiBase: base, errorMessage: msg });
     throw err;
   }
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
-  }
-  const data = res.status === 204 ? undefined : await res.json();
-  updateApiState({ state: "live", apiBase: base, errorMessage: undefined });
-  return data as T;
 }
 
+// Human identity and decision writes seamlessly persist to the backend database
 async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const isBrowser = typeof window !== "undefined";
   const token = isBrowser ? (localStorage.getItem("token") || "guest_reviewer_token") : "guest_reviewer_token";
@@ -549,53 +1803,6 @@ export interface ScreeningSummary {
 export interface ReviewMatrix {
   variables: ReviewVariable[];
   studies: ReviewStudyRow[];
-}
-
-// ── Import events (backend-persisted import_batches) ──
-export interface ImportBatchEvent {
-  batch_id: string;
-  project_id: string;
-  filename: string;
-  source: string;
-  format: string;
-  total_records: number;
-  imported_count: number;
-  duplicate_count: number;
-  merged_count: number;
-  failed_count: number;
-  status: string; // completed | completed_with_errors | failed | undone
-  undone_at: string | null;
-  created_at: string;
-  created_by: string;
-  retained_studies_count: number;
-}
-
-export interface ImportBatchEventRecord {
-  index?: number;
-  study_id?: string;
-  title: string;
-  authors: string;
-  publication_year?: number;
-  journal: string;
-  doi: string;
-  pmid: string;
-  status: string; // added | duplicate | error
-  match_reason?: string;
-  study_active: boolean;
-}
-
-export interface ImportBatchEventDetail extends ImportBatchEvent {
-  records: ImportBatchEventRecord[];
-  errors: string[];
-}
-
-export interface UndoBatchResult {
-  batch_id: string;
-  status: string;
-  undone_at: string;
-  studies_removed_count: number;
-  studies_retained_count: number;
-  message: string;
 }
 
 export interface ReviewVariable {
@@ -915,10 +2122,6 @@ export interface PicoExtractionResponse {
   research_question: string;
   hypothesis: string;
   extraction_confidence: string;
-  inclusion?: string[];
-  exclusion?: string[];
-  search_strings?: Record<string, string>;
-  variables?: Array<Record<string, unknown>>;
 }
 
 export interface ProtocolExtractionResponse extends PicoExtractionResponse {
@@ -941,6 +2144,8 @@ export interface HypothesisResponse {
   hypothesis: string;
   research_question: string;
   secondary_hypotheses: SecondaryHypothesis[];
+  generation_source?: string; // "llm" | "template" | "failed"
+  generation_error?: string;
 }
 
 export interface HypothesisUpdate {
@@ -1220,20 +2425,6 @@ export interface ClarificationQuestion {
   final_reason_text?: string;
   final_reason_code?: string;
   created_at: string;
-  is_tracked?: boolean;
-}
-
-export interface TodoItem {
-  id: string;
-  project_id: string;
-  text: string;
-  done: boolean;
-  source: "manual" | "study" | "notification";
-  study_id?: string | null;
-  notification_id?: string | null;
-  created_at: string;
-  study_title?: string | null;
-  study_pmid?: string | null;
 }
 
 export interface ClarificationAnswerResponse {
@@ -1969,14 +3160,6 @@ export const api = {
   screeningSummary: (projectId: string) =>
     request<ScreeningSummary>(`/projects/${projectId}/screening/summary`),
 
-  // Import events (backend-persisted import batches)
-  listImportBatches: (projectId: string) =>
-    request<ImportBatchEvent[]>(`/projects/${projectId}/batches`),
-  getImportBatchDetail: (projectId: string, batchId: string) =>
-    request<ImportBatchEventDetail>(`/projects/${projectId}/batches/${batchId}`),
-  undoImportBatch: (projectId: string, batchId: string, force = false) =>
-    request<UndoBatchResult>(`/projects/${projectId}/batches/${batchId}/undo?force=${force}`, { method: "POST" }),
-
   // RoB Tools
   listRobTools: () => request<RobToolDef[]>("/rob/tools"),
   getRobTool: (key: string) => request<RobToolDef>(`/rob/tools/${key}`),
@@ -2305,61 +3488,15 @@ export const api = {
         ? "Evidence is pooled as descriptive proportions with Wilson 95% CIs. NR values are not imputed."
         : "Targeted endovascular intervention achieves higher definitive lesion control with acceptable complication rates compared to non-interventional management.";
 
-      const finalPop = extracted.population || defaultPopulation;
-      const finalIndex = extracted.index_test || defaultIndexTest;
-      const finalComp = extracted.comparator || defaultComparator;
-      const finalOut = extracted.outcome || defaultOutcome;
-      const finalDesign = extracted.study_design || defaultStudyDesign;
-
-      // Extract explicit inclusion and exclusion criteria sections if available
-      let extractedInclusion: string[] = [];
-      let extractedExclusion: string[] = [];
-      if (fileText && fileText.trim().length > 20) {
-        const incMatch = fileText.match(/(?:inclusion\s+criteria|criteria\s+for\s+inclusion|eligibility\s+criteria\s*[-–:]\s*inclusion)\s*[:\-–]?\s*\n((?:[ \t]*[-•*0-9\.\)][^\n]+\n?)+)/i);
-        if (incMatch && incMatch[1]) {
-          extractedInclusion = incMatch[1]
-            .split("\n")
-            .map((s) => s.replace(/^[ \t]*[-•*0-9\.\)]+/, "").trim())
-            .filter((s) => s.length >= 8);
-        }
-        const excMatch = fileText.match(/(?:exclusion\s+criteria|criteria\s+for\s+exclusion|eligibility\s+criteria\s*[-–:]\s*exclusion)\s*[:\-–]?\s*\n((?:[ \t]*[-•*0-9\.\)][^\n]+\n?)+)/i);
-        if (excMatch && excMatch[1]) {
-          extractedExclusion = excMatch[1]
-            .split("\n")
-            .map((s) => s.replace(/^[ \t]*[-•*0-9\.\)]+/, "").trim())
-            .filter((s) => s.length >= 8);
-        }
-      }
-
-      if (extractedInclusion.length === 0) {
-        extractedInclusion = [
-          `Studies must include patients matching: ${finalPop}`,
-          `Studies must evaluate the index test: ${finalIndex}`,
-          `Studies must report on the outcome: ${finalOut}`,
-          `Studies must use the study design: ${finalDesign}`,
-        ];
-      }
-
-      if (extractedExclusion.length === 0) {
-        extractedExclusion = [
-          "Case reports, editorials, letters, and conference abstracts will be excluded.",
-          "Studies not published in English will be excluded.",
-          "Studies without sufficient data to construct 2x2 tables will be excluded.",
-          `Studies not using ${finalComp} as reference standard will be excluded.`,
-        ];
-      }
-
       return {
-        population: finalPop,
-        index_test: finalIndex,
-        comparator: finalComp,
-        outcome: finalOut,
-        study_design: finalDesign,
+        population: extracted.population || defaultPopulation,
+        index_test: extracted.index_test || defaultIndexTest,
+        comparator: extracted.comparator || defaultComparator,
+        outcome: extracted.outcome || defaultOutcome,
+        study_design: extracted.study_design || defaultStudyDesign,
         research_question: extracted.research_question || defaultQuestion,
         hypothesis: extracted.hypothesis || defaultHypothesis,
-        extraction_confidence: Object.keys(extracted).length >= 3 ? "high" : "high",
-        inclusion: extractedInclusion,
-        exclusion: extractedExclusion,
+        extraction_confidence: Object.keys(extracted).length >= 3 ? "high" : "high"
       };
     };
 
@@ -2395,6 +3532,11 @@ export const api = {
     request<HypothesisResponse>(`/projects/${projectId}/hypothesis`),
   updateHypothesis: (projectId: string, data: HypothesisUpdate) =>
     request<HypothesisResponse>(`/projects/${projectId}/hypothesis`, { method: "PUT", body: JSON.stringify(data) }),
+  generateHypothesis: (projectId: string, confirmOverwrite?: boolean) =>
+    request<HypothesisResponse>(`/projects/${projectId}/generate-hypothesis`, {
+      method: "POST",
+      headers: confirmOverwrite ? { "X-Confirm-Overwrite": "true" } : {},
+    }),
 
   // Criteria
   getCriteria: (projectId: string) =>
@@ -2957,39 +4099,6 @@ export const api = {
   /** Get clarification statistics */
   getClarificationStats: (projectId: string) =>
     request<ClarificationStats>(`/projects/${projectId}/clarifications/stats`),
-
-  // ── To-dos (Google Tasks behavior with Study & Notification integration) ──
-
-  /** List to-dos for a project */
-  listTodos: (projectId: string) =>
-    request<TodoItem[]>(`/projects/${projectId}/todos`),
-
-  /** Create a new to-do (manual or study) */
-  createTodo: (projectId: string, data: { text: string; source?: string; study_id?: string }) =>
-    request<TodoItem>(`/projects/${projectId}/todos`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-
-  /** Update to-do text and/or done status */
-  updateTodo: (id: string, data: { text?: string; done?: boolean }) =>
-    request<TodoItem>(`/todos/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    }),
-
-  /** Delete a to-do */
-  deleteTodo: (id: string) =>
-    request<{ status: string; id: string }>(`/todos/${id}`, {
-      method: "DELETE",
-    }),
-
-  /** Create a to-do from a clarification notification */
-  createTodoFromNotification: (projectId: string, data: { notification_id: string; text?: string }) =>
-    request<TodoItem>(`/projects/${projectId}/todos/from-notification`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
 
   // ── v2.4+: Multi-Stage AI Screening & Highlights ──
 

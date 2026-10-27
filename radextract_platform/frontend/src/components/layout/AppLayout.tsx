@@ -402,16 +402,6 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
               {/* TAB 3: PAGE NAVIGATION */}
               {activeTab === "nav" && (
                 <div className="space-y-1.5">
-                  <Link to="/claimscape" className="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded flex items-center gap-2" onClick={() => setIsOpen(false)}>
-                    <Layers className="h-4 w-4" /> Evidence Map (ClaimScape)
-                  </Link>
-                  <Link to="/rigor-scan" className="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded flex items-center gap-2" onClick={() => setIsOpen(false)}>
-                    <ShieldCheck className="h-4 w-4" /> Rigor Scan
-                  </Link>
-                  <Link to="/citation-telephone" className="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded flex items-center gap-2" onClick={() => setIsOpen(false)}>
-                    <Share2 className="h-4 w-4" /> Citation Telephone
-                  </Link>
-                  <div className="h-px bg-gray-200 dark:bg-slate-700 my-1" />
                   <Link to={`/projects/${projectId}/pico`} className="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded flex items-center gap-2" onClick={() => setIsOpen(false)}>
                     <Target className="h-4 w-4" /> PICO & Hypothesis
                   </Link>

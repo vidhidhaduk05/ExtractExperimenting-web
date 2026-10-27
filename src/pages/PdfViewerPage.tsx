@@ -5,8 +5,8 @@ import {
   api,
   type PdfDocumentData,
   type PdfHighlight as ApiPdfHighlight,
-  type CodebookRule,
 } from "../lib/api";
+import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, DEMO_EXTRACTIONS, DEMO_VARIABLES, type CodebookRule } from "../lib/demoData";
 import {
   ArrowLeft, FileText, Loader2, Upload, Sparkles,
   CheckCircle, Table, Tag, Highlighter, ArrowRight,
@@ -146,7 +146,7 @@ export function PdfViewerPage() {
       const saved = localStorage.getItem("radextract_codebook_rules");
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return {};
+    return DEMO_CODEBOOK_RULES;
   });
 
   // Undo system
@@ -226,7 +226,7 @@ export function PdfViewerPage() {
 
   // Ensure variable list strictly respects global saved order_index
   const variableList = useMemo(() => {
-    const list = (variables && variables.length > 0) ? variables : [];
+    const list = (variables && variables.length > 0) ? variables : DEMO_VARIABLES;
     return [...list].sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
   }, [variables]);
   useEffect(() => {
@@ -249,23 +249,24 @@ export function PdfViewerPage() {
   const currentVar = variableList.find((v: any) => v.variable_id === selectedVarId) || variableList[0];
   const extractionMap: Record<string, any> = useMemo(() => {
     const map: Record<string, any> = {};
-    const sourceList = (extractions && extractions.length > 0) ? extractions : [];
+    const fallbackList = (DEMO_EXTRACTIONS as any)[activeStudyId] || (DEMO_EXTRACTIONS as any)["study_birua_2022"] || [];
+    const sourceList = (extractions && extractions.length > 0) ? extractions : fallbackList;
     sourceList.forEach((e: any) => {
       if (e.variable_id) {
         map[e.variable_id] = {
           ...e,
           quote: e.quote || e.source_text || e.evidence_quote || "",
-          source_page: e.source_page || e.page_number || null,
+          source_page: e.source_page || e.page_number || 1,
           is_verified: e.is_verified ?? (e.verification_status === "verified"),
           is_edited: e.is_edited ?? false,
         };
       }
     });
     return map;
-  }, [extractions]);
+  }, [extractions, activeStudyId]);
 
   const currentExtraction = currentVar ? extractionMap[currentVar.variable_id] : null;
-  const currentRule: CodebookRule | undefined = currentVar ? customRules[currentVar.variable_id] : undefined;
+  const currentRule: CodebookRule | undefined = currentVar ? (customRules[currentVar.variable_id] || DEMO_CODEBOOK_RULES[currentVar.variable_id]) : undefined;
 
   // Progress metrics
   const currentVarIndex = Math.max(0, variableList.findIndex((v: any) => v.variable_id === selectedVarId));
@@ -598,7 +599,7 @@ export function PdfViewerPage() {
       for (const v of highConfPendingVariables) {
         const ext = extractionMap[v.variable_id];
         const val = ext?.value || "";
-        const rule = customRules[v.variable_id];
+        const rule = customRules[v.variable_id] || DEMO_CODEBOOK_RULES[v.variable_id];
 
         batchUndos.push({
           studyId: activeStudyId,
@@ -987,24 +988,7 @@ export function PdfViewerPage() {
               <ChevronRight className="h-4 w-4" />
             </button>
 
-            <div
-              className="ml-2 cursor-grab active:cursor-grabbing p-1 rounded hover:bg-[#eee7ec]/50 transition-colors"
-              draggable
-              onDragStart={(e) => {
-                if (currentStudy) {
-                  e.dataTransfer.setData(
-                    "application/x-study",
-                    JSON.stringify({
-                      studyId: currentStudy.study_id,
-                      title: currentStudy.title || "Study PDF",
-                      projectId: projectId || "",
-                    })
-                  );
-                  e.dataTransfer.effectAllowed = "copy";
-                }
-              }}
-              title="Drag study to To-dos panel"
-            >
+            <div className="ml-2">
               <h1 className="font-['Serifon_Editorial'] font-bold text-[#3a0f34] text-sm sm:text-base leading-tight truncate max-w-md">
                 {currentStudy?.title || "Study PDF & Extraction"}
               </h1>
@@ -1590,7 +1574,7 @@ export function PdfViewerPage() {
               const isSelected = v.variable_id === selectedVarId;
               const isVerified = ext?.is_verified;
               const isEdited = ext?.is_edited;
-              const rule = customRules[v.variable_id];
+              const rule = customRules[v.variable_id] || DEMO_CODEBOOK_RULES[v.variable_id];
               const isTransitioning = acceptTransitioningId === v.variable_id;
 
               const confPercent = Math.round((ext?.confidence || 0) * 100);

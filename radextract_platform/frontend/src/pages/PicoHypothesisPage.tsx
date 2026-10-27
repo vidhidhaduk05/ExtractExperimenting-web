@@ -92,10 +92,16 @@ export function PicoHypothesisPage() {
   const [researchQuestion, setResearchQuestion] = useState("");
   const [secondary, setSecondary] = useState<SecondaryHypothesis[]>([]);
   const [hypSaved, setHypSaved] = useState(false);
+  const [genWarning, setGenWarning] = useState("");
 
   useEffect(() => {
     if (hyp) {
       setHypothesis(hyp.hypothesis || "");
+      if (hyp.generation_source && hyp.generation_source !== "llm" && hyp.hypothesis) {
+        setGenWarning(hyp.generation_error || "Hypothesis was formulated using a heuristic fallback template rather than Co-Scientist active reasoning. Review API settings or refine PICO criteria.");
+      } else {
+        setGenWarning("");
+      }
       setResearchQuestion(hyp.research_question || "");
       setSecondary(hyp.secondary_hypotheses || []);
     }
@@ -635,6 +641,13 @@ export function PicoHypothesisPage() {
           }}
           className="space-y-4"
         >
+          {genWarning && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <span className="text-xs text-amber-800">{genWarning}</span>
+            </div>
+          )}
+
           {/* Research Question */}
           <div>
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">

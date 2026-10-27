@@ -5,7 +5,8 @@ import {
   FileText, Copy, RotateCcw, Save, GripVertical, ChevronUp, ChevronDown,
   AlertTriangle, Loader2, ArrowRight, ListOrdered, FileSpreadsheet
 } from "lucide-react";
-import { api, type ReviewVariable, type CodebookRule } from "../../lib/api";
+import { type CodebookRule, DEMO_CODEBOOK_RULES, DEMO_VARIABLES } from "../../lib/demoData";
+import { api, type ReviewVariable } from "../../lib/api";
 
 interface CodebookDesignerModalProps {
   isOpen: boolean;
@@ -27,18 +28,24 @@ interface DeleteConfirmationState {
 }
 
 const PREDEFINED_TEMPLATES: Record<string, { name: string; description: string; rules: Record<string, CodebookRule>; variables: ReviewVariable[] }> = {
+  pam_vascular: {
+    name: "Pure Arterial Malformations (PAM) Protocol (Default)",
+    description: "Angioarchitecture, aneurysm association, vessel involvement, and stroke outcomes in intracranial PAMs.",
+    rules: DEMO_CODEBOOK_RULES,
+    variables: DEMO_VARIABLES,
+  },
   clinical_trial: {
     name: "RCT / Clinical Trial Systematic Review",
     description: "Standard Cochrane/PRISMA variables: Randomization, sample size, primary endpoint, effect size, and adverse events.",
     variables: [
-      { variable_id: "v_study_id", project_id: "proj_current", name: "Study ID", section: "Identification", order_index: 0, description: "Canonical study identifier (e.g. Smith 2024)", field_type: "text" },
-      { variable_id: "v_year", project_id: "proj_current", name: "Year", section: "Identification", order_index: 1, description: "Publication year", field_type: "numeric" },
-      { variable_id: "v_author", project_id: "proj_current", name: "Author", section: "Identification", order_index: 2, description: "First author surname", field_type: "text" },
-      { variable_id: "v_country", project_id: "proj_current", name: "Country", section: "Study Characteristics", order_index: 3, description: "Country where study took place", field_type: "text" },
-      { variable_id: "v_sample_size", project_id: "proj_current", name: "Sample size", section: "Study Characteristics", order_index: 4, description: "Total randomized patient count", field_type: "numeric" },
-      { variable_id: "v_intervention", project_id: "proj_current", name: "Intervention Arm", section: "Intervention", order_index: 5, description: "Experimental treatment", field_type: "categorical" },
-      { variable_id: "v_comparator", project_id: "proj_current", name: "Control / Comparator", section: "Intervention", order_index: 6, description: "Comparator or placebo", field_type: "categorical" },
-      { variable_id: "v_primary_endpoint", project_id: "proj_current", name: "Primary Endpoint", section: "Outcomes", order_index: 7, description: "Pre-specified primary clinical outcome", field_type: "text" },
+      { variable_id: "v_study_id", project_id: "proj_pam_current", name: "Study ID", section: "Identification", order_index: 0, description: "Canonical study identifier (e.g. Smith 2024)", field_type: "text" },
+      { variable_id: "v_year", project_id: "proj_pam_current", name: "Year", section: "Identification", order_index: 1, description: "Publication year", field_type: "numeric" },
+      { variable_id: "v_author", project_id: "proj_pam_current", name: "Author", section: "Identification", order_index: 2, description: "First author surname", field_type: "text" },
+      { variable_id: "v_country", project_id: "proj_pam_current", name: "Country", section: "Study Characteristics", order_index: 3, description: "Country where study took place", field_type: "text" },
+      { variable_id: "v_sample_size", project_id: "proj_pam_current", name: "Sample size", section: "Study Characteristics", order_index: 4, description: "Total randomized patient count", field_type: "numeric" },
+      { variable_id: "v_intervention", project_id: "proj_pam_current", name: "Intervention Arm", section: "Intervention", order_index: 5, description: "Experimental treatment", field_type: "categorical" },
+      { variable_id: "v_comparator", project_id: "proj_pam_current", name: "Control / Comparator", section: "Intervention", order_index: 6, description: "Comparator or placebo", field_type: "categorical" },
+      { variable_id: "v_primary_endpoint", project_id: "proj_pam_current", name: "Primary Endpoint", section: "Outcomes", order_index: 7, description: "Pre-specified primary clinical outcome", field_type: "text" },
     ],
     rules: {
       v_sample_size: {
@@ -58,11 +65,11 @@ const PREDEFINED_TEMPLATES: Record<string, { name: string; description: string; 
     name: "Diagnostic Radiology & Neuro-Imaging Protocol",
     description: "Imaging modality, sensitivity, reference standard, reader blinding, and artifact verification.",
     variables: [
-      { variable_id: "v_study_id", project_id: "proj_current", name: "Study ID", section: "Identification", order_index: 0, description: "Study identifier", field_type: "text" },
-      { variable_id: "v_modality", project_id: "proj_current", name: "Imaging Modality", section: "Technique", order_index: 1, description: "Primary diagnostic imaging technology used", field_type: "categorical" },
-      { variable_id: "v_contrast_used", project_id: "proj_current", name: "Contrast Enhanced", section: "Technique", order_index: 2, description: "Whether intravascular contrast was administered", field_type: "categorical" },
-      { variable_id: "v_reference_standard", project_id: "proj_current", name: "Reference Standard", section: "Methodology", order_index: 3, description: "Gold-standard verification test (e.g. catheter DSA, biopsy)", field_type: "text" },
-      { variable_id: "v_diagnostic_accuracy", project_id: "proj_current", name: "Diagnostic Sensitivity / Specificity", section: "Accuracy", order_index: 4, description: "Calculated sensitivity, specificity metrics", field_type: "text" },
+      { variable_id: "v_study_id", project_id: "proj_pam_current", name: "Study ID", section: "Identification", order_index: 0, description: "Study identifier", field_type: "text" },
+      { variable_id: "v_modality", project_id: "proj_pam_current", name: "Imaging Modality", section: "Technique", order_index: 1, description: "Primary diagnostic imaging technology used", field_type: "categorical" },
+      { variable_id: "v_contrast_used", project_id: "proj_pam_current", name: "Contrast Enhanced", section: "Technique", order_index: 2, description: "Whether intravascular contrast was administered", field_type: "categorical" },
+      { variable_id: "v_reference_standard", project_id: "proj_pam_current", name: "Reference Standard", section: "Methodology", order_index: 3, description: "Gold-standard verification test (e.g. catheter DSA, biopsy)", field_type: "text" },
+      { variable_id: "v_diagnostic_accuracy", project_id: "proj_pam_current", name: "Diagnostic Sensitivity / Specificity", section: "Accuracy", order_index: 4, description: "Calculated sensitivity, specificity metrics", field_type: "text" },
     ],
     rules: {}
   }
@@ -83,7 +90,7 @@ export function CodebookDesignerModal({
       const saved = localStorage.getItem("radextract_codebook_rules");
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return {};
+    return DEMO_CODEBOOK_RULES;
   });
 
   const [variables, setVariables] = useState<ReviewVariable[]>(() => {
@@ -91,7 +98,7 @@ export function CodebookDesignerModal({
       const saved = localStorage.getItem("radextract_variables");
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return [];
+    return DEMO_VARIABLES;
   });
 
   const [selectedVarId, setSelectedVarId] = useState<string>(() => {

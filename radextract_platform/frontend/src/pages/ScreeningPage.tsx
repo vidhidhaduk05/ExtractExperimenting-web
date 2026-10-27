@@ -66,12 +66,15 @@ import {
   CheckSquare,
   CheckCircle2,
   ChevronDown,
+  Sliders,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
+import { ExploratoryScreeningView } from "../components/screening/ExploratoryScreeningView";
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const [viewMode, setViewMode] = useState<"standard" | "exploratory">("standard");
   const bookmarks = useBookmarks(projectId);
   const tagIndex = useProjectTags(projectId);
   const [tagFilter, setTagFilter] = useState("");
@@ -216,14 +219,14 @@ export function ScreeningPage() {
     queryKey: ["screening-studies", projectId, stageFilter, statusFilter],
     queryFn: () => api.listScreening(projectId!, stageFilter === "all" ? undefined : stageFilter, statusFilter === "all" ? undefined : statusFilter),
     enabled: !!projectId,
-    refetchInterval: isRunning ? 2000 : false,
+    refetchInterval: isRunning ? 3000 : false,
   });
 
   const { data: summary } = useQuery<ScreeningSummary>({
     queryKey: ["screening-summary", projectId],
     queryFn: () => api.screeningSummary(projectId!),
     enabled: !!projectId,
-    refetchInterval: isRunning ? 2000 : false,
+    refetchInterval: isRunning ? 3000 : false,
   });
 
   const { data: exclusionReasonsData } = useQuery({
@@ -331,17 +334,24 @@ export function ScreeningPage() {
     }
   };
 
-  const studyList = Array.isArray(studies) ? studies : [];
+  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
 
-  // Real screening progress: studies with a recorded decision vs total, from the
-  // same backend summary that feeds the PRISMA flow. Never fabricated.
-  const screenedCount = summary ? summary.total - (summary.pending ?? 0) : 0;
-  const screenedPct = summary && summary.total > 0 ? Math.round((screenedCount / summary.total) * 100) : 0;
+  // Performance optimization: O(1) Set lookup for bookmarks instead of O(N*B) array searches
+  const bookmarkSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids]);
+
+  // Memoized count of bookmarked/saved studies to avoid filtering inside JSX render loops
+  const savedCount = useMemo(() => {
+    let count = 0;
+    for (let i = 0; i < studyList.length; i++) {
+      if (bookmarkSet.has(studyList[i].study_id)) count++;
+    }
+    return count;
+  }, [studyList, bookmarkSet]);
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
-      if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
+      if (savedOnly && !bookmarkSet.has(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
 
       // Stage filter
@@ -400,7 +410,7 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
+  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarkSet, tagIndex.data, tagFilter]);
 
   // Auto-select first study in filtered set if current selectedStudyId is filtered out
   useEffect(() => {
@@ -781,7 +791,7 @@ export function ScreeningPage() {
       );
     }
 
-    // Resolve character-level priority so keywords (green/red) are never swallowed by broad sentence spans
+    // Resolve priority via Cut-Point Boundary Set algorithm to avoid O(text_length) character array allocations
     const priorityMap: Record<string, number> = {
       exclude_keyword: 40,
       include_keyword: 30,
@@ -792,45 +802,40 @@ export function ScreeningPage() {
       outcome: 10,
     };
 
-    // Cut-point boundary set algorithm O(N log N + N * K) instead of O(text.length) char array allocation
-    const boundaryPoints = new Set<number>([0, rawText.length]);
+    const cutsSet = new Set<number>([0, rawText.length]);
     for (const span of activeSpans) {
-      const start = Math.max(0, Math.min(rawText.length, span.start));
-      const end = Math.max(0, Math.min(rawText.length, span.end));
-      if (start < end) {
-        boundaryPoints.add(start);
-        boundaryPoints.add(end);
+      const s = Math.max(0, span.start);
+      const e = Math.min(rawText.length, span.end);
+      if (e > s) {
+        cutsSet.add(s);
+        cutsSet.add(e);
       }
     }
+    const cuts = Array.from(cutsSet).sort((a, b) => a - b);
 
-    const sortedBoundaries = Array.from(boundaryPoints).sort((a, b) => a - b);
-
-    // Compute winning span for each interval [b_i, b_{i+1})
     const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
-    for (let i = 0; i < sortedBoundaries.length - 1; i++) {
-      const segStart = sortedBoundaries[i];
-      const segEnd = sortedBoundaries[i + 1];
-
-      let winningSpan: HighlightSpan | null = null;
-      let winningPrio = -1;
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const segStart = cuts[i];
+      const segEnd = cuts[i + 1];
+      let topSpan: HighlightSpan | null = null;
+      let topPrio = -1;
 
       for (const span of activeSpans) {
-        const start = Math.max(0, Math.min(rawText.length, span.start));
-        const end = Math.max(0, Math.min(rawText.length, span.end));
-        if (start <= segStart && end >= segEnd) {
+        const s = Math.max(0, span.start);
+        const e = Math.min(rawText.length, span.end);
+        if (s <= segStart && e >= segEnd) {
           const prio = priorityMap[span.type] || 0;
-          if (prio > winningPrio) {
-            winningPrio = prio;
-            winningSpan = span;
+          if (prio > topPrio) {
+            topPrio = prio;
+            topSpan = span;
           }
         }
       }
 
-      // Merge with last segment if same span reference or null
-      if (segments.length > 0 && segments[segments.length - 1].span === winningSpan) {
+      if (segments.length > 0 && segments[segments.length - 1].span === topSpan) {
         segments[segments.length - 1].end = segEnd;
       } else {
-        segments.push({ start: segStart, end: segEnd, span: winningSpan });
+        segments.push({ start: segStart, end: segEnd, span: topSpan });
       }
     }
 
@@ -888,6 +893,20 @@ export function ScreeningPage() {
     }
   };
 
+  if (viewMode === "exploratory") {
+    return (
+      <ExploratoryScreeningView
+        projectId={projectId}
+        projectStudies={studies}
+        summary={summary}
+        exclusionReasons={exclusionReasons}
+        onScreenStudy={(payload) => decisionMutation.mutateAsync(payload)}
+        isDecisionPending={decisionMutation.isPending}
+        onSwitchToStandard={() => setViewMode("standard")}
+      />
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#fbf9f4] font-['Work_Sans']">
       {/* Top Header */}
@@ -904,8 +923,11 @@ export function ScreeningPage() {
             <div>
               <h1 className="text-xl font-bold font-['Serifon_Editorial'] text-[#3a0f34] flex items-center gap-2">
                 <ShieldCheck className="w-6 h-6 text-[#814d75]" />
-                Eligibility Screening
+                Co-Scientist Screening Workspace
               </h1>
+              <p className="text-xs text-[#62535d]">
+                Multi-Stage Screening: Title &rarr; Abstract &rarr; Full-Text with Rayyan-Style Highlighting
+              </p>
             </div>
           </div>
 
@@ -930,6 +952,19 @@ export function ScreeningPage() {
               <Keyboard className="w-3.5 h-3.5 text-[#814d75]" />
               <span>Hotkeys</span>
               <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-[#eee7ec] text-[#3a0f34] rounded font-bold">?</kbd>
+            </button>
+
+            {/* View Switcher: Exploratory View */}
+            <button
+              onClick={() => setViewMode("exploratory")}
+              className="px-3.5 py-2 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] rounded flex items-center gap-2 transition-all cursor-pointer"
+              title="Switch to Exploratory View with Senior Doctor Mode, Toggles, and Step-by-Step Process Trace"
+            >
+              <Sliders className="w-3.5 h-3.5 text-[#814d75]" />
+              <span>Exploratory Process Stream</span>
+              <span className="text-[10px] font-mono uppercase bg-[#3a0f34] text-[#fbf9f4] px-1.5 py-0.2 rounded font-bold">
+                Live
+              </span>
             </button>
 
             <button
@@ -1156,43 +1191,28 @@ export function ScreeningPage() {
             </button>
           </div>
         )}
-
-        {/* Real screening progress bar: decided / total, refetched after every decision and during batch runs */}
-        {summary && summary.total > 0 && (
-          <div className="max-w-7xl mx-auto mt-2.5 px-4 md:px-0">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-[#62535d] mb-1">
-              <span className="uppercase tracking-wider">Screened</span>
-              <span className="font-mono text-[#3a0f34]">{screenedCount} / {summary.total}</span>
-            </div>
-            <div className="h-1 w-full bg-[#eee7ec] rounded-full overflow-hidden" role="progressbar" aria-valuenow={screenedCount} aria-valuemin={0} aria-valuemax={summary.total}>
-              <div className="h-full bg-[#3a0f34] rounded-full transition-all duration-300" style={{ width: `${screenedPct}%` }} />
-            </div>
-          </div>
-        )}
       </header>
 
-      {/* Live AI batch screening status — shown only while a real batch job is running */}
+      {/* Live Co-Scientist screening progress & controls */}
       {progress?.active && (
         <div className={`border-b px-6 py-2.5 transition-colors ${
-          progress.paused ? "bg-[#ffdea6]/40 border-[#d2c2cb]" : "bg-[#eee7ec] border-[#d2c2cb]"
+          progress.paused ? "bg-amber-50/95 border-amber-200" : "bg-indigo-50 border-indigo-200"
         }`}>
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 {progress.paused ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-[#ffdea6] text-[#7c5800] border border-[#d2c2cb] shrink-0">
-                    <Pause className="w-3 h-3 fill-[#7c5800]" />
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-200 text-amber-900 border border-amber-300 shrink-0">
+                    <Pause className="w-3 h-3 fill-amber-800" />
                     PAUSED
                   </span>
                 ) : (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#814d75] shrink-0" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
                 )}
-                <span className={`font-semibold shrink-0 ${progress.paused ? "text-[#7c5800]" : "text-[#3a0f34]"}`}>
-                  {progress.paused
-                    ? "AI screening paused"
-                    : `AI screening in progress — ${progress.done} of ${progress.total} done`}
+                <span className={`font-semibold shrink-0 ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
+                  Co-Scientist screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
                 </span>
-                <span className={`truncate ${progress.paused ? "text-[#7c5800]" : "text-[#62535d]"}`}>
+                <span className={`truncate ${progress.paused ? "text-amber-800" : "text-indigo-700"}`}>
                   {progress.paused
                     ? (progress.current_study_id ? `Paused at: ${progress.current_title || progress.current_study_id}` : "Paused between studies (clean state)")
                     : (progress.current_study_id ? `Screening: ${progress.current_title || progress.current_study_id}` : "Preparing next study…")}
@@ -1200,7 +1220,7 @@ export function ScreeningPage() {
               </div>
 
               <div className="flex items-center gap-3 shrink-0">
-                <span className={`font-bold whitespace-nowrap ${progress.paused ? "text-[#7c5800]" : "text-[#3a0f34]"}`}>
+                <span className={`font-bold whitespace-nowrap ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
                   {progress.done} / {progress.total} screened ({progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%)
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -1237,9 +1257,9 @@ export function ScreeningPage() {
                 </div>
               </div>
             </div>
-            <div className={`mt-1.5 h-1.5 rounded-full overflow-hidden ${progress.paused ? "bg-[#ffdea6]/60" : "bg-[#eee7ec]"}`}>
+            <div className={`mt-1.5 h-1.5 rounded-full overflow-hidden ${progress.paused ? "bg-amber-200/80" : "bg-indigo-100"}`}>
               <div
-                className={`h-full transition-all duration-500 ${progress.paused ? "bg-[#7c5800]" : "bg-[#3a0f34]"}`}
+                className={`h-full transition-all duration-500 ${progress.paused ? "bg-amber-500" : "bg-indigo-600"}`}
                 style={{ width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%` }}
               />
             </div>
@@ -1315,7 +1335,7 @@ export function ScreeningPage() {
                 onChange={(e) => setSavedOnly(e.target.checked)}
                 className="rounded text-[#3a0f34] focus:ring-[#814d75]"
               />
-              <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
+              <span className="font-medium">Saved ({savedCount})</span>
             </label>
 
             {/* Tag Filter */}
@@ -1854,18 +1874,6 @@ export function ScreeningPage() {
                 return (
                   <div
                     key={study.study_id}
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData(
-                        "application/x-study",
-                        JSON.stringify({
-                          studyId: study.study_id,
-                          title: study.title,
-                          projectId: projectId || "",
-                        })
-                      );
-                      e.dataTransfer.effectAllowed = "copy";
-                    }}
                     onClick={() => setSelectedStudyId(study.study_id)}
                     className={`p-3 rounded cursor-pointer transition-all border ${
                       isCurrent
@@ -1879,7 +1887,7 @@ export function ScreeningPage() {
                       <h3 className="text-xs font-semibold text-[#3a0f34] line-clamp-2 leading-snug">
                         {study.title}
                       </h3>
-                      <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
+                      <BookmarkButton saved={bookmarkSet.has(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
                       {conf !== null && (
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap animate-tag-pop ${
@@ -2004,7 +2012,7 @@ export function ScreeningPage() {
                       true
                     )}
                   </h2>
-                  <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
+                  <BookmarkButton saved={bookmarkSet.has(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
                   <span
                     className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap animate-tag-pop ${
                       selectedStudy.screening_status === "included" || selectedStudy.screening_status === "ta_included"

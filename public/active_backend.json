@@ -1,8 +1,8 @@
 {
-  "backend_url": "https://observations-franklin-accent-julian.trycloudflare.com",
-  "api_url": "https://observations-franklin-accent-julian.trycloudflare.com/api",
-  "health_url": "https://observations-franklin-accent-julian.trycloudflare.com/health",
-  "updated_at": "2026-10-27T08:55:02Z",
+  "backend_url": "/api",
+  "api_url": "/api",
+  "health_url": "/health",
+  "updated_at": "2026-10-27T00:00:00Z",
   "status": "online",
-  "model": "biomni-r0"
+  "model": "co-scientist-screening"
 }

@@ -27,7 +27,6 @@ import {
 import { cn } from "../lib/utils";
 import { ErrorBoundary } from "./common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "./common/ClarificationNotificationCenter";
-import { TodosPanel } from "./todos/TodosPanel";
 
 interface NavItemDef {
   to: (projectId?: string) => string;
@@ -164,15 +163,6 @@ export function AppShell() {
     queryFn: () => (projectId ? api.listGrade(projectId) : Promise.resolve([])),
     enabled: !!projectId,
     staleTime: 15000,
-  });
-
-  // Pending notifications query for dock badge
-  const { data: pendingNotifications = [] } = useQuery({
-    queryKey: ["pending-clarifications", projectId],
-    queryFn: () => (projectId ? api.listClarifications(projectId, "pending") : Promise.resolve([])),
-    enabled: !!projectId,
-    staleTime: 5000,
-    refetchInterval: 8000,
   });
 
   const stageName = getStageName(location.pathname);
@@ -379,21 +369,13 @@ export function AppShell() {
                   type="button"
                   onClick={() => setActiveDockTab("todos")}
                   className={cn(
-                    "px-3 py-2 rounded-t transition-colors flex items-center gap-1.5",
+                    "px-3 py-2 rounded-t transition-colors",
                     activeDockTab === "todos"
                       ? "text-[#3a0f34] border-b-2 border-[#3a0f34] font-bold"
                       : "text-[#62535d] hover:text-[#3a0f34]"
                   )}
                 >
-                  <span>To-dos</span>
-                  {pendingNotifications.length > 0 && (
-                    <span
-                      data-testid="todos-dock-badge"
-                      className="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#814d75] text-[#fbf9f4]"
-                    >
-                      {pendingNotifications.length}
-                    </span>
-                  )}
+                  To-dos
                 </button>
                 <button
                   type="button"
@@ -434,9 +416,143 @@ export function AppShell() {
 
             {/* Dock Tab Content (Hairline-separated list rows, no card boxes) */}
             <div className="flex-1 overflow-y-auto">
-              {/* TAB 1: TO-DOS (Google Tasks behavior, notifications, study drop target) */}
+              {/* TAB 1: TO-DOS (Live API checklist) */}
               {activeDockTab === "todos" && (
-                <TodosPanel projectId={projectId} className="flex-1" />
+                <div className="divide-y divide-[rgba(210,194,203,0.45)] text-xs">
+                  {/* Step 1: PICO */}
+                  <div
+                    onClick={() => projectId && navigate(`/projects/${projectId}/pico`)}
+                    className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {hasPico ? (
+                        <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <div className="font-semibold text-[#4f444b] truncate">PICO Protocol</div>
+                        <div className="text-[11px] text-[#62535d]">
+                          {hasPico ? "Criteria configured" : "Draft protocol pending"}
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-3.5 w-3.5 text-[#81737b] shrink-0" />
+                  </div>
+
+                  {/* Step 2: Title & Abstract Screening */}
+                  <div
+                    onClick={() => projectId && navigate(`/projects/${projectId}/screening?stage=ta`)}
+                    className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {screenedCount >= totalStudies && totalStudies > 0 ? (
+                        <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <div className="font-semibold text-[#4f444b] truncate">Title / Abstract Screening</div>
+                        <div className="text-[11px] text-[#62535d]">
+                          {totalStudies > 0 ? `${screenedCount} of ${totalStudies} decided` : "No studies imported"}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="font-mono text-[11px] text-[#814d75] font-semibold shrink-0">
+                      {screenedCount}/{totalStudies}
+                    </span>
+                  </div>
+
+                  {/* Step 3: Full-Text Eligibility */}
+                  <div
+                    onClick={() => projectId && navigate(`/projects/${projectId}/screening?stage=ft`)}
+                    className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {includedCount > 0 ? (
+                        <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <div className="font-semibold text-[#4f444b] truncate">Full-Text Assessment</div>
+                        <div className="text-[11px] text-[#62535d]">
+                          {prismaFlow ? `${prismaFlow.included || 0} studies included` : "0 included"}
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-3.5 w-3.5 text-[#81737b] shrink-0" />
+                  </div>
+
+                  {/* Step 4: Data Extraction */}
+                  <div
+                    onClick={() => projectId && navigate(`/projects/${projectId}/extraction-sheet`)}
+                    className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {extractedCount > 0 ? (
+                        <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <div className="font-semibold text-[#4f444b] truncate">Extraction Sheet</div>
+                        <div className="text-[11px] text-[#62535d]">
+                          {extractedCount} studies with verified values
+                        </div>
+                      </div>
+                    </div>
+                    <span className="font-mono text-[11px] text-[#814d75] font-semibold shrink-0">
+                      {extractedCount}
+                    </span>
+                  </div>
+
+                  {/* Step 5: Risk of Bias */}
+                  <div
+                    onClick={() => projectId && navigate(`/projects/${projectId}/rob`)}
+                    className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {robAssessmentsCount > 0 ? (
+                        <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <div className="font-semibold text-[#4f444b] truncate">Risk of Bias</div>
+                        <div className="text-[11px] text-[#62535d]">
+                          {robAssessmentsCount} assessments recorded
+                        </div>
+                      </div>
+                    </div>
+                    <span className="font-mono text-[11px] text-[#814d75] font-semibold shrink-0">
+                      {robAssessmentsCount}
+                    </span>
+                  </div>
+
+                  {/* Step 6: Synthesis & GRADE */}
+                  <div
+                    onClick={() => projectId && navigate(`/projects/${projectId}/grade`)}
+                    className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {gradeCount > 0 ? (
+                        <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <div className="font-semibold text-[#4f444b] truncate">GRADE Certainty</div>
+                        <div className="text-[11px] text-[#62535d]">
+                          {gradeCount} outcomes evaluated
+                        </div>
+                      </div>
+                    </div>
+                    <span className="font-mono text-[11px] text-[#814d75] font-semibold shrink-0">
+                      {gradeCount}
+                    </span>
+                  </div>
+                </div>
               )}
 
               {/* TAB 2: RESULTS (Exportable Artifacts with Direct Action) */}
