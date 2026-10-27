@@ -18,9 +18,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/main.py": {
-    "mtime": 1792343272.4280508,
-    "seen": 1792343466.904006,
-    "ast_hash": "b66291007698306408e6cf5b6b00a72d",
+    "mtime": 1793095247.1945064,
+    "seen": 1793095642.7884092,
+    "ast_hash": "851e87faf6812c1b2378f5a812eefc7d",
     "semantic_hash": ""
   },
   "radextract_platform/backend/models.py": {
@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1793066450.8368876,
-    "seen": 1793067195.5705485,
-    "ast_hash": "f4b0c322c374b204a8da858e90a7f604",
+    "mtime": 1793095298.8723147,
+    "seen": 1793095643.1284223,
+    "ast_hash": "0244cbadf8ddd9b073b6c4bfd389b94a",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -1890,9 +1890,9 @@
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1793069418.0755792,
-    "seen": 1793069476.5311506,
-    "ast_hash": "47c1bb380f62e272a08a68cbb6cf9177",
+    "mtime": 1793073677.615322,
+    "seen": 1793095643.1985507,
+    "ast_hash": "d266333a855053d98cb5daa57c69b764",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {
@@ -3894,9 +3894,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/LandingPage.tsx": {
-    "mtime": 1793057880.6232295,
-    "seen": 1793058016.1452506,
-    "ast_hash": "159f1deae8205f0802de75d027b61611",
+    "mtime": 1793095357.189075,
+    "seen": 1793095643.1582565,
+    "ast_hash": "aa5ec9d35dbcb909caaa4cc905391d65",
     "semantic_hash": ""
   },
   "Website for software/10.24.26_Website_landing_page.html": {
@@ -5046,9 +5046,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/landing_body.html": {
-    "mtime": 1792992252.9477458,
-    "seen": 1792993147.9728794,
-    "ast_hash": "787f941443a2a15209e5b66a88fff6bc",
+    "mtime": 1793095340.0671763,
+    "seen": 1793095643.5538175,
+    "ast_hash": "7a0e5aa366f3ff1b4cecb6b05f2ece82",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/assets/motion/rhythm.js": {
@@ -5088,9 +5088,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/data/research_presets.json": {
-    "mtime": 1792959810.7917354,
-    "seen": 1792962142.1072702,
-    "ast_hash": "3ea7ecee05b32c3c1cbcc298b78450de",
+    "mtime": 1793091205.658921,
+    "seen": 1793095643.1263251,
+    "ast_hash": "720f87792876f4780790885ff84cd0a1",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/researchPresets.ts": {
