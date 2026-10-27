@@ -17,3 +17,7 @@
 ## 2026-03-31 - Memoizing Multi-Pass Flow & Dashboard Aggregation Logic
 **Learning:** Computing live PRISMA diagram counts, dual-reviewer agreement matrices, and filtered study lists at the top-level of pages without `useMemo` causes redundant multi-pass array iterations on every polling interval or UI state change.
 **Action:** Wrapped `computeLivePrismaData` in `PrismaFlowPage`, study filtering & bookmark counts in `StudyList`, agreement/kappa metrics in `DualBlindedDashboard`, and factor classifications in `GradePage` in `useMemo`.
+
+## 2026-03-31 - Guarding Pointer Tracking State Updates in Canvas & Map Views
+**Learning:** Calling React state setters (e.g., `setHovered`) with object literals inside `onPointerMove` on every mouse movement event (~60-120Hz) creates new object references on every pixel and triggers full component VDOM reconciliation on every frame, even when the hovered node ID or status remains unchanged.
+**Action:** Guard state setters in high-frequency pointer event handlers by comparing target entity identifiers (`hovered?.pmid === match.paper.paper.pmid`), eliminating ~60Hz redundant VDOM re-renders during mouse traversal.
