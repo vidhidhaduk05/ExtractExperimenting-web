@@ -977,6 +977,7 @@ class ClarificationQuestionResponse(BaseModel):
     final_confidence: float = 0.0
     final_reason_text: str = ""
     created_at: str = ""
+    is_tracked: bool = False
     # Joined study fields
     study_title: str = ""
     study_authors: str = ""
@@ -1078,5 +1079,37 @@ class ScreeningKeywordResponse(BaseModel):
     keyword: str
     keyword_type: str
     color: str
+
+
+# ── Todos Models ──
+
+class TodoCreate(BaseModel):
+    text: str
+    source: Optional[str] = "manual"
+    study_id: Optional[str] = None
+
+
+class TodoUpdate(BaseModel):
+    text: Optional[str] = None
+    done: Optional[bool] = None
+
+
+class TodoFromNotification(BaseModel):
+    notification_id: str
+    text: Optional[str] = None
+
+
+class TodoResponse(BaseModel):
+    id: str
+    project_id: str
+    text: str
+    done: bool = False
+    source: str = "manual"
+    study_id: Optional[str] = None
+    notification_id: Optional[str] = None
+    created_at: str
+    study_title: Optional[str] = None
+    study_pmid: Optional[str] = None
+
 
 

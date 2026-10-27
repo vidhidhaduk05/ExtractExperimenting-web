@@ -987,7 +987,24 @@ export function PdfViewerPage() {
               <ChevronRight className="h-4 w-4" />
             </button>
 
-            <div className="ml-2">
+            <div
+              className="ml-2 cursor-grab active:cursor-grabbing p-1 rounded hover:bg-[#eee7ec]/50 transition-colors"
+              draggable
+              onDragStart={(e) => {
+                if (currentStudy) {
+                  e.dataTransfer.setData(
+                    "application/x-study",
+                    JSON.stringify({
+                      studyId: currentStudy.study_id,
+                      title: currentStudy.title || "Study PDF",
+                      projectId: projectId || "",
+                    })
+                  );
+                  e.dataTransfer.effectAllowed = "copy";
+                }
+              }}
+              title="Drag study to To-dos panel"
+            >
               <h1 className="font-['Serifon_Editorial'] font-bold text-[#3a0f34] text-sm sm:text-base leading-tight truncate max-w-md">
                 {currentStudy?.title || "Study PDF & Extraction"}
               </h1>

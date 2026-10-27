@@ -83,6 +83,14 @@ class Settings(BaseSettings):
         """Alias for storage_root for backward compatibility."""
         return self.storage_root
 
+    @property
+    def upload_dir(self) -> str:
+        return self.upload_root
+
+    @property
+    def export_dir(self) -> str:
+        return self.export_root
+
     # ── AWS / LocalStack settings (single block — no duplicates) ──
     aws_endpoint_url: str = ""           # "" = real AWS; "http://localhost:4566" = LocalStack
     aws_region: str = "us-east-1"        # Use this consistently (not aws_default_region)

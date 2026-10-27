@@ -44,6 +44,7 @@ from routers import (
     rigor_scan,
     storm_router,
     settings as system_settings,
+    todos,
 )
 
 logger = logging.getLogger("radextract")
@@ -177,6 +178,7 @@ def create_app() -> FastAPI:
     app.include_router(storm_router.router, prefix="/api")
     app.include_router(storm_router.router)
     app.include_router(system_settings.router)
+    app.include_router(todos.router)
 
     # Health check
     @app.get("/health")

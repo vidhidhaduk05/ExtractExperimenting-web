@@ -1851,6 +1851,18 @@ export function ScreeningPage() {
                 return (
                   <div
                     key={study.study_id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData(
+                        "application/x-study",
+                        JSON.stringify({
+                          studyId: study.study_id,
+                          title: study.title,
+                          projectId: projectId || "",
+                        })
+                      );
+                      e.dataTransfer.effectAllowed = "copy";
+                    }}
                     onClick={() => setSelectedStudyId(study.study_id)}
                     className={`p-3 rounded cursor-pointer transition-all border ${
                       isCurrent

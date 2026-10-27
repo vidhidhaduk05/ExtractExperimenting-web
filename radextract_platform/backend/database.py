@@ -693,6 +693,17 @@ CREATE TABLE IF NOT EXISTS batch_study_contributions (
     UNIQUE(batch_id, study_id)
 );
 
+CREATE TABLE IF NOT EXISTS todos (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    text TEXT NOT NULL,
+    done INTEGER NOT NULL DEFAULT 0,
+    source TEXT NOT NULL DEFAULT 'manual',        -- 'manual' | 'study' | 'notification'
+    study_id TEXT,                                -- set when source='study'
+    notification_id TEXT,                         -- set when source='notification'
+    created_at TEXT NOT NULL
+);
+
 -- ── Indexes ──
 
 CREATE INDEX IF NOT EXISTS idx_studies_project ON studies(project_id);
@@ -726,12 +737,16 @@ CREATE INDEX IF NOT EXISTS idx_import_batches_project ON import_batches(project_
 CREATE INDEX IF NOT EXISTS idx_batch_contributions_batch ON batch_study_contributions(batch_id);
 CREATE INDEX IF NOT EXISTS idx_batch_contributions_study ON batch_study_contributions(study_id);
 CREATE INDEX IF NOT EXISTS idx_batch_contributions_project ON batch_study_contributions(project_id);
+CREATE INDEX IF NOT EXISTS idx_todos_project ON todos(project_id);
+CREATE INDEX IF NOT EXISTS idx_todos_study ON todos(study_id);
+CREATE INDEX IF NOT EXISTS idx_todos_notification ON todos(notification_id);
 """
 
 # ── Column migrations for existing tables ──
 # SQLite ALTER TABLE ADD COLUMN is safe on existing databases.
 # Each tuple: (table, column_name, column_def)
 MIGRATION_COLUMNS = [
+    ("clarification_questions", "is_tracked", "INTEGER DEFAULT 0"),
     # Dual-reviewer columns on extractions
     ("extractions", "verification_status", "TEXT DEFAULT 'pending'"),
     ("extractions", "second_value", "TEXT DEFAULT ''"),
@@ -874,6 +889,7 @@ def reset_db():
     conn = get_connection()
     try:
         tables = [
+            "todos",
             "record_annotations", "study_tag_links", "project_tags",
             "screening_keywords", "keyword_groups",
             "clarification_questions",

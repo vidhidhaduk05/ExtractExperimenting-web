@@ -1143,6 +1143,20 @@ export interface ClarificationQuestion {
   final_reason_text?: string;
   final_reason_code?: string;
   created_at: string;
+  is_tracked?: boolean;
+}
+
+export interface TodoItem {
+  id: string;
+  project_id: string;
+  text: string;
+  done: boolean;
+  source: "manual" | "study" | "notification";
+  study_id?: string | null;
+  notification_id?: string | null;
+  created_at: string;
+  study_title?: string | null;
+  study_pmid?: string | null;
 }
 
 export interface ClarificationAnswerResponse {
@@ -2858,6 +2872,39 @@ export const api = {
   /** Get clarification statistics */
   getClarificationStats: (projectId: string) =>
     request<ClarificationStats>(`/projects/${projectId}/clarifications/stats`),
+
+  // ── To-dos (Google Tasks behavior with Study & Notification integration) ──
+
+  /** List to-dos for a project */
+  listTodos: (projectId: string) =>
+    request<TodoItem[]>(`/projects/${projectId}/todos`),
+
+  /** Create a new to-do (manual or study) */
+  createTodo: (projectId: string, data: { text: string; source?: string; study_id?: string }) =>
+    request<TodoItem>(`/projects/${projectId}/todos`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  /** Update to-do text and/or done status */
+  updateTodo: (id: string, data: { text?: string; done?: boolean }) =>
+    request<TodoItem>(`/todos/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  /** Delete a to-do */
+  deleteTodo: (id: string) =>
+    request<{ status: string; id: string }>(`/todos/${id}`, {
+      method: "DELETE",
+    }),
+
+  /** Create a to-do from a clarification notification */
+  createTodoFromNotification: (projectId: string, data: { notification_id: string; text?: string }) =>
+    request<TodoItem>(`/projects/${projectId}/todos/from-notification`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // ── v2.4+: Multi-Stage AI Screening & Highlights ──
 

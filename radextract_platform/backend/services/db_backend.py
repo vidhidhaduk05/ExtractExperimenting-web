@@ -70,6 +70,7 @@ TABLE_PK = {
     "reporting_profile_assessments": "profile_assessment_id",
     "reporting_profile_items": "profile_item_id",
     "extraction_decisions": "decision_id",
+    "todos": "id",
 }
 
 # Tables that have project_id for GSI
@@ -79,7 +80,7 @@ PROJECT_GSI_TABLES = {
     "grade_assessments", "screening_decisions", "screening_conflicts",
     "pdf_highlights", "project_members", "user_review_state",
     "rob_tool_classifications", "reporting_profile_assessments",
-    "extraction_decisions",
+    "extraction_decisions", "todos",
 }
 
 # Tables that have study_id for GSI
@@ -89,7 +90,7 @@ STUDY_GSI_TABLES = {
     "screening_decisions", "screening_conflicts", "pdf_highlights",
     "user_review_state",
     "rob_tool_classifications", "reporting_profile_assessments",
-    "extraction_decisions",
+    "extraction_decisions", "todos",
 }
 
 

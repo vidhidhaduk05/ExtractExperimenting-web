@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/config.py": {
-    "mtime": 1793091435.767753,
-    "seen": 1793091496.0163648,
-    "ast_hash": "e57f80651649a338dc90c366056ecd5e",
+    "mtime": 1793095493.7822812,
+    "seen": 1793096498.7054236,
+    "ast_hash": "f4d5628b0d62b57c8d76ede39da55048",
     "semantic_hash": ""
   },
   "radextract_platform/backend/data/error_analysis_log.json": {
@@ -114,9 +114,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/database.py": {
-    "mtime": 1793091435.7687528,
-    "seen": 1793091496.0166557,
-    "ast_hash": "f5ff8e89b48d42cd5ea825d2a34909c0",
+    "mtime": 1793095282.078965,
+    "seen": 1793096498.7057042,
+    "ast_hash": "e71b9d6cc7c59824d149e7cb2f437cee",
     "semantic_hash": ""
   },
   "radextract_platform/backend/dependencies.py": {
@@ -132,15 +132,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/main.py": {
-    "mtime": 1793091435.769753,
-    "seen": 1793091496.016714,
-    "ast_hash": "502943e55da07eedaec4335cb48e89c8",
+    "mtime": 1793095373.4625268,
+    "seen": 1793096498.7058067,
+    "ast_hash": "6d23a95e5b48b720c888cec2d500eef5",
     "semantic_hash": ""
   },
   "radextract_platform/backend/models.py": {
-    "mtime": 1793091435.769753,
-    "seen": 1793091496.0167167,
-    "ast_hash": "ddb9322ca834b9a6e67587b2908b2e98",
+    "mtime": 1793095320.3072002,
+    "seen": 1793096498.7058105,
+    "ast_hash": "e6c6e4d3436e645b552a25dacebdbdff",
     "semantic_hash": ""
   },
   "radextract_platform/backend/profiles/mtr_rc.json": {
@@ -420,9 +420,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/clarification.py": {
-    "mtime": 1792261253.451419,
-    "seen": 1793069794.1348948,
-    "ast_hash": "d0fdf879df0f50924549967b7db3d6a9",
+    "mtime": 1793095336.237298,
+    "seen": 1793096498.709149,
+    "ast_hash": "752bdbc7b6559f93d179a8c353db1375",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/export.py": {
@@ -744,9 +744,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/db_backend.py": {
-    "mtime": 1793091435.783753,
-    "seen": 1793091496.0223715,
-    "ast_hash": "944aa021f185329466feb3d804160cff",
+    "mtime": 1793095293.3260343,
+    "seen": 1793096498.7121372,
+    "ast_hash": "8ac37a7947b7175a37cbbb9e1a416805",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/db_helpers.py": {
@@ -2040,9 +2040,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1793091435.8097532,
-    "seen": 1793091496.032386,
-    "ast_hash": "626241ae8375f14987bcbdc3863ec9c6",
+    "mtime": 1793095586.9898498,
+    "seen": 1793096498.7244427,
+    "ast_hash": "2c34f285468fead8c75542073faed2ba",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/bookmarks.test.ts": {
@@ -2250,9 +2250,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ExtractionSheetPage.tsx": {
-    "mtime": 1793091435.8187532,
-    "seen": 1793091496.0337012,
-    "ast_hash": "122470707c0f36becdf3b221302ac936",
+    "mtime": 1793095937.1470258,
+    "seen": 1793096498.7264123,
+    "ast_hash": "973375cc937fc11601e8ec234d3274f6",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/GradePage.tsx": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PdfViewerPage.tsx": {
-    "mtime": 1793091435.820753,
-    "seen": 1793091496.0337675,
-    "ast_hash": "71791858c3d96292cc040daa9fccded5",
+    "mtime": 1793095967.8482194,
+    "seen": 1793096498.726645,
+    "ast_hash": "89ba78cd57b3ad66307b9d6ea08015e5",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PicoHypothesisPage.tsx": {
@@ -2376,9 +2376,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
-    "mtime": 1793091435.8307533,
-    "seen": 1793091496.033913,
-    "ast_hash": "26c15e537283712ca299bd98d7337ea3",
+    "mtime": 1793095929.1739755,
+    "seen": 1793096498.72749,
+    "ast_hash": "bf3be29f9a66f39259ae1dc61749ca0c",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyImport.tsx": {
@@ -2388,9 +2388,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyList.tsx": {
-    "mtime": 1793091435.8317533,
-    "seen": 1793091496.0339177,
-    "ast_hash": "330dd72517bcfc8f8b7ea2c8f8e76fda",
+    "mtime": 1793095977.1972783,
+    "seen": 1793096498.727551,
+    "ast_hash": "27527d388107c5f375f93338d03abee4",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyListCollaboration.test.tsx": {
@@ -2706,9 +2706,9 @@
     "semantic_hash": ""
   },
   "src/lib/api.ts": {
-    "mtime": 1793091435.8527534,
-    "seen": 1793091496.0376048,
-    "ast_hash": "626241ae8375f14987bcbdc3863ec9c6",
+    "mtime": 1793095605.9989657,
+    "seen": 1793096498.7337031,
+    "ast_hash": "2c34f285468fead8c75542073faed2ba",
     "semantic_hash": ""
   },
   "src/lib/bookmarks.test.ts": {
@@ -2910,9 +2910,9 @@
     "semantic_hash": ""
   },
   "src/pages/ExtractionSheetPage.tsx": {
-    "mtime": 1793091435.8627534,
-    "seen": 1793091496.0376928,
-    "ast_hash": "122470707c0f36becdf3b221302ac936",
+    "mtime": 1793095984.1823223,
+    "seen": 1793096498.7351594,
+    "ast_hash": "973375cc937fc11601e8ec234d3274f6",
     "semantic_hash": ""
   },
   "src/pages/GradePage.tsx": {
@@ -2940,9 +2940,9 @@
     "semantic_hash": ""
   },
   "src/pages/PdfViewerPage.tsx": {
-    "mtime": 1793091435.8667536,
-    "seen": 1793091496.037704,
-    "ast_hash": "71791858c3d96292cc040daa9fccded5",
+    "mtime": 1793095984.1843224,
+    "seen": 1793096498.7353282,
+    "ast_hash": "89ba78cd57b3ad66307b9d6ea08015e5",
     "semantic_hash": ""
   },
   "src/pages/PicoHypothesisPage.tsx": {
@@ -3030,9 +3030,9 @@
     "semantic_hash": ""
   },
   "src/pages/ScreeningPage.tsx": {
-    "mtime": 1793091435.8777535,
-    "seen": 1793091496.037737,
-    "ast_hash": "26c15e537283712ca299bd98d7337ea3",
+    "mtime": 1793095984.1803222,
+    "seen": 1793096498.7359626,
+    "ast_hash": "bf3be29f9a66f39259ae1dc61749ca0c",
     "semantic_hash": ""
   },
   "src/pages/StudyImport.tsx": {
@@ -3042,9 +3042,9 @@
     "semantic_hash": ""
   },
   "src/pages/StudyList.tsx": {
-    "mtime": 1793091435.8797536,
-    "seen": 1793091496.0377407,
-    "ast_hash": "330dd72517bcfc8f8b7ea2c8f8e76fda",
+    "mtime": 1793095984.1863222,
+    "seen": 1793096498.7360072,
+    "ast_hash": "27527d388107c5f375f93338d03abee4",
     "semantic_hash": ""
   },
   "src/pages/StudyListCollaboration.test.tsx": {
@@ -5226,9 +5226,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/components/AppShell.tsx": {
-    "mtime": 1793091435.7967532,
-    "seen": 1793091496.0310678,
-    "ast_hash": "e682f1f5c1f0f97019d3aa2b4e311ae0",
+    "mtime": 1793095799.2331567,
+    "seen": 1793096498.7217505,
+    "ast_hash": "ac07eb10e0910c5660218371bfc7457a",
     "semantic_hash": ""
   },
   "src/components/AppShell.test.tsx": {
@@ -5238,9 +5238,9 @@
     "semantic_hash": ""
   },
   "src/components/AppShell.tsx": {
-    "mtime": 1793091435.8367534,
-    "seen": 1793091496.0374997,
-    "ast_hash": "e682f1f5c1f0f97019d3aa2b4e311ae0",
+    "mtime": 1793095805.0581934,
+    "seen": 1793096498.7316887,
+    "ast_hash": "ac07eb10e0910c5660218371bfc7457a",
     "semantic_hash": ""
   },
   "src/components/common/BorderBeam.test.tsx": {
@@ -5295,6 +5295,42 @@
     "mtime": 1793069831.99897,
     "seen": 1793091496.0377269,
     "ast_hash": "60ccfe8bd0a5854e7c71c694cc644b70",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/routers/todos.py": {
+    "mtime": 1793095356.1244204,
+    "seen": 1793096498.7102642,
+    "ast_hash": "9e3dd3d2d84c23dbacec3fe291234a82",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_todos.py": {
+    "mtime": 1793095401.3637004,
+    "seen": 1793096498.7201946,
+    "ast_hash": "ebfc4185a9656fc72ddb2ad3513df97c",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/todos/TodosPanel.test.tsx": {
+    "mtime": 1793096232.9378695,
+    "seen": 1793096498.724035,
+    "ast_hash": "74a9c0f874a4df70ce2bc424d43aa755",
+    "semantic_hash": ""
+  },
+  "radextract_platform/frontend/src/components/todos/TodosPanel.tsx": {
+    "mtime": 1793096154.4093816,
+    "seen": 1793096498.7240381,
+    "ast_hash": "14879aa10f7f444e364081fdaadfd554",
+    "semantic_hash": ""
+  },
+  "src/components/todos/TodosPanel.test.tsx": {
+    "mtime": 1793096259.0220315,
+    "seen": 1793096498.7334,
+    "ast_hash": "74a9c0f874a4df70ce2bc424d43aa755",
+    "semantic_hash": ""
+  },
+  "src/components/todos/TodosPanel.tsx": {
+    "mtime": 1793096259.0200317,
+    "seen": 1793096498.733403,
+    "ast_hash": "14879aa10f7f444e364081fdaadfd554",
     "semantic_hash": ""
   },
   "laya/yarn.lock": {

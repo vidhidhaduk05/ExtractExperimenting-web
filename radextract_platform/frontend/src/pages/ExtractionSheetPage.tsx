@@ -958,7 +958,19 @@ export function ExtractionSheetPage() {
                   return (
                     <tr
                       key={study.study_id}
-                      className={`hover:bg-[#fbf9f4]/70 transition-colors ${
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData(
+                          "application/x-study",
+                          JSON.stringify({
+                            studyId: study.study_id,
+                            title: study.title || study.study_label || `Study ${study.study_id}`,
+                            projectId: projectId || "",
+                          })
+                        );
+                        e.dataTransfer.effectAllowed = "copy";
+                      }}
+                      className={`hover:bg-[#fbf9f4]/70 transition-colors cursor-grab active:cursor-grabbing ${
                         isStudySelected ? "bg-[#ffdea6]/10" : ""
                       }`}
                     >

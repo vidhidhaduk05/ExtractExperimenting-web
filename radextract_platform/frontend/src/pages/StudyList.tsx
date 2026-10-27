@@ -784,7 +784,21 @@ function StudyRow({
   };
 
   return (
-    <tr className="hover:bg-[#eee7ec]/30 transition-colors">
+    <tr
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData(
+          "application/x-study",
+          JSON.stringify({
+            studyId: study.study_id,
+            title: study.title,
+            projectId,
+          })
+        );
+        e.dataTransfer.effectAllowed = "copy";
+      }}
+      className="hover:bg-[#eee7ec]/30 transition-colors cursor-grab active:cursor-grabbing"
+    >
       <td className="px-5 py-3.5">
         <div className="flex items-start gap-2">{bookmark}<div className="font-['Serifon_Editorial'] font-bold text-sm text-[#3a0f34] line-clamp-1">{study.title}</div></div>
         <TagBadges index={tags} studyId={study.study_id} />
