@@ -45,16 +45,12 @@ export interface ApiConnectionInfo {
 type ApiListener = (info: ApiConnectionInfo) => void;
 const apiListeners: Set<ApiListener> = new Set();
 
-export const PERMANENT_HPC_BACKEND = "https://verification-enter-attachments-mug.trycloudflare.com";
-
 export function getApiBase(): string {
   if (typeof window === "undefined") return "/api";
   const custom = localStorage.getItem("custom_api_base");
   if (custom && custom.trim()) return custom.trim().replace(/\/+$/, "");
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1") return "/api";
-  return `${PERMANENT_HPC_BACKEND}/api`;
+  return "/api";
 }
 
 export let API_BASE = getApiBase();
@@ -69,54 +65,20 @@ export async function autoDiscoverBackend(): Promise<string | null> {
       updateApiState({ apiBase: API_BASE, state: "live" });
       return API_BASE;
     }
-    // Stale or dead custom URL; remove it so auto-discovery can take over
+    // Stale custom URL; remove it
     localStorage.removeItem("custom_api_base");
   }
 
-  try {
-    let res = await fetch("./active_backend.json", { cache: "no-store" }).catch(() => null);
-    if (!res || !res.ok) {
-      res = await fetch(
-        "https://raw.githubusercontent.com/vidhidhaduk05/ExtractExperimenting-web/main/public/active_backend.json",
-        { cache: "no-store" }
-      ).catch(() => null);
-    }
-    if (res && res.ok) {
-      const data = await res.json();
-      if (data?.backend_url) {
-        const url = String(data.backend_url).replace(/\/+$/, "");
-        const check = await testBackendConnection(url);
-        if (check.ok) {
-          API_BASE = url.endsWith("/api") ? url : `${url}/api`;
-          updateApiState({ apiBase: API_BASE, state: "live" });
-          return API_BASE;
-        }
-      }
-    }
-  } catch (e) {}
-
-  // Hardcoded fallback to current known HPC active tunnel
-  const hpcFallback = "https://verification-enter-attachments-mug.trycloudflare.com";
-  try {
-    const checkFallback = await testBackendConnection(hpcFallback);
-    if (checkFallback.ok) {
-      API_BASE = `${hpcFallback}/api`;
-      updateApiState({ apiBase: API_BASE, state: "live" });
-      return API_BASE;
-    }
-  } catch (e) {}
-
-  const isBrowser = typeof window !== "undefined";
-  const isLocalhost = isBrowser && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-  const isGithubPages = isBrowser && window.location.hostname.includes("github.io");
-
-  if (isLocalhost || isGithubPages || isDemoModeEnabled()) {
-    updateApiState({ apiBase: "Local Engine", state: "live" });
+  const currentBase = getApiBase();
+  const check = await testBackendConnection(currentBase).catch(() => null);
+  if (check && check.ok) {
+    API_BASE = currentBase;
+    updateApiState({ apiBase: API_BASE, state: "live" });
     return API_BASE;
   }
 
-  updateApiState({ apiBase: null, state: "error" });
-  return null;
+  updateApiState({ apiBase: currentBase, state: "live" });
+  return API_BASE;
 }
 
 if (typeof window !== "undefined") {
@@ -221,8 +183,7 @@ export async function testBackendConnection(targetUrl?: string): Promise<{
 }
 
 export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[] {
-  const isDemo = projectId === "demo" || projectId === "proj_pam_current";
-  if (typeof window === "undefined") return isDemo ? [...DEMO_STUDIES] : [];
+  if (typeof window === "undefined") return projectId === "demo" ? [...DEMO_STUDIES] : [];
   try {
     const isBlank = localStorage.getItem(`radextract_blank_${projectId}`) === "true";
     if (isBlank) {
@@ -232,7 +193,7 @@ export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[]
     const saved = localStorage.getItem(`radextract_studies_${projectId}`);
     if (saved) return JSON.parse(saved);
   } catch (e) {}
-  if (isDemo) {
+  if (projectId === "demo") {
     return [...DEMO_STUDIES];
   }
   return [];
@@ -1572,12 +1533,6 @@ async function request<T>(
   try {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
-      // If server returns 404/500/502 on demo or project data, gracefully fallback
-      if (res.status === 404 || res.status >= 500) {
-        console.warn(`[API HTTP ${res.status}] ${base}${path} - Falling back to demo data`);
-        updateApiState({ state: "demo_fallback", apiBase: base });
-        return handleDemoRequest<T>(path, options);
-      }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }
@@ -1586,14 +1541,9 @@ async function request<T>(
     return data as T;
   } catch (err: any) {
     const msg = err?.message || "Network request failed";
-    console.warn(`[API Connection Failed - Gracefully falling back to demo data] ${base}${path}:`, err);
-    updateApiState({ state: "demo_fallback", apiBase: base, errorMessage: msg });
-    try {
-      return handleDemoRequest<T>(path, options);
-    } catch (fallbackErr) {
-      console.error(`[Demo Fallback Failed for ${path}]`, fallbackErr);
-      throw err;
-    }
+    console.error(`[API Error] ${base}${path}:`, err);
+    updateApiState({ state: "error", apiBase: base, errorMessage: msg });
+    throw err;
   }
 }
 
@@ -1610,17 +1560,11 @@ async function authenticatedRequest<T>(path: string, options: RequestInit = {}):
       },
     });
     if (!res.ok) {
-      if (shouldUseDemoFallback()) {
-        return handleDemoRequest<T>(path, options);
-      }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }
     return res.json();
   } catch (err: any) {
-    if (shouldUseDemoFallback()) {
-      return handleDemoRequest<T>(path, options);
-    }
     throw err;
   }
 }

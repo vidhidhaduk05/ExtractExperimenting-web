@@ -37,18 +37,31 @@ class JevError(Exception):
 
 def _get_laya_model_dir() -> str:
     if settings.laya_model_dir and os.path.exists(settings.laya_model_dir):
-        return settings.laya_model_dir
-    # Check default workspace location: <project_root>/laya/models
+        if os.path.exists(os.path.join(settings.laya_model_dir, "laya.onnx")):
+            return settings.laya_model_dir
+        for sub in ("models", "onnx"):
+            subpath = os.path.join(settings.laya_model_dir, sub)
+            if os.path.exists(os.path.join(subpath, "laya.onnx")):
+                return subpath
+    # Check default workspace locations: <project_root>/laya/models or <project_root>/laya/onnx
     # services -> backend -> radextract_platform -> workspace_root
     services_dir = os.path.abspath(os.path.dirname(__file__))
     candidates = [
         os.path.abspath(os.path.join(services_dir, "..", "..", "..", "laya", "models")),
+        os.path.abspath(os.path.join(services_dir, "..", "..", "..", "laya", "onnx")),
         os.path.abspath(os.path.join(services_dir, "..", "..", "laya", "models")),
+        os.path.abspath(os.path.join(services_dir, "..", "..", "laya", "onnx")),
         os.path.abspath(os.path.join(services_dir, "..", "laya", "models")),
+        os.path.abspath(os.path.join(services_dir, "..", "laya", "onnx")),
     ]
     for c in candidates:
         if os.path.exists(os.path.join(c, "laya.onnx")):
             return c
+    if getattr(settings, "jev_mode", "off") == "on" and getattr(settings, "jev_provider", "") == "laya":
+        logger.warning(
+            "[Jev/Laya] Local Laya weights 'laya.onnx' not found in candidate paths. "
+            "Evidence tracing will be skipped or degraded to unverified."
+        )
     return ""
 
 

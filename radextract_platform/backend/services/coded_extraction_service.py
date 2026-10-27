@@ -179,7 +179,7 @@ def _try_derivations(var: dict, full_text: str) -> Optional[dict]:
             return {
                 "value": str(derived),
                 "source_text": m.group(0),
-                "source_page": 1,
+                "source_page": None,
                 "confidence_tag": "CALC",
                 "calc_note": f"{original} {m.group(0).split()[-1]} x {factor} = {derived} {target_unit}",
             }

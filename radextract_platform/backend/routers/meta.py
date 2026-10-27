@@ -74,9 +74,15 @@ async def create_meta_analysis(
 
     # Add study data if provided
     if body.study_data:
+        seen_study_ids = set()
         for sd in body.study_data:
-            link_id = str(uuid.uuid4())
             study_id = sd.get("study_id", "")
+            if study_id:
+                if study_id in seen_study_ids:
+                    logger.warning("Duplicate study_id %s passed to meta-analysis %s; ignoring duplicate", study_id, meta_id)
+                    continue
+                seen_study_ids.add(study_id)
+            link_id = str(uuid.uuid4())
             included = 1 if sd.get("included", True) else 0
             conn.execute(
                 """INSERT INTO meta_analysis_studies
@@ -244,7 +250,7 @@ async def _run_analysis(meta_id: str, analysis_type: str, effect_measure: str,
                results_json = ?
                WHERE meta_id = ?""",
             (results["n_studies"],
-             pooled["pooled_effect_log"], pooled["ci_lower"], pooled["ci_upper"],
+             pooled.get("pooled_effect", pooled.get("pooled_effect_log")), pooled["ci_lower"], pooled["ci_upper"],
              pooled["se"], pooled["z_statistic"], pooled["p_value"],
              het["i_squared"], het["tau_squared"], het["q_statistic"], het["q_p_value"],
              egger.get("intercept"), egger.get("p_value"),
@@ -277,9 +283,15 @@ async def update_studies(meta_id: str, body: MetaAnalysisStudyUpdate, user: Opti
     conn.execute("DELETE FROM meta_analysis_studies WHERE meta_id = ?", (meta_id,))
 
     # Insert new
+    seen_study_ids = set()
     for sd in body.studies:
-        link_id = str(uuid.uuid4())
         study_id = sd.get("study_id", "")
+        if study_id:
+            if study_id in seen_study_ids:
+                logger.warning("Duplicate study_id %s in update_studies for meta %s; skipping", study_id, meta_id)
+                continue
+            seen_study_ids.add(study_id)
+        link_id = str(uuid.uuid4())
         included = 1 if sd.get("included", True) else 0
         conn.execute(
             """INSERT INTO meta_analysis_studies

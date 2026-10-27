@@ -299,12 +299,11 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
             sim = _title_similarity(t_i, t_j)
 
             if sim >= TITLE_SIMILARITY_THRESHOLD:
-                # Bolt Optimization: If title similarity is >= 0.95, group immediately
-                # without evaluating secondary author/year signals. If 0.90-0.95, check
-                # year match first before invoking C-level set overlap on pre-parsed sets.
-                if sim >= 0.95:
+                # For very high title similarity (>= 0.98, nearly identical strings), group directly.
+                # For 0.90 <= sim < 0.98, require secondary confirmation (author overlap or year match)
+                # to prevent chained false merges of distinct papers with similar titles.
+                if sim >= 0.98:
                     union(i, j)
-                    # Update root_i if component changed
                     root_i = find(root_i)
                 else:
                     y_j = years[j]
@@ -313,7 +312,8 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                         and y_j is not None
                         and y_i == y_j
                     )
-                    if year_match or _author_overlap(a_set_i, norm_author_sets[j]) > 0.3:
+                    author_match = _author_overlap(a_set_i, norm_author_sets[j]) > 0.3
+                    if year_match or author_match:
                         union(i, j)
                         root_i = find(root_i)
 
@@ -328,13 +328,22 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
     for root, indices in groups.items():
         if len(indices) < 2:
             continue
-        # Canonical = first by created_at (already sorted)
-        canonical_idx = indices[0]
+        # Score studies in group: prioritize human decision, then metadata richness
+        def _study_rank(idx: int):
+            st = studies[idx]
+            has_decision = 1 if (st.get("screening_status") and st.get("screening_status") != "pending") else 0
+            has_doi = 1 if st.get("doi") else 0
+            has_pmid = 1 if st.get("pmid") else 0
+            abstract_len = len(st.get("abstract") or "")
+            return (has_decision, has_doi + has_pmid, abstract_len, -idx)
+
+        sorted_indices = sorted(indices, key=_study_rank, reverse=True)
+        canonical_idx = sorted_indices[0]
         canonical = studies[canonical_idx]
         group_id = str(uuid.uuid4())
 
         duplicates = []
-        for idx in indices[1:]:
+        for idx in sorted_indices[1:]:
             s = studies[idx]
             # Bolt Optimization: Check exact DOI/PMID equality first to avoid
             # computing SequenceMatcher title similarity ratio when exact IDs match.
@@ -403,6 +412,9 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
     if auto_mark and dup_groups:
         for g in dup_groups:
             for d in g["duplicates"]:
+                # Never silently override an existing non-pending human/system screening decision
+                if d.get("screening_status") and d["screening_status"] not in ("pending", "duplicate"):
+                    continue
                 db.update("studies", d["study_id"], {
                     "is_duplicate": 1,
                     "duplicate_of_study_id": g["canonical_study_id"],

@@ -138,16 +138,23 @@ class TestQuadas2DomainJudgment:
 
 
 class TestRobinsIDomainJudgment:
-    """Test ROBINS-I domain judgment algorithm."""
+    """Test ROBINS-I domain judgment algorithm per Sterne et al 2016."""
 
-    def test_all_yes_low(self):
-        assert compute_robins_i_domain_judgment({"sq_1_1": "yes", "sq_1_2": "yes"}) == "low"
+    def test_confounding_low_risk(self):
+        # sq_1_1=no (no potential for confounding) -> low
+        assert compute_robins_i_domain_judgment({"sq_1_1": "no"}, domain_key="confounding") == "low"
 
-    def test_one_no_moderate(self):
-        assert compute_robins_i_domain_judgment({"sq_1_1": "yes", "sq_1_2": "no"}) == "moderate"
+    def test_confounding_critical_when_uncontrolled(self):
+        # sq_1_1=yes (confounding potential) but sq_1_2=no (no control technique) -> critical
+        assert compute_robins_i_domain_judgment({"sq_1_1": "yes", "sq_1_2": "no"}, domain_key="confounding") == "critical"
 
-    def test_multiple_no_serious(self):
-        assert compute_robins_i_domain_judgment({"sq_1_1": "no", "sq_1_2": "no"}) == "serious"
+    def test_confounding_moderate_when_well_controlled(self):
+        # sq_1_1=yes, sq_1_2=yes, sq_1_4=yes, sq_1_5=yes -> moderate
+        assert compute_robins_i_domain_judgment({"sq_1_1": "yes", "sq_1_2": "yes", "sq_1_4": "yes", "sq_1_5": "yes"}, domain_key="confounding") == "moderate"
+
+    def test_selection_serious_risk(self):
+        # sq_2_1=yes, sq_2_2=yes, sq_2_3=yes -> serious
+        assert compute_robins_i_domain_judgment({"sq_2_1": "yes", "sq_2_2": "yes", "sq_2_3": "yes"}, domain_key="selection_participants") == "serious"
 
     def test_no_information(self):
         assert compute_robins_i_domain_judgment({"sq_1_1": "no_information"}) == "no_information"
@@ -157,16 +164,27 @@ class TestRobinsIDomainJudgment:
 
 
 class TestRob2DomainJudgment:
-    """Test RoB 2 domain judgment algorithm."""
+    """Test RoB 2 domain judgment algorithm per Sterne et al 2019."""
 
-    def test_all_yes_low(self):
-        assert compute_rob2_domain_judgment({"sq_1_1": "yes", "sq_1_2": "yes"}) == "low"
+    def test_d1_randomization_all_good_low(self):
+        # sq_1_1=yes, sq_1_2=yes, sq_1_3=no (no baseline problem) -> low
+        assert compute_rob2_domain_judgment({"sq_1_1": "yes", "sq_1_2": "yes", "sq_1_3": "no"}, domain_key="randomization") == "low"
 
-    def test_strong_no_high(self):
-        assert compute_rob2_domain_judgment({"sq_1_1": "no", "sq_1_2": "yes"}) == "high"
+    def test_d1_randomization_harm_yes_is_high(self):
+        # sq_1_3=yes (baseline differences suggest problem with randomization) -> high
+        assert compute_rob2_domain_judgment({"sq_1_1": "yes", "sq_1_2": "yes", "sq_1_3": "yes"}, domain_key="randomization") == "high"
 
-    def test_probably_no_some_concerns(self):
-        assert compute_rob2_domain_judgment({"sq_1_1": "probably_no", "sq_1_2": "yes"}) == "some_concerns"
+    def test_d1_concealment_no_is_some_concerns(self):
+        # sq_1_1=yes, sq_1_2=no (allocation sequence not concealed) -> some_concerns
+        assert compute_rob2_domain_judgment({"sq_1_1": "yes", "sq_1_2": "no", "sq_1_3": "no"}, domain_key="randomization") == "some_concerns"
+
+    def test_d3_missing_data_harm_is_high(self):
+        # sq_3_1=no (missing data), sq_3_4=yes (missingness depends on true value), sq_3_5=yes -> high
+        assert compute_rob2_domain_judgment({"sq_3_1": "no", "sq_3_4": "yes", "sq_3_5": "yes"}, domain_key="missing_outcome") == "high"
+
+    def test_d4_awareness_influence_is_high(self):
+        # sq_4_4=yes (awareness influenced assessment) -> high
+        assert compute_rob2_domain_judgment({"sq_4_1": "yes", "sq_4_4": "yes"}, domain_key="measurement") == "high"
 
     def test_no_information_some_concerns(self):
         assert compute_rob2_domain_judgment({"sq_1_1": "no_information"}) == "some_concerns"

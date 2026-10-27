@@ -16,6 +16,7 @@ Endpoints:
 """
 from __future__ import annotations
 import json
+import os
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
@@ -253,15 +254,26 @@ async def ai_prefill(
     used_full_text = len(full_text) > 100
 
     # Select model_fn
+    is_test_env = os.environ.get("PYTEST_CURRENT_TEST") is not None or getattr(settings, "env", "") in ("test", "development")
     if body.model_fn_name == "mock":
+        if not is_test_env:
+            raise HTTPException(
+                status_code=400,
+                detail="Mock model function is prohibited in production. Configure a real LLM gateway.",
+            )
         model_fn = rob_ai.mock_model_fn
     else:
         from services.llm_client import get_client
         from services.llm_extractor import is_llm_available
         if is_llm_available():
             model_fn = get_client().as_model_fn("prefill_rob_domain")
-        else:
+        elif is_test_env:
             model_fn = rob_ai.mock_model_fn
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail="Risk of Bias Co-Scientist service is currently unavailable. No fake judgments are fabricated in production.",
+            )
 
     # Build study metadata from the actual study row (was: all empty strings,
     # which gave the LLM no study context and degraded every prefill)
@@ -501,6 +513,17 @@ async def adjudicate_assessment(
     if not row:
         raise HTTPException(status_code=404, detail="Assessment not found")
 
+    tool_key = row["tool"]
+    rob_tool = rob_tools.get_tool(tool_key)
+    valid_options = set(rob_tool.judgment_options) if rob_tool else {"low", "some_concerns", "high", "moderate", "serious", "critical", "unclear"}
+    
+    norm_judgment = body.final_judgment.strip().lower().replace(" ", "_")
+    if norm_judgment not in valid_options and body.final_judgment not in valid_options:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid judgment '{body.final_judgment}'. Valid options: {list(valid_options)}"
+        )
+
     adjudicator = body.adjudicator or (user["username"] if user else "adjudicator")
 
     conn.execute(
@@ -509,7 +532,7 @@ async def adjudicate_assessment(
            adjudicator = ?,
            overall_judgment = ?
            WHERE assessment_id = ?""",
-        (adjudicator, body.final_judgment, assessment_id),
+        (adjudicator, norm_judgment, assessment_id),
     )
     conn.commit()
 
@@ -551,6 +574,10 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
         now = datetime.now(timezone.utc).isoformat()
         assessment_id = f"rob_{study_id}_{tool_id}"
         
+        # Normalize overall judgment to standard vocabulary (e.g. "Low" -> "low", "Some concerns" -> "some_concerns")
+        raw_overall = result.get("overall_judgment", "unclear")
+        overall_norm = raw_overall.strip().lower().replace(" ", "_")
+
         # Check if assessment exists
         existing = conn.execute(
             "SELECT assessment_id FROM rob_assessments WHERE study_id = ? AND tool = ?",
@@ -565,7 +592,7 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
                    ai_prefilled = 1,
                    ai_prefilled_at = ?
                    WHERE assessment_id = ?""",
-                (result.get("overall_judgment", "Unclear"), result.get("overall_judgment", "Unclear"), now, existing["assessment_id"])
+                (overall_norm, overall_norm, now, existing["assessment_id"])
             )
             assessment_id = existing["assessment_id"]
         else:
@@ -573,14 +600,15 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
                 """INSERT INTO rob_assessments 
                    (assessment_id, study_id, project_id, tool, overall_judgment, overall_risk, ai_prefilled, ai_prefilled_at)
                    VALUES (?, ?, ?, ?, ?, ?, 1, ?)""",
-                (assessment_id, study_id, project_id, tool_id, result.get("overall_judgment", "Unclear"), result.get("overall_judgment", "Unclear"), now)
+                (assessment_id, study_id, project_id, tool_id, overall_norm, overall_norm, now)
             )
 
         # Save individual domain judgments & rationales
         for d in result.get("domains", []):
             d_key = d.get("domain_id")
             d_label = d.get("domain_name")
-            judgment = d.get("judgment", "Unclear")
+            raw_dj = d.get("judgment", "unclear")
+            judgment = raw_dj.strip().lower().replace(" ", "_")
             support_quote = d.get("support_quote", "")
             confidence = d.get("confidence", 0.85)
             justification = d.get("justification", "")
@@ -615,7 +643,7 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
         return {
             "success": True,
             "assessment_id": assessment_id,
-            "overall_judgment": result.get("overall_judgment", "Unclear"),
+            "overall_judgment": overall_norm,
             "domains": result.get("domains", [])
         }
     except HTTPException:

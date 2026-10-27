@@ -131,6 +131,20 @@ Return JSON only in this exact shape:
     return _fallback_heuristic_assessment(study_text, tool_type)
 
 
+def _extract_snippet(text: str, keywords: list[str]) -> str:
+    """Extract an authentic sentence from study text containing any of the keywords."""
+    for kw in keywords:
+        pos = text.lower().find(kw)
+        if pos != -1:
+            start = max(0, text.rfind(".", 0, pos) + 1)
+            end = text.find(".", pos)
+            end = len(text) if end == -1 else end + 1
+            snippet = text[start:end].strip()
+            if snippet:
+                return snippet[:250]
+    return ""
+
+
 def _fallback_heuristic_assessment(text: str, tool_type: str = "rob2") -> Dict[str, Any]:
     """Fast rule-based Cochrane domain assessment matching RCT-Reviewer classifier weights."""
     t_lower = text.lower()
@@ -143,23 +157,24 @@ def _fallback_heuristic_assessment(text: str, tool_type: str = "rob2") -> Dict[s
                     "domain_name": "Quality Assessment",
                     "judgment": "Unclear",
                     "confidence": 0.50,
-                    "support_quote": "Automated evaluation fell back to default domain mapping for non-Cochrane tool.",
+                    "support_quote": "",
                     "page_number": 1,
-                    "justification": "Manual review recommended for this tool."
+                    "justification": "Manual review recommended for non-Cochrane tool."
                 }
             ]
         }
     domains = []
 
     # D1: Sequence Generation
-    if any(k in t_lower for k in ["randomized", "randomly", "computer-generated", "permuted block", "random number"]):
+    d1_keys = ["randomized", "randomly", "computer-generated", "permuted block", "random number"]
+    if any(k in t_lower for k in d1_keys):
         domains.append({
             "domain_id": "D1",
             "domain_name": "Random sequence generation",
             "judgment": "Low",
             "confidence": 0.85,
-            "support_quote": "Patients were randomly assigned to treatment cohorts.",
-            "page_number": 2,
+            "support_quote": _extract_snippet(text, d1_keys),
+            "page_number": 1,
             "justification": "Random allocation explicitly stated in study design methodology."
         })
     else:
@@ -168,20 +183,21 @@ def _fallback_heuristic_assessment(text: str, tool_type: str = "rob2") -> Dict[s
             "domain_name": "Random sequence generation",
             "judgment": "High" if "observational" in t_lower or "retrospective" in t_lower else "Unclear",
             "confidence": 0.80,
-            "support_quote": "Retrospective / non-randomized single center study cohort.",
+            "support_quote": _extract_snippet(text, ["observational", "retrospective"]),
             "page_number": 1,
             "justification": "Non-randomized observational design with potential confounding."
         })
 
     # D2: Allocation Concealment
-    if any(k in t_lower for k in ["opaque envelope", "central randomization", "interactive voice", "web-based randomization"]):
+    d2_keys = ["opaque envelope", "central randomization", "interactive voice", "web-based randomization"]
+    if any(k in t_lower for k in d2_keys):
         domains.append({
             "domain_id": "D2",
             "domain_name": "Allocation concealment",
             "judgment": "Low",
             "confidence": 0.85,
-            "support_quote": "Central web-based allocation was used to conceal treatment assignment.",
-            "page_number": 2,
+            "support_quote": _extract_snippet(text, d2_keys),
+            "page_number": 1,
             "justification": "Adequate concealment preventing allocation anticipation."
         })
     else:
@@ -196,14 +212,15 @@ def _fallback_heuristic_assessment(text: str, tool_type: str = "rob2") -> Dict[s
         })
 
     # D3: Blinding of Participants and Personnel
-    if any(k in t_lower for k in ["double-blind", "double blind", "placebo-controlled", "identical matching placebo"]):
+    d3_keys = ["double-blind", "double blind", "placebo-controlled", "identical matching placebo"]
+    if any(k in t_lower for k in d3_keys):
         domains.append({
             "domain_id": "D3",
             "domain_name": "Blinding of participants and personnel",
             "judgment": "Low",
             "confidence": 0.90,
-            "support_quote": "Double-blind, placebo-controlled clinical investigation.",
-            "page_number": 2,
+            "support_quote": _extract_snippet(text, d3_keys),
+            "page_number": 1,
             "justification": "Both participants and clinical personnel were blinded."
         })
     else:
@@ -212,20 +229,21 @@ def _fallback_heuristic_assessment(text: str, tool_type: str = "rob2") -> Dict[s
             "domain_name": "Blinding of participants and personnel",
             "judgment": "High" if "open-label" in t_lower or "open label" in t_lower else "Unclear",
             "confidence": 0.75,
-            "support_quote": "Open-label treatment administration.",
-            "page_number": 2,
+            "support_quote": _extract_snippet(text, ["open-label", "open label"]),
+            "page_number": 1,
             "justification": "Open-label trial design; performance bias possible."
         })
 
     # D4: Blinding of Outcome Assessment
-    if any(k in t_lower for k in ["blinded outcome", "independent core lab", "blinded radiologist", "blinded assessor", "central adjudicat"]):
+    d4_keys = ["blinded outcome", "independent core lab", "blinded radiologist", "blinded assessor", "central adjudicat"]
+    if any(k in t_lower for k in d4_keys):
         domains.append({
             "domain_id": "D4",
             "domain_name": "Blinding of outcome assessment",
             "judgment": "Low",
             "confidence": 0.85,
-            "support_quote": "Imaging endpoints were evaluated by blinded independent core laboratory neuroradiologists.",
-            "page_number": 3,
+            "support_quote": _extract_snippet(text, d4_keys),
+            "page_number": 1,
             "justification": "Blinded independent adjudicators assessed clinical and radiological endpoints."
         })
     else:
@@ -235,19 +253,20 @@ def _fallback_heuristic_assessment(text: str, tool_type: str = "rob2") -> Dict[s
             "judgment": "Unclear",
             "confidence": 0.70,
             "support_quote": "",
-            "page_number": 2,
+            "page_number": 1,
             "justification": "Blinding of outcome adjudicators not clearly documented."
         })
 
     # D5: Incomplete Outcome Data
-    if any(k in t_lower for k in ["intention-to-treat", "itt analysis", "complete follow-up", "no loss to follow-up"]):
+    d5_keys = ["intention-to-treat", "itt analysis", "complete follow-up", "no loss to follow-up"]
+    if any(k in t_lower for k in d5_keys):
         domains.append({
             "domain_id": "D5",
             "domain_name": "Incomplete outcome data",
             "judgment": "Low",
             "confidence": 0.85,
-            "support_quote": "All randomized participants were included in the intention-to-treat analysis with complete follow-up.",
-            "page_number": 4,
+            "support_quote": _extract_snippet(text, d5_keys),
+            "page_number": 1,
             "justification": "Low attrition rate with intention-to-treat population."
         })
     else:
@@ -256,19 +275,20 @@ def _fallback_heuristic_assessment(text: str, tool_type: str = "rob2") -> Dict[s
             "domain_name": "Incomplete outcome data",
             "judgment": "Low" if "100%" in t_lower or "recovered" in t_lower else "Unclear",
             "confidence": 0.70,
-            "support_quote": "Twelve months after discharge, the patient had recovered.",
-            "page_number": 4,
+            "support_quote": _extract_snippet(text, ["100%", "recovered"]),
+            "page_number": 1,
             "justification": "Outcome data reported for the evaluated patient cohort."
         })
 
     # D6: Selective Reporting
-    if any(k in t_lower for k in ["clinicaltrials.gov", "protocol registered", "pre-specified", "primary endpoint"]):
+    d6_keys = ["clinicaltrials.gov", "protocol registered", "pre-specified", "primary endpoint"]
+    if any(k in t_lower for k in d6_keys):
         domains.append({
             "domain_id": "D6",
             "domain_name": "Selective reporting",
             "judgment": "Low",
             "confidence": 0.85,
-            "support_quote": "Trial was registered on ClinicalTrials.gov with pre-specified primary endpoints.",
+            "support_quote": _extract_snippet(text, d6_keys),
             "page_number": 1,
             "justification": "Pre-specified registered protocol with concordant reported outcomes."
         })
@@ -278,20 +298,21 @@ def _fallback_heuristic_assessment(text: str, tool_type: str = "rob2") -> Dict[s
             "domain_name": "Selective reporting",
             "judgment": "Low",
             "confidence": 0.75,
-            "support_quote": "All diagnostic and clinical endpoints reported in accordance with case report guidelines.",
-            "page_number": 2,
-            "justification": "Key pre-specified morphological and clinical outcomes fully reported."
+            "support_quote": "",
+            "page_number": 1,
+            "justification": "Key pre-specified morphological and clinical outcomes reported."
         })
 
     # D7: Other Bias
+    d7_keys = ["conflict of interest", "competing interests", "funding", "disclosure"]
     domains.append({
         "domain_id": "D7",
         "domain_name": "Other bias",
         "judgment": "Low",
         "confidence": 0.80,
-        "support_quote": "No competing financial interests or conflicts of interest were declared.",
-        "page_number": 6,
-        "justification": "No major external commercial conflicts or baseline confounding detected."
+        "support_quote": _extract_snippet(text, d7_keys),
+        "page_number": 1,
+        "justification": "Commercial conflicts and baseline confounding checked."
     })
 
     high_count = sum(1 for d in domains if d["judgment"] == "High")

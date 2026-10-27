@@ -81,27 +81,29 @@ async def update_screening(
 
     check_project_access(conn, row["project_id"], user, min_role="reviewer")
 
-    if body.stage in ("ta", "ft"):
-        conn.execute("UPDATE studies SET screening_stage = ? WHERE study_id = ?", (body.stage, study_id))
-        conn.commit()
+    # H4: Validate stage before mutating so stage guards are not bypassed
+    record_stage = row["screening_stage"] or ("ft" if row["screening_status"] == "awaiting_pdf" else "ta")
+    if body.stage and body.stage not in ("ta", "ft"):
+        raise HTTPException(status_code=400, detail="Invalid screening stage")
 
     if body.status in ("included", "excluded", "maybe"):
         await create_screening_decision(study_id, ScreeningDecisionCreate(
             study_id=study_id, project_id=row["project_id"], decision=body.status,
-            stage=body.stage, reason_text=body.reason,
+            stage=body.stage or record_stage, reason_text=body.reason,
         ), background_tasks, user, conn)
         return dict(conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone())
 
+    target_stage = body.stage or record_stage
     conn.execute(
         """UPDATE studies
            SET screening_status = ?, screening_stage = ?, screening_reason = ?
            WHERE study_id = ?""",
-        (body.status, body.stage, body.reason, study_id),
+        (body.status, target_stage, body.reason, study_id),
     )
     conn.commit()
 
-    # Auto-fill extraction sheet with Study ID, Year, Author, etc. when study is included
-    if body.status == "included":
+    # Auto-fill extraction sheet only when study is included at Full-Text stage
+    if body.status == "included" and target_stage == "ft":
         auto_prefill_study_bibliographic_extractions(conn, study_id, row["project_id"])
 
     # Auto-create + AI-prefill RoB when a study is included at full-text stage
@@ -572,10 +574,16 @@ def _check_and_record_conflict(
 
     all_decisions = [dict(d) for d in raw_decisions]
 
+    def _norm_dec(d_val: str) -> str:
+        d_clean = (d_val or "").strip().lower()
+        if d_clean in ("ta_included", "included"):
+            return "included"
+        return d_clean
+
     conflict_detected = False
-    decisions_set = {d["decision"] for d in all_decisions}
+    decisions_set = {_norm_dec(d["decision"]) for d in all_decisions}
     if latest_decision:
-        decisions_set.add(latest_decision)
+        decisions_set.add(_norm_dec(latest_decision))
 
     if len(decisions_set) > 1 and len(all_decisions) >= 1:
         conflict_detected = True
@@ -596,7 +604,7 @@ def _check_and_record_conflict(
                    (conflict_id, study_id, project_id, stage,
                     reviewer1_id, reviewer1_decision,
                     reviewer2_id, reviewer2_decision, status)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unresolved')""",
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unresolved')""",
                 (str(uuid.uuid4()), study_id, project_id, stage,
                  r1_id, r1_dec, r2_id, r2_dec),
             )
@@ -707,24 +715,26 @@ async def create_screening_decision(
         )
 
     # Auto-detect conflicts via shared helper
-    _check_and_record_conflict(
+    has_conflict = _check_and_record_conflict(
         conn, study_id, body.project_id, body.stage,
         latest_decision=body.decision,
         reason_text=body.reason_text or body.reason_code,
     )
 
-    # Always update study screening status (single or multi reviewer)
+    # If there is an unresolved conflict between reviewers, preserve conflict status rather than last-writer-wins
+    study_status = "conflict" if has_conflict else body.decision
+
     conn.execute(
         """UPDATE studies SET
            screening_status = ?, screening_stage = ?,
            screening_reason = ?
            WHERE study_id = ?""",
-        (body.decision, body.stage,
+        (study_status, body.stage,
          body.reason_text or body.reason_code, study_id),
     )
 
-    # Auto-fill extraction sheet with Study ID, Year, Author, etc. when study is included
-    if body.decision == "included":
+    # Auto-fill extraction sheet with Study ID, Year, Author, etc. ONLY when study is included at Full-Text stage
+    if body.decision == "included" and body.stage == "ft":
         auto_prefill_study_bibliographic_extractions(conn, study_id, body.project_id)
 
     # Auto-create + AI-prefill RoB on full-text inclusion
@@ -748,6 +758,17 @@ async def create_screening_decision(
             verify_exclusion_with_laya, title, abstract, reason_to_verify,
         )
 
+    # Record human decision feedback for calibrated screening confidence and audit
+    if reviewer_id not in ("ai_screener", "ai_reviewer"):
+        from services.screening_confidence import record_human_decision_feedback
+        record_human_decision_feedback(
+            project_id=body.project_id,
+            study_id=study_id,
+            human_decision=body.decision,
+            stage=body.stage,
+            db=conn,
+        )
+
     if hasattr(conn, "commit"):
         conn.commit()
 
@@ -755,6 +776,32 @@ async def create_screening_decision(
         "SELECT * FROM screening_decisions WHERE decision_id = ?", (decision_id,)
     ).fetchone()
     return ScreeningDecisionResponse(**dict(row))
+
+
+@router.get("/projects/{project_id}/screening-calibration")
+async def get_screening_calibration_endpoint(
+    project_id: str,
+    stage: str = Query("ta", description="Screening stage: ta or ft"),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Retrieve conformal calibration parameters, re-inclusion recall, and workload savings metrics."""
+    check_project_access(conn, project_id, user, min_role="reviewer")
+    from services.screening_confidence import compute_workload_and_recall
+    return compute_workload_and_recall(project_id, stage=stage, db=conn)
+
+
+@router.post("/projects/{project_id}/screening-calibration/recalibrate")
+async def recalibrate_screening_endpoint(
+    project_id: str,
+    stage: str = Query("ta", description="Screening stage: ta or ft"),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Recompute and update conformal risk control thresholds from human screening decisions."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.screening_confidence import recalibrate_project
+    return recalibrate_project(project_id, stage=stage, db=conn)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1506,10 +1553,16 @@ async def batch_ai_screen(
     sig_res = generate_signals(project_id, db=conn, force=False)
     signals = sig_res.get("signals", {})
 
-    studies = conn.execute(
-        "SELECT * FROM studies WHERE project_id = ? AND screening_status = 'pending'",
-        (project_id,),
-    ).fetchall()
+    if stage == "ft":
+        studies = conn.execute(
+            "SELECT * FROM studies WHERE project_id = ? AND screening_status IN ('ta_included', 'awaiting_pdf', 'pending_ft')",
+            (project_id,),
+        ).fetchall()
+    else:
+        studies = conn.execute(
+            "SELECT * FROM studies WHERE project_id = ? AND screening_status = 'pending'",
+            (project_id,),
+        ).fetchall()
 
     total_screened = 0
     included = 0
@@ -1694,15 +1747,21 @@ async def batch_ai_screen(
                     (dec_id, sid, project_id, rec, reason_code, reason_text, stage),
                 )
 
+            status_to_set = rec
+            if rec == "included" and stage == "ta":
+                status_to_set = "ta_included"
+
             conn.execute(
-                "UPDATE studies SET screening_status = ?, screening_reason = ? WHERE study_id = ?",
-                (rec, reason_text, sid),
+                "UPDATE studies SET screening_status = ?, screening_stage = ?, screening_reason = ? WHERE study_id = ?",
+                (status_to_set, stage, reason_text, sid),
             )
 
             is_conflict = _check_and_record_conflict(conn, sid, project_id, stage, latest_decision=rec, reason_text=reason_text)
 
             if rec == "included":
                 included += 1
+                if stage == "ft":
+                    auto_prefill_study_bibliographic_extractions(conn, sid, project_id)
             elif rec == "excluded":
                 excluded += 1
             else:

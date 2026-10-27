@@ -97,11 +97,30 @@ def fit_bivariate_model(
     if n_studies < 2:
         raise ValueError("Need at least 2 studies for bivariate model")
 
-    # Transform to logit scale
-    logit_sens = np.array([_logit(s) for s in sensitivities])
-    logit_spec = np.array([_logit(sp) for sp in specificities])
-    var_sens = np.array([_logit_se(s, n) ** 2 for s, n in zip(sensitivities, n_pos)])
-    var_spec = np.array([_logit_se(sp, n) ** 2 for sp, n in zip(specificities, n_neg)])
+    # Standard continuity correction: if p == 0 or p == 1, adjust by 0.5 events
+    adj_sens = []
+    adj_spec = []
+    for s, n in zip(sensitivities, n_pos):
+        if n > 0 and (s <= 0.0 or s >= 1.0):
+            events = s * n
+            corrected = (events + 0.5) / (n + 1.0)
+            adj_sens.append(corrected)
+        else:
+            adj_sens.append(max(min(s, 0.999), 0.001))
+
+    for sp, n in zip(specificities, n_neg):
+        if n > 0 and (sp <= 0.0 or sp >= 1.0):
+            events = sp * n
+            corrected = (events + 0.5) / (n + 1.0)
+            adj_spec.append(corrected)
+        else:
+            adj_spec.append(max(min(sp, 0.999), 0.001))
+
+    # Transform to logit scale with corrected rates
+    logit_sens = np.array([_logit(s) for s in adj_sens])
+    logit_spec = np.array([_logit(sp) for sp in adj_spec])
+    var_sens = np.array([_logit_se(s, n) ** 2 for s, n in zip(adj_sens, n_pos)])
+    var_spec = np.array([_logit_se(sp, n) ** 2 for sp, n in zip(adj_spec, n_neg)])
 
     # Negative log-likelihood for bivariate normal model
     def neg_log_lik(params):

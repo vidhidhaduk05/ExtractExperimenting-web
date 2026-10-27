@@ -1,9 +1,10 @@
-﻿"""FastAPI router for Rigor Scan methodology & reporting completeness analysis."""
+"""FastAPI router for Rigor Scan methodology & reporting completeness analysis."""
 
 from __future__ import annotations
 
 import io
 import logging
+import os
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -27,9 +28,14 @@ class ScanTextRequest(BaseModel):
     doi: Optional[str] = Field("", description="DOI if known")
 
 
+ENABLE_EXAMPLE_ENDPOINTS = os.environ.get("ENABLE_EXAMPLE_ENDPOINTS", "false").lower() in ("true", "1", "yes")
+
+
 @router.get("/example")
 async def get_example() -> Dict[str, Any]:
-    """Retrieve the full reference scan (Dubowitz et al. PLOS ONE)."""
+    """Retrieve reference scan (gated by ENABLE_EXAMPLE_ENDPOINTS)."""
+    if not ENABLE_EXAMPLE_ENDPOINTS:
+        raise HTTPException(status_code=404, detail="Example endpoint is disabled in production.")
     ex = load_preset_example()
     if not ex:
         raise HTTPException(status_code=404, detail="Example dataset not found")
@@ -38,7 +44,9 @@ async def get_example() -> Dict[str, Any]:
 
 @router.get("/example/pdf")
 async def get_example_pdf():
-    """Serve the reference example PDF."""
+    """Serve reference example PDF (gated by ENABLE_EXAMPLE_ENDPOINTS)."""
+    if not ENABLE_EXAMPLE_ENDPOINTS:
+        raise HTTPException(status_code=404, detail="Example PDF endpoint is disabled in production.")
     import os
     pdf_path = os.path.join(os.path.dirname(__file__), "..", "data", "example.pdf")
     if os.path.exists(pdf_path):

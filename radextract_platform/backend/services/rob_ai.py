@@ -364,7 +364,13 @@ def prefill_assessment(
         return laya_result
 
     if model_fn is None:
-        model_fn = mock_model_fn
+        import os
+        from config import settings
+        is_test_env = os.environ.get("PYTEST_CURRENT_TEST") is not None or getattr(settings, "env", "") in ("test", "development")
+        if is_test_env:
+            model_fn = mock_model_fn
+        else:
+            raise RuntimeError("No model_fn provided for Risk of Bias prefill and LLM gateway is offline.")
 
     # Process each domain via model_fn fallback
     domains_result = {}

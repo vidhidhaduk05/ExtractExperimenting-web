@@ -568,7 +568,7 @@ class RobAIPrefillRequest(BaseModel):
     """Request AI pre-fill for an assessment."""
     full_text: Optional[str] = None  # full text of the study (from PDF processing)
     abstract: Optional[str] = None   # fallback if no full text
-    model_fn_name: str = "mock"      # which model_fn to use
+    model_fn_name: str = "llm"       # default to real LLM (not mock)
 
 
 class RobAIPrefillResult(BaseModel):

@@ -469,3 +469,44 @@ Then show one primary button labeled `Generate Search Strings`, leading to edita
   - Replaced generic "AI" terminology across the entire UI with **"Co-Scientist"** (e.g., *Co-Scientist Screening*, *Co-Scientist Decision*, *Co-Scientist Recommendation*, *Co-Scientist Pre-Fill*, *Co-Scientist Verification*).
   - All current and future frontend components must conform strictly to these rules.
 
+
+## 2026-10-27 — Screening-to-PRISMA live demo plan
+
+- Consolidated decisions: [PLANS/SCREENING_TO_PRISMA_DEMO_MASTER_PLAN.md](../PLANS/SCREENING_TO_PRISMA_DEMO_MASTER_PLAN.md).
+- Preserve future features with visible, inactive landing launch actions; retain protocol upload and editable inclusion/exclusion criteria.
+- Reviewer-approved protocol settings and study-only versus review-wide clarifications govern screening; uncertainty must not be suppressed without evidence.
+- Required browser testing: Jev Ultrafast × local Laya ONNX action decisions, Biomni-R0 32B candidate verbatim generation where needed, and independent source/annotated-value verification. Prior setup is user-reported, not independently verified here.
+- Seven-day validation plan and two final rehearsals are pending. No application behavior was changed by this document.
+
+## 2026-10-27 — Source-column duplicate review and coding-agent handoff
+
+- User requires source name entry during reference import and a spreadsheet duplicate-review tab with one column per distinct source, candidate groups as rows, and persistent Confirm duplicate / Not a duplicate / undo actions. Preserve original provenance, import history, same-source multiple records, group splits, and negative decisions across detector reruns.
+- Full implementation handoff: PLANS/CODING_AGENT_HANDOFF_SCREENING_TO_PRISMA.md; master decisions: PLANS/SCREENING_TO_PRISMA_DEMO_MASTER_PLAN.md.
+- Evaluate stanford-oval/sliders as an optional long-document extraction adapter with pinned reviewer-approved schema and independent evidence checks; no current integration or accuracy benefit established.
+- Local evidence-tracer guardrail patch: complete quote membership, real/unknown page location, stale-verification clearing and abstention on long truncated excerpts. Seven regression failures reproduced before repair; targeted tracer/coded-extraction/quote-verification suite: 29 passed in 33.92s. Semantic calls mocked; no claim of real model or browser accuracy. Ruff unavailable. Other work remains pending.
+
+## 2026-10-27 — Planning-only UI and Rigor Scan handoff
+
+- User explicitly clarified: no application coding requested; provide plans to pass to another coding agent. Screening UI edits attempted before this clarification were undone; git diff confirms no retained changes to ScreeningPage.tsx or approved-theme.css.
+- Handoff work packages 8/9 specify Master Theme repair and simple shield replacing robot icons beside Co-Scientist, plus source-grounded Rigor Scan fixes against https://www.k-dense.ai/tools/rigor-scan.
+- Rigor Scan static findings: simulated document reader, missing uploaded-check spoke geometry, fixed domain labels/default score fallbacks, fabricated evidence rectangles and unperformed reference-check success claims. Implementation and live validation remain pending. Details and gates: PLANS/CODING_AGENT_HANDOFF_SCREENING_TO_PRISMA.md.
+
+## 2026-10-27 — Extraction Evidence Tracing & Demo Removal
+
+- **Part A: Evidence Tracing Honesty & Table Support**:
+  - `jev_client.py`: Added candidate path resolution for both `laya/models` and `laya/onnx` across workspace root directories. Added explicit WARNING logs if Laya weights are absent.
+  - `laya_extraction_tracer.py`: Added structured table row/caption indexing in `_extract_page_sentences` and `_locate_quote`. Structured table extractions are now candidate-indexed and Laya-verified with exact table page attribution.
+  - Replaced debug swallowing with batch-level WARNING logs and annotated every item with `tracing_status` (`verified`, `unverified`, `failed`, `disabled`).
+  - Added batch tracing summary to `auto_extract_service.py` (`auto_extract_study`).
+  - Quote provenance pre-verification: unlocated quotes are explicitly tagged `[UNVERIFIED QUOTE]`, `laya_verified = False`, and `source_page = None`.
+  - Honest confidence and page numbers: removed character-offset page guessing (`idx // 2500 + 1` and `m.start() // 3000 + 1`) and hardcoded derivation page 1. Set `source_page: None` unless located on a known page. Keyword matches emit `[KEYWORD]` with conservative score (0.50), never `[DS]`.
+- **Part B: Production Demo Removal**:
+  - `api.ts`: Deleted silent 404/5xx and catch-block fallback to `handleDemoRequest` in `request()` and `authenticatedRequest()`; real errors throw to the caller.
+  - `api.ts`: Removed `isDemo` fallback for `proj_pam_current`; unpopulated real projects return empty array `[]`.
+  - `api.ts`: Removed hardcoded Cloudflare tunnel URL (`PERMANENT_HPC_BACKEND`) and GitHub `active_backend.json` discovery. Base URL resolves to `VITE_API_BASE_URL` or relative `/api`. Sanitized `active_backend.json` to relative `/api`.
+  - `config.py` & `.env` & `llm_config_service.py`: Removed hardcoded secret keys (`sk-biomni-...`) and proprietary model names.
+  - `routers/rob.py` & `rob_service.py` & `rob_ai.py`: Defaulted `RobAIPrefillRequest.model_fn_name` to `"llm"`; raises 503 if LLM is unavailable in production; restricted `mock_model_fn` strictly to test environments (`PYTEST_CURRENT_TEST`).
+  - `routers/rigor_scan.py`: Gated example endpoints (`/api/rigor-scan/example`, `/api/rigor-scan/example/pdf`) behind `ENABLE_EXAMPLE_ENDPOINTS` environment flag.
+  - `demoRigorData.ts`: Deprecated and cleared dead demo data file.
+  - Full regression test suite (`test_demo_removal_regressions.py` + `test_laya_extraction_tracer.py`): 19 passed.
+

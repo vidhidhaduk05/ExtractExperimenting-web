@@ -35,8 +35,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "antigravity_model": "",          # empty = use settings.llm_model
     "antigravity_api_key": "",        # optional Gemini key (connection test only)
     "local_endpoint_url": os.environ.get("OPENAI_BASE_URL") or "http://127.0.0.1:18000/v1",
-    "local_model_name": os.environ.get("OPENAI_MODEL") or "biomni-r0",
-    "custom_api_key": os.environ.get("OPENAI_API_KEY") or "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e",
+    "local_model_name": os.environ.get("OPENAI_MODEL") or "co-scientist-screening",
+    "custom_api_key": os.environ.get("OPENAI_API_KEY") or "",
     "temperature": 0.1,
     "timeout_seconds": 90,
 }

@@ -252,7 +252,7 @@ def _recompute_domain_judgment(db, judgment_id: str):
                 active_answers[sq.key] = answer_dict.get(sq.key, "")
             answer_dict = active_answers
 
-    new_judgment = compute_domain_judgment(tool_key, answer_dict)
+    new_judgment = compute_domain_judgment(tool_key, answer_dict, domain_key=domain_key)
     db.update("rob_domain_judgments", judgment_id, {"risk_judgment": new_judgment})
     _recompute_overall_judgment(db, assessment_id)
 
@@ -261,6 +261,9 @@ def _recompute_overall_judgment(db, assessment_id: str):
     """Recompute the overall judgment from all domain judgments."""
     a_row = db.get("rob_assessments", assessment_id)
     if not a_row:
+        return
+    # H5: Do not overwrite adjudicated assessment judgments
+    if a_row.get("verification_status") == "adjudicated":
         return
     tool_key = a_row["tool"]
 
@@ -872,7 +875,14 @@ def auto_assess_study(
             from services.llm_client import get_client
             model_fn = get_client().as_model_fn("prefill_rob_domain")
         else:
-            model_fn = rob_ai.mock_model_fn
+            import os
+            from config import settings
+            is_test_env = os.environ.get("PYTEST_CURRENT_TEST") is not None or getattr(settings, "env", "") in ("test", "development")
+            if is_test_env:
+                model_fn = rob_ai.mock_model_fn
+            else:
+                logger.warning(f"[RoB] LLM unavailable for assessment {assessment['assessment_id']}; skipping AI prefill without fabricating mock data.")
+                return assessment
 
         pdf_data = pdf_service.get_pdf_data(study_id, db=db)
         full_text = (pdf_data or {}).get("full_text", "") or ""

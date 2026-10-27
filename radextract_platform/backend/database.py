@@ -664,6 +664,12 @@ MIGRATION_COLUMNS = [
     ("rob_signaling_answers", "reviewed_at", "TEXT DEFAULT ''"),
     ("studies", "pdf_processor_engine", "TEXT DEFAULT ''"),
     ("studies", "study_label", "TEXT DEFAULT ''"),
+    # Calibrated confidence & continuous audit columns
+    ("studies", "ai_p_include", "REAL DEFAULT NULL"),
+    ("studies", "auto_decision", "INTEGER DEFAULT 0"),
+    ("studies", "sampled_audit", "INTEGER DEFAULT 0"),
+    ("screening_decisions", "auto_decision", "INTEGER DEFAULT 0"),
+    ("screening_decisions", "sampled_audit", "INTEGER DEFAULT 0"),
 ]
 
 

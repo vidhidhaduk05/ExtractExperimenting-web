@@ -294,32 +294,57 @@ def auto_populate_factors(grade_id: str, db: Optional[DBBackend] = None) -> dict
     meta_id = grade.get("meta_analysis_id")
     updates = {}
 
-    # 1. Risk of Bias — from RoB summary
+    # 1. Risk of Bias — from outcome-level studies in meta-analysis
     try:
-        rob_summary = rob_service.get_project_summary(project_id, db=db)
-        total = rob_summary.get("total_assessments", 0)
+        relevant_study_ids = set()
+        if meta_id:
+            ma_studies = db.query("meta_analysis_studies", {"meta_id": meta_id, "included": 1})
+            relevant_study_ids = {s["study_id"] for s in ma_studies if s.get("study_id")}
+
+        if relevant_study_ids:
+            all_assessments = []
+            for s_id in relevant_study_ids:
+                s_assessments = db.query("rob_assessments", {"study_id": s_id})
+                all_assessments.extend(s_assessments)
+        else:
+            all_assessments = db.query("rob_assessments", {"project_id": project_id})
+
+        total = len(all_assessments)
         if total > 0:
-            judgment_counts = rob_summary.get("judgment_counts", {})
+            judgment_counts = {}
+            for a in all_assessments:
+                oj = str(a.get("overall_judgment") or a.get("overall_risk") or "").strip().lower()
+                oj = oj.replace(" ", "_")
+                if oj:
+                    judgment_counts[oj] = judgment_counts.get(oj, 0) + 1
+
             high_count = (judgment_counts.get("high", 0) +
                           judgment_counts.get("serious", 0) +
                           judgment_counts.get("critical", 0))
             pct_high = high_count / total * 100
 
+            scope_desc = f"in outcome meta-analysis ({total} studies)" if relevant_study_ids else f"across project ({total} assessments)"
             if pct_high >= 50:
                 rating = "very_serious"
-                rationale = f"{pct_high:.0f}% of studies have high/serious risk of bias ({high_count}/{total})"
+                rationale = f"{pct_high:.0f}% of studies {scope_desc} have high/serious/critical risk of bias ({high_count}/{total})"
             elif pct_high > 0:
                 rating = "serious"
-                rationale = f"{pct_high:.0f}% of studies have high/serious risk of bias ({high_count}/{total})"
+                rationale = f"{pct_high:.0f}% of studies {scope_desc} have high/serious/critical risk of bias ({high_count}/{total})"
             else:
                 rating = "none"
-                rationale = f"No studies with high/serious risk of bias ({total} assessments)"
+                rationale = f"No studies {scope_desc} with high/serious/critical risk of bias"
 
             updates["risk_of_bias"] = {
                 "rating": rating,
                 "rationale": rationale,
                 "auto_data": {"pct_high": round(pct_high, 1), "high_count": high_count,
                               "total": total, "judgment_counts": judgment_counts},
+            }
+        else:
+            updates["risk_of_bias"] = {
+                "rating": "none",
+                "rationale": "No RoB assessments found for studies in this outcome",
+                "auto_data": {},
             }
     except Exception:
         updates["risk_of_bias"] = {
