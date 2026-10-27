@@ -218,6 +218,10 @@ def get_grade_assessment(grade_id: str, db: Optional[DBBackend] = None) -> Optio
 
     result = dict(row)
     result["factors"] = factor_list
+    for f_item in factor_list:
+        fk = f_item.get("factor_key")
+        if fk:
+            result[fk] = f_item
     result["certainty_label"] = CERTAINTY_LABELS.get(result["certainty_rating"], "")
     result["certainty_color"] = CERTAINTY_COLORS.get(result["certainty_rating"], "")
     return result
@@ -300,9 +304,10 @@ def auto_populate_factors(grade_id: str, db: Optional[DBBackend] = None) -> dict
         total = rob_summary.get("total_assessments", 0)
         if total > 0:
             judgment_counts = rob_summary.get("judgment_counts", {})
-            high_count = (judgment_counts.get("high", 0) +
-                          judgment_counts.get("serious", 0) +
-                          judgment_counts.get("critical", 0))
+            jc = {str(k).lower().strip(): v for k, v in judgment_counts.items()}
+            high_count = (jc.get("high", 0) +
+                          jc.get("serious", 0) +
+                          jc.get("critical", 0))
             pct_high = high_count / total * 100
 
             if pct_high >= 50:

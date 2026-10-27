@@ -373,9 +373,54 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
 
     # Mark duplicates in DB if requested
     duplicates_marked = 0
+    skipped_human_decided = 0
+    study_lookup = {s["study_id"]: s for s in studies}
+
+    def _has_human_decision(study_obj: dict) -> bool:
+        sid = study_obj.get("study_id")
+        if not sid:
+            return False
+        status = (study_obj.get("screening_status") or "").lower().strip()
+        stage = (study_obj.get("screening_stage") or "").lower().strip()
+        reason = (study_obj.get("screening_reason") or "").strip()
+        if status in ("included", "excluded", "maybe"):
+            if stage in ("ta", "ft", "title_abstract", "full_text") or (reason and reason != "Duplicate publication"):
+                return True
+        try:
+            decisions = db.query("screening_decisions", {"study_id": sid})
+            for dec in decisions:
+                rev = str(dec.get("reviewer_id", "")).lower()
+                rev_name = str(dec.get("reviewer_name", "")).lower()
+                if rev and not rev.startswith("ai") and "bot" not in rev and "ai" not in rev_name:
+                    return True
+                if dec.get("decision") in ("included", "excluded", "maybe"):
+                    return True
+        except Exception:
+            pass
+        meta_raw = study_obj.get("metadata_json") or "{}"
+        try:
+            meta = json.loads(meta_raw) if isinstance(meta_raw, str) else meta_raw
+            if meta.get("resolved_duplicate") or meta.get("human_decision") or meta.get("manual_decision"):
+                return True
+        except Exception:
+            pass
+        return False
+
     if auto_mark and dup_groups:
         for g in dup_groups:
+            canonical_study_id = g["canonical_study_id"]
+            canonical_study = study_lookup.get(canonical_study_id, {})
+            canonical_has_human = _has_human_decision(canonical_study)
+
             for d in g["duplicates"]:
+                dup_study = study_lookup.get(d["study_id"], {})
+                dup_has_human = _has_human_decision(dup_study)
+
+                if canonical_has_human or dup_has_human:
+                    skipped_human_decided += 1
+                    d["skipped_human_decided"] = True
+                    continue
+
                 db.update("studies", d["study_id"], {
                     "is_duplicate": 1,
                     "duplicate_of_study_id": g["canonical_study_id"],
@@ -397,6 +442,7 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
         "duplicate_groups": dup_groups,
         "total_duplicates": total_dups,
         "duplicates_marked": duplicates_marked,
+        "skipped_human_decided": skipped_human_decided,
     }
 
 

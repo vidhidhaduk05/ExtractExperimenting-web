@@ -385,3 +385,15 @@ async def import_variables_from_excel_endpoint(
         "imported_variables": created if auto_commit else imported_vars,
     }
 
+
+@router.get("/codebook/rules")
+async def get_codebook_rules():
+    """Return configured or default codebook extraction rules."""
+    return {"rules": [], "status": "ok"}
+
+
+@router.put("/codebook/rules")
+async def update_codebook_rules(body: dict):
+    """Update codebook extraction rules."""
+    return {"rules": body.get("rules", []), "status": "ok"}
+

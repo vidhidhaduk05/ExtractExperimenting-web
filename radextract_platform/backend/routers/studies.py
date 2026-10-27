@@ -87,14 +87,15 @@ async def create_study(
     if body.project_id != project_id:
         raise HTTPException(status_code=400, detail="project_id mismatch")
     study_id = str(uuid.uuid4())
+    status_val = body.screening_status or "pending"
     conn.execute(
         """INSERT INTO studies
            (study_id, project_id, title, authors, publication_year, journal,
-            doi, pmid, abstract, source, study_design, metadata_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            doi, pmid, abstract, source, study_design, metadata_json, screening_status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (study_id, project_id, body.title, body.authors,
          body.publication_year, body.journal, body.doi, body.pmid,
-         body.abstract, body.source, body.study_design, body.metadata_json),
+         body.abstract, body.source, body.study_design, body.metadata_json, status_val),
     )
     conn.commit()
     return StudyResponse(
@@ -103,6 +104,7 @@ async def create_study(
         journal=body.journal, doi=body.doi, pmid=body.pmid,
         abstract=body.abstract, source=body.source,
         study_design=body.study_design, metadata_json=body.metadata_json,
+        screening_status=status_val,
     )
 
 

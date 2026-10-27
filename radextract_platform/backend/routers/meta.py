@@ -110,6 +110,7 @@ async def list_meta_analyses(project_id: str, user: Optional[dict] = Depends(get
 
 
 @router.get("/meta-analysis/{project_id}")
+@router.get("/projects/{project_id}/meta-analysis/synthesis")
 async def get_project_meta_analysis_synthesis(
     project_id: str,
     model: str = Query("random", pattern="^(random|fixed)$"),
@@ -117,68 +118,268 @@ async def get_project_meta_analysis_synthesis(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    """Compute and return pooled meta-analysis synthesis for project's included studies."""
+    """Compute and return pooled meta-analysis synthesis from real extracted study data."""
     check_project_access(conn, project_id, user)
     proj = conn.execute("SELECT project_id, name FROM projects WHERE project_id = ?", (project_id,)).fetchone()
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
 
     studies_rows = conn.execute(
-        """SELECT study_id, title, authors, publication_year FROM studies
+        """SELECT study_id, title, authors, publication_year, metadata_json FROM studies
            WHERE project_id = ? AND screening_status IN ('included', 'ta_included', 'ft_included')
            ORDER BY publication_year ASC, title ASC""",
         (project_id,),
     ).fetchall()
 
     if not studies_rows:
-        sample_studies = [
-            {"name": "Miller et al. 2021", "effect": 1.45, "ci_lower": 1.10, "ci_upper": 1.91, "weight": 28.5, "se": 0.14},
-            {"name": "Chen et al. 2022", "effect": 1.82, "ci_lower": 1.25, "ci_upper": 2.65, "weight": 22.0, "se": 0.19},
-            {"name": "Sato et al. 2023", "effect": 1.15, "ci_lower": 0.85, "ci_upper": 1.55, "weight": 34.0, "se": 0.15},
-            {"name": "Garcia et al. 2024", "effect": 2.10, "ci_lower": 1.30, "ci_upper": 3.40, "weight": 15.5, "se": 0.24},
-        ]
         return {
-            "pooled_effect": 1.48,
-            "ci_lower": 1.22,
-            "ci_upper": 1.79,
-            "i2": 42.5,
-            "p_heterogeneity": 0.156,
+            "pooled_effect": None,
+            "ci_lower": None,
+            "ci_upper": None,
+            "i2": None,
+            "p_heterogeneity": None,
+            "tau_squared": None,
+            "q_statistic": None,
             "measure": "Odds Ratio (OR)" if measure == "OR" else measure,
             "model": model,
-            "studies": sample_studies,
+            "studies": [],
+            "excluded_missing_data": [],
+            "message": "No included studies found in this project.",
         }
 
     import math
-    out_studies = []
-    total = len(studies_rows)
+    import re
+    import numpy as np
+    from scipy import stats
+
+    is_ratio = measure.upper() in ("OR", "RR", "HR")
+    extracted_studies = []
+    excluded_missing_data = []
+
     for idx, s in enumerate(studies_rows):
+        sid = s["study_id"]
         author = (s["authors"] or "Study").split(",")[0].split(" ")[0]
         year = s["publication_year"] or (2020 + (idx % 5))
         lbl = f"{author} et al. {year}"
-        eff = round(1.35 + (0.15 * math.sin(idx + 1)), 2)
-        se = round(0.12 + (0.03 * ((idx % 3) + 1)), 2)
-        ci_low = round(math.exp(math.log(eff) - 1.96 * se), 2)
-        ci_high = round(math.exp(math.log(eff) + 1.96 * se), 2)
-        weight = round(100.0 / total, 1)
-        out_studies.append({
-            "name": lbl,
-            "study_id": s["study_id"],
-            "effect": eff,
-            "ci_lower": ci_low,
-            "ci_upper": ci_high,
-            "weight": weight,
-            "se": se,
-        })
+
+        # Fetch all extractions for this study
+        ext_rows = conn.execute(
+            """SELECT e.value, v.name as var_name, v.field_type
+               FROM extractions e
+               JOIN variables v ON e.variable_id = v.variable_id
+               WHERE e.study_id = ?""",
+            (sid,),
+        ).fetchall()
+
+        ext_dict = {}
+        for er in ext_rows:
+            v_key = er["var_name"].strip().lower()
+            val_str = (er["value"] or "").strip()
+            if val_str:
+                ext_dict[v_key] = val_str
+
+        # Also inspect any linked meta_analysis_studies record
+        mas_row = conn.execute(
+            """SELECT mas.* FROM meta_analysis_studies mas
+               JOIN meta_analyses ma ON mas.meta_id = ma.meta_id
+               WHERE ma.project_id = ? AND mas.study_id = ?""",
+            (project_id, sid),
+        ).fetchone()
+
+        effect_val = None
+        ci_low = None
+        ci_high = None
+        se_val = None
+
+        if mas_row:
+            m_eff = mas_row.get("effect_size")
+            m_var = mas_row.get("variance")
+            m_se = mas_row.get("se")
+            m_cil = mas_row.get("ci_lower")
+            m_ciu = mas_row.get("ci_upper")
+            if m_eff is not None:
+                effect_val = float(m_eff)
+            if m_cil is not None:
+                ci_low = float(m_cil)
+            if m_ciu is not None:
+                ci_high = float(m_ciu)
+            if m_se is not None:
+                se_val = float(m_se)
+            elif m_var is not None and float(m_var) > 0:
+                se_val = math.sqrt(float(m_var))
+
+        # Check extracted variables dictionary if not already provided
+        if effect_val is None:
+            # Look for effect key
+            for k, v in ext_dict.items():
+                if any(term in k for term in ("odds_ratio", "odds ratio", "risk_ratio", "risk ratio", "mean_diff", "mean difference", "effect_size", "effect size", "or", "rr", "md", "smd", "hazard_ratio", "hr")):
+                    # Try single string with CI e.g. "1.50 (1.01-2.22)"
+                    m = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(?:\(|\[)?(?:95%\s*CI:?\s*)?([0-9]+(?:\.[0-9]+)?)\s*(?:-|to|,)\s*([0-9]+(?:\.[0-9]+)?)", v)
+                    if m:
+                        try:
+                            effect_val = float(m.group(1))
+                            ci_low = float(m.group(2))
+                            ci_high = float(m.group(3))
+                            break
+                        except ValueError:
+                            pass
+                    try:
+                        effect_val = float(re.findall(r"[-+]?\d*\.?\d+", v)[0])
+                        break
+                    except (IndexError, ValueError):
+                        pass
+
+        # Look for CI keys
+        if ci_low is None or ci_high is None:
+            for k, v in ext_dict.items():
+                if any(term in k for term in ("ci lower", "ci_lower", "ci_low", "lower_ci", "lower ci")):
+                    try:
+                        ci_low = float(re.findall(r"[-+]?\d*\.?\d+", v)[0])
+                    except (IndexError, ValueError):
+                        pass
+                elif any(term in k for term in ("ci upper", "ci_upper", "ci_high", "upper_ci", "upper ci")):
+                    try:
+                        ci_high = float(re.findall(r"[-+]?\d*\.?\d+", v)[0])
+                    except (IndexError, ValueError):
+                        pass
+                elif any(term in k for term in ("se", "standard_error", "standard error", "stderr")):
+                    try:
+                        se_val = float(re.findall(r"[-+]?\d*\.?\d+", v)[0])
+                    except (IndexError, ValueError):
+                        pass
+
+        # Validate numbers
+        has_valid_data = False
+        y = None
+        var = None
+
+        if effect_val is not None:
+            if is_ratio:
+                if effect_val > 0:
+                    y = math.log(effect_val)
+                    if ci_low is not None and ci_high is not None and ci_high > ci_low > 0:
+                        se_log = (math.log(ci_high) - math.log(ci_low)) / (2.0 * 1.96)
+                        if se_log > 0:
+                            var = se_log ** 2
+                            se_val = se_log
+                            has_valid_data = True
+                    elif se_val is not None and se_val > 0:
+                        var = se_val ** 2
+                        ci_low = math.exp(y - 1.96 * se_val)
+                        ci_high = math.exp(y + 1.96 * se_val)
+                        has_valid_data = True
+            else:
+                y = effect_val
+                if ci_low is not None and ci_high is not None and ci_high > ci_low:
+                    se = (ci_high - ci_low) / (2.0 * 1.96)
+                    if se > 0:
+                        var = se ** 2
+                        se_val = se
+                        has_valid_data = True
+                elif se_val is not None and se_val > 0:
+                    var = se_val ** 2
+                    ci_low = y - 1.96 * se_val
+                    ci_high = y + 1.96 * se_val
+                    has_valid_data = True
+
+        if has_valid_data and y is not None and var is not None and var > 0:
+            extracted_studies.append({
+                "name": lbl,
+                "study_id": sid,
+                "title": s["title"],
+                "effect": round(effect_val, 4),
+                "ci_lower": round(ci_low, 4),
+                "ci_upper": round(ci_high, 4),
+                "se": round(se_val, 4),
+                "variance": var,
+                "y": y,
+            })
+        else:
+            excluded_missing_data.append({
+                "study_id": sid,
+                "name": lbl,
+                "title": s["title"],
+                "reason": "Missing extracted effect size or 95% confidence interval / standard error"
+            })
+
+    k = len(extracted_studies)
+    if k == 0:
+        return {
+            "pooled_effect": None,
+            "ci_lower": None,
+            "ci_upper": None,
+            "i2": None,
+            "p_heterogeneity": None,
+            "tau_squared": None,
+            "q_statistic": None,
+            "measure": "Odds Ratio (OR)" if measure == "OR" else measure,
+            "model": model,
+            "studies": [],
+            "excluded_missing_data": excluded_missing_data,
+            "message": "No studies with complete extracted effect data available for meta-analysis pooling."
+        }
+
+    # Meta-analysis pooling
+    y_arr = np.array([st["y"] for st in extracted_studies], dtype=float)
+    v_arr = np.array([st["variance"] for st in extracted_studies], dtype=float)
+    w_fixed = 1.0 / v_arr
+    sum_w_fixed = float(np.sum(w_fixed))
+    theta_fixed = float(np.sum(w_fixed * y_arr) / sum_w_fixed)
+    se_fixed = float(math.sqrt(1.0 / sum_w_fixed))
+
+    if k >= 2:
+        Q = float(np.sum(w_fixed * (y_arr - theta_fixed) ** 2))
+        df = k - 1
+        c = float(sum_w_fixed - np.sum(w_fixed ** 2) / sum_w_fixed)
+        tau2 = max(0.0, (Q - df) / c) if c > 0 else 0.0
+        i2 = max(0.0, (Q - df) / Q * 100.0) if Q > 0 else 0.0
+        p_het = float(1.0 - stats.chi2.cdf(Q, df))
+    else:
+        Q = 0.0
+        df = 0
+        tau2 = 0.0
+        i2 = 0.0
+        p_het = 1.0
+
+    if model == "fixed" or k < 2:
+        theta_pooled = theta_fixed
+        se_pooled = se_fixed
+        w_final = w_fixed
+    else:
+        w_random = 1.0 / (v_arr + tau2)
+        sum_w_random = float(np.sum(w_random))
+        theta_pooled = float(np.sum(w_random * y_arr) / sum_w_random)
+        se_pooled = float(math.sqrt(1.0 / sum_w_random))
+        w_final = w_random
+
+    total_weight = float(np.sum(w_final))
+    for i, st in enumerate(extracted_studies):
+        pct_weight = round(float(w_final[i] / total_weight * 100.0), 2)
+        st["weight"] = pct_weight
+        del st["y"]
+        del st["variance"]
+
+    if is_ratio:
+        pooled_effect = float(math.exp(theta_pooled))
+        ci_lower = float(math.exp(theta_pooled - 1.96 * se_pooled))
+        ci_upper = float(math.exp(theta_pooled + 1.96 * se_pooled))
+    else:
+        pooled_effect = float(theta_pooled)
+        ci_lower = float(theta_pooled - 1.96 * se_pooled)
+        ci_upper = float(theta_pooled + 1.96 * se_pooled)
 
     return {
-        "pooled_effect": 1.42,
-        "ci_lower": 1.18,
-        "ci_upper": 1.71,
-        "i2": 38.2,
-        "p_heterogeneity": 0.182,
+        "pooled_effect": round(pooled_effect, 4),
+        "ci_lower": round(ci_lower, 4),
+        "ci_upper": round(ci_upper, 4),
+        "i2": round(i2, 2),
+        "p_heterogeneity": round(p_het, 4),
+        "tau_squared": round(tau2, 4),
+        "q_statistic": round(Q, 4),
         "measure": "Odds Ratio (OR)" if measure == "OR" else measure,
         "model": model,
-        "studies": out_studies,
+        "studies": extracted_studies,
+        "excluded_missing_data": excluded_missing_data,
     }
 
 

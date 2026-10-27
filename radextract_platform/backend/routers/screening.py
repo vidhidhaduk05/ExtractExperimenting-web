@@ -240,6 +240,7 @@ async def screening_summary(project_id: str, user: Optional[dict] = Depends(get_
 # ═══════════════════════════════════════════════════════════════════════
 
 @router.post("/projects/{project_id}/studies/deduplicate", response_model=DeduplicationResult)
+@router.post("/projects/{project_id}/deduplicate", response_model=DeduplicationResult)
 async def deduplicate_studies(
     project_id: str,
     auto_mark: bool = Query(True, description="Mark duplicates in the database"),

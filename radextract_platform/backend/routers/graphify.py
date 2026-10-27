@@ -1287,7 +1287,7 @@ async def get_review_graph(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    check_project_access(project_id, user, conn)
+    check_project_access(conn, project_id, user)
     return _build_review_graph(project_id, conn)
 
 
@@ -1297,7 +1297,7 @@ async def get_review_graph_stats(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    check_project_access(project_id, user, conn)
+    check_project_access(conn, project_id, user)
     graph = _build_review_graph(project_id, conn)
     from collections import Counter
 

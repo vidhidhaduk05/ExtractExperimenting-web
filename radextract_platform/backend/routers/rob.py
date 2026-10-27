@@ -508,6 +508,7 @@ async def export_rob(
 # ── Dual-reviewer verification & adjudication ──
 
 @router.put("/assessments/{assessment_id}/verify")
+@router.post("/assessments/{assessment_id}/verify")
 async def verify_assessment(
     assessment_id: str,
     body: RobVerifyRequest,
@@ -543,6 +544,7 @@ async def verify_assessment(
 
 
 @router.put("/assessments/{assessment_id}/adjudicate")
+@router.post("/assessments/{assessment_id}/adjudicate")
 async def adjudicate_assessment(
     assessment_id: str,
     body: RobAdjudicateRequest,

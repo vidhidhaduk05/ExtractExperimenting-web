@@ -329,6 +329,7 @@ class StudyCreate(BaseModel):
     source: str = ""
     study_design: str = ""
     metadata_json: str = ""
+    screening_status: str = "pending"
 
 
 class StudyUpdate(BaseModel):
@@ -728,6 +729,7 @@ class DeduplicationResult(BaseModel):
     duplicate_groups: list[DuplicateGroup] = Field(default_factory=list)
     total_duplicates: int
     duplicates_marked: int
+    skipped_human_decided: int = 0
 
 
 class DuplicateResolveRequest(BaseModel):

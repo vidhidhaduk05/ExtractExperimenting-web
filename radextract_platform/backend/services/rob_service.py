@@ -461,8 +461,9 @@ def get_project_summary(project_id: str, db: Optional[DBBackend] = None) -> dict
 
     judgment_counts = {}
     for a in assessments:
-        j = a.get("overall_judgment", "")
-        judgment_counts[j] = judgment_counts.get(j, 0) + 1
+        j = (a.get("overall_judgment", "") or "").lower().strip()
+        if j:
+            judgment_counts[j] = judgment_counts.get(j, 0) + 1
 
     assessment_list = []
     total_flagged_questions = 0
