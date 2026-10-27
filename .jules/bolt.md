@@ -17,3 +17,7 @@
 ## 2026-03-31 - Memoizing Multi-Pass Flow & Dashboard Aggregation Logic
 **Learning:** Computing live PRISMA diagram counts, dual-reviewer agreement matrices, and filtered study lists at the top-level of pages without `useMemo` causes redundant multi-pass array iterations on every polling interval or UI state change.
 **Action:** Wrapped `computeLivePrismaData` in `PrismaFlowPage`, study filtering & bookmark counts in `StudyList`, agreement/kappa metrics in `DualBlindedDashboard`, and factor classifications in `GradePage` in `useMemo`.
+
+## 2026-03-31 - Single-Pass Grouping & Filtering Memoization for Checklist Datasets
+**Learning:** Re-filtering and running nested $O(D \cdot N)$ array `.filter()` calls inside render loops (such as domain grouping in `RigorScanPage`) on every frame creates garbage collection pressure and re-evaluations during active interactions (like page scrolling or check selection).
+**Action:** Wrap checklist filter calculations in `useMemo` and construct an $O(N)$ single-pass `Map` grouping structure to organize checks by domain in a single array traversal.
