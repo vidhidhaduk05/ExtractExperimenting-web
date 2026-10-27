@@ -7,7 +7,7 @@ export function BookmarkButton({ saved, disabled, onClick }: {
     aria-label={saved ? "Remove bookmark" : "Save for later"}
     title={saved ? "Remove bookmark" : "Save for later"} disabled={disabled}
     onClick={event => { event.stopPropagation(); onClick(); }}
-    className={`inline-flex items-center gap-1 rounded-md p-1.5 text-xs transition-colors disabled:opacity-40 cursor-pointer ${saved ? "text-[#3a0f34] bg-[#ffdea6] border border-[#d2c2cb]" : "text-[#81737b] hover:bg-[#eee7ec] hover:text-[#3a0f34]"}`}>
+    className={`inline-flex items-center gap-1 rounded-md p-1.5 text-xs disabled:opacity-40 ${saved ? "text-amber-700 bg-amber-50" : "text-slate-500 hover:bg-slate-100"}`}>
     <Bookmark className="h-4 w-4" fill={saved ? "currentColor" : "none"} />
   </button>;
 }

@@ -178,60 +178,60 @@ export function DuplicateReviewModal({
       case "doi":
         return {
           label: "DOI Exact Match (100%)",
-          color: "bg-[#eee7ec] text-[#3a0f34] border-[#d2c2cb]",
+          color: "bg-emerald-100 text-emerald-800 border-emerald-300",
           desc: "Normalized digital object identifiers match identical publication records.",
         };
       case "pmid":
         return {
           label: "PMID Exact Match (100%)",
-          color: "bg-[#eee7ec] text-[#3a0f34] border-[#d2c2cb]",
+          color: "bg-emerald-100 text-emerald-800 border-emerald-300",
           desc: "PubMed IDs match identical bibliographic records in NLM database.",
         };
       case "title_similarity":
         return {
           label: `Title Similarity (${Math.round((score || 0.95) * 100)}%)`,
-          color: "bg-[#ffdea6] text-[#7c5800] border-[#d2c2cb]",
+          color: "bg-amber-100 text-amber-800 border-amber-300",
           desc: `High title textual similarity score of ${score.toFixed(3)}.`,
         };
       case "author_year":
         return {
           label: "Title & Author/Year Match",
-          color: "bg-[#814d75]/15 text-[#814d75] border-[#814d75]/30",
+          color: "bg-indigo-100 text-indigo-800 border-indigo-300",
           desc: "Matching normalized title, matching publication year and overlapping first author.",
         };
       default:
         return {
           label: `Candidate Match (${Math.round((score || 0.9) * 100)}%)`,
-          color: "bg-[#eee7ec] text-[#62535d] border-[#d2c2cb]",
+          color: "bg-slate-100 text-slate-800 border-slate-300",
           desc: "Potential duplicate publication identified by screening heuristics.",
         };
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#1a0017]/40 backdrop-blur-xs font-sans animate-in fade-in duration-200">
-      <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl w-full max-w-6xl shadow-2xl flex flex-col max-h-[94vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs font-sans animate-in fade-in duration-200">
+      <div className="bg-[#FAF9F3] border border-black/15 rounded-2xl w-full max-w-6xl shadow-2xl flex flex-col max-h-[94vh] overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4.5 border-b border-[#d2c2cb] bg-white flex items-center justify-between shrink-0">
+        <div className="px-6 py-4.5 border-b border-black/10 bg-white/70 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-[#3a0f34] text-[#fbf9f4] flex items-center justify-center shadow-xs">
+            <div className="h-10 w-10 rounded-xl bg-[#141413] text-[#FAF9F3] flex items-center justify-center shadow-xs">
               <ArrowLeftRight className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-serif text-xl sm:text-2xl font-bold text-[#3a0f34] tracking-tight">
-                  Studies &rarr; Duplicate Review Workspace
+                <h2 className="font-serif text-xl sm:text-2xl font-normal text-[#141413] tracking-tight">
+                  Studies → Duplicate Review Workspace
                 </h2>
-                <span className="bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb] rounded-md text-[10px] font-semibold px-2 py-0.5">
+                <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">
                   DEDUPLICATION STEP
                 </span>
                 {totalDuplicates > 0 && (
-                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-[#eee7ec] text-[#62535d] border border-[#d2c2cb]">
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-black/5 text-[#6B665E] border border-black/10">
                     {resolvedCount} of {totalDuplicates} Resolved
                   </span>
                 )}
               </div>
-              <p className="font-serif italic text-xs text-[#62535d] mt-0.5">
+              <p className="font-serif italic text-xs text-[#6B665E] mt-0.5">
                 Side-by-side title, abstract, DOI, PMID, year and authors comparison. Keep this record, Keep both, or Merge metadata.
               </p>
             </div>
@@ -242,24 +242,24 @@ export function DuplicateReviewModal({
               <button
                 type="button"
                 onClick={handleAutoResolveExactDois}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#d2c2cb] bg-[#ffdea6] text-[#3a0f34] hover:bg-[#ffd580] text-xs font-semibold transition-colors cursor-pointer"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-medium transition-colors"
                 title="Automatically keep primary for all exact DOI/PMID matches"
               >
-                <Sparkles className="h-3.5 w-3.5 text-[#3a0f34]" />
+                <Sparkles className="h-3.5 w-3.5" />
                 <span>Auto-Resolve Exact DOIs</span>
               </button>
             )}
             <button
               onClick={() => refetch()}
               disabled={isRefetching}
-              className="p-1.5 rounded-lg text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec] transition-colors disabled:opacity-40 cursor-pointer"
+              className="p-1.5 rounded-lg text-black/60 hover:text-black hover:bg-black/5 transition-colors disabled:opacity-40"
               title="Refresh duplicates"
             >
               <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full text-[#81737b] hover:text-[#3a0f34] hover:bg-[#eee7ec] transition-colors cursor-pointer"
+              className="p-1.5 rounded-full text-black/40 hover:text-black hover:bg-black/5 transition-colors"
               title="Close modal"
             >
               <X className="h-5 w-5" />
@@ -272,9 +272,9 @@ export function DuplicateReviewModal({
           <div
             className={`px-6 py-2.5 text-xs font-sans flex items-center justify-between border-b ${
               statusMessage.type === "success"
-                ? "bg-[#eee7ec] text-[#3a0f34] border-[#d2c2cb]"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                 : statusMessage.type === "error"
-                ? "bg-[#ab3329]/10 text-[#ab3329] border-[#ab3329]/30"
+                ? "bg-rose-50 text-rose-800 border-rose-200"
                 : "bg-amber-50 text-amber-800 border-amber-200"
             }`}
           >
@@ -301,19 +301,19 @@ export function DuplicateReviewModal({
           {isLoading ? (
             <div className="py-24 text-center space-y-3">
               <RefreshCw className="h-8 w-8 animate-spin mx-auto text-black/40" />
-              <p className="font-serif italic text-sm text-[#62535d]">
+              <p className="font-serif italic text-sm text-[#6B665E]">
                 Scanning repository for duplicate bibliographic records (DOI, PMID, title Levenshtein, author/year)...
               </p>
             </div>
           ) : totalGroups === 0 ? (
             <div className="card-phylo-warm p-12 text-center rounded-2xl max-w-xl mx-auto space-y-4 my-8 border border-black/10">
-              <div className="h-14 w-14 rounded-full bg-[#eee7ec] text-[#3a0f34] flex items-center justify-center mx-auto">
+              <div className="h-14 w-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="h-7 w-7" />
               </div>
-              <h3 className="font-serif text-2xl font-normal text-[#3a0f34]">
+              <h3 className="font-serif text-2xl font-normal text-[#141413]">
                 No Duplicate Records Found
               </h3>
-              <p className="font-sans text-xs text-[#62535d] leading-relaxed">
+              <p className="font-sans text-xs text-[#6B665E] leading-relaxed">
                 All indexed studies in this project have distinct titles, DOIs, PMIDs, and author distributions. Any previously excluded duplicates have been processed.
               </p>
               <div className="pt-2">
@@ -331,7 +331,7 @@ export function DuplicateReviewModal({
               {/* Stepper & Match Reason Bar */}
               <div className="bg-white border border-black/10 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono uppercase tracking-wider text-[#81737b]">
+                  <span className="text-xs font-mono uppercase tracking-wider text-[#8A817A]">
                     DUPLICATE PAIR:
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -347,7 +347,7 @@ export function DuplicateReviewModal({
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
-                    <span className="font-mono text-xs px-2.5 py-1 rounded bg-black/5 text-[#3a0f34] font-medium">
+                    <span className="font-mono text-xs px-2.5 py-1 rounded bg-black/5 text-[#141413] font-medium">
                       Group {activeGroupIndex + 1} of {totalGroups}
                     </span>
                     <button
@@ -366,7 +366,7 @@ export function DuplicateReviewModal({
 
                   {currentGroup && currentGroup.duplicates.length > 1 && (
                     <div className="flex items-center gap-1 ml-2">
-                      <span className="text-[11px] text-[#81737b] font-mono">Variant:</span>
+                      <span className="text-[11px] text-[#8A817A] font-mono">Variant:</span>
                       {currentGroup.duplicates.map((_, idx) => (
                         <button
                           key={idx}
@@ -374,7 +374,7 @@ export function DuplicateReviewModal({
                           onClick={() => setActiveDuplicateIndex(idx)}
                           className={`text-xs px-2 py-0.5 rounded font-mono ${
                             activeDuplicateIndex === idx
-                              ? "bg-[#3a0f34] text-white"
+                              ? "bg-[#141413] text-white"
                               : "bg-black/5 text-black/70 hover:bg-black/10"
                           }`}
                         >
@@ -399,7 +399,7 @@ export function DuplicateReviewModal({
                             <Sparkles className="h-3 w-3" />
                             <span>{badge.label}</span>
                           </span>
-                          <span className="text-[11px] text-[#62535d] hidden lg:inline italic">
+                          <span className="text-[11px] text-[#6B665E] hidden lg:inline italic">
                             {badge.desc}
                           </span>
                         </div>
@@ -413,19 +413,19 @@ export function DuplicateReviewModal({
               {currentGroup && currentDuplicate && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   {/* Left Column: Primary / Canonical Record */}
-                  <div className="bg-white border-2 border-[#814d75] rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-4 relative">
+                  <div className="bg-white border-2 border-emerald-500/40 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-4 relative">
                     <div className="space-y-4">
                       {/* Column Header */}
                       <div className="flex items-center justify-between border-b border-black/[0.08] pb-3">
                         <div className="flex items-center gap-2">
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb]">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-100 text-emerald-800 border border-emerald-300">
                             KEEP THIS (PRIMARY)
                           </span>
-                          <span className="text-[11px] font-mono text-[#81737b]">
+                          <span className="text-[11px] font-mono text-[#8A817A]">
                             ID: {currentGroup.canonical_study_id}
                           </span>
                         </div>
-                        <span className="text-xs font-sans text-[#7c5800] font-medium flex items-center gap-1">
+                        <span className="text-xs font-sans text-emerald-700 font-medium flex items-center gap-1">
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           <span>Canonical Record</span>
                         </span>
@@ -433,29 +433,29 @@ export function DuplicateReviewModal({
 
                       {/* Title */}
                       <div>
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b] block mb-1">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A] block mb-1">
                           TITLE:
                         </span>
-                        <h4 className="font-serif text-base sm:text-lg font-medium text-[#3a0f34] leading-snug">
+                        <h4 className="font-serif text-base sm:text-lg font-medium text-[#141413] leading-snug">
                           {currentGroup.canonical_title || "Untitled Record"}
                         </h4>
                       </div>
 
                       {/* Authors & Year */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <div className="bg-[#fbf9f4] p-2.5 rounded-lg border border-black/5">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b] block mb-0.5">
+                        <div className="bg-[#FAF9F3] p-2.5 rounded-lg border border-black/5">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A] block mb-0.5">
                             AUTHORS:
                           </span>
-                          <span className="font-medium text-[#3a0f34]">
+                          <span className="font-medium text-[#141413]">
                             {currentGroup.canonical_authors || "Authors not specified"}
                           </span>
                         </div>
-                        <div className="bg-[#fbf9f4] p-2.5 rounded-lg border border-black/5">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b] block mb-0.5">
+                        <div className="bg-[#FAF9F3] p-2.5 rounded-lg border border-black/5">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A] block mb-0.5">
                             YEAR & JOURNAL:
                           </span>
-                          <span className="font-medium text-[#3a0f34]">
+                          <span className="font-medium text-[#141413]">
                             {currentGroup.canonical_year || "N/A"} &bull; {currentGroup.canonical_journal || "Journal not specified"}
                           </span>
                         </div>
@@ -463,12 +463,12 @@ export function DuplicateReviewModal({
 
                       {/* Identifiers: DOI & PMID */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <div className="bg-[#fbf9f4] p-2.5 rounded-lg border border-black/5 flex items-center justify-between">
+                        <div className="bg-[#FAF9F3] p-2.5 rounded-lg border border-black/5 flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b] block">
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A] block">
                               DOI:
                             </span>
-                            <span className="font-mono text-xs text-[#3a0f34] break-all">
+                            <span className="font-mono text-xs text-[#141413] break-all">
                               {currentGroup.canonical_doi || (
                                 <span className="text-black/40 italic">Not recorded</span>
                               )}
@@ -486,12 +486,12 @@ export function DuplicateReviewModal({
                             </a>
                           )}
                         </div>
-                        <div className="bg-[#fbf9f4] p-2.5 rounded-lg border border-black/5 flex items-center justify-between">
+                        <div className="bg-[#FAF9F3] p-2.5 rounded-lg border border-black/5 flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b] block">
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A] block">
                               PMID:
                             </span>
-                            <span className="font-mono text-xs text-[#3a0f34]">
+                            <span className="font-mono text-xs text-[#141413]">
                               {currentGroup.canonical_pmid || (
                                 <span className="text-black/40 italic">Not recorded</span>
                               )}
@@ -514,14 +514,14 @@ export function DuplicateReviewModal({
                       {/* Abstract */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b]">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A]">
                             ABSTRACT:
                           </span>
-                          <span className="text-[10px] font-mono text-[#81737b]">
+                          <span className="text-[10px] font-mono text-[#8A817A]">
                             {(currentGroup.canonical_abstract || "").split(/\s+/).filter(Boolean).length} words
                           </span>
                         </div>
-                        <div className="p-3 bg-[#fbf9f4] border border-black/10 rounded-xl text-xs text-[#3a0f34] leading-relaxed max-h-48 overflow-y-auto">
+                        <div className="p-3 bg-[#FAF9F3] border border-black/10 rounded-xl text-xs text-[#33302C] leading-relaxed max-h-48 overflow-y-auto">
                           {currentGroup.canonical_abstract ? (
                             <p className="whitespace-pre-line">{currentGroup.canonical_abstract}</p>
                           ) : (
@@ -532,12 +532,12 @@ export function DuplicateReviewModal({
                     </div>
 
                     {/* Column Quick State */}
-                    <div className="pt-3 border-t border-black/[0.08] flex items-center justify-between text-xs text-[#62535d]">
-                      <span className="flex items-center gap-1.5 font-medium text-[#3a0f34]">
-                        <Check className="h-3.5 w-3.5 text-[#7c5800]" />
+                    <div className="pt-3 border-t border-black/[0.08] flex items-center justify-between text-xs text-[#6B665E]">
+                      <span className="flex items-center gap-1.5 font-medium text-emerald-800">
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
                         <span>Included in systematic synthesis</span>
                       </span>
-                      <span className="font-mono text-[11px] text-[#81737b]">
+                      <span className="font-mono text-[11px] text-[#8A817A]">
                         Status: {currentGroup.canonical_screening_status || "pending"}
                       </span>
                     </div>
@@ -555,16 +555,16 @@ export function DuplicateReviewModal({
                         <div className="flex items-center gap-2">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium border ${
                             currentDuplicate.is_duplicate === 1
-                              ? "bg-[#ffdea6] text-[#7c5800] border-[#d2c2cb]"
-                              : "bg-[#eee7ec] text-[#62535d] border-[#d2c2cb]"
+                              ? "bg-amber-100 text-amber-800 border-amber-300"
+                              : "bg-slate-100 text-slate-800 border-slate-300"
                           }`}>
                             {currentDuplicate.is_duplicate === 1 ? "MARKED AS DUPLICATE" : "CANDIDATE DUPLICATE"}
                           </span>
-                          <span className="text-[11px] font-mono text-[#81737b]">
+                          <span className="text-[11px] font-mono text-[#8A817A]">
                             ID: {currentDuplicate.study_id}
                           </span>
                         </div>
-                        <span className="text-xs font-sans text-[#81737b] flex items-center gap-1">
+                        <span className="text-xs font-sans text-[#8A817A] flex items-center gap-1">
                           {currentDuplicate.is_duplicate === 1 ? (
                             <span className="text-amber-800 font-medium">Excluded Duplicate</span>
                           ) : (
@@ -575,29 +575,29 @@ export function DuplicateReviewModal({
 
                       {/* Title with diff styling */}
                       <div>
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b] block mb-1">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A] block mb-1">
                           TITLE:
                         </span>
-                        <h4 className="font-serif text-base sm:text-lg font-medium text-[#3a0f34] leading-snug">
+                        <h4 className="font-serif text-base sm:text-lg font-medium text-[#141413] leading-snug">
                           {currentDuplicate.title || "Untitled Record"}
                         </h4>
                       </div>
 
                       {/* Authors & Year */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <div className="bg-[#fbf9f4] p-2.5 rounded-lg border border-black/5">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b] block mb-0.5">
+                        <div className="bg-[#FAF9F3] p-2.5 rounded-lg border border-black/5">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A] block mb-0.5">
                             AUTHORS:
                           </span>
-                          <span className="font-medium text-[#3a0f34]">
+                          <span className="font-medium text-[#141413]">
                             {currentDuplicate.authors || "Authors not specified"}
                           </span>
                         </div>
-                        <div className="bg-[#fbf9f4] p-2.5 rounded-lg border border-black/5">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b] block mb-0.5">
+                        <div className="bg-[#FAF9F3] p-2.5 rounded-lg border border-black/5">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A] block mb-0.5">
                             YEAR & JOURNAL:
                           </span>
-                          <span className="font-medium text-[#3a0f34]">
+                          <span className="font-medium text-[#141413]">
                             {currentDuplicate.publication_year || "N/A"} &bull; {currentDuplicate.journal || "Journal not specified"}
                           </span>
                         </div>
@@ -605,12 +605,12 @@ export function DuplicateReviewModal({
 
                       {/* Identifiers: DOI & PMID */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <div className="bg-[#fbf9f4] p-2.5 rounded-lg border border-black/5 flex items-center justify-between">
+                        <div className="bg-[#FAF9F3] p-2.5 rounded-lg border border-black/5 flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b] block">
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A] block">
                               DOI:
                             </span>
-                            <span className="font-mono text-xs text-[#3a0f34] break-all">
+                            <span className="font-mono text-xs text-[#141413] break-all">
                               {currentDuplicate.doi || (
                                 <span className="text-black/40 italic">Not recorded</span>
                               )}
@@ -628,12 +628,12 @@ export function DuplicateReviewModal({
                             </a>
                           )}
                         </div>
-                        <div className="bg-[#fbf9f4] p-2.5 rounded-lg border border-black/5 flex items-center justify-between">
+                        <div className="bg-[#FAF9F3] p-2.5 rounded-lg border border-black/5 flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b] block">
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A] block">
                               PMID:
                             </span>
-                            <span className="font-mono text-xs text-[#3a0f34]">
+                            <span className="font-mono text-xs text-[#141413]">
                               {currentDuplicate.pmid || (
                                 <span className="text-black/40 italic">Not recorded</span>
                               )}
@@ -656,14 +656,14 @@ export function DuplicateReviewModal({
                       {/* Abstract */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#81737b]">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#8A817A]">
                             ABSTRACT:
                           </span>
-                          <span className="text-[10px] font-mono text-[#81737b]">
+                          <span className="text-[10px] font-mono text-[#8A817A]">
                             {(currentDuplicate.abstract || "").split(/\s+/).filter(Boolean).length} words
                           </span>
                         </div>
-                        <div className="p-3 bg-[#fbf9f4] border border-black/10 rounded-xl text-xs text-[#3a0f34] leading-relaxed max-h-48 overflow-y-auto">
+                        <div className="p-3 bg-[#FAF9F3] border border-black/10 rounded-xl text-xs text-[#33302C] leading-relaxed max-h-48 overflow-y-auto">
                           {currentDuplicate.abstract ? (
                             <p className="whitespace-pre-line">{currentDuplicate.abstract}</p>
                           ) : (
@@ -674,11 +674,11 @@ export function DuplicateReviewModal({
                     </div>
 
                     {/* Duplicate Status Tag */}
-                    <div className="pt-3 border-t border-black/[0.08] flex items-center justify-between text-xs text-[#62535d]">
+                    <div className="pt-3 border-t border-black/[0.08] flex items-center justify-between text-xs text-[#6B665E]">
                       <span className="font-mono text-[11px]">
                         Similarity: {(currentDuplicate.similarity_score * 100).toFixed(1)}% ({currentDuplicate.match_reason})
                       </span>
-                      <span className="font-mono text-[11px] text-[#81737b]">
+                      <span className="font-mono text-[11px] text-[#8A817A]">
                         Current: {currentDuplicate.is_duplicate === 1 ? "Excluded Duplicate" : "Active / Pending"}
                       </span>
                     </div>
@@ -788,9 +788,9 @@ export function DuplicateReviewModal({
               )}
 
               {/* Action Buttons Toolbar */}
-              <div className="bg-white border border-[#d2c2cb] rounded-xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs">
-                <div className="text-xs text-[#62535d] space-y-1">
-                  <div className="font-serif font-bold text-[#3a0f34] text-sm">
+              <div className="bg-[#FAF9F3] border border-black/10 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-[#6B665E] space-y-1">
+                  <div className="font-serif font-medium text-[#141413] text-sm">
                     Resolution Protocol for Duplicate Pair:
                   </div>
                   <p>
@@ -804,10 +804,10 @@ export function DuplicateReviewModal({
                     type="button"
                     disabled={resolveMutation.isPending}
                     onClick={() => handleResolve("keep_both")}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#d2c2cb] bg-white hover:bg-[#eee7ec] text-[#3a0f34] text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-black/20 bg-white hover:bg-black/5 text-[#141413] text-xs font-medium transition-all shadow-2xs"
                     title="Retain both records as distinct active studies in the review"
                   >
-                    <ShieldCheck className="h-4 w-4 text-[#814d75]" />
+                    <ShieldCheck className="h-4 w-4 text-[#6B665E]" />
                     <span>Keep Both</span>
                   </button>
 
@@ -822,10 +822,10 @@ export function DuplicateReviewModal({
                         handleResolve("merge_metadata");
                       }
                     }}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border text-xs font-semibold transition-all shadow-2xs cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-medium transition-all shadow-2xs ${
                       isMergingInteractive
-                        ? "bg-[#3a0f34] text-[#fbf9f4] border-[#3a0f34] hover:bg-[#1a0017]"
-                        : "border-[#d2c2cb] bg-[#ffdea6] text-[#3a0f34] hover:bg-[#ffd580]"
+                        ? "bg-amber-600 text-white border-amber-700 hover:bg-amber-700"
+                        : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
                     }`}
                     title="Merge missing fields into primary record and mark duplicate"
                   >
@@ -838,10 +838,10 @@ export function DuplicateReviewModal({
                     type="button"
                     disabled={resolveMutation.isPending}
                     onClick={() => handleResolve("keep_primary")}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] border border-[#3a0f34] text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#141413] text-[#FAF9F3] hover:bg-black/85 text-xs font-medium transition-all shadow-xs"
                     title="Retain primary record as active and mark candidate as duplicate"
                   >
-                    <CheckCircle2 className="h-4 w-4 text-[#ffdea6]" />
+                    <CheckCircle2 className="h-4 w-4 text-[#E9ED4C]" />
                     <span>Keep This Record</span>
                   </button>
 
@@ -851,7 +851,7 @@ export function DuplicateReviewModal({
                       type="button"
                       disabled={resolveMutation.isPending}
                       onClick={() => handleResolve("revert_duplicate")}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#ab3329]/30 bg-[#ab3329]/10 text-[#ab3329] hover:bg-[#ab3329]/20 text-xs font-semibold transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100 text-xs font-medium transition-colors"
                       title="Reversibly unmark duplicate and restore both records"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
@@ -865,7 +865,7 @@ export function DuplicateReviewModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-[#d2c2cb] bg-white flex items-center justify-between text-xs text-[#81737b] shrink-0">
+        <div className="px-6 py-3.5 border-t border-black/10 bg-white/70 flex items-center justify-between text-xs text-[#8A817A] shrink-0">
           <div className="flex items-center gap-4">
             <span className="font-mono">PRISMA 2020 Protocol Compliant</span>
             <span className="hidden sm:inline">&bull;</span>
@@ -875,7 +875,7 @@ export function DuplicateReviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 rounded-lg border border-[#d2c2cb] text-[#3a0f34] bg-white hover:bg-[#eee7ec] transition-colors font-semibold text-xs cursor-pointer"
+              className="px-4 py-1.5 rounded-lg border border-black/15 text-[#141413] hover:bg-black/5 transition-colors font-medium text-xs"
             >
               Done
             </button>

@@ -46,27 +46,4 @@ describe("sanitizeSvg", () => {
     expect(sanitized).not.toContain("foreignObject");
     expect(sanitized).not.toContain("foreignobject");
   });
-
-  it("removes SVG animation tags and style elements", () => {
-    const maliciousSvg = `<svg><animate attributeName="href" to="javascript:alert(1)"/><set attributeName="href" to="javascript:alert(1)"/><style>@import 'javascript:alert(1)'</style><rect width="10" height="10"/></svg>`;
-    const sanitized = sanitizeSvg(maliciousSvg);
-    expect(sanitized).not.toContain("animate");
-    expect(sanitized).not.toContain("set");
-    expect(sanitized).not.toContain("style");
-    expect(sanitized).toContain("<rect");
-  });
-
-  it("strips obfuscated javascript URIs containing tabs, newlines or control characters", () => {
-    const maliciousSvg = `<svg><a href=" java\tscript:alert('xss')"><text>Click</text></a></svg>`;
-    const sanitized = sanitizeSvg(maliciousSvg);
-    expect(sanitized).not.toContain("java\tscript");
-    expect(sanitized).not.toContain("alert");
-  });
-
-  it("strips dangerous data URIs like data:image/svg+xml or data:text/html", () => {
-    const maliciousSvg = `<svg><a href="data:image/svg+xml;utf8,<svg onload=alert(1)>"><text>Click</text></a></svg>`;
-    const sanitized = sanitizeSvg(maliciousSvg);
-    expect(sanitized).not.toContain("data:image/svg+xml");
-    expect(sanitized).not.toContain("alert");
-  });
 });

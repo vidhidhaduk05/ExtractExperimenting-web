@@ -142,26 +142,26 @@ export function ReferenceImportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1a0017]/40 backdrop-blur-xs p-4 overflow-y-auto font-sans">
-      <div className="relative w-full max-w-4xl bg-[#fbf9f4] rounded-xl shadow-2xl border border-[#d2c2cb] flex flex-col max-h-[90vh] text-[#4f444b]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#d2c2cb] px-6 py-4 bg-white">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-[#3a0f34] text-[#fbf9f4]">
+            <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
               <Upload className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-serif font-bold text-[#3a0f34]">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Import Bibliographic References
               </h2>
-              <p className="text-xs text-[#62535d]">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Support for RIS, BibTeX, CSV, PubMed/NBIB, EndNote Tagged, EndNote XML, PubMed XML, and Web of Science CIW
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#81737b] hover:text-[#3a0f34] hover:bg-[#eee7ec] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -184,10 +184,10 @@ export function ReferenceImportModal({
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
                 isDragging
-                  ? "border-[#814d75] bg-[#eee7ec]"
+                  ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30"
                   : selectedFile
-                  ? "border-[#3a0f34] bg-white"
-                  : "border-[#d2c2cb] hover:border-[#814d75] bg-white hover:bg-[#eee7ec]/50"
+                  ? "border-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/20"
+                  : "border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-slate-50/50 dark:bg-slate-800/40"
               }`}
             >
               <input
@@ -204,21 +204,21 @@ export function ReferenceImportModal({
               <div className="flex flex-col items-center gap-2">
                 {selectedFile ? (
                   <>
-                    <FileCheck className="w-8 h-8 text-[#3a0f34] animate-in zoom-in-75 duration-200" />
-                    <div className="text-sm font-semibold text-[#3a0f34]">
+                    <FileCheck className="w-8 h-8 text-emerald-500 animate-in zoom-in-75 duration-200" />
+                    <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
                       {selectedFile.name}
                     </div>
-                    <div className="text-xs text-[#62535d]">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
                       {(selectedFile.size / 1024).toFixed(1)} KB &bull; Click to change file
                     </div>
                   </>
                 ) : (
                   <>
-                    <Upload className="w-8 h-8 text-[#814d75]" />
-                    <div className="text-sm font-medium text-[#4f444b]">
-                      Drag and drop your reference file here, or <span className="text-[#814d75] underline font-semibold">browse</span>
+                    <Upload className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                      Drag and drop your reference file here, or <span className="text-indigo-600 dark:text-indigo-400 underline">browse</span>
                     </div>
-                    <div className="text-xs text-[#81737b] max-w-md">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
                       Accepts .ris, .bib, .csv, .nbib, .enw, .ciw, .xml, .txt
                     </div>
                   </>
@@ -230,26 +230,26 @@ export function ReferenceImportModal({
           {/* Format Badges Grid */}
           {!previewData && !importResult && (
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-wider text-[#81737b]">
-                Supported Database &amp; Manager Formats
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Supported Database & Manager Formats
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {SUPPORTED_FORMATS.map((fmt) => (
                   <div
                     key={fmt.name}
-                    className="p-2.5 rounded-lg border border-[#d2c2cb] bg-white flex flex-col justify-between"
+                    className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex flex-col justify-between"
                   >
-                    <div className="text-xs font-medium text-[#4f444b]">
+                    <div className="text-xs font-medium text-slate-800 dark:text-slate-200">
                       {fmt.name}
                     </div>
-                    <div className="text-[11px] text-[#81737b] font-mono mt-0.5">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                       {fmt.ext}
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="text-[11px] text-[#62535d] flex items-center gap-1.5 pt-1">
-                <Info className="w-3.5 h-3.5 text-[#814d75] flex-shrink-0" />
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-1">
+                <Info className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
                 <span>Automatic format detection inspects headers, tags, and markers. Compressed batch archives (ZIP / GZ) planned in upcoming release.</span>
               </div>
             </div>
@@ -257,8 +257,8 @@ export function ReferenceImportModal({
 
           {/* Loading Indicator */}
           {isAnalyzing && (
-            <div className="py-8 flex flex-col items-center justify-center gap-3 text-[#62535d]">
-              <Loader2 className="w-6 h-6 animate-spin text-[#814d75]" />
+            <div className="py-8 flex flex-col items-center justify-center gap-3 text-slate-500 dark:text-slate-400">
+              <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
               <div className="text-sm font-medium">Detecting format & parsing reference records...</div>
             </div>
           )}
@@ -276,19 +276,19 @@ export function ReferenceImportModal({
           {/* Import Complete Card */}
           {importResult && (
             <div className="space-y-4">
-              <div className="p-6 rounded-xl bg-[#eee7ec] border border-[#d2c2cb] text-center space-y-2">
-                <CheckCircle2 className="w-10 h-10 text-[#7c5800] mx-auto" />
-                <h3 className="text-lg font-semibold text-[#3a0f34]">
+              <div className="p-6 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-200">
                   Import Completed Successfully
                 </h3>
-                <p className="text-sm text-[#4f444b]">
+                <p className="text-sm text-emerald-700 dark:text-emerald-300">
                   Added <strong>{importResult.imported_count}</strong> new studies to your review.
                   {importResult.skipped_duplicates > 0 && (
                     <span> ({importResult.skipped_duplicates} duplicate records safely skipped).</span>
                   )}
                 </p>
                 {importResult.format && (
-                  <div className="inline-block px-2.5 py-1 text-xs font-medium rounded-full bg-[#ffdea6] text-[#7c5800] border border-[#d2c2cb]">
+                  <div className="inline-block px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200">
                     Format: {importResult.format}
                   </div>
                 )}
@@ -321,19 +321,19 @@ export function ReferenceImportModal({
           {previewData && !importResult && !isAnalyzing && (
             <div className="space-y-4">
               {/* Format Badge Banner */}
-              <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-lg bg-[#eee7ec] border border-[#d2c2cb]">
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-xs font-semibold text-[#62535d] uppercase tracking-wider">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Format Detected:
                   </span>
-                  <span className="px-2.5 py-0.5 text-xs font-bold rounded-md bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb]">
+                  <span className="px-2.5 py-0.5 text-xs font-bold rounded-md bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                     {previewData.format}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-[#62535d]">
-                  <span><strong className="text-[#3a0f34]">{previewData.total_valid}</strong> valid</span>
+                <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300">
+                  <span><strong>{previewData.total_valid}</strong> valid</span>
                   {previewData.total_malformed > 0 && (
-                    <span className="text-[#814d75] font-medium">
+                    <span className="text-amber-600 dark:text-amber-400 font-medium">
                       &bull; <strong>{previewData.total_malformed}</strong> malformed
                     </span>
                   )}
@@ -342,14 +342,14 @@ export function ReferenceImportModal({
               </div>
 
               {/* Navigation Tabs */}
-              <div className="flex border-b border-[#d2c2cb] gap-4 text-xs font-semibold">
+              <div className="flex border-b border-slate-200 dark:border-slate-800 gap-4 text-xs font-medium">
                 <button
                   type="button"
                   onClick={() => setActiveTab("preview")}
-                  className={`pb-2.5 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
+                  className={`pb-2.5 flex items-center gap-1.5 transition-colors border-b-2 ${
                     activeTab === "preview"
-                      ? "border-[#3a0f34] text-[#3a0f34]"
-                      : "border-transparent text-[#62535d] hover:text-[#3a0f34]"
+                      ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold"
+                      : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -360,10 +360,10 @@ export function ReferenceImportModal({
                   <button
                     type="button"
                     onClick={() => setActiveTab("mapping")}
-                    className={`pb-2.5 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
+                    className={`pb-2.5 flex items-center gap-1.5 transition-colors border-b-2 ${
                       activeTab === "mapping"
-                        ? "border-[#3a0f34] text-[#3a0f34]"
-                        : "border-transparent text-[#62535d] hover:text-[#3a0f34]"
+                        ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold"
+                        : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                     }`}
                   >
                     <Table className="w-3.5 h-3.5" />
@@ -375,13 +375,13 @@ export function ReferenceImportModal({
                   <button
                     type="button"
                     onClick={() => setActiveTab("malformed")}
-                    className={`pb-2.5 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
+                    className={`pb-2.5 flex items-center gap-1.5 transition-colors border-b-2 ${
                       activeTab === "malformed"
-                        ? "border-[#ab3329] text-[#ab3329]"
-                        : "border-transparent text-[#62535d] hover:text-[#3a0f34]"
+                        ? "border-amber-600 text-amber-600 dark:text-amber-400 font-semibold"
+                        : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                     }`}
                   >
-                    <AlertTriangle className="w-3.5 h-3.5 text-[#ab3329]" />
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                     <span>Malformed Records ({previewData.malformed_records.length})</span>
                   </button>
                 )}
@@ -390,27 +390,27 @@ export function ReferenceImportModal({
               {/* Tab: Preview Records */}
               {activeTab === "preview" && (
                 <div className="space-y-3">
-                  <div className="max-h-72 overflow-y-auto rounded-lg border border-[#d2c2cb] divide-y divide-[#eee7ec] bg-white">
+                  <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
                     {previewData.preview_records.map((rec, idx) => (
-                      <div key={idx} className="p-3 text-xs space-y-1 hover:bg-[#eee7ec]/50 transition-colors">
-                        <div className="font-serif font-bold text-[#3a0f34] line-clamp-1">
-                          {rec.title || <span className="text-[#ab3329]">Untitled</span>}
+                      <div key={idx} className="p-3 text-xs space-y-1 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <div className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
+                          {rec.title || <span className="text-red-500">Untitled</span>}
                         </div>
-                        <div className="text-[#62535d] flex flex-wrap gap-2 text-[11px]">
+                        <div className="text-slate-500 dark:text-slate-400 flex flex-wrap gap-2 text-[11px]">
                           {rec.authors && <span><strong>Authors:</strong> {rec.authors}</span>}
                           {rec.publication_year && <span><strong>Year:</strong> {rec.publication_year}</span>}
                           {rec.journal && <span><strong>Journal:</strong> {rec.journal}</span>}
-                          {rec.doi && <span className="font-mono text-[#814d75]">DOI: {rec.doi}</span>}
+                          {rec.doi && <span className="font-mono text-indigo-600 dark:text-indigo-400">DOI: {rec.doi}</span>}
                         </div>
                         {rec.abstract && (
-                          <div className="text-[11px] text-[#4f444b] line-clamp-2 italic pt-0.5 font-serif">
+                          <div className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 italic pt-0.5">
                             "{rec.abstract}"
                           </div>
                         )}
                       </div>
                     ))}
                   </div>
-                  <div className="text-[11px] text-[#81737b]">
+                  <div className="text-[11px] text-slate-400">
                     Showing first {previewData.preview_records.length} of {previewData.total_valid} valid parsed references.
                   </div>
                 </div>
@@ -419,23 +419,23 @@ export function ReferenceImportModal({
               {/* Tab: Column Mapping for CSV */}
               {activeTab === "mapping" && (
                 <div className="space-y-3">
-                  <div className="text-xs text-[#62535d]">
+                  <div className="text-xs text-slate-600 dark:text-slate-400">
                     Map columns in your CSV file to standard review fields. Title is mandatory.
                   </div>
-                  <div className="max-h-72 overflow-y-auto rounded-lg border border-[#d2c2cb] divide-y divide-[#eee7ec] p-2 bg-white">
+                  <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800 p-2">
                     {previewData.columns_detected.map((col) => {
                       const currentMapped = columnMapping[col] || "";
                       return (
                         <div key={col} className="flex items-center justify-between py-2 px-3 text-xs">
-                          <span className="font-mono font-medium text-[#4f444b]">
+                          <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
                             {col}
                           </span>
                           <div className="flex items-center gap-2">
-                            <ArrowRight className="w-3.5 h-3.5 text-[#81737b]" />
+                            <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                             <select
                               value={currentMapped}
                               onChange={(e) => handleUpdateMapping(col, e.target.value)}
-                              className="px-2 py-1 text-xs rounded-lg border border-[#d2c2cb] bg-[#fbf9f4] text-[#4f444b] focus:outline-none focus:ring-1 focus:ring-[#814d75]"
+                              className="px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                             >
                               <option value="">-- Ignore Column --</option>
                               {TARGET_FIELDS.map((tf) => (
@@ -455,18 +455,18 @@ export function ReferenceImportModal({
               {/* Tab: Malformed Records */}
               {activeTab === "malformed" && (
                 <div className="space-y-3">
-                  <div className="text-xs text-[#62535d]">
+                  <div className="text-xs text-slate-600 dark:text-slate-400">
                     These items in the file had formatting or missing title defects. They will be skipped automatically to maintain dataset integrity.
                   </div>
-                  <div className="max-h-72 overflow-y-auto rounded-lg border border-[#ab3329]/30 bg-[#ab3329]/5 divide-y divide-[#ab3329]/20">
+                  <div className="max-h-72 overflow-y-auto rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50/40 dark:bg-amber-950/20 divide-y divide-amber-100 dark:divide-amber-900/50">
                     {previewData.malformed_records.map((m, idx) => (
                       <div key={idx} className="p-3 text-xs space-y-1">
-                        <div className="font-semibold text-[#ab3329] flex items-center gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5 text-[#ab3329] flex-shrink-0" />
+                        <div className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                           <span>{m.index ? `Row #${m.index}: ` : ""}{m.reason}</span>
                         </div>
                         {m.snippet && (
-                          <div className="font-mono text-[11px] text-[#ab3329] bg-white p-1.5 rounded border border-[#ab3329]/20 truncate">
+                          <div className="font-mono text-[11px] text-amber-800 dark:text-amber-400 bg-amber-100/50 dark:bg-amber-950/50 p-1.5 rounded truncate">
                             {m.snippet}
                           </div>
                         )}
@@ -480,8 +480,8 @@ export function ReferenceImportModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-[#d2c2cb] px-6 py-4 bg-white">
-          <div className="text-xs text-[#62535d]">
+        <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
             {selectedFile && !importResult && (
               <span>Ready to import into project studies</span>
             )}
@@ -490,7 +490,7 @@ export function ReferenceImportModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-[#3a0f34] hover:bg-[#eee7ec] border border-[#d2c2cb] rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
             >
               {importResult ? "Close" : "Cancel"}
             </button>
@@ -499,7 +499,7 @@ export function ReferenceImportModal({
                 type="button"
                 disabled={!selectedFile || isAnalyzing || isImporting || (previewData ? previewData.total_valid === 0 : true)}
                 onClick={handleImport}
-                className="px-4 py-2 text-xs font-semibold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
               >
                 {isImporting ? (
                   <>

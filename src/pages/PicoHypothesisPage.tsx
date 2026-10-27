@@ -4,33 +4,28 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type SecondaryHypothesis, type Criterion } from "../lib/api";
 import {
   ArrowLeft, Users, Stethoscope, GitCompare, Target, FlaskConical,
-  HelpCircle, Plus, Trash2, Loader2, CheckCircle,
-  Upload, FileText, Copy, Sparkles, Database,
+  Lightbulb, HelpCircle, Plus, Trash2, Loader2, CheckCircle,
+  Upload, FileText, Copy, Search, Sparkles, Database,
   ChevronDown, ChevronRight, AlertCircle, AlertTriangle, FileUp,
-  ExternalLink, Check, Download, ShieldCheck, ClipboardCheck,
-  Edit3, RotateCcw, Save, Info, AlertOctagon,
 } from "lucide-react";
 import { ReferenceImportModal } from "../components/common/ReferenceImportModal";
 
+
 const DATABASES = [
-  { key: "pubmed", label: "PubMed", interfaceName: "NCBI Entrez", syntaxDesc: "MeSH terms [Mesh] and title/abstract [tiab], capitalized AND/OR/NOT", hasAutoFetch: true },
-  { key: "ovid_medline", label: "Ovid MEDLINE", interfaceName: "OvidSP", syntaxDesc: "Subject headings /, multi-purpose .mp., title/abstract .ti,ab., adjacency adjN", hasAutoFetch: false },
-  { key: "embase", label: "Embase.com", interfaceName: "Elsevier Embase", syntaxDesc: "Emtree terms /exp, title/abstract/keywords :ti,ab,kw, NEXT/NEAR operators", hasAutoFetch: false },
-  { key: "ovid_embase", label: "Ovid Embase", interfaceName: "OvidSP Embase", syntaxDesc: "Emtree headings /, field tags .ti,ab., case-insensitive Boolean", hasAutoFetch: false },
-  { key: "cochrane", label: "Cochrane Library", interfaceName: "Wiley Cochrane", syntaxDesc: "MeSH descriptors [mh], title/abstract/keyword [ti,ab,kw], wildcard *", hasAutoFetch: false },
-  { key: "web_of_science", label: "Web of Science", interfaceName: "Clarivate WoS", syntaxDesc: "Topic field TS=(...), NEAR/x operators, quotation marks for exact phrases", hasAutoFetch: false },
-  { key: "scopus", label: "Scopus", interfaceName: "Elsevier Scopus", syntaxDesc: "TITLE-ABS-KEY(...), W/n proximity operators, exact phrases in quotes", hasAutoFetch: false },
-  { key: "cinahl", label: "CINAHL", interfaceName: "EBSCOhost", syntaxDesc: "Major headings (MH \"...\"), text fields TI or AB, Boolean AND/OR", hasAutoFetch: false },
-  { key: "openalex", label: "OpenAlex", interfaceName: "OpenAlex API / Web", syntaxDesc: "Semantic concepts and inverted index title/abstract match queries", hasAutoFetch: false },
+  { key: "pubmed", label: "PubMed", hasAutoFetch: true },
+  { key: "ovid_medline", label: "Ovid MEDLINE", hasAutoFetch: false },
+  { key: "openalex", label: "OpenAlex", hasAutoFetch: false },
+  { key: "embase", label: "Embase.com", hasAutoFetch: false },
+  { key: "ovid_embase", label: "Ovid Embase", hasAutoFetch: false },
+  { key: "cochrane", label: "Cochrane", hasAutoFetch: false },
+  { key: "web_of_science", label: "Web of Science", hasAutoFetch: false },
+  { key: "scopus", label: "Scopus", hasAutoFetch: false },
+  { key: "cinahl", label: "CINAHL", hasAutoFetch: false },
 ] as const;
 
 export function PicoHypothesisPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
-
-  // ── Stage Navigation State ──
-  // Stage 1: Set up PICO | Stage 2: Review protocol | Stage 3: Generate search strings
-  const [currentStage, setCurrentStage] = useState<1 | 2 | 3>(1);
 
   // ── Data queries ──
   const { data: pico, isLoading: picoLoading } = useQuery({
@@ -57,15 +52,7 @@ export function PicoHypothesisPage() {
     enabled: !!projectId,
   });
 
-  // ── Stage 1: Entry Method & Form State ──
-  const [entryMethod, setEntryMethod] = useState<"upload" | "question" | "manual">("question");
-  const [frameworkType, setFrameworkType] = useState<"diagnostic" | "intervention">("diagnostic");
-  const [researchQuestionInput, setResearchQuestionInput] = useState("");
-  const [researchQuestion, setResearchQuestion] = useState("");
-  const [hypothesis, setHypothesis] = useState("");
-  const [secondary, setSecondary] = useState<SecondaryHypothesis[]>([]);
-  const [showHypothesesAccordion, setShowHypothesesAccordion] = useState(false);
-
+  // ── PICO form state ──
   const [picoForm, setPicoForm] = useState({
     population: "",
     index_test: "",
@@ -73,25 +60,8 @@ export function PicoHypothesisPage() {
     outcome: "",
     study_design: "",
   });
+  const [picoSaved, setPicoSaved] = useState(false);
 
-  // Tracking baseline for stale review / search string invalidation
-  const [lastReviewedSnapshot, setLastReviewedSnapshot] = useState<string>("");
-  const [lastSearchedSnapshot, setLastSearchedSnapshot] = useState<string>("");
-
-  const currentPicoSnapshot = JSON.stringify({ picoForm, researchQuestion });
-
-  // PICO Save status: idle | saving | saved | error
-  const [picoSaveState, setPicoSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [picoSaveError, setPicoSaveError] = useState<string>("");
-
-  // Ambiguity notes & missing info flagged during extraction/generation
-  const [extractionAmbiguities, setExtractionAmbiguities] = useState<string[]>([]);
-  const [missingFieldsNotice, setMissingFieldsNotice] = useState<string[]>([]);
-
-  // Method switch confirmation modal
-  const [pendingMethod, setPendingMethod] = useState<"upload" | "question" | "manual" | null>(null);
-
-  // Sync loaded PICO into local form state
   useEffect(() => {
     if (pico) {
       setPicoForm({
@@ -101,265 +71,67 @@ export function PicoHypothesisPage() {
         outcome: pico.outcome || "",
         study_design: pico.study_design || "",
       });
-      // Infer framework type if intervention terminology is prevalent
-      const combined = `${pico.index_test || ""} ${pico.comparator || ""}`.toLowerCase();
-      if (combined.includes("therapy") || combined.includes("drug") || combined.includes("treatment") || combined.includes("placebo") || combined.includes("surgery")) {
-        setFrameworkType("intervention");
-      }
     }
   }, [pico]);
-
-  // Sync loaded Hypothesis & Research Question
-  useEffect(() => {
-    if (hyp) {
-      setHypothesis(hyp.hypothesis || "");
-      if (hyp.research_question) {
-        setResearchQuestion(hyp.research_question);
-        setResearchQuestionInput(hyp.research_question);
-      }
-      setSecondary(hyp.secondary_hypotheses || []);
-    }
-  }, [hyp]);
 
   const setPicoField = (k: string, v: string) =>
     setPicoForm((f) => ({ ...f, [k]: v }));
 
-  // Save PICO & Continue to Review
-  const handleSaveAndContinue = async () => {
-    // Validation check: at least Population and Index Test / Intervention should have text
-    if (!picoForm.population.trim() && !picoForm.index_test.trim()) {
-      setPicoSaveError("Please provide at least a Population and Index Test / Intervention before continuing.");
-      setPicoSaveState("error");
-      return;
-    }
-
-    setPicoSaveState("saving");
-    setPicoSaveError("");
-
-    try {
-      await Promise.all([
-        api.updatePico(projectId!, picoForm),
-        api.updateHypothesis(projectId!, {
-          hypothesis,
-          research_question: researchQuestion || researchQuestionInput,
-          secondary_hypotheses: secondary,
-        }),
-      ]);
-
+  const picoSaveMutation = useMutation({
+    mutationFn: () => api.updatePico(projectId!, picoForm),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      setPicoSaved(true);
+      setTimeout(() => setPicoSaved(false), 2500);
+    },
+  });
+
+  // ── Hypothesis state ──
+  const [hypothesis, setHypothesis] = useState("");
+  const [researchQuestion, setResearchQuestion] = useState("");
+  const [secondary, setSecondary] = useState<SecondaryHypothesis[]>([]);
+  const [hypSaved, setHypSaved] = useState(false);
+
+  useEffect(() => {
+    if (hyp) {
+      setHypothesis(hyp.hypothesis || "");
+      setResearchQuestion(hyp.research_question || "");
+      setSecondary(hyp.secondary_hypotheses || []);
+    }
+  }, [hyp]);
+
+  const hypSaveMutation = useMutation({
+    mutationFn: () =>
+      api.updateHypothesis(projectId!, {
+        hypothesis,
+        research_question: researchQuestion,
+        secondary_hypotheses: secondary,
+      }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      setHypSaved(true);
+      setTimeout(() => setHypSaved(false), 2500);
+    },
+  });
 
-      setPicoSaveState("saved");
-      setTimeout(() => {
-        setPicoSaveState("idle");
-        setCurrentStage(2);
-      }, 700);
-    } catch (err: any) {
-      setPicoSaveState("error");
-      setPicoSaveError(err.message || "Failed to save PICO data.");
-    }
+  const addSecondary = () =>
+    setSecondary([...secondary, { text: "", type: "alternative", status: "pending" }]);
+
+  const updateSecondary = (i: number, field: keyof SecondaryHypothesis, value: string) => {
+    const next = [...secondary];
+    next[i] = { ...next[i], [field]: value };
+    setSecondary(next);
   };
 
-  // Method switching with safe guard
-  const handleSelectMethod = (target: "upload" | "question" | "manual") => {
-    if (target === entryMethod) return;
-    const hasPopulatedPico = Object.values(picoForm).some((v) => v.trim().length > 0);
-    const hasActiveInput = researchQuestionInput.trim().length > 0;
-    if (hasPopulatedPico || hasActiveInput) {
-      setPendingMethod(target);
-    } else {
-      setEntryMethod(target);
-    }
-  };
+  const removeSecondary = (i: number) =>
+    setSecondary(secondary.filter((_, idx) => idx !== i));
 
-  // ── Method A: Protocol File Upload ──
-  const [extractionStatus, setExtractionStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
-  const [uploadedFileName, setUploadedFileName] = useState("");
-  const [extractionConfidence, setExtractionConfidence] = useState("");
-  const [extractionError, setExtractionError] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleProtocolUpload = async (file: File) => {
-    setExtractionStatus("loading");
-    setExtractionError("");
-    setUploadedFileName(file.name);
-    try {
-      const result = await api.extractPico(projectId!, file);
-      const newPico = {
-        population: result.population || picoForm.population || "",
-        index_test: result.index_test || picoForm.index_test || "",
-        comparator: result.comparator || picoForm.comparator || "",
-        outcome: result.outcome || picoForm.outcome || "",
-        study_design: result.study_design || picoForm.study_design || "",
-      };
-
-      const newRq = result.research_question || researchQuestion || "";
-      const newHyp = result.hypothesis || hypothesis || "";
-
-      setPicoForm(newPico);
-      if (newRq) {
-        setResearchQuestion(newRq);
-        setResearchQuestionInput(newRq);
-      }
-      if (newHyp) setHypothesis(newHyp);
-
-      // Auto-fill Inclusion and Exclusion criteria from protocol
-      let nextInclusion: Criterion[] = [];
-      let nextExclusion: Criterion[] = [];
-
-      if (Array.isArray(result.inclusion) && result.inclusion.length > 0) {
-        nextInclusion = result.inclusion.map((item: any, idx: number) => {
-          if (typeof item === "string") {
-            return { id: `inc_${Date.now()}_${idx}`, text: item };
-          }
-          return { id: item.id || `inc_${Date.now()}_${idx}`, text: item.text || String(item) };
-        });
-      }
-
-      if (Array.isArray(result.exclusion) && result.exclusion.length > 0) {
-        nextExclusion = result.exclusion.map((item: any, idx: number) => {
-          if (typeof item === "string") {
-            return { id: `exc_${Date.now()}_${idx}`, text: item };
-          }
-          return { id: item.id || `exc_${Date.now()}_${idx}`, text: item.text || String(item) };
-        });
-      }
-
-      // If criteria were not returned from document extraction, auto-draft from the newly extracted PICO
-      if (nextInclusion.length === 0 && nextExclusion.length === 0 && (newPico.population || newPico.index_test)) {
-        try {
-          const generated = await api.generateCriteria(projectId!);
-          if (generated.inclusion && generated.inclusion.length > 0) {
-            nextInclusion = generated.inclusion;
-          }
-          if (generated.exclusion && generated.exclusion.length > 0) {
-            nextExclusion = generated.exclusion;
-          }
-        } catch (e) {
-          console.warn("Could not auto-generate criteria fallback:", e);
-        }
-      }
-
-      if (nextInclusion.length > 0) {
-        setInclusion(nextInclusion);
-      }
-      if (nextExclusion.length > 0) {
-        setExclusion(nextExclusion);
-      }
-
-      setExtractionConfidence(result.extraction_confidence || "medium");
-      setExtractionStatus("done");
-
-      // Identify unextracted fields needing confirmation without fabricating
-      const missing: string[] = [];
-      if (!result.population) missing.push("Population / Participants (P)");
-      if (!result.index_test) missing.push("Index Test / Intervention (I)");
-      if (!result.comparator) missing.push("Comparator / Reference Standard (C)");
-      if (!result.outcome) missing.push("Outcome / Primary Endpoint (O)");
-      if (!result.study_design) missing.push("Study Design (S)");
-      setMissingFieldsNotice(missing);
-
-      // Persist to sync backend project
-      api.updatePico(projectId!, newPico).catch(() => {});
-      if (newRq || newHyp) {
-        api.updateHypothesis(projectId!, {
-          hypothesis: newHyp,
-          research_question: newRq,
-          secondary_hypotheses: secondary,
-        }).catch(() => {});
-      }
-      if (nextInclusion.length > 0 || nextExclusion.length > 0) {
-        api.updateCriteria(projectId!, { inclusion: nextInclusion, exclusion: nextExclusion }).catch(() => {});
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
-
-      setReviewToast("Protocol loaded: PICO and eligibility criteria auto-filled.");
-      setTimeout(() => setReviewToast(null), 4000);
-    } catch (err: any) {
-      setExtractionError(err.message || "Failed to process protocol file.");
-      setExtractionStatus("error");
-    }
-  };
-
-  // ── Method B: Single Question → Generate PICO ──
-  const [isGeneratingPico, setIsGeneratingPico] = useState(false);
-  const [generatePicoError, setGeneratePicoError] = useState<string>("");
-
-  const handleGeneratePicoFromQuestion = async () => {
-    const q = researchQuestionInput.trim();
-    if (!q) return;
-
-    setIsGeneratingPico(true);
-    setGeneratePicoError("");
-    setExtractionAmbiguities([]);
-    setMissingFieldsNotice([]);
-
-    try {
-      const res = await api.generatePicoFromQuestion(projectId!, q, true);
-      const newPico = {
-        population: res.pico.population || "",
-        index_test: res.pico.index_test || "",
-        comparator: res.pico.comparator || "",
-        outcome: res.pico.outcome || "",
-        study_design: res.pico.study_design || "",
-      };
-      setPicoForm(newPico);
-      setResearchQuestion(q);
-      if (res.hypothesis) setHypothesis(res.hypothesis);
-      if (res.secondary_hypotheses && res.secondary_hypotheses.length > 0) {
-        setSecondary(
-          res.secondary_hypotheses.map((txt) => ({ text: txt, type: "alternative", status: "pending" }))
-        );
-      }
-
-      if (res.ambiguities && res.ambiguities.length > 0) {
-        setExtractionAmbiguities(res.ambiguities);
-      }
-      if (res.missing_fields && res.missing_fields.length > 0) {
-        setMissingFieldsNotice(res.missing_fields);
-      }
-
-      // Auto-draft eligibility criteria if currently empty
-      if (inclusion.length === 0 && exclusion.length === 0 && (newPico.population || newPico.index_test)) {
-        try {
-          const generated = await api.generateCriteria(projectId!);
-          if (generated.inclusion?.length) setInclusion(generated.inclusion);
-          if (generated.exclusion?.length) setExclusion(generated.exclusion);
-          queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
-        } catch (e) {
-          console.warn("Could not draft criteria from question PICO", e);
-        }
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
-    } catch (err: any) {
-      setGeneratePicoError(err.message || "Failed to generate PICO from research question.");
-    } finally {
-      setIsGeneratingPico(false);
-    }
-  };
-
-  // ── Stage 2: Protocol Review State ──
-  const [isReviewLoading, setIsReviewLoading] = useState(false);
-  const [reviewResult, setReviewResult] = useState<any | null>(null);
-  const [maxReviewers, setMaxReviewers] = useState<number>(4);
-  const [dismissedFindingIds, setDismissedFindingIds] = useState<Set<string>>(new Set());
-  const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
-  const [editingFindingText, setEditingFindingText] = useState<string>("");
-  const [reviewToast, setReviewToast] = useState<string | null>(null);
-  const [showPrismaChecklist, setShowPrismaChecklist] = useState<boolean>(false);
-  const [isExportingProtocol, setIsExportingProtocol] = useState<boolean>(false);
-
-  // Inclusion / Exclusion criteria state
+  // ── Criteria state ──
   const [inclusion, setInclusion] = useState<Criterion[]>([]);
   const [exclusion, setExclusion] = useState<Criterion[]>([]);
-  const [isDraftingCriteria, setIsDraftingCriteria] = useState(false);
+  const [criteriaSaved, setCriteriaSaved] = useState(false);
 
   useEffect(() => {
     if (criteria) {
@@ -369,1799 +141,961 @@ export function PicoHypothesisPage() {
   }, [criteria]);
 
   const criteriaSaveMutation = useMutation({
-    mutationFn: () => api.updateCriteria(projectId!, { inclusion, exclusion }),
+    mutationFn: () =>
+      api.updateCriteria(projectId!, { inclusion, exclusion }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
+      setCriteriaSaved(true);
+      setTimeout(() => setCriteriaSaved(false), 2500);
+    },
+  });
+
+  const criteriaGenerateMutation = useMutation({
+    mutationFn: () => api.generateCriteria(projectId!),
+    onSuccess: (data) => {
+      setInclusion(data.inclusion);
+      setExclusion(data.exclusion);
       queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
     },
   });
 
-  const handleDraftEligibilityCriteria = async () => {
-    setIsDraftingCriteria(true);
-    try {
-      const res = await api.generateCriteria(projectId!);
-      setInclusion(res.inclusion || []);
-      setExclusion(res.exclusion || []);
-      queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
-      setReviewToast("Drafted eligibility criteria from confirmed PICO framework.");
-      setTimeout(() => setReviewToast(null), 3000);
-    } catch (err: any) {
-      console.warn("Draft criteria error", err);
-    } finally {
-      setIsDraftingCriteria(false);
+  const addCriterion = (type: "inclusion" | "exclusion") => {
+    const newCrit: Criterion = {
+      id: `crit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      text: "",
+    };
+    if (type === "inclusion") setInclusion([...inclusion, newCrit]);
+    else setExclusion([...exclusion, newCrit]);
+  };
+
+  const updateCriterion = (
+    type: "inclusion" | "exclusion",
+    i: number,
+    text: string
+  ) => {
+    if (type === "inclusion") {
+      const next = [...inclusion];
+      next[i] = { ...next[i], text };
+      setInclusion(next);
+    } else {
+      const next = [...exclusion];
+      next[i] = { ...next[i], text };
+      setExclusion(next);
     }
   };
 
-  const handleRunProtocolReview = async () => {
-    setIsReviewLoading(true);
-    try {
-      const activePico = picoForm;
-      const res = await api.deliberateProtocolStorm({
-        pico: activePico,
-        hypothesis,
-        criteria: { inclusion, exclusion },
-        research_question: researchQuestion || researchQuestionInput,
-        topic: researchQuestion || researchQuestionInput || (activePico.population ? `${activePico.population} ${activePico.index_test}` : "clinical medicine"),
-      });
-      setReviewResult(res);
-      setLastReviewedSnapshot(currentPicoSnapshot);
-      setDismissedFindingIds(new Set());
-    } catch (err: any) {
-      console.warn("Protocol deliberation error", err);
-    } finally {
-      setIsReviewLoading(false);
-    }
+  const removeCriterion = (type: "inclusion" | "exclusion", i: number) => {
+    if (type === "inclusion")
+      setInclusion(inclusion.filter((_, idx) => idx !== i));
+    else setExclusion(exclusion.filter((_, idx) => idx !== i));
   };
 
-  const isReviewOutOfDate = !!reviewResult && lastReviewedSnapshot !== currentPicoSnapshot;
-
-  const handleAdoptSuggestion = async (sugg: any) => {
-    const target = sugg.target_type;
-    const txt = editingFindingId === sugg.id ? editingFindingText : sugg.suggested_text;
-
-    if (target === "pico_outcome") {
-      setPicoForm((prev) => ({ ...prev, outcome: txt }));
-      api.updatePico(projectId!, { ...picoForm, outcome: txt }).catch(() => {});
-    } else if (target === "pico_comparator") {
-      setPicoForm((prev) => ({ ...prev, comparator: txt }));
-      api.updatePico(projectId!, { ...picoForm, comparator: txt }).catch(() => {});
-    } else if (target === "pico_index_test") {
-      setPicoForm((prev) => ({ ...prev, index_test: txt }));
-      api.updatePico(projectId!, { ...picoForm, index_test: txt }).catch(() => {});
-    } else if (target === "pico_population") {
-      setPicoForm((prev) => ({ ...prev, population: txt }));
-      api.updatePico(projectId!, { ...picoForm, population: txt }).catch(() => {});
-    } else if (target === "pico_study_design") {
-      setPicoForm((prev) => ({ ...prev, study_design: txt }));
-      api.updatePico(projectId!, { ...picoForm, study_design: txt }).catch(() => {});
-    } else if (target === "criteria_inclusion" || target === "inclusion_criterion") {
-      const updated = [...inclusion, { id: `crit-${Date.now()}`, text: txt }];
-      setInclusion(updated);
-      api.updateCriteria(projectId!, { inclusion: updated, exclusion }).catch(() => {});
-    } else if (target === "criteria_exclusion" || target === "exclusion_criterion") {
-      const updated = [...exclusion, { id: `crit-${Date.now()}`, text: txt }];
-      setExclusion(updated);
-      api.updateCriteria(projectId!, { inclusion, exclusion: updated }).catch(() => {});
-    }
-
-    setDismissedFindingIds((prev) => new Set([...prev, sugg.id]));
-    setEditingFindingId(null);
-    setReviewToast(`Applied recommendation: "${sugg.flaw_title || "Protocol refinement"}"`);
-    setTimeout(() => setReviewToast(null), 3500);
-
-    queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
-    queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
-  };
-
-  const handleExportProtocolJson = async () => {
-    setIsExportingProtocol(true);
-    try {
-      const activePico = picoForm;
-      const exportData = await api.exportProtocol({
-        pico: activePico,
-        hypothesis,
-        criteria: { inclusion, exclusion },
-        research_question: researchQuestion || researchQuestionInput,
-        topic: researchQuestion || researchQuestionInput || (activePico.population ? `${activePico.population} ${activePico.index_test}` : "clinical medicine"),
-      });
-
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `protocol-prisma2020-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      setReviewToast("Downloaded PRISMA 2020 protocol specification (JSON).");
-      setTimeout(() => setReviewToast(null), 4000);
-    } catch (err) {
-      console.error("[Export Protocol Error]", err);
-    } finally {
-      setIsExportingProtocol(false);
-    }
-  };
-
-  // ── Stage 3: Search Strings State ──
+  // ── Search strings state ──
   const [activeDb, setActiveDb] = useState<string>("pubmed");
-  const [localSearchStrings, setLocalSearchStrings] = useState<Record<string, string>>({});
-  const [manuallyEditedDbs, setManuallyEditedDbs] = useState<Set<string>>(new Set());
   const [copiedDb, setCopiedDb] = useState<string | null>(null);
-  const [isGeneratingSearches, setIsGeneratingSearches] = useState(false);
-  const [showRegenConfirm, setShowRegenConfirm] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [fetchResult, setFetchResult] = useState<string | null>(null);
-  const [savedDbQuery, setSavedDbQuery] = useState<string | null>(null);
+  const [uploadResult, setUploadResult] = useState<string | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
-  // Sync loaded search strings into local state
-  useEffect(() => {
-    if (searchStrings?.strings) {
-      setLocalSearchStrings((prev) => ({
-        ...searchStrings.strings,
-        ...prev,
-      }));
-    }
-  }, [searchStrings]);
 
-  const handleGenerateSearchStrings = async (forceOverwrite = false) => {
-    if (!forceOverwrite && manuallyEditedDbs.size > 0) {
-      setShowRegenConfirm(true);
-      return;
-    }
-    setShowRegenConfirm(false);
-    setIsGeneratingSearches(true);
-    try {
-      const res = await api.generateSearchStrings(projectId!);
-      if (res?.strings) {
-        setLocalSearchStrings(res.strings);
-        setManuallyEditedDbs(new Set());
-        setLastSearchedSnapshot(currentPicoSnapshot);
-      }
+  // ── Research question state ──
+  const [researchQuestionInput, setResearchQuestionInput] = useState("");
+  const [questionResult, setQuestionResult] = useState<string | null>(null);
+
+  const questionMutation = useMutation({
+    mutationFn: (question: string) => api.searchFromQuestion(projectId!, question),
+    onSuccess: (data) => {
+      setQuestionResult(
+        `PICO extracted and Co-Scientist search strings generated for the supported database interfaces.`
+      );
+      queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
       queryClient.invalidateQueries({ queryKey: ["search-strings", projectId] });
-    } catch (err: any) {
-      console.warn("Search generation error", err);
-    } finally {
-      setIsGeneratingSearches(false);
-    }
-  };
+    },
+    onError: (err: Error) => {
+      setQuestionResult(`Error: ${err.message}`);
+    },
+  });
 
-  const isSearchOutOfDate = Object.keys(localSearchStrings).length > 0 && lastSearchedSnapshot !== "" && lastSearchedSnapshot !== currentPicoSnapshot;
+  const stringsGenerateMutation = useMutation({
+    mutationFn: () => api.generateSearchStrings(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["search-strings", projectId] });
+    },
+  });
 
-  const handleCopySearch = async (dbKey: string, text: string) => {
+  const pubmedFetchMutation = useMutation({
+    mutationFn: () => api.pubmedFetch(projectId!, 100),
+    onSuccess: (data) => {
+      setFetchResult(
+        `Imported ${data.imported_count} studies, skipped ${data.skipped_duplicates} duplicates (${data.total_found} found on PubMed)`
+      );
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+    },
+    onError: (err: Error) => {
+      setFetchResult(`Error: ${err.message}`);
+    },
+  });
+
+  const refUploadMutation = useMutation({
+    mutationFn: (file: File) => api.uploadReferences(projectId!, file),
+    onSuccess: (data) => {
+      setUploadResult(
+        `Imported ${data.imported_count} references, skipped ${data.skipped_duplicates} duplicates (source: ${data.source})`
+      );
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+    },
+    onError: (err: Error) => {
+      setUploadResult(`Error: ${err.message}`);
+    },
+  });
+
+  const handleCopy = async (dbKey: string, text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedDb(dbKey);
       setTimeout(() => setCopiedDb(null), 2000);
     } catch {
-      // clipboard fallback
+      // fallback
     }
   };
 
-  const handleSaveSearchString = (dbKey: string) => {
-    setSavedDbQuery(dbKey);
-    setTimeout(() => setSavedDbQuery(null), 2000);
-  };
+  // ── Protocol upload state ──
+  const [extractionStatus, setExtractionStatus] = useState<
+    "idle" | "loading" | "done" | "error"
+  >("idle");
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [extractionConfidence, setExtractionConfidence] = useState("");
+  const [extractionError, setExtractionError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const refFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Validate balanced parentheses and quotes for search string
-  const validateQuerySyntax = (q: string) => {
-    let openParen = 0;
-    let quoteCount = 0;
-    for (const char of q) {
-      if (char === "(") openParen++;
-      else if (char === ")") openParen--;
-      else if (char === '"') quoteCount++;
-      if (openParen < 0) return { valid: false, error: "Unmatched closing parenthesis" };
+  const handleProtocolUpload = async (file: File) => {
+    setExtractionStatus("loading");
+    setExtractionError("");
+    setUploadedFileName(file.name);
+    try {
+      const result = await api.extractPico(projectId!, file);
+      
+      const newPico = {
+        population: result.population || picoForm.population,
+        index_test: result.index_test || picoForm.index_test,
+        comparator: result.comparator || picoForm.comparator,
+        outcome: result.outcome || picoForm.outcome,
+        study_design: result.study_design || picoForm.study_design,
+      };
+
+      const newRq = result.research_question || researchQuestion;
+      const newHyp = result.hypothesis || hypothesis;
+
+      // Auto-fill PICO form and Hypothesis in local state immediately
+      setPicoForm(newPico);
+      if (result.research_question) setResearchQuestion(result.research_question);
+      if (result.hypothesis) setHypothesis(result.hypothesis);
+      setExtractionConfidence(result.extraction_confidence || "high");
+      setExtractionStatus("done");
+
+      // Synchronously populate React Query caches so refetches never revert values
+      queryClient.setQueryData(["pico", projectId], newPico);
+      queryClient.setQueryData(["hypothesis", projectId], (prev: any) => ({
+        ...(prev || {}),
+        hypothesis: newHyp,
+        research_question: newRq,
+      }));
+
+      // Immediately persist PICO and Hypothesis to ensure database & UI are synced
+      try {
+        await Promise.all([
+          api.updatePico(projectId!, newPico),
+          api.updateHypothesis(projectId!, {
+            hypothesis: newHyp,
+            research_question: newRq,
+            secondary_hypotheses: secondary,
+          }),
+        ]);
+        setPicoSaved(true);
+        setHypSaved(true);
+        setTimeout(() => {
+          setPicoSaved(false);
+          setHypSaved(false);
+        }, 3500);
+      } catch (saveErr) {
+        console.warn("[Auto-persist Warning]", saveErr);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["pico", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["hypothesis", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["search-strings", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+
+      // Auto-expand PICO, Hypothesis, and Criteria sections so user immediately views all fields filled
+      setOpenSections((prev) => ({
+        ...prev,
+        protocol: true,
+        pico: true,
+        hypothesis: true,
+        criteria: true,
+      }));
+    } catch (err) {
+      console.error("[Protocol Upload Error]", err);
+      setExtractionError((err as Error).message || "Failed to process protocol file");
+      setExtractionStatus("error");
     }
-    if (openParen !== 0) return { valid: false, error: `${openParen} unclosed parenthesis` };
-    if (quoteCount % 2 !== 0) return { valid: false, error: "Unclosed quotation mark" };
-    return { valid: true, error: "" };
   };
 
-  // Dynamic field labels based on framework terminology
-  const fieldConfigs = [
-    {
-      key: "population",
-      letter: "P",
-      label: "Population / Target Participants",
-      icon: Users,
-      placeholder: "e.g., Patients with suspected hepatocellular carcinoma undergoing liver resection evaluation",
-      help: "Patient cohort, disease condition, or clinical setting.",
-    },
-    {
-      key: "index_test",
-      letter: "I",
-      label: frameworkType === "diagnostic" ? "Index Test / Imaging Modality" : "Intervention / Treatment",
-      icon: Stethoscope,
-      placeholder: frameworkType === "diagnostic"
-        ? "e.g., Gadoxetic acid-enhanced liver MRI (EOB-MRI)"
-        : "e.g., Catheter-directed mechanical thrombectomy",
-      help: frameworkType === "diagnostic" ? "Test or imaging protocol under diagnostic evaluation." : "Active therapeutic intervention.",
-    },
-    {
-      key: "comparator",
-      letter: "C",
-      label: frameworkType === "diagnostic" ? "Reference Standard / Baseline" : "Comparator / Control",
-      icon: GitCompare,
-      placeholder: frameworkType === "diagnostic"
-        ? "e.g., Histopathological examination or multi-phase contrast CT"
-        : "e.g., Best medical management or intravenous thrombolysis",
-      help: frameworkType === "diagnostic" ? "Gold standard or comparative test." : "Control group or active comparator.",
-    },
-    {
-      key: "outcome",
-      letter: "O",
-      label: "Outcome / Primary Endpoint",
-      icon: Target,
-      placeholder: "e.g., Diagnostic sensitivity, specificity, positive predictive value, and false-positive recall",
-      help: "Primary clinical or diagnostic diagnostic efficacy metrics.",
-    },
-    {
-      key: "study_design",
-      letter: "S",
-      label: "Study Design & Methods",
-      icon: FlaskConical,
-      placeholder: "e.g., Prospective or retrospective cross-sectional diagnostic accuracy studies",
-      help: "Eligible study methodologies and trial designs.",
-    },
+  const handleRefUpload = (file: File) => {
+    refUploadMutation.mutate(file);
+  };
+
+  // ── Collapsible sections ──
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    protocol: true,
+    pico: true,
+    hypothesis: true,
+    criteria: true,
+    search: true,
+  });
+
+  const toggleSection = (key: string) =>
+    setOpenSections((s) => ({ ...s, [key]: !s[key] }));
+
+  const picoFields = [
+    { key: "population", label: "P — Population", icon: Users, placeholder: "e.g., Patients with colorectal cancer undergoing staging imaging" },
+    { key: "index_test", label: "I — Index Test", icon: Stethoscope, placeholder: "e.g., Contrast-enhanced computed tomography (CT)" },
+    { key: "comparator", label: "C — Comparator", icon: GitCompare, placeholder: "e.g., Gadoxetic acid-enhanced MRI as reference standard" },
+    { key: "outcome", label: "O — Outcome", icon: Target, placeholder: "e.g., Diagnostic accuracy (sensitivity and specificity)" },
+    { key: "study_design", label: "S — Study Design", icon: FlaskConical, placeholder: "e.g., Diagnostic accuracy studies (cross-sectional)" },
   ];
 
-  const currentDbMeta = DATABASES.find((d) => d.key === activeDb) || DATABASES[0];
-  const activeQueryText = localSearchStrings[activeDb] || searchStrings?.strings?.[activeDb] || "";
-  const syntaxCheck = validateQuerySyntax(activeQueryText);
+  const currentDbString =
+    searchStrings?.strings?.[activeDb] || "";
 
   return (
-    <div className="min-h-screen bg-[#fbf9f4] text-[#4f444b] font-sans">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        
-        {/* Navigation Breadcrumb */}
-        <Link
-          to={`/projects/${projectId}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#814d75] hover:text-[#3a0f34] transition-colors mb-4"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to Project Workspace
-        </Link>
+    <div className="p-8 max-w-4xl mx-auto">
+      <Link
+        to={`/projects/${projectId}`}
+        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4"
+      >
+        <ArrowLeft className="h-3 w-3" /> Back to project
+      </Link>
 
-        {/* Page Title & Mission */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-serif text-[#3a0f34] font-normal tracking-tight">
-            Protocol Specification & Search Formulation
-          </h1>
-          <p className="text-sm text-[#62535d] mt-1 max-w-2xl leading-relaxed">
-            Formulate your PICO framework, conduct multi-perspective protocol reviews, and generate syntax-calibrated search strategies.
+      <h1 className="text-2xl font-bold mb-1">PICO & Hypothesis</h1>
+      <p className="text-gray-500 text-sm mb-6">
+        Upload a study protocol to auto-extract PICO elements, define your research
+        question and hypotheses, generate inclusion/exclusion criteria, and build
+        database-specific search strings.
+      </p>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          Section 1: Protocol Document Upload
+          ═══════════════════════════════════════════════════════════════ */}
+      <SectionCard
+        title="Protocol Document"
+        icon={FileText}
+        isOpen={openSections.protocol}
+        onToggle={() => toggleSection("protocol")}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Upload a study protocol (PDF, DOCX, or TXT) to automatically extract PICO
+            elements, research question, and hypothesis via NLP analysis.
           </p>
-        </div>
 
-        {/* ═══════════════════════════════════════════════════════════════
-            3-STEP NUMBERED STAGE INDICATOR
-            ═══════════════════════════════════════════════════════════════ */}
-        <nav aria-label="Workflow Steps" className="mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            
-            {/* Step 1 */}
-            <button
-              type="button"
-              onClick={() => setCurrentStage(1)}
-              className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 cursor-pointer ${
-                currentStage === 1
-                  ? "bg-[#ffffff] border-[#814d75] shadow-sm ring-1 ring-[#814d75]"
-                  : "bg-[#ffffff]/60 border-[#d2c2cb] hover:bg-[#ffffff]"
-              }`}
-            >
-              <div
-                className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                  currentStage === 1
-                    ? "bg-[#3a0f34] text-[#fbf9f4]"
-                    : Object.values(picoForm).some((v) => v.trim())
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-[#eee7ec] text-[#62535d]"
-                }`}
-              >
-                1
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              const file = e.dataTransfer.files?.[0];
+              if (file) handleProtocolUpload(file);
+            }}
+            className={`rounded-2xl border-2 border-dashed p-5 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 ${
+              isDragging
+                ? "border-[#381A61] bg-[#88A0DC]/10"
+                : "border-[#381A61]/15 bg-[#F2F1EB]/30 hover:border-[#381A61]/30"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-[#381A61]/10 flex items-center justify-center text-[#381A61] shrink-0">
+                <FileText className="h-5 w-5" />
               </div>
-              <div className="min-w-0">
-                <span className="text-xs font-bold uppercase tracking-wider block text-[#3a0f34]">
-                  Stage 1
-                </span>
-                <span className="text-sm font-semibold block truncate text-[#4f444b]">
-                  Set Up Your PICO
-                </span>
-              </div>
-            </button>
-
-            {/* Step 2 */}
-            <button
-              type="button"
-              onClick={() => setCurrentStage(2)}
-              className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 cursor-pointer ${
-                currentStage === 2
-                  ? "bg-[#ffffff] border-[#814d75] shadow-sm ring-1 ring-[#814d75]"
-                  : "bg-[#ffffff]/60 border-[#d2c2cb] hover:bg-[#ffffff]"
-              }`}
-            >
-              <div
-                className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                  currentStage === 2
-                    ? "bg-[#3a0f34] text-[#fbf9f4]"
-                    : reviewResult
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-[#eee7ec] text-[#62535d]"
-                }`}
-              >
-                2
-              </div>
-              <div className="min-w-0">
-                <span className="text-xs font-bold uppercase tracking-wider block text-[#3a0f34]">
-                  Stage 2
-                </span>
-                <span className="text-sm font-semibold block truncate text-[#4f444b]">
-                  Review Your Protocol
-                </span>
-              </div>
-            </button>
-
-            {/* Step 3 */}
-            <button
-              type="button"
-              onClick={() => setCurrentStage(3)}
-              className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 cursor-pointer ${
-                currentStage === 3
-                  ? "bg-[#ffffff] border-[#814d75] shadow-sm ring-1 ring-[#814d75]"
-                  : "bg-[#ffffff]/60 border-[#d2c2cb] hover:bg-[#ffffff]"
-              }`}
-            >
-              <div
-                className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                  currentStage === 3
-                    ? "bg-[#3a0f34] text-[#fbf9f4]"
-                    : Object.keys(localSearchStrings).length > 0
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-[#eee7ec] text-[#62535d]"
-                }`}
-              >
-                3
-              </div>
-              <div className="min-w-0">
-                <span className="text-xs font-bold uppercase tracking-wider block text-[#3a0f34]">
-                  Stage 3
-                </span>
-                <span className="text-sm font-semibold block truncate text-[#4f444b]">
-                  Generate Search Strings
-                </span>
-              </div>
-            </button>
-          </div>
-        </nav>
-
-        {/* ═══════════════════════════════════════════════════════════════
-            STAGE 1 — SET UP YOUR PICO
-            ═══════════════════════════════════════════════════════════════ */}
-        {currentStage === 1 && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            
-            {/* Entry Method Selector */}
-            <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl p-5 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#d2c2cb]/40">
-                <div>
-                  <h2 className="text-base font-serif font-bold text-[#3a0f34]">
-                    Choose PICO Entry Method
-                  </h2>
-                  <p className="text-xs text-[#62535d]">
-                    Select how you wish to initiate your PICO specification. All three methods populate the shared form below.
-                  </p>
-                </div>
-                
-                {/* Framework Terminology Selector */}
-                <div className="flex items-center gap-1.5 self-start sm:self-auto bg-[#fbf9f4] border border-[#d2c2cb] p-1 rounded-lg">
-                  <span className="text-[11px] font-bold text-[#62535d] px-2">Framework:</span>
-                  <button
-                    type="button"
-                    onClick={() => setFrameworkType("diagnostic")}
-                    className={`px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
-                      frameworkType === "diagnostic"
-                        ? "bg-[#3a0f34] text-[#fbf9f4]"
-                        : "text-[#62535d] hover:text-[#3a0f34]"
-                    }`}
-                  >
-                    Diagnostic Accuracy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFrameworkType("intervention")}
-                    className={`px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
-                      frameworkType === "intervention"
-                        ? "bg-[#3a0f34] text-[#fbf9f4]"
-                        : "text-[#62535d] hover:text-[#3a0f34]"
-                    }`}
-                  >
-                    Intervention / Therapy
-                  </button>
-                </div>
-              </div>
-
-              {/* 3-Option Segmented Selector */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-                <button
-                  type="button"
-                  id="tab-method-question"
-                  onClick={() => handleSelectMethod("question")}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
-                    entryMethod === "question"
-                      ? "border-[#3a0f34] bg-[#3a0f34]/5 shadow-xs"
-                      : "border-[#d2c2cb] hover:border-[#814d75] bg-[#ffffff]"
-                  }`}
-                >
-                  <div className={`p-2 rounded-lg ${entryMethod === "question" ? "bg-[#3a0f34] text-[#fbf9f4]" : "bg-[#eee7ec] text-[#62535d]"}`}>
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold block text-[#3a0f34]">Method B</span>
-                    <span className="text-xs font-medium text-[#4f444b]">Enter Research Question</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  id="tab-method-upload"
-                  onClick={() => handleSelectMethod("upload")}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
-                    entryMethod === "upload"
-                      ? "border-[#3a0f34] bg-[#3a0f34]/5 shadow-xs"
-                      : "border-[#d2c2cb] hover:border-[#814d75] bg-[#ffffff]"
-                  }`}
-                >
-                  <div className={`p-2 rounded-lg ${entryMethod === "upload" ? "bg-[#3a0f34] text-[#fbf9f4]" : "bg-[#eee7ec] text-[#62535d]"}`}>
-                    <Upload className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold block text-[#3a0f34]">Method A</span>
-                    <span className="text-xs font-medium text-[#4f444b]">Upload a Protocol</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  id="tab-method-manual"
-                  onClick={() => handleSelectMethod("manual")}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
-                    entryMethod === "manual"
-                      ? "border-[#3a0f34] bg-[#3a0f34]/5 shadow-xs"
-                      : "border-[#d2c2cb] hover:border-[#814d75] bg-[#ffffff]"
-                  }`}
-                >
-                  <div className={`p-2 rounded-lg ${entryMethod === "manual" ? "bg-[#3a0f34] text-[#fbf9f4]" : "bg-[#eee7ec] text-[#62535d]"}`}>
-                    <Edit3 className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold block text-[#3a0f34]">Method C</span>
-                    <span className="text-xs font-medium text-[#4f444b]">Fill PICO Manually</span>
-                  </div>
-                </button>
-              </div>
-
-              {/* METHOD B CONTROLS: Enter a research question */}
-              {entryMethod === "question" && (
-                <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-[#3a0f34] uppercase tracking-wider flex items-center gap-1.5">
-                      <HelpCircle className="h-3.5 w-3.5 text-[#814d75]" />
-                      Clinical Research Question
-                    </label>
-                    <span className="text-[11px] text-[#62535d]">Single question input</span>
-                  </div>
-                  <textarea
-                    id="input-research-question"
-                    rows={3}
-                    className="w-full bg-[#ffffff] border border-[#d2c2cb] rounded-lg p-3 text-sm text-[#4f444b] focus:outline-none focus:ring-2 focus:ring-[#814d75] placeholder:text-[#81737b]"
-                    placeholder="e.g., Is gadoxetic acid-enhanced MRI more accurate than contrast-enhanced CT for detecting liver metastases in patients with colorectal cancer?"
-                    value={researchQuestionInput}
-                    onChange={(e) => {
-                      setResearchQuestionInput(e.target.value);
-                      setResearchQuestion(e.target.value);
-                    }}
-                  />
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-[11px] text-[#62535d]">
-                      Generates editable PICO fields below without altering saved search strings.
+              <div>
+                <p className="text-xs font-bold text-[#141413]">
+                  {uploadedFileName ? (
+                    <span className="flex items-center gap-1.5 text-[#381A61]">
+                      <span>{uploadedFileName}</span>
                     </span>
-                    <button
-                      type="button"
-                      id="btn-generate-pico"
-                      onClick={handleGeneratePicoFromQuestion}
-                      disabled={isGeneratingPico || !researchQuestionInput.trim()}
-                      className="px-4 py-2 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] rounded-lg text-xs font-bold inline-flex items-center gap-2 cursor-pointer transition-colors shadow-xs disabled:opacity-50"
-                    >
-                      {isGeneratingPico ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>Generating PICO...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-3.5 w-3.5 text-[#ffdea6]" />
-                          <span>Generate PICO</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {generatePicoError && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
-                      <span>{generatePicoError}</span>
-                    </div>
+                  ) : (
+                    "Select a protocol file or drag & drop here"
                   )}
-                </div>
-              )}
-
-              {/* METHOD A CONTROLS: Upload a protocol */}
-              {entryMethod === "upload" && (
-                <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-[#3a0f34] uppercase tracking-wider flex items-center gap-1.5">
-                      <FileText className="h-3.5 w-3.5 text-[#814d75]" />
-                      Upload Protocol Document
-                    </label>
-                    <span className="text-[11px] text-[#62535d]">PDF, DOCX, TXT, MD, RTF</span>
-                  </div>
-
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setIsDragging(true);
-                    }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsDragging(false);
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) handleProtocolUpload(file);
-                    }}
-                    className={`rounded-xl border-2 border-dashed p-6 text-center transition-all flex flex-col items-center justify-center gap-2 ${
-                      isDragging
-                        ? "border-[#3a0f34] bg-[#eee7ec]"
-                        : "border-[#d2c2cb] bg-[#ffffff] hover:border-[#814d75]"
-                    }`}
-                  >
-                    <div className="h-10 w-10 rounded-full bg-[#eee7ec] flex items-center justify-center text-[#3a0f34]">
-                      <Upload className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-[#3a0f34]">
-                        {uploadedFileName || "Click to browse or drag protocol file here"}
-                      </p>
-                      <p className="text-[11px] text-[#62535d] mt-0.5">
-                        Extracts available PICO details and leaves unstated fields blank.
-                      </p>
-                    </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,.docx,.doc,.txt,.md,.rtf"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleProtocolUpload(file);
-                        e.target.value = "";
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={extractionStatus === "loading"}
-                      className="mt-1 px-3.5 py-1.5 bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] text-[#3a0f34] rounded-lg text-xs font-semibold cursor-pointer"
-                    >
-                      {extractionStatus === "loading" ? "Analyzing Protocol..." : "Select Document File"}
-                    </button>
-                  </div>
-
-                  {extractionStatus === "loading" && (
-                    <div className="p-3 bg-[#eee7ec] border border-[#d2c2cb] rounded-lg text-xs text-[#3a0f34] flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-[#814d75]" />
-                      <span>Parsing sections and extracting verified protocol elements...</span>
-                    </div>
-                  )}
-
-                  {extractionStatus === "done" && (
-                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span>Protocol extracted from <strong>{uploadedFileName}</strong>. Fields populated below.</span>
-                      </div>
-                      {extractionConfidence && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
-                          {extractionConfidence} confidence
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {extractionStatus === "error" && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
-                      <span>{extractionError}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* METHOD C: Fill manually announcement */}
-              {entryMethod === "manual" && (
-                <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl p-3 text-xs text-[#62535d] flex items-center gap-2">
-                  <Info className="h-4 w-4 text-[#814d75] shrink-0" />
-                  <span>Manual entry active. No automated AI generation required. Populate the PICO fields directly below.</span>
-                </div>
-              )}
-
-              {/* Ambiguity & Missing Information Notices */}
-              {(extractionAmbiguities.length > 0 || missingFieldsNotice.length > 0) && (
-                <div className="mt-4 p-4 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs space-y-2">
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>Ambiguities & Unspecified Elements Requiring Confirmation</span>
-                  </div>
-                  <ul className="list-disc list-inside space-y-1 text-amber-800 pl-1">
-                    {missingFieldsNotice.map((m, idx) => (
-                      <li key={`missing-${idx}`}>
-                        <strong>Missing Field:</strong> {m} was not stated and left blank.
-                      </li>
-                    ))}
-                    {extractionAmbiguities.map((a, idx) => (
-                      <li key={`ambiguity-${idx}`}>{a}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                </p>
+                <p className="text-[11px] text-black/50 mt-0.5">
+                  Supports PDF, DOCX, TXT, MD, RTF (up to 50MB)
+                </p>
+              </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                SHARED EDITABLE PICO FORM
-                ═══════════════════════════════════════════════════════════════ */}
-            <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl p-6 shadow-xs space-y-5">
-              <div className="flex items-center justify-between pb-3 border-b border-[#d2c2cb]/50">
-                <div>
-                  <h3 className="text-base font-serif font-bold text-[#3a0f34]">
-                    Shared PICO Specification
-                  </h3>
-                  <p className="text-xs text-[#62535d]">
-                    One consolidated record populated from your chosen entry method. Review and edit all fields.
-                  </p>
-                </div>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb]">
-                  {frameworkType === "diagnostic" ? "Diagnostic Accuracy" : "Intervention / Therapy"}
-                </span>
-              </div>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.doc,.txt,.md,.rtf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleProtocolUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                id="btn-upload-protocol"
+                className="btn-palette-primary cursor-pointer !px-4 !py-2 text-xs font-bold shadow-sm inline-flex items-center gap-2"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={extractionStatus === "loading"}
+              >
+                {extractionStatus === "loading" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {extractionStatus === "done" ? "Upload Different Protocol" : "Upload Protocol"}
+              </button>
+            </div>
+          </div>
 
-              {/* Original Research Question (Always accessible without asking user to re-enter) */}
-              <div>
-                <label className="block text-xs font-bold text-[#3a0f34] uppercase tracking-wider mb-1">
-                  Primary Research Question
+          {extractionStatus === "loading" && (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#88A0DC]/15 border border-[#88A0DC]/30 text-xs font-medium text-[#381A61]">
+              <Loader2 className="h-4 w-4 animate-spin text-[#381A61]" />
+              <span>Analyzing protocol text and extracting PICO elements via NLP...</span>
+            </div>
+          )}
+
+          {extractionStatus === "done" && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+                <span className="text-sm font-semibold text-emerald-800">Protocol Successfully Extracted</span>
+                {extractionConfidence && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    {extractionConfidence.toUpperCase()} CONFIDENCE
+                  </span>
+                )}
+              </div>
+              <div className="rounded-xl bg-emerald-50/70 border border-emerald-200 px-4 py-3 text-xs text-emerald-900 leading-relaxed">
+                PICO elements, research question, and hypothesis have been auto-populated below from <strong className="font-semibold">{uploadedFileName || "your protocol"}</strong>. Review and edit as needed, then click Save on each section.
+              </div>
+            </div>
+          )}
+
+          {extractionStatus === "error" && (
+            <div className="flex items-center justify-between rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+                <span>{extractionError || "Failed to extract protocol. Please try again."}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="underline font-semibold hover:text-red-900"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          Section 1b: Research Question → PICO + Search Strings
+          ═══════════════════════════════════════════════════════════════ */}
+      <SectionCard
+        title="Research Question (Auto-Generate PICO)"
+        icon={HelpCircle}
+        isOpen={openSections.protocol}
+        onToggle={() => toggleSection("protocol")}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-500">
+            Type your research question in plain English and let the Co-Scientist extract PICO
+            elements and generate database-specific search strings automatically.
+          </p>
+          <div className="flex items-start gap-3">
+            <textarea
+              className="input min-h-[80px] flex-1"
+              placeholder="e.g., Is MRI more accurate than CT for detecting liver metastases in patients with colorectal cancer?"
+              value={researchQuestionInput}
+              onChange={(e) => setResearchQuestionInput(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn-primary whitespace-nowrap"
+              onClick={() => {
+                if (researchQuestionInput.trim()) {
+                  questionMutation.mutate(researchQuestionInput.trim());
+                }
+              }}
+              disabled={questionMutation.isPending || !researchQuestionInput.trim()}
+            >
+              {questionMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              Generate
+            </button>
+          </div>
+          {questionResult && (
+            <div
+              className={`rounded-md px-4 py-3 text-sm ${
+                questionResult.startsWith("Error")
+                  ? "bg-red-50 border border-red-200 text-red-700"
+                  : "bg-green-50 border border-green-200 text-green-700"
+              }`}
+            >
+              {questionResult}
+            </div>
+          )}
+        </div>
+      </SectionCard>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          Section 2: PICO Framework
+          ═══════════════════════════════════════════════════════════════ */}
+      <SectionCard
+        title="PICO Framework"
+        icon={Target}
+        isOpen={openSections.pico}
+        onToggle={() => toggleSection("pico")}
+      >
+        {picoLoading ? (
+          <div className="flex items-center gap-2 text-gray-400">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+          </div>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              picoSaveMutation.mutate();
+            }}
+            className="space-y-4"
+          >
+            {picoFields.map(({ key, label, icon: Icon, placeholder }) => (
+              <div key={key}>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
+                  <Icon className="h-4 w-4 text-phylo-blue" />
+                  {label}
                 </label>
-                <input
-                  type="text"
-                  className="w-full bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg px-3 py-2 text-sm text-[#4f444b] focus:outline-none focus:ring-2 focus:ring-[#814d75]"
-                  placeholder="e.g., In patients with colorectal cancer, does MRI demonstrate higher sensitivity than CT for liver metastases?"
-                  value={researchQuestion}
-                  onChange={(e) => {
-                    setResearchQuestion(e.target.value);
-                    setResearchQuestionInput(e.target.value);
-                  }}
+                <textarea
+                  className="input min-h-[60px]"
+                  value={picoForm[key as keyof typeof picoForm]}
+                  onChange={(e) => setPicoField(key, e.target.value)}
+                  placeholder={placeholder}
                 />
               </div>
+            ))}
 
-              {/* 5 PICO Fields */}
-              <div className="space-y-4">
-                {fieldConfigs.map((field) => {
-                  const Icon = field.icon;
-                  return (
-                    <div key={field.key} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-[#3a0f34] flex items-center gap-1.5">
-                          <span className="h-5 w-5 rounded bg-[#3a0f34]/10 text-[#3a0f34] inline-flex items-center justify-center font-bold text-[11px]">
-                            {field.letter}
-                          </span>
-                          <span>{field.label}</span>
-                        </label>
-                        <span className="text-[11px] text-[#81737b]">{field.help}</span>
-                      </div>
-                      <textarea
-                        rows={2}
-                        className="w-full bg-[#ffffff] border border-[#d2c2cb] rounded-lg p-2.5 text-sm text-[#4f444b] focus:outline-none focus:ring-2 focus:ring-[#814d75] placeholder:text-[#81737b]/60"
-                        placeholder={field.placeholder}
-                        value={(picoForm as any)[field.key] || ""}
-                        onChange={(e) => setPicoField(field.key, e.target.value)}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+            {picoSaveMutation.isError && (
+              <ErrorBanner msg={(picoSaveMutation.error as Error).message} />
+            )}
 
-              {/* Optional Expandable Accordion: Research Hypotheses */}
-              <div className="border border-[#d2c2cb] rounded-xl overflow-hidden bg-[#fbf9f4]">
-                <button
-                  type="button"
-                  onClick={() => setShowHypothesesAccordion(!showHypothesesAccordion)}
-                  className="w-full px-4 py-3 text-left font-bold text-xs text-[#3a0f34] flex items-center justify-between cursor-pointer hover:bg-[#eee7ec]/50"
-                >
-                  <span className="flex items-center gap-2">
-                    <FlaskConical className="h-4 w-4 text-[#814d75]" />
-                    <span>Hypotheses & Falsifiable Claims (Optional)</span>
-                    {hypothesis && <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-medium">Configured</span>}
+            <div className="flex items-center gap-3">
+              <button type="submit" className="btn-primary" disabled={picoSaveMutation.isPending}>
+                {picoSaveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Save PICO
+              </button>
+              {picoSaved && (
+                <span className="flex items-center gap-1 text-sm text-phylo-green">
+                  <CheckCircle className="h-4 w-4" /> Saved
+                </span>
+              )}
+            </div>
+          </form>
+        )}
+      </SectionCard>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          Section 3: Research Question & Hypothesis
+          ═══════════════════════════════════════════════════════════════ */}
+      <SectionCard
+        title="Research Question & Hypothesis"
+        icon={Lightbulb}
+        isOpen={openSections.hypothesis}
+        onToggle={() => toggleSection("hypothesis")}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            hypSaveMutation.mutate();
+          }}
+          className="space-y-4"
+        >
+          {/* Research Question */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
+              <HelpCircle className="h-4 w-4 text-phylo-blue" />
+              Research Question
+            </label>
+            <textarea
+              className="input min-h-[60px]"
+              value={researchQuestion}
+              onChange={(e) => setResearchQuestion(e.target.value)}
+              placeholder="e.g., What is the diagnostic accuracy of CT compared to MRI for detecting liver metastases in patients with colorectal cancer?"
+            />
+          </div>
+
+          {/* Primary Hypothesis */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
+              <Lightbulb className="h-4 w-4 text-phylo-orange" />
+              Primary Hypothesis
+            </label>
+            <textarea
+              className="input min-h-[80px]"
+              value={hypothesis}
+              onChange={(e) => setHypothesis(e.target.value)}
+              placeholder="e.g., MRI has superior diagnostic accuracy compared to CT for the detection of liver metastases in colorectal cancer patients."
+            />
+          </div>
+
+          {/* Secondary Hypotheses */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Lightbulb className="h-4 w-4 text-gray-400" />
+                Secondary Hypotheses
+              </label>
+              <button
+                type="button"
+                onClick={addSecondary}
+                className="text-xs text-phylo-blue hover:underline flex items-center gap-1"
+              >
+                <Plus className="h-3 w-3" /> Add
+              </button>
+            </div>
+
+            {secondary.length === 0 && (
+              <p className="text-sm text-gray-400">No secondary hypotheses defined.</p>
+            )}
+
+            <div className="space-y-2">
+              {secondary.map((h, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <textarea
+                    className="input min-h-[40px] flex-1 text-sm"
+                    value={h.text}
+                    onChange={(e) => updateSecondary(i, "text", e.target.value)}
+                    placeholder="Secondary hypothesis text..."
+                  />
+                  <select
+                    className="input w-28 text-xs"
+                    value={h.type}
+                    onChange={(e) => updateSecondary(i, "type", e.target.value)}
+                  >
+                    <option value="alternative">Alternative</option>
+                    <option value="null">Null</option>
+                  </select>
+                  <select
+                    className="input w-28 text-xs"
+                    value={h.status}
+                    onChange={(e) => updateSecondary(i, "status", e.target.value)}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => removeSecondary(i)}
+                    className="text-gray-400 hover:text-red-500 mt-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {hypSaveMutation.isError && (
+            <ErrorBanner msg={(hypSaveMutation.error as Error).message} />
+          )}
+
+          <div className="flex items-center gap-3">
+            <button type="submit" className="btn-primary" disabled={hypSaveMutation.isPending}>
+              {hypSaveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save Hypothesis
+            </button>
+            {hypSaved && (
+              <span className="flex items-center gap-1 text-sm text-phylo-green">
+                <CheckCircle className="h-4 w-4" /> Saved
+              </span>
+            )}
+          </div>
+        </form>
+      </SectionCard>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          Section 4: Inclusion/Exclusion Criteria
+          ═══════════════════════════════════════════════════════════════ */}
+      <SectionCard
+        title="Inclusion / Exclusion Criteria"
+        icon={CheckCircle}
+        isOpen={openSections.criteria}
+        onToggle={() => toggleSection("criteria")}
+      >
+        <div className="space-y-4">
+          {/* Warning banner: auto-generated search strings require expert review */}
+          <div className="rounded-lg border border-phylo-orange/30 bg-phylo-orange/5 px-4 py-3 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-phylo-orange shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <span className="font-semibold text-phylo-orange">Auto-generated search strings are a starting point.</span>{" "}
+              <span className="text-gray-600">
+                The Co-Scientist selects the search concepts and synonyms from your PICO. Basic syntax checks and an automatic repair step help catch formatting errors; searches have not been tested in the databases.
+                They must be reviewed and refined by a medical librarian or systematic review methodologist
+                before use in a formal search. Synonym coverage, database-specific syntax, and field tags
+                may require adjustment for your specific research question.
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => criteriaGenerateMutation.mutate()}
+              disabled={criteriaGenerateMutation.isPending}
+            >
+              {criteriaGenerateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              Generate from PICO
+            </button>
+            {criteriaGenerateMutation.isError && (
+              <span className="text-sm text-red-600">
+                {(criteriaGenerateMutation.error as Error).message}
+              </span>
+            )}
+          </div>
+
+          {/* Inclusion criteria */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-semibold text-gray-700">Inclusion Criteria</h4>
+              <button
+                type="button"
+                onClick={() => addCriterion("inclusion")}
+                className="text-xs text-phylo-blue hover:underline flex items-center gap-1"
+              >
+                <Plus className="h-3 w-3" /> Add
+              </button>
+            </div>
+            {inclusion.length === 0 && (
+              <p className="text-sm text-gray-400">No inclusion criteria defined.</p>
+            )}
+            <div className="space-y-2">
+              {inclusion.map((c, i) => (
+                <div key={c.id} className="flex gap-2 items-start">
+                  <span className="text-sm font-medium text-gray-400 mt-2 w-6 shrink-0">
+                    {i + 1}.
                   </span>
-                  {showHypothesesAccordion ? (
-                    <ChevronDown className="h-4 w-4 text-[#814d75]" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-[#814d75]" />
-                  )}
-                </button>
-
-                {showHypothesesAccordion && (
-                  <div className="p-4 border-t border-[#d2c2cb] space-y-4 bg-[#ffffff]">
-                    <div>
-                      <label className="block text-xs font-bold text-[#3a0f34] mb-1">
-                        Primary Alternative Hypothesis (H₁)
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg px-3 py-2 text-sm text-[#4f444b] focus:outline-none focus:ring-2 focus:ring-[#814d75]"
-                        placeholder="e.g., Gadoxetic acid-enhanced MRI provides significantly superior sensitivity compared to contrast CT."
-                        value={hypothesis}
-                        onChange={(e) => setHypothesis(e.target.value)}
-                      />
-                    </div>
-
-                    {/* Secondary Hypotheses */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-bold text-[#3a0f34]">
-                          Secondary Hypotheses & Sub-claims
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setSecondary([...secondary, { text: "", type: "alternative", status: "pending" }])}
-                          className="text-xs text-[#814d75] hover:text-[#3a0f34] font-semibold inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="h-3 w-3" /> Add Hypothesis
-                        </button>
-                      </div>
-
-                      {secondary.length === 0 ? (
-                        <p className="text-xs text-[#81737b] italic">No secondary hypotheses defined.</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {secondary.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                className="flex-1 bg-[#ffffff] border border-[#d2c2cb] rounded-lg px-3 py-1.5 text-xs text-[#4f444b]"
-                                placeholder="Secondary hypothesis..."
-                                value={item.text}
-                                onChange={(e) => {
-                                  const updated = [...secondary];
-                                  updated[idx] = { ...updated[idx], text: e.target.value };
-                                  setSecondary(updated);
-                                }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setSecondary(secondary.filter((_, i) => i !== idx))}
-                                className="text-gray-400 hover:text-red-600 p-1 cursor-pointer"
-                                title="Remove hypothesis"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Save & Continue Primary Action */}
-              <div className="pt-3 border-t border-[#d2c2cb]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  {picoSaveState === "saved" && (
-                    <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5 animate-in fade-in">
-                      <CheckCircle className="h-4 w-4 text-emerald-600" />
-                      PICO saved successfully. Transitioning to Protocol Review...
-                    </span>
-                  )}
-                  {picoSaveState === "error" && (
-                    <span className="text-xs font-bold text-red-700 flex items-center gap-1.5">
-                      <AlertCircle className="h-4 w-4 text-red-600" />
-                      {picoSaveError}
-                    </span>
-                  )}
+                  <textarea
+                    className="input min-h-[36px] flex-1 text-sm"
+                    value={c.text}
+                    onChange={(e) => updateCriterion("inclusion", i, e.target.value)}
+                    placeholder="Inclusion criterion..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeCriterion("inclusion", i)}
+                    className="text-gray-400 hover:text-red-500 mt-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  id="btn-save-continue-review"
-                  onClick={handleSaveAndContinue}
-                  disabled={picoSaveState === "saving"}
-                  className="px-6 py-2.5 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 cursor-pointer shadow-sm transition-all disabled:opacity-50"
-                >
-                  {picoSaveState === "saving" ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin text-[#ffdea6]" />
-                      <span>Saving PICO...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Save & Continue to Review</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-              </div>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* ═══════════════════════════════════════════════════════════════
-            STAGE 2 — REVIEW YOUR PROTOCOL
-            ═══════════════════════════════════════════════════════════════ */}
-        {currentStage === 2 && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            
-            {/* Header & Main Review Action */}
-            <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl p-6 shadow-xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#d2c2cb]/50">
-                <div>
-                  <h2 className="text-lg font-serif font-bold text-[#3a0f34]">
-                    Protocol Multi-Perspective Review
-                  </h2>
-                  <p className="text-xs text-[#62535d] mt-0.5">
-                    Dynamically evaluates study design, eligibility criteria, and methodological traps before literature screening.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5 text-xs text-[#62535d]">
-                    <span className="font-semibold">Reviewer limit:</span>
-                    <select
-                      value={maxReviewers}
-                      onChange={(e) => setMaxReviewers(Number(e.target.value))}
-                      className="bg-[#fbf9f4] border border-[#d2c2cb] rounded px-2 py-1 text-xs text-[#3a0f34] font-medium"
-                    >
-                      <option value={3}>3 AI Reviewers</option>
-                      <option value={4}>4 AI Reviewers</option>
-                    </select>
-                  </div>
-
-                  <button
-                    type="button"
-                    id="btn-review-protocol"
-                    onClick={handleRunProtocolReview}
-                    disabled={isReviewLoading}
-                    className="px-5 py-2 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] rounded-xl text-xs font-bold inline-flex items-center gap-2 cursor-pointer transition-colors shadow-xs disabled:opacity-50"
-                  >
-                    {isReviewLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin text-[#ffdea6]" />
-                        <span>Running AI Review...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-4 w-4 text-[#ffdea6]" />
-                        <span>Review My Protocol</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Clear AI Perspective Disclosure */}
-              <div className="p-3 bg-[#eee7ec]/60 border border-[#d2c2cb] rounded-xl text-xs text-[#62535d] flex items-start gap-2.5">
-                <Info className="h-4 w-4 text-[#814d75] shrink-0 mt-0.5" />
-                <div className="leading-relaxed">
-                  <strong className="text-[#3a0f34]">AI Methodology Perspectives:</strong> The reviewer roles below represent simulated clinical and statistical perspectives configured to uncover study design flaws. They do not constitute independent human peer review or establish scientific validity.
-                </div>
-              </div>
-
-              {/* Out of Date Banner */}
-              {isReviewOutOfDate && (
-                <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>PICO framework has been edited since last review. Findings may be out of date.</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRunProtocolReview}
-                    className="underline font-bold text-amber-900 hover:text-[#3a0f34] cursor-pointer"
-                  >
-                    Re-run Review
-                  </button>
-                </div>
-              )}
-
-              {/* Selected Dynamic Reviewer Roles & Relevance Explanations */}
-              {reviewResult?.personas && reviewResult.personas.length > 0 && (
-                <div className="space-y-2 pt-1">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#3a0f34]">
-                    Selected AI Reviewer Panel ({reviewResult.personas.length} Roles)
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {reviewResult.personas.map((p: any) => (
-                      <div
-                        key={p.id || p.role}
-                        className="p-3 rounded-xl border border-[#d2c2cb] bg-[#fbf9f4] space-y-1"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#3a0f34] flex items-center gap-1.5">
-                            <span>{p.avatar || "🩺"}</span>
-                            <span>{p.role || p.name}</span>
-                          </span>
-                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-[#3a0f34]/10 text-[#3a0f34]">
-                            AI Perspective
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#62535d] leading-relaxed">
-                          <strong className="text-[#4f444b]">Why selected:</strong> {p.relevance_reason || p.focus || "Clinical domain expert."}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+          {/* Exclusion criteria */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-semibold text-gray-700">Exclusion Criteria</h4>
+              <button
+                type="button"
+                onClick={() => addCriterion("exclusion")}
+                className="text-xs text-phylo-blue hover:underline flex items-center gap-1"
+              >
+                <Plus className="h-3 w-3" /> Add
+              </button>
             </div>
-
-            {/* ═══════════════════════════════════════════════════════════════
-                CONSOLIDATED FINDINGS (4 BUCKETS)
-                ═══════════════════════════════════════════════════════════════ */}
-            {reviewResult && (
-              <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl p-6 shadow-xs space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-[#d2c2cb]/50">
-                  <div>
-                    <h3 className="text-base font-serif font-bold text-[#3a0f34]">
-                      Consolidated Protocol Findings
-                    </h3>
-                    <p className="text-xs text-[#62535d]">
-                      Actionable findings partitioned into clinical and methodological categories. Accept, edit, or dismiss suggestions.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#3a0f34]">Rigor Score:</span>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-[#3a0f34] text-[#fbf9f4]">
-                      {reviewResult.rigor_score || 85}/100
-                    </span>
-                  </div>
-                </div>
-
-                {/* 4 Distinct Buckets */}
-                <div className="space-y-5">
-                  
-                  {/* Bucket 1: Missing or Ambiguous Information */}
-                  <FindingsBucketCard
-                    title="1. Missing or Ambiguous Information"
-                    badge="Clarification"
-                    badgeColor="amber"
-                    items={reviewResult.findings_by_category?.missing_ambiguous || []}
-                    dismissedIds={dismissedFindingIds}
-                    editingId={editingFindingId}
-                    editingText={editingFindingText}
-                    onStartEdit={(id, text) => {
-                      setEditingFindingId(id);
-                      setEditingFindingText(text);
-                    }}
-                    onCancelEdit={() => setEditingFindingId(null)}
-                    onChangeEditText={(val) => setEditingFindingText(val)}
-                    onAccept={handleAdoptSuggestion}
-                    onDismiss={(id) => setDismissedFindingIds((prev) => new Set([...prev, id]))}
-                  />
-
-                  {/* Bucket 2: Conflicting Eligibility Criteria */}
-                  <FindingsBucketCard
-                    title="2. Conflicting Eligibility Criteria"
-                    badge="Criteria Conflict"
-                    badgeColor="purple"
-                    items={reviewResult.findings_by_category?.conflicting_criteria || []}
-                    dismissedIds={dismissedFindingIds}
-                    editingId={editingFindingId}
-                    editingText={editingFindingText}
-                    onStartEdit={(id, text) => {
-                      setEditingFindingId(id);
-                      setEditingFindingText(text);
-                    }}
-                    onCancelEdit={() => setEditingFindingId(null)}
-                    onChangeEditText={(val) => setEditingFindingText(val)}
-                    onAccept={handleAdoptSuggestion}
-                    onDismiss={(id) => setDismissedFindingIds((prev) => new Set([...prev, id]))}
-                  />
-
-                  {/* Bucket 3: Study-Design or Methodological Concerns */}
-                  <FindingsBucketCard
-                    title="3. Study-Design or Methodological Concerns"
-                    badge="Methodology"
-                    badgeColor="red"
-                    items={reviewResult.findings_by_category?.methodological_concerns || []}
-                    dismissedIds={dismissedFindingIds}
-                    editingId={editingFindingId}
-                    editingText={editingFindingText}
-                    onStartEdit={(id, text) => {
-                      setEditingFindingId(id);
-                      setEditingFindingText(text);
-                    }}
-                    onCancelEdit={() => setEditingFindingId(null)}
-                    onChangeEditText={(val) => setEditingFindingText(val)}
-                    onAccept={handleAdoptSuggestion}
-                    onDismiss={(id) => setDismissedFindingIds((prev) => new Set([...prev, id]))}
-                  />
-
-                  {/* Bucket 4: Search-Relevant Concepts and Omissions */}
-                  <FindingsBucketCard
-                    title="4. Search-Relevant Concepts and Omissions"
-                    badge="Search Terms"
-                    badgeColor="blue"
-                    items={reviewResult.findings_by_category?.search_omissions || []}
-                    dismissedIds={dismissedFindingIds}
-                    editingId={editingFindingId}
-                    editingText={editingFindingText}
-                    onStartEdit={(id, text) => {
-                      setEditingFindingId(id);
-                      setEditingFindingText(text);
-                    }}
-                    onCancelEdit={() => setEditingFindingId(null)}
-                    onChangeEditText={(val) => setEditingFindingText(val)}
-                    onAccept={handleAdoptSuggestion}
-                    onDismiss={(id) => setDismissedFindingIds((prev) => new Set([...prev, id]))}
-                  />
-                </div>
-              </div>
+            {exclusion.length === 0 && (
+              <p className="text-sm text-gray-400">No exclusion criteria defined.</p>
             )}
-
-            {/* ═══════════════════════════════════════════════════════════════
-                ELIGIBILITY CRITERIA REVIEW & EDITING
-                ═══════════════════════════════════════════════════════════════ */}
-            <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl p-6 shadow-xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#d2c2cb]/50">
-                <div>
-                  <h3 className="text-base font-serif font-bold text-[#3a0f34]">
-                    Eligibility Criteria (Inclusion & Exclusion)
-                  </h3>
-                  <p className="text-xs text-[#62535d]">
-                    Define precise criteria governing study inclusion and reason codes for screening exclusion.
-                  </p>
+            <div className="space-y-2">
+              {exclusion.map((c, i) => (
+                <div key={c.id} className="flex gap-2 items-start">
+                  <span className="text-sm font-medium text-gray-400 mt-2 w-6 shrink-0">
+                    {i + 1}.
+                  </span>
+                  <textarea
+                    className="input min-h-[36px] flex-1 text-sm"
+                    value={c.text}
+                    onChange={(e) => updateCriterion("exclusion", i, e.target.value)}
+                    placeholder="Exclusion criterion..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeCriterion("exclusion", i)}
+                    className="text-gray-400 hover:text-red-500 mt-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  id="btn-draft-criteria"
-                  onClick={handleDraftEligibilityCriteria}
-                  disabled={isDraftingCriteria}
-                  className="px-3.5 py-1.5 bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] text-[#3a0f34] rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  {isDraftingCriteria ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[#814d75]" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5 text-[#814d75]" />
-                  )}
-                  <span>Draft Eligibility Criteria</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                {/* Inclusion criteria */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
-                      Inclusion Criteria ({inclusion.length})
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setInclusion([...inclusion, { id: `inc-${Date.now()}`, text: "" }])}
-                      className="text-xs text-emerald-700 hover:text-emerald-900 font-semibold inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <Plus className="h-3 w-3" /> Add Criterion
-                    </button>
-                  </div>
-                  {inclusion.length === 0 ? (
-                    <p className="text-xs text-[#81737b] italic p-3 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg">No inclusion criteria set. Click "Draft Eligibility Criteria" or add manually.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {inclusion.map((crit, idx) => (
-                        <div key={crit.id || idx} className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            className="flex-1 bg-[#ffffff] border border-[#d2c2cb] rounded-lg px-3 py-1.5 text-xs text-[#4f444b] focus:outline-none focus:ring-1 focus:ring-[#814d75]"
-                            value={crit.text}
-                            onChange={(e) => {
-                              const updated = [...inclusion];
-                              updated[idx] = { ...updated[idx], text: e.target.value };
-                              setInclusion(updated);
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setInclusion(inclusion.filter((_, i) => i !== idx))}
-                            className="text-gray-400 hover:text-red-600 p-1 cursor-pointer"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Exclusion criteria */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-rose-800 uppercase tracking-wider">
-                      Exclusion Criteria ({exclusion.length})
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setExclusion([...exclusion, { id: `exc-${Date.now()}`, text: "" }])}
-                      className="text-xs text-rose-700 hover:text-rose-900 font-semibold inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <Plus className="h-3 w-3" /> Add Criterion
-                    </button>
-                  </div>
-                  {exclusion.length === 0 ? (
-                    <p className="text-xs text-[#81737b] italic p-3 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg">No exclusion criteria set. Click "Draft Eligibility Criteria" or add manually.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {exclusion.map((crit, idx) => (
-                        <div key={crit.id || idx} className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            className="flex-1 bg-[#ffffff] border border-[#d2c2cb] rounded-lg px-3 py-1.5 text-xs text-[#4f444b] focus:outline-none focus:ring-1 focus:ring-[#814d75]"
-                            value={crit.text}
-                            onChange={(e) => {
-                              const updated = [...exclusion];
-                              updated[idx] = { ...updated[idx], text: e.target.value };
-                              setExclusion(updated);
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setExclusion(exclusion.filter((_, i) => i !== idx))}
-                            className="text-gray-400 hover:text-red-600 p-1 cursor-pointer"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => criteriaSaveMutation.mutate()}
-                  className="px-4 py-1.5 bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] text-[#3a0f34] text-xs font-semibold rounded-lg inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Save className="h-3.5 w-3.5 text-[#814d75]" />
-                  <span>Save Criteria Changes</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Expandable Secondary Tools: PRISMA Checklist & Protocol Export */}
-            <div className="border border-[#d2c2cb] rounded-xl overflow-hidden bg-[#fbf9f4]">
-              <button
-                type="button"
-                onClick={() => setShowPrismaChecklist(!showPrismaChecklist)}
-                className="w-full px-4 py-3 text-left font-bold text-xs text-[#3a0f34] flex items-center justify-between cursor-pointer hover:bg-[#eee7ec]/50"
-              >
-                <span className="flex items-center gap-2">
-                  <ClipboardCheck className="h-4 w-4 text-[#814d75]" />
-                  <span>PRISMA 2020 Protocol Validation & Export (Secondary Tools)</span>
-                </span>
-                {showPrismaChecklist ? (
-                  <ChevronDown className="h-4 w-4 text-[#814d75]" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-[#814d75]" />
-                )}
-              </button>
-
-              {showPrismaChecklist && (
-                <div className="p-4 border-t border-[#d2c2cb] space-y-4 bg-[#ffffff]">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-[#62535d]">
-                      PRISMA 2020 protocol checklist items automatically verified against your current specification.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleExportProtocolJson}
-                      disabled={isExportingProtocol}
-                      className="px-3.5 py-1.5 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      {isExportingProtocol ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 text-[#ffdea6]" />}
-                      <span>Export Protocol (JSON)</span>
-                    </button>
-                  </div>
-
-                  {reviewResult?.prisma_conformance?.checklist && (
-                    <div className="space-y-1.5">
-                      {reviewResult.prisma_conformance.checklist.map((item: any) => (
-                        <div
-                          key={item.item_id}
-                          className="flex items-center justify-between p-2 rounded-lg bg-[#fbf9f4] border border-[#d2c2cb] text-xs"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-[#3a0f34]">{item.item_number}.</span>
-                            <span className="font-medium text-[#4f444b]">{item.name}</span>
-                          </div>
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                              item.passed ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                            }`}
-                          >
-                            {item.passed ? "Conformant" : "Check Needed"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Continue to Stage 3 */}
-            <div className="flex justify-between items-center pt-2">
-              <button
-                type="button"
-                onClick={() => setCurrentStage(1)}
-                className="px-4 py-2 border border-[#d2c2cb] text-[#62535d] hover:bg-[#eee7ec] rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Return to PICO Setup</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCurrentStage(3)}
-                className="px-5 py-2.5 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] rounded-xl text-xs font-bold inline-flex items-center gap-2 cursor-pointer shadow-sm transition-colors"
-              >
-                <span>Continue to Search Generation</span>
-                <ChevronRight className="h-4 w-4" />
-              </button>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* ═══════════════════════════════════════════════════════════════
-            STAGE 3 — GENERATE SEARCH STRINGS
-            ═══════════════════════════════════════════════════════════════ */}
-        {currentStage === 3 && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            
-            {/* Header & Primary Action */}
-            <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl p-6 shadow-xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#d2c2cb]/50">
-                <div>
-                  <h2 className="text-lg font-serif font-bold text-[#3a0f34]">
-                    Database-Specific Search Formulation
-                  </h2>
-                  <p className="text-xs text-[#62535d] mt-0.5">
-                    Generates syntax-adapted search queries across 9 academic databases using confirmed PICO elements.
-                  </p>
-                </div>
+          {criteriaSaveMutation.isError && (
+            <ErrorBanner msg={(criteriaSaveMutation.error as Error).message} />
+          )}
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    id="btn-generate-search-strings"
-                    onClick={() => handleGenerateSearchStrings(false)}
-                    disabled={isGeneratingSearches}
-                    className="px-6 py-2.5 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] rounded-xl text-xs font-bold inline-flex items-center gap-2 cursor-pointer transition-colors shadow-sm disabled:opacity-50"
-                  >
-                    {isGeneratingSearches ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin text-[#ffdea6]" />
-                        <span>Generating Strategies...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Database className="h-4 w-4 text-[#ffdea6]" />
-                        <span>Generate Search Strings</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Clarification banner: Strategy generation vs running search */}
-              <div className="p-3 bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl text-xs text-[#62535d] flex items-center gap-2.5">
-                <Info className="h-4 w-4 text-[#814d75] shrink-0" />
-                <span>
-                  <strong>Search Strategy Generation:</strong> Formulates and validates queries for each target database interface. Does <em>not</em> execute live searches automatically.
-                </span>
-              </div>
-
-              {/* Stale Warning Banner */}
-              {isSearchOutOfDate && (
-                <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>PICO framework was modified since these strategies were generated. Manual edits are preserved below.</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateSearchStrings(false)}
-                    className="underline font-bold text-amber-900 hover:text-[#3a0f34] cursor-pointer"
-                  >
-                    Refresh Queries
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Regeneration Confirmation Modal */}
-            {showRegenConfirm && (
-              <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl text-xs text-amber-900 space-y-3 shadow-xs">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-bold">Regenerate Search Strategies?</h4>
-                    <p className="mt-1 leading-relaxed">
-                      You have manually edited search strings for: <strong>{[...manuallyEditedDbs].join(", ")}</strong>. Regenerating will overwrite all strategies with fresh PICO-derived queries.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowRegenConfirm(false)}
-                    className="px-3 py-1.5 bg-[#ffffff] border border-[#d2c2cb] rounded-lg text-xs font-semibold text-[#62535d] hover:bg-[#eee7ec]"
-                  >
-                    Cancel (Keep My Edits)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateSearchStrings(true)}
-                    className="px-3 py-1.5 bg-amber-800 hover:bg-amber-900 text-[#ffffff] rounded-lg text-xs font-bold"
-                  >
-                    Overwrite All Strategies
-                  </button>
-                </div>
-              </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => criteriaSaveMutation.mutate()}
+              disabled={criteriaSaveMutation.isPending}
+            >
+              {criteriaSaveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save Criteria
+            </button>
+            {criteriaSaved && (
+              <span className="flex items-center gap-1 text-sm text-phylo-green">
+                <CheckCircle className="h-4 w-4" /> Saved
+              </span>
             )}
+          </div>
+        </div>
+      </SectionCard>
 
-            {/* 9 Database Tabs & Query Editor */}
-            <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl p-6 shadow-xs space-y-5">
-              
-              {/* Tab Bar (9 databases) */}
-              <div className="border-b border-[#d2c2cb] pb-2">
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                  {DATABASES.map((db) => {
-                    const isEdited = manuallyEditedDbs.has(db.key);
-                    const isCurrent = activeDb === db.key;
-                    return (
-                      <button
-                        key={db.key}
-                        type="button"
-                        onClick={() => setActiveDb(db.key)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
-                          isCurrent
-                            ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
-                            : "bg-[#fbf9f4] text-[#62535d] hover:bg-[#eee7ec] hover:text-[#3a0f34]"
-                        }`}
-                      >
-                        <span>{db.label}</span>
-                        {isEdited && (
-                          <span className={`h-1.5 w-1.5 rounded-full ${isCurrent ? "bg-[#ffdea6]" : "bg-[#814d75]"}`} title="Manually edited" />
-                        )}
-                      </button>
-                    );
-                  })}
+      {/* ═══════════════════════════════════════════════════════════════
+          Section 5: Search Strings
+          ═══════════════════════════════════════════════════════════════ */}
+      <SectionCard
+        title="Search Strings"
+        icon={Search}
+        isOpen={openSections.search}
+        onToggle={() => toggleSection("search")}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">AI designs each search for the database interface shown below. It can omit unnecessary PICO blocks and choose suitable synonyms and proximity searches. Basic syntax is checked automatically; review the strategy and subject headings before running it.</p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => stringsGenerateMutation.mutate()}
+              disabled={stringsGenerateMutation.isPending}
+            >
+              {stringsGenerateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              Generate from PICO
+            </button>
+            {stringsGenerateMutation.isError && (
+              <span className="text-sm text-red-600">
+                {(stringsGenerateMutation.error as Error).message}
+              </span>
+            )}
+          </div>
+
+          {/* Database tabs */}
+          <div className="flex flex-wrap gap-1 border-b border-gray-200">
+            {DATABASES.map((db) => (
+              <button
+                key={db.key}
+                type="button"
+                onClick={() => {
+                  setActiveDb(db.key);
+                  setFetchResult(null);
+                  setUploadResult(null);
+                }}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeDb === db.key
+                    ? "border-phylo-blue text-phylo-blue"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {db.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Active database content */}
+          <div className="space-y-3">
+            {currentDbString ? (
+              <>
+                <div className="relative">
+                  <pre className="input min-h-[120px] whitespace-pre-wrap font-mono text-xs bg-gray-50 overflow-x-auto">
+                    {currentDbString}
+                  </pre>
                 </div>
-              </div>
 
-              {/* Active Tab Header & Syntax Guide */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-[#fbf9f4] border border-[#d2c2cb]">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#3a0f34]">{currentDbMeta.label}</span>
-                    <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-[#eee7ec] text-[#62535d]">
-                      {currentDbMeta.interfaceName}
-                    </span>
+                {/* User-requested verification notice under search string */}
+                <div className="flex items-center gap-2.5 p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs text-amber-900 dark:text-amber-200 font-medium shadow-2xs">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div>
+                    <span className="font-bold uppercase tracking-wider text-[11px] text-amber-700 dark:text-amber-300 block">Verify before moving forward</span>
+                    <span>Review Boolean operators, MeSH syntax, and concept synonyms above before querying PubMed or initiating batch reference ingestion.</span>
                   </div>
-                  <p className="text-[11px] text-[#62535d] mt-0.5">
-                    Syntax: {currentDbMeta.syntaxDesc}
-                  </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {syntaxCheck.valid ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                      <Check className="h-3 w-3" /> Syntax Balanced
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
-                      <AlertOctagon className="h-3 w-3" /> {syntaxCheck.error}
-                    </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Copy button */}
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => handleCopy(activeDb, currentDbString)}
+                  >
+                    {copiedDb === activeDb ? (
+                      <CheckCircle className="h-4 w-4 text-phylo-green" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                    {copiedDb === activeDb ? "Copied" : "Copy"}
+                  </button>
+
+                  {/* Direct Test in PubMed */}
+                  {activeDb === "pubmed" && (
+                    <a
+                      href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(currentDbString)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-secondary flex items-center gap-1.5 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>Test in PubMed</span>
+                    </a>
                   )}
-                </div>
-              </div>
 
-              {/* Query Textarea & Guidance */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                
-                {/* Editor Column */}
-                <div className="lg:col-span-2 space-y-3">
-                  <div className="relative">
-                    <textarea
-                      rows={8}
-                      className="w-full font-mono text-xs p-3.5 bg-[#ffffff] border border-[#d2c2cb] rounded-xl text-[#4f444b] focus:outline-none focus:ring-2 focus:ring-[#814d75] leading-relaxed resize-y"
-                      value={activeQueryText}
-                      placeholder={`Click "Generate Search Strings" above to produce calibrated syntax for ${currentDbMeta.label}...`}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setLocalSearchStrings((prev) => ({ ...prev, [activeDb]: val }));
-                        setManuallyEditedDbs((prev) => new Set([...prev, activeDb]));
+                  {/* AutoFetch button (PubMed only) */}
+                  {DATABASES.find((d) => d.key === activeDb)?.hasAutoFetch && (
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => {
+                        setFetchResult(null);
+                        pubmedFetchMutation.mutate();
                       }}
-                    />
-                  </div>
+                      disabled={pubmedFetchMutation.isPending}
+                    >
+                      {pubmedFetchMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Database className="h-4 w-4" />
+                      )}
+                      AutoFetch
+                    </button>
+                  )}
 
-                  <div className="flex items-center justify-between pt-1">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleCopySearch(activeDb, activeQueryText)}
-                        disabled={!activeQueryText}
-                        className="px-3.5 py-1.5 bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] text-[#3a0f34] text-xs font-semibold rounded-lg inline-flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
-                      >
-                        {copiedDb === activeDb ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-[#814d75]" />}
-                        <span>{copiedDb === activeDb ? "Copied Strategy" : "Copy Query"}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleSaveSearchString(activeDb)}
-                        className="px-3.5 py-1.5 bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] text-[#3a0f34] text-xs font-semibold rounded-lg inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
-                      >
-                        <Save className="h-3.5 w-3.5 text-[#814d75]" />
-                        <span>{savedDbQuery === activeDb ? "Saved Query!" : "Save Query"}</span>
-                      </button>
-                    </div>
-
-                    {manuallyEditedDbs.has(activeDb) && (
-                      <span className="text-[11px] font-semibold text-[#814d75] bg-[#eee7ec] px-2 py-0.5 rounded">
-                        Manual edit preserved
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* PRESS Search Review Guidance Column */}
-                <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl p-4 space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#3a0f34] flex items-center gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-[#814d75]" />
-                    <span>PRESS Peer Review Guidelines</span>
-                  </h4>
-                  <p className="text-[11px] text-[#62535d] leading-relaxed">
-                    Evaluate strategy quality against standard systematic search criteria before executing searches:
-                  </p>
-                  <ul className="text-xs space-y-2 text-[#4f444b]">
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-[#814d75] font-bold">•</span>
-                      <span><strong>Translation:</strong> Verify syntax operators (e.g. [Mesh] vs /, .mp.) match the target interface.</span>
-                    </li>
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-[#814d75] font-bold">•</span>
-                      <span><strong>Boolean Logic:</strong> Confirm AND connects distinct PICO concepts; OR connects internal synonyms.</span>
-                    </li>
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-[#814d75] font-bold">•</span>
-                      <span><strong>Free-Text Coverage:</strong> Truncate root words (e.g. tomosynth*) to capture plural or derivative forms.</span>
-                    </li>
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-[#814d75] font-bold">•</span>
-                      <span><strong>Controlled Terms:</strong> Check whether subject headings are exploded where broad coverage is required.</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Literature Import Card (Distinct from query formulation) */}
-            <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl p-6 shadow-xs space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-serif font-bold text-[#3a0f34]">
-                    Run Literature Search & Import Studies
-                  </h3>
-                  <p className="text-xs text-[#62535d]">
-                    Ready to populate your screening library? Import references from file exports or PubMed auto-fetch.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
+                  {/* Reference Import Button (all formats) */}
                   <button
                     type="button"
+                    className="btn-secondary flex items-center gap-1.5 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
                     onClick={() => setIsImportModalOpen(true)}
-                    className="px-4 py-2 bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] text-[#3a0f34] rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    title="Import reference files: RIS, BibTeX, CSV with mapping, PubMed/NBIB, EndNote (.enw/.xml), PubMed XML, Web of Science CIW"
                   >
-                    <FileUp className="h-4 w-4 text-[#814d75]" />
-                    <span>Import Reference Files (.ris, .bib, .xml)</span>
+                    <FileUp className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>Import References</span>
                   </button>
                 </div>
-              </div>
 
-              {fetchResult && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900">
-                  {fetchResult}
-                </div>
-              )}
-            </div>
-
-            {/* Back to Step 2 Navigation */}
-            <div className="flex justify-between items-center pt-2">
-              <button
-                type="button"
-                onClick={() => setCurrentStage(2)}
-                className="px-4 py-2 border border-[#d2c2cb] text-[#62535d] hover:bg-[#eee7ec] rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Return to Protocol Review</span>
-              </button>
-
-              <Link
-                to={`/projects/${projectId}/screening`}
-                className="px-5 py-2.5 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-sm transition-colors"
-              >
-                <span>Proceed to Study Screening</span>
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════════
-            GLOBAL MODALS & TOAST NOTIFICATIONS
-            ═══════════════════════════════════════════════════════════════ */}
-
-        {/* Method Switch Confirmation Dialog */}
-        {pendingMethod && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-            <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-800 shrink-0">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-base font-serif font-bold text-[#3a0f34]">
-                    Switch PICO Entry Method?
-                  </h4>
-                  <p className="text-xs text-[#62535d] mt-0.5">
-                    You have existing inputs in your current method.
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-[#4f444b] leading-relaxed">
-                Switching to <strong>{pendingMethod === "upload" ? "Protocol Upload" : pendingMethod === "question" ? "Research Question" : "Manual Entry"}</strong> will open that input control. Your shared PICO form values below will be preserved.
+                {/* Fetch result */}
+                {fetchResult && (
+                  <div
+                    className={`rounded-md px-4 py-3 text-sm ${
+                      fetchResult.startsWith("Error")
+                        ? "bg-red-50 border border-red-200 text-red-700"
+                        : "bg-green-50 border border-green-200 text-green-700"
+                    }`}
+                  >
+                    {fetchResult}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-gray-400">
+                No search string generated yet. Click "Generate from PICO" to create
+                database-specific search strings.
               </p>
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#d2c2cb]/50">
-                <button
-                  type="button"
-                  onClick={() => setPendingMethod(null)}
-                  className="px-3.5 py-1.5 bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] text-[#62535d] rounded-lg text-xs font-semibold cursor-pointer"
-                >
-                  Stay in Current Method
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEntryMethod(pendingMethod);
-                    setPendingMethod(null);
-                  }}
-                  className="px-4 py-1.5 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] rounded-lg text-xs font-bold cursor-pointer"
-                >
-                  Switch Method
-                </button>
-              </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
+      </SectionCard>
 
-        {/* Reference Import Modal */}
-        {projectId && (
-          <ReferenceImportModal
-            projectId={projectId}
-            isOpen={isImportModalOpen}
-            onClose={() => setIsImportModalOpen(false)}
-            onSuccess={(count, source) => {
-              queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-              setFetchResult(`Successfully imported ${count} references from ${source}`);
-            }}
-          />
-        )}
-
-        {/* Floating Toast Notification */}
-        {reviewToast && (
-          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-[#3a0f34] text-[#fbf9f4] px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold border border-[#d2c2cb] animate-in fade-in slide-in-from-bottom-3">
-            <CheckCircle className="h-4 w-4 text-[#ffdea6] shrink-0" />
-            <span>{reviewToast}</span>
-          </div>
-        )}
-      </div>
+      {/* Reference Import Modal */}
+      {projectId && (
+        <ReferenceImportModal
+          projectId={projectId}
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onSuccess={(count, source) => {
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            setFetchResult(`Successfully imported ${count} references from ${source}`);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// ── Findings Bucket Component for Stage 2 ──
+// ── Reusable section card with collapsible header ──
 
-function FindingsBucketCard({
+function SectionCard({
   title,
-  badge,
-  badgeColor,
-  items,
-  dismissedIds,
-  editingId,
-  editingText,
-  onStartEdit,
-  onCancelEdit,
-  onChangeEditText,
-  onAccept,
-  onDismiss,
+  icon: Icon,
+  isOpen,
+  onToggle,
+  children,
 }: {
   title: string;
-  badge: string;
-  badgeColor: "amber" | "purple" | "red" | "blue";
-  items: Array<{ flaw: any; suggestions: any[] }>;
-  dismissedIds: Set<string>;
-  editingId: string | null;
-  editingText: string;
-  onStartEdit: (id: string, text: string) => void;
-  onCancelEdit: () => void;
-  onChangeEditText: (val: string) => void;
-  onAccept: (sugg: any) => void;
-  onDismiss: (id: string) => void;
+  icon: React.ComponentType<{ className?: string }>;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
 }) {
-  const activeItems = items.filter((item) => !dismissedIds.has(item.flaw.flaw_code || item.flaw.title));
-
   return (
-    <div className="border border-[#d2c2cb] rounded-xl p-4 bg-[#fbf9f4] space-y-3">
-      <div className="flex items-center justify-between pb-2 border-b border-[#d2c2cb]/40">
-        <h4 className="text-xs font-bold text-[#3a0f34] uppercase tracking-wider flex items-center gap-2">
-          <span>{title}</span>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#eee7ec] text-[#3a0f34]">
-            {activeItems.length} issue(s)
-          </span>
-        </h4>
-        <span
-          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-            badgeColor === "amber"
-              ? "bg-amber-100 text-amber-800"
-              : badgeColor === "purple"
-              ? "bg-purple-100 text-purple-800"
-              : badgeColor === "red"
-              ? "bg-red-100 text-red-800"
-              : "bg-blue-100 text-blue-800"
-          }`}
-        >
-          {badge}
-        </span>
-      </div>
+    <div className="card mb-4">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex items-center gap-2 w-full px-5 py-4 text-left hover:bg-gray-50 transition-colors rounded-t-lg"
+      >
+        {isOpen ? (
+          <ChevronDown className="h-4 w-4 text-gray-400" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-gray-400" />
+        )}
+        <Icon className="h-4 w-4 text-phylo-blue" />
+        <span className="font-semibold text-gray-800">{title}</span>
+      </button>
+      {isOpen && <div className="px-5 pb-5">{children}</div>}
+    </div>
+  );
+}
 
-      {activeItems.length === 0 ? (
-        <p className="text-xs text-[#81737b] italic py-1">
-          No issues identified in this category.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {activeItems.map((item, idx) => {
-            const flaw = item.flaw;
-            const sugg = item.suggestions?.[0];
-            const findingKey = flaw.flaw_code || flaw.title || `finding-${idx}`;
-            const isEditing = editingId === (sugg?.id || findingKey);
-
-            return (
-              <div
-                key={findingKey}
-                className="bg-[#ffffff] border border-[#d2c2cb] rounded-xl p-3.5 space-y-2.5"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-[#3a0f34]">
-                        {flaw.title}
-                      </span>
-                      {flaw.severity && (
-                        <span
-                          className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
-                            flaw.severity === "HIGH"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-amber-100 text-amber-800"
-                          }`}
-                        >
-                          {flaw.severity}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-[#4f444b] mt-1 leading-relaxed">
-                      {flaw.description}
-                    </p>
-                  </div>
-                  {flaw.advocated_by && (
-                    <span className="text-[10px] font-medium text-[#62535d] bg-[#fbf9f4] border border-[#d2c2cb] px-2 py-0.5 rounded shrink-0">
-                      Advocated by {flaw.advocated_by}
-                    </span>
-                  )}
-                </div>
-
-                {/* Actionable Suggestion */}
-                {sugg && (
-                  <div className="p-3 rounded-lg bg-[#eee7ec]/50 border border-[#d2c2cb] space-y-2">
-                    <div className="text-[11px] font-bold text-[#3a0f34] flex items-center justify-between">
-                      <span>Recommendation: {sugg.action_label || "Apply Refinement"}</span>
-                      <span className="text-[10px] text-[#814d75] font-semibold">{sugg.target_type}</span>
-                    </div>
-
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <textarea
-                          rows={2}
-                          className="w-full text-xs p-2 bg-[#ffffff] border border-[#814d75] rounded focus:outline-none"
-                          value={editingText}
-                          onChange={(e) => onChangeEditText(e.target.value)}
-                        />
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={onCancelEdit}
-                            className="px-2.5 py-1 text-xs text-[#62535d] hover:bg-[#ffffff] rounded"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onAccept(sugg)}
-                            className="px-3 py-1 bg-[#3a0f34] text-[#fbf9f4] text-xs font-bold rounded"
-                          >
-                            Apply Edited Text
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-xs text-[#4f444b] font-mono bg-[#ffffff] p-2 rounded border border-[#d2c2cb]">
-                          {sugg.suggested_text}
-                        </p>
-                        {sugg.rationale && (
-                          <p className="text-[11px] text-[#62535d] italic">
-                            Rationale: {sugg.rationale}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-end gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => onDismiss(findingKey)}
-                            className="px-2.5 py-1 text-xs text-[#62535d] hover:text-[#3a0f34] rounded cursor-pointer"
-                          >
-                            Dismiss
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onStartEdit(sugg.id || findingKey, sugg.suggested_text)}
-                            className="px-2.5 py-1 text-xs text-[#814d75] hover:bg-[#ffffff] font-semibold rounded cursor-pointer border border-[#d2c2cb]"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onAccept(sugg)}
-                            className="px-3 py-1 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] text-xs font-bold rounded cursor-pointer transition-colors shadow-xs"
-                          >
-                            Accept Suggestion
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+function ErrorBanner({ msg }: { msg: string }) {
+  return (
+    <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+      Error: {msg}
     </div>
   );
 }

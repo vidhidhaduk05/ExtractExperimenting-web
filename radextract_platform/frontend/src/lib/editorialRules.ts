@@ -40,7 +40,7 @@ export function sanitizeUiCopy(text: string): string {
 
   // 1. Redact / replace internal patented engine names
   result = result.replace(/\bbiomni[-_\s]*(?:r\d+|ai|service)?/gi, "Co-Scientist");
-  result = result.replace(/\blaya(?:[-_\s]+(?:system-1|onnx|engine|ai|fast))*/gi, "Co-Scientist");
+  result = result.replace(/\blaya[-_\s]*(?:system-1|onnx|model|engine|ai|fast)?/gi, "Co-Scientist");
   result = result.replace(/\bstorm[-_\s]*(?:method|pipeline|research)?/gi, "Co-Scientist");
 
   // 2. Standardize AI copy to Co-Scientist

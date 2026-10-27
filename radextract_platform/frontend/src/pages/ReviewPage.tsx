@@ -6,17 +6,17 @@ import { ArrowLeft, Table, TrendingUp, Sparkles, Loader2, FileText, Plus, Trash2
 
 // Missing-data code colors (match the coded Excel workbook)
 const MISSING_CODE_STYLES: Record<string, { bg: string; label: string }> = {
-  "-99": { bg: "#ffdea6", label: "Not reported (exhaustive search completed)" },
-  "-77": { bg: "#eee7ec", label: "Not applicable" },
-  "-88": { bg: "#fed7aa", label: "Unable to extract (figure-only or garbled PDF)" },
+  "-99": { bg: "#FFD700", label: "Not reported (exhaustive search completed)" },
+  "-77": { bg: "#D3D3D3", label: "Not applicable" },
+  "-88": { bg: "#FFA500", label: "Unable to extract (figure-only or garbled PDF)" },
 };
 
 const TAG_STYLES: Record<string, string> = {
-  DS: "bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb]",
-  INF: "bg-[#814d75]/15 text-[#814d75] border border-[#814d75]/30",
-  CALC: "bg-[#ffdea6]/60 text-[#7c5800] border border-[#ffdea6]",
-  SUP: "bg-[#3a0f34]/10 text-[#3a0f34] border border-[#3a0f34]/20",
-  FIG: "bg-[#eee7ec] text-[#62535d] border border-[#d2c2cb]",
+  DS: "bg-phylo-green/15 text-phylo-green",
+  INF: "bg-phylo-blue/15 text-phylo-blue",
+  CALC: "bg-purple-100 text-purple-700",
+  SUP: "bg-teal-100 text-teal-700",
+  FIG: "bg-amber-100 text-amber-700",
 };
 
 export function ReviewPage() {
@@ -91,18 +91,18 @@ export function ReviewPage() {
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto bg-[#fbf9f4] min-h-screen text-[#4f444b]">
-      <Link to={`/projects/${projectId}`} className="text-sm text-[#62535d] hover:text-[#3a0f34] flex items-center gap-1 mb-4 font-sans transition-colors">
+    <div className="p-8 max-w-7xl mx-auto">
+      <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
         <ArrowLeft className="h-3 w-3" /> Back to project
       </Link>
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-[#3a0f34] flex items-center gap-2">
-            <Table className="h-6 w-6 text-[#814d75]" />
-            Data Review Matrix
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Table className="h-6 w-6 text-phylo-blue" />
+            Data Review
           </h1>
-          <p className="text-[#62535d] text-sm mt-1 font-serif">Extraction data matrix, variable management, and completion progress</p>
+          <p className="text-gray-500 text-sm mt-1">Extraction data matrix, variable management, and completion progress</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -117,7 +117,7 @@ export function ReviewPage() {
             className="btn-secondary"
             title="Auto-generate extraction variables from PICO + hypothesis"
           >
-            {autoGenerateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin text-[#814d75]" /> : <Wand2 className="h-4 w-4" />}
+            {autoGenerateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
             Auto-Generate
           </button>
           <button
@@ -153,22 +153,22 @@ export function ReviewPage() {
 
       {/* Extraction prompts panel */}
       {showPrompts && (
-        <div className="card p-5 mb-6 border border-[#d2c2cb] bg-white shadow-xs rounded-xl">
-          <div className="flex items-center justify-between mb-3 border-b border-[#d2c2cb] pb-2">
-            <h3 className="font-serif font-bold text-base text-[#3a0f34]">Extraction Prompts (one per variable)</h3>
-            <button onClick={() => setShowPrompts(false)} className="text-[#81737b] hover:text-[#3a0f34] p-1 rounded">
+        <div className="card p-4 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-sm">Extraction Prompts (one per variable)</h3>
+            <button onClick={() => setShowPrompts(false)} className="text-gray-400 hover:text-gray-600">
               <X className="h-4 w-4" />
             </button>
           </div>
-          {!prompts && <p className="text-[#81737b] text-sm">Loading prompts...</p>}
+          {!prompts && <p className="text-gray-400 text-sm">Loading prompts...</p>}
           {prompts && (
-            <div className="max-h-80 overflow-y-auto divide-y divide-[#eee7ec]">
+            <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
               {prompts.map((p) => (
-                <div key={p.variable_id} className="py-2.5">
-                  <div className="text-xs font-semibold text-[#3a0f34]">
-                    {p.name} <span className="font-normal text-[#81737b]">({p.section} · {p.field_type})</span>
+                <div key={p.variable_id} className="py-2">
+                  <div className="text-xs font-semibold text-gray-700">
+                    {p.name} <span className="font-normal text-gray-400">({p.section} · {p.field_type})</span>
                   </div>
-                  <div className="text-xs text-[#62535d] mt-1 whitespace-pre-wrap font-mono bg-[#fbf9f4] p-2 rounded border border-[#d2c2cb]/50">{p.extraction_prompt}</div>
+                  <div className="text-xs text-gray-500 mt-0.5 whitespace-pre-wrap">{p.extraction_prompt}</div>
                 </div>
               ))}
             </div>
@@ -178,20 +178,20 @@ export function ReviewPage() {
 
       {/* Auto-generate result */}
       {autoGenerateMutation.isSuccess && (
-        <div className="card p-3.5 mb-4 text-sm text-[#3a0f34] bg-[#eee7ec] border border-[#d2c2cb] rounded-lg">
+        <div className="card p-3 mb-4 text-sm text-phylo-green bg-phylo-green/5">
           Generated {autoGenerateMutation.data.generated_count} variables — {autoGenerateMutation.data.created_count} new, {autoGenerateMutation.data.skipped_duplicates} duplicates skipped.
         </div>
       )}
 
       {autoGenerateMutation.isError && (
-        <div className="card p-3.5 mb-4 text-sm text-[#814d75] bg-[#eee7ec] border border-[#814d75] rounded-lg">
+        <div className="card p-3 mb-4 text-sm text-red-600 bg-red-50">
           Error: {(autoGenerateMutation.error as Error).message}
         </div>
       )}
 
       {/* Auto-extract result */}
       {autoExtractMutation.isSuccess && (
-        <div className="card p-3.5 mb-4 text-sm text-[#3a0f34] bg-[#eee7ec] border border-[#d2c2cb] rounded-lg">
+        <div className="card p-3 mb-4 text-sm text-phylo-green bg-phylo-green/5">
           Auto-extraction complete for {autoExtractMutation.data.length} studies.
         </div>
       )}
@@ -222,19 +222,19 @@ export function ReviewPage() {
 
       {/* Completion Bar */}
       {progress && (
-        <div className="card p-4 mb-6 border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
+        <div className="card p-4 mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-[#3a0f34] flex items-center gap-1.5 font-sans">
-              <TrendingUp className="h-4 w-4 text-[#814d75]" />
+            <span className="text-sm font-medium text-gray-600 flex items-center gap-1">
+              <TrendingUp className="h-4 w-4 text-phylo-blue" />
               Extraction Progress
             </span>
-            <span className="text-xs text-[#62535d] font-sans">
+            <span className="text-sm text-gray-500">
               {progress?.total_extractions ?? 0} / {progress?.expected_extractions ?? 0} cells filled
             </span>
           </div>
-          <div className="h-2.5 rounded-full bg-[#eee7ec] overflow-hidden border border-[#d2c2cb]/60">
+          <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
             <div
-              className="h-full bg-[#3a0f34] transition-all duration-500"
+              className="h-full bg-phylo-blue transition-all duration-500"
               style={{ width: `${Math.min(progress?.completion_pct ?? 0, 100)}%` }}
             />
           </div>
@@ -242,53 +242,53 @@ export function ReviewPage() {
       )}
 
       {/* Data Matrix */}
-      {matrixLoading && <p className="text-[#81737b] py-8 text-center font-serif">Loading data matrix...</p>}
+      {matrixLoading && <p className="text-gray-400">Loading data matrix...</p>}
 
       {matrix && (matrix.studies || []).length === 0 && (
-        <div className="card p-12 text-center border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
-          <Table className="h-12 w-12 text-[#d2c2cb] mx-auto mb-3" />
-          <p className="text-[#4f444b] font-serif text-base font-semibold">No included studies with extraction data yet</p>
-          <p className="text-sm text-[#81737b] mt-1 font-serif">
+        <div className="card p-12 text-center">
+          <Table className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">No included studies with extraction data yet</p>
+          <p className="text-sm text-gray-400 mt-1">
             Screen studies as "included" and add extraction variables to populate this matrix.
           </p>
         </div>
       )}
 
       {matrix && (matrix.studies || []).length > 0 && (
-        <div className="card overflow-x-auto border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
+        <div className="card overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-[#fbf9f4] border-b border-[#d2c2cb]">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left px-4 py-3.5 font-semibold text-[#3a0f34] font-sans sticky left-0 bg-[#fbf9f4] border-r border-[#d2c2cb]">
+                <th className="text-left px-4 py-3 font-semibold text-gray-600 sticky left-0 bg-gray-50">
                   Study
                 </th>
                 {(matrix.variables || []).map((v) => (
-                  <th key={v.variable_id} className="px-3 py-3.5 font-semibold text-[#3a0f34] font-sans text-center min-w-[130px] border-r border-[#d2c2cb]/40">
+                  <th key={v.variable_id} className="px-3 py-3 font-semibold text-gray-600 text-center min-w-[120px]">
                     <div className="text-xs leading-tight">{v.name}</div>
-                    <div className="text-[11px] text-[#81737b] font-normal mt-0.5">{v.section}</div>
+                    <div className="text-xs text-gray-400 font-normal mt-0.5">{v.section}</div>
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#eee7ec]">
+            <tbody className="divide-y divide-gray-100">
               {(matrix.studies || []).map((s) => {
                 const studyHasPdf = studyPdfMap.get(s.study_id);
                 return (
-                <tr key={s.study_id} className="hover:bg-[#eee7ec]/40 transition-colors">
-                  <td className="px-4 py-3 sticky left-0 bg-white border-r border-[#d2c2cb]">
+                <tr key={s.study_id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 sticky left-0 bg-white">
                     <Link
                       to={`/projects/${projectId}/studies/${s.study_id}/pdf`}
-                      className="font-serif font-medium text-[#3a0f34] line-clamp-1 max-w-[200px] hover:text-[#814d75] hover:underline"
+                      className="font-medium text-gray-900 line-clamp-1 max-w-[200px] hover:text-phylo-blue hover:underline"
                       title="Open study PDF viewer"
                     >
                       {s.title}
                     </Link>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-[#81737b] font-sans">{s.authors} — {s.year}</span>
+                      <span className="text-xs text-gray-400">{s.authors} — {s.year}</span>
                       {studyHasPdf && (
                         <Link
                           to={`/projects/${projectId}/studies/${s.study_id}/pdf`}
-                          className="inline-flex items-center gap-0.5 text-xs text-[#814d75] hover:underline font-sans"
+                          className="inline-flex items-center gap-0.5 text-xs text-phylo-blue hover:underline"
                         >
                           <FileText className="h-3 w-3" /> PDF
                         </Link>
@@ -309,22 +309,22 @@ export function ReviewPage() {
                     return (
                       <td
                         key={v.variable_id}
-                        className="px-3 py-3 text-center group relative border-r border-[#d2c2cb]/30"
+                        className="px-3 py-3 text-center group relative"
                         style={missingStyle ? { backgroundColor: missingStyle.bg } : undefined}
                         title={tooltip || undefined}
                       >
                         {hasValue ? (
                           <div className="flex flex-col items-center gap-1">
-                            <span className={cell.is_edited ? "text-[#3a0f34] font-semibold" : "text-[#4f444b]"}>
+                            <span className={cell.is_edited ? "text-gray-900 font-medium" : "text-gray-600"}>
                               {cell.value}
                             </span>
                             {tag && (
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${TAG_STYLES[tag] || "bg-[#eee7ec] text-[#62535d]"}`}>
+                              <span className={`text-[10px] px-1 rounded font-mono ${TAG_STYLES[tag] || "bg-gray-100 text-gray-600"}`}>
                                 [{tag}]
                               </span>
                             )}
                             {lowConfidence && (
-                              <span className="text-[10px] text-[#7c5800] bg-[#ffdea6]/70 px-1 py-0.2 rounded flex items-center gap-0.5" title="Low confidence extraction">
+                              <span className="text-[10px] text-phylo-orange flex items-center gap-0.5" title="Low confidence extraction">
                                 <AlertCircle className="h-2.5 w-2.5" /> {(cell.confidence * 100).toFixed(0)}%
                               </span>
                             )}
@@ -335,7 +335,7 @@ export function ReviewPage() {
                                   "_blank",
                                   "noopener,noreferrer"
                                 )}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-[#814d75] hover:underline flex items-center gap-0.5 mt-0.5 font-sans"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-phylo-blue hover:underline flex items-center gap-0.5"
                                 title="Open PDF to verify/edit this extraction"
                               >
                                 <ExternalLink className="h-2.5 w-2.5" /> Verify
@@ -344,7 +344,7 @@ export function ReviewPage() {
                           </div>
                         ) : (
                           <div className="flex flex-col items-center gap-1">
-                            <span className="text-[#d2c2cb]">—</span>
+                            <span className="text-gray-300">—</span>
                             {studyHasPdf && (
                               <button
                                 onClick={() => window.open(
@@ -352,7 +352,7 @@ export function ReviewPage() {
                                   "_blank",
                                   "noopener,noreferrer"
                                 )}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-[#814d75] hover:underline flex items-center gap-0.5 font-sans"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-phylo-blue hover:underline flex items-center gap-0.5"
                                 title="Open PDF to manually extract this value"
                               >
                                 <ExternalLink className="h-2.5 w-2.5" /> Extract
@@ -372,9 +372,9 @@ export function ReviewPage() {
       )}
 
       {(!variables || variables.length === 0) && (
-        <div className="card p-8 text-center text-[#62535d] text-sm bg-white border border-[#d2c2cb] rounded-xl mb-6 shadow-xs">
-          <div className="font-serif font-bold text-[#3a0f34] text-base mb-1">No extraction variables defined for this project yet.</div>
-          <p className="text-xs text-[#62535d] max-w-md mx-auto mb-4 font-serif">
+        <div className="card p-8 text-center text-gray-600 text-sm bg-phylo-cream/20 border border-phylo-blue/20 mb-6">
+          <div className="font-semibold text-gray-800 text-base mb-1">No extraction variables defined for this project yet.</div>
+          <p className="text-xs text-gray-500 max-w-md mx-auto mb-4">
             Generate standard and PICO-aligned radiology extraction variables automatically, or create your own custom variables.
           </p>
           <div className="flex items-center justify-center gap-3">
@@ -409,7 +409,7 @@ function VariableManagementPanel({
   projectId: string;
   variables: any[];
   onClose: () => void;
-  }) {
+}) {
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
   const [addError, setAddError] = useState("");
@@ -462,27 +462,25 @@ function VariableManagementPanel({
   const sections = ["Cohort_Level", "Protocol_Level", "Outcome_Level", "Other"];
 
   // Group variables by section
-  const grouped = useMemo(() => {
-    return variables.reduce((acc, v) => {
-      const sec = v.section || "Other";
-      if (!acc[sec]) acc[sec] = [];
-      acc[sec].push(v);
-      return acc;
-    }, {} as Record<string, any[]>);
-  }, [variables]);
+  const grouped = variables.reduce((acc, v) => {
+    const sec = v.section || "Other";
+    if (!acc[sec]) acc[sec] = [];
+    acc[sec].push(v);
+    return acc;
+  }, {} as Record<string, any[]>);
 
   return (
-    <div className="card p-6 mb-6 border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
-      <div className="flex items-center justify-between mb-4 border-b border-[#d2c2cb] pb-3">
-        <h3 className="font-serif font-bold text-base text-[#3a0f34] flex items-center gap-2">
-          <Edit3 className="h-4 w-4 text-[#814d75]" />
+    <div className="card p-6 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold flex items-center gap-2">
+          <Edit3 className="h-4 w-4 text-phylo-blue" />
           Variable Management
         </h3>
         <div className="flex gap-2">
           <button onClick={() => setShowAdd(!showAdd)} className="btn-secondary text-xs">
             <Plus className="h-3 w-3" /> Add Variable
           </button>
-          <button onClick={onClose} className="text-[#81737b] hover:text-[#3a0f34]">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -490,12 +488,12 @@ function VariableManagementPanel({
 
       {/* Add new variable form */}
       {showAdd && (
-        <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg p-4 mb-4 space-y-3">
+        <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs font-semibold text-[#3a0f34] font-sans">Section</label>
+              <label className="text-xs font-medium text-gray-500">Section</label>
               <select
-                className="input mt-1 text-sm bg-white border-[#d2c2cb]"
+                className="input mt-1 text-sm"
                 value={newVar.section}
                 onChange={(e) => setNewVar({ ...newVar, section: e.target.value })}
               >
@@ -503,18 +501,18 @@ function VariableManagementPanel({
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-[#3a0f34] font-sans">Name</label>
+              <label className="text-xs font-medium text-gray-500">Name</label>
               <input
-                className="input mt-1 text-sm bg-white border-[#d2c2cb]"
+                className="input mt-1 text-sm"
                 value={newVar.name}
                 onChange={(e) => setNewVar({ ...newVar, name: e.target.value })}
                 placeholder="e.g. mean_age"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-[#3a0f34] font-sans">Field Type</label>
+              <label className="text-xs font-medium text-gray-500">Field Type</label>
               <select
-                className="input mt-1 text-sm bg-white border-[#d2c2cb]"
+                className="input mt-1 text-sm"
                 value={newVar.field_type}
                 onChange={(e) => setNewVar({ ...newVar, field_type: e.target.value })}
               >
@@ -522,9 +520,9 @@ function VariableManagementPanel({
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-[#3a0f34] font-sans">Allowed Values (for enum)</label>
+              <label className="text-xs font-medium text-gray-500">Allowed Values (for enum)</label>
               <input
-                className="input mt-1 text-sm bg-white border-[#d2c2cb]"
+                className="input mt-1 text-sm"
                 value={newVar.allowed_values}
                 onChange={(e) => setNewVar({ ...newVar, allowed_values: e.target.value })}
                 placeholder="e.g. CT; MRI; PET"
@@ -532,15 +530,15 @@ function VariableManagementPanel({
             </div>
           </div>
           <div>
-            <label className="text-xs font-semibold text-[#3a0f34] font-sans">Description</label>
+            <label className="text-xs font-medium text-gray-500">Description</label>
             <input
-              className="input mt-1 text-sm bg-white border-[#d2c2cb]"
+              className="input mt-1 text-sm"
               value={newVar.description}
               onChange={(e) => setNewVar({ ...newVar, description: e.target.value })}
               placeholder="Variable description..."
             />
           </div>
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2">
             <button
               onClick={() => createMutation.mutate()}
               disabled={createMutation.isPending || !newVar.name.trim()}
@@ -550,7 +548,7 @@ function VariableManagementPanel({
               Create
             </button>
             {createMutation.isError && (
-              <span className="text-xs text-[#814d75]">{(createMutation.error as Error).message}</span>
+              <span className="text-xs text-red-600">{(createMutation.error as Error).message}</span>
             )}
           </div>
         </div>
@@ -558,30 +556,29 @@ function VariableManagementPanel({
 
       {/* Variable list grouped by section */}
       {Object.keys(grouped).length === 0 && (
-        <p className="text-sm text-[#81737b] font-serif">No variables defined. Use Auto-Generate or add manually.</p>
+        <p className="text-sm text-gray-400">No variables defined. Use Auto-Generate or add manually.</p>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {(Object.entries(grouped) as [string, any[]][]).map(([section, vars]) => (
           <div key={section}>
-            <div className="text-xs font-semibold text-[#814d75] uppercase tracking-wider mb-2 font-sans">{section}</div>
-            <div className="space-y-1.5">
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{section}</div>
+            <div className="space-y-1">
               {vars.map((v) => (
-                <div key={v.variable_id} className="flex items-center justify-between bg-[#fbf9f4] border border-[#d2c2cb] rounded-md px-3 py-2">
-                  <div className="flex-1 font-sans">
-                    <span className="text-sm font-medium text-[#3a0f34]">{v.name}</span>
-                    <span className="ml-2 text-xs text-[#81737b]">({v.field_type})</span>
+                <div key={v.variable_id} className="flex items-center justify-between bg-white border border-gray-100 rounded-md px-3 py-2">
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-700">{v.name}</span>
+                    <span className="ml-2 text-xs text-gray-400">{v.field_type}</span>
                     {v.allowed_values && (
-                      <span className="ml-2 text-xs text-[#81737b]">[{v.allowed_values}]</span>
+                      <span className="ml-2 text-xs text-gray-400">[{v.allowed_values}]</span>
                     )}
                     {v.description && (
-                      <span className="ml-2 text-xs text-[#62535d] font-serif">— {v.description}</span>
+                      <span className="ml-2 text-xs text-gray-400">— {v.description}</span>
                     )}
                   </div>
                   <button
                     onClick={() => deleteMutation.mutate(v.variable_id)}
-                    className="text-[#81737b] hover:text-[#814d75] p-1"
-                    title="Delete variable"
+                    className="text-gray-400 hover:text-red-500"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -597,11 +594,12 @@ function VariableManagementPanel({
 
 function ProgressCard({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
   return (
-    <div className="card p-4 text-center border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
-      <div className={`text-2xl font-serif font-bold ${highlight ? "text-[#3a0f34]" : "text-[#4f444b]"}`}>
+    <div className="card p-4 text-center">
+      <div className={`text-2xl font-bold ${highlight ? "text-phylo-green" : "text-gray-900"}`}>
         {value}
       </div>
-      <div className="text-xs text-[#62535d] font-sans mt-0.5">{label}</div>
+      <div className="text-xs text-gray-500 mt-0.5">{label}</div>
     </div>
   );
 }
+

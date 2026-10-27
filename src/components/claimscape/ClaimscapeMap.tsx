@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   ProcessedPaper,
   TierSummary,
@@ -12,8 +12,7 @@ interface ClaimscapeMapProps {
   summaries: TierSummary[];
   selectedPmid: string | null;
   onSelectPaper: (pmid: string) => void;
-  evidenceLens?: "all" | "direct" | "reviews";
-  showReviews?: boolean;
+  showReviews: boolean;
 }
 
 interface TooltipState {
@@ -28,7 +27,6 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
   summaries,
   selectedPmid,
   onSelectPaper,
-  evidenceLens = "all",
   showReviews
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,21 +78,16 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
   }, [minYear, maxYear]);
 
   // X coordinate projection
-  const scaleX = useCallback((date: number) => {
+  const scaleX = (date: number) => {
     return 14 + ((date - minYear) / (maxYear - minYear)) * Math.max(1, containerWidth - 28);
-  }, [minYear, maxYear, containerWidth]);
+  };
 
   // Compute placed dots for each row using the bee-swarm algorithm
   const rows = useMemo(() => {
     if (!containerWidth) return [];
 
     return summaries
-      .filter((s) => {
-        if (showReviews === false && s.id === "review") return false;
-        if (evidenceLens === "reviews") return s.id === "review";
-        if (evidenceLens === "direct") return s.id !== "review";
-        return true;
-      })
+      .filter((s) => s.id !== "review" || showReviews)
       .map((summary) => {
         const datedPapers = summary.papers.filter((p) => p.paper.date !== null && p.paper.date !== undefined);
         const xPositions = datedPapers.map((p) => scaleX(p.paper.date));
@@ -115,7 +108,7 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
           height: rowHeight
         };
       });
-  }, [summaries, evidenceLens, showReviews, scaleX]);
+  }, [summaries, showReviews, containerWidth, minYear, maxYear]);
 
   // Find dot nearest to (x, y) for hit-testing
   const findNearest = (
@@ -139,15 +132,11 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
     <div
       ref={containerRef}
       className="cs-map relative select-none"
-      onPointerLeave={() => {
-        if (hovered !== null) {
-          setHovered(null);
-        }
-      }}
+      onPointerLeave={() => setHovered(null)}
     >
       <div className="cs-rows border-b border-[var(--cs-line)]">
         {/* Column Headers for Map and Forest Plot */}
-        <div className="cs-row bg-[var(--cs-panel)] border-b border-[var(--cs-line)] text-[11px] font-bold uppercase tracking-wider text-[#62535d] dark:text-[#81737b] max-lg:hidden">
+        <div className="cs-row bg-[var(--cs-panel)] border-b border-[var(--cs-line)] text-[11px] font-bold uppercase tracking-wider text-[#6B665E] dark:text-[#968F84] max-lg:hidden">
           <div className="lab !py-2.5">
             <span>Study Design Hierarchy</span>
           </div>
@@ -156,7 +145,7 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
           </div>
           <div className="sum !py-2.5 flex-row items-center justify-between">
             <span>Forest Plot (Wilson 95% CI)</span>
-            <span className="text-[10px] font-mono normal-case text-[var(--cs-ink-3)] font-normal">n = papers analyzed</span>
+            <span className="text-[10px] font-mono normal-case text-[var(--cs-ink-3)] font-normal">n = papers with verdict</span>
           </div>
         </div>
 
@@ -165,12 +154,11 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
           return (
             <div
               key={summary.id}
-              data-tier={summary.id}
               className={`cs-row ${summary.id === "review" ? "review" : ""}`}
             >
               {/* Left Label */}
               <div className="lab">
-                <span className="text-[13.5px] font-semibold text-[#3a0f34] dark:text-[#fbf9f4] leading-snug">
+                <span className="text-[13.5px] font-semibold text-[#381A61] dark:text-[#FAF9F3] leading-snug">
                   {tier?.label || summary.label}
                 </span>
                 <span className="cs-mono text-[11.5px] cs-muted">
@@ -189,17 +177,10 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                     const localX = e.clientX - rect.left;
                     const localY = e.clientY - rect.top;
                     const match = findNearest(placed, localX, localY);
-                    if (!match) {
-                      if (hovered !== null) {
-                        setHovered(null);
-                      }
+                    if (!match || !containerRef.current) {
+                      setHovered(null);
                       return;
                     }
-                    // Bolt Optimization: Avoid re-rendering component and layout thrashing if hovering same paper dot
-                    if (hovered?.pmid === match.paper.paper.pmid) {
-                      return;
-                    }
-                    if (!containerRef.current) return;
                     const parentRect = containerRef.current.getBoundingClientRect();
                     setHovered({
                       pmid: match.paper.paper.pmid,
@@ -209,11 +190,7 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                       width: parentRect.width
                     });
                   }}
-                  onPointerLeave={() => {
-                    if (hovered !== null) {
-                      setHovered(null);
-                    }
-                  }}
+                  onPointerLeave={() => setHovered(null)}
                   onClick={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const localX = e.clientX - rect.left;
@@ -260,7 +237,6 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                         className="cs-dot enter"
                         style={{
                           transform: transformStr,
-                          transition: "opacity 0.2s ease, transform 0.2s ease",
                           // @ts-expect-error CSS variable for transform animation
                           "--t": transformStr
                         }}
@@ -331,7 +307,7 @@ interface DotSymbolProps {
   r: number;
 }
 
-const DotSymbol: React.FC<DotSymbolProps> = React.memo(({ category, direct, strength, r }) => {
+const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, r }) => {
   const opacity =
     category === "supports" || category === "contradicts" || category === "mixed"
       ? 0.45 + 0.55 * Math.min(1, Math.max(0, (strength - 0.6) / 0.4))
@@ -414,10 +390,10 @@ const DotSymbol: React.FC<DotSymbolProps> = React.memo(({ category, direct, stre
       strokeWidth={2}
     />
   );
-});
+};
 
 // Row verdict & Wilson score interval summary
-const RowSummary: React.FC<{ summary: TierSummary }> = React.memo(({ summary }) => {
+const RowSummary: React.FC<{ summary: TierSummary }> = ({ summary }) => {
   const { supports, mixed, contradicts } = summary.counts;
 
   if (!summary.papers.length) {
@@ -473,7 +449,7 @@ const RowSummary: React.FC<{ summary: TierSummary }> = React.memo(({ summary }) 
           </span>
           <span
             className="cs-mono whitespace-nowrap text-[11.5px] cs-muted"
-            title={`${summary.n} papers analyzed`}
+            title={`${summary.n} papers with a verdict`}
           >
             n = {summary.n}
           </span>
@@ -497,7 +473,7 @@ const RowSummary: React.FC<{ summary: TierSummary }> = React.memo(({ summary }) 
         </span>
         <span
           className="cs-mono whitespace-nowrap text-[11.5px] cs-muted"
-          title={`${summary.n} papers analyzed`}
+          title={`${summary.n} papers with a verdict`}
         >
           n = {summary.n}
         </span>
@@ -521,7 +497,7 @@ const RowSummary: React.FC<{ summary: TierSummary }> = React.memo(({ summary }) 
       </p>
     </>
   );
-});
+};
 
 // Hover tooltip box
 interface TooltipProps {
@@ -583,14 +559,14 @@ const Tooltip: React.FC<TooltipProps> = ({ paper, left, top, width }) => {
       </p>
 
       {paper.finding && (
-        <p className="mt-1.5 text-[12px] cs-soft italic line-clamp-2 border-l-2 border-[#3a0f34] dark:border-[#ffdea6] pl-2">
+        <p className="mt-1.5 text-[12px] cs-soft italic line-clamp-2 border-l-2 border-[#381A61] dark:border-[#F9D14A] pl-2">
           "{paper.finding}"
         </p>
       )}
 
       <div className="mt-2 text-[11px] cs-muted flex items-center justify-between">
         <span>{paper.direct ? "Direct evidence" : "Indirect model/proxy"}</span>
-        <span className="text-[#3a0f34] dark:text-[#ffdea6] font-bold">Click to inspect</span>
+        <span className="text-[#381A61] dark:text-[#F9D14A] font-bold">Click to inspect</span>
       </div>
     </div>
   );

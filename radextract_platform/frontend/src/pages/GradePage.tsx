@@ -5,17 +5,17 @@ import { api, type GradeAssessment, type GradeFactor } from "../lib/api";
 import { ArrowLeft, Award, Plus, Trash2, Sparkles, Calculator, Download, Loader2, CheckCircle2 } from "lucide-react";
 
 const CERTAINTY_COLORS: Record<string, string> = {
-  high: "#3a0f34",
-  moderate: "#814d75",
-  low: "#7c5800",
-  very_low: "#be123c",
+  high: "#75A025",
+  moderate: "#E9ED4C",
+  low: "#FF9400",
+  very_low: "#E94444",
 };
 
 const CERTAINTY_BG: Record<string, string> = {
-  high: "bg-[#3a0f34]/10 text-[#3a0f34] border border-[#3a0f34]/25",
-  moderate: "bg-[#814d75]/15 text-[#814d75] border border-[#814d75]/30",
-  low: "bg-[#ffdea6]/60 text-[#7c5800] border border-[#ffdea6]",
-  very_low: "bg-rose-50 text-rose-800 border border-rose-200",
+  high: "bg-phylo-green/15 text-phylo-green",
+  moderate: "bg-phylo-yellow/20 text-gray-700",
+  low: "bg-phylo-orange/15 text-phylo-orange",
+  very_low: "bg-red-100 text-red-700",
 };
 
 export function GradePage() {
@@ -42,18 +42,18 @@ export function GradePage() {
   });
 
   return (
-    <div className="p-8 max-w-6xl mx-auto bg-[#fbf9f4] min-h-screen text-[#4f444b]">
-      <Link to={`/projects/${projectId}`} className="text-sm text-[#62535d] hover:text-[#3a0f34] flex items-center gap-1 mb-4 font-sans transition-colors">
+    <div className="p-8 max-w-6xl mx-auto">
+      <Link to={`/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
         <ArrowLeft className="h-3 w-3" /> Back to project
       </Link>
 
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-2">
-            <Award className="h-6 w-6 text-[#814d75]" />
-            <h1 className="text-2xl font-serif font-bold text-[#3a0f34]">GRADE Certainty Assessment</h1>
+            <Award className="h-5 w-5 text-phylo-blue" />
+            <h1 className="text-2xl font-bold">GRADE Certainty Assessment</h1>
           </div>
-          <p className="text-[#62535d] text-sm mt-1 font-serif">
+          <p className="text-gray-500 text-sm mt-1">
             Summary of Findings tables with auto-population from RoB and meta-analysis
           </p>
         </div>
@@ -67,7 +67,7 @@ export function GradePage() {
         </div>
       </div>
 
-      {isLoading && <p className="text-[#81737b] font-serif py-6">Loading assessments...</p>}
+      {isLoading && <p className="text-gray-400">Loading...</p>}
 
       {showCreate && (
         <CreateGradeForm
@@ -83,9 +83,9 @@ export function GradePage() {
       )}
 
       {gradeList && gradeList.length === 0 && !showCreate && (
-        <div className="card p-12 text-center border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
-          <Award className="h-12 w-12 text-[#d2c2cb] mx-auto mb-3" />
-          <p className="text-[#4f444b] font-serif text-base mb-4 font-semibold">No GRADE assessments yet</p>
+        <div className="card p-12 text-center">
+          <Award className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 mb-4">No GRADE assessments yet</p>
           <button onClick={() => setShowCreate(true)} className="btn-primary inline-flex">
             <Plus className="h-4 w-4" /> Create your first assessment
           </button>
@@ -135,22 +135,22 @@ function CreateGradeForm({
   });
 
   return (
-    <div className="card p-6 mb-6 border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
-      <h3 className="font-serif font-bold text-[#3a0f34] text-base mb-4">Create GRADE Assessment</h3>
+    <div className="card p-6 mb-6">
+      <h3 className="font-semibold mb-4">Create GRADE Assessment</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="text-xs font-semibold text-[#3a0f34] font-sans">Outcome Label</label>
+          <label className="text-xs font-medium text-gray-500">Outcome Label</label>
           <input
-            className="input mt-1 bg-white border-[#d2c2cb]"
+            className="input mt-1"
             placeholder="e.g., Diagnostic accuracy of MRI for detecting tumor"
             value={outcomeLabel}
             onChange={(e) => setOutcomeLabel(e.target.value)}
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-[#3a0f34] font-sans">Link to Meta-Analysis (optional)</label>
+          <label className="text-xs font-medium text-gray-500">Link to Meta-Analysis (optional)</label>
           <select
-            className="input mt-1 bg-white border-[#d2c2cb]"
+            className="input mt-1"
             value={metaAnalysisId}
             onChange={(e) => setMetaAnalysisId(e.target.value)}
           >
@@ -175,7 +175,7 @@ function CreateGradeForm({
         <button onClick={onCancel} className="btn-secondary">Cancel</button>
       </div>
       {createMutation.isError && (
-        <div className="mt-3 text-sm text-[#814d75]">
+        <div className="mt-3 text-sm text-red-600">
           Error: {(createMutation.error as Error).message}
         </div>
       )}
@@ -196,26 +196,24 @@ function GradeCard({
 }) {
   return (
     <div
-      className={`card p-4.5 cursor-pointer transition-all border rounded-xl bg-white shadow-xs ${
-        isSelected ? "border-[#3a0f34] ring-2 ring-[#814d75]" : "border-[#d2c2cb] hover:border-[#814d75]"
-      }`}
+      className={`card p-4 cursor-pointer transition-all ${isSelected ? "ring-2 ring-phylo-blue" : "hover:shadow-md"}`}
       onClick={onSelect}
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <div className="flex items-center gap-2.5">
-            <span className="font-serif font-bold text-[#3a0f34]">{grade.outcome_label}</span>
-            <span className={`badge ${CERTAINTY_BG[grade.certainty_rating] || "bg-[#eee7ec] text-[#62535d]"}`}>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{grade.outcome_label}</span>
+            <span className={`badge ${CERTAINTY_BG[grade.certainty_rating] || "bg-gray-100 text-gray-600"}`}>
               {grade.certainty_label || grade.certainty_rating}
             </span>
           </div>
-          <div className="text-xs text-[#81737b] mt-1 font-sans">
+          <div className="text-xs text-gray-400 mt-1">
             Starting: {grade.starting_level} | {grade.factors?.length || 0} factors
           </div>
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="text-[#81737b] hover:text-[#814d75] p-1"
+          className="text-gray-400 hover:text-red-500"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -255,34 +253,34 @@ function GradeDetail({ gradeId }: { gradeId: string }) {
   const upgrading = grade.factors.filter((f) => f.factor_type === "upgrading");
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Certainty banner */}
-      <div className="card p-5 border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
+      <div className="card p-5">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-xs font-semibold text-[#81737b] uppercase font-sans">Certainty Rating</div>
-            <div className="flex items-center gap-3 mt-1.5">
+            <div className="text-xs font-semibold text-gray-400 uppercase">Certainty Rating</div>
+            <div className="flex items-center gap-3 mt-1">
               <div
-                className="px-4 py-1.5 rounded-lg font-serif font-bold text-lg border border-[#d2c2cb]"
+                className="px-4 py-2 rounded-lg font-bold text-lg"
                 style={{
-                  backgroundColor: "#eee7ec",
-                  color: CERTAINTY_COLORS[grade.certainty_rating] || "#3a0f34",
+                  backgroundColor: `${CERTAINTY_COLORS[grade.certainty_rating]}20`,
+                  color: CERTAINTY_COLORS[grade.certainty_rating],
                 }}
               >
                 {grade.certainty_label || grade.certainty_rating}
               </div>
-              <div className="text-sm text-[#62535d] font-sans">
-                Starting: <span className="font-semibold text-[#3a0f34]">{grade.starting_level}</span>
+              <div className="text-sm text-gray-500">
+                Starting: <span className="font-medium">{grade.starting_level}</span>
               </div>
             </div>
           </div>
-          <div className="flex gap-2.5">
+          <div className="flex gap-2">
             <button
               onClick={() => autoPopulateMutation.mutate()}
               disabled={autoPopulateMutation.isPending}
               className="btn-secondary"
             >
-              {autoPopulateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin text-[#814d75]" /> : <Sparkles className="h-4 w-4" />}
+              {autoPopulateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               Auto-Populate
             </button>
             <button
@@ -296,15 +294,15 @@ function GradeDetail({ gradeId }: { gradeId: string }) {
           </div>
         </div>
         {autoPopulateMutation.isSuccess && (
-          <div className="mt-3 text-xs text-[#3a0f34] bg-[#eee7ec] p-2 rounded border border-[#d2c2cb] flex items-center gap-1.5 font-sans">
-            <CheckCircle2 className="h-4 w-4 text-[#814d75]" /> Auto-populated from RoB and meta-analysis data.
+          <div className="mt-3 text-sm text-phylo-green flex items-center gap-1">
+            <CheckCircle2 className="h-4 w-4" /> Auto-populated from RoB and meta-analysis data.
           </div>
         )}
       </div>
 
       {/* Downgrading factors */}
-      <div className="card p-5 border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
-        <h3 className="text-base font-serif font-bold text-[#3a0f34] mb-4">Factors Reducing Certainty</h3>
+      <div className="card p-5">
+        <h3 className="text-sm font-semibold mb-4">Factors Reducing Certainty</h3>
         <div className="space-y-3">
           {(Array.isArray(downgrading) ? downgrading : []).map((f) => (
             <FactorRow key={f.factor_id} factor={f} gradeId={gradeId} />
@@ -313,8 +311,8 @@ function GradeDetail({ gradeId }: { gradeId: string }) {
       </div>
 
       {/* Upgrading factors */}
-      <div className="card p-5 border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
-        <h3 className="text-base font-serif font-bold text-[#3a0f34] mb-4">Factors Raising Certainty</h3>
+      <div className="card p-5">
+        <h3 className="text-sm font-semibold mb-4">Factors Raising Certainty</h3>
         <div className="space-y-3">
           {(Array.isArray(upgrading) ? upgrading : []).map((f) => (
             <FactorRow key={f.factor_id} factor={f} gradeId={gradeId} />
@@ -323,9 +321,9 @@ function GradeDetail({ gradeId }: { gradeId: string }) {
       </div>
 
       {/* SoF Table */}
-      <div className="card p-5 border border-[#d2c2cb] bg-white rounded-xl shadow-xs">
-        <div className="flex items-center justify-between mb-4 border-b border-[#eee7ec] pb-2">
-          <h3 className="text-base font-serif font-bold text-[#3a0f34]">Summary of Findings (SoF) Table</h3>
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold">Summary of Findings (SoF) Table</h3>
           <button
             onClick={() => setSofVisible(!sofVisible)}
             className="btn-secondary text-xs"
@@ -334,7 +332,7 @@ function GradeDetail({ gradeId }: { gradeId: string }) {
           </button>
         </div>
         {sofVisible && sof && <SofTable sof={sof} />}
-        {sofVisible && !sof && <p className="text-[#81737b] text-sm font-serif">Loading SoF table...</p>}
+        {sofVisible && !sof && <p className="text-gray-400 text-sm">Loading SoF table...</p>}
       </div>
     </div>
   );
@@ -351,18 +349,18 @@ function FactorRow({ factor, gradeId }: { factor: GradeFactor; gradeId: string }
   });
 
   return (
-    <div className="border border-[#d2c2cb] rounded-lg p-3 bg-[#fbf9f4]">
+    <div className="border border-gray-100 rounded-lg p-3">
       <div className="flex items-center gap-3 mb-2">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-[#3a0f34] font-sans">{factor.factor_name}</span>
+            <span className="text-sm font-medium">{factor.factor_name}</span>
             {factor.auto_populated && (
-              <span className="badge bg-[#eee7ec] text-[#814d75] border border-[#d2c2cb] text-[10px]">auto</span>
+              <span className="badge bg-phylo-blue/10 text-phylo-blue text-xs">auto</span>
             )}
           </div>
         </div>
         <select
-          className="input py-1 text-xs max-w-[180px] bg-white border-[#d2c2cb]"
+          className="input py-1 text-xs max-w-[180px]"
           value={rating}
           onChange={(e) => setRating(e.target.value)}
         >
@@ -375,19 +373,19 @@ function FactorRow({ factor, gradeId }: { factor: GradeFactor; gradeId: string }
         <button
           onClick={() => updateMutation.mutate()}
           disabled={updateMutation.isPending}
-          className="btn-secondary text-xs px-2.5 py-1"
+          className="btn-secondary text-xs px-2 py-1"
         >
           {updateMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
         </button>
       </div>
       <input
-        className="input text-xs bg-white border-[#d2c2cb]"
+        className="input text-xs"
         placeholder="Rationale for this rating..."
         value={rationale}
         onChange={(e) => setRationale(e.target.value)}
       />
       {updateMutation.isSuccess && (
-        <div className="text-xs text-[#3a0f34] mt-1 font-sans">Saved & certainty recomputed.</div>
+        <div className="text-xs text-phylo-green mt-1">Saved & certainty recomputed.</div>
       )}
     </div>
   );
@@ -396,34 +394,33 @@ function FactorRow({ factor, gradeId }: { factor: GradeFactor; gradeId: string }
 function SofTable({ sof }: { sof: any }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs border border-[#d2c2cb] rounded-lg">
-        <thead className="bg-[#fbf9f4]">
+      <table className="w-full text-xs border border-gray-200">
+        <thead className="bg-gray-50">
           <tr>
-            <th className="text-left px-3 py-2.5 font-semibold text-[#3a0f34] border-b border-[#d2c2cb] font-sans">Outcome</th>
-            <th className="text-center px-3 py-2.5 font-semibold text-[#3a0f34] border-b border-[#d2c2cb] font-sans">Studies</th>
-            <th className="text-center px-3 py-2.5 font-semibold text-[#3a0f34] border-b border-[#d2c2cb] font-sans">Certainty</th>
-            <th className="text-left px-3 py-2.5 font-semibold text-[#3a0f34] border-b border-[#d2c2cb] font-sans">Effect Estimate</th>
+            <th className="text-left px-3 py-2 font-semibold text-gray-600 border-b">Outcome</th>
+            <th className="text-center px-3 py-2 font-semibold text-gray-600 border-b">Studies</th>
+            <th className="text-center px-3 py-2 font-semibold text-gray-600 border-b">Certainty</th>
+            <th className="text-left px-3 py-2 font-semibold text-gray-600 border-b">Effect Estimate</th>
           </tr>
         </thead>
-        <tbody className="bg-white">
-          <tr className="border-b border-[#eee7ec]">
-            <td className="px-3 py-3 font-medium text-[#3a0f34]">{sof.outcome}</td>
-            <td className="px-3 py-3 text-center text-[#4f444b] font-sans">{sof.n_studies}</td>
+        <tbody>
+          <tr className="border-b">
+            <td className="px-3 py-3 font-medium">{sof.outcome}</td>
+            <td className="px-3 py-3 text-center">{sof.n_studies}</td>
             <td className="px-3 py-3 text-center">
               <span
-                className="inline-block px-2.5 py-1 rounded font-semibold text-xs border"
+                className="inline-block px-2 py-1 rounded font-semibold"
                 style={{
-                  backgroundColor: "#eee7ec",
-                  borderColor: "#d2c2cb",
-                  color: sof.certainty_color || "#3a0f34",
+                  backgroundColor: `${sof.certainty_color}20`,
+                  color: sof.certainty_color,
                 }}
               >
                 {sof.certainty_label}
               </span>
             </td>
-            <td className="px-3 py-3 text-[#4f444b] font-sans">
+            <td className="px-3 py-3 text-gray-600">
               {sof.effect_estimate || "—"}
-              {sof.ci_text && <span className="text-[#81737b]"> ({sof.ci_text})</span>}
+              {sof.ci_text && <span className="text-gray-400"> ({sof.ci_text})</span>}
             </td>
           </tr>
         </tbody>
@@ -431,26 +428,26 @@ function SofTable({ sof }: { sof: any }) {
 
       {/* Factor breakdown */}
       <div className="mt-4">
-        <div className="text-xs font-semibold text-[#814d75] uppercase mb-2 font-sans">Factor Assessment</div>
-        <table className="w-full text-xs border border-[#d2c2cb] rounded-lg">
-          <thead className="bg-[#fbf9f4]">
+        <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Factor Assessment</div>
+        <table className="w-full text-xs">
+          <thead className="bg-gray-50">
             <tr>
-              <th className="text-left px-3 py-2 font-medium text-[#3a0f34] border-b border-[#d2c2cb] font-sans">Factor</th>
-              <th className="text-left px-3 py-2 font-medium text-[#3a0f34] border-b border-[#d2c2cb] font-sans">Rating</th>
-              <th className="text-left px-3 py-2 font-medium text-[#3a0f34] border-b border-[#d2c2cb] font-sans">Rationale</th>
+              <th className="text-left px-3 py-2 font-medium text-gray-500">Factor</th>
+              <th className="text-left px-3 py-2 font-medium text-gray-500">Rating</th>
+              <th className="text-left px-3 py-2 font-medium text-gray-500">Rationale</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#eee7ec] bg-white">
+          <tbody className="divide-y divide-gray-100">
             {sof.factors?.map((f: any) => (
               <tr key={f.factor_key}>
-                <td className="px-3 py-2 font-sans">
-                  <span className="font-medium text-[#3a0f34]">{f.factor_name}</span>
-                  <span className={`ml-2 text-xs font-bold ${f.factor_type === "downgrading" ? "text-rose-700" : "text-[#7c5800]"}`}>
+                <td className="px-3 py-2">
+                  <span className="font-medium">{f.factor_name}</span>
+                  <span className={`ml-2 text-xs ${f.factor_type === "downgrading" ? "text-red-400" : "text-phylo-green"}`}>
                     {f.factor_type === "downgrading" ? "↓" : "↑"}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-[#4f444b] font-sans">{f.rating_label}</td>
-                <td className="px-3 py-2 text-[#62535d] font-serif">{f.rationale || "—"}</td>
+                <td className="px-3 py-2">{f.rating_label}</td>
+                <td className="px-3 py-2 text-gray-500">{f.rationale || "—"}</td>
               </tr>
             ))}
           </tbody>

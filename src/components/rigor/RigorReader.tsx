@@ -23,10 +23,7 @@ export const RigorReader: React.FC<RigorReaderProps> = ({
   useEffect(() => {
     const pageNum = targetPage || selectedCheck.page;
     if (pageNum && pageRefs.current[pageNum]) {
-      const el = pageRefs.current[pageNum];
-      if (typeof el?.scrollIntoView === "function") {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      pageRefs.current[pageNum]?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [targetPage, selectedCheck]);
 

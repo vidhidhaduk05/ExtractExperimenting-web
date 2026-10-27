@@ -744,13 +744,13 @@ export function ExtractionSheetPage() {
             </span>
           )}
           {saveStatus === "saved" && (
-            <span className="flex items-center gap-1.5 text-xs text-[#ffdea6] bg-[#3a0f34] px-3 py-1 rounded-full border border-[#814d75] font-mono font-bold">
-              <Check className="h-3 w-3 text-[#ffdea6]" /> Saved to Project Database
+            <span className="flex items-center gap-1.5 text-xs text-emerald-300 bg-[#1a0017] px-3 py-1 rounded-full border border-emerald-500/40 font-mono font-bold">
+              <Check className="h-3 w-3 text-emerald-400" /> Saved to Project Database
             </span>
           )}
           {saveStatus === "error" && (
-            <span className="flex items-center gap-1.5 text-xs text-[#fbf9f4] bg-[#ab3329] px-3 py-1 rounded-full border border-[#ab3329] font-mono font-bold">
-              <AlertCircle className="h-3 w-3 text-[#fbf9f4]" /> Save Error: {saveError || "Failed to commit"}
+            <span className="flex items-center gap-1.5 text-xs text-rose-300 bg-rose-950 px-3 py-1 rounded-full border border-rose-600 font-mono font-bold">
+              <AlertCircle className="h-3 w-3 text-rose-400" /> Save Error: {saveError || "Failed to commit"}
             </span>
           )}
         </div>
@@ -797,10 +797,7 @@ export function ExtractionSheetPage() {
 
           {/* Excel Exports Dropdown / Actions */}
           <a
-            href={api.exportTemplateUrl ? api.exportTemplateUrl(projectId || "demo") : "#"}
-            onClick={(e) => {
-              if (!api.exportTemplateUrl) e.preventDefault();
-            }}
+            href={api.exportTemplateUrl(projectId || "demo")}
             download
             className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#ffffff]/10 hover:bg-[#ffffff]/20 text-[#fbf9f4] border border-[#ffffff]/20 transition-all flex items-center gap-1.5 shadow-2xs"
             title="Download blank extraction template (.xlsx) with exact saved column sequence"
@@ -809,10 +806,7 @@ export function ExtractionSheetPage() {
           </a>
 
           <a
-            href={api.exportProjectXlsxUrl ? api.exportProjectXlsxUrl(projectId || "demo") : "#"}
-            onClick={(e) => {
-              if (!api.exportProjectXlsxUrl) e.preventDefault();
-            }}
+            href={api.exportProjectXlsxUrl(projectId || "demo")}
             download
             className="px-3 py-1.5 text-xs font-['Work_Sans'] font-bold rounded-lg bg-[#814d75] hover:bg-[#814d75]/90 text-[#fbf9f4] border border-[#d2c2cb]/40 transition-all flex items-center gap-1.5 shadow-xs"
             title="Download completed extraction results workbook (.xlsx) with linked Evidence sheet"
@@ -1115,7 +1109,7 @@ export function ExtractionSheetPage() {
                                 {/* Verification Status Indicator */}
                                 {isVerified && (
                                   <span title="Verified accurate">
-                                    <Check className="h-3 w-3 text-[#7c5800] shrink-0" />
+                                    <Check className="h-3 w-3 text-emerald-600 shrink-0" />
                                   </span>
                                 )}
                               </div>
@@ -1179,7 +1173,7 @@ export function ExtractionSheetPage() {
                 <div className="flex items-center gap-1.5 pt-1">
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                     activeSelectedCellData.cell.is_verified
-                      ? "bg-[#ffdea6] text-[#7c5800] border-[#d2c2cb]"
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                       : "bg-amber-50 text-amber-900 border-amber-200"
                   }`}>
                     {activeSelectedCellData.cell.is_verified ? "Verified Accurate" : "Pending Verification"}
@@ -1303,7 +1297,7 @@ export function ExtractionSheetPage() {
             </>
           ) : (
             <>
-              <Check className="h-4 w-4 text-[#7c5800]" />
+              <Check className="h-4 w-4 text-emerald-600" />
               <span>Task undone</span>
             </>
           )}

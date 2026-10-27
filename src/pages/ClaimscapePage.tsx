@@ -187,30 +187,25 @@ export const ClaimscapePage: React.FC = () => {
     });
   }, [dataset.papers, judgmentMap]);
 
-  // Share the same eligibility filters across the map, inventory, and inspector.
-  const visiblePapers = useMemo(() => processedPapers.filter((p) =>
-    p.onTopic && p.tier && (!directOnly || p.direct) && (showReviews || p.tier !== "review")
-  ), [processedPapers, directOnly, showReviews]);
-
   // Compute tier summaries and metrics
   const summaries = useMemo(() => {
-    return computeTierSummaries(visiblePapers, false).filter((s) => showReviews || s.id !== "review");
-  }, [visiblePapers, showReviews]);
+    return computeTierSummaries(processedPapers, directOnly);
+  }, [processedPapers, directOnly]);
 
   // Dynamic Headline synthesis
   const headlineData = useMemo(() => {
-    return generateHeadline(summaries, visiblePapers.length);
-  }, [summaries, visiblePapers]);
+    return generateHeadline(summaries, processedPapers.length);
+  }, [summaries, processedPapers]);
 
   // Active selected paper
   const activePaper = useMemo(() => {
-    return visiblePapers.find((p) => p.paper.pmid === selectedPmid) || visiblePapers[0] || null;
-  }, [visiblePapers, selectedPmid]);
+    return processedPapers.find((p) => p.paper.pmid === selectedPmid) || processedPapers[0] || null;
+  }, [processedPapers, selectedPmid]);
 
   // Key KPI stats
   const stats = useMemo(() => {
     const onTopicList = processedPapers.filter((p) => p.onTopic);
-    const mappedList = visiblePapers;
+    const mappedList = onTopicList.filter((p) => p.tier && (!directOnly || p.direct));
     const withVerdictList = mappedList.filter(
       (p) => p.tier && TIER_BY_ID[p.tier]?.counted && (p.category === "supports" || p.category === "contradicts" || p.category === "mixed")
     );
@@ -222,11 +217,12 @@ export const ClaimscapePage: React.FC = () => {
       onMap: mappedList.length,
       withVerdict: withVerdictList.length
     };
-  }, [processedPapers, paperCount, visiblePapers, dataset.total]);
+  }, [processedPapers, paperCount, directOnly, dataset.total]);
 
   // Filtered papers for bottom data table
   const filteredTablePapers = useMemo(() => {
-    return visiblePapers
+    return processedPapers
+      .filter((p) => p.onTopic && p.tier && (!directOnly || p.direct))
       .filter((p) => {
         if (!tableSearch.trim()) return true;
         const q = tableSearch.toLowerCase();
@@ -237,7 +233,7 @@ export const ClaimscapePage: React.FC = () => {
           (p.finding && p.finding.toLowerCase().includes(q))
         );
       });
-  }, [visiblePapers, tableSearch]);
+  }, [processedPapers, directOnly, tableSearch]);
 
   const scrollToMap = () => {
     setTimeout(() => {
@@ -422,7 +418,7 @@ export const ClaimscapePage: React.FC = () => {
   };
 
   return (
-    <div className="cs min-h-screen bg-[#fbf9f4] text-[#4f444b] selection:bg-[#66365c]/15 transition-colors duration-200 font-['Newsreader']">
+    <div className="cs min-h-screen bg-[#fbf9f4] text-[#1b1c19] selection:bg-[#66365c]/15 transition-colors duration-200 font-['Newsreader']">
       <div className="px-6 pt-3 text-xs font-['Work_Sans'] text-[#72636d]" role="status">{resultSource}</div>
       {scanError && (
         <div role="alert" className="mx-6 mt-3 border border-red-300 bg-red-50 p-3 text-sm text-red-900 font-['Work_Sans']">
@@ -433,9 +429,64 @@ export const ClaimscapePage: React.FC = () => {
       {/* Main Container */}
       <main className="claimscape-theme mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-12 pt-2 sm:px-6 lg:px-8">
         
-        {/* Section 1: Claim first, followed by the reading guide */}
-        <section className="claim-introduction grid items-start gap-6 pt-1 pb-2">
-          {/* Claim form and progress */}
+        {/* Section 1: Hero & Question Card - Compact 2-Column Editorial Velvet Layout */}
+        <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10 pt-1 pb-2">
+          {/* Left Column: Headline, Restored Description & Legend Bullets */}
+          <div className="max-w-[580px] xl:pt-1">
+            <p className="text-[11px] font-['Work_Sans'] font-bold uppercase tracking-[0.12em] text-[#7c5800] mb-2 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
+              Evidence map for any research claim
+            </p>
+
+            {/* Restored Description Paragraph */}
+            <p className="mt-3 text-[15px] sm:text-[15.5px] text-[#4f444b] font-['Newsreader'] leading-[1.58]">
+              Type a claim and see where the literature stands on it. Up to 300 of the most relevant PubMed abstracts are read, sorted by study design and plotted by year, so you can see which kinds of evidence agree and how consensus shifted over time.
+            </p>
+
+            {/* Restored 3 Bullets with Legend Markers */}
+            <ul className="mt-4 grid gap-2.5 text-[13px] text-[#4f444b] font-['Work_Sans']">
+              <li className="flex items-center gap-2.5">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
+                  <circle r="6" fill="var(--cs-for)" stroke="var(--cs-surface)" strokeWidth="1.5" />
+                </svg>
+                <span>Each dot is a paper, colored by what its abstract reports</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
+                  <circle r="7.5" fill="var(--cs-surface)" />
+                  <path d="M0 -6 A 6 6 0 0 0 0 6 Z" fill="var(--cs-for)" />
+                  <path d="M0 -6 A 6 6 0 0 1 0 6 Z" fill="var(--cs-against)" />
+                </svg>
+                <span>Rows are study designs, each with a verdict and a 95% Wilson interval</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
+                  <circle r="6" fill="var(--cs-against)" stroke="var(--cs-surface)" strokeWidth="1.5" />
+                </svg>
+                <span>Every dot opens the sentence its verdict rests on</span>
+              </li>
+            </ul>
+
+            {/* Compact Technical Pillars Strip */}
+            <div className="mt-5 pt-3 border-t border-[#e4e2dd] flex flex-wrap items-center gap-3 text-[11px] font-['Work_Sans'] text-[#72636d]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#3a0f34]"></span>
+                PubMed Live Retrieval
+              </span>
+              <span className="w-px h-3 bg-[#d2c2cb]"></span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
+                Co-Scientist Rapid Screening
+              </span>
+              <span className="w-px h-3 bg-[#d2c2cb]"></span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
+                Wilson 95% Confidence
+              </span>
+            </div>
+          </div>
+
+          {/* Right Column: Search Card & Progress */}
           <div className="w-full">
             <form
               onSubmit={handleMapEvidence}
@@ -506,7 +557,7 @@ export const ClaimscapePage: React.FC = () => {
                         <span className="relative inline-flex rounded-none h-2.5 w-2.5 bg-[#814d75]"></span>
                       </span>
                     ) : (
-                      <Check className="w-3.5 h-3.5 text-[#7c5800]" />
+                      <Check className="w-3.5 h-3.5 text-emerald-700" />
                     )}
                     <span className="text-[#3a0f34] font-medium text-[12px]">
                       {scanStepLabel || "Analyzing evidence..."}
@@ -516,7 +567,7 @@ export const ClaimscapePage: React.FC = () => {
                     {Math.round(scanProgress)}%
                   </span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden bg-[#d2c2cb]">
+                <div className="h-1.5 w-full overflow-hidden bg-[#e4e2dd]">
                   <div
                     className="h-full bg-gradient-to-r from-[#3a0f34] via-[#814d75] to-[#7c5800] transition-all duration-300 ease-out"
                     style={{ width: `${scanProgress}%` }}
@@ -525,61 +576,6 @@ export const ClaimscapePage: React.FC = () => {
               </div>
             )}
           </div>
-          {/* Reading guide and dot legend */}
-          <div className="claim-explanation">
-            <p className="text-[11px] font-['Work_Sans'] font-bold uppercase tracking-[0.12em] text-[#814d75] mb-2 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
-              Evidence map for any research claim
-            </p>
-
-            <h2>How to read the evidence map</h2>
-            <p className="mt-3 text-[15px] sm:text-[15.5px] text-[#4f444b] font-['Newsreader'] leading-[1.58]">
-              Type a claim and see where the literature stands on it. Up to 300 of the most relevant PubMed abstracts are read, sorted by study design and plotted by year, so you can see which kinds of evidence agree and how consensus shifted over time.
-            </p>
-
-            {/* Restored 3 Bullets with Legend Markers */}
-            <ul className="mt-4 grid gap-2.5 text-[13px] text-[#4f444b] font-['Work_Sans']">
-              <li className="flex items-center gap-2.5">
-                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
-                  <circle r="6" fill="var(--cs-for)" stroke="var(--cs-surface)" strokeWidth="1.5" />
-                </svg>
-                <span>Each dot is a paper, colored by what its abstract reports</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
-                  <circle r="7.5" fill="var(--cs-surface)" />
-                  <path d="M0 -6 A 6 6 0 0 0 0 6 Z" fill="var(--cs-for)" />
-                  <path d="M0 -6 A 6 6 0 0 1 0 6 Z" fill="var(--cs-against)" />
-                </svg>
-                <span>Rows are study designs, each with a verdict and a 95% Wilson interval</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
-                  <circle r="6" fill="var(--cs-against)" stroke="var(--cs-surface)" strokeWidth="1.5" />
-                </svg>
-                <span>Every dot opens the sentence its verdict rests on</span>
-              </li>
-            </ul>
-
-            {/* Compact Technical Pillars Strip */}
-            <div className="mt-5 pt-3 border-t border-[#d2c2cb] flex flex-wrap items-center gap-3 text-[11px] font-['Work_Sans'] text-[#72636d]">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-none bg-[#3a0f34]"></span>
-                PubMed Live Retrieval
-              </span>
-              <span className="w-px h-3 bg-[#d2c2cb]"></span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
-                Co-Scientist Rapid Screening
-              </span>
-              <span className="w-px h-3 bg-[#d2c2cb]"></span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
-                Wilson 95% Confidence
-              </span>
-            </div>
-          </div>
-
         </section>
 
         {/* Section 2: Dynamic Headline & Stat KPIs */}
@@ -613,7 +609,7 @@ export const ClaimscapePage: React.FC = () => {
               onClick={handleCopyLink}
               className="inline-flex items-center gap-2 border border-[#d2c2cb] bg-white px-3.5 py-2 text-xs font-semibold font-['Work_Sans'] text-[#3a0f34] hover:bg-[#ffdea6] transition-colors shadow-2xs cursor-pointer"
             >
-              {copiedLink ? <Check className="w-4 h-4 text-[#7c5800]" /> : <Share2 className="w-4 h-4" />}
+              {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
               <span>{copiedLink ? "Link copied" : "Copy link"}</span>
             </button>
           </div>
@@ -650,7 +646,7 @@ export const ClaimscapePage: React.FC = () => {
           {/* Section 3: Interactive SVG Scatter Map */}
           <div ref={mapSectionRef} id="claimscape-map-section" className="cs-card overflow-hidden shadow-sm scroll-mt-6 border border-[#d2c2cb]">
             {/* Map Header Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-[#d2c2cb] px-5 py-3 bg-[#eee7ec]">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-[#d2c2cb] px-5 py-3 bg-[#f0eee9]">
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-['Work_Sans'] text-xs">
                 <label className="cs-toggle flex items-center gap-2 cursor-pointer">
                   <input
@@ -681,7 +677,7 @@ export const ClaimscapePage: React.FC = () => {
             {/* Interactive Bee-Swarm SVG Matrix */}
             <ClaimscapeMap
               summaries={summaries}
-              selectedPmid={activePaper?.paper.pmid ?? null}
+              selectedPmid={selectedPmid}
               onSelectPaper={(pmid) => setSelectedPmid(pmid)}
               showReviews={showReviews}
             />
@@ -758,7 +754,7 @@ export const ClaimscapePage: React.FC = () => {
             </div>
 
             {/* Quick Workspace Integration Card */}
-            <div className="cs-card p-5 sm:p-6 grid gap-3 bg-[#eee7ec] border border-[#d2c2cb]">
+            <div className="cs-card p-5 sm:p-6 grid gap-3 bg-[#f0eee9] border border-[#d2c2cb]">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#3a0f34]" />
                 <h3 className="font-['Bodoni_Moda'] font-medium text-[16px] text-[#3a0f34]">
@@ -766,11 +762,11 @@ export const ClaimscapePage: React.FC = () => {
                 </h3>
               </div>
               <p className="text-[13px] text-[#4f444b] font-['Newsreader'] leading-relaxed">
-                Start a review project with this claim. You can prefill and edit the project name and primary hypothesis, then set up PICO and import studies in the workspace.
+                Import these {stats.onMap} mapped PubMed papers directly into your project's PICO screening queue, full-text PDF viewer, and Risk of Bias appraisal matrix.
               </p>
               <div className="pt-1 flex flex-wrap gap-2">
                 <Link
-                  to={`/projects/new?${new URLSearchParams({ claim: claim.trim() }).toString()}`}
+                  to="/projects"
                   className="font-['Work_Sans'] font-semibold text-xs py-2 px-4 bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] inline-flex items-center gap-1.5 transition-colors"
                 >
                   <span>Launch in Review Workspace</span>
@@ -809,7 +805,7 @@ export const ClaimscapePage: React.FC = () => {
 
           <div className="overflow-x-auto max-h-[460px] overflow-y-auto">
             <table className="cs-table w-full text-left font-['Work_Sans']">
-              <thead className="bg-[#eee7ec] border-b border-[#d2c2cb] text-[11px] uppercase tracking-wider text-[#72636d]">
+              <thead className="bg-[#f0eee9] border-b border-[#d2c2cb] text-[11px] uppercase tracking-wider text-[#72636d]">
                 <tr>
                   <th className="p-3 w-16">Year</th>
                   <th className="p-3">Title & Publication</th>
@@ -830,12 +826,12 @@ export const ClaimscapePage: React.FC = () => {
                       data-sel={isSel}
                       onClick={() => setSelectedPmid(p.paper.pmid)}
                       className={`cursor-pointer transition-colors ${
-                        isSel ? "bg-[#ffdea6]/35" : "hover:bg-[#eee7ec]"
+                        isSel ? "bg-[#ffdea6]/35" : "hover:bg-[#f5f3ee]"
                       }`}
                     >
                       <td className="p-3 font-mono font-medium text-[12px] text-[#3a0f34]">{year}</td>
                       <td className="p-3">
-                        <p className="font-semibold text-[13px] text-[#4f444b] line-clamp-1 font-['Newsreader']">
+                        <p className="font-semibold text-[13px] text-[#1b1c19] line-clamp-1 font-['Newsreader']">
                           {p.paper.title}
                         </p>
                         <p className="text-[11.5px] text-[#72636d] mt-0.5">

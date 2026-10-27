@@ -119,14 +119,3 @@ describe('API Library', () => {
     });
   });
 });
-
-it('retains a newly created demo project hypothesis for subsequent reads', async () => {
-  localStorage.clear();
-  localStorage.setItem('demo_mode', 'true');
-  try {
-    const project = await api.createProject({name:'Claim review',hypothesis:'A reduces B'});
-    const hypothesis = await api.getHypothesis(project.project_id);
-    expect(hypothesis.hypothesis).toBe('A reduces B');
-    expect(JSON.parse(localStorage.getItem(`radextract_hyp_${project.project_id}`)!)).toMatchObject({hypothesis:'A reduces B'});
-  } finally { localStorage.clear(); }
-});

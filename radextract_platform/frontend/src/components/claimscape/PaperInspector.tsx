@@ -1,5 +1,5 @@
 import React from "react";
-import { ExternalLink, HelpCircle } from "lucide-react";
+import { ExternalLink, CheckCircle2, AlertCircle, HelpCircle } from "lucide-react";
 import { ProcessedPaper, TIER_BY_ID, STANCE_LABEL } from "../../lib/claimscapeMethod";
 
 interface PaperInspectorProps {
@@ -42,16 +42,16 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
   const onTopicPct = Math.round((paper.judgment.onTopic ?? 1) * 100);
 
   return (
-    <article className="cs-card p-5 sm:p-6 grid gap-5 border border-[#d2c2cb] bg-white shadow-2xs font-['Work_Sans']" aria-live="polite">
+    <article className="cs-card p-5 sm:p-6 grid gap-5 border border-[#381A61]/10 dark:border-white/10 bg-white dark:bg-[#221D2C] shadow-sm" aria-live="polite">
       {/* Header Metadata */}
-      <header className="grid gap-2 border-b border-[#d2c2cb] pb-4">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 cs-mono text-[12px] text-[#72636d]">
-          <span className="font-serif font-bold text-[14px] text-[#3a0f34]">{yearStr}</span>
+      <header className="grid gap-2 border-b border-[#381A61]/10 dark:border-white/10 pb-4">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 cs-mono text-[12px] cs-muted">
+          <span className="font-serif font-bold text-[14px] text-[#381A61] dark:text-[#F9D14A]">{yearStr}</span>
           <span>·</span>
           <span>{paper.paper.journal || "PubMed publication"}</span>
           <span>·</span>
           <a
-            className="cs-link inline-flex items-center gap-1 font-semibold text-[#814d75] hover:text-[#3a0f34]"
+            className="cs-link inline-flex items-center gap-1 font-semibold"
             href={`https://pubmed.ncbi.nlm.nih.gov/${paper.paper.pmid}/`}
             target="_blank"
             rel="noopener noreferrer"
@@ -63,7 +63,7 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
             <>
               <span>·</span>
               <a
-                className="cs-link inline-flex items-center gap-1 text-[#814d75] hover:text-[#3a0f34]"
+                className="cs-link inline-flex items-center gap-1"
                 href={`https://doi.org/${paper.paper.doi}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -75,24 +75,24 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
           )}
         </div>
 
-        <h3 className="text-[19px] font-serif font-bold leading-snug text-wrap-pretty text-[#3a0f34]">
+        <h3 className="text-[19px] font-serif font-bold leading-snug text-wrap-pretty text-[#381A61] dark:text-[#FAF9F3]">
           {paper.paper.title}
         </h3>
       </header>
 
-      {/* Main Evidence Stance & Study Attributes Grid */}
+      {/* Main Verdict & Study Attributes Grid */}
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Stance Breakdown Box */}
-        <div className="grid content-start gap-3 rounded-lg border border-[#d2c2cb] bg-[#fbf9f4] p-4">
+        <div className="grid content-start gap-3 rounded-xl border border-[#381A61]/10 dark:border-white/10 bg-[#F2F1EB] dark:bg-[#1A1622] p-4">
           <div className="flex items-center justify-between">
-            <p className="flex items-center gap-2 text-[14px] font-bold text-[#3a0f34]">
+            <p className="flex items-center gap-2 text-[14px] font-bold text-[#381A61] dark:text-[#FAF9F3]">
               <span
                 className="w-3.5 h-3.5 rounded-full inline-block flex-none"
                 style={{ background: stanceColorVar }}
               />
               {STANCE_LABEL[paper.category] || "Unclear"}
             </p>
-            <span className="cs-mono text-[11px] text-[#72636d]">
+            <span className="cs-mono text-[11px] cs-muted">
               Confidence {Math.round(paper.strength * 100)}%
             </span>
           </div>
@@ -103,7 +103,7 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
               <span className="bar">
                 <b style={{ width: `${forPct}%`, background: "var(--cs-for)" }} />
               </span>
-              <span className="cs-mono text-right text-[12px] text-[#72636d]">{forPct}%</span>
+              <span className="cs-mono text-right text-[12px] cs-muted">{forPct}%</span>
             </div>
             <div className="contents">
               <span className="cs-soft text-[12px]">Mixed</span>
@@ -115,54 +115,62 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
                   }}
                 />
               </span>
-              <span className="cs-mono text-right text-[12px] text-[#72636d]">{mixedPct}%</span>
+              <span className="cs-mono text-right text-[12px] cs-muted">{mixedPct}%</span>
             </div>
             <div className="contents">
               <span className="cs-soft text-[12px]">Against the claim</span>
               <span className="bar">
                 <b style={{ width: `${againstPct}%`, background: "var(--cs-against)" }} />
               </span>
-              <span className="cs-mono text-right text-[12px] text-[#72636d]">{againstPct}%</span>
+              <span className="cs-mono text-right text-[12px] cs-muted">{againstPct}%</span>
             </div>
             <div className="contents">
               <span className="cs-soft text-[12px]">No result on claim</span>
               <span className="bar">
                 <b style={{ width: `${noResultPct}%`, background: "var(--cs-neutral)" }} />
               </span>
-              <span className="cs-mono text-right text-[12px] text-[#72636d]">{noResultPct}%</span>
+              <span className="cs-mono text-right text-[12px] cs-muted">{noResultPct}%</span>
             </div>
           </div>
+
+          <p className="text-[12px] cs-muted pt-1 border-t border-[var(--cs-line)]">
+            {paper.agree
+              ? "Both evaluation prompts agree. Averaged across 2 independently worded questions."
+              : "Readings differed between wording checks; classified as unclear."}
+          </p>
         </div>
 
-        {/* Study Type & Directness Box */}
-        <dl className="grid content-start gap-2.5 rounded-lg border border-[#d2c2cb] bg-[#fbf9f4] p-4 text-[12.5px]">
-          <div>
-            <dt className="text-[#72636d] font-medium">Study design hierarchy</dt>
-            <dd className="text-[#4f444b] font-semibold flex items-center gap-1.5 mt-0.5">
-              <span>{tier?.label || "Unclassified study type"}</span>
-              {tier && !tier.counted && (
-                <span className="text-[11px] font-normal text-[#814d75]">
-                  (not counted in pooled statistics)
+        {/* Study Details DL */}
+        <dl className="grid content-start gap-2.5 rounded-xl border border-[#381A61]/10 dark:border-white/10 bg-[#F2F1EB] dark:bg-[#1A1622] p-4 text-[13px]">
+          <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 pb-2 border-b border-[#381A61]/10 dark:border-white/10">
+            <dt className="cs-muted font-medium">Study type</dt>
+            <dd className="font-semibold text-[var(--cs-ink)]">
+              {tier?.label || "Unclassified"}
+              {paper.paper.pubTypes?.length > 0 && (
+                <span className="block text-[11.5px] cs-muted font-normal mt-0.5">
+                  NLM type: {paper.paper.pubTypes.join(", ")}
                 </span>
               )}
             </dd>
           </div>
 
-          <div>
-            <dt className="text-[#72636d] font-medium">Evidence directness</dt>
-            <dd className="text-[#4f444b] font-semibold mt-0.5">
-              {directPct >= 50 ? "Direct evidence" : "Indirect / animal / model"}{" "}
-              <span className="text-[11.5px] font-normal text-[#72636d]">
-                ({directPct}% confidence)
+          <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 pb-2 border-b border-[#381A61]/10 dark:border-white/10">
+            <dt className="cs-muted font-medium">Evidence</dt>
+            <dd className="text-[var(--cs-ink)]">
+              <span className="font-semibold">
+                {paper.direct ? "Tests claim directly" : "Indirect model / proxy"}
+              </span>
+              <span className="block text-[11.5px] cs-muted">
+                {directPct}% direct test confidence
               </span>
             </dd>
           </div>
 
-          <div>
-            <dt className="text-[#72636d] font-medium">Topic relevance</dt>
-            <dd className="text-[#4f444b] font-semibold mt-0.5">
+          <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
+            <dt className="cs-muted font-medium">On topic</dt>
+            <dd className="text-[var(--cs-ink)] font-semibold">
               {onTopicPct}%{" "}
-              <span className="text-[11.5px] font-normal text-[#72636d]">
+              <span className="text-[11.5px] font-normal cs-muted">
                 relevance match
               </span>
             </dd>
@@ -173,39 +181,39 @@ export const PaperInspector: React.FC<PaperInspectorProps> = ({ paper }) => {
       {/* Abstract & Extracted Key Finding Sentence */}
       <section className="grid gap-2.5 pt-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-[12px] font-serif font-bold uppercase tracking-[0.06em] text-[#3a0f34] flex items-center gap-1.5">
+          <h4 className="text-[12px] font-serif font-bold uppercase tracking-[0.06em] text-[#381A61] dark:text-[#F9D14A] flex items-center gap-1.5">
             Key Extracted Finding & Abstract
           </h4>
-          <span className="text-[11.5px] text-[#72636d] cs-mono">
+          <span className="text-[11.5px] cs-muted cs-mono">
             Sentence highlighted below
           </span>
         </div>
 
         {paper.finding ? (
           <div
-            className="cs-abstract rounded-lg border border-[#d2c2cb] bg-[#fbf9f4] p-4 text-[14px] leading-relaxed text-[#4f444b] shadow-2xs"
+            className="cs-abstract rounded-xl border border-[#381A61]/10 dark:border-white/10 bg-[#FAF9F3] dark:bg-black/30 p-4 text-[14px] leading-relaxed text-[var(--cs-ink)] shadow-2xs"
             // @ts-expect-error CSS variable for highlight color
             style={{ "--c": stanceColorVar }}
           >
-            <mark className="font-medium text-[#4f444b]">
+            <mark className="font-medium text-[var(--cs-ink)]">
               {paper.finding}
             </mark>
           </div>
         ) : (
-          <p className="text-[13px] text-[#72636d] italic">
+          <p className="text-[13px] cs-muted italic">
             No specific finding sentence extracted from this abstract.
           </p>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[12px] text-[#72636d]">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[12px] cs-muted">
           <span>
-            Abstract synthesized according to systematic review criteria. Always inspect full text before clinical application.
+            Abstract read and verified by clinical model. Always check primary sources before citing.
           </span>
           <a
             href={`https://pubmed.ncbi.nlm.nih.gov/${paper.paper.pmid}/`}
             target="_blank"
             rel="noopener noreferrer"
-            className="cs-link font-medium inline-flex items-center gap-1 text-[#814d75] hover:text-[#3a0f34]"
+            className="cs-link font-medium inline-flex items-center gap-1"
           >
             Open on PubMed <ExternalLink className="w-3 h-3" />
           </a>

@@ -1444,7 +1444,12 @@ function computeLivePrismaData(
     );
     const new_studies = includedStudies.length;
     const total_studies = new_studies;
-    const total_studies_ma = new_studies;
+    const total_studies_ma =
+      official && official.fields && official.fields.total_studies_ma
+        ? parseInt(official.fields.total_studies_ma, 10) || 0
+        : flow && typeof (flow as any).studies_in_meta_analysis === "number"
+        ? (flow as any).studies_in_meta_analysis
+        : new_studies;
 
     return {
       counts: {

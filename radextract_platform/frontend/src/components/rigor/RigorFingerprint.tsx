@@ -206,7 +206,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
         {/* Legend */}
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs rs-soft">
           <span className="inline-flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#7c5800] fill-[#7c5800] text-white" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500 text-white" />
             Reported
           </span>
           <span className="inline-flex items-center gap-1.5">
@@ -216,11 +216,11 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
             Unclear
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded-full border-2 border-[#ab3329]" />
+            <span className="w-3.5 h-3.5 rounded-full border-2 border-rose-500" />
             Missing
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <AlertOctagon className="w-3.5 h-3.5 text-[#ab3329] fill-[#ab3329] text-white" />
+            <AlertOctagon className="w-3.5 h-3.5 text-rose-600 fill-rose-600 text-white" />
             Warning sign found
           </span>
           <span className="rs-mono text-[11px] rs-muted">spoke length = evidence it is reported</span>
@@ -232,7 +232,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
             <span className="rs-mono text-[10px] font-bold uppercase tracking-wider rs-muted">Selected</span>
             <b className="text-sm font-semibold">{selectedCheck.label}</b>
             {selectedCheck.guideline && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium bg-black/5 dark:bg-white/10 text-[#62535d]">
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-zinc-300">
                 {selectedCheck.guideline}
               </span>
             )}
@@ -240,11 +240,11 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
 
           <div className="flex items-center gap-2 text-xs font-semibold">
             {selectedCheck.outcome === "good" ? (
-              <CheckCircle2 className="w-4 h-4 text-[#7c5800]" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             ) : selectedCheck.outcome === "mid" ? (
               <AlertTriangle className="w-4 h-4 text-amber-500" />
             ) : (
-              <XCircle className="w-4 h-4 text-[#ab3329]" />
+              <XCircle className="w-4 h-4 text-rose-500" />
             )}
             <span>{selectedCheck.spoke?.verdict || "Evaluated"}</span>
             <span className="rs-mono font-normal rs-muted">
@@ -264,7 +264,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
               <button
                 type="button"
                 onClick={() => onShowOnPage(selectedCheck.page)}
-                className="font-sans text-xs underline text-[#814d75] hover:text-[#3a0f34] font-semibold"
+                className="font-sans text-xs underline text-blue-600 dark:text-blue-400 hover:text-blue-700 font-semibold"
               >
                 Show on page {selectedCheck.page} →
               </button>
@@ -282,7 +282,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
               className={`grid gap-1.5 rounded-lg border p-2.5 text-left transition-all ${
                 selectedDomain === dom.id
                   ? "border-[var(--rs-accent)] bg-[var(--rs-accent-soft)] ring-1 ring-[var(--rs-accent)]"
-                  : "border-[var(--rs-line)] bg-[var(--rs-card)] hover:border-[#814d75]"
+                  : "border-[var(--rs-line)] bg-[var(--rs-card)] hover:border-zinc-400"
               }`}
             >
               <span className="flex items-baseline justify-between gap-1.5 text-xs">
