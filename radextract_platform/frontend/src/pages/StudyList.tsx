@@ -36,46 +36,7 @@ const getInitialBatches = (pid: string): ImportBatch[] => {
     const saved = localStorage.getItem(`radextract_import_batches_${pid}`);
     if (saved) return JSON.parse(saved);
   } catch (e) {}
-  return [
-    {
-      id: `batch_seed_1_${pid}`,
-      projectId: pid,
-      date: "14 Oct 2026",
-      filename: "ACTA2_Included_103_Studies.ris",
-      addedCount: 75,
-      referencesCount: 103,
-      duplicatesCount: 28,
-      mergedCount: 0,
-      source: "Scopus",
-      studyIds: [],
-    },
-    {
-      id: `batch_seed_2_${pid}`,
-      projectId: pid,
-      date: "14 Oct 2026",
-      filename: "export_0b88f950-fa22-4142-bbd2-282685ff0f2f_2026-10-13T194351.786774561.ris",
-      addedCount: 1181,
-      referencesCount: 1226,
-      duplicatesCount: 45,
-      mergedCount: 0,
-      source: "Scopus",
-      undoneAt: "14 Oct 2026",
-      studyIds: [],
-    },
-    {
-      id: `batch_seed_3_${pid}`,
-      projectId: pid,
-      date: "14 Oct 2026",
-      filename: "records.ris",
-      addedCount: 1271,
-      referencesCount: 1396,
-      duplicatesCount: 125,
-      mergedCount: 0,
-      source: "Embase",
-      undoneAt: "18 Oct 2026",
-      studyIds: [],
-    },
-  ];
+  return [];
 };
 
 export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean }) {

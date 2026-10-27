@@ -34,7 +34,8 @@ import {
   AlertTriangle,
   Upload,
   FileText,
-  Bot,
+  Shield,
+  ShieldCheck,
   Check,
   ExternalLink,
   HelpCircle,
@@ -2027,16 +2028,16 @@ export function ScreeningPage() {
 
               {/* Co-Scientist Verdict & Confidence Card */}
               {selectedStudy.ai_decision && (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+                <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Bot className="w-4 h-4 text-indigo-600" />
-                      <span className="text-xs font-bold text-slate-800">
+                      <Shield className="w-4 h-4 text-[#814d75] fill-[#814d75]/15" aria-hidden="true" />
+                      <span className="text-xs font-bold text-[#3a0f34]">
                         Co-Scientist Recommendation: <span className="capitalize">{selectedStudy.ai_decision}</span>
                       </span>
                     </div>
                     {selectedStudy.ai_confidence && (
-                      <span className="text-xs font-semibold text-slate-600">
+                      <span className="text-xs font-semibold text-[#62535d]">
                         {Math.round(selectedStudy.ai_confidence * 100)}% Confidence
                       </span>
                     )}
@@ -2044,14 +2045,14 @@ export function ScreeningPage() {
 
                   {/* Confidence Progress Bar */}
                   {selectedStudy.ai_confidence && (
-                    <div className="w-full bg-slate-200 rounded-full h-1.5">
+                    <div className="w-full bg-[#eee7ec] rounded-full h-1.5 overflow-hidden">
                       <div
                         className={`h-1.5 rounded-full ${
                           selectedStudy.ai_confidence >= 0.8
-                            ? "bg-emerald-500"
+                            ? "bg-[#3a0f34]"
                             : selectedStudy.ai_confidence >= 0.6
-                            ? "bg-amber-500"
-                            : "bg-rose-500"
+                            ? "bg-[#814d75]"
+                            : "bg-[#7c5800]"
                         }`}
                         style={{ width: `${Math.round(selectedStudy.ai_confidence * 100)}%` }}
                       />
@@ -2059,7 +2060,7 @@ export function ScreeningPage() {
                   )}
 
                   {selectedStudy.ai_reason && (
-                    <p className="text-xs text-slate-700 italic bg-white p-2.5 rounded border border-slate-200">
+                    <p className="text-xs text-[#4f444b] italic bg-white p-2.5 rounded-lg border border-[#d2c2cb]">
                       &ldquo;{selectedStudy.ai_reason}&rdquo;
                     </p>
                   )}
@@ -2067,25 +2068,25 @@ export function ScreeningPage() {
               )}
 
               <TagBadges index={tagIndex.data} studyId={selectedStudy.study_id} />
-              <details className="rounded-lg border border-slate-200">
-                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-800">Comments & tags</summary>
+              <details className="rounded-lg border border-[#d2c2cb]">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#3a0f34]">Comments & tags</summary>
                 <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
               </details>
 
               {/* Co-Scientist Clarification Questions Panel */}
               {(studyClarifications.length > 0 || selectedStudy.screening_status === "awaiting_clarification" || selectedStudy.ai_decision === "maybe") && (
-                <div className="bg-gradient-to-r from-purple-50/90 to-indigo-50/90 border-2 border-purple-300 rounded-xl p-4 space-y-3 shadow-xs animate-tag-pop">
+                <div className="bg-[#fbf9f4] border border-[#814d75] rounded-xl p-4 space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-purple-950 font-bold text-xs">
-                      <div className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center shadow-xs">
-                        <Bot className="w-4 h-4" />
+                    <div className="flex items-center gap-2 text-[#3a0f34] font-bold text-xs">
+                      <div className="w-6 h-6 rounded-lg bg-[#3a0f34] text-[#fbf9f4] flex items-center justify-center shadow-xs">
+                        <Shield className="w-3.5 h-3.5 fill-[#fbf9f4]/20" aria-hidden="true" />
                       </div>
                       <div>
-                        <span className="block text-purple-900 font-bold">Co-Scientist Clarification Request</span>
-                        <span className="text-[10px] text-purple-600 font-normal">Ambiguous eligibility against PICO criteria &bull; Human clarification needed</span>
+                        <span className="block text-[#3a0f34] font-bold">Co-Scientist Clarification Request</span>
+                        <span className="text-[10px] text-[#62535d] font-normal">Ambiguous eligibility against PICO criteria &bull; Human clarification needed</span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 border border-purple-300">
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb]">
                       Awaiting Clarification
                     </span>
                   </div>
@@ -2095,10 +2096,10 @@ export function ScreeningPage() {
                       const isAnswered = q.status === "answered";
 
                       return (
-                        <div key={q.question_id} className="bg-white border border-purple-100 rounded-lg p-3 space-y-2.5">
-                          <p className="text-xs font-semibold text-slate-800">{q.question_text}</p>
+                        <div key={q.question_id} className="bg-white border border-[#d2c2cb] rounded-lg p-3 space-y-2.5">
+                          <p className="text-xs font-semibold text-[#3a0f34]">{q.question_text}</p>
                           {q.context_excerpt && (
-                            <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-200 italic">
+                            <p className="text-[11px] text-[#4f444b] bg-[#fbf9f4] p-2 rounded border border-[#d2c2cb] italic">
                               Excerpt: &ldquo;{q.context_excerpt}&rdquo;
                             </p>
                           )}
@@ -2109,7 +2110,7 @@ export function ScreeningPage() {
                                 {q.options.map((opt) => (
                                   <label
                                     key={opt.value}
-                                    className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer"
+                                    className="flex items-center gap-2 text-xs text-[#4f444b] cursor-pointer"
                                   >
                                     <input
                                       type="radio"
@@ -2120,12 +2121,12 @@ export function ScreeningPage() {
                                         setSelectedOption(opt.value);
                                         setAnsweringQuestionId(q.question_id);
                                       }}
-                                      className="text-purple-600 focus:ring-purple-500"
+                                      className="text-[#3a0f34] focus:ring-[#814d75]"
                                     />
                                     <span>{opt.label}</span>
                                   </label>
                                 ))}
-                                <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                                <label className="flex items-center gap-2 text-xs text-[#4f444b] cursor-pointer">
                                   <input
                                     type="radio"
                                     name={`option-${q.question_id}`}
@@ -2135,7 +2136,7 @@ export function ScreeningPage() {
                                       setSelectedOption("other");
                                       setAnsweringQuestionId(q.question_id);
                                     }}
-                                    className="text-purple-600 focus:ring-purple-500"
+                                    className="text-[#3a0f34] focus:ring-[#814d75]"
                                   />
                                   <span>Other (specify below)</span>
                                 </label>
@@ -2147,7 +2148,7 @@ export function ScreeningPage() {
                                   placeholder="Enter custom clarification answer..."
                                   value={freetextAnswer}
                                   onChange={(e) => setFreetextAnswer(e.target.value)}
-                                  className="w-full text-xs p-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                  className="w-full text-xs p-2 border border-[#d2c2cb] rounded bg-[#fbf9f4] text-[#3a0f34] focus:outline-hidden focus:ring-1 focus:ring-[#814d75]"
                                 />
                               )}
 
@@ -2162,7 +2163,7 @@ export function ScreeningPage() {
                                   });
                                 }}
                                 disabled={!selectedOption || answerClarificationMutation.isPending}
-                                className="px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                className="px-3 py-1.5 text-xs font-semibold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50"
                               >
                                 {answerClarificationMutation.isPending ? (
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" />

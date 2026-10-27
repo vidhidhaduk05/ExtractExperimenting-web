@@ -308,27 +308,11 @@ def _screen(
 ) -> Optional[dict[str, Any]]:
     title, abstract = (title or "").strip(), (abstract or "").strip()
 
-    # ── Tier 1: Deterministic Boolean Search String Filter ──
+    # Note: Search syntax is a retrieval filter, not an eligibility criterion.
+    # We preserve search_string match status in metadata without vetoing eligibility.
+    search_matched = True
     if search_string and (title or abstract):
-        matched, reason_str = match_search_string(f"{title} {abstract}", search_string)
-        if not matched:
-            return {
-                "recommendation": "excluded",
-                "decision": "exclude",
-                "confidence": 0.99,
-                "reason_code": "SEARCH_STRING_EXCLUSION",
-                "reason_text": f"Search string filter excluded abstract: {reason_str}",
-                "reason": f"Search string filter excluded abstract: {reason_str}",
-                "rationale": reason_str,
-                "evidence_quote": "",
-                "quotes": [],
-                "include_keywords": [],
-                "exclude_keywords": [],
-                "matched_keywords": [],
-                "needs_clarification": False,
-                "engine": "search_string_tier1",
-                "jev_answers": {"search_string_match": False},
-            }
+        search_matched, _ = match_search_string(f"{title} {abstract}", search_string)
 
     # ── Tier 2: Focused PICO Abstract Laya ONNX Inference ──
     exclusion_reasons = _labels(exclusion_reasons)
@@ -381,29 +365,8 @@ def screen_batch(
         full_text = (study.get("full_text") or "").strip()
         study_id = str(study.get("study_id") or f"study_{idx}")
 
-        # Tier-1 Search String Evaluation
-        if search_string and (title or abstract):
-            matched, reason_str = match_search_string(f"{title} {abstract}", search_string)
-            if not matched:
-                results[idx] = {
-                    "study_id": study_id,
-                    "recommendation": "excluded",
-                    "decision": "exclude",
-                    "confidence": 0.99,
-                    "reason_code": "SEARCH_STRING_EXCLUSION",
-                    "reason_text": f"Search string filter excluded abstract: {reason_str}",
-                    "reason": f"Search string filter excluded abstract: {reason_str}",
-                    "rationale": reason_str,
-                    "evidence_quote": "",
-                    "quotes": [],
-                    "include_keywords": [],
-                    "exclude_keywords": [],
-                    "matched_keywords": [],
-                    "needs_clarification": False,
-                    "engine": "search_string_tier1",
-                    "jev_answers": {"search_string_match": False},
-                }
-                continue
+        # Search syntax is a retrieval filter, not an eligibility criterion.
+        # Eligibility is determined by PICO criteria through neural evaluation.
 
         if not (fields["population"] or fields["intervention"]):
             continue
