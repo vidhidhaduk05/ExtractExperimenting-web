@@ -1,14 +1,14 @@
 {
   "radextract_platform/backend/config.py": {
-    "mtime": 1793066364.483456,
-    "seen": 1793067195.4550784,
-    "ast_hash": "f68268e86f488b8a7ecc22d36372a9c7",
+    "mtime": 1793098005.3157668,
+    "seen": 1793099645.407909,
+    "ast_hash": "159c4e2785b5c6a0cedbc1c3ab6c763e",
     "semantic_hash": ""
   },
   "radextract_platform/backend/database.py": {
-    "mtime": 1793064263.6877794,
-    "seen": 1793065707.6043205,
-    "ast_hash": "e89a69904cafd680e705c0d8ab3230dc",
+    "mtime": 1793098005.3177574,
+    "seen": 1793099645.407909,
+    "ast_hash": "346231ba9127827b8599d2e1d41d67a2",
     "semantic_hash": ""
   },
   "radextract_platform/backend/dependencies.py": {
@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/models.py": {
-    "mtime": 1793066295.5797372,
-    "seen": 1793067195.4570825,
-    "ast_hash": "d3f7539b7a4ddadab649e8c7f45a0fea",
+    "mtime": 1793098335.4064126,
+    "seen": 1793099645.4108818,
+    "ast_hash": "792728d0a02f39797fa416a12881d01f",
     "semantic_hash": ""
   },
   "radextract_platform/backend/pyproject.toml": {
@@ -324,9 +324,9 @@
     "semantic_hash": "40c23d2d6e79e3318287b236ab28f6ad"
   },
   "radextract_platform/backend/routers/meta.py": {
-    "mtime": 1793063150.9394546,
-    "seen": 1793063767.617134,
-    "ast_hash": "6c2de56933e1942dff426b18cf704385",
+    "mtime": 1793098005.32273,
+    "seen": 1793099645.4262917,
+    "ast_hash": "b0e50d2c068ef2963f56ac030606d392",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/pdf_highlights.py": {
@@ -336,9 +336,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/projects.py": {
-    "mtime": 1791927380.369379,
-    "seen": 1791927525.429787,
-    "ast_hash": "b9d1f9c29cec559229a9d87a89c5ba2a",
+    "mtime": 1793098005.3246782,
+    "seen": 1793099645.4262917,
+    "ast_hash": "57265a5ac6c175a4cb4d44e61cc08b45",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/pubmed.py": {
@@ -366,9 +366,9 @@
     "semantic_hash": "d3327fbdf4184cb26a8c13f46880e191"
   },
   "radextract_platform/backend/routers/screening.py": {
-    "mtime": 1793065317.7266252,
-    "seen": 1793065707.6338089,
-    "ast_hash": "7e7f62bbe45e92b0a483e036c87c1a27",
+    "mtime": 1793098005.3285902,
+    "seen": 1793099645.4262917,
+    "ast_hash": "5d156ec0a48dbe8a64781f6bb465242f",
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/statistics.py": {
@@ -432,9 +432,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/dedup_service.py": {
-    "mtime": 1793063324.0172613,
-    "seen": 1793063767.6326456,
-    "ast_hash": "d6cc9874f9be282d9184458df0fd1bbc",
+    "mtime": 1793098005.3366406,
+    "seen": 1793099645.4416285,
+    "ast_hash": "af4999b602295d16e8604aaf96817a3f",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/docling_extract_service.py": {
@@ -552,9 +552,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/search_string_generator.py": {
-    "mtime": 1792882002.665915,
-    "seen": 1792886070.068915,
-    "ast_hash": "9e6cae73f4cb263aa5b599013db1b980",
+    "mtime": 1793098005.3415456,
+    "seen": 1793099645.4580586,
+    "ast_hash": "95e26b57abedb79b1605a5f4178087bb",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/stats_engine.py": {
@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/api.ts": {
-    "mtime": 1793095298.8723147,
-    "seen": 1793095643.1284223,
-    "ast_hash": "0244cbadf8ddd9b073b6c4bfd389b94a",
+    "mtime": 1793097338.7426987,
+    "seen": 1793099645.5216076,
+    "ast_hash": "8dc107e87a633bb8e59a6d88dbf93d3a",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/lib/utils.ts": {
@@ -846,9 +846,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PicoHypothesisPage.tsx": {
-    "mtime": 1792994474.656353,
-    "seen": 1792994782.1053522,
-    "ast_hash": "69b38d9d989f021ebc611b790e854faf",
+    "mtime": 1793097373.809059,
+    "seen": 1793099645.5438187,
+    "ast_hash": "92b157a2a84b31f7bdff36a4211f134d",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PicoPage.tsx": {
@@ -858,9 +858,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/PrismaFlowPage.tsx": {
-    "mtime": 1793062932.0616958,
-    "seen": 1793063767.731064,
-    "ast_hash": "df725211f0f217804aaa75e266d30764",
+    "mtime": 1793097770.2389457,
+    "seen": 1793099645.5458262,
+    "ast_hash": "8044b2af631a7de56da604ed28182401",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ProjectCreate.tsx": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ScreeningPage.tsx": {
-    "mtime": 1793072628.1789246,
-    "seen": 1793073650.0705104,
-    "ast_hash": "6d60ad01df70887c39bc284638114200",
+    "mtime": 1793097847.7112875,
+    "seen": 1793099645.5517774,
+    "ast_hash": "8d87b7a660964f2c5ba005b1667da50e",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyImport.tsx": {
@@ -918,9 +918,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/StudyList.tsx": {
-    "mtime": 1793072862.8681266,
-    "seen": 1793073650.0705104,
-    "ast_hash": "4d166790f3c5bc9bf64311dfcd27de52",
+    "mtime": 1793097770.2439518,
+    "seen": 1793099645.5517774,
+    "ast_hash": "023e29d9ea6708719c20016020812542",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/vite-env.d.ts": {
@@ -972,9 +972,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/db_backend.py": {
-    "mtime": 1791926090.8937633,
-    "seen": 1791927525.4435804,
-    "ast_hash": "5e1457bb7af1fc2b7b73ba54e95ad47d",
+    "mtime": 1793098005.3326142,
+    "seen": 1793099645.4416285,
+    "ast_hash": "832fa033d44cd4df0bd50e2d6a32f528",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/storage_backend.py": {
@@ -1890,9 +1890,9 @@
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1793073677.615322,
-    "seen": 1793095643.1985507,
-    "ast_hash": "d266333a855053d98cb5daa57c69b764",
+    "mtime": 1793099433.6073098,
+    "seen": 1793099645.5656357,
+    "ast_hash": "56f918b9825e69e71c3a6b1ed5d5ddb3",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {
@@ -2160,9 +2160,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/prisma_service.py": {
-    "mtime": 1792998697.4851434,
-    "seen": 1792999046.084202,
-    "ast_hash": "8692936c191fea6ac1d5ae06050b258c",
+    "mtime": 1793098005.3392286,
+    "seen": 1793099645.451025,
+    "ast_hash": "5cc8bec25c547b433a20a02f7da80896",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_prisma_service.py": {
@@ -2382,9 +2382,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_duplicate_review.py": {
-    "mtime": 1791925374.5629056,
-    "seen": 1791927525.4696093,
-    "ast_hash": "9772d37ce74e389e75c843676d8b05c6",
+    "mtime": 1793098005.3473346,
+    "seen": 1793099645.4663348,
+    "ast_hash": "d019eaaf1a036bdaafa8581b918568af",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_extraction_decisions.py": {
@@ -2508,15 +2508,15 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/routers/claimscape.py": {
-    "mtime": 1792279735.8578286,
-    "seen": 1792279857.350563,
-    "ast_hash": "bd926b92c57763cef92646ffe4823357",
+    "mtime": 1793098005.3210611,
+    "seen": 1793099645.425222,
+    "ast_hash": "b9114bf6153c4d75f8fc091164a53835",
     "semantic_hash": ""
   },
   "radextract_platform/backend/services/claimscape_fast_pipeline.py": {
-    "mtime": 1792985762.746615,
-    "seen": 1792987867.94579,
-    "ast_hash": "a35429cb8c15d2ed2839986849296961",
+    "mtime": 1793098005.3326142,
+    "seen": 1793099645.4416285,
+    "ast_hash": "994d11246520bf406a2f2a91428a64df",
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_graphify_auth.py": {
@@ -2592,9 +2592,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/pages/ClaimscapePage.tsx": {
-    "mtime": 1792994789.7174735,
-    "seen": 1792994965.657464,
-    "ast_hash": "b5cbad09f6de68bb87fee0fa93b61019",
+    "mtime": 1793098005.358267,
+    "seen": 1793099645.539799,
+    "ast_hash": "a33671bde8ada30cd8805b7a30e098a8",
     "semantic_hash": ""
   },
   ".agents/rules/gravitas-invariants.md": {
@@ -3780,9 +3780,9 @@
     "semantic_hash": ""
   },
   "radextract_platform/backend/tests/test_claimscape_live_pipeline.py": {
-    "mtime": 1792349169.8858824,
-    "seen": 1792349706.80611,
-    "ast_hash": "f83a1a4c8f75a47106a639da10979175",
+    "mtime": 1793098005.3435645,
+    "seen": 1793099645.4663348,
+    "ast_hash": "03a175bdf27eb5efa8c75f09ce02f7b9",
     "semantic_hash": ""
   },
   "radextract_platform/frontend/src/data/demoRigorData.ts": {
@@ -5391,6 +5391,48 @@
     "mtime": 1793071796.3903377,
     "seen": 1793073650.0324845,
     "ast_hash": "e682f1f5c1f0f97019d3aa2b4e311ae0",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/scripts/eval_dedup_gold.py": {
+    "mtime": 1793098005.3306026,
+    "seen": 1793099645.4262917,
+    "ast_hash": "26dc36b84dc7369b9bbad8f62f47126a",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/services/duplicate_finder.py": {
+    "mtime": 1793098005.3376536,
+    "seen": 1793099645.4416285,
+    "ast_hash": "59b642a91309d6cd1f15db881d0b8caf",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_dedup_safety.py": {
+    "mtime": 1793098005.3455775,
+    "seen": 1793099645.4663348,
+    "ast_hash": "0aabec99db4b6be348b3d0bd4e00fe75",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_eval_dedup_gold.py": {
+    "mtime": 1793098005.3473346,
+    "seen": 1793099645.4663348,
+    "ast_hash": "faa38ed827cc9a73a02df5951496e4c5",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_hypothesis_generation.py": {
+    "mtime": 1793096846.7331426,
+    "seen": 1793099645.4663348,
+    "ast_hash": "8881cf8e558b0edd2f727dc577d68cc3",
+    "semantic_hash": ""
+  },
+  "radextract_platform/backend/tests/test_zoplicate_dedup.py": {
+    "mtime": 1793098005.3493505,
+    "seen": 1793099645.49248,
+    "ast_hash": "d93c815acea7486e8fa5979aacebb6e6",
+    "semantic_hash": ""
+  },
+  "PLANS/screening_dashboard_cleanup_plan.md": {
+    "mtime": 1793096056.897927,
+    "seen": 1793099645.6677246,
+    "ast_hash": "5c202163ecc4b24806bfe6a02cf98ce2",
     "semantic_hash": ""
   }
 }
