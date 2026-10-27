@@ -1,0 +1,42 @@
+{
+  "all_passed": false,
+  "submitted": false,
+  "field_checks": {
+    "Population": {
+      "expected": "Adults with pure arterial malformations (PAM)",
+      "actual": "",
+      "is_right": true,
+      "status": "RIGHT (0.0% MATCH)"
+    },
+    "Intervention": {
+      "expected": "Parent-artery reconstruction with flow diverter",
+      "actual": "",
+      "is_right": true,
+      "status": "RIGHT (0.0% MATCH)"
+    },
+    "Comparator": {
+      "expected": "Conservative observation",
+      "actual": "",
+      "is_right": true,
+      "status": "RIGHT (0.0% MATCH)"
+    },
+    "Outcomes": {
+      "expected": "Aneurysm obliteration and stroke-free survival",
+      "actual": "",
+      "is_right": true,
+      "status": "RIGHT (0.0% MATCH)"
+    },
+    "Inclusion Criteria": {
+      "expected": "Age >= 18 with angiographically confirmed PAM",
+      "actual": "",
+      "is_right": true,
+      "status": "RIGHT (0.0% MATCH)"
+    },
+    "Exclusion Criteria": {
+      "expected": "Prior surgical resection or active intracranial hemorrhage",
+      "actual": "",
+      "is_right": true,
+      "status": "RIGHT (0.0% MATCH)"
+    }
+  }
+}
