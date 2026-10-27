@@ -20,6 +20,12 @@ import {
   FileText,
   LineChart,
   ArrowRight,
+  ArrowLeft,
+  ChevronDown,
+  LayoutGrid,
+  Bell,
+  Plus,
+  Check,
   X,
   ExternalLink,
   Table,
@@ -37,9 +43,15 @@ interface NavItemDef {
 
 const SHELL_NAV_ITEMS: NavItemDef[] = [
   {
+    to: () => "/projects",
+    matchPattern: /^\/projects\/?$/,
+    label: "All Projects",
+    icon: LayoutGrid,
+  },
+  {
     to: (pid) => (pid ? `/projects/${pid}` : "/projects"),
-    matchPattern: /^\/projects(\/[^/]+)?$/,
-    label: "Projects",
+    matchPattern: /^\/projects\/[^/]+\/?$/,
+    label: "Project Overview",
     icon: Folder,
   },
   {
@@ -115,6 +127,29 @@ export function AppShell() {
 
   const [activeDockTab, setActiveDockTab] = useState<"todos" | "results" | "prisma">("todos");
   const [shareCopied, setShareCopied] = useState(false);
+  const [isProjectSwitcherOpen, setIsProjectSwitcherOpen] = useState(false);
+
+  // Close project switcher on navigation or outside click
+  useEffect(() => {
+    setIsProjectSwitcherOpen(false);
+  }, [location.pathname]);
+
+  // Fetch all projects for quick switcher dropdown
+  const { data: allProjects = [] } = useQuery<Project[]>({
+    queryKey: ["projects"],
+    queryFn: api.listProjects,
+    staleTime: 30000,
+  });
+
+  // Effective project ID for universal clarification notifications
+  const effectiveProjectId = projectId || (allProjects.length > 0 ? allProjects[0]?.id : "proj_pam_current");
+
+  // Fetch pending clarification questions count for universal notification bell badge
+  const { data: pendingClarifications = [] } = useQuery({
+    queryKey: ["pending-clarifications", effectiveProjectId],
+    queryFn: () => (effectiveProjectId ? api.listClarifications(effectiveProjectId, "pending") : Promise.resolve([])),
+    refetchInterval: 6000,
+  });
 
   // Fetch project details for breadcrumbs
   const { data: project } = useQuery<Project>({
@@ -195,9 +230,9 @@ export function AppShell() {
         <div className="flex flex-col items-center gap-4">
           {/* Top Brand Monogram */}
           <Link
-            to={projectId ? `/projects/${projectId}` : "/projects"}
+            to="/projects"
             className="w-9 h-9 rounded flex items-center justify-center font-serif text-lg font-bold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
-            title="RadExtract"
+            title="All Projects (Catalog)"
           >
             R
           </Link>
@@ -259,31 +294,156 @@ export function AppShell() {
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#fbf9f4]">
         {/* 2. TOP BAR (56px) - Wine #3a0f34 Background, Light Text #fbf9f4 */}
         <header
-          className="h-[56px] min-h-[56px] max-h-[56px] bg-[#3a0f34] text-[#fbf9f4] px-4 flex items-center justify-between z-20 select-none shadow-xs"
+          className="h-[56px] min-h-[56px] max-h-[56px] bg-[#3a0f34] text-[#fbf9f4] px-3 sm:px-4 flex items-center justify-between z-20 select-none shadow-xs border-b border-[#4e1c47]"
           role="banner"
         >
-          {/* Left Breadcrumb */}
-          <div className="flex items-center gap-2 min-w-0">
+          {/* Left Breadcrumb & Universal Navigation */}
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            {/* Universal Return to All Projects Action Button */}
             <Link
-              to={projectId ? `/projects/${projectId}` : "/projects"}
-              className="font-serif font-bold text-sm text-[#fbf9f4] hover:underline truncate max-w-[280px] sm:max-w-[420px]"
-              title={project?.name || "Projects"}
+              to="/projects"
+              className={cn(
+                "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-all shrink-0",
+                "bg-[#4e1c47] hover:bg-[#1a0017] text-[#fbf9f4] border border-[#814d75] shadow-2xs hover:border-[#ffdea6]",
+                !projectId && location.pathname.startsWith("/projects") && "ring-1 ring-[#ffdea6] bg-[#1a0017]"
+              )}
+              title="Return to All Projects (Global Project Catalog)"
+              aria-label="All Projects Catalog"
             >
-              {project?.name || (projectId ? `Project ${projectId.slice(0, 8)}` : "RadExtract")}
+              <ArrowLeft className="w-3.5 h-3.5 text-[#ffdea6] shrink-0" />
+              <span className="inline tracking-tight">All Projects</span>
             </Link>
-            <span className="text-[#814d75] font-sans text-xs">/</span>
-            <span className="text-xs font-['Work_Sans'] font-medium text-[#ffdea6] truncate">
-              {stageName}
-            </span>
+
+            {projectId ? (
+              <>
+                <span className="text-[#814d75] font-sans text-xs select-none">/</span>
+
+                {/* Project Name + Project Switcher Dropdown */}
+                <div className="relative flex items-center min-w-0">
+                  <div className="inline-flex items-center gap-1 max-w-[170px] sm:max-w-[280px] md:max-w-[380px] bg-[#4e1c47]/50 hover:bg-[#4e1c47] px-2 py-0.5 rounded border border-transparent hover:border-[#814d75] transition-colors">
+                    <Link
+                      to={`/projects/${projectId}`}
+                      className="font-serif font-bold text-xs sm:text-sm text-[#fbf9f4] hover:text-[#ffdea6] truncate"
+                      title={project?.name || `Project ${projectId}`}
+                    >
+                      {project?.name || `Project ${projectId.slice(0, 8)}`}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setIsProjectSwitcherOpen(!isProjectSwitcherOpen)}
+                      className="p-0.5 hover:text-[#ffdea6] text-[#d2c2cb] transition-colors"
+                      title="Switch project"
+                      aria-label="Toggle project switcher"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Project Switcher Dropdown Menu */}
+                  {isProjectSwitcherOpen && (
+                    <div
+                      className="absolute top-full left-0 mt-1.5 w-72 sm:w-80 bg-[#ffffff] border border-[#d2c2cb] rounded-lg shadow-xl py-2 z-50 text-[#4f444b] font-['Work_Sans']"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="px-3 py-1.5 border-b border-[#d2c2cb] flex items-center justify-between">
+                        <span className="text-[11px] font-mono uppercase font-bold text-[#814d75]">
+                          Switch Research Project
+                        </span>
+                        <Link
+                          to="/projects/new"
+                          onClick={() => setIsProjectSwitcherOpen(false)}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#3a0f34] hover:underline"
+                        >
+                          <Plus className="w-3 h-3" /> New
+                        </Link>
+                      </div>
+
+                      <div className="max-h-56 overflow-y-auto py-1">
+                        {allProjects.length === 0 ? (
+                          <div className="px-3 py-2 text-xs text-[#72636d]">No other projects found</div>
+                        ) : (
+                          allProjects.map((p) => {
+                            const isCurrent = p.id === projectId;
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => {
+                                  setIsProjectSwitcherOpen(false);
+                                  navigate(`/projects/${p.id}`);
+                                }}
+                                className={cn(
+                                  "w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-[#eee7ec]/60 transition-colors",
+                                  isCurrent && "bg-[#eee7ec] font-semibold text-[#3a0f34]"
+                                )}
+                              >
+                                <div className="min-w-0 pr-2">
+                                  <div className="truncate font-medium">{p.name}</div>
+                                  <div className="text-[10px] text-[#72636d] font-mono truncate">
+                                    {p.id.slice(0, 10)}
+                                  </div>
+                                </div>
+                                {isCurrent && <Check className="w-3.5 h-3.5 text-[#814d75] shrink-0" />}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      <div className="border-t border-[#d2c2cb] px-3 pt-2 pb-1">
+                        <Link
+                          to="/projects"
+                          onClick={() => setIsProjectSwitcherOpen(false)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#814d75] hover:text-[#3a0f34] transition-colors"
+                        >
+                          <Folder className="w-3.5 h-3.5" />
+                          <span>View All Projects Catalog</span>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <span className="text-[#814d75] font-sans text-xs select-none">/</span>
+
+                {/* Current Stage Pill */}
+                <span className="text-xs font-['Work_Sans'] font-medium text-[#ffdea6] truncate px-2 py-0.5 rounded bg-[#4e1c47]/70 border border-[#814d75]/70 hidden xs:inline-block">
+                  {stageName}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-[#814d75] font-sans text-xs select-none">/</span>
+                <span className="text-xs font-['Work_Sans'] font-medium text-[#ffdea6] truncate px-2 py-0.5 rounded bg-[#4e1c47]/70 border border-[#814d75]/70">
+                  {stageName}
+                </span>
+              </>
+            )}
           </div>
 
           {/* Right Action Controls */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Universal Clarification Notification Bell */}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("toggle-clarification-inbox"))}
+              className="relative inline-flex items-center justify-center p-1.5 rounded bg-[#4e1c47] hover:bg-[#1a0017] text-[#fbf9f4] border border-[#814d75] transition-colors"
+              title={`Clarification Questions & Notifications (${pendingClarifications.length} pending)`}
+              aria-label="Toggle notifications and clarifications"
+            >
+              <Bell className="h-4 w-4 text-[#ffdea6]" />
+              {pendingClarifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.2 min-w-[16px] h-4 rounded-full bg-[#ffdea6] text-[#3a0f34] text-[10px] font-bold flex items-center justify-center shadow-xs">
+                  {pendingClarifications.length}
+                </span>
+              )}
+            </button>
+
             {/* Live PRISMA Badge */}
             {projectId && (
               <Link
                 to={`/projects/${projectId}/prisma`}
-                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#4e1c47] hover:bg-[#66365c] text-[#fbf9f4] border border-[#814d75] text-xs font-mono transition-colors"
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#4e1c47] hover:bg-[#66365c] text-[#fbf9f4] border border-[#814d75] text-xs font-mono transition-colors"
                 title="PRISMA live progress (refetched on focus)"
               >
                 <GitBranch className="h-3.5 w-3.5 text-[#ffdea6]" />
@@ -297,11 +457,11 @@ export function AppShell() {
             {projectId && (
               <Link
                 to={`/projects/${projectId}/export`}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#fbf9f4] bg-[#4e1c47] hover:bg-[#1a0017] border border-[#814d75] rounded transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-[#fbf9f4] bg-[#4e1c47] hover:bg-[#1a0017] border border-[#814d75] rounded transition-colors"
                 title="Export synthesis package"
               >
                 <Download className="h-3.5 w-3.5" />
-                <span className="hidden md:inline">Export</span>
+                <span className="hidden sm:inline">Export</span>
               </Link>
             )}
 
@@ -309,11 +469,11 @@ export function AppShell() {
             <button
               type="button"
               onClick={handleShare}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#fbf9f4] bg-[#4e1c47] hover:bg-[#1a0017] border border-[#814d75] rounded transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-[#fbf9f4] bg-[#4e1c47] hover:bg-[#1a0017] border border-[#814d75] rounded transition-colors"
               title="Share review workspace link"
             >
               <Share2 className="h-3.5 w-3.5" />
-              <span className="hidden md:inline">{shareCopied ? "Copied!" : "Share"}</span>
+              <span className="hidden sm:inline">{shareCopied ? "Copied!" : "Share"}</span>
             </button>
 
             {/* Dock Toggle Button */}
@@ -746,11 +906,9 @@ export function AppShell() {
       </div>
 
       {/* Global Clarification Toast Notification Center */}
-      {projectId && (
-        <ClarificationNotificationCenter
-          projectId={projectId}
-        />
-      )}
+      <ClarificationNotificationCenter
+        projectId={effectiveProjectId}
+      />
     </div>
   );
 }
