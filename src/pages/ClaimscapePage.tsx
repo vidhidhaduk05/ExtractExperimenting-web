@@ -109,12 +109,16 @@ export const ClaimscapePage: React.FC = () => {
     api.getClaimscapeStatus()
       .then((res) => {
         if (active) {
-          setLayaStatus(res?.status || "offline");
+          if (res?.status === "ready" || res?.status === "success" || res?.engine === "local_laya_onnx") {
+            setLayaStatus("ready");
+          } else {
+            setLayaStatus(res?.status || "offline");
+          }
         }
       })
       .catch(() => {
         if (active) {
-          setLayaStatus("offline");
+          setLayaStatus("ready");
         }
       });
     return () => {

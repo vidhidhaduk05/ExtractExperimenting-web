@@ -974,6 +974,14 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.includes("/meta-analyses")) {
     return DEMO_META_ANALYSES as unknown as T;
   }
+  if (path.includes("/claimscape/status")) {
+    return {
+      status: "ready",
+      engine: "local_laya_onnx",
+      model: "ModernBERT-large-system-1",
+      max_papers_per_batch: 300,
+    } as unknown as T;
+  }
   if (path.includes("/criteria")) {
     return DEMO_CRITERIA as unknown as T;
   }
