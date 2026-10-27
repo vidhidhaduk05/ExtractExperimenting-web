@@ -179,11 +179,18 @@ def create_app() -> FastAPI:
         if os.path.isdir(assets_dir):
             app.mount("/assets", StaticFiles(directory=assets_dir), name="static-assets")
 
-        @app.get("/{full_path:path}")
-        async def serve_spa(full_path: str):
+        @app.api_route("/{full_path:path}", methods=["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+        async def serve_spa(request: Request, full_path: str):
             if full_path.startswith("api/") or full_path.startswith("health") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
                 from fastapi import HTTPException
                 raise HTTPException(status_code=404, detail="Not found")
+
+            if request.method not in ("GET", "HEAD"):
+                return JSONResponse(
+                    status_code=404,
+                    content={"detail": f"API endpoint not found: {request.method} /{full_path}. Did you mean /api/{full_path}?"},
+                )
+
             file_path = os.path.join(frontend_dist, full_path)
             if os.path.isfile(file_path):
                 return FileResponse(file_path)
