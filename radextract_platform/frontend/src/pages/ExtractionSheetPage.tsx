@@ -8,7 +8,7 @@ import {
   type ExtractionGridCell,
   type ExtractionGridResponse
 } from "../lib/api";
-import { DEMO_STUDIES, DEMO_VARIABLES, DEMO_EXTRACTIONS, type CodebookRule } from "../lib/demoData";
+import { type CodebookRule } from "../lib/api";
 import {
   FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
@@ -102,9 +102,6 @@ export function ExtractionSheetPage() {
     if (gridData?.variables && gridData.variables.length > 0) {
       return [...gridData.variables].sort((a, b) => a.order_index - b.order_index);
     }
-    if (projectId === "demo") {
-      return [...DEMO_VARIABLES].sort((a, b) => a.order_index - b.order_index);
-    }
     return [];
   }, [gridData, projectId]);
 
@@ -112,18 +109,6 @@ export function ExtractionSheetPage() {
   const studies: ExtractionGridStudy[] = useMemo(() => {
     if (gridData?.studies && gridData.studies.length > 0) {
       return gridData.studies;
-    }
-    if (projectId === "demo") {
-      return DEMO_STUDIES.map((s, idx) => ({
-        study_id: s.study_id,
-        study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || 2024}`,
-        title: s.title,
-        authors: s.authors,
-        publication_year: s.publication_year,
-        journal: s.journal,
-        doi: s.doi,
-        pmid: s.pmid,
-      }));
     }
     return [];
   }, [gridData, projectId]);
@@ -135,28 +120,6 @@ export function ExtractionSheetPage() {
     const cellsData = gridData?.cells || (gridData as any)?.extractions;
     if (cellsData) {
       setCellsMap(cellsData);
-    } else if (projectId === "demo") {
-      const demoCells: Record<string, Record<string, any>> = {};
-      DEMO_STUDIES.forEach((s) => {
-        demoCells[s.study_id] = {};
-        const exts = (DEMO_EXTRACTIONS as any)[s.study_id] || [];
-        exts.forEach((e: any) => {
-          if (e.variable_id) {
-            demoCells[s.study_id][e.variable_id] = {
-              extraction_id: e.extraction_id || `ext_${s.study_id}_${e.variable_id}`,
-              value: e.value || "",
-              confidence: e.confidence ?? 0.95,
-              evidence_quote: e.quote || "",
-              source_page: e.source_page || 1,
-              is_verified: !!e.is_verified,
-              is_edited: !!e.is_edited,
-              verification_status: e.is_verified ? (e.is_edited ? "modified" : "verified") : "unverified",
-              extraction_source: e.is_edited ? "manual" : "ai",
-            };
-          }
-        });
-      });
-      setCellsMap(demoCells);
     }
   }, [gridData, projectId]);
 

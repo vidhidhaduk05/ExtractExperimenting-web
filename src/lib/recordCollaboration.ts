@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getApiBase, shouldUseDemoFallback } from "./api";
+import { getApiBase } from "./api";
 
 export interface RecordAnnotation {
   annotation_id: string;

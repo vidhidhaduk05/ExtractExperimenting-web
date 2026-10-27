@@ -1,42 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getApiBase, shouldUseDemoFallback } from "./api";
-import { listBookmarks, saveBookmark } from "./bookmarks";
+import { getApiBase } from "./api";
+import { listBookmarks, saveBookmark, bookmarkScope } from "./bookmarks";
 
-vi.mock("./api", () => ({ getApiBase: vi.fn(() => "/api"), shouldUseDemoFallback: vi.fn(() => true) }));
+vi.mock("./api", () => ({ getApiBase: vi.fn(() => "/api") }));
 
 beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
   vi.mocked(getApiBase).mockReturnValue("/api");
-  vi.mocked(shouldUseDemoFallback).mockReturnValue(true);
 });
 
 describe("personal bookmarks", () => {
-  it("persists, deduplicates and removes saved studies", async () => {
-    await saveBookmark("p1", "s1", true);
-    await saveBookmark("p1", "s1", true);
-    expect(await listBookmarks("p1")).toEqual(["s1"]);
-    await saveBookmark("p1", "s1", false);
-    expect(await listBookmarks("p1")).toEqual([]);
-  });
-
-  it("separates demo users and projects", async () => {
-    localStorage.setItem("username", "alice");
-    await saveBookmark("p1", "s1", true);
-    expect(await listBookmarks("p2")).toEqual([]);
-    localStorage.setItem("username", "bob");
-    expect(await listBookmarks("p1")).toEqual([]);
-    localStorage.setItem("username", "alice");
-    expect(await listBookmarks("p1")).toEqual(["s1"]);
-  });
-
-  it("reports storage failure instead of claiming success", async () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("Storage full"); });
-    await expect(saveBookmark("p1", "s1", true)).rejects.toThrow("Storage full");
+  it("scopes bookmarks to the signed-in user from the JWT subject", () => {
+    localStorage.setItem("token", "x." + btoa(JSON.stringify({ sub: "alice" })).replace(/=/g, "") + ".z");
+    expect(bookmarkScope()).toBe("user:alice");
+    localStorage.removeItem("token");
+    expect(bookmarkScope()).toBe("anonymous");
   });
 
   it("sends authenticated saves and never falls back after server failure", async () => {
-    vi.mocked(shouldUseDemoFallback).mockReturnValue(false);
     localStorage.setItem("token", "test-token");
     const request = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: false, json: async () => ({ detail: "Access denied" }),
@@ -46,11 +28,17 @@ describe("personal bookmarks", () => {
       method: "PUT", body: '{"bookmarked":true}',
       headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
     }));
-    expect(localStorage.length).toBe(1);
   });
 
-  it("requires authentication in live mode", async () => {
-    vi.mocked(shouldUseDemoFallback).mockReturnValue(false);
-    await expect(listBookmarks("p1")).rejects.toThrow("Sign in");
+  it("lists bookmarks from the backend", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true, json: async () => ({ study_ids: ["s1", "s2"] }),
+    } as Response);
+    expect(await listBookmarks("p1")).toEqual(["s1", "s2"]);
+  });
+
+  it("surfaces backend failures instead of returning local data", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"));
+    await expect(listBookmarks("p1")).rejects.toThrow("Network error");
   });
 });

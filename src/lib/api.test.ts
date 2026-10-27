@@ -1,6 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
-import { api, API_BASE, shouldUseDemoFallback } from './api';
-import { DEMO_PROJECT, DEMO_STUDIES, DEMO_PRISMA, DEMO_SCREENING_SUMMARY, DEMO_REVIEW_MATRIX } from './demoData';
+import { api, API_BASE } from './api';
+
+// Fixtures defined IN this test file — the app has no demo data module.
+const FIXTURE_PROJECT = {
+  project_id: 'proj_fixture_1',
+  name: 'Fixture Project',
+  description: '',
+  pico_json: '{}',
+  hypothesis: '',
+  research_question: '',
+  created_at: '2026-01-01T00:00:00Z',
+};
 
 if (typeof localStorage === 'undefined') {
   let store: Record<string, string> = {};
@@ -25,7 +35,7 @@ describe('API Library', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Endpoint Resolution and Demo Fallback', () => {
+  describe('Endpoint Resolution and loud failures', () => {
     it('should correctly call the API with the base URL', async () => {
       const mockResponse = { data: 'test' };
       (global.fetch as Mock).mockResolvedValueOnce({
@@ -60,9 +70,8 @@ describe('API Library', () => {
       ["projects", () => api.listProjects()],
       ["studies", () => api.listStudies("proj-123")],
       ["health", () => api.health()],
-    ])("rejects failed live %s requests instead of returning demo results", async (_name, call) => {
+    ])("rejects failed live %s requests instead of returning fake results", async (_name, call) => {
       global.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error"));
-      vi.spyOn(console, "warn").mockImplementation(() => {});
       await expect(call()).rejects.toThrow("Network error");
     });
 
@@ -70,15 +79,18 @@ describe('API Library', () => {
       (global.fetch as Mock).mockResolvedValueOnce({
         ok: false, status: 400, json: async () => ({ detail: "Custom error message" }),
       });
-      vi.spyOn(console, "warn").mockImplementation(() => {});
       await expect(api.listProjects()).rejects.toThrow("Custom error message");
     });
 
-    it("uses demo results only after explicit opt-in", async () => {
-      localStorage.setItem("demo_mode", "true");
-      expect(shouldUseDemoFallback()).toBe(true);
-      expect(await api.listProjects()).toEqual([DEMO_PROJECT]);
-      expect(global.fetch).not.toHaveBeenCalled();
+    it("never returns fabricated projects on any failure mode", async () => {
+      // 404
+      (global.fetch as Mock).mockResolvedValueOnce({
+        ok: false, status: 404, json: async () => ({ detail: "Not found" }),
+      });
+      await expect(api.getProject("proj_real")).rejects.toThrow();
+      // network failure
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error"));
+      await expect(api.getProject("proj_real")).rejects.toThrow("Network error");
     });
 
     it("sends feature uploads to the configured backend without a JSON content type", async () => {
@@ -92,25 +104,26 @@ describe('API Library', () => {
     });
   });
 
-  describe('Additional endpoints fallback handling', () => {
+  describe('Additional endpoints', () => {
     it("rejects failed login requests", async () => {
       global.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error"));
-      vi.spyOn(console, "warn").mockImplementation(() => {});
       await expect(api.login("admin", "admin")).rejects.toThrow("Network error");
     });
 
-    it('should fallback to client-side PICO extraction when /pico/extract fetch fails', async () => {
-      const file = new File(['Some test text with population: test patients, intervention: test intervention'], 'test.txt', { type: 'text/plain' });
+    it('surfaces PICO extraction failures instead of a client-side fallback', async () => {
+      const file = new File(['test text'], 'test.txt', { type: 'text/plain' });
       global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
-      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const result = await api.extractPico('proj-123', file);
+      await expect(api.extractPico('proj-123', file)).rejects.toThrow('Network error');
+    });
 
-      expect(spy).toHaveBeenCalled();
-      expect(result).toHaveProperty('population');
-      expect(result).toHaveProperty('index_test');
+    it('surfaces PICO extraction HTTP errors with the backend detail', async () => {
+      const file = new File(['test text'], 'test.txt', { type: 'text/plain' });
+      (global.fetch as Mock).mockResolvedValueOnce({
+        ok: false, status: 400, json: async () => ({ detail: 'Unsupported file type' }),
+      });
 
-      spy.mockRestore();
+      await expect(api.extractPico('proj-123', file)).rejects.toThrow('Unsupported file type');
     });
 
     it('should handle /export endpoints gracefully', () => {
