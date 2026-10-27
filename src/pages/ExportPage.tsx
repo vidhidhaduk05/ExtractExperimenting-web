@@ -47,15 +47,26 @@ export function ExportPage() {
     setDraftLoading(true);
     setManuscriptOpen(true);
     try {
+      let synthesisData: any = null;
+      try {
+        const synRes = await fetch(`/api/meta-analysis/${projectId}`);
+        if (synRes.ok) {
+          const parsed = await synRes.json();
+          if (parsed && parsed.status === 'pooled') {
+            synthesisData = parsed;
+          }
+        }
+      } catch {}
+
       const data = await api.draftManuscript({
         project_id: projectId,
         section: section,
-        pooled_effect: 1.48,
-        ci_lower: 1.22,
-        ci_upper: 1.79,
-        measure: 'Odds Ratio (OR)',
-        i2: 42.5,
-        p_val: 0.001
+        pooled_effect: synthesisData?.pooled_effect,
+        ci_lower: synthesisData?.ci_lower,
+        ci_upper: synthesisData?.ci_upper,
+        measure: synthesisData?.measure || 'Descriptive',
+        i2: synthesisData?.i2,
+        p_val: synthesisData?.p_heterogeneity
       });
       if (data.markdown) setManuscriptText(data.markdown);
     } catch (err) {

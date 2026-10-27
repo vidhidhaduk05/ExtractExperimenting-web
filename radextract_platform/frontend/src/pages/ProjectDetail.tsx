@@ -48,14 +48,14 @@ export function ProjectDetail() {
   const gradeCount = gradeList?.length || 0;
 
   const cards = [
-    { label: "Extraction Sheet", value: "Matrix", to: `/projects/${projectId}/extraction-sheet`, icon: FileSpreadsheet, color: "text-emerald-600" },
-    { label: "Data Extraction (PDF)", value: "6 Papers", to: `/projects/${projectId}/extraction`, icon: Highlighter, color: "text-blue-600" },
-    { label: "Studies", value: studyCount, to: `/projects/${projectId}/studies`, icon: FileText, color: "text-phylo-blue" },
-    { label: "Screened In", value: includedCount, to: `/projects/${projectId}/screening`, icon: CheckSquare, color: "text-phylo-green" },
-    { label: "PRISMA Flow", value: "View", to: `/projects/${projectId}/prisma`, icon: GitBranch, color: "text-phylo-pink" },
-    { label: "RoB Assessments", value: robCount, to: `/projects/${projectId}/rob`, icon: ShieldCheck, color: "text-phylo-orange" },
-    { label: "Data Review", value: "—", to: `/projects/${projectId}/review`, icon: Table, color: "text-phylo-pink" },
-    { label: "Meta-Analyses", value: metaCount, to: `/projects/${projectId}/meta-analysis`, icon: BarChart3, color: "text-phylo-blue" },
+    { label: "1. Studies & Search", value: studyCount, to: `/projects/${projectId}/studies`, icon: FileText },
+    { label: "2. Eligibility Screening", value: includedCount, to: `/projects/${projectId}/screening`, icon: CheckSquare },
+    { label: "3. Extraction Sheet", value: "Matrix", to: `/projects/${projectId}/extraction-sheet`, icon: FileSpreadsheet },
+    { label: "4. Risk of Bias", value: robCount, to: `/projects/${projectId}/rob`, icon: ShieldCheck },
+    { label: "5. Evidence Synthesis", value: metaCount, to: `/projects/${projectId}/meta-analysis`, icon: BarChart3 },
+    { label: "6. GRADE Certainty", value: gradeCount, to: `/projects/${projectId}/grade`, icon: Award },
+    { label: "7. PRISMA 2020 Flow", value: "Audit", to: `/projects/${projectId}/prisma`, icon: GitBranch },
+    { label: "8. Scientific Export", value: "Ready", to: `/projects/${projectId}/export`, icon: Download },
   ];
 
   return (

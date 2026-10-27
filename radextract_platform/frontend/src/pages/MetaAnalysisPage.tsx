@@ -15,12 +15,15 @@ interface StudyData {
 }
 
 interface MetaResult {
-  pooled_effect: number;
-  ci_lower: number;
-  ci_upper: number;
-  i2: number;
-  p_heterogeneity: number;
-  measure: string;
+  status?: string;
+  reason?: string;
+  pooled_effect?: number;
+  ci_lower?: number;
+  ci_upper?: number;
+  i2?: number;
+  p_heterogeneity?: number;
+  measure?: string;
+  model?: string;
   studies: StudyData[];
 }
 
@@ -52,25 +55,12 @@ export function MetaAnalysisPage() {
     enabled: !!projectId,
   });
 
-  const { data: results, isLoading, refetch } = useQuery<MetaResult>({
+  const { data: results, isLoading, isError, error, refetch } = useQuery<MetaResult>({
     queryKey: ['meta-analysis', projectId, modelType, measureType],
     queryFn: async () => {
       const res = await fetch(`/api/meta-analysis/${projectId}?model=${modelType}&measure=${measureType}`);
       if (!res.ok) {
-        return {
-          pooled_effect: 1.48,
-          ci_lower: 1.22,
-          ci_upper: 1.79,
-          i2: 42.5,
-          p_heterogeneity: 0.156,
-          measure: measureType === 'OR' ? 'Odds Ratio (OR)' : measureType,
-          studies: [
-            { name: "Miller et al. 2021", effect: 1.45, ci_lower: 1.10, ci_upper: 1.91, weight: 28.5, se: 0.14 },
-            { name: "Chen et al. 2022", effect: 1.82, ci_lower: 1.25, ci_upper: 2.65, weight: 22.0, se: 0.19 },
-            { name: "Sato et al. 2023", effect: 1.15, ci_lower: 0.85, ci_upper: 1.55, weight: 34.0, se: 0.15 },
-            { name: "Garcia et al. 2024", effect: 2.10, ci_lower: 1.30, ci_upper: 3.40, weight: 15.5, se: 0.24 },
-          ]
-        };
+        throw new Error(`Failed to load synthesis: ${res.status} ${res.statusText}`);
       }
       return res.json();
     },
@@ -78,6 +68,11 @@ export function MetaAnalysisPage() {
   });
 
   const handleGenerateChart = async (type: 'forest' | 'funnel') => {
+    if (results?.status === 'cannot_pool' || results?.pooled_effect === undefined) {
+      alert(results?.reason || 'Quantitative pooling is not feasible for this project. Please review the descriptive synthesis below.');
+      return;
+    }
+
     setChartType(type);
     setChartLoading(true);
     setChartModalOpen(true);
@@ -86,11 +81,11 @@ export function MetaAnalysisPage() {
 
     const studiesData = (results?.studies || []).map((s: any, idx: number) => ({
       name: s.study_name || s.name || `Study ${idx + 1}`,
-      effect: Number(s.effect || s.effect_size || 1.2),
-      ci_lower: Number(s.ci_lower || (s.effect || 1.2) * 0.8),
-      ci_upper: Number(s.ci_upper || (s.effect || 1.2) * 1.25),
-      weight: Number(s.weight || (100 / Math.max(1, results?.studies?.length || 1))),
-      se: Number(s.se || (Math.abs(Number(s.ci_upper || 1.5) - Number(s.ci_lower || 0.9)) / 3.92) || 0.25),
+      effect: Number(s.effect ?? s.effect_size ?? 1.0),
+      ci_lower: Number(s.ci_lower ?? ((s.effect || 1.0) * 0.8)),
+      ci_upper: Number(s.ci_upper ?? ((s.effect || 1.0) * 1.25)),
+      weight: Number(s.weight ?? (100 / Math.max(1, results?.studies?.length || 1))),
+      se: Number(s.se ?? (Math.abs(Number(s.ci_upper || 1.5) - Number(s.ci_lower || 0.9)) / 3.92) || 0.25),
     }));
 
     try {
@@ -106,13 +101,13 @@ export function MetaAnalysisPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               studies: studiesData,
-              overall_effect: Number(results?.pooled_effect || 1.48),
-              ci_lower: Number(results?.ci_lower || 1.22),
-              ci_upper: Number(results?.ci_upper || 1.79),
+              overall_effect: Number(results?.pooled_effect ?? 0),
+              ci_lower: Number(results?.ci_lower ?? 0),
+              ci_upper: Number(results?.ci_upper ?? 0),
               measure: results?.measure || 'Odds Ratio (OR)',
               is_ratio: true,
-              i2: Number(results?.i2 || 42.5),
-              p_heterogeneity: Number(results?.p_heterogeneity || 0.156),
+              i2: Number(results?.i2 ?? 0),
+              p_heterogeneity: Number(results?.p_heterogeneity ?? 1),
               title: `Meta-Analysis Forest Plot (k=${studiesData.length})`
             })
           });
@@ -135,13 +130,13 @@ export function MetaAnalysisPage() {
         if (!renderedImage) {
           const clientSvg = renderRMetaforForestPlotSVG({
             studies: studiesData,
-            overallEffect: Number(results?.pooled_effect || 1.48),
-            ciLower: Number(results?.ci_lower || 1.22),
-            ciUpper: Number(results?.ci_upper || 1.79),
+            overallEffect: Number(results?.pooled_effect ?? 0),
+            ciLower: Number(results?.ci_lower ?? 0),
+            ciUpper: Number(results?.ci_upper ?? 0),
             measure: results?.measure || 'Odds Ratio (OR)',
             isRatio: true,
-            i2: Number(results?.i2 || 42.5),
-            pHeterogeneity: Number(results?.p_heterogeneity || 0.156),
+            i2: Number(results?.i2 ?? 0),
+            pHeterogeneity: Number(results?.p_heterogeneity ?? 1),
             modelType: modelType === 'random' ? 'DerSimonian-Laird Random-Effects' : 'Inverse-Variance Fixed-Effects',
             title: `Meta-Analysis Forest Plot (k=${studiesData.length})`
           });
@@ -164,7 +159,7 @@ export function MetaAnalysisPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               studies: studiesData,
-              overall_effect: Number(results?.pooled_effect || 1.48),
+              overall_effect: Number(results?.pooled_effect ?? 0),
               measure: 'Log Odds Ratio',
               title: 'Publication Bias Assessment (Funnel Plot)'
             })
@@ -187,7 +182,7 @@ export function MetaAnalysisPage() {
         if (!renderedImage) {
           const clientSvg = renderRMetaforFunnelPlotSVG({
             studies: studiesData,
-            overallEffect: Number(results?.pooled_effect || 1.48),
+            overallEffect: Number(results?.pooled_effect ?? 0),
             measure: 'Odds Ratio (log scale)',
             title: 'Publication Bias Assessment (Funnel Plot)'
           });
@@ -208,15 +203,25 @@ export function MetaAnalysisPage() {
   };
 
   const handleRunStatsAnalysis = async () => {
+    if (!results?.studies || results.studies.length === 0 || results?.status === 'cannot_pool') {
+      alert(results?.reason || 'Quantitative statistical analysis requires extractable study numbers.');
+      return;
+    }
     setStatsLoading(true);
     setStatsModalOpen(true);
     try {
-      const g1 = (results?.studies || []).map((s: any) => Number(s.effect || s.effect_size || 1.4));
+      const g1 = (results?.studies || []).map((s: any) => Number(s.effect || s.effect_size || 1.0));
       const g2 = (results?.studies || []).map(() => 1.0);
 
+      if (g1.length < 2) {
+        alert('Insufficient study count (< 2 studies) for comparative statistical analysis.');
+        setStatsModalOpen(false);
+        return;
+      }
+
       const data = await api.analyzeStats({
-        group1: g1.length >= 3 ? g1 : [12.4, 14.1, 13.8, 15.2, 16.0, 14.7, 13.9, 15.5],
-        group2: g2.length >= 3 ? g2 : [10.1, 11.2, 9.8, 10.5, 12.0, 11.4, 10.9, 11.8],
+        group1: g1,
+        group2: g2,
         group1_name: 'Intervention Effect',
         group2_name: 'Null Comparator',
         paired: false,
@@ -234,7 +239,7 @@ export function MetaAnalysisPage() {
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Quantitative Synthesis & Meta-Analysis</h1>
+          <h1 className="text-2xl font-bold text-slate-900 font-serif">Quantitative Synthesis & Meta-Analysis</h1>
           <p className="text-sm text-slate-500 mt-1">
             DerSimonian-Laird random effects pooling, statistical heterogeneity, and forest plots
           </p>
@@ -256,7 +261,7 @@ export function MetaAnalysisPage() {
           <select
             value={modelType}
             onChange={(e) => setModelType(e.target.value as any)}
-            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#814d75]"
           >
             <option value="random">DerSimonian-Laird Random-Effects (Recommended)</option>
             <option value="fixed">Inverse-Variance Fixed-Effects</option>
@@ -267,7 +272,7 @@ export function MetaAnalysisPage() {
           <select
             value={measureType}
             onChange={(e) => setMeasureType(e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#814d75]"
           >
             <option value="OR">Odds Ratio (OR)</option>
             <option value="RR">Risk Ratio (RR)</option>
@@ -278,62 +283,133 @@ export function MetaAnalysisPage() {
         <div className="flex items-end">
           <button
             onClick={() => refetch()}
-            className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center justify-center gap-2 shadow-sm transition"
+            className="w-full py-2.5 px-4 rounded-xl bg-[#3a0f34] hover:bg-[#1a0017] text-white font-medium text-xs flex items-center justify-center gap-2 shadow-sm transition"
           >
             <Play className="w-4 h-4" /> Run Synthesis
           </button>
         </div>
       </div>
 
-      {/* Action Buttons for Scientific Visualizations & Stats */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => handleGenerateChart('forest')}
-          className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition"
-        >
-          <BarChart3 className="w-4 h-4" />
-          Generate High-DPI Forest Plot (300 DPI)
-        </button>
-        <button
-          onClick={() => handleGenerateChart('funnel')}
-          className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-sky-600 text-white hover:bg-sky-700 shadow-sm transition"
-        >
-          <TrendingUp className="w-4 h-4" />
-          Generate Funnel Plot
-        </button>
-        <button
-          onClick={handleRunStatsAnalysis}
-          className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition"
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          Guided Statistical Analysis (APA 7th)
-        </button>
-      </div>
+      {/* Error state */}
+      {isError && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-rose-900 space-y-2">
+          <div className="flex items-center gap-2 font-bold text-base text-rose-950">
+            <AlertTriangle className="w-5 h-5 text-rose-600" />
+            Unable to Load Meta-Analysis
+          </div>
+          <p className="text-sm">{(error as any)?.message || 'An error occurred while communicating with the analysis service.'}</p>
+          <button
+            onClick={() => refetch()}
+            className="mt-3 px-4 py-2 bg-rose-600 text-white text-xs font-semibold rounded-xl hover:bg-rose-700 transition"
+          >
+            Retry Analysis
+          </button>
+        </div>
+      )}
 
-      {/* Results Overview */}
-      {results && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Pooled Effect Size</p>
-            <p className="text-2xl font-black text-indigo-600 mt-2">{results.pooled_effect?.toFixed(2) || '1.48'}</p>
-            <p className="text-xs text-slate-400 mt-1">95% CI: [{results.ci_lower?.toFixed(2) || '1.22'}, {results.ci_upper?.toFixed(2) || '1.79'}]</p>
+      {/* Cannot Pool / Descriptive Synthesis View */}
+      {results?.status === 'cannot_pool' && (
+        <div className="bg-white rounded-2xl border border-[#d2c2cb] p-6 shadow-sm space-y-6">
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-[#eee7ec] border border-[#d2c2cb]/60">
+            <Info className="w-5 h-5 text-[#3a0f34] shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-[#3a0f34]">Descriptive Synthesis — Quantitative Pooling Not Feasible</h3>
+              <p className="text-xs text-[#62535d] leading-relaxed">
+                {results.reason || 'Quantitative pooling cannot be performed because insufficient studies contain usable effect size estimates. A systematic review without pooled meta-analysis remains completely valid as a narrative and descriptive synthesis.'}
+              </p>
+            </div>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Heterogeneity (I²)</p>
-            <p className="text-2xl font-black text-amber-600 mt-2">{results.i2?.toFixed(1) || '42.5'}%</p>
-            <p className="text-xs text-slate-400 mt-1">p = {results.p_heterogeneity?.toFixed(3) || '0.156'}</p>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Included Studies</p>
-            <p className="text-2xl font-black text-slate-800 mt-2">{results.studies?.length || 4}</p>
-            <p className="text-xs text-slate-400 mt-1">Quantitative synthesis</p>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Synthesis Model</p>
-            <p className="text-lg font-bold text-slate-800 mt-2 capitalize">{modelType} Effects</p>
-            <p className="text-xs text-slate-400 mt-1">DerSimonian-Laird</p>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#62535d]">Study Cohort & Missing Data Audit</h4>
+              <span className="text-xs text-[#81737b]">{results.studies?.length || 0} studies reviewed</span>
+            </div>
+            <div className="overflow-x-auto border border-[#d2c2cb] rounded-xl">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-[#eee7ec] text-[#3a0f34] border-b border-[#d2c2cb] font-semibold">
+                  <tr>
+                    <th className="py-2.5 px-3">Study / Citation</th>
+                    <th className="py-2.5 px-3">Title</th>
+                    <th className="py-2.5 px-3">Pooling Feasibility & Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#d2c2cb]">
+                  {(results.studies || []).map((s: any, idx: number) => (
+                    <tr key={s.study_id || idx} className="hover:bg-[#fbf9f4]">
+                      <td className="py-2.5 px-3 font-semibold text-[#3a0f34]">{s.name || s.label || `Study ${idx + 1}`}</td>
+                      <td className="py-2.5 px-3 text-[#4f444b] max-w-xs truncate">{s.title || '—'}</td>
+                      <td className="py-2.5 px-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-900 border border-amber-200">
+                          {s.missing_data || 'Missing effect size / SE'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {(!results.studies || results.studies.length === 0) && (
+                    <tr>
+                      <td colSpan={3} className="py-6 text-center text-[#81737b] italic">
+                        No included studies found in this project. Complete title/abstract and full-text screening first.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Action Buttons & Quantitative Results Overview (only when pooled) */}
+      {results && results.status !== 'cannot_pool' && (
+        <>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleGenerateChart('forest')}
+              className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-[#3a0f34] text-white hover:bg-[#1a0017] shadow-sm transition"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Generate High-DPI Forest Plot (300 DPI)
+            </button>
+            <button
+              onClick={() => handleGenerateChart('funnel')}
+              className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-[#814d75] text-white hover:bg-[#66365c] shadow-sm transition"
+            >
+              <TrendingUp className="w-4 h-4" />
+              Generate Funnel Plot
+            </button>
+            <button
+              onClick={handleRunStatsAnalysis}
+              className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 shadow-sm transition"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Guided Statistical Analysis (APA 7th)
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Pooled Effect Size</p>
+              <p className="text-2xl font-black text-[#3a0f34] mt-2">{results.pooled_effect !== undefined ? results.pooled_effect.toFixed(2) : '—'}</p>
+              <p className="text-xs text-slate-400 mt-1">95% CI: [{results.ci_lower !== undefined ? results.ci_lower.toFixed(2) : '—'}, {results.ci_upper !== undefined ? results.ci_upper.toFixed(2) : '—'}]</p>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Heterogeneity (I²)</p>
+              <p className="text-2xl font-black text-amber-600 mt-2">{results.i2 !== undefined ? results.i2.toFixed(1) + '%' : '—'}</p>
+              <p className="text-xs text-slate-400 mt-1">p = {results.p_heterogeneity !== undefined ? results.p_heterogeneity.toFixed(3) : '—'}</p>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Included Studies</p>
+              <p className="text-2xl font-black text-slate-800 mt-2">{results.studies?.length ?? 0}</p>
+              <p className="text-xs text-slate-400 mt-1">Quantitative synthesis</p>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Synthesis Model</p>
+              <p className="text-lg font-bold text-slate-800 mt-2 capitalize">{modelType} Effects</p>
+              <p className="text-xs text-slate-400 mt-1">DerSimonian-Laird</p>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Chart Preview Modal */}

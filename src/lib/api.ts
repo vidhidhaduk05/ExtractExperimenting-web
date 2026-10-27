@@ -2066,6 +2066,8 @@ export interface GradeAssessment {
   certainty_label: string;
   certainty_color: string;
   factors: GradeFactor[];
+  status?: "draft" | "final" | string;
+  finalized_at?: string;
   created_at: string;
 }
 
@@ -3354,6 +3356,8 @@ export const api = {
     request<any>(`/grade/${gradeId}/auto-populate`, { method: "POST" }),
   computeGrade: (gradeId: string) =>
     request<any>(`/grade/${gradeId}/compute`, { method: "POST" }),
+  finalizeGrade: (gradeId: string) =>
+    request<GradeAssessment>(`/grade/${gradeId}/finalize`, { method: "POST" }),
   getSofTable: (gradeId: string) =>
     request<SofTable>(`/grade/${gradeId}/sof-table`),
   gradeStartingLevel: (projectId: string) =>
