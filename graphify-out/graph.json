@@ -25172,7 +25172,7 @@
       "file_type": "code",
       "norm_label": "quoteicon()",
       "source_file": "radextract_platform/frontend/src/pages/PdfViewerPage.tsx",
-      "source_location": "L2342"
+      "source_location": "L2347"
     },
     {
       "id": "radextract_platform_backend_services_reporting_profile_service_assess_profile",
@@ -59384,7 +59384,7 @@
       "file_type": "code",
       "norm_label": "screeningpage()",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L75"
+      "source_location": "L74"
     },
     {
       "id": "radextract_platform_frontend_src_pages_studylist_bulkuploadmodal",
@@ -201134,7 +201134,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/PdfViewerPage.tsx",
-      "source_location": "L1151",
+      "source_location": "L1156",
       "weight": 1.0
     },
     {
@@ -201146,7 +201146,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/PdfViewerPage.tsx",
-      "source_location": "L1721",
+      "source_location": "L1726",
       "weight": 1.0
     },
     {
@@ -201158,7 +201158,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/PdfViewerPage.tsx",
-      "source_location": "L2187",
+      "source_location": "L2192",
       "weight": 1.0
     },
     {
@@ -201170,7 +201170,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/PdfViewerPage.tsx",
-      "source_location": "L867",
+      "source_location": "L872",
       "weight": 1.0
     },
     {
@@ -201734,7 +201734,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L1342",
+      "source_location": "L1341",
       "weight": 1.0
     },
     {
@@ -201746,7 +201746,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L1530",
+      "source_location": "L1529",
       "weight": 1.0
     },
     {
@@ -201758,7 +201758,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L1890",
+      "source_location": "L1889",
       "weight": 1.0
     },
     {
@@ -201770,7 +201770,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L1909",
+      "source_location": "L1908",
       "weight": 1.0
     },
     {
@@ -201782,7 +201782,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L2096",
+      "source_location": "L2095",
       "weight": 1.0
     },
     {
@@ -201794,7 +201794,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L227",
+      "source_location": "L226",
       "weight": 1.0
     },
     {
@@ -201806,7 +201806,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L259",
+      "source_location": "L258",
       "weight": 1.0
     },
     {
@@ -201818,7 +201818,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L2776",
+      "source_location": "L2775",
       "weight": 1.0
     },
     {
@@ -201830,7 +201830,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L355",
+      "source_location": "L354",
       "weight": 1.0
     },
     {
@@ -201842,7 +201842,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L496",
+      "source_location": "L495",
       "weight": 1.0
     },
     {
@@ -201854,7 +201854,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L556",
+      "source_location": "L555",
       "weight": 1.0
     },
     {
@@ -201866,7 +201866,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L78",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -201878,7 +201878,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L79",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -201890,7 +201890,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L898",
+      "source_location": "L897",
       "weight": 1.0
     },
     {
@@ -243351,7 +243351,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L71",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -243363,7 +243363,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L72",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -243375,7 +243375,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L73",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -263467,7 +263467,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L71",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -263479,7 +263479,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L72",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -263491,7 +263491,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L73",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -340910,7 +340910,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/frontend/src/pages/PdfViewerPage.tsx",
-      "source_location": "L2342",
+      "source_location": "L2347",
       "weight": 1.0
     },
     {
@@ -341383,7 +341383,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "radextract_platform/frontend/src/pages/ScreeningPage.tsx",
-      "source_location": "L75",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -407719,5 +407719,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "4ddd5cb9b7be5c359e5a6e28c59c9511f9928425"
+  "built_at_commit": "d4a4ad80911edea30ffa5d0feb03291ea5ed0b9c"
 }

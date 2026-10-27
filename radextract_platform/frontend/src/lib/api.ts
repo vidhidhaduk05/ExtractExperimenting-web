@@ -77,6 +77,23 @@ export async function autoDiscoverBackend(): Promise<string | null> {
     localStorage.removeItem("custom_api_base");
   }
 
+  // Check active_backend.json published by tunnel runner
+  try {
+    const res = await fetch("./active_backend.json", { cache: "no-store" }).catch(() => null);
+    if (res && res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data?.api_url && data.api_url !== "/api") {
+        const checkTunnel = await testBackendConnection(data.api_url).catch(() => null);
+        if (checkTunnel && checkTunnel.ok) {
+          localStorage.setItem("custom_api_base", data.api_url);
+          API_BASE = getApiBase();
+          updateApiState({ apiBase: API_BASE, state: "live" });
+          return API_BASE;
+        }
+      }
+    }
+  } catch (e) {}
+
   const currentBase = getApiBase();
   const check = await testBackendConnection(currentBase).catch(() => null);
   if (check && check.ok) {
@@ -632,6 +649,25 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         name: "Demo Project",
         auto_rob_enabled: body.auto_rob_enabled !== undefined ? body.auto_rob_enabled : true,
         rob_confidence_threshold: body.rob_confidence_threshold || 0.7
+      } as unknown as T;
+    }
+    if (path.includes("/claimscape/status")) {
+      return {
+        status: "ready",
+        engine: "co_scientist_local_onnx",
+        model: "ModernBERT-large-system-1",
+        max_papers_per_batch: 300
+      } as unknown as T;
+    }
+    if (path.includes("/claimscape/evaluate")) {
+      return {
+        claim: body.claim || "Clinical Claim",
+        query: body.query || "",
+        total: 15,
+        elapsed_ms: 120,
+        engine: "claimscape_live_v1",
+        papers: [],
+        judgments: []
       } as unknown as T;
     }
     if (path.includes("/rob/") && path.includes("/ai-prefill")) {

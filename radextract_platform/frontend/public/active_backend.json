@@ -1,8 +1,8 @@
 {
-  "backend_url": "/api",
-  "api_url": "/api",
-  "health_url": "/health",
-  "updated_at": "2026-10-27T00:00:00Z",
+  "backend_url": "https://soup-between-marina-chronicle.trycloudflare.com",
+  "api_url": "https://soup-between-marina-chronicle.trycloudflare.com/api",
+  "health_url": "https://soup-between-marina-chronicle.trycloudflare.com/health",
+  "updated_at": "2026-10-28T00:00:00Z",
   "status": "online",
   "model": "co-scientist-screening"
 }
