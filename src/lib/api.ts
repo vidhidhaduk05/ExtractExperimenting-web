@@ -551,6 +551,53 @@ export interface ReviewMatrix {
   studies: ReviewStudyRow[];
 }
 
+// ── Import events (backend-persisted import_batches) ──
+export interface ImportBatchEvent {
+  batch_id: string;
+  project_id: string;
+  filename: string;
+  source: string;
+  format: string;
+  total_records: number;
+  imported_count: number;
+  duplicate_count: number;
+  merged_count: number;
+  failed_count: number;
+  status: string; // completed | completed_with_errors | failed | undone
+  undone_at: string | null;
+  created_at: string;
+  created_by: string;
+  retained_studies_count: number;
+}
+
+export interface ImportBatchEventRecord {
+  index?: number;
+  study_id?: string;
+  title: string;
+  authors: string;
+  publication_year?: number;
+  journal: string;
+  doi: string;
+  pmid: string;
+  status: string; // added | duplicate | error
+  match_reason?: string;
+  study_active: boolean;
+}
+
+export interface ImportBatchEventDetail extends ImportBatchEvent {
+  records: ImportBatchEventRecord[];
+  errors: string[];
+}
+
+export interface UndoBatchResult {
+  batch_id: string;
+  status: string;
+  undone_at: string;
+  studies_removed_count: number;
+  studies_retained_count: number;
+  message: string;
+}
+
 export interface ReviewVariable {
   variable_id: string;
   project_id: string;
@@ -1921,6 +1968,14 @@ export const api = {
   },
   screeningSummary: (projectId: string) =>
     request<ScreeningSummary>(`/projects/${projectId}/screening/summary`),
+
+  // Import events (backend-persisted import batches)
+  listImportBatches: (projectId: string) =>
+    request<ImportBatchEvent[]>(`/projects/${projectId}/batches`),
+  getImportBatchDetail: (projectId: string, batchId: string) =>
+    request<ImportBatchEventDetail>(`/projects/${projectId}/batches/${batchId}`),
+  undoImportBatch: (projectId: string, batchId: string, force = false) =>
+    request<UndoBatchResult>(`/projects/${projectId}/batches/${batchId}/undo?force=${force}`, { method: "POST" }),
 
   // RoB Tools
   listRobTools: () => request<RobToolDef[]>("/rob/tools"),

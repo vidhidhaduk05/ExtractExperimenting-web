@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, saveStoredProjectStudies, type Study } from "../lib/api";
+import { api, type Study, type ImportBatchEvent, type ImportBatchEventDetail } from "../lib/api";
 import { autoIdentifyPdf } from "../lib/pdfAutoIdentifier";
 import {
   Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2,
@@ -16,28 +16,6 @@ import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags, type TagIndex } from "../lib/recordCollaboration";
 import { CollaborationDialog, RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
 import { cn } from "../lib/utils";
-
-export interface ImportBatch {
-  id: string;
-  projectId: string;
-  date: string;
-  filename: string;
-  addedCount: number;
-  referencesCount: number;
-  duplicatesCount: number;
-  mergedCount: number;
-  source: string;
-  studyIds: string[];
-  undoneAt?: string | null;
-}
-
-const getInitialBatches = (pid: string): ImportBatch[] => {
-  try {
-    const saved = localStorage.getItem(`radextract_import_batches_${pid}`);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [];
-};
 
 export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean }) {
   const { projectId } = useParams<{ projectId: string }>();
@@ -56,16 +34,25 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
 
-  // Direct Drag & Drop and Batch History State
-  const [importBatches, setImportBatches] = useState<ImportBatch[]>(() => getInitialBatches(projectId || "default"));
+  // Import history: real import events from the backend (import_batches table).
+  // One row per import event; expandable to show per-record detail.
+  const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null);
+  const { data: importBatches = [] } = useQuery<ImportBatchEvent[]>({
+    queryKey: ["import-batches", projectId],
+    queryFn: () => api.listImportBatches(projectId!),
+    enabled: !!projectId,
+  });
+  const { data: expandedBatchDetail } = useQuery<ImportBatchEventDetail>({
+    queryKey: ["import-batch-detail", projectId, expandedBatchId],
+    queryFn: () => api.getImportBatchDetail(projectId!, expandedBatchId!),
+    enabled: !!projectId && !!expandedBatchId,
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessingDirect, setIsProcessingDirect] = useState(false);
   const [directProcessMsg, setDirectProcessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (projectId) {
-      setImportBatches(getInitialBatches(projectId));
-    }
+    setExpandedBatchId(null);
   }, [projectId]);
 
   const { data: studies, isLoading } = useQuery({
@@ -143,21 +130,16 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
 
       let totalAdded = 0;
       let totalRefs = 0;
-      let totalDuplicates = 0;
-      const batchStudyIds: string[] = [];
 
-      // Reference files (.ris, .bib, .csv, .xml, .nbib, .txt)
+      // Reference files (.ris, .bib, .csv, .xml, .nbib, .txt) — the backend
+      // records one import event per file in its import_batches table.
       if (refFiles.length > 0) {
         setDirectProcessMsg(`Parsing ${refFiles.length} bibliographic reference file(s)...`);
         const res = await api.uploadReferences(projectId!, refFiles);
         const added = res.imported_count || 0;
         const skipped = res.skipped_duplicates || 0;
         totalAdded += added;
-        totalDuplicates += skipped;
         totalRefs += (added + skipped);
-        if (res.imported_studies) {
-          batchStudyIds.push(...res.imported_studies.map((s: any) => s.study_id));
-        }
       }
 
       // PDF files
@@ -168,7 +150,6 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
           try {
             const identified = await autoIdentifyPdf(pdf, projectId);
             created.push(identified as any);
-            batchStudyIds.push(identified.study_id);
           } catch (e) {
             console.error(e);
           }
@@ -180,39 +161,10 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         }
       }
 
-      const todayStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-      const mainName = fileArray.length === 1 ? fileArray[0].name : `${fileArray[0].name} (+${fileArray.length - 1} more)`;
-      const sourceGuess = mainName.toLowerCase().includes("embase")
-        ? "Embase"
-        : mainName.toLowerCase().includes("scopus")
-        ? "Scopus"
-        : mainName.toLowerCase().includes("pubmed")
-        ? "PubMed"
-        : refFiles.length > 0
-        ? "RIS File"
-        : "Direct PDF Upload";
-
-      const newBatch: ImportBatch = {
-        id: `batch_${Date.now()}`,
-        projectId: projectId!,
-        date: todayStr,
-        filename: mainName,
-        addedCount: totalAdded,
-        referencesCount: totalRefs || totalAdded,
-        duplicatesCount: totalDuplicates,
-        mergedCount: 0,
-        source: sourceGuess,
-        studyIds: batchStudyIds,
-      };
-
-      const nextBatches = [newBatch, ...importBatches];
-      setImportBatches(nextBatches);
-      try {
-        localStorage.setItem(`radextract_import_batches_${projectId}`, JSON.stringify(nextBatches));
-      } catch (e) {}
-
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
       queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      const mainName = fileArray.length === 1 ? fileArray[0].name : `${fileArray[0].name} (+${fileArray.length - 1} more)`;
       setUploadMsg(`Import successful: ${totalAdded} studies added to screening from ${mainName}.`);
     } catch (err: any) {
       setUploadMsg(`Import error: ${err.message || "Failed to process files"}`);
@@ -222,40 +174,35 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
     }
   };
 
-  const handleUndoImport = async (batchId: string) => {
-    const batch = importBatches.find(b => b.id === batchId);
-    if (!batch || batch.undoneAt) return;
+  // Undo via the backend: atomically removes studies created by this import event.
+  // If studies have downstream work, the backend returns 409 and we confirm force.
+  const undoBatchMutation = useMutation({
+    mutationFn: ({ batchId, force }: { batchId: string; force: boolean }) =>
+      api.undoImportBatch(projectId!, batchId, force),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+      setUploadMsg(res.message || `Import undone: ${res.studies_removed_count} studies removed.`);
+    },
+    onError: async (err: any) => {
+      const batchId = undoBatchMutation.variables?.batchId;
+      if (err?.status === 409 && batchId) {
+        if (window.confirm("Some studies in this batch have screening decisions, extractions, or risk-of-bias assessments. Undo anyway? This will permanently remove that downstream work.")) {
+          undoBatchMutation.mutate({ batchId, force: true });
+          return;
+        }
+      }
+      setUploadMsg(`Undo failed: ${err?.message || "Unknown error"}`);
+    },
+  });
 
+  const handleUndoImport = (batch: ImportBatchEvent) => {
+    if (batch.status === "undone") return;
     if (!window.confirm(`Undo import of ${batch.filename}? This will remove the studies imported in this batch.`)) {
       return;
     }
-
-    const todayStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-    const updated = importBatches.map(b => b.id === batchId ? { ...b, undoneAt: todayStr } : b);
-    setImportBatches(updated);
-    try {
-      localStorage.setItem(`radextract_import_batches_${projectId}`, JSON.stringify(updated));
-    } catch (e) {}
-
-    try {
-      const curStudies = await api.listStudies(projectId!);
-      let remaining: Study[];
-      if (batch.studyIds && batch.studyIds.length > 0) {
-        const toRemove = new Set(batch.studyIds);
-        remaining = curStudies.filter(s => !toRemove.has(s.study_id));
-        for (const id of batch.studyIds) {
-          api.deleteStudy(id).catch(() => {});
-        }
-      } else {
-        remaining = curStudies.slice(0, Math.max(0, curStudies.length - (batch.addedCount || 1)));
-      }
-      saveStoredProjectStudies(projectId!, remaining);
-      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
-      setUploadMsg(`Import undone: ${batch.filename} was successfully undone on ${todayStr}.`);
-    } catch (err: any) {
-      console.error("Error undoing import:", err);
-    }
+    undoBatchMutation.mutate({ batchId: batch.batch_id, force: false });
   };
 
   const handleStartBlank = async () => {
@@ -578,29 +525,38 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
           <div className="space-y-4">
             {importBatches.map((batch) => (
               <div
-                key={batch.id}
+                key={batch.batch_id}
                 className="bg-white border border-black/10 rounded-2xl p-5 sm:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4 transition-all hover:border-[#d2c2cb]"
               >
                 {/* Header: Date + Filename on Left, Status / Undo Import on Right */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/[0.04] pb-3">
                   <div>
-                    <div className="text-xs text-[#81737b] font-sans font-medium">{batch.date}</div>
+                    <div className="text-xs text-[#81737b] font-sans font-medium">{batch.created_at}</div>
                     <div className="text-sm font-semibold font-mono text-[#3a0f34] mt-0.5 break-all">
                       {batch.filename}
                     </div>
                   </div>
 
-                  <div className="shrink-0">
-                    {batch.undoneAt ? (
+                  <div className="shrink-0 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedBatchId(expandedBatchId === batch.batch_id ? null : batch.batch_id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#4f444b] bg-white border border-[#d2c2cb] hover:bg-[#eee7ec] transition-colors"
+                      title="Show per-record import detail"
+                    >
+                      <span>{expandedBatchId === batch.batch_id ? "Hide detail" : "Detail"}</span>
+                    </button>
+                    {batch.status === "undone" ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans text-[#62535d] bg-[#eee7ec] border border-[#d2c2cb]">
                         <Check className="h-3.5 w-3.5 text-[#81737b]" />
-                        <span>Undone on {batch.undoneAt}</span>
+                        <span>Undone on {batch.undone_at}</span>
                       </span>
                     ) : (
                       <button
                         type="button"
-                        onClick={() => handleUndoImport(batch.id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#4f444b] hover:text-[#ab3329] bg-white hover:bg-[#ab3329]/10 border border-[#d2c2cb] hover:border-[#ab3329]/30 transition-colors"
+                        onClick={() => handleUndoImport(batch)}
+                        disabled={undoBatchMutation.isPending}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#4f444b] hover:text-[#ab3329] bg-white hover:bg-[#ab3329]/10 border border-[#d2c2cb] hover:border-[#ab3329]/30 transition-colors disabled:opacity-50"
                         title="Revert this batch and remove its studies from review"
                       >
                         <Undo2 className="h-3.5 w-3.5 text-[#81737b] hover:text-[#ab3329]" />
@@ -618,7 +574,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                       Added to title and abstract screening
                     </span>
                     <span className="text-2xl sm:text-3xl font-bold font-sans text-[#3a0f34] mt-2">
-                      {batch.addedCount}
+                      {batch.imported_count}
                     </span>
                   </div>
 
@@ -628,7 +584,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                       References
                     </span>
                     <span className="text-2xl sm:text-3xl font-bold font-sans text-[#3a0f34] mt-2">
-                      {batch.referencesCount}
+                      {batch.total_records}
                     </span>
                   </div>
 
@@ -639,7 +595,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                       <ExternalLink className="h-3 w-3 text-[#81737b]" />
                     </div>
                     <span className="text-2xl sm:text-3xl font-bold font-sans text-[#3a0f34] mt-2">
-                      {batch.duplicatesCount}
+                      {batch.duplicate_count}
                     </span>
                   </div>
 
@@ -650,7 +606,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                       <HelpCircle className="h-3 w-3 text-[#81737b]" />
                     </div>
                     <span className="text-2xl sm:text-3xl font-bold font-sans text-[#3a0f34] mt-2">
-                      {batch.mergedCount}
+                      {batch.merged_count}
                     </span>
                   </div>
 
@@ -665,6 +621,40 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                     </span>
                   </div>
                 </div>
+
+                {/* Expandable per-record detail, loaded from the backend batch record */}
+                {expandedBatchId === batch.batch_id && (
+                  <div className="border border-[#d2c2cb] rounded-xl bg-[#fbf9f4] p-4">
+                    {expandedBatchDetail ? (
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        <div className="text-[11px] font-mono text-[#62535d] uppercase tracking-wider">
+                          {expandedBatchDetail.records.length} records &middot; {expandedBatchDetail.errors.length} errors
+                        </div>
+                        {expandedBatchDetail.records.map((rec, i) => (
+                          <div key={`${rec.study_id || i}-${i}`} className="flex items-center justify-between gap-3 text-xs border-b border-[#d2c2cb]/40 pb-1.5">
+                            <span className="truncate text-[#4f444b]" title={rec.title}>
+                              {rec.title || rec.doi || rec.pmid || `Record ${rec.index ?? i + 1}`}
+                            </span>
+                            <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                              rec.status === "added"
+                                ? "bg-[#eee7ec] text-[#3a0f34]"
+                                : rec.status === "duplicate"
+                                ? "bg-[#ffdea6]/60 text-[#7c5800]"
+                                : "bg-[#eee7ec] text-[#62535d]"
+                            }`}>
+                              {rec.status}
+                            </span>
+                          </div>
+                        ))}
+                        {expandedBatchDetail.errors.map((e, i) => (
+                          <div key={i} className="text-xs text-[#62535d]">{e}</div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-[#81737b]">Loading detail…</div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

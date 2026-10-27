@@ -66,15 +66,12 @@ import {
   CheckSquare,
   CheckCircle2,
   ChevronDown,
-  Sliders,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
-import { ExploratoryScreeningView } from "../components/screening/ExploratoryScreeningView";
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
-  const [viewMode, setViewMode] = useState<"standard" | "exploratory">("standard");
   const bookmarks = useBookmarks(projectId);
   const tagIndex = useProjectTags(projectId);
   const [tagFilter, setTagFilter] = useState("");
@@ -219,14 +216,14 @@ export function ScreeningPage() {
     queryKey: ["screening-studies", projectId, stageFilter, statusFilter],
     queryFn: () => api.listScreening(projectId!, stageFilter === "all" ? undefined : stageFilter, statusFilter === "all" ? undefined : statusFilter),
     enabled: !!projectId,
-    refetchInterval: isRunning ? 3000 : false,
+    refetchInterval: isRunning ? 2000 : false,
   });
 
   const { data: summary } = useQuery<ScreeningSummary>({
     queryKey: ["screening-summary", projectId],
     queryFn: () => api.screeningSummary(projectId!),
     enabled: !!projectId,
-    refetchInterval: isRunning ? 3000 : false,
+    refetchInterval: isRunning ? 2000 : false,
   });
 
   const { data: exclusionReasonsData } = useQuery({
@@ -335,6 +332,11 @@ export function ScreeningPage() {
   };
 
   const studyList = Array.isArray(studies) ? studies : [];
+
+  // Real screening progress: studies with a recorded decision vs total, from the
+  // same backend summary that feeds the PRISMA flow. Never fabricated.
+  const screenedCount = summary ? summary.total - (summary.pending ?? 0) : 0;
+  const screenedPct = summary && summary.total > 0 ? Math.round((screenedCount / summary.total) * 100) : 0;
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
@@ -886,20 +888,6 @@ export function ScreeningPage() {
     }
   };
 
-  if (viewMode === "exploratory") {
-    return (
-      <ExploratoryScreeningView
-        projectId={projectId}
-        projectStudies={studies}
-        summary={summary}
-        exclusionReasons={exclusionReasons}
-        onScreenStudy={(payload) => decisionMutation.mutateAsync(payload)}
-        isDecisionPending={decisionMutation.isPending}
-        onSwitchToStandard={() => setViewMode("standard")}
-      />
-    );
-  }
-
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#fbf9f4] font-['Work_Sans']">
       {/* Top Header */}
@@ -916,11 +904,8 @@ export function ScreeningPage() {
             <div>
               <h1 className="text-xl font-bold font-['Serifon_Editorial'] text-[#3a0f34] flex items-center gap-2">
                 <ShieldCheck className="w-6 h-6 text-[#814d75]" />
-                Co-Scientist Screening Workspace
+                Eligibility Screening
               </h1>
-              <p className="text-xs text-[#62535d]">
-                Multi-Stage Screening: Title &rarr; Abstract &rarr; Full-Text with Rayyan-Style Highlighting
-              </p>
             </div>
           </div>
 
@@ -945,19 +930,6 @@ export function ScreeningPage() {
               <Keyboard className="w-3.5 h-3.5 text-[#814d75]" />
               <span>Hotkeys</span>
               <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-[#eee7ec] text-[#3a0f34] rounded font-bold">?</kbd>
-            </button>
-
-            {/* View Switcher: Exploratory View */}
-            <button
-              onClick={() => setViewMode("exploratory")}
-              className="px-3.5 py-2 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] rounded flex items-center gap-2 transition-all cursor-pointer"
-              title="Switch to Exploratory View with Senior Doctor Mode, Toggles, and Step-by-Step Process Trace"
-            >
-              <Sliders className="w-3.5 h-3.5 text-[#814d75]" />
-              <span>Exploratory Process Stream</span>
-              <span className="text-[10px] font-mono uppercase bg-[#3a0f34] text-[#fbf9f4] px-1.5 py-0.2 rounded font-bold">
-                Live
-              </span>
             </button>
 
             <button
@@ -1184,28 +1156,43 @@ export function ScreeningPage() {
             </button>
           </div>
         )}
+
+        {/* Real screening progress bar: decided / total, refetched after every decision and during batch runs */}
+        {summary && summary.total > 0 && (
+          <div className="max-w-7xl mx-auto mt-2.5 px-4 md:px-0">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-[#62535d] mb-1">
+              <span className="uppercase tracking-wider">Screened</span>
+              <span className="font-mono text-[#3a0f34]">{screenedCount} / {summary.total}</span>
+            </div>
+            <div className="h-1 w-full bg-[#eee7ec] rounded-full overflow-hidden" role="progressbar" aria-valuenow={screenedCount} aria-valuemin={0} aria-valuemax={summary.total}>
+              <div className="h-full bg-[#3a0f34] rounded-full transition-all duration-300" style={{ width: `${screenedPct}%` }} />
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Live Co-Scientist screening progress & controls */}
+      {/* Live AI batch screening status — shown only while a real batch job is running */}
       {progress?.active && (
         <div className={`border-b px-6 py-2.5 transition-colors ${
-          progress.paused ? "bg-amber-50/95 border-amber-200" : "bg-indigo-50 border-indigo-200"
+          progress.paused ? "bg-[#ffdea6]/40 border-[#d2c2cb]" : "bg-[#eee7ec] border-[#d2c2cb]"
         }`}>
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 {progress.paused ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-200 text-amber-900 border border-amber-300 shrink-0">
-                    <Pause className="w-3 h-3 fill-amber-800" />
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-[#ffdea6] text-[#7c5800] border border-[#d2c2cb] shrink-0">
+                    <Pause className="w-3 h-3 fill-[#7c5800]" />
                     PAUSED
                   </span>
                 ) : (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#814d75] shrink-0" />
                 )}
-                <span className={`font-semibold shrink-0 ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
-                  Co-Scientist screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
+                <span className={`font-semibold shrink-0 ${progress.paused ? "text-[#7c5800]" : "text-[#3a0f34]"}`}>
+                  {progress.paused
+                    ? "AI screening paused"
+                    : `AI screening in progress — ${progress.done} of ${progress.total} done`}
                 </span>
-                <span className={`truncate ${progress.paused ? "text-amber-800" : "text-indigo-700"}`}>
+                <span className={`truncate ${progress.paused ? "text-[#7c5800]" : "text-[#62535d]"}`}>
                   {progress.paused
                     ? (progress.current_study_id ? `Paused at: ${progress.current_title || progress.current_study_id}` : "Paused between studies (clean state)")
                     : (progress.current_study_id ? `Screening: ${progress.current_title || progress.current_study_id}` : "Preparing next study…")}
@@ -1213,7 +1200,7 @@ export function ScreeningPage() {
               </div>
 
               <div className="flex items-center gap-3 shrink-0">
-                <span className={`font-bold whitespace-nowrap ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
+                <span className={`font-bold whitespace-nowrap ${progress.paused ? "text-[#7c5800]" : "text-[#3a0f34]"}`}>
                   {progress.done} / {progress.total} screened ({progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%)
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -1250,9 +1237,9 @@ export function ScreeningPage() {
                 </div>
               </div>
             </div>
-            <div className={`mt-1.5 h-1.5 rounded-full overflow-hidden ${progress.paused ? "bg-amber-200/80" : "bg-indigo-100"}`}>
+            <div className={`mt-1.5 h-1.5 rounded-full overflow-hidden ${progress.paused ? "bg-[#ffdea6]/60" : "bg-[#eee7ec]"}`}>
               <div
-                className={`h-full transition-all duration-500 ${progress.paused ? "bg-amber-500" : "bg-indigo-600"}`}
+                className={`h-full transition-all duration-500 ${progress.paused ? "bg-[#7c5800]" : "bg-[#3a0f34]"}`}
                 style={{ width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%` }}
               />
             </div>

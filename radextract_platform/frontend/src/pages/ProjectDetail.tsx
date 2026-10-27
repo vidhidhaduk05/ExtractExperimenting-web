@@ -1,7 +1,62 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { FileText, CheckSquare, ShieldCheck, Table, Download, Plus, GitBranch, BarChart3, Award, Highlighter, FileSpreadsheet, Sparkles, ArrowRight } from "lucide-react";
+import { Download, Plus, Check } from "lucide-react";
+
+// Dashboard cards: every card shows a real DB-derived number, a computed reason
+// line, and navigates to its stage. No label-only tiles, no placeholder dashes.
+
+function relativeTime(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const days = Math.floor((Date.now() - then) / 86400000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  return `${months} month${months > 1 ? "s" : ""} ago`;
+}
+
+function StageCard({
+  to,
+  number,
+  stage,
+  reason,
+  fraction,
+  complete,
+}: {
+  to: string;
+  number: string;
+  stage: string;
+  reason: string;
+  fraction?: { done: number; total: number };
+  complete?: boolean;
+}) {
+  const pct = fraction && fraction.total > 0 ? Math.round((fraction.done / fraction.total) * 100) : 0;
+  return (
+    <Link
+      to={to}
+      className="block bg-[#ffffff] border border-[#d2c2cb] p-5 rounded hover:border-[#3a0f34] transition-colors group"
+    >
+      <div className="font-['Serifon_Editorial'] text-3xl font-bold text-[#3a0f34] tracking-tight">
+        {number}
+      </div>
+      <div className="text-[10px] font-semibold text-[#62535d] uppercase tracking-wider mt-1.5 font-['Work_Sans']">
+        {stage}
+      </div>
+      <div className="text-xs text-[#62535d] mt-2 leading-snug flex items-start gap-1.5">
+        {complete && <Check className="h-3.5 w-3.5 text-[#3a0f34] shrink-0 mt-0.5" />}
+        <span>{reason}</span>
+      </div>
+      {fraction && fraction.total > 0 && (
+        <div className="h-1 w-full bg-[#eee7ec] rounded-full overflow-hidden mt-3">
+          <div className="h-full bg-[#3a0f34] rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+        </div>
+      )}
+    </Link>
+  );
+}
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -16,6 +71,20 @@ export function ProjectDetail() {
     queryKey: ["studies", projectId],
     queryFn: () => api.listStudies(projectId!),
     enabled: !!projectId,
+  });
+
+  const { data: summary } = useQuery({
+    queryKey: ["screening-summary", projectId],
+    queryFn: () => api.screeningSummary(projectId!),
+    enabled: !!projectId,
+  });
+
+  // Live AI batch screening state, polled only while a run is active
+  const { data: aiProgress } = useQuery({
+    queryKey: ["screening-progress", projectId],
+    queryFn: () => api.getAIScreeningProgress(projectId!),
+    enabled: !!projectId,
+    refetchInterval: (q) => (q.state.data?.active ? 2000 : false),
   });
 
   const { data: robSummary } = useQuery({
@@ -36,27 +105,160 @@ export function ProjectDetail() {
     enabled: !!projectId,
   });
 
+  const { data: prisma } = useQuery({
+    queryKey: ["prisma-flow", projectId],
+    queryFn: () => api.prismaFlow(projectId!),
+    enabled: !!projectId,
+  });
+
+  const { data: reviewProgress } = useQuery({
+    queryKey: ["review-progress", projectId],
+    queryFn: () => api.reviewProgress(projectId!),
+    enabled: !!projectId,
+  });
+
+  const { data: importBatches = [] } = useQuery({
+    queryKey: ["import-batches", projectId],
+    queryFn: () => api.listImportBatches(projectId!),
+    enabled: !!projectId,
+  });
+
   let pico: Record<string, string> = {};
   try {
     pico = project?.pico_json ? JSON.parse(project.pico_json) : {};
   } catch {}
 
   const studyCount = studies?.length || 0;
-  const includedCount = studies?.filter((s) => s.screening_status === "included").length || 0;
+  const total = summary?.total ?? studyCount;
+  const pending = summary?.pending ?? 0;
+  const decided = total - pending;
+  const included = (summary?.ft_included ?? 0) + (summary?.ta_included ?? 0);
+  const taDecided = (summary?.ta_included ?? 0) + (summary?.ta_excluded ?? 0);
+  const ftIncluded = summary?.ft_included ?? 0;
+
   const robCount = robSummary?.total_assessments || 0;
   const metaCount = metaList?.length || 0;
   const gradeCount = gradeList?.length || 0;
 
-  const cards = [
-    { label: "Extraction Sheet", value: "Matrix", to: `/projects/${projectId}/extraction-sheet`, icon: FileSpreadsheet, color: "text-emerald-600" },
-    { label: "Data Extraction (PDF)", value: "6 Papers", to: `/projects/${projectId}/extraction`, icon: Highlighter, color: "text-blue-600" },
-    { label: "Studies", value: studyCount, to: `/projects/${projectId}/studies`, icon: FileText, color: "text-phylo-blue" },
-    { label: "Screened In", value: includedCount, to: `/projects/${projectId}/screening`, icon: CheckSquare, color: "text-phylo-green" },
-    { label: "PRISMA Flow", value: "View", to: `/projects/${projectId}/prisma`, icon: GitBranch, color: "text-phylo-pink" },
-    { label: "RoB Assessments", value: robCount, to: `/projects/${projectId}/rob`, icon: ShieldCheck, color: "text-phylo-orange" },
-    { label: "Data Review", value: "—", to: `/projects/${projectId}/review`, icon: Table, color: "text-phylo-pink" },
-    { label: "Meta-Analyses", value: metaCount, to: `/projects/${projectId}/meta-analysis`, icon: BarChart3, color: "text-phylo-blue" },
-  ];
+  const aiRunning = !!aiProgress?.active && !aiProgress?.paused;
+  const extractionValues = reviewProgress?.total_extractions ?? 0;
+  const verifiedValues = reviewProgress?.edited_count ?? 0;
+  const lastBatch = importBatches.find((b) => b.status !== "undone");
+
+  const cards = (
+    <>
+      <StageCard
+        to={`/projects/${projectId}/screening`}
+        number={`${decided} / ${total}`}
+        stage="Screening"
+        reason={
+          aiRunning
+            ? `AI batch running — ${aiProgress?.done ?? 0}/${aiProgress?.total ?? 0} read`
+            : pending > 0
+            ? `${pending} studies waiting on a decision`
+            : total > 0
+            ? "All studies decided"
+            : "Import studies to begin screening"
+        }
+        fraction={{ done: decided, total: total }}
+        complete={total > 0 && pending === 0}
+      />
+
+      <StageCard
+        to={`/projects/${projectId}/screening?stage=ft`}
+        number={`${ftIncluded} / ${taDecided}`}
+        stage="Full-Text"
+        reason={
+          pending > 0
+            ? "Blocked: finish Title/Abstract first"
+            : taDecided === 0
+            ? "No Title/Abstract decisions yet"
+            : `${taDecided - ftIncluded} studies not yet included at full-text`
+        }
+        fraction={{ done: ftIncluded, total: taDecided }}
+        complete={taDecided > 0 && pending === 0 && ftIncluded === taDecided}
+      />
+
+      <StageCard
+        to={`/projects/${projectId}/extraction-sheet`}
+        number={`${verifiedValues} / ${extractionValues}`}
+        stage="Extraction"
+        reason={
+          extractionValues === 0
+            ? included === 0
+              ? "Needs included studies"
+              : "Define extraction variables to begin"
+            : extractionValues - verifiedValues > 0
+            ? `${extractionValues - verifiedValues} values awaiting human verification`
+            : "All extracted values verified"
+        }
+        fraction={{ done: verifiedValues, total: extractionValues }}
+        complete={extractionValues > 0 && verifiedValues === extractionValues}
+      />
+
+      <StageCard
+        to={`/projects/${projectId}/rob`}
+        number={`${robCount} / ${included}`}
+        stage="Risk of Bias"
+        reason={
+          included === 0
+            ? "Needs included studies"
+            : robCount < included
+            ? "Required before GRADE can run"
+            : "All included studies assessed"
+        }
+        fraction={{ done: robCount, total: included }}
+        complete={included > 0 && robCount >= included}
+      />
+
+      <StageCard
+        to={`/projects/${projectId}/grade`}
+        number={`${gradeCount}`}
+        stage="GRADE"
+        reason={
+          robCount === 0 || extractionValues === 0
+            ? "Needs RoB + extraction data"
+            : gradeCount === 0
+            ? "Ready: assess outcome certainty"
+            : "Outcomes evaluated"
+        }
+        complete={gradeCount > 0}
+      />
+
+      <StageCard
+        to={`/projects/${projectId}/meta-analysis`}
+        number={`${metaCount}`}
+        stage="Meta-Analysis"
+        reason={
+          included < 2
+            ? "Needs ≥2 studies with extracted effect data"
+            : metaCount === 0
+            ? "Ready: pool extracted effect data"
+            : "Effect sizes pooled"
+        }
+        complete={metaCount > 0}
+      />
+
+      {/* PRISMA card: the only card that deliberately repeats To-dos numbers */}
+      <StageCard
+        to={`/projects/${projectId}/prisma`}
+        number={`${prisma?.identification?.total ?? 0} → ${prisma?.screening?.records_screened ?? 0} → ${prisma?.included?.studies_in_review ?? 0}`}
+        stage="PRISMA Flow"
+        reason="Identified → screened → included, live from the flow computation"
+      />
+
+      <StageCard
+        to={`/projects/${projectId}/studies`}
+        number={`${studyCount}`}
+        stage="Studies"
+        reason={
+          lastBatch
+            ? `Last import ${relativeTime(lastBatch.created_at)}`
+            : "No imports yet"
+        }
+      />
+    </>
+  );
 
   return (
     <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8 font-['Work_Sans']">
@@ -86,24 +288,7 @@ export function ProjectDetail() {
           <h3 className="font-['Serifon_Editorial'] text-xl font-bold text-[#3a0f34]">Review Architecture & Metrics</h3>
           <span className="font-mono text-xs text-[#81737b]">Live Status</span>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {cards.map((c) => (
-            <Link
-              key={c.label}
-              to={c.to}
-              className="bg-[#ffffff] border border-[#d2c2cb] p-6 rounded hover:border-[#814d75] hover:bg-[#eee7ec]/30 transition-all group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-8 w-8 rounded bg-[#fbf9f4] border border-[#d2c2cb] flex items-center justify-center text-[#3a0f34] group-hover:bg-[#3a0f34] group-hover:text-[#fbf9f4] transition-colors">
-                  <c.icon className="h-4 w-4" />
-                </div>
-                <ArrowRight className="h-3.5 w-3.5 text-[#81737b] opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <div className="font-['Serifon_Editorial'] text-3xl font-bold text-[#3a0f34] tracking-tight">{c.value}</div>
-              <div className="font-mono text-[11px] text-[#62535d] uppercase tracking-wider mt-1">{c.label}</div>
-            </Link>
-          ))}
-        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{cards}</div>
       </div>
 
       {/* PICOS Framework */}

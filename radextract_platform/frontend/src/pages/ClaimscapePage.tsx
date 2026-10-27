@@ -429,7 +429,7 @@ export const ClaimscapePage: React.FC = () => {
       {/* Main Container */}
       <main className="claimscape-theme mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-12 pt-2 sm:px-6 lg:px-8">
         
-        {/* Section 1: Hero & Question Card - Compact 2-Column Editorial Velvet Layout */}
+        {/* Section 1: Hero & Question Card - Compact 2-Column Editorial Layout */}
         <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10 pt-1 pb-2">
           {/* Left Column: Headline, Restored Description & Legend Bullets */}
           <div className="max-w-[580px] xl:pt-1">

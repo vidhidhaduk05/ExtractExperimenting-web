@@ -1053,6 +1053,26 @@ async def pubmed_fetch_studies(project_id: str,
             existing_pmids.add(pmid)
             imported += 1
 
+        # Persist the import event so the import history shows real backend records
+        conn.execute(
+            """INSERT INTO import_batches
+               (batch_id, project_id, filename, source, format,
+                total_records, imported_count, duplicate_count, merged_count, failed_count,
+                status, created_at, created_by, details_json)
+               VALUES (?, ?, ?, 'PubMed', 'Query', ?, ?, ?, 0, 0, 'completed', ?, ?, ?)""",
+            (
+                str(uuid.uuid4()),
+                project_id,
+                f"PubMed query: {pubmed_query[:120]}",
+                len(results),
+                imported,
+                skipped,
+                datetime.utcnow().strftime("%d %b %Y %H:%M UTC"),
+                user.get("username", "") if user else "",
+                json.dumps({"query": pubmed_query, "mindate": body.mindate, "maxdate": body.maxdate}),
+            ),
+        )
+
         conn.commit()
         from services.search_audit_service import log_search
         log_search(
@@ -1169,6 +1189,26 @@ async def openalex_fetch_studies(
         if title_key:
             existing_titles.add(title_key)
         imported += 1
+
+    # Persist the import event so the import history shows real backend records
+    conn.execute(
+        """INSERT INTO import_batches
+           (batch_id, project_id, filename, source, format,
+            total_records, imported_count, duplicate_count, merged_count, failed_count,
+            status, created_at, created_by, details_json)
+           VALUES (?, ?, ?, 'OpenAlex', 'Query', ?, ?, ?, 0, 0, 'completed', ?, ?, ?)""",
+        (
+            str(uuid.uuid4()),
+            project_id,
+            f"OpenAlex query: {(pubmed_query or strings.get('openalex', ''))[:120]}",
+            len(found["results"]),
+            imported,
+            skipped,
+            datetime.utcnow().strftime("%d %b %Y %H:%M UTC"),
+            user.get("username", "") if user else "",
+            json.dumps({"phrases": phrases, "mindate": body.mindate, "maxdate": body.maxdate}),
+        ),
+    )
     conn.commit()
 
     query_record = " OR ".join(f'"{phrase}"' for phrase in phrases)
