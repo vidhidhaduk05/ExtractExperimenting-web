@@ -170,12 +170,13 @@ def _drain_pending_jobs(db_conn, batch_size: int) -> int:
         from database import get_db
         from services import auto_extract_service
 
-        # Fetch studies that need AI screening (status = 'pending_screen')
+        # Fetch studies that need AI screening (ai_decision IS NULL or ai_decision = 'pending')
         cursor = db_conn.execute(
             """
-            SELECT s.id, s.title, s.abstract, s.project_id
+            SELECT s.study_id, s.title, s.abstract, s.project_id
             FROM studies s
-            WHERE s.ai_screening_status = 'pending'
+            WHERE (s.ai_decision IS NULL OR s.ai_decision = 'pending')
+              AND s.screening_status NOT IN ('excluded', 'duplicate')
             ORDER BY s.created_at ASC
             LIMIT ?
             """,
@@ -189,11 +190,11 @@ def _drain_pending_jobs(db_conn, batch_size: int) -> int:
             ]
             log.info("Processing screening batch of %d studies …", len(studies))
 
-            # Mark them as in-progress so other workers (if any) skip them
+            # Mark them as in-progress so other workers skip them
             placeholders = ",".join("?" * len(studies))
             ids = [s["study_id"] for s in studies]
             db_conn.execute(
-                f"UPDATE studies SET ai_screening_status='running' WHERE id IN ({placeholders})",
+                f"UPDATE studies SET ai_decision='running' WHERE study_id IN ({placeholders})",
                 ids,
             )
             db_conn.commit()
@@ -205,17 +206,22 @@ def _drain_pending_jobs(db_conn, batch_size: int) -> int:
                 by_project[s["project_id"]].append(s)
 
             for project_id, batch in by_project.items():
-                # Fetch PICO criteria for this project
                 pico_row = db_conn.execute(
-                    "SELECT pico_criteria FROM projects WHERE id = ?", (project_id,)
+                    "SELECT pico_json, inclusion_criteria_json, exclusion_criteria_json FROM projects WHERE project_id = ?", (project_id,)
                 ).fetchone()
                 pico_criteria: dict = {}
-                if pico_row and pico_row[0]:
+                if pico_row:
                     import json as _json
-                    try:
-                        pico_criteria = _json.loads(pico_row[0])
-                    except Exception:
-                        pass
+                    for field in (pico_row[0], pico_row[1], pico_row[2]):
+                        if field:
+                            try:
+                                parsed = _json.loads(field)
+                                if isinstance(parsed, dict):
+                                    pico_criteria.update(parsed)
+                                elif isinstance(parsed, list):
+                                    pico_criteria["criteria"] = parsed
+                            except Exception:
+                                pass
 
                 results = _run_laya_batch(batch, pico_criteria)
 
@@ -223,14 +229,15 @@ def _drain_pending_jobs(db_conn, batch_size: int) -> int:
                     sid = r["study_id"]
                     if "error" in r:
                         db_conn.execute(
-                            "UPDATE studies SET ai_screening_status='error', ai_screening_notes=? WHERE id=?",
+                            "UPDATE studies SET ai_decision='error', ai_reason=? WHERE study_id=?",
                             (r["error"][:500], sid),
                         )
                     else:
                         decision = r["result"].get("decision", "unclear") if isinstance(r["result"], dict) else "unclear"
+                        reason = r["result"].get("reason", "") if isinstance(r["result"], dict) else ""
                         db_conn.execute(
-                            "UPDATE studies SET ai_screening_status='done', ai_screening_decision=? WHERE id=?",
-                            (decision, sid),
+                            "UPDATE studies SET ai_decision=?, ai_reason=?, ai_screened_at=datetime('now') WHERE study_id=?",
+                            (decision, reason[:500], sid),
                         )
                 db_conn.commit()
                 processed += len(results)
@@ -238,10 +245,9 @@ def _drain_pending_jobs(db_conn, batch_size: int) -> int:
         # ── Extraction jobs ───────────────────────────────────────────────
         ext_cursor = db_conn.execute(
             """
-            SELECT s.id, s.project_id
+            SELECT s.study_id, s.project_id
             FROM studies s
-            WHERE s.auto_extraction_status = 'pending'
-            AND s.ai_screening_decision = 'include'
+            WHERE s.extraction_status = 'ready_for_extraction'
             ORDER BY s.created_at ASC
             LIMIT ?
             """,
@@ -253,18 +259,18 @@ def _drain_pending_jobs(db_conn, batch_size: int) -> int:
             for (sid, pid) in ext_rows:
                 try:
                     db_conn.execute(
-                        "UPDATE studies SET auto_extraction_status='running' WHERE id=?", (sid,)
+                        "UPDATE studies SET extraction_status='extracting' WHERE study_id=?", (sid,)
                     )
                     db_conn.commit()
-                    auto_extract_service.extract_study(sid, pid)
+                    auto_extract_service.auto_extract(study_id=sid, project_id=pid)
                     db_conn.execute(
-                        "UPDATE studies SET auto_extraction_status='done' WHERE id=?", (sid,)
+                        "UPDATE studies SET extraction_status='done' WHERE study_id=?", (sid,)
                     )
                 except Exception as exc:
                     log.warning("Extraction error for %s: %s", sid, exc)
                     db_conn.execute(
-                        "UPDATE studies SET auto_extraction_status='error', extraction_notes=? WHERE id=?",
-                        (str(exc)[:500], sid),
+                        "UPDATE studies SET extraction_status='error' WHERE study_id=?",
+                        (sid,),
                     )
                 finally:
                     db_conn.commit()
