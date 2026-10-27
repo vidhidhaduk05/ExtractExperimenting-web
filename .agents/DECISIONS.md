@@ -723,3 +723,8 @@ Implemented and verified the 5-phase correctness fix work order ([`PLANS/correct
 
 
 
+
+## 2026-10-27 — Protocol criteria weights and clarification specification
+
+User confirmed generic protocol criteria (medications and any inclusion/exclusion variable), with spreadsheet-style inclusion AND exclusion lists and right-column importance-weight sliders. Weights are not probability overrides or confidence intervals. Missing consequential protocol rules require persisted scope-aware clarifications. Required rules remain distinct from soft scoring. Updated RADEXTRACT_FINAL_AGENT_HANDOFF.md and RADEXTRACT_UPDATED_BLUEPRINT.html specify score traces, independent validation and boundary-safe sensitivity bounds. This was documentation only; no feature/statistical fix is claimed implemented. Prior handoff was archived without deletion. Primary methodology references are in the handoff.
+

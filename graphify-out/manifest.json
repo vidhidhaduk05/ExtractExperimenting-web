@@ -1890,9 +1890,9 @@
     "semantic_hash": ""
   },
   ".agents/DECISIONS.md": {
-    "mtime": 1793106671.233626,
-    "seen": 1793107247.5761096,
-    "ast_hash": "d6ec89d6be7b6dc77cd7b882df6aedb6",
+    "mtime": 1793108336.5809495,
+    "seen": 1793108385.230414,
+    "ast_hash": "558dfcdb4be2b1d7985788b76030233e",
     "semantic_hash": ""
   },
   "radextract_platform/backend/README_DEPLOYMENT.md": {
@@ -5472,8 +5472,20 @@
     "semantic_hash": ""
   },
   "RADEXTRACT_FINAL_AGENT_HANDOFF.md": {
-    "mtime": 1793107165.6880803,
-    "seen": 1793107247.6797073,
+    "mtime": 1793108274.9779668,
+    "seen": 1793108385.3902268,
+    "ast_hash": "d3aa150c250e2866a2833fddd3fafe0d",
+    "semantic_hash": ""
+  },
+  "RADEXTRACT_UPDATED_BLUEPRINT.html": {
+    "mtime": 1793108230.9518068,
+    "seen": 1793108385.3902268,
+    "ast_hash": "14fa2212f7fe6ea9277ac09bebb6c0bc",
+    "semantic_hash": ""
+  },
+  "docs/archives/2026-10-27-agent-handoff/RADEXTRACT_FINAL_AGENT_HANDOFF.before-confidence-1793107749103.md": {
+    "mtime": 1793107749.1060104,
+    "seen": 1793108385.4129653,
     "ast_hash": "5f12e19fcd10804a1ee7c681cb8a1932",
     "semantic_hash": ""
   }
