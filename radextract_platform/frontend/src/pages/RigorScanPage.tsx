@@ -114,19 +114,23 @@ export const RigorScanPage: React.FC = () => {
     return null;
   }, [scanResult, isReferenceActive]);
 
-  const selectedCheck: RigorCheckItem | undefined = activeDataset
-    ? (activeDataset.checks.find((c) => c.id === selectedCheckId) || activeDataset.checks[0])
-    : undefined;
+  // ⚡ Bolt Optimization: Memoize active selected check lookup to preserve reference equality across unrelated state changes
+  const selectedCheck: RigorCheckItem | undefined = React.useMemo(() => {
+    if (!activeDataset) return undefined;
+    return activeDataset.checks.find((c) => c.id === selectedCheckId) || activeDataset.checks[0];
+  }, [activeDataset, selectedCheckId]);
 
-  const filteredChecks = activeDataset
-    ? activeDataset.checks.filter((c) => {
-        if (selectedDomain !== "all" && c.domain !== selectedDomain) return false;
-        if (filterMode === "good" && c.outcome !== "good") return false;
-        if (filterMode === "mid" && c.outcome !== "mid") return false;
-        if (filterMode === "bad" && c.outcome !== "bad") return false;
-        return true;
-      })
-    : [];
+  // ⚡ Bolt Optimization: Memoize filtered check items array based on active filters
+  const filteredChecks = React.useMemo(() => {
+    if (!activeDataset) return [];
+    return activeDataset.checks.filter((c) => {
+      if (selectedDomain !== "all" && c.domain !== selectedDomain) return false;
+      if (filterMode === "good" && c.outcome !== "good") return false;
+      if (filterMode === "mid" && c.outcome !== "mid") return false;
+      if (filterMode === "bad" && c.outcome !== "bad") return false;
+      return true;
+    });
+  }, [activeDataset, selectedDomain, filterMode]);
 
   const handleSelectCheck = (id: string) => {
     setSelectedCheckId(id);
@@ -186,12 +190,30 @@ export const RigorScanPage: React.FC = () => {
     }, 600);
   };
 
-  const checksByDomain = activeDataset
-    ? activeDataset.domains.map((dom) => ({
-        domain: dom,
-        checks: filteredChecks.filter((c) => c.domain === dom.id),
-      })).filter((group) => group.checks.length > 0)
-    : [];
+  // ⚡ Bolt Optimization: Memoize domain-grouped checks using a single-pass O(N) Map algorithm
+  // This avoids redundant O(D * N) array filtering and object allocations on every render frame
+  const checksByDomain = React.useMemo(() => {
+    if (!activeDataset) return [];
+
+    const domainChecksMap = new Map<string, RigorCheckItem[]>();
+    for (const c of filteredChecks) {
+      const existing = domainChecksMap.get(c.domain);
+      if (existing) {
+        existing.push(c);
+      } else {
+        domainChecksMap.set(c.domain, [c]);
+      }
+    }
+
+    const result: Array<{ domain: RigorDomain; checks: RigorCheckItem[] }> = [];
+    for (const dom of activeDataset.domains) {
+      const checks = domainChecksMap.get(dom.id);
+      if (checks && checks.length > 0) {
+        result.push({ domain: dom, checks });
+      }
+    }
+    return result;
+  }, [activeDataset, filteredChecks]);
 
   return (
     <div className="rs min-h-screen bg-[var(--rs-card)] text-[var(--rs-ink)] pb-24 font-sans selection:bg-[#F9D14A] selection:text-[#381A61]">
