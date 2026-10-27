@@ -20,9 +20,9 @@ os.environ["USE_LOCAL_LAYA"] = "1"
 os.environ["LAYA_MODEL_DIR"] = os.path.join(REPO_ROOT, "laya/models")
 os.environ["LAYA_REPO_ROOT"] = REPO_ROOT
 os.environ["BU_CDP_URL"] = "http://127.0.0.1:9222"
-os.environ["TEXT_MODEL_BASE_URL"] = "http://127.0.0.1:11434/v1"
-os.environ["TEXT_MODEL"] = "llama3.2:latest"
-os.environ["TEXT_MODEL_API_KEY"] = "ollama"
+os.environ["TEXT_MODEL_BASE_URL"] = "http://127.0.0.1:18000/v1"
+os.environ["TEXT_MODEL"] = "biomni-r0"
+os.environ["TEXT_MODEL_API_KEY"] = "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
 
 from browser_harness.helpers import cdp
 from jev_ultrafast.browser import Browser
@@ -138,23 +138,19 @@ class WebsiteTester:
             self.browser = None
 
     def navigate(self, path):
-        full_url = f"{self.base_url}/#{path.lstrip('/')}"
+        full_url = f"{self.base_url}/{path.lstrip('/')}"
         try:
-            self.browser.call("Page.navigate", url=full_url)
-            time.sleep(0.4)
-            self.browser.call("Page.reload")
+            if self.browser:
+                try:
+                    self.browser.close()
+                except Exception:
+                    pass
+            self.browser = Browser(full_url)
             time.sleep(1.2)
             self.browser.evaluate(INJECT_MONITOR_JS)
             time.sleep(0.3)
         except Exception as e:
-            print(f"  Navigation reconnect: {e}")
-            try:
-                self.browser.close()
-            except Exception:
-                pass
-            self.browser = Browser(full_url)
-            time.sleep(1.2)
-            self.browser.evaluate(INJECT_MONITOR_JS)
+            print(f"  Navigation error: {e}")
 
     def get_errors(self):
         try:
@@ -400,21 +396,22 @@ class WebsiteTester:
 
 
 if __name__ == "__main__":
-    tester = WebsiteTester()
+    tester = WebsiteTester(project_id="1f209599-cfc6-48c5-a43c-422a96052930")
     try:
         tester.start()
+        pid = tester.project_id
         routes_to_test = [
             ("Landing Page", "/"),
             ("Projects List", "/projects"),
-            ("Project Overview", "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6"),
-            ("Studies Workbench", "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/studies"),
-            ("Screening Workbench", "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/screening"),
-            ("Extraction Sheet Matrix", "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/extraction-sheet"),
-            ("PRISMA 2020 Flow", "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/prisma"),
-            ("Risk of Bias (RoB)", "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/rob"),
-            ("Meta-Analysis", "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/meta-analysis"),
-            ("PICO & Hypothesis", "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/pico"),
-            ("Export", "/projects/4826596b-a6c6-4a39-bd59-4d98d38511b6/export"),
+            ("Project Overview", f"/projects/{pid}"),
+            ("Studies Workbench", f"/projects/{pid}/studies"),
+            ("Screening Workbench", f"/projects/{pid}/screening"),
+            ("Extraction Sheet Matrix", f"/projects/{pid}/extraction-sheet"),
+            ("PRISMA 2020 Flow", f"/projects/{pid}/prisma"),
+            ("Risk of Bias (RoB)", f"/projects/{pid}/rob"),
+            ("Meta-Analysis", f"/projects/{pid}/meta-analysis"),
+            ("PICO & Hypothesis", f"/projects/{pid}/pico"),
+            ("Export", f"/projects/{pid}/export"),
             ("Claimscape", "/claimscape"),
             ("Citation Telephone", "/citation-telephone"),
             ("RigorScan", "/rigor-scan"),

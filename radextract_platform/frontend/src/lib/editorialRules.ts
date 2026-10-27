@@ -40,10 +40,11 @@ export function sanitizeUiCopy(text: string): string {
 
   // 1. Redact / replace internal patented engine names
   result = result.replace(/\bbiomni[-_\s]*(?:r\d+|ai|service)?/gi, "AI Reviewer");
-  result = result.replace(/\blaya[-_\s]*(?:system-1|onnx|model|engine|ai|fast)?/gi, "AI Reviewer");
-  result = result.replace(/\bstorm[-_\s]*(?:method|pipeline|research)?/gi, "AI Reviewer");
+  result = result.replace(/\blaya(?:\s+system-1)?(?:\s+onnx)?/gi, "AI Reviewer");
+  result = result.replace(/\bstorm(?:\s+research)?/gi, "AI Reviewer");
 
   // 2. Standardize AI copy to AI Reviewer
+  result = result.replace(/\bAI Screening Workspace\b/gi, "Systematic Screening Workspace");
   result = result.replace(/\bAI Screening\b/gi, "AI Screening");
   result = result.replace(/\bFull AI Screening\b/gi, "Full AI Screening");
   result = result.replace(/\bAI Decision\b/gi, "AI Decision");

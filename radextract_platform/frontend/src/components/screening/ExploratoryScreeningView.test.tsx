@@ -6,8 +6,8 @@ describe("ExploratoryScreeningView", () => {
   it("renders with exact original Rose title and 5 prominent screening controls", () => {
     render(<ExploratoryScreeningView />);
 
-    expect(screen.getByText(/steal the/i)).toBeTruthy();
-    expect(screen.getByText(/whole literature/i)).toBeTruthy();
+    expect(screen.getAllByText(/Systematic/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Literature Screening/i)).toBeTruthy();
 
     // Check the 5 toggles
     expect(screen.getByText(/LIVE STREAM:/i)).toBeTruthy();

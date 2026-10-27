@@ -326,7 +326,7 @@ export function AppShell() {
                       className="font-serif font-bold text-xs sm:text-sm text-[#fbf9f4] hover:text-[#ffdea6] truncate"
                       title={project?.name || `Project ${projectId}`}
                     >
-                      {project?.name || `Project ${projectId.slice(0, 8)}`}
+                      {project?.name || `Project ${projectId}`}
                     </Link>
                     <button
                       type="button"

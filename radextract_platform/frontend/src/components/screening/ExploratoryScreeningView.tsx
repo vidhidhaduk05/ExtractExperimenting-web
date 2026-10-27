@@ -18,7 +18,8 @@ import {
   XCircle,
   Grid,
 } from "lucide-react";
-import { type Study, type ScreeningSummary, api } from "../../lib/api";
+import { type Study, type ScreeningSummary, api, getStoredProjectStudies } from "../../lib/api";
+import { PREVIEW_STUDIES } from "../../lib/demoData";
 
 interface ExploratoryScreeningViewProps {
   projectId?: string;
@@ -108,13 +109,19 @@ function studyToStreamPaper(s: Study, turn: number): StreamPaper {
 
 export function ExploratoryScreeningView({
   projectId = "proj_pam_current",
-  projectStudies = [],
+  projectStudies: incomingStudies = [],
   summary,
   exclusionReasons = [],
   onScreenStudy,
   isDecisionPending = false,
   onSwitchToStandard,
 }: ExploratoryScreeningViewProps) {
+  const projectStudies = useMemo(() => {
+    if (incomingStudies && incomingStudies.length > 0) return incomingStudies;
+    const stored = getStoredProjectStudies(projectId);
+    return stored && stored.length > 0 ? stored : PREVIEW_STUDIES;
+  }, [incomingStudies, projectId]);
+
   // ── 5 MAIN TOGGLES FOR SENIOR DOCTORS + SPEED ──
   // 1. LIVE STREAM: Pauses the live feed so senior doctors can read without it shifting
   const [liveStream, setLiveStream] = useState(true);
@@ -412,14 +419,13 @@ export function ExploratoryScreeningView({
 
           <div>
             <h1
-              className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111111] leading-none"
-              style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
+              className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111111] leading-none font-heading"
             >
-              steal the <em className="text-[#2E1231] not-italic">whole literature</em>
+              Systematic <em className="text-[#3a0f34] not-italic">Literature Screening</em>
             </h1>
             <p className="font-mono text-[9px] uppercase tracking-wider text-[#666666] mt-1">
               AI Reviewer Systematic Screening • Academic Editorial •{" "}
-              {readingComfortMode ? "Senior Clinician Mode Active" : "High-Throughput Mode"}
+              {readingComfortMode ? "Reading Comfort Active" : "High-Throughput Mode"}
             </p>
           </div>
         </div>

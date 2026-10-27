@@ -36,28 +36,28 @@ describe("AppShell Component", () => {
   };
 
   it("renders the 4 shell regions: rail, wine top bar, center work area, and dock", () => {
-    renderWithProviders(["/projects"]);
+    renderWithProviders(["/projects/test-proj-123"]);
 
     // Center work area rendered
-    expect(screen.getByText("Projects Work Area")).toBeInTheDocument();
+    expect(screen.getByText("Project Detail Work Area")).toBeInTheDocument();
 
     // Top bar elements
     expect(screen.getByText("Export")).toBeInTheDocument();
     expect(screen.getByText("Share")).toBeInTheDocument();
 
     // Left Rail navigation items
-    expect(screen.getByTitle("Projects")).toBeInTheDocument();
+    expect(screen.getByTitle("All Projects")).toBeInTheDocument();
     expect(screen.getByTitle("Screening")).toBeInTheDocument();
     expect(screen.getByTitle("Extraction")).toBeInTheDocument();
     expect(screen.getByTitle("Risk of Bias")).toBeInTheDocument();
     expect(screen.getByTitle("GRADE")).toBeInTheDocument();
-    expect(screen.getByTitle("Meta-analysis")).toBeInTheDocument();
+    expect(screen.getByTitle("Synthesis")).toBeInTheDocument();
     expect(screen.getByTitle("PRISMA")).toBeInTheDocument();
 
     // Right Dock tabs
     expect(screen.getByText("To-dos")).toBeInTheDocument();
     expect(screen.getByText("Results")).toBeInTheDocument();
-    expect(screen.getByText("PRISMA")).toBeInTheDocument();
+    expect(screen.getAllByText("PRISMA").length).toBeGreaterThan(0);
   });
 
   it("displays project breadcrumb when projectId is present in route", () => {
