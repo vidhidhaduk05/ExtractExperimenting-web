@@ -74,11 +74,16 @@ interface UndoRecord {
 export function PdfViewerPage() {
   const { projectId, studyId } = useParams<{ projectId: string; studyId?: string }>();
 
-  const { data: dynamicStudies } = useQuery({
+  const { data: dynamicStudies, isLoading: studyLoading } = useQuery({
     queryKey: ["studies", projectId],
     queryFn: () => api.listStudies(projectId!),
     enabled: !!projectId,
   });
+
+  const handleSaveInlineEdit = (_varId: string) => {
+    handleDecision("modified", editDraftValue);
+    setEditingVarId(null);
+  };
   const allStudies: any[] = useMemo(() => {
     if (dynamicStudies && dynamicStudies.length > 0) {
       return dynamicStudies.map((s, idx) => {
