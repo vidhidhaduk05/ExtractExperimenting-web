@@ -300,16 +300,16 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
               </span>
             )}
           </div>
-          <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#141413] tracking-tight">
+          <h1 className="font-['Serifon_Editorial'] text-3xl sm:text-4xl font-bold text-[#3a0f34] tracking-tight">
             {bookmarkedOnly ? "Bookmarked studies" : "Studies & Clinical Benchmarks"}
           </h1>
-          <p className="font-serif italic text-sm text-[#6B665E] mt-1">
+          <p className="font-['Newsreader'] italic text-sm text-[#62535d] mt-1">
             {bookmarkedOnly ? "Your saved studies for reviewing later. Remove a bookmark when you no longer need it." : "Verified study extraction records, bounding box quote locators, and evidence quality reviews."}
           </p>
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5 shrink-0">
-          <Link to={`/projects/${projectId}/${bookmarkedOnly ? "studies" : "bookmarks"}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/15 text-xs font-medium hover:bg-black/5">
+          <Link to={`/projects/${projectId}/${bookmarkedOnly ? "studies" : "bookmarks"}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] text-xs font-semibold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors">
             {bookmarkedOnly ? "View all studies" : "View bookmarked studies"}
           </Link>
           {/* Hidden reference file input */}
@@ -330,17 +330,17 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
             <button
               type="button"
               onClick={handleRestoreBenchmark}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/15 text-xs font-medium text-[#141413] hover:bg-black/5 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] text-xs font-semibold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
               title="Restore standard 6 benchmark demo studies"
             >
-              <RefreshCw className="h-3.5 w-3.5 text-[#6B665E]" />
+              <RefreshCw className="h-3.5 w-3.5 text-[#814d75]" />
               <span>Load Benchmark Studies</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={handleStartBlank}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/15 text-xs font-medium text-[#6B665E] hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] text-xs font-semibold text-[#62535d] hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50 transition-colors"
               title="Clear benchmark demo studies and start fresh with 0 studies"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -352,13 +352,13 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
           <button
             type="button"
             onClick={() => setIsDuplicateModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/15 bg-white text-xs font-medium text-[#141413] hover:bg-black/5 transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] bg-white text-xs font-semibold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
             title="Open side-by-side duplicate review workspace (Keep primary, Keep both, Merge metadata)"
           >
-            <ArrowLeftRight className="h-3.5 w-3.5 text-[#6B665E]" />
+            <ArrowLeftRight className="h-3.5 w-3.5 text-[#814d75]" />
             <span>Duplicate Review</span>
             {dedupData && dedupData.total_duplicates > 0 ? (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-100 text-amber-800 border border-amber-200">
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#ffdea6]/50 text-[#7c5800] border border-[#d2c2cb]">
                 {dedupData.total_duplicates}
               </span>
             ) : null}
@@ -367,15 +367,18 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
           {/* Bulk Upload PDFs Button */}
           <button
             type="button"
-            className="btn-phylo-primary text-xs flex items-center gap-1.5 shadow-xs"
+            className="bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] px-3.5 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors"
             onClick={() => setIsBulkModalOpen(true)}
           >
-            <FolderPlus className="h-3.5 w-3.5" />
+            <FolderPlus className="h-3.5 w-3.5 text-[#ffdea6]" />
             <span>Bulk Upload PDFs</span>
           </button>
 
           {/* Import Single Study */}
-          <Link to={`/projects/${projectId}/studies/new`} className="btn-phylo-secondary text-xs flex items-center gap-1.5">
+          <Link
+            to={`/projects/${projectId}/studies/new`}
+            className="bg-[#ffffff] text-[#3a0f34] border border-[#d2c2cb] hover:bg-[#eee7ec] px-3.5 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors"
+          >
             <Plus className="h-3.5 w-3.5" />
             <span>Import Study</span>
           </Link>
@@ -679,20 +682,20 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       {studies && studies.length > 0 && <p className="text-xs text-slate-500">{visibleStudies.length} matching studies</p>}
       {tagFilter && studies && studies.length > 0 && visibleStudies.length === 0 && <p className="text-sm text-slate-500">No studies match this tag and the current filters.</p>}
       {studies && studies.length > 0 && (
-        <div className="card-phylo overflow-hidden rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+        <div className="bg-[#ffffff] border border-[#d2c2cb] rounded overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-[#F2F1EB]/70 border-b border-black/[0.08] text-[10px] font-mono text-[#8A817A] uppercase tracking-wider">
+              <thead className="bg-[#fbf9f4] border-b border-[#d2c2cb] text-[10px] font-mono text-[#62535d] uppercase tracking-wider">
                 <tr>
-                  <th className="px-5 py-3 font-medium">Study & Citation</th>
-                  <th className="px-4 py-3 font-medium">Year</th>
-                  <th className="px-4 py-3 font-medium">Design</th>
-                  <th className="px-4 py-3 font-medium">Screening</th>
-                  <th className="px-4 py-3 font-medium">RoB Status</th>
-                  <th className="px-5 py-3 font-medium text-right">Extraction Workflows</th>
+                  <th className="px-5 py-3 font-semibold">Study & Citation</th>
+                  <th className="px-4 py-3 font-semibold">Year</th>
+                  <th className="px-4 py-3 font-semibold">Design</th>
+                  <th className="px-4 py-3 font-semibold">Screening</th>
+                  <th className="px-4 py-3 font-semibold">RoB Status</th>
+                  <th className="px-5 py-3 font-semibold text-right">Extraction Workflows</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-black/[0.04]">
+              <tbody className="divide-y divide-[#d2c2cb]/40">
                 {visibleStudies.map((s) => (
                   <StudyRow
                     key={s.study_id}
@@ -781,23 +784,23 @@ function StudyRow({
   };
 
   return (
-    <tr className="hover:bg-black/[0.015] transition-colors">
+    <tr className="hover:bg-[#eee7ec]/30 transition-colors">
       <td className="px-5 py-3.5">
-        <div className="flex items-start gap-2">{bookmark}<div className="font-serif font-medium text-sm text-[#141413] line-clamp-1">{study.title}</div></div>
+        <div className="flex items-start gap-2">{bookmark}<div className="font-['Serifon_Editorial'] font-bold text-sm text-[#3a0f34] line-clamp-1">{study.title}</div></div>
         <TagBadges index={tags} studyId={study.study_id} />
-        <div className="text-xs font-sans text-[#8A817A] mt-0.5 line-clamp-1">
+        <div className="text-xs font-['Work_Sans'] text-[#62535d] mt-0.5 line-clamp-1">
           {study.authors || "Unknown Authors"} {study.journal ? `— ${study.journal}` : ""}
         </div>
       </td>
-      <td className="px-4 py-3.5 font-mono text-xs text-[#6B665E]">{study.publication_year || "—"}</td>
-      <td className="px-4 py-3.5 text-xs text-[#6B665E]">{study.study_design || "—"}</td>
+      <td className="px-4 py-3.5 font-mono text-xs text-[#62535d]">{study.publication_year || "—"}</td>
+      <td className="px-4 py-3.5 text-xs text-[#62535d]">{study.study_design || "—"}</td>
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${screeningBadge(study.screening_status)}`}>
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-mono font-medium ${screeningBadge(study.screening_status)}`}>
             {study.screening_status || "pending"}
           </span>
           {Boolean(study.is_duplicate) && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-100 text-amber-900 border border-amber-300 font-medium">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[#ffdea6]/50 text-[#7c5800] border border-[#d2c2cb] font-medium">
               <Copy className="h-2.5 w-2.5" />
               <span>DUPLICATE</span>
             </span>
@@ -808,39 +811,39 @@ function StudyRow({
         {activeAssessment ? (
           <Link
             to={`/projects/${projectId}/rob/${activeAssessment.assessment_id}`}
-            className="inline-flex items-center gap-1.5 text-xs text-[#141413] hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs text-[#3a0f34] hover:underline"
           >
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
-            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono ${judgmentColor(activeAssessment.overall_judgment)}`}>
+            <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-mono ${judgmentColor(activeAssessment.overall_judgment)}`}>
               {judgmentLabel(activeAssessment.overall_judgment)}
             </span>
           </Link>
         ) : (
-          <span className="text-[#8A817A] text-xs font-serif italic">unassessed</span>
+          <span className="text-[#81737b] text-xs font-['Newsreader'] italic">unassessed</span>
         )}
       </td>
       <td className="px-5 py-3.5 text-right">
         <div className="flex items-center justify-end gap-2">
-          <button type="button" onClick={onComments} className="rounded-full border border-black/15 bg-white px-3 py-1 text-xs hover:bg-black/5" aria-label={`Comments and tags for ${study.title}`}>Comments & tags</button>
+          <button type="button" onClick={onComments} className="rounded border border-[#d2c2cb] bg-white px-3 py-1 text-xs text-[#4f444b] hover:bg-[#eee7ec] transition-colors" aria-label={`Comments and tags for ${study.title}`}>Comments & tags</button>
           <Link
             to={`/projects/${projectId}/studies/${study.study_id}/pdf`}
-            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-[#141413] text-[#FAF9F3] hover:bg-[#282724] transition-all shadow-2xs"
+            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all"
             title="Review Co-Scientist Extractions in PDF with Track Changes"
           >
-            <Highlighter className="h-3 w-3" />
+            <Highlighter className="h-3 w-3 text-[#ffdea6]" />
             <span>PDF</span>
           </Link>
           <Link
             to={`/projects/${projectId}/extraction-sheet?study=${study.study_id}`}
-            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-white hover:bg-black/5 text-[#141413] border border-black/15 transition-all"
+            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all"
             title="View Extraction Data Sheet"
           >
-            <FileSpreadsheet className="h-3 w-3" />
+            <FileSpreadsheet className="h-3 w-3 text-[#814d75]" />
             <span>Sheet</span>
           </Link>
           <button
             onClick={onDelete}
-            className="text-[#8A817A] hover:text-rose-600 transition-colors p-1.5 rounded-full hover:bg-black/5"
+            className="text-[#81737b] hover:text-rose-700 hover:bg-[#eee7ec] transition-colors p-1.5 rounded"
             title="Delete study"
           >
             <Trash2 className="h-3.5 w-3.5" />

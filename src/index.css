@@ -22,10 +22,15 @@
     --palette-gold: #F9D14A;
     --accent-yellow: #F9D14A;
     --accent-yellow-text: #381A61;
+    --line: #d2c2cb;
+    --line-soft: rgba(210, 194, 203, 0.45);
+    --shell-rail-w: 56px;
+    --shell-topbar-h: 56px;
+    --shell-dock-w: 340px;
   }
 
   body {
-    @apply bg-[#FAF9F3] text-[#141413] font-sans antialiased selection:bg-[#F9D14A] selection:text-[#381A61];
+    @apply bg-[#fbf9f4] text-[#4f444b] font-sans antialiased selection:bg-[#F9D14A] selection:text-[#381A61];
   }
 
   h1, h2, h3, .font-editorial {

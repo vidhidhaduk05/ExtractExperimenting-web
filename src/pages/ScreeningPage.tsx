@@ -885,24 +885,24 @@ export function ScreeningPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="flex-1 flex flex-col min-h-0 bg-[#fbf9f4] font-['Work_Sans']">
       {/* Top Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-3 shadow-sm">
+      <header className="bg-[#fbf9f4] border-b border-[#d2c2cb] sticky top-0 z-30 px-6 py-3">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
               to={`/projects/${projectId}`}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec] rounded transition-colors"
               title="Back to Project"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <ShieldCheck className="w-6 h-6 text-indigo-600" />
+              <h1 className="text-xl font-bold font-['Serifon_Editorial'] text-[#3a0f34] flex items-center gap-2">
+                <ShieldCheck className="w-6 h-6 text-[#814d75]" />
                 Co-Scientist Screening Workspace
               </h1>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[#62535d]">
                 Multi-Stage Screening: Title &rarr; Abstract &rarr; Full-Text with Rayyan-Style Highlighting
               </p>
             </div>
@@ -913,42 +913,42 @@ export function ScreeningPage() {
             {/* Bulk Upload from Laptop Button */}
             <button
               onClick={() => setShowBulkUploadModal(true)}
-              className="px-3.5 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center gap-1.5 shadow-sm transition-all"
+              className="px-3.5 py-2 text-xs font-semibold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded flex items-center gap-1.5 transition-all"
               title="Bulk upload study PDFs, spreadsheets, or citations directly from your laptop"
             >
-              <FolderPlus className="w-3.5 h-3.5 text-amber-300" />
+              <FolderPlus className="w-3.5 h-3.5 text-[#ffdea6]" />
               <span>Bulk Upload from Laptop</span>
             </button>
 
             {/* Hotkeys Cheatsheet Button */}
             <button
               onClick={() => setShowHotkeysModal(true)}
-              className="px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 shadow-sm transition-all"
+              className="px-3 py-2 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1.5 transition-all"
               title="Keyboard Shortcuts: [I/1] Include, [E/2] Exclude, [M/3] Maybe, [←/J] Prev, [→/K] Next"
             >
-              <Keyboard className="w-3.5 h-3.5 text-indigo-600" />
+              <Keyboard className="w-3.5 h-3.5 text-[#814d75]" />
               <span>Hotkeys</span>
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-indigo-200/70 text-indigo-900 rounded font-bold">?</kbd>
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-[#eee7ec] text-[#3a0f34] rounded font-bold">?</kbd>
             </button>
 
-            {/* View Switcher: Exploratory Velvet + Senior Mode */}
+            {/* View Switcher: Exploratory View */}
             <button
               onClick={() => setViewMode("exploratory")}
-              className="px-3.5 py-2 text-xs font-bold text-[#2E1231] bg-[#FAF7F2] border-2 border-[#2E1231] hover:bg-[#E8C5E0]/40 rounded-lg flex items-center gap-2 shadow-xs transition-all cursor-pointer"
-              title="Switch to Velvet Exploratory View with Senior Doctor Mode, Toggles, and Step-by-Step Process Trace"
+              className="px-3.5 py-2 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] rounded flex items-center gap-2 transition-all cursor-pointer"
+              title="Switch to Exploratory View with Senior Doctor Mode, Toggles, and Step-by-Step Process Trace"
             >
-              <Sliders className="w-3.5 h-3.5 text-amber-600" />
-              <span>Velvet Stream + Senior Mode</span>
-              <span className="text-[10px] font-mono uppercase bg-[#2E1231] text-white px-1.5 py-0.2 rounded font-bold">
+              <Sliders className="w-3.5 h-3.5 text-[#814d75]" />
+              <span>Exploratory Process Stream</span>
+              <span className="text-[10px] font-mono uppercase bg-[#3a0f34] text-[#fbf9f4] px-1.5 py-0.2 rounded font-bold">
                 Live
               </span>
             </button>
 
             <button
               onClick={() => setShowKeywordsDrawer(true)}
-              className="px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-1.5 shadow-sm transition-all"
+              className="px-3 py-2 text-xs font-semibold text-[#4f444b] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1.5 transition-all"
             >
-              <Tag className="w-3.5 h-3.5 text-indigo-600" />
+              <Tag className="w-3.5 h-3.5 text-[#814d75]" />
               Keywords & Highlighting ({keywords.length})
             </button>
 
@@ -1017,13 +1017,13 @@ export function ScreeningPage() {
                 <button
                   onClick={() => startAnalysisMutation.mutate()}
                   disabled={startAnalysisMutation.isPending || startFullPipelineMutation.isPending}
-                  className="px-3.5 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
                   title="Run Stage 1: Automated Title & Abstract screening triage"
                 >
                   {startAnalysisMutation.isPending ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <Play className="w-3.5 h-3.5 text-indigo-600 fill-indigo-600" />
+                    <Play className="w-3.5 h-3.5 text-[#3a0f34] fill-[#3a0f34]" />
                   )}
                   <span>Start Stage 1 (Title & Abstract)</span>
                 </button>
@@ -1031,7 +1031,7 @@ export function ScreeningPage() {
                 <button
                   onClick={() => startFullPipelineMutation.mutate()}
                   disabled={startFullPipelineMutation.isPending || startAnalysisMutation.isPending}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {startFullPipelineMutation.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1045,22 +1045,22 @@ export function ScreeningPage() {
           </div>
         </div>
 
-        {/* Metric Summary Ribbon with Interactive Click-to-Filter Bundles */}
+        {/* Metric Summary Ribbon with Hairline Outline Cards on Paper */}
         {summary && (
           <div className="max-w-7xl mx-auto mt-2.5 px-4 md:px-0 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
             {/* TOTAL */}
             <button
               type="button"
               onClick={() => handleBundleClick("all")}
-              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+              className={`text-left rounded px-3 py-1.5 transition-all cursor-pointer border ${
                 statusFilter === "all"
-                  ? "bg-slate-200/90 border-slate-400 ring-2 ring-slate-400/40 shadow-xs scale-[1.02]"
-                  : "bg-slate-100/70 border-slate-200/80 hover:bg-slate-100 hover:border-slate-300"
+                  ? "bg-[#ffdea6]/30 border-[#3a0f34] ring-1 ring-[#3a0f34]"
+                  : "bg-[#ffffff] border-[#d2c2cb] hover:bg-[#eee7ec]"
               }`}
               title="Click to view all studies in the project"
             >
-              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Total</span>
-              <span className={`text-base font-bold text-slate-800 block ${activeBumpKey === "all" ? "animate-bump" : ""}`}>
+              <span className="text-[10px] font-semibold text-[#62535d] uppercase tracking-wider block">Total</span>
+              <span className={`text-base font-bold font-mono text-[#3a0f34] block ${activeBumpKey === "all" ? "animate-bump" : ""}`}>
                 {summary.total}
               </span>
             </button>
@@ -1069,15 +1069,15 @@ export function ScreeningPage() {
             <button
               type="button"
               onClick={() => handleBundleClick("ta_included")}
-              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+              className={`text-left rounded px-3 py-1.5 transition-all cursor-pointer border ${
                 statusFilter === "ta_included"
-                  ? "bg-emerald-100 border-emerald-500 ring-2 ring-emerald-400/50 shadow-xs scale-[1.02]"
-                  : "bg-emerald-50/80 border-emerald-200 hover:bg-emerald-100/70 hover:border-emerald-300"
+                  ? "bg-[#ffdea6]/30 border-[#3a0f34] ring-1 ring-[#3a0f34]"
+                  : "bg-[#ffffff] border-[#d2c2cb] hover:bg-[#eee7ec]"
               }`}
               title="Click to filter to Title & Abstract Included studies"
             >
-              <span className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider block">T/A Inc</span>
-              <span className={`text-base font-bold text-emerald-800 block ${activeBumpKey === "ta_included" ? "animate-bump" : ""}`}>
+              <span className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block">T/A Inc</span>
+              <span className={`text-base font-bold font-mono text-[#3a0f34] block ${activeBumpKey === "ta_included" ? "animate-bump" : ""}`}>
                 {summary.ta_included}
               </span>
             </button>
@@ -1086,15 +1086,15 @@ export function ScreeningPage() {
             <button
               type="button"
               onClick={() => handleBundleClick("included")}
-              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+              className={`text-left rounded px-3 py-1.5 transition-all cursor-pointer border ${
                 statusFilter === "included"
-                  ? "bg-emerald-200/80 border-emerald-600 ring-2 ring-emerald-500/50 shadow-xs scale-[1.02]"
-                  : "bg-emerald-100/60 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400"
+                  ? "bg-[#ffdea6]/30 border-[#3a0f34] ring-1 ring-[#3a0f34]"
+                  : "bg-[#ffffff] border-[#d2c2cb] hover:bg-[#eee7ec]"
               }`}
               title="Click to filter to Full-Text Included studies"
             >
               <span className="text-[10px] font-semibold text-emerald-900 uppercase tracking-wider block">FT Inc</span>
-              <span className={`text-base font-bold text-emerald-900 block ${activeBumpKey === "included" ? "animate-bump" : ""}`}>
+              <span className={`text-base font-bold font-mono text-[#3a0f34] block ${activeBumpKey === "included" ? "animate-bump" : ""}`}>
                 {summary.ft_included}
               </span>
             </button>
@@ -1103,15 +1103,15 @@ export function ScreeningPage() {
             <button
               type="button"
               onClick={() => handleBundleClick("excluded")}
-              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+              className={`text-left rounded px-3 py-1.5 transition-all cursor-pointer border ${
                 statusFilter === "excluded"
-                  ? "bg-rose-100 border-rose-500 ring-2 ring-rose-400/50 shadow-xs scale-[1.02]"
-                  : "bg-rose-50/80 border-rose-200 hover:bg-rose-100/70 hover:border-rose-300"
+                  ? "bg-[#ffdea6]/30 border-[#3a0f34] ring-1 ring-[#3a0f34]"
+                  : "bg-[#ffffff] border-[#d2c2cb] hover:bg-[#eee7ec]"
               }`}
               title="Click to filter to Excluded studies"
             >
-              <span className="text-[10px] font-semibold text-rose-700 uppercase tracking-wider block">Excluded</span>
-              <span className={`text-base font-bold text-rose-800 block ${activeBumpKey === "excluded" ? "animate-bump" : ""}`}>
+              <span className="text-[10px] font-semibold text-rose-800 uppercase tracking-wider block">Excluded</span>
+              <span className={`text-base font-bold font-mono text-[#3a0f34] block ${activeBumpKey === "excluded" ? "animate-bump" : ""}`}>
                 {summary.ta_excluded + summary.ft_excluded}
               </span>
             </button>
@@ -1120,15 +1120,15 @@ export function ScreeningPage() {
             <button
               type="button"
               onClick={() => handleBundleClick("uncertain")}
-              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+              className={`text-left rounded px-3 py-1.5 transition-all cursor-pointer border ${
                 statusFilter === "uncertain"
-                  ? "bg-amber-100 border-amber-500 ring-2 ring-amber-400/50 shadow-xs scale-[1.02]"
-                  : "bg-amber-50/80 border-amber-200 hover:bg-amber-100/70 hover:border-amber-300"
+                  ? "bg-[#ffdea6]/30 border-[#3a0f34] ring-1 ring-[#3a0f34]"
+                  : "bg-[#ffffff] border-[#d2c2cb] hover:bg-[#eee7ec]"
               }`}
               title="Click to filter to Uncertain & Pending studies"
             >
-              <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider block">Uncertain</span>
-              <span className={`text-base font-bold text-amber-800 block ${activeBumpKey === "uncertain" ? "animate-bump" : ""}`}>
+              <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider block">Uncertain</span>
+              <span className={`text-base font-bold font-mono text-[#3a0f34] block ${activeBumpKey === "uncertain" ? "animate-bump" : ""}`}>
                 {summary.uncertain ?? summary.pending}
               </span>
             </button>
@@ -1137,15 +1137,15 @@ export function ScreeningPage() {
             <button
               type="button"
               onClick={() => handleBundleClick("awaiting_clarification")}
-              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+              className={`text-left rounded px-3 py-1.5 transition-all cursor-pointer border ${
                 statusFilter === "awaiting_clarification"
-                  ? "bg-purple-100 border-purple-500 ring-2 ring-purple-400/50 shadow-xs scale-[1.02]"
-                  : "bg-purple-50/80 border-purple-200 hover:bg-purple-100/70 hover:border-purple-300"
+                  ? "bg-[#ffdea6]/30 border-[#3a0f34] ring-1 ring-[#3a0f34]"
+                  : "bg-[#ffffff] border-[#d2c2cb] hover:bg-[#eee7ec]"
               }`}
               title="Click to filter to Studies Awaiting Human Clarification"
             >
-              <span className="text-[10px] font-semibold text-purple-700 uppercase tracking-wider block">Questions</span>
-              <span className={`text-base font-bold text-purple-800 block ${activeBumpKey === "awaiting_clarification" ? "animate-bump" : ""}`}>
+              <span className="text-[10px] font-semibold text-[#814d75] uppercase tracking-wider block">Questions</span>
+              <span className={`text-base font-bold font-mono text-[#3a0f34] block ${activeBumpKey === "awaiting_clarification" ? "animate-bump" : ""}`}>
                 {summary.awaiting_clarification ?? 0}
               </span>
             </button>
@@ -1154,15 +1154,15 @@ export function ScreeningPage() {
             <button
               type="button"
               onClick={() => handleBundleClick("awaiting_pdf")}
-              className={`text-left rounded-lg px-3 py-1.5 transition-all cursor-pointer border ${
+              className={`text-left rounded px-3 py-1.5 transition-all cursor-pointer border ${
                 statusFilter === "awaiting_pdf"
-                  ? "bg-blue-100 border-blue-500 ring-2 ring-blue-400/50 shadow-xs scale-[1.02]"
-                  : "bg-blue-50/80 border-blue-200 hover:bg-blue-100/70 hover:border-blue-300"
+                  ? "bg-[#ffdea6]/30 border-[#3a0f34] ring-1 ring-[#3a0f34]"
+                  : "bg-[#ffffff] border-[#d2c2cb] hover:bg-[#eee7ec]"
               }`}
               title="Click to filter to Studies Awaiting Full-Text PDF"
             >
-              <span className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider block">Need PDF</span>
-              <span className={`text-base font-bold text-blue-800 block ${activeBumpKey === "awaiting_pdf" ? "animate-bump" : ""}`}>
+              <span className="text-[10px] font-semibold text-[#62535d] uppercase tracking-wider block">Need PDF</span>
+              <span className={`text-base font-bold font-mono text-[#3a0f34] block ${activeBumpKey === "awaiting_pdf" ? "animate-bump" : ""}`}>
                 {summary.awaiting_pdf ?? 0}
               </span>
             </button>
@@ -1247,30 +1247,30 @@ export function ScreeningPage() {
 
 
       {/* Compact Single-Line Filter & Search Toolbar */}
-      <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-2">
+      <div className="bg-[#fbf9f4] border-b border-[#d2c2cb] px-4 md:px-6 py-2">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           {/* Stage Filter Pills */}
-          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-xs font-medium text-slate-600">
+          <div className="flex items-center gap-1 bg-[#eee7ec] p-0.5 rounded text-xs font-medium text-[#62535d]">
             <button
               onClick={() => setStageFilter("all")}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                stageFilter === "all" ? "bg-white text-slate-900 shadow-2xs font-semibold" : "hover:text-slate-900"
+              className={`px-2.5 py-1 rounded transition-all ${
+                stageFilter === "all" ? "bg-[#ffffff] text-[#3a0f34] font-semibold border border-[#d2c2cb]" : "hover:text-[#3a0f34]"
               }`}
             >
               All Stages
             </button>
             <button
               onClick={() => setStageFilter("ta")}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                stageFilter === "ta" ? "bg-white text-slate-900 shadow-2xs font-semibold" : "hover:text-slate-900"
+              className={`px-2.5 py-1 rounded transition-all ${
+                stageFilter === "ta" ? "bg-[#ffffff] text-[#3a0f34] font-semibold border border-[#d2c2cb]" : "hover:text-[#3a0f34]"
               }`}
             >
               Title & Abstract
             </button>
             <button
               onClick={() => setStageFilter("ft")}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                stageFilter === "ft" ? "bg-white text-slate-900 shadow-2xs font-semibold" : "hover:text-slate-900"
+              className={`px-2.5 py-1 rounded transition-all ${
+                stageFilter === "ft" ? "bg-[#ffffff] text-[#3a0f34] font-semibold border border-[#d2c2cb]" : "hover:text-[#3a0f34]"
               }`}
             >
               Full-Text
@@ -1282,7 +1282,7 @@ export function ScreeningPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+              className="text-xs bg-[#ffffff] border border-[#d2c2cb] rounded px-2.5 py-1.5 text-[#3a0f34] focus:outline-none focus:ring-1 focus:ring-[#814d75] font-medium"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
@@ -1297,7 +1297,7 @@ export function ScreeningPage() {
             <select
               value={confidenceFilter}
               onChange={(e) => setConfidenceFilter(e.target.value as any)}
-              className="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+              className="text-xs bg-[#ffffff] border border-[#d2c2cb] rounded px-2.5 py-1.5 text-[#3a0f34] focus:outline-none focus:ring-1 focus:ring-[#814d75] font-medium"
             >
               <option value="all">All Confidence</option>
               <option value="high">&ge; 80% (High Confidence)</option>
@@ -1305,12 +1305,12 @@ export function ScreeningPage() {
               <option value="low">&lt; 60% (Low Confidence)</option>
             </select>
 
-            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+            <label className="flex items-center gap-1.5 text-xs text-[#4f444b] cursor-pointer bg-[#ffffff] border border-[#d2c2cb] px-2.5 py-1.5 rounded hover:bg-[#eee7ec] transition-colors">
               <input
                 type="checkbox"
                 checked={savedOnly}
                 onChange={(e) => setSavedOnly(e.target.checked)}
-                className="rounded text-indigo-600 focus:ring-indigo-500"
+                className="rounded text-[#3a0f34] focus:ring-[#814d75]"
               />
               <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
             </label>
@@ -1321,13 +1321,13 @@ export function ScreeningPage() {
 
           {/* Search Box */}
           <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-[#62535d] absolute left-2.5 top-2.5" />
             <input
               type="text"
               placeholder="Search title, authors, DOI..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-sans"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#ffffff] border border-[#d2c2cb] rounded focus:bg-[#ffffff] focus:outline-none focus:ring-1 focus:ring-[#814d75] font-['Work_Sans'] text-[#3a0f34]"
             />
           </div>
         </div>
@@ -1337,15 +1337,15 @@ export function ScreeningPage() {
       <aside
         aria-label="Protocol and PICO Rules"
         onClick={() => setIsProtocolSliderOpen(true)}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-gradient-to-b from-[#381A61] to-[#4F46E5] text-white py-4 px-2 rounded-l-xl cursor-pointer shadow-xl border-l border-t border-b border-indigo-300 hover:shadow-2xl hover:scale-105 transition-all flex flex-col items-center gap-2.5 group select-none"
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-[#3a0f34] text-[#fbf9f4] py-4 px-2 rounded-l cursor-pointer shadow-md border-l border-t border-b border-[#d2c2cb] hover:bg-[#1a0017] transition-all flex flex-col items-center gap-2.5 group select-none"
         title="Click to slide open Protocol Eligibility & PICO Rules"
       >
-        <BookOpen className="w-4 h-4 text-amber-300 group-hover:rotate-12 transition-transform" />
-        <span className="text-[10px] font-bold uppercase tracking-widest [writing-mode:vertical-rl] rotate-180 text-indigo-100 group-hover:text-white">
+        <BookOpen className="w-4 h-4 text-[#ffdea6] group-hover:rotate-12 transition-transform" />
+        <span className="text-[10px] font-bold uppercase tracking-widest [writing-mode:vertical-rl] rotate-180 text-[#fbf9f4]">
           Protocol &amp; PICO Criteria
         </span>
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        <ChevronRight className="w-3.5 h-3.5 text-indigo-200 group-hover:text-white rotate-180" />
+        <ChevronRight className="w-3.5 h-3.5 text-[#d2c2cb] group-hover:text-white rotate-180" />
       </aside>
 
       {/* ── SLIDE-OVER PROTOCOL DRAWER ── */}
@@ -1353,35 +1353,35 @@ export function ScreeningPage() {
         <div className="fixed inset-0 z-50 overflow-hidden">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+            className="absolute inset-0 bg-[#1a0017]/40 backdrop-blur-xs transition-opacity"
             onClick={() => setIsProtocolSliderOpen(false)}
           />
 
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-white shadow-2xl border-l border-slate-200 flex flex-col animate-tag-pop">
+            <div className="w-screen max-w-md bg-[#ffffff] shadow-xl border-l border-[#d2c2cb] flex flex-col animate-tag-pop">
               {/* Drawer Header */}
-              <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-[#381A61] text-white p-4 flex items-center justify-between">
+              <div className="bg-[#3a0f34] text-[#fbf9f4] p-4 flex items-center justify-between border-b border-[#d2c2cb]">
                 <div className="flex items-center gap-2.5">
-                  <BookOpen className="w-5 h-5 text-amber-300" />
+                  <BookOpen className="w-5 h-5 text-[#ffdea6]" />
                   <div>
-                    <h3 className="text-sm font-bold tracking-tight">Protocol &amp; PICO Rules</h3>
-                    <p className="text-[11px] text-indigo-200">Systematic Review Eligibility Criteria</p>
+                    <h3 className="text-sm font-['Serifon_Editorial'] font-bold tracking-tight">Protocol &amp; PICO Rules</h3>
+                    <p className="text-[11px] text-[#d2c2cb] font-['Work_Sans']">Systematic Review Eligibility Criteria</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsProtocolSliderOpen(false)}
-                  className="p-1 rounded-lg hover:bg-white/10 text-indigo-200 hover:text-white transition-colors"
+                  className="p-1 rounded hover:bg-white/10 text-[#d2c2cb] hover:text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Drawer Content */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-['Work_Sans']">
                 {/* Protocol Badge */}
-                <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 p-2.5 rounded-lg">
-                  <span className="font-bold text-indigo-900 text-[11px]">PRISMA Protocol Active</span>
-                  <span className="text-[10px] bg-indigo-600 text-white font-semibold px-2 py-0.5 rounded-full">Automated Triage</span>
+                <div className="flex items-center justify-between bg-[#fbf9f4] border border-[#d2c2cb] p-2.5 rounded">
+                  <span className="font-bold text-[#3a0f34] text-[11px]">PRISMA Protocol Active</span>
+                  <span className="text-[10px] bg-[#3a0f34] text-[#fbf9f4] font-semibold px-2 py-0.5 rounded">Automated Triage</span>
                 </div>
 
                 {/* PICO Cards */}
@@ -1476,23 +1476,23 @@ export function ScreeningPage() {
           className="max-w-7xl w-full mx-auto px-4 md:px-6 pt-3"
           aria-label="Co-Scientist Screening Clarifications Checklist"
         >
-          <div className="bg-white border border-purple-200/90 rounded-xl shadow-xs overflow-hidden transition-all">
+          <div className="bg-[#ffffff] border border-[#d2c2cb] rounded overflow-hidden transition-all">
             {/* Checklist Ribbon Header */}
-            <div className="px-4 py-3 bg-gradient-to-r from-purple-50/90 via-indigo-50/50 to-white flex flex-wrap items-center justify-between gap-3 border-b border-purple-100">
+            <div className="px-4 py-3 bg-[#fbf9f4] flex flex-wrap items-center justify-between gap-3 border-b border-[#d2c2cb]">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-xs">
-                  <ListChecks className="w-4 h-4" />
+                <div className="w-8 h-8 rounded bg-[#3a0f34] text-[#fbf9f4] flex items-center justify-center">
+                  <ListChecks className="w-4 h-4 text-[#ffdea6]" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-bold text-slate-900 tracking-tight">
+                    <h2 className="text-sm font-['Serifon_Editorial'] font-bold text-[#3a0f34] tracking-tight">
                       Co-Scientist Screening Clarifications Checklist
                     </h2>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#ffdea6]/50 text-[#7c5800] border border-[#d2c2cb]">
                       {pendingClarifications.length} Pending
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-[#62535d] font-['Work_Sans']">
                     Review and clarify ambiguous PICO criteria flagged by Co-Scientist screener
                   </p>
                 </div>
@@ -1501,14 +1501,14 @@ export function ScreeningPage() {
               <div className="flex items-center gap-2">
                 {/* Filter Pills */}
                 {isChecklistExpanded && (
-                  <div className="flex items-center gap-1 bg-white border border-slate-200 p-0.5 rounded-lg text-xs font-medium text-slate-600">
+                  <div className="flex items-center gap-1 bg-[#ffffff] border border-[#d2c2cb] p-0.5 rounded text-xs font-medium text-[#62535d]">
                     <button
                       onClick={() => setChecklistFilter("pending")}
                       className={cn(
-                        "px-2.5 py-1 rounded-md text-[11px] transition-all",
+                        "px-2.5 py-1 rounded text-[11px] transition-all",
                         checklistFilter === "pending"
-                          ? "bg-purple-100 text-purple-900 font-bold"
-                          : "hover:text-slate-900"
+                          ? "bg-[#3a0f34] text-[#fbf9f4] font-bold"
+                          : "hover:text-[#3a0f34]"
                       )}
                     >
                       Pending ({pendingClarifications.length})
@@ -1516,10 +1516,10 @@ export function ScreeningPage() {
                     <button
                       onClick={() => setChecklistFilter("answered")}
                       className={cn(
-                        "px-2.5 py-1 rounded-md text-[11px] transition-all",
+                        "px-2.5 py-1 rounded text-[11px] transition-all",
                         checklistFilter === "answered"
-                          ? "bg-purple-100 text-purple-900 font-bold"
-                          : "hover:text-slate-900"
+                          ? "bg-[#3a0f34] text-[#fbf9f4] font-bold"
+                          : "hover:text-[#3a0f34]"
                       )}
                     >
                       Resolved ({answeredClarifications.length})
@@ -1527,10 +1527,10 @@ export function ScreeningPage() {
                     <button
                       onClick={() => setChecklistFilter("all")}
                       className={cn(
-                        "px-2.5 py-1 rounded-md text-[11px] transition-all",
+                        "px-2.5 py-1 rounded text-[11px] transition-all",
                         checklistFilter === "all"
-                          ? "bg-purple-100 text-purple-900 font-bold"
-                          : "hover:text-slate-900"
+                          ? "bg-[#3a0f34] text-[#fbf9f4] font-bold"
+                          : "hover:text-[#3a0f34]"
                       )}
                     >
                       All ({projectClarifications.length})
@@ -1541,7 +1541,7 @@ export function ScreeningPage() {
                 {/* Expand / Collapse Button */}
                 <button
                   onClick={() => setIsChecklistExpanded((prev) => !prev)}
-                  className="px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] hover:bg-[#eee7ec] border border-[#d2c2cb] rounded flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <span>{isChecklistExpanded ? "Hide Checklist" : `Show Checklist (${pendingClarifications.length})`}</span>
                   <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", isChecklistExpanded && "rotate-180")} />
@@ -1788,16 +1788,16 @@ export function ScreeningPage() {
       {/* Main Two-Pane Screening Workspace */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* Left Column: Study List (5 cols) */}
-        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-[calc(100vh-185px)] sticky top-[135px]">
-          <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-xl">
-            <span className="text-xs font-semibold text-slate-700">
+        <div className="lg:col-span-5 bg-[#ffffff] border border-[#d2c2cb] rounded flex flex-col h-[calc(100vh-185px)] sticky top-[135px]">
+          <div className="px-4 py-2.5 border-b border-[#d2c2cb] flex items-center justify-between bg-[#fbf9f4] rounded-t">
+            <span className="text-xs font-semibold text-[#3a0f34]">
               Studies ({filteredStudies.length})
             </span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => continuePipelineMutation.mutate("abstract")}
                 disabled={continuePipelineMutation.isPending}
-                className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100"
+                className="text-[11px] text-[#3a0f34] hover:text-[#1a0017] font-semibold px-2 py-0.5 rounded bg-[#eee7ec] hover:bg-[#d2c2cb]/50 border border-[#d2c2cb] transition-colors"
                 title="Run Stage 2 (Abstract) on pending & uncertain studies"
               >
                 Advance Abstract &rarr;
@@ -1805,13 +1805,13 @@ export function ScreeningPage() {
               <button
                 onClick={() => continuePipelineMutation.mutate("fulltext")}
                 disabled={continuePipelineMutation.isPending}
-                className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100"
+                className="text-[11px] text-[#3a0f34] hover:text-[#1a0017] font-semibold px-2 py-0.5 rounded bg-[#eee7ec] hover:bg-[#d2c2cb]/50 border border-[#d2c2cb] transition-colors"
                 title="Run Stage 3 (Full-text) on included studies with PDFs"
               >
                 Advance Full-Text &rarr;
               </button>
               {robRunProgress?.status === "running" ? (
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 animate-pulse">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#ffdea6]/50 text-[#7c5800] border border-[#d2c2cb] flex items-center gap-1 animate-pulse">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   Auto RoB Running ({robRunProgress.completed_studies}/{robRunProgress.total_studies})
                 </span>
@@ -1819,10 +1819,10 @@ export function ScreeningPage() {
                 <button
                   onClick={handleRobAllIncluded}
                   disabled={startBatchRobMutation.isPending}
-                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1"
+                  className="text-[11px] text-[#3a0f34] hover:text-[#1a0017] font-semibold px-2 py-0.5 rounded bg-[#eee7ec] hover:bg-[#d2c2cb]/50 border border-[#d2c2cb] flex items-center gap-1 transition-colors"
                   title="Run automated batch Risk of Bias assessment on all included studies"
                 >
-                  <ShieldCheck className="w-3 h-3" />
+                  <ShieldCheck className="w-3 h-3 text-[#814d75]" />
                   {startBatchRobMutation.isPending ? "Starting RoB..." : "Batch RoB Included"}
                 </button>
               )}
@@ -1830,14 +1830,14 @@ export function ScreeningPage() {
           </div>
 
           {/* Scrollable list */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-2 space-y-1">
+          <div className="flex-1 overflow-y-auto divide-y divide-[#d2c2cb]/40 p-2 space-y-1">
             {isLoadingStudies ? (
-              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+              <div className="flex flex-col items-center justify-center py-12 text-[#81737b]">
                 <Loader2 className="w-6 h-6 animate-spin mb-2" />
                 <span className="text-xs">Loading studies...</span>
               </div>
             ) : filteredStudies.length === 0 ? (
-              <div className="text-center py-12 text-slate-400 text-xs">
+              <div className="text-center py-12 text-[#81737b] text-xs">
                 No studies match the selected filters.
               </div>
             ) : (
@@ -1852,16 +1852,16 @@ export function ScreeningPage() {
                   <div
                     key={study.study_id}
                     onClick={() => setSelectedStudyId(study.study_id)}
-                    className={`p-3 rounded-lg cursor-pointer transition-all border ${
+                    className={`p-3 rounded cursor-pointer transition-all border ${
                       isCurrent
-                        ? "bg-indigo-50 border-indigo-400 ring-2 ring-indigo-300 animate-pulse"
+                        ? "bg-[#ffdea6]/40 border-[#3a0f34] ring-1 ring-[#3a0f34] animate-pulse"
                         : isSelected
-                        ? "bg-indigo-50/60 border-indigo-300 shadow-sm"
-                        : "hover:bg-slate-50 border-transparent"
+                        ? "bg-[#ffdea6]/25 border-[#814d75]"
+                        : "hover:bg-[#eee7ec] border-transparent"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 leading-snug">
+                      <h3 className="text-xs font-semibold text-[#3a0f34] line-clamp-2 leading-snug">
                         {study.title}
                       </h3>
                       <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
@@ -1974,14 +1974,14 @@ export function ScreeningPage() {
           </div>
         </div>
 
-        {/* Right Column: Rayyan-Style Preview Pane (7 cols) */}
-        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-[calc(100vh-185px)] overflow-y-auto">
+        {/* Right Column: Preview Pane (7 cols) */}
+        <div className="lg:col-span-7 bg-[#ffffff] border border-[#d2c2cb] rounded flex flex-col h-[calc(100vh-185px)] overflow-y-auto">
           {selectedStudy ? (
             <div className="p-6 space-y-6">
               {/* Header section */}
               <div>
                 <div className="flex items-start justify-between gap-4 mb-2">
-                  <h2 className="text-base font-bold text-slate-900 leading-tight">
+                  <h2 className="text-base font-bold font-['Serifon_Editorial'] text-[#3a0f34] leading-tight">
                     {renderHighlightedText(
                       selectedStudy.title,
                       selectedHighlights?.title_spans || [],

@@ -141,6 +141,17 @@ export function ClarificationNotificationCenter({
     return pendingQuestions.filter((q) => !dismissedToastIds.has(q.question_id)).slice(0, 2);
   }, [pendingQuestions, dismissedToastIds]);
 
+  // Auto-dismiss pending toasts after 4000ms per Master Theme shell rules
+  useEffect(() => {
+    if (activeToasts.length === 0) return;
+    const timers = activeToasts.map((toast) =>
+      setTimeout(() => {
+        setDismissedToastIds((prev) => new Set([...prev, toast.question_id]));
+      }, 4000)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [activeToasts]);
+
   // Drawer list filtered by tab and stage
   const drawerList = useMemo(() => {
     const list = activeDrawerTab === "pending" ? pendingQuestions : allQuestions.filter((q) => q.status === "answered");
@@ -229,32 +240,23 @@ export function ClarificationNotificationCenter({
               <div
                 key={q.question_id}
                 className={cn(
-                  "pointer-events-auto w-88 max-w-sm rounded-xl border p-3.5 shadow-2xl backdrop-blur-md transition-all duration-300 relative overflow-hidden",
+                  "pointer-events-auto w-88 max-w-sm rounded-lg border border-[#d2c2cb] border-l-2 border-l-[#3a0f34] p-3.5 shadow-md bg-white text-[#4f444b] transition-all duration-300 relative overflow-hidden",
                   feedback
-                    ? "bg-emerald-50/95 border-emerald-300 text-emerald-950"
-                    : "bg-white/95 dark:bg-[#1E1E1E]/95 border-[#d2c2cb] dark:border-white/10 text-[#141413] dark:text-slate-100"
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-950 border-l-2 border-l-emerald-600"
+                    : "bg-white text-[#4f444b]"
                 )}
                 role="alert"
               >
-                {/* Master Theme Animated Border Beam */}
-                <BorderBeam
-                  active={beamActive && !feedback}
-                  duration={7}
-                  colorFrom="#814d75"
-                  colorTo="#ffdea6"
-                  borderWidth={1.5}
-                />
-
                 {/* Desktop Notification Header */}
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <div className="w-5 h-5 rounded bg-[#eee7ec] text-[#3a0f34] flex items-center justify-center shrink-0">
                       <Sparkles className="h-3 w-3" />
                     </div>
-                    <span className="text-[11px] font-bold text-purple-900 dark:text-purple-300 truncate">
+                    <span className="text-[11px] font-bold text-[#3a0f34] truncate">
                       Co-Scientist Screening Clarification
                     </span>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase font-semibold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 shrink-0">
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase font-semibold bg-[#eee7ec] text-[#814d75] shrink-0">
                       {q.stage}
                     </span>
                   </div>
@@ -274,21 +276,21 @@ export function ClarificationNotificationCenter({
                 <div className="mb-1">
                   <Link
                     to={`/projects/${projectId}/screening#clarifications`}
-                    className="font-sans font-semibold text-xs text-slate-900 dark:text-white hover:text-purple-600 dark:hover:text-purple-400 hover:underline line-clamp-1 flex items-center gap-1 group"
+                    className="font-sans font-semibold text-xs text-[#3a0f34] hover:text-[#814d75] hover:underline line-clamp-1 flex items-center gap-1 group"
                     title={q.study_title}
                   >
                     <span className="truncate">{q.study_title || `Study ${q.study_id}`}</span>
-                    <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 text-slate-400 transition-opacity shrink-0" />
+                    <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 text-[#81737b] transition-opacity shrink-0" />
                   </Link>
                 </div>
 
                 {/* Success Banner if just answered */}
                 {feedback ? (
-                  <div className="p-2.5 rounded-lg bg-emerald-100/90 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 flex items-start gap-2 text-xs text-emerald-900 dark:text-emerald-200 animate-fadeIn mt-1">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-300 flex items-start gap-2 text-xs text-emerald-950 animate-fadeIn mt-1">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-[11px]">Clarified & Re-screened!</p>
-                      <p className="text-[10px] text-emerald-800 dark:text-emerald-300 mt-0.5 font-medium">
+                      <p className="text-[10px] text-emerald-800 mt-0.5 font-medium">
                         Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% conf)
                       </p>
                     </div>
@@ -296,17 +298,17 @@ export function ClarificationNotificationCenter({
                 ) : (
                   <>
                     {/* Question Text (Compact snippet) */}
-                    <p className="text-[11px] text-slate-700 dark:text-slate-300 font-normal leading-snug line-clamp-2 mb-2.5">
+                    <p className="text-[11px] text-[#4f444b] font-normal leading-snug line-clamp-2 mb-2.5">
                       {q.question_text}
                     </p>
 
                     {/* Actions Bar */}
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-white/5">
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#d2c2cb]/50">
                       <Link
                         to={`/projects/${projectId}/screening#clarifications`}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 px-2.5 py-1 rounded-md transition-colors"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#3a0f34] hover:text-[#1a0017] bg-[#eee7ec] hover:bg-[#d2c2cb]/50 px-2.5 py-1 rounded border border-[#d2c2cb] transition-colors"
                       >
-                        <ClipboardCheck className="h-3 w-3" />
+                        <ClipboardCheck className="h-3 w-3 text-[#814d75]" />
                         <span>Clarify in Dashboard</span>
                         <ChevronRight className="h-3 w-3" />
                       </Link>
@@ -314,7 +316,7 @@ export function ClarificationNotificationCenter({
                       <button
                         type="button"
                         onClick={() => toggleToastQuickAnswer(q.question_id)}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-[#62535d] hover:text-[#3a0f34] px-2 py-1 rounded hover:bg-[#eee7ec]/50 transition-colors"
                       >
                         <span>Quick Answer</span>
                         <ChevronDown className={cn("h-3 w-3 transition-transform", isQuickOpen && "rotate-180")} />
@@ -323,7 +325,7 @@ export function ClarificationNotificationCenter({
 
                     {/* Expandable Quick Answer Options (Collapsible drawer) */}
                     {isQuickOpen && (
-                      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/10 space-y-1.5 animate-fadeIn">
+                      <div className="mt-2.5 pt-2 border-t border-[#d2c2cb] space-y-1.5 animate-fadeIn">
                         <div className="space-y-1">
                           {q.options.map((opt, optIdx) => {
                             const isChosen = curSelected === opt.value;
@@ -334,19 +336,19 @@ export function ClarificationNotificationCenter({
                                   setSelectedOptions((prev) => ({ ...prev, [q.question_id]: opt.value }));
                                 }}
                                 className={cn(
-                                  "w-full text-left px-2 py-1.5 rounded-md border text-[11px] transition-all flex items-start gap-1.5",
+                                  "w-full text-left px-2 py-1.5 rounded border text-[11px] transition-all flex items-start gap-1.5",
                                   isChosen
-                                    ? "bg-purple-50 border-purple-400 text-purple-950 font-medium"
-                                    : "bg-slate-50/70 border-slate-200 hover:bg-slate-100/70 text-slate-800"
+                                    ? "bg-[#ffdea6]/40 border-[#814d75] text-[#3a0f34] font-medium"
+                                    : "bg-[#fbf9f4] border-[#d2c2cb] hover:bg-[#eee7ec] text-[#4f444b]"
                                 )}
                               >
-                                <span className="font-mono text-[9px] font-bold px-1 rounded bg-black/5 text-slate-600 shrink-0 mt-0.5">
+                                <span className="font-mono text-[9px] font-bold px-1 rounded bg-[#d2c2cb]/30 text-[#62535d] shrink-0 mt-0.5">
                                   {optIdx + 1}
                                 </span>
                                 <div className="flex-1 min-w-0">
                                   <div className="leading-tight font-medium truncate">{opt.label}</div>
                                 </div>
-                                {isChosen && <Check className="h-3 w-3 text-purple-600 shrink-0 mt-0.5" />}
+                                {isChosen && <Check className="h-3 w-3 text-[#814d75] shrink-0 mt-0.5" />}
                               </button>
                             );
                           })}

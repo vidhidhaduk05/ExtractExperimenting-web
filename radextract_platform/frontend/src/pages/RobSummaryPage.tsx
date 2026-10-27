@@ -79,22 +79,22 @@ export function RobSummaryPage() {
   const needingReviewCount = summary?.assessments_needing_review_count ?? 0;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto font-['Work_Sans']">
       <Link
         to={`/projects/${projectId}`}
-        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4"
+        className="text-xs text-[#62535d] hover:text-[#3a0f34] flex items-center gap-1 mb-4 font-semibold"
       >
         <ArrowLeft className="h-3 w-3" /> Back to project
       </Link>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-4 border-b border-[#d2c2cb] pb-5">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-phylo-blue" />
+          <h1 className="text-3xl font-bold font-['Serifon_Editorial'] text-[#3a0f34] flex items-center gap-2">
+            <ShieldCheck className="h-6 w-6 text-[#814d75]" />
             Risk of Bias
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-[#62535d] text-xs mt-1">
             {summary?.total_assessments || 0} assessments
             {summary?.tool && ` using ${summary.tool.toUpperCase().replace("-", "-")}`}
           </p>
@@ -104,7 +104,7 @@ export function RobSummaryPage() {
           <button
             onClick={() => startRunMutation.mutate()}
             disabled={startRunMutation.isPending || isRunning}
-            className="btn-primary text-xs py-2 px-3.5 flex items-center gap-1.5 shadow-xs"
+            className="bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] text-xs py-2 px-3.5 rounded font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
             title="Auto-assess unassessed included studies with Co-Scientist full-text pre-fill"
           >
             {startRunMutation.isPending ? (
@@ -114,13 +114,16 @@ export function RobSummaryPage() {
               </>
             ) : (
               <>
-                <Sparkles className="h-3.5 w-3.5" />
+                <Sparkles className="h-3.5 w-3.5 text-[#ffdea6]" />
                 Run Batch RoB
               </>
             )}
           </button>
-          <Link to={`/projects/${projectId}/studies`} className="btn-secondary text-xs py-2 px-3">
-            <Plus className="h-3.5 w-3.5" /> Add studies
+          <Link
+            to={`/projects/${projectId}/studies`}
+            className="bg-[#ffffff] text-[#3a0f34] border border-[#d2c2cb] hover:bg-[#eee7ec] text-xs py-2 px-3 rounded font-semibold transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5 inline mr-1" /> Add studies
           </Link>
         </div>
       </div>

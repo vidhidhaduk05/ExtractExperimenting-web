@@ -41,12 +41,12 @@ export function ProjectCreate() {
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <Link to="/projects" className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
+    <div className="p-8 max-w-2xl mx-auto font-['Work_Sans']">
+      <Link to="/projects" className="text-xs text-[#62535d] hover:text-[#3a0f34] flex items-center gap-1 mb-4 font-semibold">
         <ArrowLeft className="h-4 w-4" /> Back to projects
       </Link>
 
-      <h1 className="text-2xl font-bold mb-6">Create New Project</h1>
+      <h1 className="text-3xl font-bold font-['Serifon_Editorial'] text-[#3a0f34] mb-6">Create New Project</h1>
 
       <form
         onSubmit={(e) => {
@@ -130,32 +130,41 @@ export function ProjectCreate() {
         </div>
 
         {/* Next steps preview */}
-        <div className="card p-4 bg-phylo-cream/30">
-          <p className="text-sm text-gray-600 mb-3 font-medium">After creating the project, you'll set up:</p>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="flex items-center gap-1.5 text-gray-500">
-              <Target className="h-4 w-4 text-phylo-blue" /> PICO Framework
+        <div className="bg-[#ffffff] border border-[#d2c2cb] rounded p-4">
+          <p className="text-xs text-[#62535d] mb-3 font-semibold uppercase tracking-wider">After creating the project, you'll set up:</p>
+          <div className="flex items-center gap-4 text-xs">
+            <span className="flex items-center gap-1.5 text-[#4f444b] font-medium">
+              <Target className="h-4 w-4 text-[#814d75]" /> PICO Framework
             </span>
-            <span className="text-gray-300">→</span>
-            <span className="flex items-center gap-1.5 text-gray-500">
-              <Lightbulb className="h-4 w-4 text-phylo-orange" /> Hypothesis
+            <span className="text-[#81737b]">→</span>
+            <span className="flex items-center gap-1.5 text-[#4f444b] font-medium">
+              <Lightbulb className="h-4 w-4 text-[#7c5800]" /> Hypothesis
             </span>
-            <span className="text-gray-300">→</span>
-            <span className="text-gray-500">Import Studies</span>
+            <span className="text-[#81737b]">→</span>
+            <span className="text-[#4f444b] font-medium">Import Studies</span>
           </div>
         </div>
 
         {mutation.isError && (
-          <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          <div className="rounded bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
             Error: {(mutation.error as Error).message}
           </div>
         )}
 
         <div className="flex gap-3">
-          <button type="submit" className="btn-primary" disabled={mutation.isPending}>
+          <button
+            type="submit"
+            className="bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] px-4 py-2 rounded text-xs font-semibold transition-colors disabled:opacity-50"
+            disabled={mutation.isPending}
+          >
             {mutation.isPending ? "Creating..." : "Create Project"}
           </button>
-          <Link to="/projects" className="btn-secondary">Cancel</Link>
+          <Link
+            to="/projects"
+            className="bg-[#ffffff] text-[#3a0f34] border border-[#d2c2cb] hover:bg-[#eee7ec] px-4 py-2 rounded text-xs font-semibold transition-colors"
+          >
+            Cancel
+          </Link>
         </div>
       </form>
     </div>
