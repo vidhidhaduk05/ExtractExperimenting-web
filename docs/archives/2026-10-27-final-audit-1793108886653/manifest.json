@@ -1,0 +1,16 @@
+{
+  "created": "2026-10-27T13:48:06.687Z",
+  "restore": "Copy the archived file to its original path only after preserving the newer version.",
+  "files": [
+    {
+      "original": "D:/Desktop/Rad Extract Experimenting/RADEXTRACT_FINAL_AGENT_HANDOFF.md",
+      "archive": "D:/Desktop/Rad Extract Experimenting/docs/archives/2026-10-27-final-audit-1793108886653/RADEXTRACT_FINAL_AGENT_HANDOFF.md",
+      "sha256": "ee4f6f3c9db4edb29d1fd01f39fc0cf4bf922b4f6b8fba178a4eaa24a2e4fab7"
+    },
+    {
+      "original": "D:/Desktop/Rad Extract Experimenting/RADEXTRACT_UPDATED_BLUEPRINT.html",
+      "archive": "D:/Desktop/Rad Extract Experimenting/docs/archives/2026-10-27-final-audit-1793108886653/RADEXTRACT_UPDATED_BLUEPRINT.html",
+      "sha256": "d39dce5103feb4b9e244459d4359142be6de47284fe2f47c2f68a6aaff27fb8b"
+    }
+  ]
+}
