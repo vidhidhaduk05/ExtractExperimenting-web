@@ -1,8 +1,8 @@
 {
-  "backend_url": "https://verification-enter-attachments-mug.trycloudflare.com",
-  "api_url": "https://verification-enter-attachments-mug.trycloudflare.com/api",
-  "health_url": "https://verification-enter-attachments-mug.trycloudflare.com/health",
-  "updated_at": "2026-10-26T17:07:56Z",
+  "backend_url": "https://filed-combines-columnists-separate.trycloudflare.com",
+  "api_url": "https://filed-combines-columnists-separate.trycloudflare.com/api",
+  "health_url": "https://filed-combines-columnists-separate.trycloudflare.com/health",
+  "updated_at": "2026-10-27T06:25:02Z",
   "status": "online",
   "model": "biomni-r0"
 }
