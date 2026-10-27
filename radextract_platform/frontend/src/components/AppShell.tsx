@@ -61,16 +61,16 @@ const SHELL_NAV_ITEMS: NavItemDef[] = [
     icon: ShieldCheck,
   },
   {
+    to: (pid) => (pid ? `/projects/${pid}/meta-analysis` : "/projects"),
+    matchPattern: /\/(meta-analysis|analysis)/,
+    label: "Synthesis",
+    icon: BarChart3,
+  },
+  {
     to: (pid) => (pid ? `/projects/${pid}/grade` : "/projects"),
     matchPattern: /\/grade/,
     label: "GRADE",
     icon: Award,
-  },
-  {
-    to: (pid) => (pid ? `/projects/${pid}/meta-analysis` : "/projects"),
-    matchPattern: /\/(meta-analysis|analysis)/,
-    label: "Meta-Analysis",
-    icon: BarChart3,
   },
   {
     to: (pid) => (pid ? `/projects/${pid}/prisma` : "/projects"),
@@ -530,7 +530,30 @@ export function AppShell() {
                     </span>
                   </div>
 
-                  {/* Step 6: Synthesis & GRADE */}
+                  {/* Step 6: Evidence Synthesis (conditional: pool | descriptive) */}
+                  <div
+                    onClick={() => projectId && navigate(`/projects/${projectId}/meta-analysis`)}
+                    className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {metaCount > 0 ? (
+                        <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <div className="font-semibold text-[#4f444b] truncate">Evidence Synthesis</div>
+                        <div className="text-[11px] text-[#62535d]">
+                          {metaCount > 0 ? `${metaCount} synthesis cohorts` : "Pooled or descriptive profile"}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="font-mono text-[11px] text-[#814d75] font-semibold shrink-0">
+                      {metaCount}
+                    </span>
+                  </div>
+
+                  {/* Step 7: GRADE Certainty (finalized after synthesis) */}
                   <div
                     onClick={() => projectId && navigate(`/projects/${projectId}/grade`)}
                     className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
@@ -544,7 +567,7 @@ export function AppShell() {
                       <div className="truncate">
                         <div className="font-semibold text-[#4f444b] truncate">GRADE Certainty</div>
                         <div className="text-[11px] text-[#62535d]">
-                          {gradeCount} outcomes evaluated
+                          {gradeCount > 0 ? `${gradeCount} outcomes evaluated` : "Finalized after synthesis"}
                         </div>
                       </div>
                     </div>

@@ -258,6 +258,29 @@ def compute_effect_size(
     if "effect_size" in study_data and "variance" in study_data:
         return (float(study_data["effect_size"]), float(study_data["variance"]))
 
+    is_ratio = em in ("or", "odds_ratio", "log_or", "rr", "risk_ratio", "log_rr", "hr", "hazard_ratio", "log_hr")
+
+    if ("effect" in study_data or "effect_size" in study_data) and "variance" in study_data:
+        eff = float(study_data.get("effect", study_data.get("effect_size")))
+        var = float(study_data["variance"])
+        return (math.log(eff) if is_ratio and eff > 0 else eff, var)
+
+    if ("effect" in study_data or "effect_size" in study_data) and "se" in study_data:
+        eff = float(study_data.get("effect", study_data.get("effect_size")))
+        se = float(study_data["se"])
+        return (math.log(eff) if is_ratio and eff > 0 else eff, se ** 2)
+
+    if ("effect" in study_data or "effect_size" in study_data) and "ci_lower" in study_data and "ci_upper" in study_data:
+        eff = float(study_data.get("effect", study_data.get("effect_size")))
+        ci_l = float(study_data["ci_lower"])
+        ci_u = float(study_data["ci_upper"])
+        if is_ratio and ci_l > 0 and ci_u > 0:
+            se = (math.log(ci_u) - math.log(ci_l)) / (2 * 1.96)
+            return (math.log(eff) if eff > 0 else 0.0, se ** 2)
+        else:
+            se = (ci_u - ci_l) / (2 * 1.96)
+            return (eff, se ** 2)
+
     if em in ("md", "mean_difference"):
         # Mean difference: needs mean1, sd1, n1, mean2, sd2, n2
         m1, sd1, n1 = study_data["mean1"], study_data["sd1"], study_data["n1"]

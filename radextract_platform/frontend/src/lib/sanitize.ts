@@ -114,8 +114,16 @@ function cleanTree(node: Element, disallowedTags: Set<string> = DISALLOWED_SVG_T
 
     // Check URI attributes for dangerous schemes (javascript:, data:text/html)
     if (DANGEROUS_URI_ATTRS.has(attrName)) {
-      const value = attr.value.trim().toLowerCase();
-      if (value.startsWith("javascript:") || value.startsWith("data:text/html") || value.startsWith("vbscript:")) {
+      const normalizedValue = attr.value.replace(/[\u0000-\u0020\u007F-\u009F\s]+/g, "").toLowerCase();
+      if (
+        normalizedValue.startsWith("javascript:") ||
+        normalizedValue.startsWith("vbscript:") ||
+        (normalizedValue.startsWith("data:") &&
+          !normalizedValue.startsWith("data:image/png") &&
+          !normalizedValue.startsWith("data:image/jpeg") &&
+          !normalizedValue.startsWith("data:image/webp") &&
+          !normalizedValue.startsWith("data:image/gif"))
+      ) {
         node.removeAttribute(attr.name);
       }
     }

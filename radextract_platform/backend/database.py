@@ -165,6 +165,7 @@ CREATE TABLE IF NOT EXISTS studies (
     screening_stage   TEXT DEFAULT '',
     extraction_status TEXT DEFAULT 'pending',
     metadata_json     TEXT DEFAULT '',
+    study_label       TEXT DEFAULT '',
     created_at        TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (project_id) REFERENCES projects(project_id)
 );
@@ -356,6 +357,8 @@ CREATE TABLE IF NOT EXISTS grade_assessments (
     effect_estimate   TEXT DEFAULT '',
     ci_text           TEXT DEFAULT '',
     sof_table_json    TEXT DEFAULT '{}',
+    status            TEXT DEFAULT 'draft',
+    finalized_at      TEXT DEFAULT '',
     created_at        TEXT DEFAULT (datetime('now')),
     created_by        TEXT DEFAULT '',
     FOREIGN KEY (project_id) REFERENCES projects(project_id),
@@ -866,6 +869,9 @@ MIGRATION_COLUMNS = [
     ("non_duplicates", "fingerprint_a", "TEXT DEFAULT ''"),
     ("non_duplicates", "fingerprint_b", "TEXT DEFAULT ''"),
     ("dedup_audit", "filled_fields", "TEXT DEFAULT ''"),
+    ("studies", "study_label", "TEXT DEFAULT ''"),
+    ("grade_assessments", "status", "TEXT DEFAULT 'draft'"),
+    ("grade_assessments", "finalized_at", "TEXT DEFAULT ''"),
 ]
 
 

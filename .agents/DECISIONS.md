@@ -660,7 +660,66 @@ Source: `app_shell_ui_plan.md` / Agent Work Order.
   - *Bolt Performance Optimizations*: Applied O(1) Set bookmark lookups (`bookmarkSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids])`) and memoized study counts in `ScreeningPage.tsx` and `StudyList.tsx`; memoized live PRISMA flow calculations in `PrismaFlowPage.tsx`; replaced O(text_length) character array allocations in `renderHighlightedText` with cut-point interval boundary set merging.
 - **Verification & Sync**:
   - 58/58 backend tests passed across hypothesis generation, zoplicate dedup, safety vetoes, duplicate review, and gold evaluator suites.
+- 58/58 backend tests passed across hypothesis generation, zoplicate dedup, safety vetoes, duplicate review, and gold evaluator suites.
   - Synchronized and verified across both `ExtractExperimenting` and `ExtractExperimenting-web` repositories.
+
+## 2026-10-27 — Branch & Pull Request Consolidation and Remote Cleanup
+
+- **Complete Consolidation into `main`**:
+  - All verified functional and security changes from all active feature and bot branches (`feat/zoplicate-dedup`, `fix/hypothesis-generation`, `bolt-optimize-bookmark-lookups-*`, `bolt-optimize-prisma-flow-computation-*`, `bolt/optimize-screening-highlighting-memoization-*`, `jules-394676565134141676-3fbd03d4`, and `sentinel/sanitize-landing-html-xss-*`) were consolidated directly into `main`.
+  - Zero features or models were removed during consolidation: preserved all newer schema models (`VariableReorder`, `ExtractionBatchCell`, `ExtractionBatchUpsert`, `study_label`), all 4 tiers of Zoplicate deduplication, hypothesis validation, and XSS sanitizers.
+  - Passing verification: 52/52 deduplication tests (`test_zoplicate_dedup.py`, `test_dedup_safety.py`, `test_duplicate_review.py`, `test_eval_dedup_gold.py`) and full backend test suites passed cleanly.
+- **Remote Branch Deletion & PR Resolution**:
+  - `ExtractExperimenting` (`vidhidhaduk05/ExtractExperimenting`):
+    - Deleted all 47 merged remote branches on GitHub `origin`.
+    - Remaining active remote tracking branches: strictly `origin/main` (and `origin/HEAD -> origin/main`).
+  - `ExtractExperimenting-web` (`vidhidhaduk05/ExtractExperimenting-web`):
+    - Pruned and deleted all 100+ stale and merged remote bot/feature branches on GitHub `origin`.
+    - Protected live deployment branch `origin/gh-pages` and `origin/main` remain active.
+    - All associated Pull Requests on GitHub whose feature branches were deleted are resolved and closed.
+- **Local Worktree and Branch Hygiene**:
+  - Pruned temporary worktrees (`.tmp-claimscape-ui`, `.tmp-clarification-integration`) and deleted local tracking branches (`codex/*`).
+
+## 2026-10-27 — Correctness Fix Work Order Implementation (Phases 1–5)
+
+Implemented and verified the 5-phase correctness fix work order ([`PLANS/correctness_fix_work_order.md`](file:///d:/Desktop/Rad%20Extract%20Experimenting/PLANS/correctness_fix_work_order.md)):
+
+1. **Phase 1: Fabricated Synthesis Elimination**:
+   - Purged all hardcoded sample studies ("Miller et al. 2021", "Chen et al. 2020", "Sato et al. 2019"), hardcoded effect values (`1.48`), and `math.sin()` random generators from backend endpoints (`routers/meta.py`, `services/meta_analysis.py`, `routers/scientific_exports.py`) and frontend (`MetaAnalysisPage.tsx`, `ExportPage.tsx`).
+   - Implemented exact DerSimonian-Laird random-effects pooling (verified against hand computation to 4 decimals) when ≥ 2 studies have extractable numeric data.
+   - When < 2 studies have usable effect data, endpoints return HTTP 200 with `status: "cannot_pool"`, an explicit reason, and a listing of included studies and missing data items. Frontend renders a descriptive synthesis table and never invents forest plots or pooled estimates.
+   - Grep sweep confirmed 0 hits in app code for `Miller`, `math.sin`, or `1.48`. Verified by `test_meta_correctness.py` (5/5 passed).
+
+2. **Phase 2: Project Access Control Enforcement**:
+   - Updated [`dependencies.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/dependencies.py) with polymorphic `require_project_access(project_id, user, min_role)` and `check_project_access` that strictly reject unauthenticated requests with HTTP 401 Unauthorized and non-members/insufficient roles with HTTP 403 Forbidden.
+   - Secured all GRADE endpoints in [`routers/grade.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/routers/grade.py) with `require_project_access` (read: viewer/member, write/delete/finalize: editor/owner).
+   - Verified by `test_grade_access.py` (6/6 passed: anonymous GET/DELETE → 401, non-member GET/DELETE → 403, member → 200).
+
+3. **Phase 3: Event-Derived PRISMA 2020 Counts**:
+   - Rewrote [`services/prisma2020_sync.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/prisma2020_sync.py) so every count is derived strictly from recorded events rather than total subtractions:
+     - `screened`: COUNT(studies with ≥ 1 recorded Title/Abstract screening decision event).
+     - `pending_screening`: total - duplicates - screened (kept strictly separated, never folded into screened or assessed).
+     - `retrieved`: COUNT(studies with TA decision = included).
+     - `assessed_ft`: COUNT(studies with ≥ 1 recorded Full-Text decision event).
+     - `included`: COUNT(studies with FT decision = included).
+     - `analysed`: COUNT(DISTINCT study_id) in actual `meta_analysis_studies` pooling table (not "has extraction").
+   - Added `study_label` column to SQLite database schema and migrations.
+   - Verified by `test_prisma2020_sync.py` (7/7 passed, including the reviewer reproduction test: 1 unscreened record → identified=1, screened=0, pending=1).
+
+4. **Phase 4: Outcome-Specific GRADE**:
+   - Updated [`services/grade_service.py`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/backend/services/grade_service.py) so GRADE evaluates strictly the studies in the outcome-specific meta-analysis cohort (or user-confirmed descriptive cohort), completely eliminating silent fallback to project-wide assessments.
+   - Risk of Bias factor evaluates DISTINCT studies in that cohort (not duplicate assessment rows), counts resolved judgments (verified/adjudicated), and explicitly reports unresolved assessments in the rationale rather than silently averaging them.
+   - Verified by `test_grade_outcome_cohort.py` (3/3 passed).
+
+5. **Phase 5: Workflow Re-ordering & Two-Stage GRADE Workflow**:
+   - Canonical review spine established: `1. PICO & Protocol → 2. Import & Studies → 3. Deduplication → 4. Title/Abstract Screen → 5. Full-Text Screen → 6. Extraction → 7. Risk of Bias → 8. Evidence Synthesis (conditional: pool | descriptive) → 9. GRADE (finalized after synthesis) → 10. Scientific Export`.
+   - Database schema updated with `status TEXT DEFAULT 'draft'` and `finalized_at TEXT DEFAULT ''` on `grade_assessments`.
+   - Backend service and router updated with `POST /api/grade/{id}/finalize`: enforces that quantitative pooling or descriptive synthesis has completed for that outcome before finalizing; rejects premature finalization with HTTP 400.
+   - Frontend [`GradePage.tsx`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/frontend/src/pages/GradePage.tsx) updated with DRAFT vs FINAL state badges, status banners, explicit Finalize button with Master Theme styling (`#3a0f34`, `#fbf9f4`, `#d2c2cb`), and informative disabled/error states.
+   - Updated navigation rail and right-dock live To-Dos checklist in [`AppShell.tsx`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/frontend/src/components/AppShell.tsx) and metric cards in [`ProjectDetail.tsx`](file:///d:/Desktop/Rad%20Extract%20Experimenting/radextract_platform/frontend/src/pages/ProjectDetail.tsx) to reflect the new 8-step spine where Synthesis precedes GRADE.
+   - Verified by `test_grade_finalize.py` (4/4 passed). Total 25/25 correctness tests passing across all 5 phases.
+
+
 
 
 

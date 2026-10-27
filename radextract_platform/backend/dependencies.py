@@ -303,13 +303,66 @@ def can_user_access_project(user_id: str, project_id: str, conn: Any = None, min
     return ROLE_LEVELS.get(role, 0) >= ROLE_LEVELS.get(min_role, 0)
 
 
-def check_project_access(conn: Any, project_id: str, user: Optional[dict], min_role: str = "viewer"):
-    """Raise 403 if user lacks access to the project.
+def require_project_access(
+    arg1: Any,
+    arg2: Any = None,
+    arg3: Any = None,
+    min_role: str = "viewer",
+) -> None:
+    """Enforce strict project access control.
 
-    If user is None (no auth token), silently allow — this preserves backward
-    compatibility for dev/testing. Enforcement becomes strict when the frontend
-    auth UI is implemented.
+    Supports both (conn, project_id, user, min_role) and (project_id, user, conn, min_role).
+    Raises 401 UNAUTHORIZED if user is unauthenticated (user is None).
+    Raises 403 FORBIDDEN if user is authenticated but not a member or lacks min_role.
     """
+    if isinstance(arg1, str) and not hasattr(arg1, "execute") and not hasattr(arg1, "query"):
+        project_id = arg1
+        user = arg2
+        conn = arg3 or get_db_backend()
+    else:
+        conn = arg1 or get_db_backend()
+        project_id = arg2
+        user = arg3
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required to access project",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user_id = user.get("user_id") or user.get("sub", "")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required to access project",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not can_user_access_project(user_id, project_id, conn, min_role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Insufficient permissions (requires {min_role} role)",
+        )
+
+
+def optional_project_access(
+    arg1: Any,
+    arg2: Any = None,
+    arg3: Any = None,
+    min_role: str = "viewer",
+) -> None:
+    """Deliberate optional project access for rare public resources.
+
+    If user is None (no auth token), allows access. If user is provided, validates min_role.
+    """
+    if isinstance(arg1, str) and not hasattr(arg1, "execute") and not hasattr(arg1, "query"):
+        project_id = arg1
+        user = arg2
+        conn = arg3 or get_db_backend()
+    else:
+        conn = arg1 or get_db_backend()
+        project_id = arg2
+        user = arg3
+
     if user is None:
         return
     user_id = user.get("user_id") or user.get("sub", "")
@@ -318,6 +371,16 @@ def check_project_access(conn: Any, project_id: str, user: Optional[dict], min_r
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Insufficient permissions (requires {min_role} role)",
         )
+
+
+def check_project_access(
+    arg1: Any,
+    arg2: Any = None,
+    arg3: Any = None,
+    min_role: str = "viewer",
+) -> None:
+    """Enforce project access by delegating to require_project_access."""
+    require_project_access(arg1, arg2, arg3, min_role=min_role)
 
 
 def resolve_study_project_id(conn: Any, study_id: str) -> Optional[str]:
