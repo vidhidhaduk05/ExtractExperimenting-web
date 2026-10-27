@@ -29,7 +29,14 @@ describe('AppLayout Component', () => {
 
   it('renders the header correctly', () => {
     renderWithProviders(<AppLayout />);
-    expect(screen.getByText('RadExtract')).toBeInTheDocument();
+    // Logo wordmark and breadcrumb root crumb both render the brand name
+    expect(screen.getAllByText('RadExtract').length).toBeGreaterThan(0);
+    // Breadcrumb root crumb is a link back to the landing page
+    expect(screen.getByRole('link', { name: 'RadExtract' })).toHaveAttribute('href', '/');
+    // Logo block links home
+    expect(screen.getByRole('link', { name: /RadExtract home/i })).toHaveAttribute('href', '/');
+    // Back control is present
+    expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
   });
 
   it('renders global navigation links', () => {
@@ -49,8 +56,8 @@ describe('AppLayout Component', () => {
     expect(screen.getByRole('link', { name: /PICO & Hypothesis/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^Studies$/i })).toBeInTheDocument();
 
-    // Top bar should show project ID
-    expect(screen.getByText(`Project: ${projectId.substring(0, 20)}`)).toBeInTheDocument();
+    // Breadcrumb shows a Project crumb linking to the project dashboard
+    expect(screen.getByRole('link', { name: 'Project' })).toHaveAttribute('href', `/projects/${projectId}`);
   });
 
   it('does not render project-specific navigation links when no projectId', () => {

@@ -1,8 +1,8 @@
-import { Outlet, NavLink, useParams, useLocation, Link } from "react-router-dom";
+import { Outlet, NavLink, useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useState, useEffect } from "react";
-import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, ShieldAlert, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles, Bell, Bookmark } from "lucide-react";
+import { FlaskConical, Folder, FileText, CheckSquare, ShieldCheck, ShieldAlert, Table, Download, Home, GitBranch, BarChart3, Award, Target, Settings, ChevronDown, ChevronLeft, Key, Layers, Wrench, Save, X, Loader2, LineChart, Network, Share2, Sun, Moon, Menu, PanelLeftClose, PanelLeftOpen, Highlighter, FileSpreadsheet, Sparkles, Bell, Bookmark } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { ErrorBoundary } from "../common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "../common/ClarificationNotificationCenter";
@@ -448,6 +448,22 @@ function SettingsPanel({ projectId }: SettingsPanelProps) {
 export function AppLayout() {
   const { projectId } = useParams();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  // Current page label for the breadcrumb: match the known nav items first,
+  // then fall back to the last path segment.
+  const pageLabel = (() => {
+    const items = projectId ? projectNavItems(projectId) : navItems;
+    const exact = items.find((i) => i.to === pathname);
+    if (exact) return exact.label;
+    const prefix = items
+      .filter((i) => pathname.startsWith(i.to) && i.to !== "/")
+      .sort((a, b) => b.to.length - a.to.length)[0];
+    if (prefix) return prefix.label;
+    const seg = pathname.split("/").filter(Boolean).pop();
+    return seg ? seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Home";
+  })();
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem("theme") === "dark";
   });
@@ -533,22 +549,24 @@ export function AppLayout() {
       >
         <div className={cn("flex items-center justify-between px-4 py-4 border-b border-black/[0.08] transition-all")}>
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="h-8 w-8 rounded-full bg-[#141413] text-[#FAF9F3] flex items-center justify-center font-serif text-sm font-bold shadow-xs shrink-0">
-              R
-            </div>
-            {!isSidebarCollapsed && (
-              <div className="flex flex-col truncate">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-serif font-semibold text-base text-[#141413] tracking-tight">
-                    RadExtract
-                  </span>
-                  <span className="tag-phylo-yellow text-[9px] px-1.5 py-0.2 tracking-wider">LAB</span>
-                </div>
-                <span className="text-[10px] text-[#6B665E] font-sans truncate">
-                  Co-Scientist for Biomedical Lit
-                </span>
+            <Link to="/" aria-label="RadExtract home" className="flex items-center gap-2.5 overflow-hidden hover:opacity-80 transition-opacity">
+              <div className="h-8 w-8 rounded-full bg-[#141413] text-[#FAF9F3] flex items-center justify-center font-serif text-sm font-bold shadow-xs shrink-0">
+                R
               </div>
-            )}
+              {!isSidebarCollapsed && (
+                <div className="flex flex-col truncate">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-serif font-semibold text-base text-[#141413] tracking-tight">
+                      RadExtract
+                    </span>
+                    <span className="tag-phylo-yellow text-[9px] px-1.5 py-0.2 tracking-wider">LAB</span>
+                  </div>
+                  <span className="text-[10px] text-[#6B665E] font-sans truncate">
+                    Co-Scientist for Biomedical Lit
+                  </span>
+                </div>
+              )}
+            </Link>
           </div>
 
           <div className="flex items-center gap-1">
@@ -622,15 +640,6 @@ export function AppLayout() {
         <header className="bg-[#FAF9F3]/90 backdrop-blur-md border-b border-black/[0.08] px-4 sm:px-6 py-2.5 sticky top-0 z-30 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Mobile menu trigger */}
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 rounded-full hover:bg-black/5 text-[#141413] transition-colors"
-                aria-label="Toggle Menu"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-
               {/* Desktop Expand Button if Sidebar is collapsed */}
               {isSidebarCollapsed && (
                 <button
@@ -643,15 +652,50 @@ export function AppLayout() {
                 </button>
               )}
 
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[#141413] animate-pulse" />
+              {/* Back control: returns to the previous view */}
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 rounded-full hover:bg-black/5 text-[#6B665E] hover:text-[#141413] transition-colors"
+                title="Back"
+                aria-label="Back"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+
+              {/* Mobile menu trigger */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 rounded-full hover:bg-black/5 text-[#141413] transition-colors"
+                aria-label="Toggle Menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+
+              {/* Breadcrumb: root and project crumbs are links; only the current page is plain text */}
+              <nav aria-label="Breadcrumb" className="flex items-center gap-2 min-w-0">
+                <span className="h-2 w-2 rounded-full bg-[#141413] animate-pulse shrink-0" />
+                <Link
+                  to="/"
+                  className="font-serif text-sm font-medium text-[#141413] hover:underline shrink-0"
+                >
+                  RadExtract
+                </Link>
+                {projectId && (
+                  <>
+                    <span className="text-[#8A817A] shrink-0">/</span>
+                    <Link
+                      to={`/projects/${projectId}`}
+                      className="font-serif text-sm font-medium text-[#141413] hover:underline truncate"
+                    >
+                      Project
+                    </Link>
+                  </>
+                )}
+                <span className="text-[#8A817A] shrink-0">/</span>
                 <span className="font-serif text-sm font-medium text-[#141413] truncate">
-                  {projectId ? `Project: ${projectId}` : "RadExtract Lab"}
+                  {pageLabel}
                 </span>
-                <span className="hidden sm:inline-block text-[#8A817A] text-xs font-serif italic">
-                  — Systematic Review & Literature Synthesis
-                </span>
-              </div>
+              </nav>
             </div>
 
             <div className="flex items-center gap-2">
