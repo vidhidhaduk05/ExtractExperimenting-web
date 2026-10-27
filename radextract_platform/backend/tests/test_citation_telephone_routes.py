@@ -49,6 +49,29 @@ def test_docx_upload_parses_real_paragraphs(client):
     assert response.json()["totalClaimsFound"] == 1
 
 
+def test_paper_id_validation_prevents_ssrf_and_injection(client):
+    # Empty ID
+    res = client.get("/api/citation-telephone/paper?id= ")
+    assert res.status_code == 400
+
+    # Query injection / parameter manipulation
+    res = client.get("/api/citation-telephone/paper?id=10.1000/182%26extra%3D1")
+    assert res.status_code == 400
+
+    # Space or illegal characters in identifier
+    res = client.get("/api/citation-telephone/paper?id=PMC 123456")
+    assert res.status_code == 400
+
+    # Path traversal sequence
+    res = client.get("/api/citation-telephone/paper?id=..%2F..%2Fetc%2Fpasswd")
+    assert res.status_code == 400
+
+    # Overly long string
+    long_id = "A" * 201
+    res = client.get(f"/api/citation-telephone/paper?id={long_id}")
+    assert res.status_code == 400
+
+
 def test_empty_passage_is_rejected(client):
     response = client.post("/api/citation-telephone/evaluate-claim", json={"citing_sentence": "A claim", "source_passage": " "})
     assert response.status_code == 400

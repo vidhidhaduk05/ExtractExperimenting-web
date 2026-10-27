@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Dict, Optional
 from fastapi import APIRouter, File, HTTPException, UploadFile, Query, Body, Response
 from pydantic import BaseModel, Field
@@ -17,6 +18,9 @@ from services.citation_telephone_service import (
 logger = logging.getLogger("radextract.citation_telephone")
 router = APIRouter(prefix="/api/citation-telephone", tags=["citation-telephone"])
 
+# Pattern for safe paper identifiers: PMC IDs (e.g. PMC123456), PMID (e.g. 12345678), DOI (e.g. 10.1000/182), or URL-safe slugs
+PAPER_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.\-/:]{1,200}$")
+
 
 @router.get("/paper")
 async def get_citation_paper(id: str = Query(..., description="Paper identifier (PMC ID, PubMed ID, or DOI)")) -> Dict[str, Any]:
@@ -24,6 +28,9 @@ async def get_citation_paper(id: str = Query(..., description="Paper identifier 
     clean_id = id.strip()
     if not clean_id:
         raise HTTPException(status_code=400, detail="Paper ID cannot be empty")
+    if len(clean_id) > 200 or not PAPER_ID_PATTERN.match(clean_id) or ".." in clean_id:
+        # Prevent URL/parameter injection, query manipulation, and SSRF attacks
+        raise HTTPException(status_code=400, detail="Invalid paper identifier format")
     client = httpx.AsyncClient(timeout=25.0)
     try:
         resp = await client.get(
