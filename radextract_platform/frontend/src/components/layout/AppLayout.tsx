@@ -549,23 +549,10 @@ export function AppLayout() {
       >
         <div className={cn("flex items-center justify-between px-4 py-4 border-b border-black/[0.08] transition-all")}>
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <Link to="/" aria-label="RadExtract home" className="flex items-center gap-2.5 overflow-hidden hover:opacity-80 transition-opacity">
+            <Link to="/" aria-label="Home" className="flex items-center gap-2.5 overflow-hidden hover:opacity-80 transition-opacity">
               <div className="h-8 w-8 rounded-full bg-[#141413] text-[#FAF9F3] flex items-center justify-center font-serif text-sm font-bold shadow-xs shrink-0">
-                R
+                V
               </div>
-              {!isSidebarCollapsed && (
-                <div className="flex flex-col truncate">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-serif font-semibold text-base text-[#141413] tracking-tight">
-                      RadExtract
-                    </span>
-                    <span className="tag-phylo-yellow text-[9px] px-1.5 py-0.2 tracking-wider">LAB</span>
-                  </div>
-                  <span className="text-[10px] text-[#6B665E] font-sans truncate">
-                    Co-Scientist for Biomedical Lit
-                  </span>
-                </div>
-              )}
             </Link>
           </div>
 
@@ -677,8 +664,9 @@ export function AppLayout() {
                 <Link
                   to="/"
                   className="font-serif text-sm font-medium text-[#141413] hover:underline shrink-0"
+                  aria-label="Home"
                 >
-                  RadExtract
+                  V
                 </Link>
                 {projectId && (
                   <>

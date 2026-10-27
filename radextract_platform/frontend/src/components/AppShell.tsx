@@ -197,9 +197,10 @@ export function AppShell() {
           <Link
             to={projectId ? `/projects/${projectId}` : "/projects"}
             className="w-9 h-9 rounded flex items-center justify-center font-serif text-lg font-bold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
-            title="RadExtract"
+            title="V"
+            aria-label="Home"
           >
-            R
+            V
           </Link>
 
           {/* Navigation Items */}
@@ -269,7 +270,7 @@ export function AppShell() {
               className="font-serif font-bold text-sm text-[#fbf9f4] hover:underline truncate max-w-[280px] sm:max-w-[420px]"
               title={project?.name || "Projects"}
             >
-              {project?.name || (projectId ? `Project ${projectId.slice(0, 8)}` : "RadExtract")}
+              {project?.name || (projectId ? `Project ${projectId.slice(0, 8)}` : "V")}
             </Link>
             <span className="text-[#814d75] font-sans text-xs">/</span>
             <span className="text-xs font-['Work_Sans'] font-medium text-[#ffdea6] truncate">

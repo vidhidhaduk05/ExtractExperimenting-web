@@ -201,11 +201,11 @@ export default function PicoHypothesisScreen() {
       <header className="h-16 bg-[#3a0f34] text-[#fbf9f4] flex items-center justify-between px-6 border-b border-[#d2c2cb]/20">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#ffffff] text-[#3a0f34] grid place-items-center font-serif font-bold text-lg shadow-sm">
-            R
+            V
           </div>
           <div>
             <div className="font-semibold leading-none tracking-tight flex items-center">
-              RadExtract
+              V
               <span className="text-[10px] tracking-wider uppercase bg-[#ffdea6] text-[#3a0f34] px-1.5 py-0.5 rounded font-bold ml-1.5">
                 LAB
               </span>

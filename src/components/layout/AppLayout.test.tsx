@@ -29,12 +29,12 @@ describe('AppLayout Component', () => {
 
   it('renders the header correctly', () => {
     renderWithProviders(<AppLayout />);
-    // Logo wordmark and breadcrumb root crumb both render the brand name
-    expect(screen.getAllByText('RadExtract').length).toBeGreaterThan(0);
-    // Breadcrumb root crumb is a link back to the landing page
-    expect(screen.getByRole('link', { name: 'RadExtract' })).toHaveAttribute('href', '/');
-    // Logo block links home
-    expect(screen.getByRole('link', { name: /RadExtract home/i })).toHaveAttribute('href', '/');
+    // Brand symbol is a bare "V" — no product name text anywhere in the header
+    expect(screen.queryByText('RadExtract')).not.toBeInTheDocument();
+    // Both home links (logo symbol + breadcrumb root crumb) point to the landing page
+    const homeLinks = screen.getAllByRole('link', { name: 'Home' });
+    expect(homeLinks.length).toBeGreaterThanOrEqual(2);
+    homeLinks.forEach((l) => expect(l).toHaveAttribute('href', '/'));
     // Back control is present
     expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
   });
