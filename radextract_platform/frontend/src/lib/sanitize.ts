@@ -112,11 +112,26 @@ function cleanTree(node: Element, disallowedTags: Set<string> = DISALLOWED_SVG_T
       continue;
     }
 
-    // Check URI attributes for dangerous schemes (javascript:, data:text/html)
+    // Check URI attributes for dangerous schemes (javascript:, data:text/html, data:image/svg+xml, etc.)
     if (DANGEROUS_URI_ATTRS.has(attrName)) {
-      const value = attr.value.trim().toLowerCase();
-      if (value.startsWith("javascript:") || value.startsWith("data:text/html") || value.startsWith("vbscript:")) {
+      // Normalize value by stripping whitespace and control characters to prevent evasion (e.g. java\tscript:)
+      const normalizedValue = attr.value.replace(/[\s\x00-\x1F\x7F-\x9F]+/g, "").toLowerCase();
+      if (
+        normalizedValue.startsWith("javascript:") ||
+        normalizedValue.startsWith("vbscript:")
+      ) {
         node.removeAttribute(attr.name);
+      } else if (normalizedValue.startsWith("data:")) {
+        // Only allow safe raster image data URIs
+        const isSafeDataUri =
+          normalizedValue.startsWith("data:image/png") ||
+          normalizedValue.startsWith("data:image/jpeg") ||
+          normalizedValue.startsWith("data:image/jpg") ||
+          normalizedValue.startsWith("data:image/gif") ||
+          normalizedValue.startsWith("data:image/webp");
+        if (!isSafeDataUri) {
+          node.removeAttribute(attr.name);
+        }
       }
     }
   }
