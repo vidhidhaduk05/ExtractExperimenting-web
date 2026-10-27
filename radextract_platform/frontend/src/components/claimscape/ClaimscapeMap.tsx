@@ -132,7 +132,11 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
     <div
       ref={containerRef}
       className="cs-map relative select-none"
-      onPointerLeave={() => setHovered(null)}
+      onPointerLeave={() => {
+        if (hovered !== null) {
+          setHovered(null);
+        }
+      }}
     >
       <div className="cs-rows border-b border-[var(--cs-line)]">
         {/* Column Headers for Map and Forest Plot */}
@@ -178,7 +182,14 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                     const localY = e.clientY - rect.top;
                     const match = findNearest(placed, localX, localY);
                     if (!match || !containerRef.current) {
-                      setHovered(null);
+                      if (hovered !== null) {
+                        setHovered(null);
+                      }
+                      return;
+                    }
+                    // Performance Optimization: Guard against redundant state updates and re-renders
+                    // if the hovered paper PMID hasn't changed during pointer movement.
+                    if (hovered?.pmid === match.paper.paper.pmid) {
                       return;
                     }
                     const parentRect = containerRef.current.getBoundingClientRect();
@@ -190,7 +201,11 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                       width: parentRect.width
                     });
                   }}
-                  onPointerLeave={() => setHovered(null)}
+                  onPointerLeave={() => {
+                    if (hovered !== null) {
+                      setHovered(null);
+                    }
+                  }}
                   onClick={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const localX = e.clientX - rect.left;
