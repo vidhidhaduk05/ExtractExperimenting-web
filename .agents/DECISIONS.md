@@ -628,4 +628,24 @@ Consolidated index and architectural memory of all active, implemented, and back
 - **Interactive Screening Clarifications (`PLANS/plan_interactive_clarification.md`)**:
   - Universal inline screening clarification banner with multi-question carousel, instant re-evaluation, and scoped non-intrusive toast notifications on non-screening routes.
 
+## 2026-10-27 — Post-Landing App Shell UI & Low-Contrast Hairline Architecture
+
+Source: `app_shell_ui_plan.md` / Agent Work Order.
+- **Single Canvas Background**: Uniform Paper `#fbf9f4` across all app shell regions, pages, and stages. No alternating fills, dark sidebars, or competing section colors.
+- **Low-Contrast Hairline Separators**: All panels, icon rails, dock regions, and internal sections are delimited strictly by 1px hairlines (`#d2c2cb` for structural boundaries, `rgba(210,194,203,0.45)` for soft internal rows/tabs). No heavy drop shadows or section borders.
+- **Elevated Surfaces**: White (`#ffffff`) is strictly reserved for genuinely elevated interactive elements (question card, modal sheets, dropdown menus, and active inputs/editors).
+- **Accents & Top Bar**: Primary Wine (`#3a0f34`) is reserved exclusively for the top navigation bar, primary action buttons, active navigation rail states (with a 2px wine left indicator), and key data numerals.
+- **AppShell Structure**:
+  1. *Left Icon Rail (56px)*: Paper background, 1px right hairline, vertical icons for Projects, Screening, Extraction, RoB, GRADE, Meta-analysis, and PRISMA. Pinned help and Co-Scientist avatar at bottom.
+  2. *Top Bar (56px)*: Primary Wine `#3a0f34` fill with `#fbf9f4` typography, project breadcrumb `ProjectName / Stage`, live PRISMA tally badge (refetched on window focus via `GET /api/projects/{id}/prisma`), Export, Share, and Dock toggle.
+  3. *Center Stage*: `<Outlet />` rendered directly on paper without artificial card wraps.
+  4. *Right Dock (340px, collapsible)*: Three hairline-delimited tabs:
+     - **To-dos**: Live workflow checklist reflecting real project stage status.
+     - **Results**: Real exportable artifacts (PRISMA diagram, screening CSV, extraction sheet, figures).
+     - **PRISMA**: Interactive flow diagram boxes with hairline borders and wine numerals.
+- **Floating Toast Notification**: Restyled `ClarificationNotificationCenter` into a compact floating card (white surface, 1px `#d2c2cb` border, 2px wine left edge, subtle shadow, 4000ms dismiss, positioned above the right dock).
+- **Landing Page Invariant**: The landing page at `/` remains untouched and outside the AppShell layout.
+- **Repository Sync**: Single source of truth is `radextract_platform/frontend`, synchronized via `sync_web_repo.py` to `ExtractExperimenting-web` and GitHub Pages.
+
+
 
