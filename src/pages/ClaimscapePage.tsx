@@ -193,18 +193,10 @@ export const ClaimscapePage: React.FC = () => {
     return map;
   }, [dataset.judgments]);
 
-  // Classify all papers
+  // Classify all papers. Papers without a backend judgment stay Unread —
+  // no default or fabricated judgment is ever substituted.
   const processedPapers = useMemo(() => {
-    return dataset.papers.map((paper) => {
-      const judgment = judgmentMap.get(paper.pmid) || {
-        pmid: paper.pmid,
-        onTopic: 1,
-        direct: 1,
-        stance: { supports: 0.5, contradicts: 0.5 },
-        stanceCheck: { supports: 0.5, contradicts: 0.5 }
-      };
-      return classifyPaper(paper, judgment);
-    });
+    return dataset.papers.map((paper) => classifyPaper(paper, judgmentMap.get(paper.pmid) || null));
   }, [dataset.papers, judgmentMap]);
 
   // Compute tier summaries and metrics
@@ -232,17 +224,18 @@ export const ClaimscapePage: React.FC = () => {
 
     return {
       totalMatches: dataset.total || 594,
-      read: Math.min(paperCount, processedPapers.length),
+      read: processedPapers.filter((p) => !p.unread).length,
       onTopic: onTopicList.length,
       onMap: mappedList.length,
       withVerdict: withVerdictList.length
     };
   }, [processedPapers, paperCount, directOnly, dataset.total]);
 
-  // Filtered papers for bottom data table
+  // Filtered papers for bottom data table. Unread papers stay visible here
+  // with their real abstract so nothing fetched is hidden from the user.
   const filteredTablePapers = useMemo(() => {
     return processedPapers
-      .filter((p) => p.onTopic && p.tier && (!directOnly || p.direct))
+      .filter((p) => p.unread || (p.onTopic && p.tier && (!directOnly || p.direct)))
       .filter((p) => {
         if (!tableSearch.trim()) return true;
         const q = tableSearch.toLowerCase();
@@ -367,7 +360,7 @@ export const ClaimscapePage: React.FC = () => {
           judgments: liveRes.judgments,
         });
         setSelectedPmid(liveRes.papers[0]?.pmid || "");
-        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Co-Scientist Engine`);
+        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · PubMed metadata only — verdicts require the backend engine`);
         finishScan();
         return;
       } else {
@@ -879,34 +872,43 @@ export const ClaimscapePage: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-3">
-                        <span
-                          className="text-[12px] font-semibold inline-flex items-center gap-1.5"
-                          style={{
-                            color:
-                              p.category === "supports"
-                                ? "var(--cs-for)"
-                                : p.category === "contradicts"
-                                ? "var(--cs-against)"
-                                : "var(--cs-neutral)"
-                          }}
-                        >
+                        {p.unread ? (
+                          <span className="text-[12px] font-semibold inline-flex items-center gap-1.5 text-[#72636d]">
+                            <span
+                              className="w-2 h-2 rounded-none inline-block border border-[#72636d] bg-transparent"
+                            />
+                            Unread — connect the backend for model verdicts
+                          </span>
+                        ) : (
                           <span
-                            className="w-2 h-2 rounded-none inline-block"
+                            className="text-[12px] font-semibold inline-flex items-center gap-1.5"
                             style={{
-                              background:
+                              color:
                                 p.category === "supports"
-                                ? "var(--cs-for)"
-                                : p.category === "contradicts"
-                                ? "var(--cs-against)"
-                                : "var(--cs-neutral)"
+                                  ? "var(--cs-for)"
+                                  : p.category === "contradicts"
+                                  ? "var(--cs-against)"
+                                  : "var(--cs-neutral)"
                             }}
-                          />
-                          {STANCE_LABEL[p.category] || "Unclear"}
-                        </span>
+                          >
+                            <span
+                              className="w-2 h-2 rounded-none inline-block"
+                              style={{
+                                background:
+                                  p.category === "supports"
+                                  ? "var(--cs-for)"
+                                  : p.category === "contradicts"
+                                  ? "var(--cs-against)"
+                                  : "var(--cs-neutral)"
+                              }}
+                            />
+                            {STANCE_LABEL[p.category] || "Unclear"}
+                          </span>
+                        )}
                       </td>
                       <td className="p-3">
                         <span className="text-[11.5px] text-[#72636d]">
-                          {p.direct ? "Direct" : "Indirect"}
+                          {p.unread ? "—" : p.direct ? "Direct" : "Indirect"}
                         </span>
                       </td>
                     </tr>

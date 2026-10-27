@@ -29,7 +29,14 @@ describe('AppLayout Component', () => {
 
   it('renders the header correctly', () => {
     renderWithProviders(<AppLayout />);
-    expect(screen.getByText('RadExtract')).toBeInTheDocument();
+    // Brand symbol is a bare "V" — no product name text anywhere in the header
+    expect(screen.queryByText('RadExtract')).not.toBeInTheDocument();
+    // Both home links (logo symbol + breadcrumb root crumb) point to the landing page
+    const homeLinks = screen.getAllByRole('link', { name: 'Home' });
+    expect(homeLinks.length).toBeGreaterThanOrEqual(2);
+    homeLinks.forEach((l) => expect(l).toHaveAttribute('href', '/'));
+    // Back control is present
+    expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
   });
 
   it('renders global navigation links', () => {
@@ -49,8 +56,8 @@ describe('AppLayout Component', () => {
     expect(screen.getByRole('link', { name: /PICO & Hypothesis/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^Studies$/i })).toBeInTheDocument();
 
-    // Top bar should show project ID
-    expect(screen.getByText(`Project: ${projectId.substring(0, 20)}`)).toBeInTheDocument();
+    // Breadcrumb shows a Project crumb linking to the project dashboard
+    expect(screen.getByRole('link', { name: 'Project' })).toHaveAttribute('href', `/projects/${projectId}`);
   });
 
   it('does not render project-specific navigation links when no projectId', () => {

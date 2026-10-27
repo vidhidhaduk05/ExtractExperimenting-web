@@ -1,8 +1,8 @@
-# RadExtract Platform
+# V Platform (formerly RadExtract)
 
-**Version:** `0.9.0` (see [VERSION](file:///home/vd00026/Desktop/Software/VERSION)) · **Design:** [Master Theme](file:///home/vd00026/Desktop/Software/docs/MASTER_THEME.md) · **Changelog:** [CHANGELOG.md](file:///home/vd00026/Desktop/Software/CHANGELOG.md)
+**Version:** `0.9.0` · **Design:** [Master Theme](docs/MASTER_THEME.md) · **Changelog:** [CHANGELOG.md](CHANGELOG.md)
 
-RadExtract is an evidence synthesis and systematic review platform for radiology and clinical research. It pairs local Laya / JEV screening and extraction models running on local GPU infrastructure with DerSimonian-Laird meta-analyses, PRISMA 2020 flow automation, and GRADE evidence certainty assessments.
+V is an evidence synthesis and systematic review platform for radiology and clinical research. It pairs local Laya / JEV screening and extraction models running on local GPU infrastructure with DerSimonian-Laird meta-analyses, PRISMA 2020 flow automation, and GRADE evidence certainty assessments.
 
 ---
 
@@ -32,3 +32,22 @@ RadExtract is an evidence synthesis and systematic review platform for radiology
 - **Deployable `main`**: Main is always deployable and build-green.
 - **Branch Archival**: Agent branches (`bolt/*`, `codex/*`, `jules/*`, `sentinel/*`) are tagged `archive/<branch-name>` and pruned from remote once merged.
 - **Banned Strings**: The repository strictly rejects legacy mock strings (`velvet`, `steal the whole`, `senior mode`, `DEMO_STUDIES`) via automated checks.
+
+---
+
+## Data Reset & Seed Scripts (manual CLI tools only)
+
+The seed scripts are **never** invoked on app startup or by any router. A fresh database boots with zero projects and zero studies; all data enters through the app's own import flow. To wipe test data deliberately, run these from `radextract_platform/backend/`:
+
+```bash
+# Reset screening decisions/AI state for a project (keeps studies)
+python scripts/reset_screening.py
+
+# Full clean slate: stop the app, delete the SQLite database, restart.
+# The backend recreates an empty schema on boot. Seed scripts are opt-in only:
+python scripts/seed.py                # example corpus (manual, test DBs only)
+python scripts/seed_example_study.py  # single example study (manual)
+python scripts/seed_pam_protocol.py   # PAM protocol example (manual)
+```
+
+Never point seed scripts at a production database.

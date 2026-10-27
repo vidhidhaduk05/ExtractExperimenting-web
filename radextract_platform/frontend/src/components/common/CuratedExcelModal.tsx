@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
-import { DEMO_EXTRACTIONS, DEMO_VARIABLES, DEMO_STUDIES } from "../../lib/demoData";
 
 export interface CuratedExcelModalProps {
   projectId: string;
@@ -45,50 +44,28 @@ export function CuratedExcelModal({
     studyName: "",
   });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [realVariables, setRealVariables] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    api.getExtractionGrid(projectId)
+      .then((grid: any) => { if (!cancelled) setRealVariables(grid?.variables || []); })
+      .catch(() => { if (!cancelled) setRealVariables([]); });
+    return () => { cancelled = true; };
+  }, [isOpen, projectId]);
 
   if (!isOpen) return null;
 
   // 1. One-Click Benchmark PAM Curated Sheet
+  // There is no real benchmark corpus behind this button: pre-populating
+  // extractions from anything other than verified project data would
+  // fabricate results, so it is disabled with an explicit explanation.
   const handleLoadBenchmarkData = async () => {
-    try {
-      setIsParsing(true);
-      // Ingest benchmark PAM extractions
-      const targetStudies = availablePapers.length > 0 ? availablePapers : DEMO_STUDIES.map(s => ({ id: s.study_id, shortId: s.study_id, title: s.title, filename: s.pdf_path || "" }));
-      
-      let populatedCount = 0;
-      for (const paper of targetStudies) {
-        const benchmarkExts = (DEMO_EXTRACTIONS as any)[paper.id] || (DEMO_EXTRACTIONS as any)["study_chua_2021"] || [];
-        for (const ext of benchmarkExts) {
-          const varDef = DEMO_VARIABLES.find(v => v.variable_id === ext.variable_id);
-          try {
-            await api.recordExtractionDecision({
-              project_id: projectId,
-              study_id: paper.id,
-              variable_id: ext.variable_id,
-              variable_name: varDef?.name || ext.variable_id,
-              original_value: ext.value,
-              corrected_value: ext.value,
-              decision: "accepted",
-              evidence_quote: ext.quote || ext.evidence_quote || "Curated benchmark literature finding",
-              page_number: ext.source_page || ext.page || 1,
-              reviewer: "Curated Benchmark PAM Expert",
-              notes: "Imported from verified intracranial pure arterial malformation benchmark corpus",
-            });
-            populatedCount++;
-          } catch (e) {
-            // Local fallback handled in api.ts
-          }
-        }
-      }
-
-      onSuccess(`Loaded curated benchmark extraction sheet with ${populatedCount} verified variables across PAM studies!`);
-      onClose();
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Failed to load benchmark data");
-    } finally {
-      setIsParsing(false);
-    }
+    setErrorMsg(
+      "Benchmark pre-fill was removed: extraction values must come from your own uploaded data or verified extractions. Use the Import tab to ingest a curated Excel/CSV file instead."
+    );
   };
 
   // 2. Parse Excel/CSV File
@@ -154,7 +131,7 @@ export function CuratedExcelModal({
 
         if (varName && val !== undefined) {
           // Resolve variable ID
-          const matchedVar = DEMO_VARIABLES.find(v => v.name.toLowerCase() === String(varName).toLowerCase()) || {
+          const matchedVar = realVariables.find(v => v.name.toLowerCase() === String(varName).toLowerCase()) || {
             variable_id: `v_custom_${String(varName).toLowerCase().replace(/[^a-z0-9]/g, "_")}`,
             name: String(varName),
           };
@@ -192,8 +169,8 @@ export function CuratedExcelModal({
 
       // Sheet 1: Active Study
       const currentPaper = availablePapers.find(p => p.id === selectedStudyId) || availablePapers[0];
-      const activeStudyExts = (DEMO_EXTRACTIONS as any)[selectedStudyId] || [];
-      const s1Data = DEMO_VARIABLES.map(v => {
+      const activeStudyExts: any[] = [];
+      const s1Data = realVariables.map(v => {
         const found = activeStudyExts.find((e: any) => e.variable_id === v.variable_id);
         return {
           "Study ID": selectedStudyId,
@@ -211,14 +188,14 @@ export function CuratedExcelModal({
       XLSX.utils.book_append_sheet(wb, ws1, "Current_Study_Extractions");
 
       // Sheet 2: Multi-Study Matrix
-      const matrixData = DEMO_VARIABLES.map(v => {
+      const matrixData = realVariables.map(v => {
         const row: any = {
           "Variable ID": v.variable_id,
           "Variable Name": v.name,
           "Section": v.section,
         };
         availablePapers.forEach((paper, idx) => {
-          const exts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
+          const exts: any[] = [];
           const match = exts.find((e: any) => e.variable_id === v.variable_id);
           row[`#${idx + 1} ${paper.title.split("(")[0].trim()}`] = match?.value || "NR";
         });
@@ -229,7 +206,7 @@ export function CuratedExcelModal({
 
       // Sheet 3: Codebook Dictionary
       const ws3 = XLSX.utils.json_to_sheet(
-        DEMO_VARIABLES.map(v => ({
+        realVariables.map(v => ({
           "Variable ID": v.variable_id,
           "Variable Name": v.name,
           "Section": v.section,

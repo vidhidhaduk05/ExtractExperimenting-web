@@ -231,7 +231,7 @@ export const MethodologySection: React.FC = () => {
           </span>
         </div>
         <p className="text-[11.5px] text-[var(--cs-ink-3)]">
-          RadExtract Systematic Platform · Open-science clinical research synthesis tool.
+          V Systematic Platform · Open-science clinical research synthesis tool.
         </p>
       </footer>
     </section>

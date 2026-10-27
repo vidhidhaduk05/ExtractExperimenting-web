@@ -1,10 +1,9 @@
 import { useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getApiBase, shouldUseDemoFallback } from "./api";
+import { getApiBase } from "./api";
 
 // JWT subject is only a cache namespace. The server verifies identity and access.
 export function bookmarkScope(): string {
-  if (shouldUseDemoFallback()) return `demo:${localStorage.getItem("username") || "guest"}`;
   try {
     const part = (localStorage.getItem("token") || "").split(".")[1];
     const payload = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
@@ -29,24 +28,11 @@ async function bookmarkRequest<T>(path: string, options: RequestInit = {}): Prom
 }
 
 export async function listBookmarks(projectId: string): Promise<string[]> {
-  if (shouldUseDemoFallback()) {
-    const saved = JSON.parse(localStorage.getItem(localKey(projectId)) || "[]");
-    if (!Array.isArray(saved) || saved.some(id => typeof id !== "string")) {
-      throw new Error("Saved bookmarks could not be read.");
-    }
-    return [...new Set(saved)];
-  }
   const result = await bookmarkRequest<{ study_ids: string[] }>(`/projects/${encodeURIComponent(projectId)}/bookmarks`);
   return result.study_ids;
 }
 
 export async function saveBookmark(projectId: string, studyId: string, bookmarked: boolean): Promise<void> {
-  if (shouldUseDemoFallback()) {
-    const ids = new Set(await listBookmarks(projectId));
-    if (bookmarked) ids.add(studyId); else ids.delete(studyId);
-    localStorage.setItem(localKey(projectId), JSON.stringify([...ids]));
-    return;
-  }
   await bookmarkRequest(`/studies/${encodeURIComponent(studyId)}/bookmark`, {
     method: "PUT", body: JSON.stringify({ bookmarked }),
   });
@@ -57,7 +43,7 @@ export function useBookmarks(projectId: string | undefined) {
   const busy = useRef(false);
   const scope = bookmarkScope();
   const key = ["bookmarks", getApiBase(), scope, projectId];
-  const enabled = !!projectId && (shouldUseDemoFallback() || !!localStorage.getItem("token"));
+  const enabled = !!projectId;
   const query = useQuery({ queryKey: key, queryFn: () => listBookmarks(projectId!), enabled, retry: false });
   const mutation = useMutation({
     mutationFn: ({ id, saved }: { id: string; saved: boolean }) => saveBookmark(projectId!, id, saved),
@@ -68,7 +54,7 @@ export function useBookmarks(projectId: string | undefined) {
   return {
     ids: query.data || [],
     disabled: !enabled || !query.isSuccess || mutation.isPending,
-    local: shouldUseDemoFallback(),
+    local: false,
     error: !enabled ? "Sign in to save studies for later." : (mutation.error || query.error)?.message,
     retry: () => { mutation.reset(); void query.refetch(); },
     toggle: (id: string) => {

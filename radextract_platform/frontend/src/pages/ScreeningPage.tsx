@@ -35,7 +35,6 @@ import {
   Upload,
   FileText,
   Shield,
-  ShieldCheck,
   Check,
   ExternalLink,
   HelpCircle,

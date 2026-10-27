@@ -16,8 +16,6 @@ import {
 import {
   getApiBase,
   setCustomApiBase,
-  isDemoModeEnabled,
-  setDemoModeEnabled,
   testBackendConnection,
   api
 } from "../../lib/api";
@@ -29,7 +27,6 @@ interface ApiSettingsModalProps {
 
 export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onClose }) => {
   const [apiUrl, setApiUrl] = useState<string>("");
-  const [isDemo, setIsDemo] = useState<boolean>(false);
   const [testing, setTesting] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{
     tested: boolean;
@@ -50,7 +47,6 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
     if (isOpen) {
       const stored = localStorage.getItem("custom_api_base") || "";
       setApiUrl(stored || getApiBase());
-      setIsDemo(isDemoModeEnabled());
       setTestResult(null);
       setAuthStatus("");
     }
@@ -78,15 +74,12 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
 
   const handleSave = () => {
     setCustomApiBase(apiUrl);
-    setDemoModeEnabled(isDemo);
     onClose();
   };
 
   const handleReset = () => {
     setCustomApiBase(null);
-    setDemoModeEnabled(false);
     setApiUrl(getApiBase());
-    setIsDemo(false);
     setTestResult(null);
   };
 
@@ -125,7 +118,7 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
                 Backend API & Server Connection
               </h2>
               <p className="text-xs text-[#8A817A]">
-                Configure your FastAPI VPS endpoint or switch to demo mode
+                Configure your FastAPI VPS endpoint
               </p>
             </div>
           </div>
@@ -140,48 +133,6 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
 
         {/* Body */}
         <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto text-xs">
-          {/* Mode Switcher */}
-          <div className="p-3 rounded-xl border border-black/10 bg-white/80 space-y-2">
-            <span className="font-medium text-xs text-[#141413] block">Platform Operation Mode</span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setIsDemo(false)}
-                className={`py-2 px-3 rounded-lg border text-left font-medium transition-all ${
-                  !isDemo
-                    ? "bg-[#141413] text-[#FAF9F3] border-[#141413] shadow-xs"
-                    : "bg-white text-[#6B665E] border-black/10 hover:border-black/20"
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className={`h-2 w-2 rounded-full ${!isDemo ? "bg-emerald-400" : "bg-gray-300"}`} />
-                  <span>Live Server Mode</span>
-                </div>
-                <p className="text-[10px] mt-0.5 opacity-80 font-normal">
-                  Saves to VPS SQLite / Storage
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsDemo(true)}
-                className={`py-2 px-3 rounded-lg border text-left font-medium transition-all ${
-                  isDemo
-                    ? "bg-[#141413] text-[#FAF9F3] border-[#141413] shadow-xs"
-                    : "bg-white text-[#6B665E] border-black/10 hover:border-black/20"
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className={`h-2 w-2 rounded-full ${isDemo ? "bg-amber-400" : "bg-gray-300"}`} />
-                  <span>Offline Demo Mode</span>
-                </div>
-                <p className="text-[10px] mt-0.5 opacity-80 font-normal">
-                  In-memory preview, no server
-                </p>
-              </button>
-            </div>
-          </div>
-
           {/* Endpoint Input */}
           <div className="space-y-2">
             <label htmlFor="api-url-input" className="font-medium text-xs text-[#141413] flex items-center justify-between">
@@ -230,7 +181,7 @@ export const ApiSettingsModal: React.FC<ApiSettingsModalProps> = ({ isOpen, onCl
                 className="px-2 py-0.5 rounded bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold border border-purple-300 flex items-center gap-1 shadow-2xs transition-colors"
                 title="Connect directly to the HPC Tesla V100S GPU running the high-throughput Co-Scientist research inference cluster"
               >
-                <span>⚡ RadExtract Live GPU (HPC)</span>
+                <span>⚡ V Live GPU (HPC)</span>
               </button>
               <button
                 type="button"
