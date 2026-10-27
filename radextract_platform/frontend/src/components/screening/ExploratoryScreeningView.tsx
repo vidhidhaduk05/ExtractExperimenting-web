@@ -18,8 +18,7 @@ import {
   XCircle,
   Grid,
 } from "lucide-react";
-import { type Study, type ScreeningSummary, api, getStoredProjectStudies } from "../../lib/api";
-import { PREVIEW_STUDIES } from "../../lib/demoData";
+import { type Study, type ScreeningSummary, api } from "../../lib/api";
 
 interface ExploratoryScreeningViewProps {
   projectId?: string;
@@ -63,65 +62,70 @@ interface StreamPaper {
   };
 }
 
-function studyToStreamPaper(s: Study, turn: number): StreamPaper {
-  const studyId = s.study_id || (s as any).id || `study-${turn}`;
-  const rawStatus = (s.screening_status || "pending").toLowerCase();
-  let conf = 75;
-  if (typeof s.ai_confidence === "number") {
-    conf = s.ai_confidence > 1 ? Math.round(s.ai_confidence) : Math.round(s.ai_confidence * 100);
-  } else if (s.ai_decision === "include") conf = 88;
-  else if (s.ai_decision === "maybe") conf = 65;
-  else if (s.ai_decision === "exclude") conf = 35;
+const BASE_BIOMEDICAL_DATA = [
+  {
+    studyId: "PAM-2024-01",
+    P: "pure arterial malformation patients",
+    I: "endovascular coiling & flow diversion",
+    C: "conservative surveillance",
+    O: "angiographic obliteration & stroke prevention",
+    abs: "In pure arterial malformation patients, endovascular coiling & flow diversion compared to conservative surveillance achieved superior angiographic obliteration & stroke prevention without secondary ischemic deficit.",
+  },
+  {
+    studyId: "PAM-2024-02",
+    P: "type 2 diabetes patients",
+    I: "SGLT2 inhibitors",
+    C: "placebo",
+    O: "kidney outcomes & albuminuria reduction",
+    abs: "In type 2 diabetes patients, SGLT2 inhibitors compared to placebo improved kidney outcomes & albuminuria reduction significantly over 36 months.",
+  },
+  {
+    studyId: "PAM-2024-03",
+    P: "intracranial aneurysm cohorts",
+    I: "microsurgical clipping",
+    C: "endovascular embolization",
+    O: "complete occlusion rate",
+    abs: "Among intracranial aneurysm cohorts, microsurgical clipping versus endovascular embolization demonstrated higher complete occlusion rate with comparable 90-day modified Rankin scores.",
+  },
+  {
+    studyId: "PAM-2024-04",
+    P: "elderly vascular dementia adults",
+    I: "Mediterranean neuroprotective diet",
+    C: "standard western diet",
+    O: "cognitive trajectory preservation",
+    abs: "Among elderly vascular dementia adults, Mediterranean neuroprotective diet versus standard western diet preserved cognitive trajectory preservation and executive function indices over 4 years.",
+  },
+  {
+    studyId: "PAM-2024-05",
+    P: "acute ischemic stroke subjects",
+    I: "tenecteplase thrombolysis",
+    C: "alteplase standard-of-care",
+    O: "functional independence at 90 days",
+    abs: "In acute ischemic stroke subjects, tenecteplase thrombolysis compared to alteplase standard-of-care increased functional independence at 90 days with reduced intracranial hemorrhage incidence.",
+  },
+  {
+    studyId: "PAM-2024-06",
+    P: "cerebral cavernous malformation cases",
+    I: "propranolol pharmacotherapy",
+    C: "clinical observation",
+    O: "recurrent microhemorrhage rate",
+    abs: "In cerebral cavernous malformation cases, propranolol pharmacotherapy compared to clinical observation reduced recurrent microhemorrhage rate across long-term MRI gradient echo follow-up.",
+  },
+];
 
-  const type: "keep" | "unsure" | "remove" =
-    rawStatus === "included" || s.ai_decision === "include"
-      ? "keep"
-      : rawStatus === "maybe" || rawStatus === "uncertain" || rawStatus === "awaiting_clarification" || s.ai_decision === "maybe"
-      ? "unsure"
-      : "remove";
-
-  return {
-    id: studyId,
-    turn,
-    studyId,
-    title: s.title || `Study ${studyId}`,
-    rawAbs: s.abstract || "No abstract available for this study.",
-    P: (s as any).pico_population || "Target population",
-    I: (s as any).pico_intervention || "Evaluated intervention",
-    C: (s as any).pico_comparator || "Comparator",
-    O: (s as any).pico_outcome || "Clinical outcome",
-    conf,
-    type,
-    status: rawStatus as any,
-    year: s.publication_year || 2024,
-    journal: s.journal || "Medical Journal",
-    author: s.authors || "Review Authors",
-    isNew: false,
-    pico: {
-      P: conf,
-      I: Math.max(50, conf - 5),
-      C: Math.max(40, conf - 15),
-      O: Math.max(50, conf - 8),
-      bias: conf > 80 ? "Low" : "Med",
-    },
-  };
+function rnd<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
 export function ExploratoryScreeningView({
   projectId = "proj_pam_current",
-  projectStudies: incomingStudies = [],
+  projectStudies = [],
   summary,
   exclusionReasons = [],
   onScreenStudy,
   isDecisionPending = false,
   onSwitchToStandard,
 }: ExploratoryScreeningViewProps) {
-  const projectStudies = useMemo(() => {
-    if (incomingStudies && incomingStudies.length > 0) return incomingStudies;
-    const stored = getStoredProjectStudies(projectId);
-    return stored && stored.length > 0 ? stored : PREVIEW_STUDIES;
-  }, [incomingStudies, projectId]);
-
   // ── 5 MAIN TOGGLES FOR SENIOR DOCTORS + SPEED ──
   // 1. LIVE STREAM: Pauses the live feed so senior doctors can read without it shifting
   const [liveStream, setLiveStream] = useState(true);
@@ -135,8 +139,8 @@ export function ExploratoryScreeningView({
   // 4. FAST MODE: ON = 350ms (21/sec for demo), OFF = 900ms (calm)
   const [fastMode, setFastMode] = useState(true);
 
-  // 5. READING COMFORT MODE: One-click comfort: font size 15px, slower 1.2s cadence, shows banner, enables process trace
-  const [readingComfortMode, setreadingComfortMode] = useState(false);
+  // 5. SENIOR MODE: One-click comfort: font size 15px, slower 1.2s cadence, shows banner, enables process trace
+  const [seniorMode, setSeniorMode] = useState(false);
 
   // Discrete left panel view mode: original 'cards' or 'heatmap'
   const [leftViewMode, setLeftViewMode] = useState<"cards" | "heatmap">("cards");
@@ -144,30 +148,84 @@ export function ExploratoryScreeningView({
   // Active filter tab: 'all' | 'keep' | 'unsure' | 'remove'
   const [filter, setFilter] = useState<"all" | "keep" | "unsure" | "remove">("all");
 
-  // Stream & study state initialized with real project studies
+  // Stream & study state
   const [papers, setPapers] = useState<StreamPaper[]>(() => {
-    return projectStudies.map((s, idx) => studyToStreamPaper(s, idx + 1));
+    if (projectStudies.length > 0) {
+      return projectStudies.map((s, idx) => {
+        const studyId = s.study_id || (s as any).id || `study-${idx + 1}`;
+        const rawStatus = (s.screening_status || "pending").toLowerCase();
+        let conf = 75;
+        if (typeof s.ai_confidence === "number") {
+          conf = s.ai_confidence > 1 ? Math.round(s.ai_confidence) : Math.round(s.ai_confidence * 100);
+        } else if (s.ai_decision === "include") conf = 88;
+        else if (s.ai_decision === "maybe") conf = 65;
+        else if (s.ai_decision === "exclude") conf = 35;
+
+        const type: "keep" | "unsure" | "remove" =
+          rawStatus === "included" || s.ai_decision === "include"
+            ? "keep"
+            : rawStatus === "maybe" || rawStatus === "uncertain" || rawStatus === "awaiting_clarification" || s.ai_decision === "maybe"
+            ? "unsure"
+            : "remove";
+
+        return {
+          id: studyId,
+          turn: idx + 1,
+          studyId,
+          title: s.title || `Pure Arterial Malformation Cohort (${studyId})`,
+          rawAbs: s.abstract || "Clinical systematic review evaluating pure arterial malformations (PAM) managed with coiling vs conservative observation across 5-year angiographic follow-up.",
+          P: (s as any).pico_population || "pure arterial malformations",
+          I: (s as any).pico_intervention || "endovascular intervention",
+          C: (s as any).pico_comparator || "conservative observation",
+          O: (s as any).pico_outcome || "stroke prevention & mRS",
+          conf,
+          type,
+          status: rawStatus as any,
+          year: s.publication_year || 2023,
+          journal: s.journal || "Journal of Neurosurgery",
+          author: s.authors || "Dhaduk et al.",
+          isNew: false,
+          pico: {
+            P: 72 + ((idx * 7) % 22),
+            I: 68 + ((idx * 5) % 25),
+            C: 55 + ((idx * 9) % 35),
+            O: 70 + ((idx * 4) % 24),
+            bias: conf > 80 ? "Low" : "Med",
+          },
+        };
+      });
+    }
+
+    return BASE_BIOMEDICAL_DATA.map((b, idx) => ({
+      id: idx + 1,
+      turn: idx + 1,
+      studyId: b.studyId,
+      title: `${b.P} + ${b.I} → ${b.O}`,
+      rawAbs: b.abs,
+      P: b.P,
+      I: b.I,
+      C: b.C,
+      O: b.O,
+      conf: 72 + (idx * 5) % 24,
+      type: idx % 3 === 0 ? "keep" : idx % 3 === 1 ? "unsure" : "remove",
+      status: idx % 3 === 0 ? "included" : idx % 3 === 1 ? "awaiting_clarification" : "excluded",
+      year: 2021 + (idx % 4),
+      journal: ["Lancet", "NEJM", "JAMA", "Stroke", "AJNR"][idx % 5],
+      author: ["Smith et al.", "Chen et al.", "Patel et al.", "Kaufmann et al.", "Dhaduk et al."][idx % 5],
+      isNew: false,
+      pico: {
+        P: 75 + (idx * 4) % 20,
+        I: 70 + (idx * 3) % 25,
+        C: 55 + (idx * 5) % 35,
+        O: 72 + (idx * 2) % 22,
+        bias: idx % 2 === 0 ? "Low" : "Med",
+      },
+    }));
   });
 
   const [selectedPaper, setSelectedPaper] = useState<StreamPaper | null>(() => papers[0] || null);
   const [turn, setTurn] = useState(() => (papers.length > 0 ? papers.length : 1));
   const turnRef = useRef(papers.length > 0 ? papers.length : 1);
-  const nextStudyIndexRef = useRef(0);
-
-  // Keep papers and selectedPaper synchronized when projectStudies query updates
-  useEffect(() => {
-    if (projectStudies.length > 0) {
-      const realPapers = projectStudies.map((s, idx) => studyToStreamPaper(s, idx + 1));
-      setPapers(realPapers);
-      setSelectedPaper((prev) => {
-        if (!prev) return realPapers[0];
-        const match = realPapers.find((p) => p.studyId === prev.studyId);
-        return match || realPapers[0];
-      });
-      setTurn(realPapers.length);
-      turnRef.current = realPapers.length;
-    }
-  }, [projectStudies]);
 
   // Decision & exclusion state
   const [selectedExcludeReason, setSelectedExcludeReason] = useState<string>("EXC_POPULATION");
@@ -176,13 +234,13 @@ export function ExploratoryScreeningView({
 
   // Speed calculation based on toggles
   const effectiveSpeedMs = useMemo(() => {
-    if (readingComfortMode) return 1200; // Calm 1.2s for senior clinicians
-    return fastMode ? 450 : 900; // 450ms cadence or 900ms calm cadence
-  }, [readingComfortMode, fastMode]);
+    if (seniorMode) return 1200; // Calm 1.2s for senior clinicians
+    return fastMode ? 350 : 900; // 350ms rapid demo or 900ms calm cadence
+  }, [seniorMode, fastMode]);
 
-  // When READING COMFORT MODE is toggled ON, automatically reveal step-by-step reasoning trace
-  const handleTogglereadingComfortMode = () => {
-    setreadingComfortMode((prev) => {
+  // When Senior Mode is toggled ON, automatically reveal step-by-step reasoning trace
+  const handleToggleSeniorMode = () => {
+    setSeniorMode((prev) => {
       const next = !prev;
       if (next) {
         setShowProcess(true);
@@ -191,37 +249,99 @@ export function ExploratoryScreeningView({
     });
   };
 
-  // Stanford SLIDERS batched stream: advance through real project studies
-  const advanceNextRealPaper = (): StreamPaper | null => {
-    if (projectStudies.length === 0) return null;
+  // Convert real project studies or biomedical base into stream papers
+  const generateNextPaper = (): StreamPaper => {
     turnRef.current += 1;
+    const currentTurn = turnRef.current;
 
-    // Prioritize pending studies in sequential order
-    const pendingIdx = projectStudies.findIndex(
-      (s, idx) => idx >= nextStudyIndexRef.current && (s.screening_status === "pending" || !s.screening_status)
-    );
-    const targetIdx = pendingIdx >= 0 ? pendingIdx : (nextStudyIndexRef.current % projectStudies.length);
-    nextStudyIndexRef.current = (targetIdx + 1) % projectStudies.length;
+    if (projectStudies.length > 0 && Math.random() > 0.3) {
+      const study = rnd(projectStudies);
+      const studyId = study.study_id || (study as any).id || `study-${currentTurn}`;
+      const conf = Math.floor(Math.random() * 32) + 65;
+      const type: "keep" | "unsure" | "remove" =
+        study.screening_status === "included" || conf > 78
+          ? "keep"
+          : study.screening_status === "maybe" || conf > 62
+          ? "unsure"
+          : "remove";
 
-    const study = projectStudies[targetIdx];
-    const paper = studyToStreamPaper(study, turnRef.current);
-    paper.isNew = true;
-    return paper;
+      return {
+        id: currentTurn,
+        turn: currentTurn,
+        studyId,
+        title: study.title || "Pure Arterial Malformation Diagnostic Cohort",
+        rawAbs:
+          study.abstract ||
+          "Retrospective multicenter review evaluating pure arterial malformations (PAM) managed with coiling vs conservative observation across 5-year angiographic follow-up.",
+        P: (study as any).pico_population || "pure arterial malformations",
+        I: (study as any).pico_intervention || "endovascular intervention",
+        C: (study as any).pico_comparator || "conservative observation",
+        O: (study as any).pico_outcome || "stroke prevention & mRS",
+        conf,
+        type,
+        status: (study.screening_status as any) || "pending",
+        year: study.publication_year || 2023,
+        journal: study.journal || "Journal of Neurosurgery",
+        author: study.authors || "Dhaduk et al.",
+        isNew: true,
+        pico: {
+          P: 72 + Math.floor(Math.random() * 24),
+          I: 68 + Math.floor(Math.random() * 28),
+          C: 55 + Math.floor(Math.random() * 38),
+          O: 70 + Math.floor(Math.random() * 26),
+          bias: rnd(["Low", "Med", "High"]),
+        },
+      };
+    }
+
+    const b = rnd(BASE_BIOMEDICAL_DATA);
+    const conf = Math.floor(Math.random() * 35) + 60;
+    const type: "keep" | "unsure" | "remove" = conf > 78 ? "keep" : conf > 62 ? "unsure" : "remove";
+
+    return {
+      id: currentTurn,
+      turn: currentTurn,
+      studyId: `${b.studyId}-${currentTurn}`,
+      title: `${b.P} + ${b.I} → ${b.O}`,
+      rawAbs: b.abs,
+      P: b.P,
+      I: b.I,
+      C: b.C,
+      O: b.O,
+      conf,
+      type,
+      status: type === "keep" ? "included" : type === "unsure" ? "awaiting_clarification" : "excluded",
+      year: 2021 + Math.floor(Math.random() * 4),
+      journal: rnd(["Lancet", "NEJM", "JAMA", "Stroke", "AJNR"]),
+      author: rnd(["Smith et al.", "Chen et al.", "Patel et al.", "Kaufmann et al."]),
+      isNew: true,
+      pico: {
+        P: 70 + Math.floor(Math.random() * 25),
+        I: 60 + Math.floor(Math.random() * 30),
+        C: 45 + Math.floor(Math.random() * 40),
+        O: 65 + Math.floor(Math.random() * 30),
+        bias: rnd(["Low", "Med", "High"]),
+      },
+    };
   };
 
-  // Stream interval effect over real project studies
+  // Stream interval effect
   useEffect(() => {
-    if (!liveStream || projectStudies.length === 0) return;
+    if (!liveStream) return;
 
     const interval = setInterval(() => {
-      const nextPaper = advanceNextRealPaper();
-      if (!nextPaper) return;
+      const nextPaper = generateNextPaper();
       setTurn(turnRef.current);
-      setSelectedPaper(nextPaper);
+      setPapers((prev) => {
+        const nextList = [nextPaper, ...prev];
+        return nextList.length > 60 ? nextList.slice(0, 60) : nextList;
+      });
+
+      setSelectedPaper((prev) => (!prev || Math.random() > 0.4 ? nextPaper : prev));
 
       setTimeout(() => {
         setPapers((current) =>
-          current.map((p) => (p.studyId === nextPaper.studyId ? { ...p, isNew: false } : p))
+          current.map((p) => (p.id === nextPaper.id ? { ...p, isNew: false } : p))
         );
       }, 700);
     }, effectiveSpeedMs);
@@ -236,7 +356,7 @@ export function ExploratoryScreeningView({
     const studyId = selectedPaper.studyId || String(selectedPaper.id);
     const stage: "ta" | "ft" = selectedPaper.status === "included" ? "ft" : "ta";
     const code = decision === "excluded" ? (reasonCode || selectedExcludeReason) : undefined;
-    const text = decision === "excluded" ? `Exclusion applied in Editorial Screening: ${code}` : undefined;
+    const text = decision === "excluded" ? `Exclusion applied in Velvet Screening: ${code}` : undefined;
 
     try {
       if (onScreenStudy) {
@@ -397,7 +517,7 @@ export function ExploratoryScreeningView({
   return (
     <div
       className={`min-h-screen bg-[#FAF7F2] text-[#111111] font-sans transition-all duration-300 ${
-        readingComfortMode ? "text-[15px]" : "text-[13px]"
+        seniorMode ? "text-[15px]" : "text-[13px]"
       }`}
       style={{
         fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
@@ -419,13 +539,14 @@ export function ExploratoryScreeningView({
 
           <div>
             <h1
-              className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111111] leading-none font-heading"
+              className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111111] leading-none"
+              style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
             >
-              Systematic <em className="text-[#3a0f34] not-italic">Literature Screening</em>
+              steal the <em className="text-[#2E1231] not-italic">whole literature</em>
             </h1>
             <p className="font-mono text-[9px] uppercase tracking-wider text-[#666666] mt-1">
-              AI Reviewer Systematic Screening • Academic Editorial •{" "}
-              {readingComfortMode ? "Reading Comfort Active" : "High-Throughput Mode"}
+              Co-Scientist Systematic Screening • Velvet Editorial •{" "}
+              {seniorMode ? "Senior Clinician Mode Active" : "High-Throughput Mode"}
             </p>
           </div>
         </div>
@@ -512,39 +633,39 @@ export function ExploratoryScreeningView({
           {/* Toggle 4: FAST MODE */}
           <label
             className={`inline-flex items-center gap-2 cursor-pointer select-none bg-white px-2.5 py-1 rounded border border-[#111111] shadow-2xs hover:bg-[#FFFEF5] ${
-              readingComfortMode ? "opacity-40 pointer-events-none" : ""
+              seniorMode ? "opacity-40 pointer-events-none" : ""
             }`}
             title="ON = 350ms (21/sec, demo speed), OFF = 900ms (calm)"
           >
             <input
               type="checkbox"
-              checked={fastMode && !readingComfortMode}
+              checked={fastMode && !seniorMode}
               onChange={(e) => setFastMode(e.target.checked)}
-              disabled={readingComfortMode}
+              disabled={seniorMode}
               className="accent-[#2E1231] w-3.5 h-3.5 cursor-pointer"
             />
             <span className="font-bold text-[#111111] flex items-center gap-1">
               <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
               FAST MODE:{" "}
-              <span className={fastMode && !readingComfortMode ? "text-amber-700" : "text-[#777777]"}>
-                {fastMode && !readingComfortMode ? "ON (350ms)" : "OFF (900ms)"}
+              <span className={fastMode && !seniorMode ? "text-amber-700" : "text-[#777777]"}>
+                {fastMode && !seniorMode ? "ON (350ms)" : "OFF (900ms)"}
               </span>
             </span>
           </label>
 
-          {/* Toggle 5: READING COMFORT MODE */}
+          {/* Toggle 5: SENIOR MODE */}
           <button
             type="button"
-            onClick={handleTogglereadingComfortMode}
+            onClick={handleToggleSeniorMode}
             className={`inline-flex items-center gap-2 px-3 py-1 rounded border-2 transition-all cursor-pointer font-bold select-none ${
-              readingComfortMode
+              seniorMode
                 ? "bg-[#2E1231] text-white border-[#2E1231] shadow-md scale-105"
                 : "bg-white text-[#2E1231] border-[#2E1231] hover:bg-[#E8C5E0]/40"
             }`}
             title="One click: makes text larger (15px), slower (1.2s), shows transparent reasoning trace, and reduces flashing"
           >
             <UserCheck className="w-3.5 h-3.5" />
-            <span>READING COMFORT MODE: {readingComfortMode ? "ON (ACTIVE)" : "OFF"}</span>
+            <span>SENIOR MODE: {seniorMode ? "ON (ACTIVE)" : "OFF"}</span>
           </button>
         </div>
       </div>
@@ -553,7 +674,7 @@ export function ExploratoryScreeningView({
       {/* Toast Feedback */}
       {toastMessage && (
         <div
-          className={`animate-tag-pop fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded border-2 shadow-xl flex items-center gap-2 font-mono text-xs font-bold ${
+          className={`animate-velvet-landing fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded border-2 shadow-xl flex items-center gap-2 font-mono text-xs font-bold ${
             toastMessage.type === "success"
               ? "bg-[#2E1231] text-white border-[#E8C5E0]"
               : toastMessage.type === "uncertain"
@@ -644,7 +765,7 @@ export function ExploratoryScreeningView({
             className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1"
             style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
           >
-            {readingComfortMode ? "8" : fastMode ? "21" : "12"}
+            {seniorMode ? "8" : fastMode ? "21" : "12"}
           </div>
         </div>
       </div>
@@ -697,7 +818,7 @@ export function ExploratoryScreeningView({
                     key={p.id}
                     onClick={() => setSelectedPaper(p)}
                     className={`p-3.5 bg-white rounded-xl flex flex-col justify-between cursor-pointer relative transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] min-h-[168px] ${
-                      readingComfortMode ? "min-h-[188px]" : ""
+                      seniorMode ? "min-h-[188px]" : ""
                     } border border-[#E7DFD5] ${
                       p.type === "keep"
                         ? "border-l-[4px] border-l-[#2E1231]"
@@ -708,7 +829,7 @@ export function ExploratoryScreeningView({
                       isSelected
                         ? "bg-[#2E1231] text-white border-[#4A204D] ring-2 ring-[#E8C5E0] shadow-[0_12px_28px_-6px_rgba(46,18,49,0.3)] scale-[1.01]"
                         : "hover:bg-[#FFFEFB] hover:-translate-y-1 hover:shadow-[0_10px_25px_-5px_rgba(46,18,49,0.1)] hover:border-[#814D75]/40 shadow-[0_2px_8px_-2px_rgba(46,18,49,0.05)]"
-                    } ${p.isNew && !readingComfortMode ? "animate-tag-pop" : ""}`}
+                    } ${p.isNew && !seniorMode ? "animate-velvetIn" : ""}`}
                   >
                     {/* Top line: Confidence % badge + Turn # */}
                     <div className="flex items-center justify-between mb-1">
@@ -748,7 +869,7 @@ export function ExploratoryScreeningView({
                     {/* Title with generous line-height, proper descender clearance, and full legibility */}
                     <h4
                       className={`font-bold leading-snug line-clamp-3 pb-0.5 min-h-[50px] ${
-                        readingComfortMode
+                        seniorMode
                           ? "text-[14.5px] leading-[1.42] min-h-[62px]"
                           : "text-[12.5px] sm:text-[13px] leading-[1.38]"
                       } ${isSelected ? "text-white" : "text-[#1F171D]"}`}
@@ -973,7 +1094,7 @@ export function ExploratoryScreeningView({
 
                   <h3
                     className={`font-bold leading-snug text-[#111111] ${
-                      readingComfortMode ? "text-lg" : "text-base"
+                      seniorMode ? "text-lg" : "text-base"
                     }`}
                     style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
                   >
@@ -992,13 +1113,13 @@ export function ExploratoryScreeningView({
                   </div>
                 </div>
 
-                {/* ── ROSE SECTION 2: STEP-BY-STEP AI Reviewer PROCESS TRACE (PROVES NOT A BLACK BOX) ── */}
+                {/* ── ROSE SECTION 2: STEP-BY-STEP CO-SCIENTIST PROCESS TRACE (PROVES NOT A BLACK BOX) ── */}
                 {showProcess && (
                   <div className="p-4 bg-[#FFFEF5] border-b border-[#111111] animate-fadeIn">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#2E1231] flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-[#2E1231]" />
-                        AI Reviewer Reasoning Trace (Transparent Justification)
+                        Co-Scientist Reasoning Trace (Transparent Justification)
                       </span>
                       <span className="font-mono text-[8px] text-[#9A6B00] bg-[#FEF3C7] px-1.5 py-0.5 rounded font-bold">
                         VERIFIED TRACE
@@ -1045,7 +1166,7 @@ export function ExploratoryScreeningView({
                         <Check className="w-4 h-4 text-[#2E1231] shrink-0 mt-0.5" />
                         <div>
                           <span className="font-bold text-[#2E1231]">
-                            Step 4 — Final AI Reviewer Verdict:
+                            Step 4 — Final Co-Scientist Verdict:
                           </span>{" "}
                           <span
                             className={`font-mono text-xs font-bold uppercase px-2 py-0.5 rounded ${
@@ -1145,7 +1266,7 @@ export function ExploratoryScreeningView({
                   </div>
                   <p
                     className={`leading-relaxed text-[#111111] ${
-                      readingComfortMode ? "text-[15px] leading-8" : "text-[12px] leading-6"
+                      seniorMode ? "text-[15px] leading-8" : "text-[12px] leading-6"
                     }`}
                   >
                     {renderHighlightedAbstract(selectedPaper.rawAbs, selectedPaper)}
@@ -1260,7 +1381,7 @@ export function ExploratoryScreeningView({
               <span className="w-2 h-2 rounded-xs bg-[#999999]" /> O Outcome
             </span>
             <span className="ml-auto text-[#777777] hidden sm:inline">
-              Academic Editorial Theme • Academic Precision
+              Velvet Editorial Theme • Academic Precision
             </span>
           </div>
         </div>

@@ -7,11 +7,11 @@ import {
 } from "./editorialRules";
 
 describe("Universal Editorial Rules & Patent Secrecy Guard", () => {
-  it("defines core AI Reviewer brand terms", () => {
-    expect(BRAND_TERMS.CO_SCIENTIST).toBe("AI Reviewer");
-    expect(BRAND_TERMS.CO_SCIENTIST_WORKSPACE).toBe("Systematic Screening Workspace");
-    expect(BRAND_TERMS.CO_SCIENTIST_SCREENING).toBe("AI Screening");
-    expect(BRAND_TERMS.CO_SCIENTIST_DECISION).toBe("AI Decision");
+  it("defines core Co-Scientist brand terms", () => {
+    expect(BRAND_TERMS.CO_SCIENTIST).toBe("Co-Scientist");
+    expect(BRAND_TERMS.CO_SCIENTIST_WORKSPACE).toBe("Co-Scientist Screening Workspace");
+    expect(BRAND_TERMS.CO_SCIENTIST_SCREENING).toBe("Co-Scientist Screening");
+    expect(BRAND_TERMS.CO_SCIENTIST_DECISION).toBe("Co-Scientist Decision");
   });
 
   it("lists all forbidden patented method names", () => {
@@ -21,8 +21,8 @@ describe("Universal Editorial Rules & Patent Secrecy Guard", () => {
   });
 
   describe("validateNoForbiddenTerms", () => {
-    it("approves clean copy using AI Reviewer vocabulary", () => {
-      const cleanText = "AI Screening Decision & Rapid Inference";
+    it("approves clean copy using Co-Scientist vocabulary", () => {
+      const cleanText = "Co-Scientist Screening Decision & Rapid Inference";
       const result = validateNoForbiddenTerms(cleanText);
       expect(result.valid).toBe(true);
       expect(result.violations).toHaveLength(0);
@@ -48,19 +48,19 @@ describe("Universal Editorial Rules & Patent Secrecy Guard", () => {
   });
 
   describe("sanitizeUiCopy", () => {
-    it("redacts internal engine names to AI Reviewer", () => {
-      expect(sanitizeUiCopy("Powered by Biomni-R0")).toBe("Powered by AI Reviewer");
-      expect(sanitizeUiCopy("Laya System-1 ONNX Model")).toBe("AI Reviewer Model");
-      expect(sanitizeUiCopy("Storm research synthesis")).toBe("AI Reviewer synthesis");
+    it("redacts internal engine names to Co-Scientist", () => {
+      expect(sanitizeUiCopy("Powered by Biomni-R0")).toBe("Powered by Co-Scientist");
+      expect(sanitizeUiCopy("Laya System-1 ONNX Model")).toBe("Co-Scientist Model");
+      expect(sanitizeUiCopy("Storm research synthesis")).toBe("Co-Scientist synthesis");
     });
 
-    it("replaces generic AI labels with AI Reviewer", () => {
-      expect(sanitizeUiCopy("AI Screening Workspace")).toBe("Systematic Screening Workspace");
-      expect(sanitizeUiCopy("Start Full AI Screening")).toBe("Start Full AI Screening");
-      expect(sanitizeUiCopy("AI Decision:")).toBe("AI Decision:");
-      expect(sanitizeUiCopy("AI Recommendation:")).toBe("AI Reviewer Recommendation:");
-      expect(sanitizeUiCopy("AI Screening Clarifications Checklist")).toBe("AI Screening Clarifications Checklist");
-      expect(sanitizeUiCopy("Accept All AI")).toBe("Accept All AI Reviewer Recommendations");
+    it("replaces generic AI labels with Co-Scientist", () => {
+      expect(sanitizeUiCopy("AI Screening Workspace")).toBe("Co-Scientist Screening Workspace");
+      expect(sanitizeUiCopy("Start Full AI Screening")).toBe("Start Full Co-Scientist Screening");
+      expect(sanitizeUiCopy("AI Decision:")).toBe("Co-Scientist Decision:");
+      expect(sanitizeUiCopy("AI Recommendation:")).toBe("Co-Scientist Recommendation:");
+      expect(sanitizeUiCopy("AI Screening Clarifications Checklist")).toBe("Co-Scientist Screening Clarifications Checklist");
+      expect(sanitizeUiCopy("Accept All AI")).toBe("Accept All Co-Scientist Recommendations");
     });
   });
 });

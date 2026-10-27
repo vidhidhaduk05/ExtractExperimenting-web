@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { FileText, CheckSquare, ShieldCheck, Table, Download, Plus, GitBranch, BarChart3, Award, Highlighter, FileSpreadsheet, Sparkles, ArrowRight, ArrowLeft } from "lucide-react";
+import { FileText, CheckSquare, ShieldCheck, Table, Download, Plus, GitBranch, BarChart3, Award, Highlighter, FileSpreadsheet, Sparkles, ArrowRight } from "lucide-react";
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -63,16 +63,7 @@ export function ProjectDetail() {
       {/* Project Header */}
       {project && (
         <div className="border-b border-[#d2c2cb] pb-6">
-          <div className="flex items-center gap-2.5 mb-3">
-            <Link
-              to="/projects"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#814d75] hover:text-[#3a0f34] bg-[#eee7ec] hover:bg-[#d2c2cb]/50 px-2.5 py-1 rounded border border-[#d2c2cb] transition-colors"
-              title="Return to All Projects"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>← All Projects</span>
-            </Link>
-            <span className="text-[#d2c2cb]">/</span>
+          <div className="flex items-center gap-2 mb-2">
             <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-[#ffdea6]/50 text-[#7c5800] border border-[#d2c2cb]">
               PROJECT SYNTHESIS
             </span>

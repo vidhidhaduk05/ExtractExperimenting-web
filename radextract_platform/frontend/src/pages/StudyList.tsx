@@ -412,7 +412,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h2 className="font-serif text-lg font-medium text-[#141413]">
-                Direct AI Reviewer Quote Extraction & Verification
+                Direct Co-Scientist Quote Extraction & Verification
               </h2>
               <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">FAST-TRACK EXTRACTION</span>
             </div>
@@ -845,7 +845,7 @@ function StudyRow({
           <Link
             to={`/projects/${projectId}/studies/${study.study_id}/pdf`}
             className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all"
-            title="Review AI Reviewer Extractions in PDF with Track Changes"
+            title="Review Co-Scientist Extractions in PDF with Track Changes"
           >
             <Highlighter className="h-3 w-3 text-[#ffdea6]" />
             <span>PDF</span>

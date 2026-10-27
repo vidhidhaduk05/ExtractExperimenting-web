@@ -31,10 +31,10 @@ describe("ShimmerSkeleton and LoaderScreen", () => {
   });
 
   it("renders BreathingLoader with pulse and accessible status role", () => {
-    render(<BreathingLoader label="Synthesizing studies..." sublabel="Consulting AI Reviewer models" />);
+    render(<BreathingLoader label="Synthesizing studies..." sublabel="Consulting Co-Scientist models" />);
     expect(screen.getByRole("status", { name: "Synthesizing studies..." })).toBeTruthy();
     expect(screen.getByText("Synthesizing studies...")).toBeTruthy();
-    expect(screen.getByText("Consulting AI Reviewer models")).toBeTruthy();
+    expect(screen.getByText("Consulting Co-Scientist models")).toBeTruthy();
   });
 });
 

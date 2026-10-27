@@ -8,7 +8,7 @@ import {
   type ExtractionGridCell,
   type ExtractionGridResponse
 } from "../lib/api";
-import { PREVIEW_STUDIES, DEMO_VARIABLES, DEMO_EXTRACTIONS, type CodebookRule } from "../lib/demoData";
+import { DEMO_STUDIES, DEMO_VARIABLES, DEMO_EXTRACTIONS, type CodebookRule } from "../lib/demoData";
 import {
   FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
@@ -114,7 +114,7 @@ export function ExtractionSheetPage() {
       return gridData.studies;
     }
     if (projectId === "demo") {
-      return PREVIEW_STUDIES.map((s, idx) => ({
+      return DEMO_STUDIES.map((s, idx) => ({
         study_id: s.study_id,
         study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || 2024}`,
         title: s.title,
@@ -137,7 +137,7 @@ export function ExtractionSheetPage() {
       setCellsMap(cellsData);
     } else if (projectId === "demo") {
       const demoCells: Record<string, Record<string, any>> = {};
-      PREVIEW_STUDIES.forEach((s) => {
+      DEMO_STUDIES.forEach((s) => {
         demoCells[s.study_id] = {};
         const exts = (DEMO_EXTRACTIONS as any)[s.study_id] || [];
         exts.forEach((e: any) => {
@@ -954,9 +954,7 @@ export function ExtractionSheetPage() {
                   <th className="sticky left-12 z-30 bg-[#fbf9f4] w-48 text-left p-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
                     <div className="flex items-center justify-between">
                       <span>Study ID (Label)</span>
-                      <span title="Frozen column">
-                        <Lock className="h-3 w-3 text-[#814d75]" />
-                      </span>
+                      <Lock className="h-3 w-3 text-[#814d75]" title="Frozen column" />
                     </div>
                   </th>
 

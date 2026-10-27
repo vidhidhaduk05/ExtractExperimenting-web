@@ -1,0 +1,1037 @@
+
+
+  <!-- ============================================================
+       SITE HEADER
+       ============================================================ -->
+  <header class="site-header" id="site-header">
+    <div class="site-header-inner">
+      <!-- Logo -->
+      <a href="#" class="site-header-logo" aria-label="Stellar Labs home">
+        <div class="logo-mark" aria-hidden="true">
+          <span class="logo-mark-inner">S</span>
+        </div>
+        <span class="logo-wordmark">Stellar Labs</span>
+      </a>
+
+      <!-- Nav -->
+      <nav class="site-header-nav" aria-label="Main navigation">
+        <a href="#features"    class="site-header-link">The Approach</a>
+        <a href="#evidence"    class="site-header-link">Evidence</a>
+        <a href="#use-case-gallery" class="site-header-link">Use Cases</a>
+        <a href="#how-it-works" class="site-header-link">The Process</a>
+        <a href="#collaboration" class="site-header-link">Collaborate</a>
+        <a href="#faq"         class="site-header-link">FAQ</a>
+      </nav>
+
+      <!-- Actions -->
+      <div class="site-header-actions">
+        <a href="#/projects" class="btn-pill" id="workspace-btn">Enter Workspace</a>
+        <a href="#waitlist" class="btn-solid" style="padding: 8px 20px; font-size: 14px; border-radius: 0;" id="get-started-btn">
+          Get in touch
+          <span style="display:inline-block;transition:transform 0.3s;" class="arrow">→</span>
+        </a>
+      </div>
+
+      <!-- Hamburger -->
+      <button class="site-header-hamburger" aria-label="Open menu" id="hamburger">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 5h14M3 10h14M3 15h14" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mobile menu -->
+    <div class="site-header-mobile-menu" id="mobile-menu" role="menu">
+      <a href="#/projects"     class="site-header-mobile-link" style="color:var(--wine);font-weight:600;">Enter Workspace →</a>
+      <a href="#features"     class="site-header-mobile-link">The Approach</a>
+      <a href="#how-it-works" class="site-header-mobile-link">The Process</a>
+      <a href="#testimonials" class="site-header-mobile-link">Research</a>
+      <a href="#collaboration" class="site-header-mobile-link">Collaborate</a>
+      <a href="#faq"          class="site-header-mobile-link">FAQ</a>
+      <a href="#waitlist"     class="site-header-mobile-link">Get in touch</a>
+    </div>
+  </header>
+
+  <div class="header-divider"></div>
+
+  <!-- ============================================================
+       HERO
+       ============================================================ -->
+  <main>
+    <section class="hero" aria-label="Hero">
+      <!-- Left content -->
+      <div class="hero-content">
+        
+
+        <h1 class="hero-headline font-heading">
+          Stay curious.<br>
+          <span class="italic-line">See what the evidence says.</span>
+        </h1>
+
+        <p class="hero-sub">
+          Research begins with a patient, a careful observation, and a question worth asking.
+        </p>
+        
+        <form class="rq-card" id="research-question-form" action="https://vidhidhaduk05.github.io/ExtractExperimenting-web/#/claimscape" method="get">
+          <div class="rq-heading"><label for="research-question">Your research question</label><span>Enter to explore · Shift + Enter for a new line</span></div>
+          <textarea id="research-question" aria-describedby="rq-guidance" name="term" rows="2" required maxlength="1500" placeholder="How does AI-assisted mammography compare with standard screening?"></textarea>
+
+          <p class="rq-guidance" id="rq-guidance">For a claim, one plain statement works best, phrased positively: “X reduces Y in Z”. You can also enter a research question.</p>
+          <div class="rq-search-options" id="rq-search-options">
+            <div class="rq-options-grid">
+              <div class="rq-query-field"><label for="rq-query">PubMed search query <span id="rq-query-mode">Auto-built · edit to refine</span></label><input id="rq-query" type="text" placeholder="Search terms appear as you type" autocomplete="off"><button type="button" id="rq-query-reset">Reset to auto-built query</button></div>
+              <fieldset class="rq-paper-count"><legend>Papers to read</legend><div><label><input type="radio" name="paper-count" value="100"><span>100</span></label><label><input type="radio" name="paper-count" value="200"><span>200</span></label><label><input type="radio" name="paper-count" value="300" checked><span>300</span></label></div></fieldset>
+              <label class="rq-commentary"><input type="checkbox" id="rq-include-commentary"> Include narrative reviews &amp; commentary</label>
+            </div>
+          </div>
+
+          <div class="rq-toolbar">
+            <div class="rq-tools">
+              <span id="rq-source" class="rq-source">PubMed</span>
+            </div>
+            <button class="btn-solid rq-submit" type="submit">Search papers <span aria-hidden="true">→</span></button>
+          </div>
+          <p class="rq-status" id="rq-status" role="status">Your question opens in ClaimScape, where the evidence search begins.</p>
+        </form>
+        <div class="rq-topics" aria-label="Suggested research questions"><span>Try a topic:</span>
+<button type="button" data-research-question="Can AI detect seizure-causing brain lesions that radiologists miss on MRI?">Neuroradiology ↗</button>
+<button type="button" data-research-question="How does AI-assisted mammography compare with standard screening?">Breast imaging ↗</button>
+<button type="button" data-research-question="How do CT perfusion and MRI compare in acute ischemic stroke assessment?">Stroke imaging ↗</button>
+<button type="button" data-research-question="What predicts malignancy in incidental pulmonary nodules?">Chest imaging ↗</button>
+          <button type="button" data-research-question="How does sleep deprivation affect memory consolidation?">Sleep &amp; memory ↗</button>
+          <button type="button" data-research-question="What are the cardiovascular outcomes of GLP-1 receptor agonists?">Cardiovascular health ↗</button>
+          <button type="button" data-research-question="What does the evidence say about treatments for treatment-resistant depression?">Mental health ↗</button>
+          <button type="button" data-research-question="What are the clinical outcomes of therapeutic cancer vaccines?">Cancer vaccines ↗</button>
+        </div>
+
+
+        <div class="hero-cta-group">
+          <a href="#features" class="btn-solid btn-solid-lg" id="hero-cta-primary">
+            Explore the approach
+            <span style="display:inline-block;transition:transform 0.3s;">→</span>
+          </a>
+          <a href="#collaboration" class="btn-outline" id="hero-cta-secondary">Start a conversation</a>
+        </div>
+
+        <!-- Proof strip -->
+        <div class="hero-proof">
+          <span class="proof-item font-sans">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--sage);display:inline-block;"></span>
+            Careful observation
+          </span>
+          <span class="proof-divider"></span>
+          <span class="proof-item font-sans">
+            Transparent methods
+          </span>
+          <span class="proof-divider"></span>
+          <span class="proof-item font-sans">
+            Honest interpretation
+          </span>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="hero-stats-grid">
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label placeholder-label">Metric placeholder</span>
+            <p class="hero-stat-value" aria-label="Value to be added">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right — Dashboard screenshot -->
+      <div class="hero-product-col" style="perspective:2000px">
+        <div style="transform:rotateY(-6deg) rotateX(3deg); transition: transform 0.5s ease; border-radius: 0; overflow: hidden; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04); max-width: 560px; width: 100%;" id="hero-mockup">
+          <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAuMCI+PHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMC4wIiBmaWxsPSIjZmJmOWY0Ii8+PHJlY3QgeD0iMjgiIHk9IjI4IiB3aWR0aD0iOTQ0IiBoZWlnaHQ9Ijk0NC4wIiBmaWxsPSJub25lIiBzdHJva2U9IiNkMmMyY2IiLz48dGV4dCB4PSI3NiIgeT0iMTc1LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBsZXR0ZXItc3BhY2luZz0iMyIgZmlsbD0iIzY2MzY1YyI+RlJPTSBFVklERU5DRSBUTyBUSEUgQkVEU0lERTwvdGV4dD48dGV4dCB4PSI3NiIgeT0iMjU3LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjQ4IiBmaWxsPSIjM2EwZjM0Ij5BIHF1ZXN0aW9uIHdvcnRoIGFza2luZy48L3RleHQ+PHJlY3QgeD0iNzYiIHk9IjMyNS4wIiB3aWR0aD0iODQ4IiBoZWlnaHQ9IjgyIiBmaWxsPSIjZGRlM2U4Ii8+PHRleHQgeD0iMTAwIiB5PSIzNTYuMCIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxldHRlci1zcGFjaW5nPSIyIiBmaWxsPSIjNjI1MzVkIj5PQlNFUlZFPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iMzg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5UaGUgaW5kaXZpZHVhbCBwYXRpZW50PC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI0MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2YwZWVlOSIvPjx0ZXh0IHg9IjEwMCIgeT0iNDU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+U1lOVEhFU0laRTwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjQ4Ni4wIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzNhMGYzNCI+VGhlIGZ1bGwgYm9keSBvZiBldmlkZW5jZTwvdGV4dD48cmVjdCB4PSI3NiIgeT0iNTI1LjAiIHdpZHRoPSI4NDgiIGhlaWdodD0iODIiIGZpbGw9IiNlYWRjZTYiLz48dGV4dCB4PSIxMDAiIHk9IjU1Ni4wIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGV0dGVyLXNwYWNpbmc9IjIiIGZpbGw9IiM2MjUzNWQiPlFVRVNUSU9OPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNTg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5UaGUgbWV0aG9kcyBhbmQgdGhlaXIgbGltaXRzPC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI2MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2ZmZGVhNiIvPjx0ZXh0IHg9IjEwMCIgeT0iNjU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+SU5URVJQUkVUPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNjg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5GaW5kaW5ncyBpbiBjbGluaWNhbCBjb250ZXh0PC90ZXh0Pjx0ZXh0IHg9Ijc2IiB5PSI3ODUuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzY2MzY1YyI+Q2FyZWZ1bCByZXNlYXJjaC4gQ2xlYXJlciB0aGlua2luZy48L3RleHQ+PC9zdmc+" alt="From Evidence To The Bedside: A question worth asking." style="width:100%;display:block;">
+        </div>
+      </div>
+    </section>
+
+  <!-- BEGIN: trust band (used in published research) -->
+  
+
+
+
+    <!-- Trust strip -->
+    <div class="header-divider"></div>
+    <div style="padding: 40px 40px; max-width: 1440px; margin: 0 auto;">
+      <div style="display:flex; align-items:center; gap: 40px; flex-wrap:wrap; justify-content:center;">
+        <span class="font-mono" style="font-size:10px; text-transform:uppercase; letter-spacing:0.15em; color:var(--ink-faint);">Reading across the evidence</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">Cochrane</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">PubMed</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">PROSPERO</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">Elsevier</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">JBI</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">BMJ</span>
+        <span class="font-sans" style="font-size:15px; font-weight:600; color:rgba(15,15,15,0.22);">WHO</span>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         FEATURES — BENTO GRID
+         ============================================================ -->
+    <section class="section-divider" id="features" aria-label="Features">
+      <div class="section-inner">
+        <div class="section-eyebrow">
+          <span>[ 01 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>The Approach</span>
+        </div>
+
+        <header class="features-header-row">
+          <h2 class="section-h2">
+            Observe.<br>
+            <span class="italic" style="color:var(--plum);">Question.</span><br>
+            Understand.
+          </h2>
+          <p class="features-desc">
+            Different methods. A shared commitment to careful research.<br>
+            The purpose is clearer thinking for the patient in front of us.
+          </p>
+        </header>
+
+        <!-- Mobile sticky notes (small screens) -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;" class="lg-hidden">
+          <div style="padding:16px; background:var(--note-sage); font-family:'Work Sans',system-ui,sans-serif; font-size:12px; font-weight:700; transform:rotate(-1deg); box-shadow:2px 4px 12px rgba(0,0,0,0.12);">OBSERVE CLOSELY</div>
+          <div style="padding:16px; background:var(--note-ochre); font-family:'Work Sans',system-ui,sans-serif; font-size:12px; font-weight:700; transform:rotate(1deg); box-shadow:2px 4px 12px rgba(0,0,0,0.12);">QUESTION THE METHOD</div>
+          <div style="padding:16px; background:var(--note-plum); font-family:'Work Sans',system-ui,sans-serif; font-size:12px; font-weight:700; transform:rotate(-2deg); box-shadow:2px 4px 12px rgba(0,0,0,0.12);">RESEARCHER-LED</div>
+          <div style="padding:16px; background:var(--note-cream); font-family:'Work Sans',system-ui,sans-serif; font-size:12px; font-weight:700; transform:rotate(2deg); box-shadow:2px 4px 12px rgba(0,0,0,0.12);">REPORT TRANSPARENTLY</div>
+        </div>
+
+        <div class="bento-grid fade-up visible">
+          <!-- Desktop sticky notes overlay -->
+          <div class="sticky-wrapper" aria-hidden="true">
+            <div class="sticky-note" style="background:var(--note-sage); grid-column:1/span 3; grid-row:1; justify-self:start; align-self:start; transform:translate(-6%,-32%) rotate(-4deg);">
+              <div class="note-pin"></div>
+              <p>OBSERVE CLOSELY</p>
+              <span class="note-sub">DETAIL · CONTEXT · TIMELINE</span>
+            </div>
+            <div class="sticky-note" style="background:var(--note-ochre); grid-column:8/span 3; grid-row:1/span 2; justify-self:center; align-self:start; transform:translate(12%,24%) rotate(3deg);">
+              <div class="note-pin"></div>
+              <p>QUESTION THE METHOD</p>
+              <span class="note-sub">ASSUMPTIONS AND LIMITS</span>
+            </div>
+            <div class="sticky-note" style="background:var(--note-plum); grid-column:1/span 3; grid-row:3; justify-self:start; align-self:end; width:clamp(164px,16vw,200px); transform:translate(-16%,70%) rotate(-3deg);">
+              <div class="note-pin"></div>
+              <p>CLINICAL JUDGMENT</p>
+              <span class="note-sub">EVIDENCE IN CONTEXT</span>
+            </div>
+            <div class="sticky-note" style="background:var(--note-cream); grid-column:10/span 3; grid-row:3; justify-self:end; align-self:end; width:clamp(164px,16vw,200px); transform:translate(8%,72%) rotate(2deg);">
+              <div class="note-pin"></div>
+              <p>CLEAR REPORTING</p>
+              <span class="note-sub">METHODS · FINDINGS · LIMITATIONS</span>
+            </div>
+          </div>
+
+<div class="feature-card span-8 row-2 content-placeholder" role="article" aria-label="Approach placeholder 1"><div class="card-content"><span class="mono-label">01 // PLACEHOLDER</span><div class="card-header" style="margin-top:auto"><h3>Feature placeholder</h3><p>Details to be added.</p><div class="placeholder-panel" aria-hidden="true"><span></span><span></span><span></span></div></div></div></div>
+<div class="feature-card span-4 row-2 content-placeholder" role="article" aria-label="Approach placeholder 2"><div class="card-content"><span class="mono-label">02 // PLACEHOLDER</span><div class="card-header" style="margin-top:auto"><h3>Feature placeholder</h3><p>Details to be added.</p><div class="placeholder-panel" aria-hidden="true"><span></span><span></span><span></span></div></div></div></div>
+<div class="feature-card span-4 content-placeholder" role="article" aria-label="Approach placeholder 3"><div class="card-content"><span class="mono-label">03 // PLACEHOLDER</span><div class="card-header" style="margin-top:auto"><h3>Feature placeholder</h3><p>Details to be added.</p><div class="placeholder-panel" aria-hidden="true"><span></span><span></span><span></span></div></div></div></div>
+          <!-- Card 4: Standards-compliant exports -->
+          <div class="feature-card span-4" tabindex="0" role="article">
+            <div class="bracket-corner bl-tl" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-tr" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-br" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-bl" style="border-color:var(--sage)"></div>
+            <div class="card-content">
+              <span class="mono-label" style="color:var(--sage);">04 // REPORT</span>
+              <div class="card-header" style="margin-top:auto;">
+                <h3>Make the reasoning visible</h3>
+                <p>Clear reporting lets another reader follow the question, inspect the methods, and understand the limits of the findings.</p>
+                <div class="pill-row">
+                  <span class="card-pill">PRISMA 2020</span>
+                  <span class="card-pill">Transparent reporting</span>
+                  <span class="card-pill">Bias assessment</span>
+                  <span class="card-pill">Limitations</span>
+                  <span class="card-pill">BibTeX / RIS</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5: Human in the loop -->
+          <div class="feature-card span-4" tabindex="0" role="article">
+            <div class="bracket-corner bl-tl" style="border-color:var(--plum)"></div>
+            <div class="bracket-corner bl-tr" style="border-color:var(--plum)"></div>
+            <div class="bracket-corner bl-br" style="border-color:var(--plum)"></div>
+            <div class="bracket-corner bl-bl" style="border-color:var(--plum)"></div>
+            <div class="card-content">
+              <span class="mono-label" style="color:var(--plum);">05 // INTERPRET</span>
+              <div class="card-header" style="margin-top:auto;">
+                <h3>Judgment stays at the bedside</h3>
+                <p class="card5-desc">Evidence informs a clinical decision. It still needs to be read in the context of the individual patient, competing explanations, and uncertainty.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         RESEARCH BOARD — Draggable sticky notes
+         ============================================================ -->
+    <section class="section-divider" id="evidence" aria-label="Published research evidence" style="background:var(--beige-bg); overflow:hidden;">
+      <div class="section-inner" style="padding-bottom: 0;">
+        <div class="section-eyebrow fade-up">
+          <span>[ 02 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>Research Notebook</span>
+        </div>
+
+        <div class="features-header-row fade-up d1">
+          <div>
+            <h2 class="section-h2">
+              Research principles.<br>
+              <span class="italic" style="color:var(--plum);">Lift &amp; explore.</span>
+            </h2>
+          </div>
+          <p class="features-desc" style="text-align:right;">
+            Research principles that connect evidence to the bedside. Drag the notes to explore the questions behind the work.
+          </p>
+        </div>
+      </div>
+
+      <!-- The Board itself — full-width, fixed height -->
+      <div class="research-board" id="research-board" aria-label="Research evidence board. Notes are draggable." role="region">
+        <!-- Dot-grid background drawn by CSS -->
+        <div class="board-grid-bg" aria-hidden="true"></div>
+
+        <!-- Board legend -->
+        <div class="board-legend" aria-hidden="true">
+          <span class="bl-item"><span class="bl-dot" style="background:#dde3e8;"></span> Observation</span>
+          <span class="bl-item"><span class="bl-dot" style="background:#ffdea6;"></span> Critical appraisal</span>
+          <span class="bl-item"><span class="bl-dot" style="background:#eadce6;"></span> Methods</span>
+          <span class="bl-item"><span class="bl-dot" style="background:#e4e2dd;"></span> Interpretation</span>
+          <span class="bl-drag-hint">← Drag notes to rearrange →</span>
+        </div>
+
+        <!-- ====== STICKY NOTES ====== -->
+
+        <!-- Note 1: Konet 2025 -->
+        <div class="rn-note" id="note-1" data-color="sage" data-x="4" data-y="10" data-rot="-3" tabindex="0" role="article" aria-label="Research note: Case reports">
+          <div class="rn-pin rn-pin--teal" aria-hidden="true"></div>
+          <div class="rn-tag">Observation</div>
+          <h3 class="rn-title">Every detail<br>counts</h3>
+          <p class="rn-body">A carefully documented case can offer a point of reference when a condition is rare. Close observation starts with a complete clinical account.</p>
+          <p class="radiology-margin-note">Patient-level or lesion-level?</p>
+          <div class="rn-footer"><span class="rn-meta">Case reports</span></div>
+        </div>
+
+        <!-- Note 2: Helms Andersen 2025 -->
+        <div class="rn-note" id="note-2" data-color="ochre" data-x="30" data-y="5" data-rot="2.5" tabindex="0" role="article" aria-label="Research note: Systematic reviews">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <div class="rn-tag">Evidence synthesis</div>
+          <h3 class="rn-title">Read beyond<br>one paper</h3>
+          <p class="rn-body">Individual studies can conflict. Weigh the body of literature, assess its quality, and resist a conclusion built on a single striking result.</p>
+          <div class="rn-footer"><span class="rn-meta">Systematic reviews</span></div>
+        </div>
+
+        <!-- Note 3: Sun 2024 -->
+        <div class="rn-note" id="note-3" data-color="plum" data-x="57" data-y="8" data-rot="-1.5" tabindex="0" role="article" aria-label="Research note: Read the methods">
+          <div class="rn-pin rn-pin--plum" aria-hidden="true"></div>
+          <div class="rn-tag">Critical appraisal</div>
+          <h3 class="rn-title">Question the<br>evidence</h3>
+          <p class="rn-body">Ask how evidence was collected, how outcomes were assessed, and which biases could change the interpretation.</p>
+          <p class="radiology-margin-note">Which reference standard?</p>
+          <div class="rn-footer"><span class="rn-meta">Read the methods</span></div>
+        </div>
+
+        <!-- Note 4: Khraisha 2024 -->
+        <div class="rn-note" id="note-4" data-color="cream" data-x="6" data-y="48" data-rot="4" tabindex="0" role="article" aria-label="Research note: Respect the limits">
+          <div class="rn-pin rn-pin--teal" aria-hidden="true"></div>
+          <div class="rn-tag">Observational research</div>
+          <h3 class="rn-title">Comparable groups.<br>Remaining uncertainty.</h3>
+          <p class="rn-body">Propensity matching balances measured characteristics. Unmeasured confounding and selection bias can still affect the findings.</p>
+          <div class="rn-footer"><span class="rn-meta">Respect the limits</span></div>
+        </div>
+
+        <!-- Note 5: Reason 2024 -->
+        <div class="rn-note" id="note-5" data-color="rose" data-x="31" data-y="50" data-rot="-2" tabindex="0" role="article" aria-label="Research note: Question the inference">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <div class="rn-tag">Causal reasoning</div>
+          <h3 class="rn-title">Association is<br>not causation.</h3>
+          <p class="rn-body">A relationship in the data does not, by itself, establish cause. Look for competing explanations before attributing an outcome to a treatment.</p>
+          <div class="rn-footer"><span class="rn-meta">Question the inference</span></div>
+        </div>
+
+        <!-- Note 6: Gargari 2025 -->
+        <div class="rn-note" id="note-6" data-color="sage" data-x="58" data-y="48" data-rot="3" tabindex="0" role="article" aria-label="Research note: Interpret with care">
+          <div class="rn-pin rn-pin--plum" aria-hidden="true"></div>
+          <div class="rn-tag">Statistics</div>
+          <h3 class="rn-title">Make uncertainty<br>visible</h3>
+          <p class="rn-body">Mathematics helps examine complex clinical relationships. The assumptions and the quality of the underlying data still shape what a model can tell us.</p>
+          <p class="radiology-margin-note">External validation?</p>
+          <div class="rn-footer"><span class="rn-meta">Interpret with care</span></div>
+        </div>
+
+        <!-- Note 7: López-Pineda 2025 -->
+        <div class="rn-note" id="note-7" data-color="ochre" data-x="78" data-y="10" data-rot="-4" tabindex="0" role="article" aria-label="Research note: Beyond recall">
+          <div class="rn-pin rn-pin--teal" aria-hidden="true"></div>
+          <div class="rn-tag">Clinical judgment</div>
+          <h3 class="rn-title">Memory has<br>its limits</h3>
+          <p class="rn-body">Structured analysis can help examine relationships that memory alone cannot track. It supports clinical reasoning while leaving room for context.</p>
+          <div class="rn-footer"><span class="rn-meta">Beyond recall</span></div>
+        </div>
+
+        <!-- Note 8: Landschaft – abstract screening κ -->
+        <div class="rn-note" id="note-8" data-color="plum" data-x="77" data-y="50" data-rot="2" tabindex="0" role="article" aria-label="Research note: From data to bedside">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <div class="rn-tag">Evidence in context</div>
+          <h3 class="rn-title">Return to<br>the patient</h3>
+          <p class="rn-body">A method answers a question. Its value in practice depends on what it helps us understand about the patient in front of us.</p>
+          <p class="radiology-margin-note">Does this change management?</p>
+          <div class="rn-footer"><span class="rn-meta">From data to bedside</span></div>
+        </div>
+
+        <!-- Note 9: RAISE Guidelines -->
+        <div class="rn-note" id="note-9" data-color="cream" data-x="42" data-y="28" data-rot="-1" tabindex="0" role="article" aria-label="Research note: Honest interpretation">
+          <div class="rn-pin rn-pin--plum" aria-hidden="true"></div>
+          <div class="rn-tag">Research integrity</div>
+          <h3 class="rn-title">Report the limits.<br>Keep questioning.</h3>
+          <p class="rn-body">Genuine research makes its reasoning visible. Describe what the findings support, what they cannot establish, and what remains unresolved.</p>
+          <div class="rn-footer"><span class="rn-meta">Honest interpretation</span></div>
+        </div>
+
+      
+
+        <!-- Inspirational quote: draggable alongside the research notes. -->
+        <div class="rn-note quote-note" id="note-quote" data-x="43" data-y="30" data-rot="-5" tabindex="0" role="article" aria-label="Quote by Theodore Roosevelt. Drag to rearrange.">
+          <div class="rn-pin rn-pin--amber" aria-hidden="true"></div>
+          <blockquote class="sticky-quote">
+            <span><em>“Believe</em> YOU CAN,</span>
+            <span>AND <em>you’re</em></span>
+            <span><em>halfway</em> THERE.”</span>
+            <cite>THEODORE ROOSEVELT</cite>
+          </blockquote>
+        </div>
+      </div><!-- /research-board -->
+    </section>
+
+    <!-- ============================================================
+         USE CASES — DARK SECTION
+         ============================================================ -->
+<!-- Radiology additions: reading-room questions -->
+<section id="reading-room" class="reading-room" aria-labelledby="reading-room-title">
+ <div class="section-inner">
+  <header class="reading-room-heading"><h2 id="reading-room-title" class="section-h2">Questions from<br><em>the reading room.</em></h2><p>For the questions that arise between a scan, a report, and a research meeting. Radiology first, with a wider view of clinical research.</p></header>
+  <article class="reading-room-row"><p class="reading-room-label">Breast imaging</p><div><h3>Evaluate a new approach.</h3><p>Consider the screening population, comparator, reference standard, and diagnostic performance.</p></div><div><blockquote>“How does AI-assisted mammography compare with standard screening?”</blockquote><button type="button" data-research-question="How does AI-assisted mammography compare with standard screening?" class="reading-room-action">Explore this question <span aria-hidden="true">↗</span></button></div></article>
+<article class="reading-room-row"><p class="reading-room-label">Stroke imaging</p><div><h3>Compare imaging pathways.</h3><p>Examine timing, patient selection, and the outcomes measured in each study.</p></div><div><blockquote>“How do CT perfusion and MRI compare in acute ischemic stroke assessment?”</blockquote><button type="button" data-research-question="How do CT perfusion and MRI compare in acute ischemic stroke assessment?" class="reading-room-action">Explore this question <span aria-hidden="true">↗</span></button></div></article>
+<article class="reading-room-row"><p class="reading-room-label">Chest imaging</p><div><h3>Investigate an incidental finding.</h3><p>Explore patient characteristics, imaging features, follow-up, and the definition of malignancy.</p></div><div><blockquote>“What predicts malignancy in incidental pulmonary nodules?”</blockquote><button type="button" data-research-question="What predicts malignancy in incidental pulmonary nodules?" class="reading-room-action">Explore this question <span aria-hidden="true">↗</span></button></div></article>
+  <details class="radiology-evidence"><summary>What to look for in an imaging study</summary><p class="reading-room-label">Illustrative appraisal guide</p><dl><div><dt>Population</dt><dd>Screening or symptomatic patients; inclusion and exclusion criteria.</dd></div><div><dt>Imaging &amp; comparator</dt><dd>Modality, acquisition protocol, readers, and the comparison pathway.</dd></div><div><dt>Reference standard</dt><dd>How the target condition was confirmed, and when.</dd></div><div><dt>Performance &amp; limits</dt><dd>Reported estimates, uncertainty, bias, and applicability to your setting.</dd></div></dl></details>
+ </div>
+</section>
+
+<section class="usecase-gallery" id="use-case-gallery" aria-labelledby="usecase-gallery-title"><div class="section-inner"><header class="reading-room-heading"><h2 class="section-h2" id="usecase-gallery-title">Use cases.<br><em>Room to explore.</em></h2><p>Research applications, with space for the details to come.</p></header><div class="usecase-gallery-grid">          <!-- Card 1: Main feature (research Extraction) -->
+          <div class="feature-card span-8 row-2" tabindex="0" role="article">
+            <div class="bracket-corner bl-tl" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-tr" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-br" style="border-color:var(--sage)"></div>
+            <div class="bracket-corner bl-bl" style="border-color:var(--sage)"></div>
+            <div class="card-content">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+                <span class="mono-label" style="color:var(--sage);">01 // OBSERVE</span>
+              </div>
+              <div class="card-header" style="margin-top:auto;">
+                <h3>Every detail matters</h3>
+                <p>Case reports call for careful observation, verified timelines, and complete documentation. When a condition is rare, a carefully reported case can become a useful point of reference.</p>
+                <div style="margin-top:24px; display:flex; gap:8px; flex-wrap:wrap;">
+                  <span class="tag-pill">Clinical detail</span>
+                  <span class="tag-pill">Verified timelines</span>
+                  <span class="tag-pill">Clear documentation</span>
+                </div>
+              </div>
+              <div class="card-screenshot" style="flex:1; min-height:200px;">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAuMCI+PHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMC4wIiBmaWxsPSIjZmJmOWY0Ii8+PHJlY3QgeD0iMjgiIHk9IjI4IiB3aWR0aD0iOTQ0IiBoZWlnaHQ9Ijk0NC4wIiBmaWxsPSJub25lIiBzdHJva2U9IiNkMmMyY2IiLz48dGV4dCB4PSI3NiIgeT0iMTc1LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBsZXR0ZXItc3BhY2luZz0iMyIgZmlsbD0iIzY2MzY1YyI+Q0FTRSBSRVBPUlRTPC90ZXh0Pjx0ZXh0IHg9Ijc2IiB5PSIyNTcuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iNDgiIGZpbGw9IiMzYTBmMzQiPkV2ZXJ5IGRldGFpbCBtYXR0ZXJzLjwvdGV4dD48cmVjdCB4PSI3NiIgeT0iMzI1LjAiIHdpZHRoPSI4NDgiIGhlaWdodD0iODIiIGZpbGw9IiNkZGUzZTgiLz48dGV4dCB4PSIxMDAiIHk9IjM1Ni4wIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGV0dGVyLXNwYWNpbmc9IjIiIGZpbGw9IiM2MjUzNWQiPlBSRVNFTlRBVElPTjwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjM4Ni4wIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzNhMGYzNCI+T2JzZXJ2ZSBjbG9zZWx5PC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI0MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2YwZWVlOSIvPjx0ZXh0IHg9IjEwMCIgeT0iNDU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+VElNRUxJTkU8L3RleHQ+PHRleHQgeD0iMTAwIiB5PSI0ODYuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiMzYTBmMzQiPlZlcmlmeSB0aGUgc2VxdWVuY2U8L3RleHQ+PHJlY3QgeD0iNzYiIHk9IjUyNS4wIiB3aWR0aD0iODQ4IiBoZWlnaHQ9IjgyIiBmaWxsPSIjZWFkY2U2Ii8+PHRleHQgeD0iMTAwIiB5PSI1NTYuMCIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxldHRlci1zcGFjaW5nPSIyIiBmaWxsPSIjNjI1MzVkIj5GSU5ESU5HUzwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjU4Ni4wIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzNhMGYzNCI+RG9jdW1lbnQgd2l0aG91dCBnYXBzPC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI2MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2ZmZGVhNiIvPjx0ZXh0IHg9IjEwMCIgeT0iNjU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+UkVGTEVDVElPTjwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjY4Ni4wIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzNhMGYzNCI+RXhwbGFpbiB0aGUgY2xpbmljYWwgcmVhc29uaW5nPC90ZXh0Pjx0ZXh0IHg9Ijc2IiB5PSI3ODUuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzY2MzY1YyI+VGhlIGluZGl2aWR1YWwgcGF0aWVudCBpcyB0aGUgc3RhcnRpbmcgcG9pbnQuPC90ZXh0Pjwvc3ZnPg==" alt="Case Reports: Every detail matters." loading="lazy">
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature placeholder -->
+          <div class="feature-card span-4 row-2 content-placeholder" role="article" aria-label="Feature placeholder">
+            <div class="card-content">
+              <span class="mono-label">02 // PLACEHOLDER</span>
+              <div class="card-header" style="margin-top:auto;">
+                <h3>Feature placeholder</h3>
+                <p>Feature details to be added.</p>
+                <div class="placeholder-panel" aria-hidden="true"><span></span><span></span><span></span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Validation metrics -->
+          <div class="feature-card span-4" tabindex="0" role="article">
+            <div class="bracket-corner bl-tl" style="border-color:var(--ochre)"></div>
+            <div class="bracket-corner bl-tr" style="border-color:var(--ochre)"></div>
+            <div class="bracket-corner bl-br" style="border-color:var(--ochre)"></div>
+            <div class="bracket-corner bl-bl" style="border-color:var(--ochre)"></div>
+            <div class="card-content">
+              <span class="mono-label" style="color:var(--ochre);">03 // QUESTION</span>
+              <div class="card-header" style="margin-top:auto;">
+                <h3>Know what evidence can show</h3>
+                <p>A conclusion deserves scrutiny. How were the data collected? What was measured? Which sources of bias remain?</p>
+                <div class="metric-list" id="metric-list">
+                  <div class="metric-row">
+                    <span class="metric-label">Evidence</span>
+                    <div class="metric-track"><div class="metric-fill" id="m1" style="width:0%"></div></div>
+                    <span class="metric-pct">[percentage]</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Methods</span>
+                    <div class="metric-track"><div class="metric-fill" id="m2" style="width:0%"></div></div>
+                    <span class="metric-pct">[score]</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Context</span>
+                    <div class="metric-track"><div class="metric-fill" id="m3" style="width:0%"></div></div>
+                    <span class="metric-pct">[percentage]</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Bias</span>
+                    <div class="metric-track"><div class="metric-fill" id="m4" style="width:0%"></div></div>
+                    <span class="metric-pct">[percentage]</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Uncertainty</span>
+                    <div class="metric-track"><div class="metric-fill" id="m5" style="width:0%"></div></div>
+                    <span class="metric-pct">[score]</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+</div></div></section>
+    <section class="use-cases-section section-divider" id="use-cases" aria-label="Use cases">
+      <div class="section-inner">
+        <div class="section-eyebrow">
+          <span>[ 03 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>Research in Practice</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:24px; max-width:600px; margin-bottom:16px;" class="fade-up">
+          <h2 class="use-cases-h2">
+            Different questions.<span class="italic"> Shared purpose.</span>
+          </h2>
+          <p class="use-cases-desc">Each approach asks something different. Together, they support critical appraisal and thoughtful clinical care.</p>
+        </div>
+
+        <!-- 3D Use Cases Carousel -->
+        <div class="use-cases-carousel-container" id="use-cases-carousel-container" aria-label="Use cases 3D carousel. Drag to explore." role="region">
+          <div class="use-cases-carousel-inner" id="use-cases-carousel-inner">
+            
+            <!-- Card 1: Reviewers -->
+            <div class="carousel-card-wrapper" data-index="0">
+              <div class="use-case-card" style="background:#f5f3ee; color:#1b1c19; transform:rotate(-2.5deg)">
+                <div style="position:relative; z-index:10">
+                  <div class="uc-category font-mono"><span class="uc-dot" style="background-color:currentColor; opacity:0.5; display:inline-block"></span> Case reports</div>
+                  <h3>Observe</h3>
+                </div>
+                <div style="position:relative; z-index:10">
+                  <p class="font-heading">Record the individual patient carefully. Verify the timeline, describe the findings, and make the clinical reasoning visible.</p>
+                </div>
+                <!-- Document magnifier watermark SVG -->
+                <svg aria-hidden="true" class="uc-watermark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Card 2: Methodologists -->
+            <div class="carousel-card-wrapper" data-index="1">
+              <div class="use-case-card" style="background:#dde3e8; color:#1b1c19; transform:rotate(1.8deg)">
+                <div style="position:relative; z-index:10">
+                  <div class="uc-category font-mono"><span class="uc-dot" style="background-color:currentColor; opacity:0.5; display:inline-block"></span> Systematic reviews</div>
+                  <h3>Synthesize</h3>
+                </div>
+                <div style="position:relative; z-index:10">
+                  <p class="font-heading">Read beyond a headline paper. Bring the literature together, assess study quality, and make room for conflicting findings.</p>
+                </div>
+                <!-- Graph watermark SVG -->
+                <svg aria-hidden="true" class="uc-watermark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Card 3: Librarians -->
+            <div class="carousel-card-wrapper" data-index="2">
+              <div class="use-case-card" style="background:#ffdea6; color:#1b1c19; transform:rotate(-1.2deg)">
+                <div style="position:relative; z-index:10">
+                  <div class="uc-category font-mono"><span class="uc-dot" style="background-color:currentColor; opacity:0.5; display:inline-block"></span> Observational studies</div>
+                  <h3>Compare</h3>
+                </div>
+                <div style="position:relative; z-index:10">
+                  <p class="font-heading">Compare clinical groups thoughtfully. Matching measured characteristics can help, but unmeasured confounding still matters.</p>
+                </div>
+                <!-- Book watermark SVG -->
+                <svg aria-hidden="true" class="uc-watermark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Card 4: Regulators -->
+            <div class="carousel-card-wrapper" data-index="3">
+              <div class="use-case-card" style="background:#eadce6; color:#1b1c19; transform:rotate(2.0deg)">
+                <div style="position:relative; z-index:10">
+                  <div class="uc-category font-mono"><span class="uc-dot" style="background-color:currentColor; opacity:0.5; display:inline-block"></span> Statistics</div>
+                  <h3>Quantify</h3>
+                </div>
+                <div style="position:relative; z-index:10">
+                  <p class="font-heading">Use mathematics to examine relationships that memory alone cannot hold. State the assumptions and interpret the uncertainty.</p>
+                </div>
+                <!-- Shield/Verification watermark SVG -->
+                <svg aria-hidden="true" class="uc-watermark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Card 5: Clinicians -->
+            <div class="carousel-card-wrapper" data-index="4">
+              <div class="use-case-card" style="background:#f2e7ed; color:#1b1c19; transform:rotate(-1.8deg)">
+                <div style="position:relative; z-index:10">
+                  <div class="uc-category font-mono"><span class="uc-dot" style="background-color:currentColor; opacity:0.5; display:inline-block"></span> At the bedside</div>
+                  <h3>Apply</h3>
+                </div>
+                <div style="position:relative; z-index:10">
+                  <p class="font-heading">Return to the patient with a more disciplined question, a clearer reading of the evidence, and an awareness of its limits.</p>
+                </div>
+                <!-- Heartbeat/Clinical watermark SVG -->
+                <svg aria-hidden="true" class="uc-watermark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Carousel drag indicator hint -->
+        <div class="carousel-drag-hint-row">
+          <span class="carousel-drag-hint-text">← Drag to explore →</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         HOW IT WORKS
+         ============================================================ -->
+    <section class="section-divider" id="how-it-works" aria-label="How it works" style="background:var(--beige-bg);">
+      <div class="section-inner">
+        <div class="section-eyebrow fade-up">
+          <span>[ 04 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>The Process</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:24px; margin-bottom:16px; max-width:600px;">
+          <h2 class="section-h2 fade-up">From a question<br><span class="italic" style="color:var(--plum);">to understanding.</span></h2>
+          <p class="font-space" style="font-size:12px; color:var(--ink-light); line-height:1.65; max-width:360px;" class="fade-up d1">Begin with a clinical question. Choose a method that fits. Interpret what the evidence can support.</p>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-card fade-up">
+            <div class="step-num">01 / Ask</div>
+            <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6v20h14V8z M14 2v6h6 M9 13h8 M9 17h6"/></svg></span>
+            <h3 class="step-title">Start with the patient</h3>
+            <p class="step-desc">A rare presentation, an unexpected outcome, or an unresolved treatment question can be the beginning of useful research.</p>
+          </div>
+          <div class="step-card fade-up d1">
+            <div class="step-num">02 / Investigate</div>
+            <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2 4 14h7l-1 8 10-12h-7z"/></svg></span>
+            <h3 class="step-title">Choose the right method</h3>
+            <p class="step-desc">A case report, an evidence synthesis, or an observational comparison answers a different kind of question. The method should follow the question.</p>
+          </div>
+          <div class="step-card fade-up d2">
+            <div class="step-num">03 / Reflect</div>
+            <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m5 12 4 4L19 6"/></svg></span>
+            <h3 class="step-title">Interpret with care</h3>
+            <p class="step-desc">Explain the findings, look for alternative explanations, and report what remains uncertain. Bring that discipline back to clinical practice.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PRECISION FEATURES
+         ============================================================ -->
+    <section class="section-divider" style="background:var(--beige-card);">
+      <div class="section-inner">
+        <div class="section-eyebrow fade-up">
+          <span>[ 05 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>Context</span>
+        </div>
+
+        <div class="precision-row fade-up">
+          <div class="precision-content">
+            <div class="precision-eyebrow">Evidence and uncertainty</div>
+            <h3 class="precision-title">A finding is only as useful as its interpretation</h3>
+            <p class="precision-desc">Critical appraisal looks beyond a published conclusion to examine how it was reached. Good interpretation includes the assumptions, the missing information, and the possibility of another explanation.</p>
+            <ul class="feature-checklist">
+              <li><span class="check-mark">✓</span> A clearly defined research question</li>
+              <li><span class="check-mark">✓</span> Appropriate methods and explicit assumptions</li>
+              <li><span class="check-mark">✓</span> Careful assessment of bias</li>
+              <li><span class="check-mark">✓</span> Transparent reporting of limitations</li>
+              <li><span class="check-mark">✓</span> Conclusions proportionate to the evidence</li>
+            </ul>
+          </div>
+          <div class="precision-visual">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAuMCI+PHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMC4wIiBmaWxsPSIjZmJmOWY0Ii8+PHJlY3QgeD0iMjgiIHk9IjI4IiB3aWR0aD0iOTQ0IiBoZWlnaHQ9Ijk0NC4wIiBmaWxsPSJub25lIiBzdHJva2U9IiNkMmMyY2IiLz48dGV4dCB4PSI3NiIgeT0iMTc1LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBsZXR0ZXItc3BhY2luZz0iMyIgZmlsbD0iIzY2MzY1YyI+Q1JJVElDQUwgQVBQUkFJU0FMPC90ZXh0Pjx0ZXh0IHg9Ijc2IiB5PSIyNTcuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iNDgiIGZpbGw9IiMzYTBmMzQiPkxvb2sgYmV5b25kIHRoZSBjb25jbHVzaW9uLjwvdGV4dD48cmVjdCB4PSI3NiIgeT0iMzI1LjAiIHdpZHRoPSI4NDgiIGhlaWdodD0iODIiIGZpbGw9IiNkZGUzZTgiLz48dGV4dCB4PSIxMDAiIHk9IjM1Ni4wIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGV0dGVyLXNwYWNpbmc9IjIiIGZpbGw9IiM2MjUzNWQiPlFVRVNUSU9OPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iMzg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5XaGF0IHdhcyB0aGUgc3R1ZHkgZGVzaWduZWQgdG8gYW5zd2VyPzwvdGV4dD48cmVjdCB4PSI3NiIgeT0iNDI1LjAiIHdpZHRoPSI4NDgiIGhlaWdodD0iODIiIGZpbGw9IiNmMGVlZTkiLz48dGV4dCB4PSIxMDAiIHk9IjQ1Ni4wIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGV0dGVyLXNwYWNpbmc9IjIiIGZpbGw9IiM2MjUzNWQiPk1FVEhPRFM8L3RleHQ+PHRleHQgeD0iMTAwIiB5PSI0ODYuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiMzYTBmMzQiPkhvdyB3ZXJlIHRoZSBkYXRhIGNvbGxlY3RlZD88L3RleHQ+PHJlY3QgeD0iNzYiIHk9IjUyNS4wIiB3aWR0aD0iODQ4IiBoZWlnaHQ9IjgyIiBmaWxsPSIjZWFkY2U2Ii8+PHRleHQgeD0iMTAwIiB5PSI1NTYuMCIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxldHRlci1zcGFjaW5nPSIyIiBmaWxsPSIjNjI1MzVkIj5CSUFTPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNTg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5XaGF0IGNvdWxkIGNoYW5nZSB0aGUgaW50ZXJwcmV0YXRpb24/PC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI2MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2ZmZGVhNiIvPjx0ZXh0IHg9IjEwMCIgeT0iNjU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+TElNSVRTPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNjg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5XaGF0IHJlbWFpbnMgdW5jZXJ0YWluPzwvdGV4dD48dGV4dCB4PSI3NiIgeT0iNzg1LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXN0eWxlPSJpdGFsaWMiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiM2NjM2NWMiPkFzc29jaWF0aW9uIGlzIG5vdCBjYXVzYXRpb24uPC90ZXh0Pjwvc3ZnPg==" alt="Critical Appraisal: Look beyond the conclusion." loading="lazy">
+          </div>
+        </div>
+
+        <div class="precision-row fade-up">
+          <div class="precision-visual" style="order:-1;">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAuMCI+PHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMC4wIiBmaWxsPSIjZmJmOWY0Ii8+PHJlY3QgeD0iMjgiIHk9IjI4IiB3aWR0aD0iOTQ0IiBoZWlnaHQ9Ijk0NC4wIiBmaWxsPSJub25lIiBzdHJva2U9IiNkMmMyY2IiLz48dGV4dCB4PSI3NiIgeT0iMTc1LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBsZXR0ZXItc3BhY2luZz0iMyIgZmlsbD0iIzY2MzY1YyI+UkVTRUFSQ0ggQU5EIFBSQUNUSUNFPC90ZXh0Pjx0ZXh0IHg9Ijc2IiB5PSIyNTcuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iNDgiIGZpbGw9IiMzYTBmMzQiPkEgY29udGludW91cyBjb252ZXJzYXRpb24uPC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSIzMjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2RkZTNlOCIvPjx0ZXh0IHg9IjEwMCIgeT0iMzU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+Q0xJTklDQUwgUVVFU1RJT048L3RleHQ+PHRleHQgeD0iMTAwIiB5PSIzODYuMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiMzYTBmMzQiPkJlZ2luIGF0IHRoZSBiZWRzaWRlPC90ZXh0PjxyZWN0IHg9Ijc2IiB5PSI0MjUuMCIgd2lkdGg9Ijg0OCIgaGVpZ2h0PSI4MiIgZmlsbD0iI2YwZWVlOSIvPjx0ZXh0IHg9IjEwMCIgeT0iNDU2LjAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzYyNTM1ZCI+SU5WRVNUSUdBVElPTjwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjQ4Ni4wIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIyNSIgZmlsbD0iIzNhMGYzNCI+Q2hvb3NlIGFuIGFwcHJvcHJpYXRlIG1ldGhvZDwvdGV4dD48cmVjdCB4PSI3NiIgeT0iNTI1LjAiIHdpZHRoPSI4NDgiIGhlaWdodD0iODIiIGZpbGw9IiNlYWRjZTYiLz48dGV4dCB4PSIxMDAiIHk9IjU1Ni4wIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGV0dGVyLXNwYWNpbmc9IjIiIGZpbGw9IiM2MjUzNWQiPklOVEVSUFJFVEFUSU9OPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNTg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5XZWlnaCBldmlkZW5jZSBhbmQgdW5jZXJ0YWludHk8L3RleHQ+PHJlY3QgeD0iNzYiIHk9IjYyNS4wIiB3aWR0aD0iODQ4IiBoZWlnaHQ9IjgyIiBmaWxsPSIjZmZkZWE2Ii8+PHRleHQgeD0iMTAwIiB5PSI2NTYuMCIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxldHRlci1zcGFjaW5nPSIyIiBmaWxsPSIjNjI1MzVkIj5SRUZMRUNUSU9OPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iNjg2LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjI1IiBmaWxsPSIjM2EwZjM0Ij5SZXR1cm4gd2l0aCBhIGJldHRlciBxdWVzdGlvbjwvdGV4dD48dGV4dCB4PSI3NiIgeT0iNzg1LjAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXN0eWxlPSJpdGFsaWMiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiM2NjM2NWMiPkRpZmZlcmVudCBtZXRob2RzLiBBIHNoYXJlZCBjb21taXRtZW50IHRvIGNhcmUuPC90ZXh0Pjwvc3ZnPg==" alt="Research And Practice: A continuous conversation." loading="lazy">
+          </div>
+          <div class="precision-content">
+            <div class="precision-eyebrow">From evidence to care</div>
+            <h3 class="precision-title">Research and clinical practice inform each other</h3>
+            <p class="precision-desc">The habits learned through research travel back to the clinic: closer observation, better questions, and greater care in deciding what a finding means for an individual patient.</p>
+            <ul class="feature-checklist">
+              <li><span class="check-mark">✓</span> Observe the individual patient</li>
+              <li><span class="check-mark">✓</span> Weigh the full body of evidence</li>
+              <li><span class="check-mark">✓</span> Consider competing explanations</li>
+              <li><span class="check-mark">✓</span> Recognize what the data cannot establish</li>
+              <li><span class="check-mark">✓</span> Keep clinical judgment in context</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PRICING
+         ============================================================ -->
+    
+
+    <!-- ============================================================
+         TESTIMONIALS
+         ============================================================ -->
+    <section class="section-divider" id="testimonials" aria-label="Testimonials" style="background:var(--beige-bg);">
+      <div class="section-inner">
+        <div class="section-eyebrow fade-up">
+          <span>[ 07 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>Researchers</span>
+        </div>
+
+        <h2 class="section-h2 fade-up d1">Researcher<br><span class="italic" style="color:var(--plum);">feedback.</span></h2>
+
+        <div class="testimonials-grid">
+          <div class="testimonial-card fade-up d1">
+            <div class="placeholder-label">Review placeholder</div>
+            <p class="t-quote">Reviewer feedback to be added.</p>
+            <div class="t-author">
+              <div class="author-avatar" style="background:var(--note-sage);">—</div>
+              <div>
+                <div class="author-name">Reviewer name</div>
+                <div class="author-role">Role and institution</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card fade-up d2">
+            <div class="placeholder-label">Review placeholder</div>
+            <p class="t-quote">Reviewer feedback to be added.</p>
+            <div class="t-author">
+              <div class="author-avatar" style="background:var(--note-plum);">—</div>
+              <div>
+                <div class="author-name">Reviewer name</div>
+                <div class="author-role">Role and institution</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card fade-up d3">
+            <div class="placeholder-label">Review placeholder</div>
+            <p class="t-quote">Reviewer feedback to be added.</p>
+            <div class="t-author">
+              <div class="author-avatar" style="background:var(--note-ochre);">—</div>
+              <div>
+                <div class="author-name">Reviewer name</div>
+                <div class="author-role">Role and institution</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- BEGIN: collaboration section -->
+  <section class="section-divider" id="collaboration" aria-label="Collaboration and inquiry" style="background:var(--beige-card);">
+    <div class="section-inner">
+      <div class="section-eyebrow fade-up">
+        <span>[ 08 ]</span>
+        <span class="eyebrow-line"></span>
+        <span>Collaboration</span>
+      </div>
+
+      <h2 class="section-h2 fade-up d1">
+        A conversation<br>
+        <span class="italic" style="color:var(--plum);">about meaningful research.</span>
+      </h2>
+
+      <p class="font-body fade-up d2" style="margin-top:24px; max-width:720px;">
+        Meaningful research starts with a real clinical question, careful methods, and honest interpretation. Start a conversation about a question worth exploring.
+      </p>
+
+      <div class="collab-grid">
+        <!-- Left column: pitch + bullets -->
+        <div class="collab-left fade-up d2">
+          <h3>What matters in the work.</h3>
+          <ul class="collab-bullets">
+            <li>A question worth asking, grounded in clinical practice.</li>
+            <li>Methods chosen for the question and explained clearly.</li>
+            <li>Open discussion of bias, uncertainty, and alternative explanations.</li>
+            <li>A shared commitment to careful reporting and useful evidence.</li>
+          </ul>
+        </div>
+
+        <!-- Right column: inquiry form -->
+        <form class="collab-form fade-up d3" id="collab-inquiry-form" action="#" method="GET">
+          <div class="collab-field">
+            <label class="collab-label" for="collab-name">Name</label>
+            <input class="collab-input" type="text" id="collab-name" name="name" required autocomplete="name">
+          </div>
+          <div class="collab-field">
+            <label class="collab-label" for="collab-institution">Institution</label>
+            <input class="collab-input" type="text" id="collab-institution" name="institution" required autocomplete="organization">
+          </div>
+          <div class="collab-field">
+            <label class="collab-label" for="collab-email">Email</label>
+            <input class="collab-input" type="email" id="collab-email" name="email" required autocomplete="email">
+          </div>
+          <div class="collab-field">
+            <label class="collab-label" for="collab-interest">Area of interest</label>
+            <select class="collab-select" id="collab-interest" name="interest">
+              <option>Collaborate on a systematic review</option>
+              <option>Methodological consultation</option>
+              <option>Discuss a research question</option>
+              <option>General research inquiry</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="collab-field">
+            <label class="collab-label" for="collab-message">Tell us about your project</label>
+            <textarea class="collab-textarea" id="collab-message" name="message" rows="4" placeholder="A short description of your review, lab, or research question."></textarea>
+          </div>
+
+          <div class="collab-submit-row">
+            <button type="submit" class="btn-solid" style="padding: 12px 28px; font-size: 14px; border-radius: 0;">
+              Send inquiry
+              <span style="display:inline-block;transition:transform 0.3s;" class="arrow">→</span>
+            </button>
+            <p class="collab-fineprint">
+              Response time: [response time] business days. Or email <a href="mailto:[[CONTACT_EMAIL]]">[[CONTACT_EMAIL]]</a> directly.
+            </p>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+  <!-- END: collaboration section -->
+
+
+
+    <!-- ============================================================
+         FAQ
+         ============================================================ -->
+    <section class="faq-section section-divider" id="faq" aria-label="FAQ">
+      <div class="section-inner">
+        <div class="section-eyebrow fade-up" style="justify-content:center;">
+          <span>[ 09 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>FAQ</span>
+        </div>
+
+        <h2 class="section-h2 fade-up d1" style="text-align:center; margin-bottom:56px;">
+          Common <span class="italic" style="color:var(--plum);">questions.</span>
+        </h2>
+
+        <div class="faq-list" id="faq-list">
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q1">
+            What does genuine research mean here?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>A clinically meaningful question, methods appropriate to that question, and conclusions that acknowledge uncertainty. The aim is to understand something useful, with reasoning that another reader can inspect.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q2">
+            How does research influence clinical practice?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>Research strengthens habits that matter at the bedside: observing carefully, documenting precisely, weighing conflicting evidence, and questioning the limits of a conclusion.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q3">
+            Why do case reports matter?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>When a condition is rare, a well-documented case may offer useful context. Accurate timelines, complete findings, and transparent reasoning make that account more useful to another clinician.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q4">
+            What can propensity matching tell us?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>It can help compare groups with similar measured characteristics. It does not eliminate unmeasured confounding or turn an observational study into a randomized trial.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q5">
+            What role do statistics play?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>Statistics provide a way to examine relationships and express uncertainty. Interpretation still depends on study design, assumptions, and the quality of the data.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q font-body" aria-expanded="false" id="faq-q6">
+            What connects these approaches?
+            <span class="faq-chevron font-mono">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>They ask different questions, but each encourages more disciplined thinking. That discipline connects the research process to the care of the next patient.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         CTA / WAITLIST
+         ============================================================ -->
+    <section class="section-divider cta-section" id="waitlist" aria-label="Join waitlist" style="background:var(--beige-bg);">
+      <div class="section-inner">
+        <div class="section-eyebrow fade-up" style="justify-content:center;">
+          <span>[ 10 ]</span>
+          <span class="eyebrow-line"></span>
+          <span>Stay in Conversation</span>
+        </div>
+
+        <h2 class="cta-headline font-heading fade-up d1">
+          Start with<br>
+          <span class="italic" style="color:var(--plum);">a genuine question.</span>
+        </h2>
+        <p class="cta-sub fade-up d2">A clinical question, a methodological challenge, or an idea worth exploring. Let’s talk.</p>
+
+        <form class="email-form fade-up d3" id="waitlist-form" aria-label="Join waitlist">
+          <input type="email" class="email-input" placeholder="your@university.edu" aria-label="Email address" id="waitlist-email" required>
+          <button type="submit" class="btn-solid" style="white-space:nowrap;" id="waitlist-btn">Get in touch →</button>
+        </form>
+
+        <p class="font-mono fade-up d4" style="font-size:11px; color:var(--ink-faint); text-align:center; text-transform:uppercase; letter-spacing:0.1em;">
+          Thoughtful questions. Careful methods. Honest conclusions.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="footer" aria-label="Site footer">
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div>
+          <a href="#" class="site-header-logo" style="color:var(--beige-bg);" aria-label="Stellar Labs">
+            <div style="background:var(--beige-bg); border-radius: 0; width:32px; height:32px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <span class="logo-mark-inner" style="color:var(--ink-black);">S</span>
+            </div>
+            <span style="font-family:'Bodoni Moda',serif; font-size:20px; font-weight:600; color:var(--beige-bg); letter-spacing:-0.3px;">Stellar Labs</span>
+          </a>
+          <p class="footer-brand-desc">Research grounded in careful methods: observe closely, question the evidence, and bring clearer thinking back to the bedside.</p>
+        </div>
+
+        <div>
+          <div class="footer-col-title">Approach</div>
+          <ul class="footer-links">
+            <li><a href="#features">The Approach</a></li>
+            <li><a href="#how-it-works">The Process</a></li>
+            <li><a href="#">Changelog</a></li>
+            <li><a href="#">Documentation</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer-col-title">Research</div>
+          <ul class="footer-links">
+            <li><a href="#">Research Principles</a></li>
+            <li><a href="#">Reporting Principles</a></li>
+            <li><a href="#">PRISMA Compliance</a></li>
+            <li><a href="#">About the Approach</a></li>
+            <li><a href="#">Blog</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer-col-title">Company</div>
+          <ul class="footer-links">
+            <li><a href="#">About</a></li>
+            <li><a href="#">Careers</a></li>
+            <li><a href="#">Contact</a></li>
+            <li><a href="#collaboration">Collaborate</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span class="footer-copy">© 2026 Stellar Labs. All rights reserved.</span>
+        <div class="footer-legal">
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">DPDP Compliance</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT
+       ============================================================ -->
+  
+
+
+
+
+
+
+

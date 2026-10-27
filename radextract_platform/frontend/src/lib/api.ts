@@ -1,6 +1,6 @@
 import { 
   DEMO_PROJECT, 
-  PREVIEW_STUDIES, 
+  DEMO_STUDIES, 
   DEMO_PRISMA,
   DEMO_PRISMA2020, 
   DEMO_SCREENING_SUMMARY, 
@@ -196,7 +196,7 @@ export async function testBackendConnection(targetUrl?: string): Promise<{
 }
 
 export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[] {
-  if (typeof window === "undefined") return projectId === "demo" ? [...PREVIEW_STUDIES] : [];
+  if (typeof window === "undefined") return projectId === "demo" ? [...DEMO_STUDIES] : [];
   try {
     const isBlank = localStorage.getItem(`radextract_blank_${projectId}`) === "true";
     if (isBlank) {
@@ -207,7 +207,7 @@ export function getStoredProjectStudies(projectId = "proj_pam_current"): Study[]
     if (saved) return JSON.parse(saved);
   } catch (e) {}
   if (projectId === "demo") {
-    return [...PREVIEW_STUDIES];
+    return [...DEMO_STUDIES];
   }
   return [];
 }
@@ -974,14 +974,6 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   if (path.includes("/meta-analyses")) {
     return DEMO_META_ANALYSES as unknown as T;
   }
-  if (path.includes("/claimscape/status")) {
-    return {
-      status: "ready",
-      engine: "local_laya_onnx",
-      model: "ModernBERT-large-system-1",
-      max_papers_per_batch: 300,
-    } as unknown as T;
-  }
   if (path.includes("/criteria")) {
     return DEMO_CRITERIA as unknown as T;
   }
@@ -1092,7 +1084,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
   }
   if (path.includes("/extractions/grid")) {
     const studies = getStoredProjectStudies("proj_pam_current");
-    const studyList = studies.length > 0 ? studies : PREVIEW_STUDIES;
+    const studyList = studies.length > 0 ? studies : DEMO_STUDIES;
     const gridStudies = studyList.map((s, idx) => ({
       study_id: s.study_id || (s as any).id,
       study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || (s as any).year || 2024}`,
@@ -1272,7 +1264,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
         } catch (e) {}
       }
     }
-    const matchDemo = PREVIEW_STUDIES.find((s) => s.study_id === studyId);
+    const matchDemo = DEMO_STUDIES.find((s) => s.study_id === studyId);
     if (matchDemo) return matchDemo as unknown as T;
     return null as unknown as T;
   }
@@ -1637,8 +1629,6 @@ export interface Study {
   extraction_status: string;
   pdf_status: string;
   pdf_path: string;
-  study_label?: string | null;
-  source_type?: string | null;
   is_duplicate?: boolean | number;
   duplicate_of_study_id?: string | null;
   ai_priority_score?: number | null;
@@ -2171,12 +2161,6 @@ export interface HypothesisUpdate {
 export interface Criterion {
   id: string;
   text: string;
-  direction?: 'inclusion' | 'exclusion';
-  rule_mode?: 'strict' | 'weighted';
-  threshold?: number;
-  score_source?: 'keyword' | 'model' | 'hybrid';
-  enabled?: boolean;
-  version?: number;
 }
 
 export interface CriteriaResponse {
@@ -3565,14 +3549,6 @@ export const api = {
     request<CriteriaResponse>(`/projects/${projectId}/criteria`, { method: "PUT", body: JSON.stringify(data) }),
   generateCriteria: (projectId: string) =>
     request<CriteriaResponse>(`/projects/${projectId}/criteria/generate`, { method: "POST" }),
-  getThresholdCriteria: (projectId: string) =>
-    request<{ project_id: string; criteria: Criterion[] }>(`/projects/${projectId}/threshold-criteria`),
-  updateThresholdCriteria: (projectId: string, data: { criteria: Criterion[] }) =>
-    request<{ project_id: string; criteria: Criterion[] }>(`/projects/${projectId}/threshold-criteria`, { method: "PUT", body: JSON.stringify(data) }),
-  evaluateStudyCriteria: (projectId: string, data: { study_id: string; scores: Record<string, number | null> }) =>
-    request<{ study_id: string; decision: string; fired: any[]; flagged_unscored: string[] }>(`/projects/${projectId}/criteria/evaluate-study`, { method: "POST", body: JSON.stringify(data) }),
-  getValidationBounds: (projectId: string, k: number = 0, n: number = 100, alpha: number = 0.05) =>
-    request<{ k_false_negatives: number; n_samples: number; alpha: number; confidence_level: number; clopper_pearson_upper_bound: number }>(`/projects/${projectId}/criteria/validation-bounds?k=${k}&n=${n}&alpha=${alpha}`),
 
   // Search Strings
   getSearchStrings: (projectId: string) =>
@@ -4273,7 +4249,7 @@ export const api = {
       method: "POST",
     }),
 
-  // Citation Telephone (AI Reviewer Verification)
+  // Citation Telephone (Co-Scientist Verification)
   auditCitationTelephoneText: (text: string) =>
     request<{
       references: Record<number, string>;

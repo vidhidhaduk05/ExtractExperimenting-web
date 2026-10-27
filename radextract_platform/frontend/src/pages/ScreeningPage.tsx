@@ -19,8 +19,6 @@ import {
   type ClarificationOption,
   type ClarificationAnswerResponse,
   type BatchUploadResult,
-  type Criterion,
-  type CriteriaResponse,
 } from "../lib/api";
 import {
   ArrowLeft,
@@ -37,6 +35,7 @@ import {
   Upload,
   FileText,
   Shield,
+  ShieldCheck,
   Check,
   ExternalLink,
   HelpCircle,
@@ -72,18 +71,10 @@ import {
 import { cn } from "../lib/utils";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
 import { ExploratoryScreeningView } from "../components/screening/ExploratoryScreeningView";
-import { CompactScreeningSplitView } from "../components/screening/CompactScreeningSplitView";
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [viewMode, setViewMode] = useState<"standard" | "exploratory">("standard");
-  const [layoutMode, setLayoutMode] = useState<"classic" | "compact">(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("screening_layout");
-      if (saved === "classic" || saved === "compact") return saved;
-    }
-    return "classic";
-  });
   const bookmarks = useBookmarks(projectId);
   const tagIndex = useProjectTags(projectId);
   const [tagFilter, setTagFilter] = useState("");
@@ -122,42 +113,6 @@ export function ScreeningPage() {
     enabled: !!projectId,
   });
 
-  // Project Criteria with Continuous Threshold Sliders (τ ∈ [0, 1])
-  const { data: criteriaData, refetch: refetchCriteria } = useQuery<CriteriaResponse>({
-    queryKey: ["project-criteria", projectId],
-    queryFn: () =>
-      projectId
-        ? api.getCriteria(projectId).catch(() => ({ project_id: projectId, inclusion: [], exclusion: [] }))
-        : Promise.resolve({ project_id: "", inclusion: [], exclusion: [] }),
-    enabled: !!projectId,
-  });
-  const [localInclusion, setLocalInclusion] = useState<Criterion[]>([]);
-  const [localExclusion, setLocalExclusion] = useState<Criterion[]>([]);
-  const [criteriaSaving, setCriteriaSaving] = useState(false);
-  const [criteriaSaveSuccess, setCriteriaSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    if (criteriaData) {
-      setLocalInclusion(criteriaData.inclusion || []);
-      setLocalExclusion(criteriaData.exclusion || []);
-    }
-  }, [criteriaData]);
-
-  const handleSaveCriteria = async () => {
-    if (!projectId) return;
-    setCriteriaSaving(true);
-    try {
-      await api.updateCriteria(projectId, { inclusion: localInclusion, exclusion: localExclusion });
-      setCriteriaSaveSuccess(true);
-      setTimeout(() => setCriteriaSaveSuccess(false), 2200);
-      refetchCriteria();
-    } catch (e) {
-      console.error("Failed to save criteria:", e);
-    } finally {
-      setCriteriaSaving(false);
-    }
-  };
-
   const [isChecklistExpanded, setIsChecklistExpanded] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return window.location.hash.includes("clarifications");
@@ -193,7 +148,7 @@ export function ScreeningPage() {
     return projectClarifications;
   }, [projectClarifications, pendingClarifications, answeredClarifications, checklistFilter]);
 
-  // Reviewer identity - seamless active AI Reviewer reviewer (no mandatory sign-in roadblock)
+  // Reviewer identity - seamless active Co-Scientist reviewer (no mandatory sign-in roadblock)
   const authToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const { data: currentReviewerData } = useQuery({
     queryKey: ["screening-reviewer", authToken], queryFn: api.getCurrentUser,
@@ -201,10 +156,10 @@ export function ScreeningPage() {
   });
   const currentReviewer = currentReviewerData || {
     user_id: "usr_default_coscientist",
-    username: "AI Reviewer Reviewer",
+    username: "Co-Scientist Reviewer",
     role: "owner"
   };
-  const reviewerName = currentReviewer.username || "AI Reviewer Reviewer";
+  const reviewerName = currentReviewer.username || "Co-Scientist Reviewer";
 
   // Highlight toggles & Keywords drawer state
   const [showHighlights, setShowHighlights] = useState(true);
@@ -565,22 +520,10 @@ export function ScreeningPage() {
         setExcludeReasonText("");
       }
 
-      // Advance to next undecided study in filtered list ONLY after the server confirms a successful save
+      // Advance to next study in filtered list ONLY after the server confirms a successful save
       const currentIndex = filteredStudies.findIndex((s) => s.study_id === variables.studyId);
-      const nextUndecided = filteredStudies.slice(currentIndex + 1).find(
-        (s) => !s.screening_status || s.screening_status === "pending" || s.screening_status === "awaiting_clarification"
-      );
-      if (nextUndecided) {
-        setSelectedStudyId(nextUndecided.study_id);
-      } else if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
+      if (currentIndex >= 0 && currentIndex < filteredStudies.length - 1) {
         setSelectedStudyId(filteredStudies[currentIndex + 1].study_id);
-      } else {
-        const priorUndecided = filteredStudies.find(
-          (s) => !s.screening_status || s.screening_status === "pending" || s.screening_status === "awaiting_clarification"
-        );
-        if (priorUndecided && priorUndecided.study_id !== variables.studyId) {
-          setSelectedStudyId(priorUndecided.study_id);
-        }
       }
     },
     onError: (err: any, variables) => {
@@ -713,27 +656,21 @@ export function ScreeningPage() {
 
       if (decisionMutation.isPending) return;
 
-      if (e.key === "ArrowUp" || e.key === "k" || e.key === "K") {
-        e.preventDefault();
-        handleSelectPreviousStudy();
-      } else if (e.key === "ArrowDown" || e.key === "j" || e.key === "J") {
-        e.preventDefault();
-        handleSelectNextStudy();
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        handleSelectPreviousStudy();
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        handleSelectNextStudy();
-      } else if (e.key === "i" || e.key === "I" || e.key === "1") {
+      if (e.key === "i" || e.key === "I" || e.key === "1") {
         e.preventDefault();
         handleScreenDecision("included");
       } else if (e.key === "e" || e.key === "E" || e.key === "2") {
         e.preventDefault();
         handleScreenDecision("excluded");
-      } else if (e.key === "u" || e.key === "U" || e.key === "m" || e.key === "M" || e.key === "3") {
+      } else if (e.key === "m" || e.key === "M" || e.key === "3" || e.key === "u" || e.key === "U") {
         e.preventDefault();
         handleScreenDecision("maybe");
+      } else if (e.key === "ArrowLeft" || e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        handleSelectPreviousStudy();
+      } else if (e.key === "ArrowRight" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        handleSelectNextStudy();
       } else if (e.key === "?" || (e.shiftKey && e.key === "/")) {
         e.preventDefault();
         setShowHotkeysModal(true);
@@ -803,7 +740,7 @@ export function ScreeningPage() {
 
   // Render Highlighted Text (Abstract or Title) with Priority Resolution & Instant Fallback
   const renderHighlightedText = (
-    rawText: string | undefined = "",
+    rawText: string,
     spans: HighlightSpan[] = [],
     fallbackKeywordsList: ScreeningKeyword[] = [],
     isTitle: boolean = false
@@ -986,7 +923,7 @@ export function ScreeningPage() {
             <div>
               <h1 className="text-xl font-bold font-['Serifon_Editorial'] text-[#3a0f34] flex items-center gap-2">
                 <ShieldCheck className="w-6 h-6 text-[#814d75]" />
-                Systematic Screening Workspace
+                Co-Scientist Screening Workspace
               </h1>
               <p className="text-xs text-[#62535d]">
                 Multi-Stage Screening: Title &rarr; Abstract &rarr; Full-Text with Rayyan-Style Highlighting
@@ -1005,43 +942,6 @@ export function ScreeningPage() {
               <FolderPlus className="w-3.5 h-3.5 text-[#ffdea6]" />
               <span>Bulk Upload from Laptop</span>
             </button>
-
-            {/* View Layout Toggle: Classic vs Compact Split */}
-            <div className="flex items-center border border-[#d2c2cb] rounded bg-[#ffffff] p-0.5 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setLayoutMode("classic");
-                  localStorage.setItem("screening_layout", "classic");
-                }}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-semibold rounded transition-all cursor-pointer",
-                  layoutMode === "classic"
-                    ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
-                    : "text-[#62535d] hover:text-[#3a0f34]"
-                )}
-                title="Classic multi-card screening layout"
-              >
-                Classic
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setLayoutMode("compact");
-                  localStorage.setItem("screening_layout", "compact");
-                }}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-semibold rounded transition-all flex items-center gap-1 cursor-pointer",
-                  layoutMode === "compact"
-                    ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
-                    : "text-[#62535d] hover:text-[#3a0f34]"
-                )}
-                title="Compact split-panel screening view (table left, reading pane right)"
-              >
-                <ArrowLeftRight className="w-3 h-3" />
-                <span>Compact Split</span>
-              </button>
-            </div>
 
             {/* Hotkeys Cheatsheet Button */}
             <button
@@ -1082,7 +982,7 @@ export function ScreeningPage() {
                     onClick={() => resumeMutation.mutate()}
                     disabled={resumeMutation.isPending || cancelMutation.isPending}
                     className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Resume AI Screening from current study"
+                    title="Resume Co-Scientist screening from current study"
                   >
                     {resumeMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1095,7 +995,7 @@ export function ScreeningPage() {
                     onClick={() => cancelMutation.mutate()}
                     disabled={cancelMutation.isPending || resumeMutation.isPending}
                     className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Stop AI Screening run completely"
+                    title="Stop Co-Scientist screening run completely"
                   >
                     {cancelMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1124,7 +1024,7 @@ export function ScreeningPage() {
                     onClick={() => cancelMutation.mutate()}
                     disabled={cancelMutation.isPending || pauseMutation.isPending}
                     className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Stop AI Screening run completely"
+                    title="Stop Co-Scientist screening run completely"
                   >
                     {cancelMutation.isPending ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1161,7 +1061,7 @@ export function ScreeningPage() {
                   ) : (
                     <Sparkles className="w-4 h-4" />
                   )}
-                  Start Full AI Screening
+                  Start Full Co-Scientist Screening
                 </button>
               </>
             )}
@@ -1293,7 +1193,7 @@ export function ScreeningPage() {
         )}
       </header>
 
-      {/* Live AI Screening progress & controls */}
+      {/* Live Co-Scientist screening progress & controls */}
       {progress?.active && (
         <div className={`border-b px-6 py-2.5 transition-colors ${
           progress.paused ? "bg-amber-50/95 border-amber-200" : "bg-indigo-50 border-indigo-200"
@@ -1310,7 +1210,7 @@ export function ScreeningPage() {
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" />
                 )}
                 <span className={`font-semibold shrink-0 ${progress.paused ? "text-amber-900" : "text-indigo-800"}`}>
-                  AI Screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
+                  Co-Scientist screening &middot; {progress.stage === "fulltext" ? "Full-text" : progress.stage === "abstract" ? "Abstract" : "Title"} stage
                 </span>
                 <span className={`truncate ${progress.paused ? "text-amber-800" : "text-indigo-700"}`}>
                   {progress.paused
@@ -1550,179 +1450,39 @@ export function ScreeningPage() {
                   </div>
                 </div>
 
-                {/* Mandatory Inclusion & Explicit Exclusion with Continuous Threshold Sliders (τ ∈ [0, 1]) */}
-                <div className="space-y-3 pt-1">
-                  {/* Inclusion Criteria with Sliders */}
-                  <div className="p-3 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#3a0f34] flex items-center gap-1.5 text-[11px]">
-                        <CheckCircle className="w-3.5 h-3.5 text-[#814d75]" />
-                        Inclusion Criteria (Threshold Sliders)
-                      </span>
-                      <span className="text-[10px] text-[#62535d] font-mono">
-                        {localInclusion.length} active
-                      </span>
-                    </div>
-
-                    {localInclusion.length === 0 ? (
-                      <p className="text-[11px] text-[#62535d] italic">No inclusion criteria configured.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {localInclusion.map((c, idx) => (
-                          <div key={c.id || idx} className="p-2 bg-white border border-[#d2c2cb] rounded space-y-1.5">
-                            <div className="flex items-start justify-between gap-2">
-                              <span className="text-[11px] font-medium text-[#4f444b] leading-tight">
-                                {c.text}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...localInclusion];
-                                  updated[idx] = {
-                                    ...updated[idx],
-                                    rule_mode: updated[idx].rule_mode === "strict" ? "weighted" : "strict",
-                                  };
-                                  setLocalInclusion(updated);
-                                }}
-                                className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold uppercase transition-colors cursor-pointer ${
-                                  c.rule_mode === "strict"
-                                    ? "bg-[#3a0f34] text-[#fbf9f4]"
-                                    : "bg-[#eee7ec] text-[#814d75] border border-[#d2c2cb]"
-                                }`}
-                                title="Click to toggle strict vs weighted"
-                              >
-                                {c.rule_mode || "weighted"}
-                              </button>
-                            </div>
-
-                            <div className="flex items-center gap-2 pt-0.5">
-                              <span className="text-[10px] font-mono text-[#62535d] shrink-0">
-                                τ = {(c.threshold ?? 0.8).toFixed(2)}
-                              </span>
-                              <input
-                                type="range"
-                                min="0.0"
-                                max="1.0"
-                                step="0.05"
-                                value={c.threshold ?? 0.8}
-                                onChange={(e) => {
-                                  const updated = [...localInclusion];
-                                  updated[idx] = {
-                                    ...updated[idx],
-                                    threshold: parseFloat(e.target.value),
-                                  };
-                                  setLocalInclusion(updated);
-                                }}
-                                className="w-full h-1.5 bg-[#d2c2cb] rounded-lg appearance-none cursor-pointer accent-[#3a0f34]"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                {/* Mandatory Inclusion & Explicit Exclusion */}
+                <div className="space-y-2.5 pt-1">
+                  <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg">
+                    <span className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      Mandatory Inclusion Criteria
+                    </span>
+                    <ul className="text-[11px] text-emerald-800 space-y-1 list-disc list-inside">
+                      <li>Human subjects (in vivo) with radiographically confirmed intracranial PAM.</li>
+                      <li>Reports angiographic details (DSA, CTA, or 3T MRA) and clinical management.</li>
+                      <li>Peer-reviewed original research, cohort studies, or clinical case series.</li>
+                    </ul>
                   </div>
 
-                  {/* Exclusion Criteria with Sliders */}
-                  <div className="p-3 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#3a0f34] flex items-center gap-1.5 text-[11px]">
-                        <XCircle className="w-3.5 h-3.5 text-[#814d75]" />
-                        Exclusion Criteria (Threshold Sliders)
-                      </span>
-                      <span className="text-[10px] text-[#62535d] font-mono">
-                        {localExclusion.length} active
-                      </span>
-                    </div>
-
-                    {localExclusion.length === 0 ? (
-                      <p className="text-[11px] text-[#62535d] italic">No exclusion criteria configured.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {localExclusion.map((c, idx) => (
-                          <div key={c.id || idx} className="p-2 bg-white border border-[#d2c2cb] rounded space-y-1.5">
-                            <div className="flex items-start justify-between gap-2">
-                              <span className="text-[11px] font-medium text-[#4f444b] leading-tight">
-                                {c.text}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...localExclusion];
-                                  updated[idx] = {
-                                    ...updated[idx],
-                                    rule_mode: updated[idx].rule_mode === "strict" ? "weighted" : "strict",
-                                  };
-                                  setLocalExclusion(updated);
-                                }}
-                                className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold uppercase transition-colors cursor-pointer ${
-                                  c.rule_mode === "strict"
-                                    ? "bg-[#3a0f34] text-[#fbf9f4]"
-                                    : "bg-[#eee7ec] text-[#814d75] border border-[#d2c2cb]"
-                                }`}
-                                title="Click to toggle strict vs weighted"
-                              >
-                                {c.rule_mode || "weighted"}
-                              </button>
-                            </div>
-
-                            <div className="flex items-center gap-2 pt-0.5">
-                              <span className="text-[10px] font-mono text-[#62535d] shrink-0">
-                                τ = {(c.threshold ?? 0.9).toFixed(2)}
-                              </span>
-                              <input
-                                type="range"
-                                min="0.0"
-                                max="1.0"
-                                step="0.05"
-                                value={c.threshold ?? 0.9}
-                                onChange={(e) => {
-                                  const updated = [...localExclusion];
-                                  updated[idx] = {
-                                    ...updated[idx],
-                                    threshold: parseFloat(e.target.value),
-                                  };
-                                  setLocalExclusion(updated);
-                                }}
-                                className="w-full h-1.5 bg-[#d2c2cb] rounded-lg appearance-none cursor-pointer accent-[#3a0f34]"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  <div className="p-3 bg-rose-50/60 border border-rose-200 rounded-lg">
+                    <span className="font-bold text-rose-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
+                      <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                      Explicit Exclusion Disqualifiers
+                    </span>
+                    <ul className="text-[11px] text-rose-800 space-y-1 list-disc list-inside">
+                      <li>Classic AVMs with parenchymal nidus or early draining cortical veins.</li>
+                      <li>Dural arteriovenous fistulas (dAVF) or cavernous hemangiomas without PAM.</li>
+                      <li>Animal models, in vitro hydrodynamic bench studies, or non-English abstracts.</li>
+                    </ul>
                   </div>
                 </div>
               </div>
 
-              {/* Drawer Footer with Save Criteria button */}
-              <div className="p-3 bg-[#fbf9f4] border-t border-[#d2c2cb] flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={handleSaveCriteria}
-                  disabled={criteriaSaving}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors flex items-center gap-1.5 cursor-pointer ${
-                    criteriaSaveSuccess
-                      ? "bg-emerald-700 text-white"
-                      : "bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017]"
-                  }`}
-                >
-                  {criteriaSaving ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : criteriaSaveSuccess ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Saved!</span>
-                    </>
-                  ) : (
-                    <span>Save Criteria</span>
-                  )}
-                </button>
+              {/* Drawer Footer */}
+              <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
                 <button
                   onClick={() => setIsProtocolSliderOpen(false)}
-                  className="px-3 py-1.5 text-xs font-semibold text-[#4f444b] bg-white border border-[#d2c2cb] rounded hover:bg-[#eee7ec] transition-colors cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   Close Ribbon
                 </button>
@@ -1732,12 +1492,12 @@ export function ScreeningPage() {
         </div>
       )}
 
-      {/* ── AI Screening CLARIFICATIONS & REVIEWER CHECKLIST ── */}
+      {/* ── CO-SCIENTIST SCREENING CLARIFICATIONS & REVIEWER CHECKLIST ── */}
       {projectClarifications.length > 0 && (
         <section
           id="clarifications-checklist"
           className="max-w-7xl w-full mx-auto px-4 md:px-6 pt-3"
-          aria-label="AI Screening Clarifications Checklist"
+          aria-label="Co-Scientist Screening Clarifications Checklist"
         >
           <div className="bg-[#ffffff] border border-[#d2c2cb] rounded overflow-hidden transition-all">
             {/* Checklist Ribbon Header */}
@@ -1749,14 +1509,14 @@ export function ScreeningPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-['Serifon_Editorial'] font-bold text-[#3a0f34] tracking-tight">
-                      AI Screening Clarifications Checklist
+                      Co-Scientist Screening Clarifications Checklist
                     </h2>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#ffdea6]/50 text-[#7c5800] border border-[#d2c2cb]">
                       {pendingClarifications.length} Pending
                     </span>
                   </div>
                   <p className="text-[11px] text-[#62535d] font-['Work_Sans']">
-                    Review and clarify ambiguous PICO criteria flagged by AI Reviewer screener
+                    Review and clarify ambiguous PICO criteria flagged by Co-Scientist screener
                   </p>
                 </div>
               </div>
@@ -1920,7 +1680,7 @@ export function ScreeningPage() {
                                 <div>
                                   <p className="font-bold">Clarification recorded and study re-evaluated!</p>
                                   <p className="text-[11px] text-emerald-800 mt-0.5">
-                                    AI Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% confidence)
+                                    Co-Scientist Decision: <span className="font-bold uppercase">{feedback.final_decision}</span> ({Math.round(feedback.final_confidence * 100)}% confidence)
                                   </p>
                                   {feedback.final_reason_text && (
                                     <p className="text-[10px] text-emerald-700 italic mt-0.5">{feedback.final_reason_text}</p>
@@ -2013,7 +1773,7 @@ export function ScreeningPage() {
                                   const opt = q.options.find((o) => o.value === curSelected);
                                   answerClarificationMutation.mutate({
                                     questionId: q.question_id,
-                                    answer: curSelected || "",
+                                    answer: curSelected,
                                     label: opt?.label,
                                     freetext: curNotes,
                                   });
@@ -2048,53 +1808,8 @@ export function ScreeningPage() {
         </section>
       )}
 
-      {/* Main Screening Workspace (Compact Split vs Classic) */}
-      {layoutMode === "compact" ? (
-        <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4">
-          <CompactScreeningSplitView
-            studies={filteredStudies}
-            selectedStudy={selectedStudy}
-            onSelectStudy={setSelectedStudyId}
-            onScreenDecision={handleScreenDecision}
-            isDecisionPending={decisionMutation.isPending}
-            saveError={saveError}
-            failedDecision={failedDecision}
-            onRetry={handleRetry}
-            excludeReasonCode={excludeReasonCode}
-            setExcludeReasonCode={(code) => {
-              setExcludeReasonCode(code);
-              if (code) setReasonError(null);
-            }}
-            excludeReasonText={excludeReasonText}
-            setExcludeReasonText={setExcludeReasonText}
-            reasonError={reasonError}
-            exclusionReasons={exclusionReasons}
-            keywords={keywords}
-            selectedHighlights={selectedHighlights}
-            showHighlights={showHighlights}
-            onToggleHighlights={() => setShowHighlights(!showHighlights)}
-            renderHighlightedText={renderHighlightedText}
-            studyClarifications={studyClarifications}
-            onAnswerClarification={(data) => {
-              answerClarificationMutation.mutate({
-                questionId: data.questionId,
-                answer: data.answer,
-                label: data.label,
-                freetext: data.freetext,
-              });
-            }}
-            isAnsweringClarification={answerClarificationMutation.isPending}
-            onPdfUpload={handlePdfUpload}
-            uploadingPdf={uploadingPdf}
-            uploadError={uploadError}
-            bookmarkSet={bookmarkSet}
-            bookmarks={bookmarks}
-            projectId={projectId!}
-          />
-        </main>
-      ) : (
-        /* Main Two-Pane Screening Workspace (Classic) */
-        <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      {/* Main Two-Pane Screening Workspace */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* Left Column: Study List (5 cols) */}
         <div className="lg:col-span-5 bg-[#ffffff] border border-[#d2c2cb] rounded flex flex-col h-[calc(100vh-185px)] sticky top-[135px]">
           <div className="px-4 py-2.5 border-b border-[#d2c2cb] flex items-center justify-between bg-[#fbf9f4] rounded-t">
@@ -2233,10 +1948,10 @@ export function ScreeningPage() {
                                 ? "bg-rose-50 text-rose-700"
                                 : "bg-amber-50 text-amber-700"
                             }`}
-                            title={isJustDone ? "Screened in the current run" : "Screened by AI Reviewer"}
+                            title={isJustDone ? "Screened in the current run" : "Screened by Co-Scientist"}
                           >
                             <CheckCircle className="w-3 h-3" />
-                            AI Reviewer screened: {study.ai_decision}
+                            Co-Scientist screened: {study.ai_decision}
                           </span>
                         )}
 
@@ -2334,14 +2049,14 @@ export function ScreeningPage() {
                 </div>
               </div>
 
-              {/* AI Reviewer Verdict & Confidence Card */}
+              {/* Co-Scientist Verdict & Confidence Card */}
               {selectedStudy.ai_decision && (
                 <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-[#814d75] fill-[#814d75]/15" aria-hidden="true" />
                       <span className="text-xs font-bold text-[#3a0f34]">
-                        AI Reviewer Recommendation: <span className="capitalize">{selectedStudy.ai_decision}</span>
+                        Co-Scientist Recommendation: <span className="capitalize">{selectedStudy.ai_decision}</span>
                       </span>
                     </div>
                     {selectedStudy.ai_confidence && (
@@ -2381,7 +2096,7 @@ export function ScreeningPage() {
                 <RecordCollaborationPanel key={selectedStudy.study_id} projectId={projectId!} studyId={selectedStudy.study_id} />
               </details>
 
-              {/* AI Reviewer Clarification Questions Panel */}
+              {/* Co-Scientist Clarification Questions Panel */}
               {(studyClarifications.length > 0 || selectedStudy.screening_status === "awaiting_clarification" || selectedStudy.ai_decision === "maybe") && (
                 <div className="bg-[#fbf9f4] border border-[#814d75] rounded-xl p-4 space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
@@ -2390,7 +2105,7 @@ export function ScreeningPage() {
                         <Shield className="w-3.5 h-3.5 fill-[#fbf9f4]/20" aria-hidden="true" />
                       </div>
                       <div>
-                        <span className="block text-[#3a0f34] font-bold">AI Reviewer Clarification Request</span>
+                        <span className="block text-[#3a0f34] font-bold">Co-Scientist Clarification Request</span>
                         <span className="text-[10px] text-[#62535d] font-normal">Ambiguous eligibility against PICO criteria &bull; Human clarification needed</span>
                       </div>
                     </div>
@@ -2497,7 +2212,7 @@ export function ScreeningPage() {
                   ) : (
                     <div className="bg-white border border-purple-100 rounded-lg p-3 space-y-3">
                       <p className="text-xs font-semibold text-slate-800">
-                        The AI Reviewer requires clarification whether this study meets the Population (pure arterial malformation without nidus) or Intervention criteria. Please clarify:
+                        The Co-Scientist requires clarification whether this study meets the Population (pure arterial malformation without nidus) or Intervention criteria. Please clarify:
                       </p>
                       <div className="space-y-1.5">
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1.5 rounded hover:bg-slate-50">
@@ -2913,7 +2628,6 @@ export function ScreeningPage() {
           )}
         </div>
       </main>
-      )}
 
       {/* Keywords & Highlighting Drawer / Modal */}
       {showKeywordsDrawer && (

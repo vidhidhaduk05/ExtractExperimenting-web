@@ -109,16 +109,12 @@ export const ClaimscapePage: React.FC = () => {
     api.getClaimscapeStatus()
       .then((res) => {
         if (active) {
-          if (res?.status === "ready" || res?.status === "success" || res?.engine === "local_laya_onnx") {
-            setLayaStatus("ready");
-          } else {
-            setLayaStatus(res?.status || "offline");
-          }
+          setLayaStatus(res?.status || "offline");
         }
       })
       .catch(() => {
         if (active) {
-          setLayaStatus("ready");
+          setLayaStatus("offline");
         }
       });
     return () => {
@@ -296,7 +292,7 @@ export const ClaimscapePage: React.FC = () => {
           return prev + 6;
         }
         if (prev < 70) {
-          setScanStepLabel("Synthesizing abstracts with AI Reviewer inference engine...");
+          setScanStepLabel("Synthesizing abstracts with Co-Scientist inference engine...");
           return prev + 4;
         }
         if (prev < 92) {
@@ -359,7 +355,7 @@ export const ClaimscapePage: React.FC = () => {
       // Backend not running on this domain/host, proceed to direct client-side live PubMed
     }
 
-    // Step 2: Query Live PubMed directly via NCBI E-Utilities with AI Reviewer Inference
+    // Step 2: Query Live PubMed directly via NCBI E-Utilities with Co-Scientist Inference
     try {
       const liveRes = await fetchLivePubMedEvidence(activeClaim, activeQuery, paperCount);
       if (Array.isArray(liveRes?.papers) && liveRes.papers.length > 0) {
@@ -371,7 +367,7 @@ export const ClaimscapePage: React.FC = () => {
           judgments: liveRes.judgments,
         });
         setSelectedPmid(liveRes.papers[0]?.pmid || "");
-        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · AI Reviewer Engine`);
+        setResultSource(`Live PubMed search: "${activeQuery}" · ${liveRes.papers.length} publications indexed · Co-Scientist Engine`);
         finishScan();
         return;
       } else {
@@ -468,7 +464,7 @@ export const ClaimscapePage: React.FC = () => {
       {/* Main Container */}
       <main className="claimscape-theme mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-12 pt-2 sm:px-6 lg:px-8">
         
-        {/* Section 1: Hero & Question Card - Compact 2-Column Editorial Editorial Layout */}
+        {/* Section 1: Hero & Question Card - Compact 2-Column Editorial Velvet Layout */}
         <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10 pt-1 pb-2">
           {/* Left Column: Headline, Restored Description & Legend Bullets */}
           <div className="max-w-[580px] xl:pt-1">
@@ -515,7 +511,7 @@ export const ClaimscapePage: React.FC = () => {
               <span className="w-px h-3 bg-[#d2c2cb]"></span>
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
-                AI Reviewer Rapid Screening
+                Co-Scientist Rapid Screening
               </span>
               <span className="w-px h-3 bg-[#d2c2cb]"></span>
               <span className="flex items-center gap-1.5">
@@ -625,7 +621,7 @@ export const ClaimscapePage: React.FC = () => {
                 <p className="cs-eyebrow text-[#7c5800] font-bold">Synthesized Map Headline</p>
                 {evalSpeed !== null && (
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-[#ffdea6] text-[#7c5800] border border-[#7c5800]/30 inline-flex items-center gap-1 shadow-2xs">
-                    <span>⚡ AI Reviewer Rapid Pipeline:</span>
+                    <span>⚡ Co-Scientist Rapid Pipeline:</span>
                     <span>{evalSpeed < 10 ? `${evalSpeed.toFixed(1)}ms (Cached)` : `${(evalSpeed / 1000).toFixed(2)}s`}</span>
                   </span>
                 )}

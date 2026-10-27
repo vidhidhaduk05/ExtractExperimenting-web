@@ -5,7 +5,7 @@
        ============================================================ */
     .stellar-labs-landing-root {
       --beige-bg:    #fbf9f4;
-      --beige-card:  #ffffff;
+      --beige-card:  #f0eee9;
       --beige-hover: #e4e2dd;
       --beige-deep:  #d2c2cb;
       --ink-black:   #3a0f34;
@@ -1868,7 +1868,7 @@
        END NEW STYLES
        ============================================================ */
 
-    /* Editorial Editorial: theme roles and component refinements. */
+    /* Editorial Velvet: theme roles and component refinements. */
     .stellar-labs-landing-root {
       --surface: #fbf9f4;
       --on-surface: #1b1c19;
@@ -1947,7 +1947,7 @@
       font-style: italic;
       font-display: swap;
     }
-/* One typography system for the entire Editorial Editorial page. */
+/* One typography system for the entire Editorial Velvet page. */
 .stellar-labs-landing-root {
   --font-display: 'Silver Editorial', 'Bodoni Moda', Georgia, serif;
   --font-reading: 'Newsreader', Georgia, serif;

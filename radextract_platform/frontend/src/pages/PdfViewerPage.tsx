@@ -6,7 +6,7 @@ import {
   type PdfDocumentData,
   type PdfHighlight as ApiPdfHighlight,
 } from "../lib/api";
-import { DEMO_CODEBOOK_RULES, DEMO_EXTRACTIONS, DEMO_VARIABLES, type CodebookRule } from "../lib/demoData";
+import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, DEMO_EXTRACTIONS, DEMO_VARIABLES, type CodebookRule } from "../lib/demoData";
 import {
   ArrowLeft, FileText, Loader2, Upload, Sparkles,
   CheckCircle, Table, Tag, Highlighter, ArrowRight,
@@ -1232,7 +1232,7 @@ export function PdfViewerPage() {
                   )}
                   title={
                     highConfPendingVariables.length > 0
-                      ? `Accept all ${highConfPendingVariables.length} extractions with AI Reviewer confidence >95%`
+                      ? `Accept all ${highConfPendingVariables.length} extractions with Co-Scientist confidence >95%`
                       : "No pending extractions with confidence >95%"
                   }
                 >
@@ -1254,7 +1254,7 @@ export function PdfViewerPage() {
                   onClick={() => handleDecision("accepted")}
                   disabled={acceptTransitioningId === currentVar?.variable_id}
                   className="px-3 py-1.5 text-xs font-bold text-white bg-[#381A61] hover:bg-[#4E2487] active:scale-95 rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
-                  title="Accept AI Reviewer extraction and autoscroll to next highlight (Hotkey: A or Enter)"
+                  title="Accept Co-Scientist extraction and autoscroll to next highlight (Hotkey: A or Enter)"
                 >
                   <Check className="h-3.5 w-3.5 text-[#F9D14A]" />
                   <span>Accept & Next</span>
@@ -1637,12 +1637,12 @@ export function PdfViewerPage() {
                       {ext?.confidence && (
                         isLowConfidence ? (
                           <span className="text-[10px] font-mono text-[#E78429] bg-[#E78429]/15 border border-[#E78429]/35 px-2 py-0.5 rounded-md font-bold flex items-center gap-1 shadow-2xs" title="Confidence ≤ 95% - Requires manual scrutiny">
-                            <span>{confPercent}% AI Reviewer Conf</span>
+                            <span>{confPercent}% Co-Scientist Conf</span>
                             <span className="text-[9px] bg-[#E78429] text-white px-1 rounded uppercase tracking-wider font-extrabold">Low</span>
                           </span>
                         ) : (
                           <span className="text-[10px] font-mono text-[#381A61] bg-[#F9D14A]/30 border border-[#F9D14A] px-2 py-0.5 rounded-md font-bold" title="High confidence (>95%)">
-                            {confPercent}% AI Reviewer Conf
+                            {confPercent}% Co-Scientist Conf
                           </span>
                         )
                       )}
@@ -1689,7 +1689,7 @@ export function PdfViewerPage() {
                       {isLowConfidence && !isVerified && (
                         <div className="mb-2.5 text-[11px] font-semibold text-[#E78429] bg-[#E78429]/10 border border-[#E78429]/30 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
                           <AlertCircle className="h-3.5 w-3.5 text-[#E78429] shrink-0" />
-                          <span>AI Reviewer flagged lower extraction certainty ({confPercent}%). Please verify quote vs paper.</span>
+                          <span>Co-Scientist flagged lower extraction certainty ({confPercent}%). Please verify quote vs paper.</span>
                         </div>
                       )}
                       <div className="text-[10px] font-bold text-[#7C4B73] uppercase tracking-wider mb-1 flex items-center justify-between font-mono">
@@ -1701,7 +1701,7 @@ export function PdfViewerPage() {
                         {isEdited ? (
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="line-through text-[#AB3329] bg-[#ED968C]/20 border border-[#ED968C]/40 px-2 py-0.5 rounded-md font-medium">
-                              {ext?.proposed_by || "Original AI Reviewer Prediction"}
+                              {ext?.proposed_by || "Original Co-Scientist Prediction"}
                             </span>
                             <ArrowRight className="h-3.5 w-3.5 text-[#7C4B73]" />
                             <span className="text-[#381A61] bg-[#F9D14A]/35 border border-[#F9D14A] px-2.5 py-0.5 rounded-md font-bold">
@@ -1794,7 +1794,7 @@ export function PdfViewerPage() {
                                 ? "bg-[#7C4B73] ring-2 ring-[#7C4B73]/50"
                                 : "bg-[#381A61] hover:bg-[#4E2487]"
                             }`}
-                            title="Accept AI Reviewer Extraction (Hotkey: A or Enter)"
+                            title="Accept Co-Scientist Extraction (Hotkey: A or Enter)"
                           >
                             <Check className={`h-4 w-4 text-[#F9D14A] ${isTransitioning ? "animate-bounce" : ""}`} />
                             {isTransitioning ? (
@@ -2091,7 +2091,7 @@ export function PdfViewerPage() {
                     {errorAnalysis?.accuracy_rate || 77.8}%
                   </div>
                   <div className="text-[11px] font-semibold text-[#7C4B73] uppercase mt-0.5">
-                    AI Reviewer Accuracy
+                    Co-Scientist Accuracy
                   </div>
                 </div>
 
