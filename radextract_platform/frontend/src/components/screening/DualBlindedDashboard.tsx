@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ScreeningConflict } from "../../lib/api";
 import {
@@ -64,33 +64,32 @@ export function DualBlindedDashboard({ projectId, onClose, onSelectStudy }: Dual
     },
   });
 
-  const allConflicts = conflicts || [];
-  const unresolvedConflicts = allConflicts.filter((c) => c.status === "unresolved");
-  const resolvedConflicts = allConflicts.filter((c) => c.status === "resolved");
+  const allConflicts = useMemo(() => conflicts || [], [conflicts]);
+  const unresolvedConflicts = useMemo(() => allConflicts.filter((c) => c.status === "unresolved"), [allConflicts]);
+  const resolvedConflicts = useMemo(() => allConflicts.filter((c) => c.status === "resolved"), [allConflicts]);
 
-  const displayedConflicts =
-    conflictFilter === "unresolved"
+  const displayedConflicts = useMemo(() => {
+    return conflictFilter === "unresolved"
       ? unresolvedConflicts
       : conflictFilter === "resolved"
       ? resolvedConflicts
       : allConflicts;
+  }, [conflictFilter, unresolvedConflicts, resolvedConflicts, allConflicts]);
 
   const kappa = agreement?.cohen_kappa ?? 0;
   const percentAgreement = agreement?.percentage_agreement ?? 0;
   const isBlindMode = config?.blind_mode ?? true;
 
-  const getKappaBadge = (k: number) => {
+  const kappaMeta = useMemo(() => {
     if (!agreement || agreement.total_dual_screened === 0) {
       return { label: "Awaiting Dual Reviews", color: "bg-[#eee7ec] text-[#62535d] border-[#d2c2cb]" };
     }
-    if (k >= 0.81) return { label: "Almost Perfect Agreement (κ ≥ 0.81)", color: "bg-[#ffdea6] text-[#7c5800] border-[#d2c2cb]" };
-    if (k >= 0.61) return { label: "Substantial Agreement (0.61–0.80)", color: "bg-[#eee7ec] text-[#3a0f34] border-[#d2c2cb]" };
-    if (k >= 0.41) return { label: "Moderate Agreement (0.41–0.60)", color: "bg-amber-50 text-amber-700 border-amber-200" };
-    if (k >= 0.21) return { label: "Fair Agreement (0.21–0.40)", color: "bg-orange-50 text-orange-700 border-orange-200" };
+    if (kappa >= 0.81) return { label: "Almost Perfect Agreement (κ ≥ 0.81)", color: "bg-[#ffdea6] text-[#7c5800] border-[#d2c2cb]" };
+    if (kappa >= 0.61) return { label: "Substantial Agreement (0.61–0.80)", color: "bg-[#eee7ec] text-[#3a0f34] border-[#d2c2cb]" };
+    if (kappa >= 0.41) return { label: "Moderate Agreement (0.41–0.60)", color: "bg-amber-50 text-amber-700 border-amber-200" };
+    if (kappa >= 0.21) return { label: "Fair Agreement (0.21–0.40)", color: "bg-orange-50 text-orange-700 border-orange-200" };
     return { label: "Slight / Poor Agreement (κ < 0.20)", color: "bg-[#ab3329]/10 text-[#ab3329] border-[#ab3329]/30" };
-  };
-
-  const kappaMeta = getKappaBadge(kappa);
+  }, [agreement, kappa]);
 
   const handleResolve = (conflictId: string, resolution: string) => {
     setResolvingId(conflictId);

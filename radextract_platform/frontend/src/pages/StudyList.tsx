@@ -273,7 +273,16 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   };
 
   const isBlank = studies && studies.length === 0;
-  const visibleStudies = (studies || []).filter(s => (!savedOnly || bookmarks.ids.includes(s.study_id)) && matchesTag(tagIndex.data, s.study_id, tagFilter));
+
+  const bookmarkedCount = useMemo(() => {
+    if (!studies) return 0;
+    return studies.filter((s) => bookmarks.ids.includes(s.study_id)).length;
+  }, [studies, bookmarks.ids]);
+
+  const visibleStudies = useMemo(() => {
+    if (!studies) return [];
+    return studies.filter((s) => (!savedOnly || bookmarks.ids.includes(s.study_id)) && matchesTag(tagIndex.data, s.study_id, tagFilter));
+  }, [studies, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
 
   return (
     <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
@@ -673,7 +682,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
-        {bookmarkedOnly ? <span className="font-medium">{(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length} bookmarked studies</span> : <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({(studies || []).filter(s => bookmarks.ids.includes(s.study_id)).length})</label>}
+        {bookmarkedOnly ? <span className="font-medium">{bookmarkedCount} bookmarked studies</span> : <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({bookmarkedCount})</label>}
         <span className="text-xs text-[#81737b]">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
         {bookmarks.error && <span role="alert" className="text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
       </div>
