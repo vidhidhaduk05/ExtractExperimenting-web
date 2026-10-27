@@ -75,26 +75,33 @@ export function ReviewGraphPage() {
       filteredLinks = filteredLinks.filter(
         (l) => !extractionIds.has(l.source) && !extractionIds.has(l.target)
       );
-      // Add direct study→variable links when extractions are hidden
+      // Performance Optimization (Bolt⚡): Pre-build O(1) Map from extractionId -> variableId for value_of relations
+      // Eliminates O(L²) nested link traversal loop when extractions are hidden.
+      const extractionToVarMap = new Map<string, string>();
+      graph.links.forEach((l) => {
+        if (l.relation === "value_of") {
+          extractionToVarMap.set(l.source, l.target);
+        }
+      });
+
+      // Add direct study→variable links in linear O(L) time via Map lookups
       const studyVarPairs = new Set<string>();
       graph.links.forEach((l) => {
         if (l.relation === "has_extraction") {
           // study → extraction
           const studyId = l.source;
-          graph.links.forEach((l2) => {
-            if (l2.source === l.target && l2.relation === "value_of") {
-              const varId = l2.target;
-              const key = `${studyId}->${varId}`;
-              if (!studyVarPairs.has(key)) {
-                studyVarPairs.add(key);
-                filteredLinks.push({
-                  source: studyId,
-                  target: varId,
-                  relation: "extracts",
-                });
-              }
+          const varId = extractionToVarMap.get(l.target);
+          if (varId) {
+            const key = `${studyId}->${varId}`;
+            if (!studyVarPairs.has(key)) {
+              studyVarPairs.add(key);
+              filteredLinks.push({
+                source: studyId,
+                target: varId,
+                relation: "extracts",
+              });
             }
-          });
+          }
         }
       });
     }
