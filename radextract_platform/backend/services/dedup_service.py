@@ -11,9 +11,10 @@ study; others are marked as duplicates.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from database import get_db_backend
@@ -910,43 +911,48 @@ def set_group_master(project_id: str, group_id: str, master_study_id: str,
 # Merge All (port of Zoplicate BulkMergeController)
 # ─────────────────────────────────────────────────────────────────────────
 
-# In-memory run state: {run_id: {status, total, processed, merged, skipped, ...}}
+class StalePlanError(ValueError):
+    """Raised when an executed merge-all plan fingerprint does not match current state."""
+    pass
+
+
+class ActiveRunExistsError(ValueError):
+    """Raised when another merge-all run is currently active and within its lease."""
+    pass
+
+
+RUN_LEASE_MINUTES = 10
+
+# In-memory write-through cache: {run_id: run_dict}
 _merge_runs: dict[str, dict] = {}
 
 
-def get_merge_all_status(run_id: str) -> dict:
-    run = _merge_runs.get(run_id)
-    if not run:
-        raise ValueError(f"Unknown merge-all run {run_id}")
-    return dict(run)
+def _parse_db_datetime(dt_str: Optional[str]) -> Optional[datetime]:
+    if not dt_str:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%d %H:%M:%S.%f"):
+        try:
+            return datetime.strptime(dt_str.split("+")[0].rstrip("Z"), fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    return None
 
 
-def pause_merge_all(run_id: str) -> dict:
-    run = _merge_runs.get(run_id)
-    if not run:
-        raise ValueError(f"Unknown merge-all run {run_id}")
-    if run["status"] == "running":
-        run["pause_requested"] = True
-    return dict(run)
+def _plan_fingerprint(plan: list[dict]) -> str:
+    """Canonical sha256 fingerprint over [group_id, master_study_id, duplicate_ids, fields_to_fill]."""
+    canonical = []
+    for item in sorted(plan, key=lambda x: str(x.get("group_id", ""))):
+        canonical.append([
+            str(item.get("group_id", "")),
+            str(item.get("master_study_id", "")),
+            sorted(str(d) for d in item.get("duplicate_ids", [])),
+            {k: sorted(v) if isinstance(v, list) else v for k, v in sorted((item.get("fields_to_fill") or {}).items())}
+        ])
+    payload = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def merge_all(project_id: str, master_strategy: str = "most_complete",
-              include_auto: bool = True, dry_run: bool = False,
-              db: Optional[DBBackend] = None, actor: str = "user",
-              run_id: Optional[str] = None) -> dict:
-    """Bulk-merge pending duplicate groups (Zoplicate BulkMergeController).
-
-    - Dry-run first: returns the full merge plan (N groups, master per group,
-      fields to fill) for a confirm dialog, without executing.
-    - Executes merges sequentially with per-group commit (crash-resilient);
-      progress is tracked in-memory for status/pause endpoints.
-    - Records with human decisions are never touched; they are reported as
-      skipped_human_decided.
-    """
-    db = db or get_db_backend()
-    if master_strategy not in ("most_complete", "newest", "oldest", "has_decision"):
-        raise ValueError(f"Invalid master_strategy: {master_strategy}")
-
+def _build_plan_items(db: DBBackend, project_id: str, master_strategy: str = "most_complete") -> tuple[list[dict], int]:
     studies_rows = db.query("studies", {"project_id": project_id})
     studies_by_id = {s["study_id"]: s for s in studies_rows}
     human_decided_ids = _get_human_decided_ids(db, project_id)
@@ -976,37 +982,143 @@ def merge_all(project_id: str, master_strategy: str = "most_complete",
             "duplicate_ids": [sid for sid in member_ids if sid != master["study_id"]],
             "fields_to_fill": fills,
         })
+    return plan, skipped_human_decided
 
-    response = {
+
+def _current_plan_fingerprint(db: DBBackend, project_id: str, master_strategy: str = "most_complete") -> str:
+    plan, _ = _build_plan_items(db, project_id, master_strategy)
+    return _plan_fingerprint(plan)
+
+
+def _persist_plan(db: DBBackend, project_id: str, plan: list[dict], skip_report: dict) -> tuple[str, str]:
+    plan_id = str(uuid.uuid4())
+    fp = _plan_fingerprint(plan)
+    db.insert("dedup_merge_plans", {
+        "plan_id": plan_id,
         "project_id": project_id,
-        "dry_run": dry_run,
-        "master_strategy": master_strategy,
-        "total_groups": len(plan),
-        "plan": plan,
-        "skipped_human_decided": skipped_human_decided,
-    }
-    if dry_run:
-        return response
+        "fingerprint": fp,
+        "plan_json": json.dumps(plan),
+        "skip_report": json.dumps(skip_report),
+        "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+    })
+    return plan_id, fp
 
-    run_id = run_id or str(uuid.uuid4())
-    run = {
-        "run_id": run_id,
-        "project_id": project_id,
-        "status": "running",
-        "total_groups": len(plan),
-        "processed": 0,
-        "merged": 0,
-        "failed": 0,
-        "skipped_human_decided": skipped_human_decided,
-        "merged_group_ids": [],
-        "pause_requested": False,
-    }
-    _merge_runs[run_id] = run
 
-    for item in plan:
-        if run["pause_requested"]:
+def _load_plan(db: DBBackend, plan_id: str) -> Optional[dict]:
+    row = db.get("dedup_merge_plans", plan_id)
+    if not row:
+        return None
+    res = dict(row)
+    if isinstance(res.get("plan_json"), str):
+        try:
+            res["plan"] = json.loads(res["plan_json"])
+        except Exception:
+            res["plan"] = []
+    else:
+        res["plan"] = res.get("plan_json") or []
+    if isinstance(res.get("skip_report"), str):
+        try:
+            res["skip_report"] = json.loads(res["skip_report"])
+        except Exception:
+            res["skip_report"] = {}
+    else:
+        res["skip_report"] = res.get("skip_report") or {}
+    return res
+
+
+def _write_run_row(db: DBBackend, run: dict) -> None:
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    payload = {
+        "run_id": run["run_id"],
+        "plan_id": run.get("plan_id", ""),
+        "project_id": run["project_id"],
+        "status": run.get("status", "running"),
+        "total_groups": run.get("total_groups", 0),
+        "processed": run.get("processed", 0),
+        "merged": run.get("merged", 0),
+        "failed": run.get("failed", 0),
+        "skipped_human_decided": run.get("skipped_human_decided", 0),
+        "merged_group_ids": json.dumps(run.get("merged_group_ids", [])),
+        "errors": json.dumps(run.get("errors", [])),
+        "pause_requested": 1 if run.get("pause_requested") else 0,
+        "updated_at": now_str,
+    }
+    existing = db.get("dedup_merge_runs", run["run_id"])
+    if existing:
+        db.update("dedup_merge_runs", run["run_id"], payload)
+    else:
+        payload["created_at"] = run.get("created_at") or now_str
+        db.insert("dedup_merge_runs", payload)
+
+
+def _load_run_from_db(db: DBBackend, run_id: str) -> Optional[dict]:
+    row = db.get("dedup_merge_runs", run_id)
+    if not row:
+        return None
+    res = dict(row)
+    if isinstance(res.get("merged_group_ids"), str):
+        try:
+            res["merged_group_ids"] = json.loads(res["merged_group_ids"])
+        except Exception:
+            res["merged_group_ids"] = []
+    if isinstance(res.get("errors"), str):
+        try:
+            res["errors"] = json.loads(res["errors"])
+        except Exception:
+            res["errors"] = []
+    res["pause_requested"] = bool(res.get("pause_requested"))
+    return res
+
+
+def get_merge_all_status(run_id: str, db: Optional[DBBackend] = None) -> dict:
+    db = db or get_db_backend()
+    db_run = _load_run_from_db(db, run_id)
+    if db_run:
+        _merge_runs[run_id] = db_run
+        return dict(db_run)
+    run = _merge_runs.get(run_id)
+    if not run:
+        raise ValueError(f"Unknown merge-all run {run_id}")
+    return dict(run)
+
+
+def pause_merge_all(run_id: str, db: Optional[DBBackend] = None) -> dict:
+    db = db or get_db_backend()
+    run = _merge_runs.get(run_id)
+    if run and run.get("status") == "running":
+        run["pause_requested"] = True
+    row = db.get("dedup_merge_runs", run_id)
+    if row:
+        if row.get("status") == "running":
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+            db.update("dedup_merge_runs", run_id, {
+                "pause_requested": 1,
+                "updated_at": now_str,
+            })
+            db.commit()
+    elif not run:
+        raise ValueError(f"Unknown merge-all run {run_id}")
+    return get_merge_all_status(run_id, db=db)
+
+
+def _execute_plan_items(db: DBBackend, project_id: str, items: list[dict], run: dict,
+                        actor: str, run_id: str) -> dict:
+    for item in items:
+        # Check pause requested: in memory cache or in DB
+        if _merge_runs.get(run_id, {}).get("pause_requested"):
             run["status"] = "paused"
+            run["pause_requested"] = True
+            _write_run_row(db, run)
+            db.commit()
             break
+        db_check = db.get("dedup_merge_runs", run_id)
+        if db_check and db_check.get("pause_requested"):
+            run["status"] = "paused"
+            run["pause_requested"] = True
+            _write_run_row(db, run)
+            db.commit()
+            break
+
         try:
             accept_group(project_id, item["group_id"], db=db, actor=actor)
             run["merged"] += 1
@@ -1014,16 +1126,155 @@ def merge_all(project_id: str, master_strategy: str = "most_complete",
         except Exception as e:
             run["failed"] += 1
             run.setdefault("errors", []).append({"group_id": item["group_id"], "error": str(e)})
-        run["processed"] += 1
-    else:
-        run["status"] = "completed"
 
-    if run["status"] == "running":
-        run["status"] = "completed"
+        run["processed"] += 1
+        _write_run_row(db, run)
+        db.commit()
+    else:
+        if run["status"] == "running":
+            run["status"] = "completed"
+            _write_run_row(db, run)
+            db.commit()
+
+    return {
+        "project_id": project_id,
+        "run_id": run_id,
+        "plan_id": run.get("plan_id", ""),
+        "status": run["status"],
+        "total_groups": run["total_groups"],
+        "processed": run["processed"],
+        "merged": run["merged"],
+        "failed": run["failed"],
+        "skipped_human_decided": run["skipped_human_decided"],
+        "merged_group_ids": run["merged_group_ids"],
+        "plan": items,
+    }
+
+
+def merge_all(project_id: str, master_strategy: str = "most_complete",
+              include_auto: bool = True, dry_run: bool = False,
+              db: Optional[DBBackend] = None, actor: str = "user",
+              run_id: Optional[str] = None,
+              plan_id: Optional[str] = None) -> dict:
+    """Bulk-merge pending duplicate groups (Zoplicate BulkMergeController).
+
+    - Dry-run: returns the full merge plan (N groups, master per group,
+      fields to fill) and persists it to dedup_merge_plans with a sha256 fingerprint.
+    - Execute: requires a valid plan_id. Recomputes current fingerprint; raises
+      StalePlanError if changed. Enforces single active run lease per project.
+      Executes merges sequentially with per-group commit (crash-resilient).
+    """
+    db = db or get_db_backend()
+    if master_strategy not in ("most_complete", "newest", "oldest", "has_decision"):
+        raise ValueError(f"Invalid master_strategy: {master_strategy}")
+
+    if dry_run:
+        plan, skipped_human_decided = _build_plan_items(db, project_id, master_strategy)
+        saved_plan_id, fp = _persist_plan(db, project_id, plan, {"skipped_human_decided": skipped_human_decided})
+        db.commit()
+        return {
+            "project_id": project_id,
+            "dry_run": True,
+            "plan_id": saved_plan_id,
+            "fingerprint": fp,
+            "master_strategy": master_strategy,
+            "total_groups": len(plan),
+            "plan": plan,
+            "skipped_human_decided": skipped_human_decided,
+        }
+
+    # Execute path requires plan_id
+    if not plan_id:
+        raise ValueError("plan_id is required to execute merge-all")
+
+    saved_plan = _load_plan(db, plan_id)
+    if not saved_plan or saved_plan.get("project_id") != project_id:
+        raise StalePlanError(f"Plan '{plan_id}' not found for project '{project_id}'")
+
+    current_fp = _current_plan_fingerprint(db, project_id, master_strategy)
+    if current_fp != saved_plan.get("fingerprint"):
+        raise StalePlanError("Plan is stale; study data or groups have changed since plan was generated")
+
+    # Enforce single active run per project
+    running_runs = db.query("dedup_merge_runs", {"project_id": project_id, "status": "running"})
+    now = datetime.now(timezone.utc)
+    for r_run in running_runs:
+        up_dt = _parse_db_datetime(r_run.get("updated_at") or r_run.get("created_at"))
+        if up_dt and (now - up_dt).total_seconds() < RUN_LEASE_MINUTES * 60:
+            raise ActiveRunExistsError(f"An active merge-all run ({r_run['run_id']}) is already in progress")
+        else:
+            # Lease expired: mark failed and reclaim
+            now_str = now.strftime("%Y-%m-%d %H:%M:%S")
+            db.update("dedup_merge_runs", r_run["run_id"], {
+                "status": "failed",
+                "errors": json.dumps([{"error": "Lease expired"}]),
+                "updated_at": now_str,
+            })
+            if r_run["run_id"] in _merge_runs:
+                _merge_runs[r_run["run_id"]]["status"] = "failed"
+            db.commit()
+
+    run_id = run_id or str(uuid.uuid4())
+    now_str = now.strftime("%Y-%m-%d %H:%M:%S")
+    plan_items = saved_plan["plan"]
+    run = {
+        "run_id": run_id,
+        "plan_id": plan_id,
+        "project_id": project_id,
+        "status": "running",
+        "total_groups": len(plan_items),
+        "processed": 0,
+        "merged": 0,
+        "failed": 0,
+        "skipped_human_decided": saved_plan.get("skip_report", {}).get("skipped_human_decided", 0),
+        "merged_group_ids": [],
+        "errors": [],
+        "pause_requested": False,
+        "created_at": now_str,
+        "updated_at": now_str,
+    }
+    _write_run_row(db, run)
+    _merge_runs[run_id] = run
     db.commit()
-    response.update({"run_id": run_id, "merged": run["merged"], "failed": run["failed"],
-                     "status": run["status"], "processed": run["processed"]})
-    return response
+
+    return _execute_plan_items(db, project_id, plan_items, run, actor, run_id)
+
+
+def resume_merge_all(project_id: str, run_id: str, db: Optional[DBBackend] = None,
+                     actor: str = "user") -> dict:
+    """Resume a paused or failed merge-all run."""
+    db = db or get_db_backend()
+    run = _load_run_from_db(db, run_id)
+    if not run:
+        run = _merge_runs.get(run_id)
+    if not run:
+        raise ValueError(f"Run {run_id} not found")
+    if run.get("project_id") != project_id:
+        raise ValueError("Run does not belong to this project")
+    if run.get("status") not in ("paused", "failed"):
+        raise ValueError(f"Cannot resume run with status '{run.get('status')}'; must be 'paused' or 'failed'")
+
+    plan_id = run.get("plan_id")
+    saved_plan = _load_plan(db, plan_id)
+    if not saved_plan:
+        raise StalePlanError(f"Original plan {plan_id} not found")
+
+    merged_ids = set(run.get("merged_group_ids") or [])
+    remaining_items = [item for item in saved_plan["plan"] if item["group_id"] not in merged_ids]
+
+    current_plan, _ = _build_plan_items(db, project_id)
+    if _plan_fingerprint(remaining_items) != _plan_fingerprint(current_plan):
+        raise StalePlanError("Plan is stale; remaining study data or groups have changed")
+
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    run["status"] = "running"
+    run["pause_requested"] = False
+    run["updated_at"] = now_str
+    _write_run_row(db, run)
+    _merge_runs[run_id] = run
+    db.commit()
+
+    return _execute_plan_items(db, project_id, remaining_items, run, actor, run_id)
 
 
 def resolve_duplicate_decision(

@@ -141,22 +141,21 @@ def get_prisma_2020_data(project_id: str, db) -> Dict[str, Any]:
     human_count = decisions_stats["human_decisions"] if decisions_stats else 0
 
     # Duplicates removed by tier (dedup_plan §7 / zoplicate plan §4):
-    # T0/T1/T2 auto merges vs human-accepted merges, from the dedup audit log.
-    # Rejected pairs count as unique records (never marked), so they are
-    # naturally excluded here.
+    # Active markings reconciled with duplicates_removed (s.is_duplicate = 1).
+    # Joined with dedup_groups for tier; unclassified bucket covers legacy markings.
     duplicates_removed_by_tier: Dict[str, int] = {}
     try:
         for row in db.execute(
-            """SELECT tier, COUNT(*) AS c FROM dedup_audit
-               WHERE project_id = ? AND action IN ('auto_merge', 'accept_merge')
-               GROUP BY tier""",
+            """SELECT COALESCE(NULLIF(g.tier, ''), 'unclassified') AS tier, COUNT(*) AS c
+               FROM studies s LEFT JOIN dedup_groups g ON s.duplicate_group_id = g.group_id
+               WHERE s.project_id = ? AND s.is_duplicate = 1 GROUP BY tier""",
             (project_id,),
         ).fetchall():
             r = dict(row) if not isinstance(row, dict) else row
-            tier = r.get("tier") or "unspecified"
+            tier = r.get("tier") or "unclassified"
             duplicates_removed_by_tier[tier] = duplicates_removed_by_tier.get(tier, 0) + r["c"]
     except Exception:
-        pass  # dedup_audit table may not exist in older databases
+        pass
 
     return {
         "project_id": project_id,

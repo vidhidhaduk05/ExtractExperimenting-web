@@ -1319,14 +1319,33 @@ async def upload_references(
     # Collect existing DOIs and titles with their study_id for exact duplicate linking
     existing_doi_map: dict[str, str] = {}
     existing_title_map: dict[str, str] = {}
+    existing_studies_map: dict[str, dict] = {}
     rows = conn.execute(
-        "SELECT study_id, doi, title FROM studies WHERE project_id = ?", (project_id,)
+        "SELECT study_id, doi, title, pmid FROM studies WHERE project_id = ?", (project_id,)
     ).fetchall()
     for r in rows:
-        if r["doi"]:
-            existing_doi_map[r["doi"].lower().strip()] = r["study_id"]
-        if r["title"]:
-            existing_title_map[r["title"].lower().strip()] = r["study_id"]
+        row_dict = dict(r) if not isinstance(r, dict) else r
+        sid = row_dict["study_id"]
+        existing_studies_map[sid] = row_dict
+        if row_dict.get("doi"):
+            existing_doi_map[row_dict["doi"].lower().strip()] = sid
+        if row_dict.get("title"):
+            existing_title_map[row_dict["title"].lower().strip()] = sid
+
+    # Rejected pairs to respect rejection memory during intake
+    rejected_pairs: set[tuple[str, str]] = set()
+    try:
+        nd_rows = conn.execute(
+            "SELECT study_id_a, study_id_b FROM non_duplicates WHERE project_id = ?",
+            (project_id,),
+        ).fetchall()
+        for nd in nd_rows:
+            a = nd["study_id_a"] if isinstance(nd, dict) else nd[0]
+            b = nd["study_id_b"] if isinstance(nd, dict) else nd[1]
+            pair = (min(a, b), max(a, b))
+            rejected_pairs.add(pair)
+    except Exception:
+        pass
 
     total_imported = 0
     total_skipped = 0
@@ -1418,16 +1437,39 @@ async def upload_references(
         for idx, study_data in enumerate(studies, 1):
             doi = study_data.get("doi", "").lower().strip()
             title = study_data.get("title", "").lower().strip()
+            pmid = str(study_data.get("pmid") or "").lower().strip()
 
             matched_study_id: Optional[str] = None
             match_reason: Optional[str] = None
 
+            # LIMITATION & SAFETY CONFLICT GUARD (dedup_plan §5 / Zoplicate):
+            # Exact mapping is an intake shortcut. To prevent false-positive duplicate
+            # linking, matches are guarded against:
+            # 1. Conflicting PMIDs when DOI matches
+            # 2. Conflicting DOIs when title matches
+            # 3. Numeric differences in titles ("Phase 1" vs "Phase 2")
+            # Invariant preserved: file_total = file_imported + file_duplicates + file_failed.
             if doi and doi in existing_doi_map:
-                matched_study_id = existing_doi_map[doi]
-                match_reason = "doi"
+                candidate_id = existing_doi_map[doi]
+                candidate = existing_studies_map.get(candidate_id, {})
+                c_pmid = str(candidate.get("pmid") or "").lower().strip()
+                if pmid and c_pmid and pmid != c_pmid:
+                    candidate_id = None
+                if candidate_id:
+                    matched_study_id = candidate_id
+                    match_reason = "doi"
             elif title and title in existing_title_map:
-                matched_study_id = existing_title_map[title]
-                match_reason = "title"
+                candidate_id = existing_title_map[title]
+                candidate = existing_studies_map.get(candidate_id, {})
+                c_doi = (candidate.get("doi") or "").lower().strip()
+                c_title = (candidate.get("title") or "").lower().strip()
+                if doi and c_doi and doi != c_doi:
+                    candidate_id = None
+                elif re.findall(r"\d+", title) != re.findall(r"\d+", c_title):
+                    candidate_id = None
+                if candidate_id:
+                    matched_study_id = candidate_id
+                    match_reason = "title"
 
             if matched_study_id:
                 # Duplicate record - link batch contribution as secondary creator
@@ -1487,6 +1529,12 @@ async def upload_references(
                 existing_doi_map[doi] = new_study_id
             if title:
                 existing_title_map[title] = new_study_id
+            existing_studies_map[new_study_id] = {
+                "study_id": new_study_id,
+                "doi": doi,
+                "title": title,
+                "pmid": pmid,
+            }
 
             file_imported += 1
             total_imported += 1

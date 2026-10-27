@@ -43,8 +43,10 @@ def client():
 
 def _make_app():
     from fastapi import FastAPI
+    from routers import meta
     app = FastAPI()
     app.include_router(screening.router)
+    app.include_router(meta.router)
     return app
 
 
@@ -202,7 +204,7 @@ def test_merge_fills_missing_fields_master_wins_conflicts():
 
 def test_merge_is_reversible_with_audit_trail():
     pid, (a, b) = _make_project(
-        {"title": "Trial A", "doi": "10.1234/m", "year": 2021},
+        {"title": "Trial A", "doi": "10.1234/m", "year": 2021, "abstract": "Master text"},
         {"title": "Trial A", "doi": "10.1234/m", "year": 2021},
     )
     dedup_service.deduplicate_studies(pid, auto_mark=True)
@@ -256,8 +258,10 @@ def test_reject_group_writes_non_duplicates_and_never_reappears():
 
 def _make_app():
     from fastapi import FastAPI
+    from routers import meta
     app = FastAPI()
     app.include_router(screening.router)
+    app.include_router(meta.router)
     return app
 
 
@@ -314,11 +318,13 @@ def test_merge_all_dry_run_matches_executed_merges():
     assert dry["dry_run"] is True
     assert dry["total_groups"] == 2
     assert dry["skipped_human_decided"] == 0
+    assert "plan_id" in dry
+    plan_id = dry["plan_id"]
     plan_masters = {g["master_study_id"] for g in dry["plan"]}
     assert len(plan_masters) == 2
 
-    # execute: plan matches exactly
-    exec_res = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": False}).json()
+    # execute: requires plan_id, plan matches exactly
+    exec_res = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": False, "plan_id": plan_id}).json()
     assert exec_res["merged"] == 2 and exec_res["failed"] == 0
     exec_masters = {g["master_study_id"] for g in exec_res["plan"]}
     assert exec_masters == plan_masters
@@ -333,10 +339,10 @@ def test_merge_all_skips_human_decided_records():
         {"title": "Study H", "doi": "10.8765/h", "year": 2020},
         {"title": "Study I", "doi": "10.8765/i", "year": 2021},
     )
-    # second auto pair for study c? make one more
     dedup_service.deduplicate_studies(pid, auto_mark=False)
     r = TestClient(_make_app())
-    res = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": False}).json()
+    dry = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": True}).json()
+    res = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": False, "plan_id": dry["plan_id"]}).json()
     assert res["skipped_human_decided"] >= 1
     # the human-decided record was never touched
     assert _study(a)["is_duplicate"] == 0 and _study(a)["screening_status"] == "excluded"
@@ -368,7 +374,8 @@ def test_merge_all_pause_leaves_completed_groups_merged():
 
     ds.accept_group = pausing_accept
     try:
-        res = ds.merge_all(pid, dry_run=False)
+        dry = ds.merge_all(pid, dry_run=True)
+        res = ds.merge_all(pid, dry_run=False, plan_id=dry["plan_id"])
     finally:
         ds.accept_group = orig_accept
 
@@ -386,7 +393,113 @@ def test_merge_all_pause_leaves_completed_groups_merged():
     assert pending == 2
 
 
-# ── Step 7: PRISMA by-tier ──
+def test_merge_all_execute_without_plan_id_raises_400():
+    pid, (a, b) = _make_project(
+        {"title": "Study Test 400", "doi": "10.4001/a", "year": 2020},
+        {"title": "Study Test 400", "doi": "10.4001/a", "year": 2020},
+    )
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+    r = TestClient(_make_app())
+    res = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": False})
+    assert res.status_code == 400
+    assert "plan_id is required" in res.json()["detail"]
+
+
+def test_merge_all_stale_plan_raises_409():
+    pid, (a, b) = _make_project(
+        {"title": "Study Test Stale", "doi": "10.4091/a", "year": 2020},
+        {"title": "Study Test Stale", "doi": "10.4091/a", "year": 2020},
+    )
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+    r = TestClient(_make_app())
+    dry = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": True}).json()
+    plan_id = dry["plan_id"]
+
+    # Invalidate plan by marking a study as human decided
+    conn = get_connection()
+    try:
+        conn.execute("UPDATE studies SET screening_status = 'excluded' WHERE study_id = ?", (a,))
+        conn.commit()
+    finally:
+        conn.close()
+
+    res = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": False, "plan_id": plan_id})
+    assert res.status_code == 409
+    assert "stale" in res.json()["detail"].lower()
+
+
+def test_merge_all_active_run_conflict_raises_409():
+    pid, (a, b) = _make_project(
+        {"title": "Study Test Active Run", "doi": "10.4092/a", "year": 2020},
+        {"title": "Study Test Active Run", "doi": "10.4092/a", "year": 2020},
+    )
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+    r = TestClient(_make_app())
+    dry = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": True}).json()
+    plan_id = dry["plan_id"]
+
+    # Insert an active running job in dedup_merge_runs
+    conn = get_connection()
+    try:
+        conn.execute(
+            """INSERT INTO dedup_merge_runs (run_id, project_id, status, created_at, updated_at)
+               VALUES ('active_run_1', ?, 'running', datetime('now'), datetime('now'))""",
+            (pid,),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    res = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": False, "plan_id": plan_id})
+    assert res.status_code == 409
+    assert "active merge-all run" in res.json()["detail"].lower()
+
+
+def test_merge_all_pause_and_resume_durability():
+    titles = ["CT for Stroke diagnosis", "MRI for knee cartilage", "Ultrasound for thyroid nodule"]
+    rows = []
+    for i, t in enumerate(titles):
+        rows.append({"title": t, "doi": f"10.5555/{i}x", "year": 2020, "authors": "Lee K"})
+        rows.append({"title": t, "doi": f"10.5555/{i}x", "year": 2020, "authors": "Lee K"})
+    pid, sids = _make_project(*rows)
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+
+    from services import dedup_service as ds
+    orig_accept = ds.accept_group
+    calls = {"n": 0}
+
+    def pausing_accept(*args, **kwargs):
+        result = orig_accept(*args, **kwargs)
+        calls["n"] += 1
+        if calls["n"] >= 1:
+            for run in ds._merge_runs.values():
+                if run["status"] == "running":
+                    run["pause_requested"] = True
+        return result
+
+    ds.accept_group = pausing_accept
+    r = TestClient(_make_app())
+    dry = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": True}).json()
+    try:
+        paused_res = r.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": False, "plan_id": dry["plan_id"]}).json()
+    finally:
+        ds.accept_group = orig_accept
+
+    assert paused_res["status"] == "paused"
+    run_id = paused_res["run_id"]
+
+    # Verify status from status endpoint
+    st_res = r.get(f"/api/projects/{pid}/dedup/merge-all/status?run_id={run_id}").json()
+    assert st_res["status"] == "paused"
+    assert st_res["merged"] == 1
+
+    # Resume the paused run
+    resume_res = r.post(f"/api/projects/{pid}/dedup/merge-all/resume", json={"run_id": run_id}).json()
+    assert resume_res["status"] == "completed"
+    assert resume_res["merged"] == 3
+
+
+# ── Step 7: PRISMA by-tier & Undo reconciliation ──
 
 def test_prisma_duplicates_removed_by_tier():
     from services.prisma_service import get_prisma_2020_data
@@ -403,3 +516,77 @@ def test_prisma_duplicates_removed_by_tier():
     by_tier = data["identification"]["duplicates_removed_by_tier"]
     assert by_tier.get("T0") == 1
     assert data["identification"]["duplicates_removed"] == 1
+
+
+def test_prisma_counts_after_undo_stay_correct():
+    from services.prisma_service import get_prisma_2020_data
+    pid, (a, b) = _make_project(
+        {"title": "PRISMA study reversible", "doi": "10.1124/rev", "year": 2020},
+        {"title": "PRISMA study reversible", "doi": "10.1124/rev", "year": 2020},
+    )
+    res = dedup_service.deduplicate_studies(pid, auto_mark=True)
+    gid = res["duplicate_groups"][0]["group_id"]
+    conn = get_connection()
+    try:
+        data_before = get_prisma_2020_data(pid, conn)
+        assert data_before["identification"]["duplicates_removed"] == 1
+        assert data_before["identification"]["duplicates_removed_by_tier"].get("T0") == 1
+
+        # Now undo via keep_both
+        dedup_service.keep_both_group(pid, gid)
+        data_after = get_prisma_2020_data(pid, conn)
+        # Reconciles back to 0!
+        assert data_after["identification"]["duplicates_removed"] == 0
+        assert data_after["identification"]["duplicates_removed_by_tier"].get("T0", 0) == 0
+    finally:
+        conn.close()
+
+
+def test_meta_analysis_pooling_guard_blocks_duplicate_family():
+    pid, (a, b, c) = _make_project(
+        {"title": "Trial Alpha", "doi": "10.9999/alpha", "year": 2020},
+        {"title": "Trial Alpha", "doi": "10.9999/alpha", "year": 2020},
+        {"title": "Trial Beta", "doi": "10.9999/beta", "year": 2021},
+    )
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+    r = TestClient(_make_app())
+
+    # Attempt to pool studies a and b (which belong to the same dedup group)
+    payload = {
+        "outcome_label": "Sensitivity",
+        "analysis_type": "generic",
+        "effect_measure": "md",
+        "study_data": [
+            {"study_id": a, "effect": 1.2, "se": 0.2, "included": True},
+            {"study_id": b, "effect": 1.3, "se": 0.2, "included": True},
+            {"study_id": c, "effect": 0.9, "se": 0.1, "included": True},
+        ],
+    }
+    resp = r.post(f"/api/projects/{pid}/meta-analyses", json=payload)
+    assert resp.status_code == 409
+    assert "Cannot pool duplicate studies in meta-analysis" in resp.json()["detail"]
+
+
+def test_keep_both_conflict_raises_409():
+    pid, (a, b) = _make_project(
+        {"title": "Master Record", "doi": "10.8888/orig", "pmid": "88888", "abstract": "", "year": 2020},
+        {"title": "Duplicate Record", "doi": "10.8888/orig", "abstract": "Dup abstract", "year": 2020},
+    )
+    res = dedup_service.deduplicate_studies(pid, auto_mark=True)
+    gid = res["duplicate_groups"][0]["group_id"]
+
+    # Verify abstract was filled into master 'a'
+    assert _study(a)["abstract"] == "Dup abstract"
+
+    # User manually edits master's filled abstract to something else
+    conn = get_connection()
+    try:
+        conn.execute("UPDATE studies SET abstract = 'Modified abstract' WHERE study_id = ?", (a,))
+        conn.commit()
+    finally:
+        conn.close()
+
+    r = TestClient(_make_app())
+    resp = r.post(f"/api/projects/{pid}/dedup/{gid}/keep-both")
+    assert resp.status_code == 409
+    assert "edited after the merge" in resp.json()["detail"].lower()

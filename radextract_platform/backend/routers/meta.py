@@ -43,6 +43,69 @@ class MetaAnalysisStudyUpdate(BaseModel):
 
 # ── CRUD ──
 
+def _check_duplicate_family_guard(conn: Any, project_id: str, study_ids: list[str]) -> None:
+    """Ensure no two included studies in meta-analysis share a duplicate family (dedup_groups row)."""
+    if len(study_ids) < 2:
+        return
+
+    study_id_set = set(study_ids)
+    group_to_studies: dict[str, set[str]] = {}
+
+    placeholders = ",".join("?" for _ in study_ids)
+    try:
+        s_rows = conn.execute(
+            f"SELECT study_id, duplicate_group_id FROM studies WHERE study_id IN ({placeholders}) AND duplicate_group_id IS NOT NULL AND duplicate_group_id != ''",
+            tuple(study_ids),
+        ).fetchall()
+        for r in s_rows:
+            r_dict = dict(r) if not isinstance(r, dict) else r
+            gid = r_dict.get("duplicate_group_id")
+            if gid:
+                group_to_studies.setdefault(gid, set()).add(r_dict["study_id"])
+    except Exception:
+        pass
+
+    try:
+        g_rows = conn.execute(
+            "SELECT group_id, member_study_ids, status FROM dedup_groups WHERE project_id = ?",
+            (project_id,),
+        ).fetchall()
+        for g in g_rows:
+            g_dict = dict(g) if not isinstance(g, dict) else g
+            if g_dict.get("status") in ("keep_both", "rejected"):
+                continue
+            gid = g_dict.get("group_id")
+            try:
+                members = set(json.loads(g_dict.get("member_study_ids") or "[]"))
+            except Exception:
+                members = set()
+            shared = members.intersection(study_id_set)
+            if len(shared) >= 2:
+                group_to_studies.setdefault(gid, set()).update(shared)
+    except Exception:
+        pass
+
+    conflicting_groups = set()
+    for gid, sids in group_to_studies.items():
+        if len(sids) >= 2:
+            try:
+                grow = conn.execute("SELECT status FROM dedup_groups WHERE group_id = ?", (gid,)).fetchone()
+                if grow:
+                    st = grow["status"] if isinstance(grow, dict) else grow[0]
+                    if st in ("keep_both", "rejected"):
+                        continue
+            except Exception:
+                pass
+            conflicting_groups.add(gid)
+
+    if conflicting_groups:
+        sorted_gids = sorted(conflicting_groups)
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot pool duplicate studies in meta-analysis. Duplicate group(s) detected: {sorted_gids}. Resolve duplicates first.",
+        )
+
+
 @router.post("/projects/{project_id}/meta-analyses")
 async def create_meta_analysis(
     project_id: str,
@@ -62,6 +125,11 @@ async def create_meta_analysis(
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user)
+
+    # Dedup guard: prevent pooling duplicate family studies
+    if body.study_data:
+        included_study_ids = [sd["study_id"] for sd in body.study_data if sd.get("study_id") and sd.get("included", True)]
+        _check_duplicate_family_guard(conn, project_id, included_study_ids)
 
     conn.execute(
         """INSERT INTO meta_analyses
@@ -271,6 +339,15 @@ async def run_meta_analysis(
 async def _run_analysis(meta_id: str, analysis_type: str, effect_measure: str,
                         conn: sqlite3.Connection, study_data: list[dict] = None) -> dict:
     """Internal: run the analysis and persist results."""
+    meta_row = conn.execute("SELECT project_id FROM meta_analyses WHERE meta_id = ?", (meta_id,)).fetchone()
+    project_id = (meta_row["project_id"] if isinstance(meta_row, dict) else meta_row[0]) if meta_row else ""
+
+    mas_rows = conn.execute(
+        "SELECT study_id FROM meta_analysis_studies WHERE meta_id = ? AND included = 1",
+        (meta_id,),
+    ).fetchall()
+    included_study_ids = [(r["study_id"] if isinstance(r, dict) else r[0]) for r in mas_rows if (r["study_id"] if isinstance(r, dict) else r[0])]
+
     if study_data is None:
         studies = conn.execute(
             "SELECT * FROM meta_analysis_studies WHERE meta_id = ? AND included = 1",
@@ -278,10 +355,19 @@ async def _run_analysis(meta_id: str, analysis_type: str, effect_measure: str,
         ).fetchall()
         study_data = []
         for s in studies:
-            raw = json.loads(s["raw_data_json"]) if s["raw_data_json"] else {}
-            raw["label"] = s["study_label"] or raw.get("label", f"Study {len(study_data)+1}")
+            s_dict = dict(s) if not isinstance(s, dict) else s
+            raw = json.loads(s_dict["raw_data_json"]) if s_dict.get("raw_data_json") else {}
+            raw["label"] = s_dict.get("study_label") or raw.get("label", f"Study {len(study_data)+1}")
             raw["included"] = True
+            if s_dict.get("study_id") and "study_id" not in raw:
+                raw["study_id"] = s_dict["study_id"]
             study_data.append(raw)
+
+    if not included_study_ids and study_data:
+        included_study_ids = [sd["study_id"] for sd in study_data if sd.get("study_id") and sd.get("included", True)]
+
+    if project_id and included_study_ids:
+        _check_duplicate_family_guard(conn, project_id, included_study_ids)
 
     try:
         results = ma.run_meta_analysis(analysis_type, study_data, effect_measure)

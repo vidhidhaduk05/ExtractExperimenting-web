@@ -392,10 +392,12 @@ async def keep_both_dedup_group(
     """Keep both records: unmark any duplicate flags inside the group and
     close it as keep_both (reversible)."""
     check_project_access(conn, project_id, user, min_role="editor")
-    from services.dedup_service import keep_both_group
+    from services.dedup_service import keep_both_group, MergeUndoConflictError
     actor = (user or {}).get("user_id", "user") or "user"
     try:
         return keep_both_group(project_id, group_id, db=conn, actor=actor)
+    except MergeUndoConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -432,7 +434,8 @@ async def merge_all_dedup(
     """Bulk-merge pending duplicate groups (Zoplicate BulkMergeController port).
 
     body: { master_strategy: "most_complete"|"newest"|"oldest"|"has_decision",
-            dry_run: bool }
+            dry_run: bool,
+            plan_id?: str }
     Dry-run returns the full merge plan for a confirm dialog without executing.
     Records with human decisions are skipped and reported."""
     check_project_access(conn, project_id, user, min_role="editor")
@@ -442,21 +445,72 @@ async def merge_all_dedup(
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    from services.dedup_service import merge_all as _merge_all
+    from services.dedup_service import (
+        merge_all as _merge_all,
+        StalePlanError,
+        ActiveRunExistsError,
+    )
     from starlette.concurrency import run_in_threadpool
     payload = payload or {}
     actor = (user or {}).get("user_id", "user") or "user"
+    dry_run = bool(payload.get("dry_run", False))
+    plan_id = payload.get("plan_id")
+    if not dry_run and not plan_id:
+        raise HTTPException(status_code=400, detail="plan_id is required to execute merge-all")
     try:
         result = await run_in_threadpool(
             _merge_all,
             project_id,
             payload.get("master_strategy", "most_complete"),
             bool(payload.get("include_auto", True)),
-            bool(payload.get("dry_run", False)),
+            dry_run,
+            conn,
+            actor,
+            None,
+            plan_id,
+        )
+        return result
+    except (StalePlanError, ActiveRunExistsError) as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/merge-all/resume")
+async def merge_all_resume(
+    project_id: str,
+    payload: dict,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Resume a paused or failed merge-all run."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    run_id = (payload or {}).get("run_id", "")
+    if not run_id:
+        raise HTTPException(status_code=400, detail="run_id is required")
+    from services.dedup_service import (
+        resume_merge_all as _resume_merge_all,
+        StalePlanError,
+        ActiveRunExistsError,
+    )
+    from starlette.concurrency import run_in_threadpool
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        return await run_in_threadpool(
+            _resume_merge_all,
+            project_id,
+            run_id,
             conn,
             actor,
         )
-        return result
+    except (StalePlanError, ActiveRunExistsError) as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -472,7 +526,7 @@ async def merge_all_status(
     check_project_access(conn, project_id, user)
     from services.dedup_service import get_merge_all_status
     try:
-        run = get_merge_all_status(run_id)
+        run = get_merge_all_status(run_id, db=conn)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     if run.get("project_id") != project_id:
@@ -494,7 +548,7 @@ async def merge_all_pause(
     if not run_id:
         raise HTTPException(status_code=400, detail="run_id is required")
     try:
-        run = pause_merge_all(run_id)
+        run = pause_merge_all(run_id, db=conn)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     if run.get("project_id") != project_id:
