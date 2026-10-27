@@ -2,6 +2,8 @@
 
 Prepared: 27 October 2026
 
+Updated companion: `RADEXTRACT_UPDATED_BLUEPRINT.html`. This revision includes the user's confirmed request for spreadsheet-style inclusion AND exclusion criteria with right-column importance-weight sliders, generic protocol clarification, reproducible score explanations and primary-source statistical validation requirements. Read the entire required addition near the end; it is part of acceptance, not background.
+
 ## Objective and authority
 
 Complete and verify the real review workflow from project creation to export, then deliver the reference-manager screening layout. Preserve existing work. This is an execution specification, not proof that the application already works.
@@ -186,3 +188,121 @@ At each stage reconcile displayed counts, API results, persisted state and expor
 Do not stop at a plan, a successful build, a screenshot set or a happy-path demo. Finish necessary implementation and verification within authorized scope. If genuinely blocked by missing credentials, unavailable services or a required product decision, identify the exact affected acceptance items and continue independent work. Never claim blocked items passed.
 
 Final sign-off must state: **which workflows passed, on which commits, in which environment, what remains unverified, and how to roll back.** Do not claim the system is foolproof.
+
+## Required addition: protocol autofill, clarification, criterion weights and research validation
+
+This section is part of the implementation contract, not an optional future idea. Implement protocol persistence/clarification and score auditing during scientific correctness work; deliver the spreadsheet editor during UI work, before final acceptance. Read this together with Phases 0–5. Existing code observations below were inspected on 27 October 2026 and must be rechecked against the implementation checkout.
+
+### A. Exact user intent and vocabulary
+
+The user clarified that the requested sliders are **criterion importance weights**, for BOTH inclusion and exclusion criteria. They are not per-study probability overrides, not exclusion-threshold sliders and not controls for changing confidence intervals. Human/animal scope was only an example. This applies to arbitrary protocol criteria: medication identity, class, dose, route, duration, washout, co-interventions, diagnosis, age, imaging test, comparator, outcome definition, follow-up, design, setting, language, dates or publication type. Do not build a species-specific feature or silently import generic exclusions.
+
+Keep five concepts separate:
+
+| Concept | Meaning | Where it appears |
+|---|---|---|
+| Eligibility rule | User-confirmed requirement or reason for ineligibility | Protocol criterion row, with scope and source |
+| Criterion weight | User-set relative influence on the overall recommendation score | Rightmost slider and numeric field on BOTH criterion tables |
+| Model evidence score | Model output for the defined criterion question on one study | Study calculation breakdown; not editable as if it were an observation |
+| Decision threshold | Cutoff applied by a versioned recommendation policy | Advanced policy details; distinct from weights |
+| Confidence interval/bound | Uncertainty estimate for a defined statistical quantity under a stated sampling method | Validation summary, with numerator, denominator, method and assumptions |
+
+Weight 0.90 means relative influence of 0.90 on a documented scale. It does not mean 90% certainty, a 90% confidence level, or automatic exclusion. A strict rule is separate from a weighted preference. No new automatic final human decisions are authorized by this UI.
+
+### B. Protocol autofill and missing-context questions
+
+1. Extract proposed PICO and eligibility criteria from the supplied protocol/question. Keep each criterion atomic where possible, with a stable ID, direction (inclusion/exclusion), human-readable condition, machine-readable operator/value where supported, source quotation/location, scope and confirmation state.
+2. Preserve medication details and logical relationships. Do not reduce a rule such as a particular drug/dose/duration/comparator to a loose keyword. Represent AND/OR groups, conditional rules and explicit exceptions. An inclusion list is not necessarily all-AND; a row score cannot silently erase that logic.
+3. Differentiate stated, suggested, missing, contradictory and not-applicable fields. Generated suggestions remain visibly unconfirmed. Mark clinical synonym/drug-name mappings as suggestions when not supported by the protocol; validate against appropriate maintained authoritative terminology if implemented. Never infer equivalence merely from string similarity.
+4. Conduct a protocol completeness/consistency check on upload, generation, saved manual edits and before screening. Ask only consequential missing/conflicting questions; absence of a comparator/outcome restriction can be intentional. Allow explicit unrestricted/not-applicable choices. Do not impose language, date, design, drug, species or other limits without confirmation.
+5. Questions explain what is missing, why it affects eligibility, and quote the relevant protocol passage or state that none was found. Offer appropriate mutually exclusive choices and free-text refinement. Collect multiple related gaps in a reviewable list instead of one repeated notification per study.
+6. Support project/protocol-level clarification separately from study-specific ambiguity. User answers explicitly choose scope; a single-study answer must not silently become a global eligibility change. Global answers update the saved protocol version and relevant criterion IDs. Preserve author, timestamp, prior value and supersession history.
+7. Deduplicate open/resolved questions using project, protocol version, criterion and ambiguity identity. Refresh/restart must retain answers. Re-ask only if a meaningful protocol edit makes the old answer inapplicable or contradictory.
+8. Do not decide eligibility from a rule that is both missing and consequential. Mark affected recommendations pending clarification; do not stop unrelated criteria or overwrite prior human decisions. A missing study detail is unknown, not evidence of absence; unknown medication dose/duration must not be reported as an observed mismatch.
+
+Examples are illustrative: unspecified dose range, undefined prior-treatment eligibility, ambiguous comparator, mixed adult/pediatric cohorts, unclear case-series eligibility, and conflicting outcome timing. Implement a generic schema, not one hardcoded question per example.
+
+### C. Responsibility and notification wiring
+
+Current inspected responsibilities: `services/jev_screener.py` constructs questions/state, calls the local engine and composes recommendations; its `compose()` generates limited population/intervention clarification templates. `services/clarification_generator.py` provides a model-assisted path. The frontend `ClarificationNotificationCenter.tsx` polls pending backend questions (six seconds in the inspected version) and displays them. The engine itself does not send browser notifications.
+
+Use the configured local engine for criterion scoring. The backend owns protocol gap detection, question persistence, rule application and reproducible arithmetic. A language-model assistant may extract criteria or phrase a question, but must not fabricate scores, rewrite evidence or invent a statistical guarantee. UI copy uses Co-Scientist. Trace actual provider/fallback identity internally. Build on the existing clarification service after checking project/study scoping and authenticated authorship; do not create a competing inbox.
+
+Protocol-scoped questions must be retrievable even when no studies exist. Check current schema assumptions (including required study IDs and joins) and use reviewed additive migrations if needed. Avoid fake study IDs to fit the old schema. Show the question inline beside protocol and in the project clarification inbox; keep a pending entry until resolved. Toast expiry does not resolve the question. Link the notification to the correct protocol/criterion or study/stage. Track-as-todo must reference the same question, not duplicate it.
+
+### D. Spreadsheet-style editor alongside protocol
+
+Provide two clearly named sections, **Inclusion criteria** and **Exclusion criteria**, in the protocol workspace. Each lists one criterion per row. The weight slider is the RIGHTMOST column, with its exact numeric value and keyboard-editable numeric field.
+
+Recommended desktop columns: criterion/variable; condition or allowed value; source/confirmation; rule mode; **weight [slider + number]**. Example labels may use drug, dose or design, but rows come from the actual protocol. Show source text and complex logic on expansion rather than making the table unreadably wide. Keep the criterion name visible when scrolling, sensible row heights and readable text. On phones, expand a criterion into a labeled editor preserving access to its weight. Follow 1440/903/390px and short-viewport checks.
+
+Rule mode distinguishes **required eligibility rule**, **weighted recommendation signal**, **inactive**, and any supported not-applicable state. Weight controls for a strict rule must explain that a soft weight cannot cancel a required rule; disable or separate the soft weighting control where it has no mathematical role. A zero weight is not permission to disable a required protocol rule. Changing strict eligibility requires an explicit protocol edit and version increment.
+
+Sliders may use a 0.00–1.00 importance scale with 0.01 steps, a matching number input, clear endpoints and accessible labels. This is a UI design choice, not a validated probability scale. Show defaults, unsaved changes, revert-to-saved and preview/apply controls. Do not silently normalize visible values; if the scoring method normalizes them, show effective normalized values in the breakdown.
+
+Draft sliders update a preview, not persisted eligibility or human decisions on every pointer movement. Preview reports affected records and representative score changes against fixed stored evidence. Saving a policy requires suitable project permissions, preserves the prior policy and audit trail, and marks affected evaluations stale/pending recomputation. Scope is project/stage/protocol version; users must not accidentally change other projects or other reviewers' finalized decisions. Distinguish personal view preferences from shared scientific policy.
+
+### E. Weighted calculation contract
+
+Do not replace the current model output with a user-entered value or call a weighted sum a probability. First trace the active engines and every scoring/routing path. Record actual equations and known defaults. Existing code has more than one confidence calculation; identify which produced each displayed result. Both fast and standard paths must consume the same saved criteria and confirmed rules, with explicit unsupported-criterion handling.
+
+Specify and test the soft aggregation method before implementation. It must expose direction, evidence polarity, raw score, missingness, user weight, effective weight, per-criterion contribution, aggregation formula, final recommendation score and threshold. Any formula introduced here is a new heuristic until calibrated/validated; label it accordingly and compare it against the baseline. Do not learn or invent arbitrary weights from prose.
+
+For inclusion, stronger supporting evidence may increase the score; for exclusion, stronger evidence of an applicable exclusion may decrease it. Increasing a weight must have the mathematically documented effect given that criterion's evidence; it need not always move the outcome toward inclusion or exclusion regardless of match. Define interactions, missing values, correlated criteria, all-zero weights, normalization and grouped conditions. Avoid double-counting synonymous drug/design rules. Never let positive soft signals compensate for a confirmed hard exclusion, or let a required inclusion failure be hidden by unrelated positive signals. Human review remains final.
+
+Numerical formula changes and comparison operators require regression tests and versioning. Preview numbers are provisional; they must not appear in finalized exports as validated results. No ad hoc threshold/weight change can retain the old calibration badge.
+
+### F. Explain the actual recommendation, not a generated story
+
+Store an immutable evaluation trace linked to project, study/report, stage, protocol, criterion set, model/version/config, input-text hash, policy/weights, threshold and calibration versions, timestamp and actual fallback provider. Preserve raw outputs at adequate precision; round only for display. Include criterion applicability/unknown states, checked source text and page/offset when available. Never present an invented quotation or a model score as proof of a source passage.
+
+Current inspected local scorer uses `softmax(logits / temperature)` for categorical outputs; `noul` takes a particular class output. Choice confidence can be normalized entropy `1 - H(p)/log(K)`. That measures output concentration, not validated correctness. The wrapper uses the strongest exclusion candidate, population/intervention complements and a minimum-match inclusion score; another module has logistic fusion with fixed defaults. These distinct quantities must have separate labels. A generic 95% badge is unacceptable without identifying its quantity and validation.
+
+Show a concise study summary and expandable **How calculated** table: criterion → evidence/missingness → raw score → weight/contribution → threshold/policy result. State why a clarification was requested and which confirmed answer was used. The protocol page shows rules/settings/validation, not fabricated study-specific scores before any study was evaluated. Offer exportable JSON/CSV traces and a human-readable methods summary matching the actual computation. Replaying the trace under the same version must reproduce the score and recommendation.
+
+### G. Research validation and statistical intervals
+
+Primary sources reviewed for this specification are listed below. There is no universal best confidence algorithm. Calibrating probability estimates, selecting an exclusion threshold, estimating recall, and quantifying per-study uncertainty are different tasks. A model's self-reported confidence, a softmax output, entropy, two agreeing prompts, or sigmoid fusion is not a validation study.
+
+**Observed defect requiring regression:** `screening_confidence.py::_sens_lower_bound` uses a normal/Wald approximation. When observed sensitivity is one, its variance is zero and its lower bound becomes one for any positive sample size. `ALPHA=0.95` is also ambiguously named and the inspected function ignores that argument while hardcoding the 95% quantile. `select_threshold` searches multiple cutoffs on the same positives, returns fixed fusion weights, and calls this conformal calibration. Audit this before preserving any guarantee language. Verify live callers; an unused function is a code defect, not proof that a current project's displayed confidence used it.
+
+For a fixed classifier/threshold evaluated on an independent representative set of adjudicated eligible studies, use a defensible one-sided binomial lower bound on sensitivity; a conservative default for sparse failures is Clopper–Pearson. For k successes among n eligible studies, confidence 1-alpha, lower bound is 0 if k=0, otherwise `BetaQuantile(alpha; k, n-k+1)`. With no misses, it is `alpha^(1/n)`, not one. At 95% one-sided confidence, 50/50 gives about 0.941845; at least 149 independent eligible examples with no misses are needed for that bound to exceed 0.98. These are illustrative binomial calculations, not a universal sample-size rule or a guarantee for this project. Multiple thresholds, dependent reports, adaptive samples and reused test data invalidate that naive interpretation. Sources: NIST references below.
+
+Separate model fitting, calibration/policy selection, and independent final validation at study/review level to prevent leakage from duplicate reports. Fix the operating policy before the final validation. If sample size precludes this, show insufficient evidence rather than relaxing the requirement. Check any multiplicity/sequential tuning through an appropriate validated statistical procedure. A generic bootstrap over actively selected labels does not solve selection bias. Account for clustered reports and finite-population/random-audit designs; use a justified cluster or design-based method where binomial independence is inappropriate.
+
+Evaluate probability calibration on representative human-adjudicated labels with reliability plots, proper scoring metrics such as Brier/log loss and uncertainty; do not use accuracy or a single ECE number alone as a safety claim. Temperature scaling or other calibration is a candidate to compare with appropriate held-out data, not an automatically best method for every criterion. The full weighted/policy output needs its own validation; calibrated individual criterion outputs do not imply a calibrated aggregate. Preset temperature buckets are not proof of project-specific calibration.
+
+Report recall/sensitivity, precision where estimable, specificity, confusion counts, missing-text coverage and workload separately, at both TA and FT stages as applicable. Show TP/FN denominators and the exact interval method/confidence level; do not infer specificity from an eligible-only test set. Report by important designs, language, publication period and review domain when the sample supports it; otherwise disclose sparse evidence. A lower-bound target and a confidence level are separate settings. Use a pre-specified 95% validation confidence level by default; any change must be explicit, versioned and must not silently manufacture a passed safety target.
+
+Keep recommendations human-confirmed by default. Thresholds/weights may help prioritize and explain; new automated final exclusion is outside this handoff. Existing automatic-routing behavior must be identified and constrained to a reviewable proposal queue until separately validated and explicitly enabled under protocol governance. Preserve historical actions. Do not claim 98% sensitivity at 95% confidence merely because 50 labels exist, prompts agree, or a code constant says so. Existing targets are product choices to justify, not universal research standards.
+
+If a conformal/risk-control method is retained, identify the actual published algorithm, risk definition, finite-sample correction, sampling/exchangeability assumptions and precise guarantee. Expected-risk control is not interchangeable with a high-probability guarantee that recall exceeds a target. A Wald-bound cutoff search must not be labeled conformal risk control without a valid derivation and tests.
+
+Any protocol, model, weighting, threshold, stage or material domain change invalidates prior applicability unless supported by a documented validation scope. Show not calibrated / validation insufficient / validation stale instead of recycling the old percentage. Continue human review rather than blocking all work when validation data are insufficient. Use model-independent, appropriately sampled audits; record sampling design and adjudicated reversals. Repeated monitoring needs a sequentially valid plan or pre-specified fixed audits, not unlimited repeated unadjusted 95% intervals.
+
+### H. Required tests and acceptance artifacts for this addition
+
+- Arbitrary medication/dose/duration/comparator and other protocol criteria round-trip with stable IDs, evidence and logical grouping; no species-only implementation.
+- Omitted consequential restriction creates one project-scoped question; stated/unrestricted/not-applicable rules do not get re-asked; contradictory rules are flagged. Answers survive refresh, job restart and project switching and are included in every affected scoring path.
+- Project answer versus study-only answer has correct scope; another project/user cannot read or mutate unauthorized policy/questions. Failed answer/save retains the draft and does not advance or claim success.
+- Both inclusion and exclusion lists have accessible slider/numeric controls in the rightmost column. Preview does not mutate data; apply versions the policy, preserves history and marks affected evaluations stale. Cancel/reset restores saved values.
+- Hand-computed aggregation examples reproduce contributions and final score; enforce correct polarity, bounds, grouped-rule behavior, hard-rule precedence, unknown/missing evidence, all-zero weights and normalization. No NaN, fabricated contribution or silently renormalized slider display.
+- Raw-model score, entropy confidence, heuristic aggregate, calibrated estimate and validation CI are never mislabeled or mixed. Evidence text/anchors are actually in the saved source.
+- Exact-binomial reference tests cover n=0, k=0, k=n, one miss and boundary confidence levels. The 50/50 lower bound must not be 1. Test consistent alpha/confidence semantics, score ties, >= versus > operators and threshold selection/validation separation.
+- Changing weights/protocol invalidates the validation badge and affected traces; human decisions remain untouched. Replay/export of a historical evaluation uses historical settings, not today's sliders.
+- Independent blinded adjudication/validation and representative sampling are documented. No automatic high-confidence claim when there are too few positives, unresolved labels, label leakage or out-of-scope populations. Review methodology/statistical validation with an appropriately qualified reviewer before making safety/guarantee claims.
+- Add screenshots at all target widths of protocol autofill, pending questions, BOTH criterion tables, weight preview, study calculation detail and validation summary. Add trace export, methods report and reproducible mathematical reference tests to final acceptance.
+
+### I. Primary methodology references and limits
+
+These support the design distinctions; they do not validate RadExtract or establish that a particular weighting formula is best. This was a focused primary-source review, not an exhaustive systematic review of all screening tools. Source access date: 27 October 2026.
+
+1. Guo C et al. (2017), [On Calibration of Modern Neural Networks](https://proceedings.mlr.press/v70/guo17a.html). Demonstrates miscalibration and evaluates post-hoc calibration including temperature scaling. Its empirical findings are a method candidate, not evidence that this engine is calibrated.
+2. Thomas J et al. (2021), [Machine learning reduced workload with minimal risk of missing studies: development and evaluation of a randomized controlled trial classifier for Cochrane Reviews](https://pmc.ncbi.nlm.nih.gov/articles/PMC8168828/). Illustrates distinct development, calibration and evaluation datasets and recall-focused validation. RCT identification results cannot be transferred to arbitrary medication/protocol eligibility.
+3. [Cochrane Handbook, Chapter 4: Searching for and selecting studies](https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-04), especially section 4.6. The accessed text distinguishes supported prioritization from unvalidated automated stopping/elimination, noting the status of that recommendation at its stated time of writing. Do not generalize a narrow validated classifier to all reviews.
+4. [NIST exact binomial confidence limits](https://itl.nist.gov/div898/software/dataplot/refman2/auxillar/exacbici.htm) and [NIST Technical Note 2119, Estimating Instrument Performance](https://nvlpubs.nist.gov/nistpubs/TechnicalNotes/NIST.TN.2119.pdf). Binomial interval methodology and boundary behavior; its sampling assumptions still need to be met.
+5. Angelopoulos AN et al., [Conformal Risk Control](https://arxiv.org/abs/2208.02814), revised 2025. Distinguishes a formally specified expected-loss guarantee from loosely named threshold heuristics. Other guarantee types require their own justified methods and assumptions.
+
+### J. Files to hand to the implementing agent
+
+Provide this entire Markdown handoff and `RADEXTRACT_UPDATED_BLUEPRINT.html` from the same workspace. The HTML is a detailed target-state feature/layout companion; this Markdown defines implementation order, preservation rules, mathematical safeguards and acceptance gates. Earlier documents are background, not additional competing work orders. The implementing agent needs repository access and must re-check current state.

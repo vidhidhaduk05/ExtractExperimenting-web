@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RadExtract Platform — Complete System Blueprint</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root { --wine:#3a0f34; --plum:#814d75; --paper:#fbf9f4; --ink:#4f444b; --ink2:#62535d; --line:#d2c2cb; --amber:#ffdea6; --field:#eee7ec; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:'Work Sans',system-ui,sans-serif; line-height:1.55; }
+  .wrap { max-width:1100px; margin:0 auto; padding:32px 40px 80px; }
+  header.doc { border-bottom:1px solid var(--line); padding:40px 0 24px; }
+  h1 { font-family:Georgia,serif; color:var(--wine); font-size:32px; margin:0 0 6px; }
+  .sub { color:var(--ink2); font-size:14px; }
+  .tag { display:inline-block; background:var(--amber); color:var(--wine); font-size:11px; letter-spacing:.08em; padding:2px 10px; border-radius:3px; margin-left:8px; vertical-align:middle; }
+  h2 { font-family:Georgia,serif; color:var(--wine); font-size:23px; margin:46px 0 4px; border-top:1px solid var(--line); padding-top:26px; }
+  h2 .num { color:var(--plum); font-size:14px; display:block; letter-spacing:.1em; font-family:'Work Sans',sans-serif; }
+  h3 { color:var(--wine); font-size:15.5px; margin:22px 0 4px; }
+  p, li { font-size:14px; }
+  .mermaid { background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; margin:16px 0; overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:13px; margin:12px 0; background:#fff; }
+  th, td { border:1px solid var(--line); padding:6px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--field); color:var(--wine); font-weight:600; }
+  .rule { border-left:3px solid var(--wine); background:#fff; padding:10px 16px; margin:12px 0; font-size:13.5px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:820px){ .grid{grid-template-columns:1fr;} }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 16px; font-size:13.5px; }
+  .card b { color:var(--wine); }
+  code { background:var(--field); padding:1px 5px; border-radius:3px; font-size:12.5px; }
+  .conn { color:var(--plum); font-size:12.5px; }
+  footer { margin-top:56px; border-top:1px solid var(--line); padding-top:14px; color:var(--ink2); font-size:12px; }
+  .toc { columns:2; font-size:13.5px; }
+</style>
+<style>.table-scroll{overflow-x:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eee7ec;padding:16px}code{overflow-wrap:anywhere}h4{color:#3a0f34;font-size:16px;margin-top:24px}#protocol-confidence{border-top:3px solid #3a0f34;margin-top:48px}a{color:#814d75}td{min-width:100px}#handoff-status{margin-top:20px} @media(max-width:600px){.wrap{padding:16px 14px 40px}.toc{columns:1}h1{font-size:26px}}</style></head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>RadExtract Platform — Complete System Blueprint <span class="tag">TARGET STATE</span></h1>
+  <div class="sub">ExtractExperimenting-web · Every page, every field, every button, every connection · 27 October 2026 · source blueprint reference <code>7233463</code> · counts and implementation claims require re-verification</div>
+</header><section id="handoff-status" class="rule"><b>UPDATED TARGET BLUEPRINT — 27 October 2026.</b><p>This is an internal engineering specification, not a claim that the application is implemented or validated. Use it together with <a href="RADEXTRACT_FINAL_AGENT_HANDOFF.md">RADEXTRACT_FINAL_AGENT_HANDOFF.md</a>. Re-check repository state. No destructive cleanup: preserve and archive prior work.</p><p><a href="#protocol-confidence">New detailed specification: protocol autofill, generic clarifications, inclusion/exclusion weight sheets, score traces and research validation.</a></p></section>
+
+<h2><span class="num">SECTION 0</span>How to read this blueprint</h2>
+<p class="toc">
+<b>§1</b> Master architecture — the three surfaces and the one brain<br>
+<b>§2</b> The review spine — 10 stages, gates, PRISMA<br>
+<b>§3</b> Page-by-page spec — every field and button<br>
+<b>§4</b> Screening confidence engine<br>
+<b>§5</b> Evidence tools — ClaimScape · Rigor Scan · Citation Telephone<br>
+<b>§6</b> Laya — the shared reading engine<br>
+<b>§7</b> Data model — how everything connects<br>
+<b>§8</b> UX journey and navigation contract<br>
+<b>§9</b> Storage, deployment, backup<br>
+<b>§10</b> The invariants
+</p>
+
+<h2><span class="num">SECTION 1</span>Master Architecture</h2>
+<p>Three surfaces with three distinct jobs — <b>left rail</b> = where you can go, <b>right dock</b> = what to do next, <b>dashboard cards</b> = the state of the data and why each number matters. The backend is the only brain: the frontend never computes, estimates, or fabricates a number.</p>
+<div class="mermaid">
+flowchart LR
+    subgraph CLIENT["Browser — React SPA"]
+        RAIL["Left icon rail<br/>Projects · 9 stage icons · 3 tool icons<br/>Help · Avatar"]
+        DOCK["Right dock 340px<br/>To-dos · Results · PRISMA tabs"]
+        PAGES["20 stage pages"]
+        TOP["Top bar<br/>breadcrumb · back · Export · Share<br/>live PRISMA badge"]
+    end
+    subgraph API["FastAPI — the only brain"]
+        R["32 routers · 272 routes"]
+        subgraph S["Core services"]
+            SCR["Screening engine"]
+            EXT["Extraction cascade"]
+            RB["RoB engines"]
+            GD["GRADE + Meta"]
+            CS["ClaimScape/RigorScan/CitTel"]
+        end
+        LAYA["Laya ONNX System-1"]
+        LLM["LLM client<br/>circuit breaker · cache"]
+    end
+    subgraph D["State"]
+        DB[("SQLite WAL · 36 tables")]
+        FS["STUDY DATA archive"]
+        C[("Disk + memory cache")]
+    end
+    PM["PubMed E-utilities"]
+    CLIENT --> R --> S
+    SCR --> LAYA
+    CS --> LAYA
+    S --> LLM
+    S --> DB
+    S --> FS
+    S --> C
+    SCR --> PM
+    CS --> PM
+</div>
+
+<h2><span class="num">SECTION 2</span>The Review Spine — 10 gated stages</h2>
+<p>A study can never skip a gate. A human can always override an AI. Every stage writes its decisions to the database and PRISMA recomputes instantly.</p>
+<div class="mermaid">
+flowchart TD
+    P0["1 PICO & Protocol"] --> P1["2 Import"] --> P2["3 Dedup"] --> P3["4 Title/Abstract screen"] --> P4["5 Full-Text screen"] --> P5["6 Extraction"] --> P6["7 Risk of Bias"] --> P7["8 Synthesis — CONDITIONAL<br/>pool if data suitable (IV + DL, real extractions only)<br/>else DESCRIPTIVE synthesis path — never a dead end"] --> P8["9 GRADE — finalized AFTER synthesis<br/>inconsistency + imprecision consume the pooled results<br/>outcome-specific cohort · distinct studies only"] --> P9["10 Export"]
+    PR["PRISMA counts — live SQL view<br/>each bucket derived from recorded events<br/>pending work NEVER counted as done"]:::live
+    P1 -.-> PR
+    P2 -.-> PR
+    P3 -.-> PR
+    P4 -.-> PR
+    classDef live fill:#ffdea6,stroke:#3a0f34,color:#3a0f34;
+</div>
+
+<h2><span class="num">SECTION 3</span>Page-by-page spec — every field, every button</h2>
+
+<h3>3.1 Landing <code>/</code></h3>
+<table>
+<tr><th>Element</th><th>Behavior</th><th>Connects to</th></tr>
+<tr><td>Typewriter search animation</td><td>Cycles radiology-first topics (neuroradiology first, user-approved list — do not edit)</td><td class="conn">feeds claim into ClaimScape</td></tr>
+<tr><td>Question card</td><td>Serif question entry, always-visible search options, editable auto-built PubMed query, reset-to-auto, 100/200/300 paper choice, narrative-review checkbox</td><td class="conn">→ ClaimScape evaluate</td></tr>
+<tr><td>7 topic chips</td><td>Fill the card with preset question + verified query</td><td class="conn">research_presets.json</td></tr>
+</table>
+
+<h3>3.2 Project list & create <code>/projects</code> · <code>/projects/new</code></h3>
+<table>
+<tr><th>Element</th><th>Behavior</th></tr>
+<tr><td>Project cards</td><td>Name, stage progress mini-bar, last-opened; click → project dashboard. No demo projects ever.</td></tr>
+<tr><td>New project</td><td>Name + optional research question; creates DB row + 8 subfolders in STUDY DATA; empty state everywhere until data exists</td></tr>
+</table>
+
+<h3>3.3 PICO & Hypothesis <code>/projects/:id/pico</code></h3>
+<table>
+<tr><th>Field / Button</th><th>Behavior</th><th>Connects to</th></tr>
+<tr><td>Protocol upload (drag-drop + button)</td><td>PDF/DOCX/TXT/MD/RTF ≤50MB → NLP extracts PICO, question, criteria</td><td class="conn">→ fills PICO fields + criteria</td></tr>
+<tr><td>Research question textarea + <b>Generate</b></td><td>LLM extracts PICO → generates hypothesis + search strings; 400 if PICO empty; 409 confirm if overwriting a human-edited hypothesis</td><td class="conn">→ hypothesis, search strings, criteria</td></tr>
+<tr><td>PICO fields P/I/C/O + design</td><td>Editable; every downstream prompt grounds on these exact strings</td><td class="conn">screening prompts · hypothesis grounding check</td></tr>
+<tr><td>Hypothesis display</td><td>Shows H1 + H0 + secondaries; badge <code>generation_source: llm | template | failed</code>; error banner when not llm</td><td class="conn">stored in projects.hypothesis + meta</td></tr>
+<tr><td>Inclusion/exclusion criteria</td><td>Auto-filled from PICO; editable list; feeds screening exclusion reasons</td><td class="conn">→ screening criterion-level decisions</td></tr>
+<tr><td>Save & Continue</td><td>Validates population + index_test present; atomic save PICO + hypothesis</td><td class="conn">→ Import stage</td></tr>
+</table>
+
+<h3>3.4 Study Import <code>/projects/:id/studies/new</code></h3>
+<table>
+<tr><th>Field / Button</th><th>Behavior</th><th>Connects to</th></tr>
+<tr><td>RIS upload</td><td>Parses records, size-checked, magic-byte-checked; per-record add/dup/error result</td><td class="conn">→ studies + import_batches</td></tr>
+<tr><td>PubMed query import</td><td>Runs saved search strings; records import event (query, counts)</td><td class="conn">→ search-strings · import_batches</td></tr>
+<tr><td>OpenAlex / DOI import</td><td>Required: same persisted import event recording</td><td class="conn">→ import_batches</td></tr>
+<tr><td>Import history panel</td><td>One expandable row per import event: source, query, added/duplicates/errors, timestamp, <b>Undo</b> (atomic backend undo, force-confirm on 409). Backend data only — no localStorage, no demo rows</td><td class="conn">→ batches endpoints</td></tr>
+</table>
+
+<h3>3.5 Dedup <code>/studies/deduplicate</code></h3>
+<table>
+<tr><th>Element</th><th>Behavior</th></tr>
+<tr><td>Duplicates queue</td><td>T0 exact DOI/PMID/NCT → T1 title+surname+year±1 → T2 fuzzy ≥0.90 + corroboration → T3 review. Never title-only merges</td></tr>
+<tr><td>Excel-like accept/reject sheet</td><td>Human decision per pair; decisions persisted; auto-mark NEVER flips a human decision (reports <code>skipped_human_decided</code>)</td></tr>
+<tr><td>Merge All</td><td>Dry-run preview, master = most complete, progress + pause; human-decided pairs skipped</td></tr>
+<tr><td>Non-duplicates memory</td><td>Rejected pairs stored so they never resurface</td></tr>
+</table>
+
+<h3>3.6 Screening <code>/projects/:id/screening</code> — the only view</h3>
+<table>
+<tr><th>Element</th><th>Behavior</th><th>Connects to</th></tr>
+<tr><td>Progress header</td><td>Real screened/total bar; Included/Uncertain/Excluded tiles = same numbers as PRISMA; batch banner only while a job runs. No JUD/SEC, no TURN, no timers, no fake cards</td><td class="conn">→ screening/summary · PRISMA</td></tr>
+<tr><td>Study cards/table</td><td>Real records only; AI confidence only when a real judgment exists, else "—"; PICO-element highlights from real keyword service</td><td class="conn">→ judgments</td></tr>
+<tr><td><b>Include / Uncertain / Exclude</b></td><td>Writes decision immediately; exclude requires reason from criteria list; stage-routed (TA vs FT never conflated)</td><td class="conn">→ screening-decisions · PRISMA</td></tr>
+<tr><td>Batch AI screen</td><td>Start/pause/resume/cancel + progress; proposes only — never auto-includes</td><td class="conn">→ ai-screening endpoints</td></tr>
+<tr><td>Clarifications</td><td>AI asks when ambiguous; answer inline or batch; toast expires 4 s, click → this dashboard; in-panel notification can be tracked as a todo</td><td class="conn">→ clarifications · todos</td></tr>
+<tr><td>Keywords / config / prioritize / agreement</td><td>Keyword groups auto-generate; screening-config; prioritization by confidence; dual-review agreement stats</td><td class="conn">→ respective endpoints</td></tr>
+</table>
+
+<h3>3.7 Extraction Sheet <code>/extraction-sheet</code> + PDF Viewer <code>/studies/:id/pdf</code></h3>
+<table>
+<tr><th>Element</th><th>Behavior</th></tr>
+<tr><td>Variable grid</td><td>Variables auto-generated from PICO; reorder, batch, suggest; every cell shows value + provenance quote + page anchor</td></tr>
+<tr><td>AI extract per study</td><td>Cascade LLM → Docling tables → regex → keyword; missing data coded explicitly (never imputed)</td></tr>
+<tr><td><b>Verify / Adjudicate</b></td><td>Human verifies each AI value; dual extraction adjudication; quote-provenance check fails loudly on mismatch</td></tr>
+<tr><td>PDF viewer</td><td>Highlights anchored to real page/offset; find-quote-location; Laya trace shows which sentence produced the value</td></tr>
+</table>
+
+<h3>3.8 Risk of Bias <code>/rob</code> · <code>/rob/:assessmentId</code></h3>
+<table>
+<tr><th>Element</th><th>Behavior</th></tr>
+<tr><td>Tool selection</td><td>RoB 2 / ROBINS-I / QUADAS-2 auto-selected by design, manual override</td></tr>
+<tr><td>Signaling questions</td><td>Correct polarity algorithms; no default-to-low on unanswered; unanswered blocks completion</td></tr>
+<tr><td>AI prefill + <b>Accept AI</b></td><td>Prefill flagged; accept is an explicit human act; mock RoB requires ?mock=true and never runs on projects with real assessments</td></tr>
+<tr><td><b>Verify / Adjudicate</b></td><td>Required routes: <code>/rob/assessments/{id}/verify|adjudicate</code>; dual-review workflow completes</td></tr>
+<tr><td>Summary + figures</td><td>Per-project traffic-light plot, reporting profile</td></tr>
+</table>
+
+<h3>3.9 GRADE <code>/grade</code></h3>
+<table>
+<tr><th>Element</th><th>Behavior</th></tr>
+<tr><td>Starting level</td><td>By design: RCT high, observational low</td></tr>
+<tr><td>Factors</td><td>RoB linkage is PER-STUDY (not project-wide tally); inconsistency, indirectness, imprecision, publication bias each reasoned</td></tr>
+<tr><td>Auto-populate / Compute / SoF table</td><td>Downgrade/upgrade computed from real inputs; SoF generated</td></tr>
+</table>
+
+<h3>3.10 Meta-analysis <code>/meta-analysis</code> + Analysis <code>/analysis</code></h3>
+<table>
+<tr><th>Element</th><th>Behavior</th></tr>
+<tr><td>Outcomes</td><td>Defined from extracted variables; effect measure per outcome (RR/OR/MD/SMD)</td></tr>
+<tr><td><b>Run pooling</b></td><td>Effect sizes ONLY from verified extractions; studies with missing data listed as excluded — never imputed, never a sine wave; IV fixed + DL random; log-scale for RR/OR</td></tr>
+<tr><td>Forest / funnel / heterogeneity / sensitivity</td><td>I², Q, tau² from real data; Egger correct; leave-one-out sensitivity</td></tr>
+<tr><td>Report</td><td>Numbers reproducible: hand-computed regression test gates every change</td></tr>
+</table>
+
+<h3>3.11 PRISMA <code>/prisma</code> · Export <code>/export</code></h3>
+<table>
+<tr><th>Element</th><th>Behavior</th></tr>
+<tr><td>PRISMA 2020 diagram</td><td>Live from computed counts; click a box → that stage filtered to the bucket</td></tr>
+<tr><td>Export page</td><td>Decisions CSV, extraction sheet, SoF, figures, PRISMA doc; exact status filtering; 404 on empty reference set (no fake file)</td></tr>
+</table>
+
+<h3>3.12 Dashboard <code>/projects/:id</code></h3>
+<table>
+<tr><th>Card</th><th>Number (live)</th><th>Reason line (computed)</th><th>Click</th></tr>
+<tr><td>Import</td><td>total studies · last import</td><td>"6 studies · last import 2 days ago"</td><td class="conn">/studies</td></tr>
+<tr><td>Screening</td><td>12/40 decided</td><td>"16 studies waiting on a decision"</td><td class="conn">/screening</td></tr>
+<tr><td>Full-Text</td><td>0/12 included</td><td>"Blocked: finish Title/Abstract first"</td><td class="conn">/screening?stage=ft</td></tr>
+<tr><td>Extraction</td><td>3/12 verified</td><td>"2 studies have unverified AI values"</td><td class="conn">/extraction-sheet</td></tr>
+<tr><td>Risk of Bias</td><td>0/12 assessed</td><td>"Required appraisal before applicable synthesis/GRADE finalization"</td><td class="conn">/rob</td></tr>
+<tr><td>Synthesis</td><td>0 pooled</td><td>"Pool only compatible verified data; otherwise descriptive synthesis"</td><td class="conn">/meta-analysis</td></tr>
+<tr><td>GRADE</td><td>0 outcomes</td><td>"Needs resolved cohort, appraisal and completed synthesis"</td><td class="conn">/grade</td></tr>
+<tr><td>PRISMA</td><td>identified → screened → included</td><td>live mini-flow</td><td class="conn">/prisma</td></tr>
+</table>
+<div class="rule"><b>Card law:</b> number + reason + click-through, or the card is deleted. No noun tiles ("Matrix", "View"), no placeholder dashes.</div>
+
+<h3>3.13 Right dock — To-dos · Results · PRISMA</h3>
+<table>
+<tr><th>Tab</th><th>Behavior</th></tr>
+<tr><td>To-dos</td><td>Google-Tasks: add, inline-edit, tick → Completed(n) collapse, delete; persisted per project. <b>Drag a study onto the panel</b> (mime <code>application/x-study</code>) → linked task, click navigates to the study. Notifications section on top: <b>Track</b> converts to todo; panel items never expire (only the toast expires at 4 s)</td></tr>
+<tr><td>Results</td><td>Exportable artifacts with working downloads</td></tr>
+<tr><td>PRISMA</td><td>Live mini-flow; click a box → stage filtered</td></tr>
+</table>
+
+<h3>3.14 Tools — always reachable from the rail</h3>
+<table>
+<tr><th>Tool</th><th>Route</th><th>Core flow</th></tr>
+<tr><td>Evidence Map (ClaimScape)</td><td><code>/claimscape</code></td><td>Claim → editable query → 100/200/300 real abstracts → Laya 5-question read → map by design × year → Wilson verdicts → inspector with real abstract + finding sentence → <b>Launch into Review Workspace</b> (mapped papers → project queue)</td></tr>
+<tr><td>Rigor Scan</td><td><code>/rigor-scan</code></td><td>PDF/text → design-aware rigor checklist, every finding quote-anchored</td></tr>
+<tr><td>Citation Telephone</td><td><code>/citation-telephone</code></td><td>Manuscript → every claim traced to its source; broken/overstated citations flagged with quoted passages</td></tr>
+</table>
+
+<h2><span class="num">SECTION 4</span>Screening Confidence Engine</h2>
+<div class="mermaid">
+flowchart LR
+    IN["All records"] --> A["Pass A<br/>include-focused prompt"]
+    IN --> B["Pass B<br/>exclude-focused prompt"]
+    A --> F["Logistic fusion<br/>agreement · score · criterion margin<br/>safety-net · short-abstract flag"]
+    B --> F
+    F --> C["Conformal threshold<br/>sensitivity 0.98 @ 95%<br/>min 50 labeled"]
+    C --> Q["Queue: uncertain on top<br/>high-confidence excludes bottom"]
+    Q --> H["Human decides all<br/>AI never includes"]
+    H --> R["Re-inclusion audit < 2%"]
+</div>
+
+<h2><span class="num">SECTION 5</span>Evidence tool pipeline (ClaimScape reference flow)</h2>
+<div class="mermaid">
+flowchart TD
+    C["Claim"] --> Q["Query: direction words dropped · editable<br/>retraction-filtered · term-validation stops on typos"]
+    Q --> F["esearch → chunked efetch<br/>real abstracts for ALL papers"]
+    F --> L["Laya: on-topic · verdict ×2 (supports/contradicts/mixed/no_result)<br/>direct · finding sentence S01|"]
+    L --> R["Admission: on map ≥0.5 on-topic<br/>verdict counts if both readings agree avg ≥0.6<br/>reviews shown never counted"]
+    R --> M["Map: rows = designs strongest first<br/>dots by year, colored by verdict<br/>Wilson 95% · min 3 papers"]
+    M --> I["Inspector: real abstract<br/>finding highlighted · open on PubMed"]
+    M --> W["Launch into Review Workspace"]
+    HON["Honesty: /status endpoint · banner when Laya offline<br/>client path = metadata only, verdicts require backend<br/>NO fabricated abstracts, NO hardcoded probabilities"]:::h
+    classDef h fill:#eee7ec,stroke:#814d75,color:#3a0f34;
+</div>
+
+<h2><span class="num">SECTION 6</span>Laya — one engine, many consumers</h2>
+<div class="mermaid">
+flowchart LR
+    W["laya/models/laya.onnx<br/>downloaded once · on disk"] --> E["LayaModel<br/>batched ONNX · chunk 16"]
+    E --> CS2["ClaimScape 5-question read"]
+    E --> TR["Extraction tracer<br/>which sentence produced each value"]
+    E --> TRI["Fast triage<br/>flaw probability · specialty · bias risk"]
+    E --> SC["Screening second opinion"]
+</div>
+
+<h2><span class="num">SECTION 7</span>Data model — how everything connects</h2>
+<div class="mermaid">
+erDiagram
+    PROJECTS ||--o{ STUDIES : contains
+    PROJECTS ||--|| PICO : "pico_json · hypothesis · meta"
+    PROJECTS ||--o{ IMPORT_BATCHES : "every import event"
+    PROJECTS ||--o{ TODOS : "manual · study · notification"
+    PROJECTS ||--o{ NON_DUPLICATES : "pairs never revisit"
+    STUDIES ||--o{ SCREENING_DECISIONS : "TA + FT · criterion reasons"
+    STUDIES ||--o{ EXTRACTIONS : "value · quote · page · verified"
+    STUDIES ||--o{ ROB_ASSESSMENTS : "tool · answers · judgment · verified"
+    STUDIES ||--o{ CLARIFICATIONS : "AI asks · human answers"
+    EXTRACTIONS ||--o{ GRADE_FACTORS : feeds
+    EXTRACTIONS ||--o{ SYNTHESIS_RESULTS : "verified eligible data"
+    SYNTHESIS_RESULTS ||--o{ GRADE_FACTORS : "outcome-specific cohort and evidence"
+    IMPORT_BATCHES ||--o{ STUDIES : "undoable groups"
+</div>
+
+<h2><span class="num">SECTION 8</span>UX Journey & Navigation Contract</h2>
+<div class="mermaid">
+flowchart LR
+    L["Landing"] -->|logo always returns here| HOME
+    subgraph HOME["AppShell"]
+        D["Dashboard cards"] --> W["Stage pages"]
+        W --> T["Right dock<br/>todos · notifications · PRISMA"]
+    end
+    HOME --> X["Export"]
+    TOOLS["Rail: Evidence Map · Rigor Scan · Citation Telephone<br/>≤2 clicks from anywhere"]:::t
+    classDef t fill:#ffdea6,stroke:#3a0f34,color:#3a0f34;
+</div>
+<table>
+<tr><th>Contract</th><th>Rule</th></tr>
+<tr><td>Logo</td><td>Click → landing/home, from every page</td></tr>
+<tr><td>Breadcrumb</td><td>Every crumb clickable except current page</td></tr>
+<tr><td>Back</td><td>Chevron in top bar + browser Back works everywhere</td></tr>
+<tr><td>Reachability</td><td>Every stage and tool ≤2 clicks from anywhere</td></tr>
+<tr><td>Empty states</td><td>Every page has one, with the action that fills it — never fake data</td></tr>
+</table>
+
+<h2><span class="num">SECTION 9</span>Storage & Deployment</h2>
+<div class="mermaid">
+flowchart LR
+    APP["App dir — code only"] --> DB[("radextract.db · WAL<br/>never in synced folders")]
+    DB -->|weekly backup ×8| B["_BACKUPS"]
+    S["STUDY DATA desktop · 1.16 TB free"] --> P["PROJECTS/YYYY-MM-DD_Name<br/>01_SOURCE → 08_AUDIT"]
+    S -->|monthly snapshot| EXT["External / cloud copy"]
+    DB -.->|"paths relative to STORAGE_ROOT"| P
+</div>
+
+<h2><span class="num">SECTION 10</span>The Invariants</h2>
+<table>
+<tr><th>Rule</th><th>Enforced by</th></tr>
+<tr><td>No fabricated data — an error beats a fake number</td><td>Demo purge · no silent fallbacks · no template abstracts · no <code>except: pass</code></td></tr>
+<tr><td>Every AI output flagged and traceable</td><td><code>generation_source</code> · <code>engine</code> · provenance quotes · page anchors</td></tr>
+<tr><td>AI proposes, human decides</td><td>Screening never auto-includes · RoB prefill needs verify · dedup never flips human calls</td></tr>
+<tr><td>PRISMA computed, never entered</td><td>Live SQL after every mutation</td></tr>
+<tr><td>Meta-analysis uses only extracted data</td><td>Missing data excluded + listed · hand-computed tests gate changes</td></tr>
+<tr><td>Failures visible</td><td>Honesty banners · status endpoints · circuit-breaker surfaced</td></tr>
+<tr><td>One source of truth per number</td><td>Rail = navigation · To-dos = next actions · Dashboard = state</td></tr>
+</table>
+
+<section id="protocol-confidence"><h2><span class="num">NEW WORKSPACE LAYOUT</span>Protocol rules and weighting</h2><p>Both sections sit alongside the protocol. Each row represents an actual protocol-defined variable or criterion; examples below are labels only, not suggested restrictions or defaults.</p><h3>Inclusion criteria</h3><div class="table-scroll"><table><tr><th>Variable / criterion</th><th>Condition / value</th><th>Source / confirmation</th><th>Rule mode</th><th>Weight — rightmost column</th></tr><tr><td>Medication, dose, duration, population or another protocol variable</td><td>From the uploaded protocol or your confirmed answer</td><td>Quoted source / needs clarification</td><td>Required rule or weighted signal</td><td>Slider + exact number (0.00–1.00)</td></tr></table></div><h3>Exclusion criteria</h3><div class="table-scroll"><table><tr><th>Variable / criterion</th><th>Excluded condition</th><th>Source / confirmation</th><th>Rule mode</th><th>Weight — rightmost column</th></tr><tr><td>Any protocol-defined exclusion</td><td>From the uploaded protocol or your confirmed answer</td><td>Quoted source / needs clarification</td><td>Required rule or weighted signal</td><td>Slider + exact number (0.00–1.00)</td></tr></table></div><div class="rule">Weight means relative influence, not probability, confidence level or a forced final decision. Required eligibility logic remains explicit. Slider changes are draft until previewed and saved. The implementing agent must build accessible working controls; these tables describe the target, not a functioning scoring tool.</div><h2>Required addition: protocol autofill, clarification, criterion weights and research validation</h2><p>This section is part of the implementation contract, not an optional future idea. Implement protocol persistence/clarification and score auditing during scientific correctness work; deliver the spreadsheet editor during UI work, before final acceptance. Read this together with Phases 0–5. Existing code observations below were inspected on 27 October 2026 and must be rechecked against the implementation checkout.</p><h3>A. Exact user intent and vocabulary</h3><p>The user clarified that the requested sliders are <strong>criterion importance weights</strong>, for BOTH inclusion and exclusion criteria. They are not per-study probability overrides, not exclusion-threshold sliders and not controls for changing confidence intervals. Human/animal scope was only an example. This applies to arbitrary protocol criteria: medication identity, class, dose, route, duration, washout, co-interventions, diagnosis, age, imaging test, comparator, outcome definition, follow-up, design, setting, language, dates or publication type. Do not build a species-specific feature or silently import generic exclusions.</p><p>Keep five concepts separate:</p><div class="table-scroll"><table><tbody><tr><td>Concept</td><td>Meaning</td><td>Where it appears</td></tr><tr><td>Eligibility rule</td><td>User-confirmed requirement or reason for ineligibility</td><td>Protocol criterion row, with scope and source</td></tr><tr><td>Criterion weight</td><td>User-set relative influence on the overall recommendation score</td><td>Rightmost slider and numeric field on BOTH criterion tables</td></tr><tr><td>Model evidence score</td><td>Model output for the defined criterion question on one study</td><td>Study calculation breakdown; not editable as if it were an observation</td></tr><tr><td>Decision threshold</td><td>Cutoff applied by a versioned recommendation policy</td><td>Advanced policy details; distinct from weights</td></tr><tr><td>Confidence interval/bound</td><td>Uncertainty estimate for a defined statistical quantity under a stated sampling method</td><td>Validation summary, with numerator, denominator, method and assumptions</td></tr></tbody></table></div><p>Weight 0.90 means relative influence of 0.90 on a documented scale. It does not mean 90% certainty, a 90% confidence level, or automatic exclusion. A strict rule is separate from a weighted preference. No new automatic final human decisions are authorized by this UI.</p><h3>B. Protocol autofill and missing-context questions</h3><ul><li>Extract proposed PICO and eligibility criteria from the supplied protocol/question. Keep each criterion atomic where possible, with a stable ID, direction (inclusion/exclusion), human-readable condition, machine-readable operator/value where supported, source quotation/location, scope and confirmation state.</li><li>Preserve medication details and logical relationships. Do not reduce a rule such as a particular drug/dose/duration/comparator to a loose keyword. Represent AND/OR groups, conditional rules and explicit exceptions. An inclusion list is not necessarily all-AND; a row score cannot silently erase that logic.</li><li>Differentiate stated, suggested, missing, contradictory and not-applicable fields. Generated suggestions remain visibly unconfirmed. Mark clinical synonym/drug-name mappings as suggestions when not supported by the protocol; validate against appropriate maintained authoritative terminology if implemented. Never infer equivalence merely from string similarity.</li><li>Conduct a protocol completeness/consistency check on upload, generation, saved manual edits and before screening. Ask only consequential missing/conflicting questions; absence of a comparator/outcome restriction can be intentional. Allow explicit unrestricted/not-applicable choices. Do not impose language, date, design, drug, species or other limits without confirmation.</li><li>Questions explain what is missing, why it affects eligibility, and quote the relevant protocol passage or state that none was found. Offer appropriate mutually exclusive choices and free-text refinement. Collect multiple related gaps in a reviewable list instead of one repeated notification per study.</li><li>Support project/protocol-level clarification separately from study-specific ambiguity. User answers explicitly choose scope; a single-study answer must not silently become a global eligibility change. Global answers update the saved protocol version and relevant criterion IDs. Preserve author, timestamp, prior value and supersession history.</li><li>Deduplicate open/resolved questions using project, protocol version, criterion and ambiguity identity. Refresh/restart must retain answers. Re-ask only if a meaningful protocol edit makes the old answer inapplicable or contradictory.</li><li>Do not decide eligibility from a rule that is both missing and consequential. Mark affected recommendations pending clarification; do not stop unrelated criteria or overwrite prior human decisions. A missing study detail is unknown, not evidence of absence; unknown medication dose/duration must not be reported as an observed mismatch.</li></ul><p>Examples are illustrative: unspecified dose range, undefined prior-treatment eligibility, ambiguous comparator, mixed adult/pediatric cohorts, unclear case-series eligibility, and conflicting outcome timing. Implement a generic schema, not one hardcoded question per example.</p><h3>C. Responsibility and notification wiring</h3><p>Current inspected responsibilities: <code>services/jev_screener.py</code> constructs questions/state, calls the local engine and composes recommendations; its <code>compose()</code> generates limited population/intervention clarification templates. <code>services/clarification_generator.py</code> provides a model-assisted path. The frontend <code>ClarificationNotificationCenter.tsx</code> polls pending backend questions (six seconds in the inspected version) and displays them. The engine itself does not send browser notifications.</p><p>Use the configured local engine for criterion scoring. The backend owns protocol gap detection, question persistence, rule application and reproducible arithmetic. A language-model assistant may extract criteria or phrase a question, but must not fabricate scores, rewrite evidence or invent a statistical guarantee. UI copy uses Co-Scientist. Trace actual provider/fallback identity internally. Build on the existing clarification service after checking project/study scoping and authenticated authorship; do not create a competing inbox.</p><p>Protocol-scoped questions must be retrievable even when no studies exist. Check current schema assumptions (including required study IDs and joins) and use reviewed additive migrations if needed. Avoid fake study IDs to fit the old schema. Show the question inline beside protocol and in the project clarification inbox; keep a pending entry until resolved. Toast expiry does not resolve the question. Link the notification to the correct protocol/criterion or study/stage. Track-as-todo must reference the same question, not duplicate it.</p><h3>D. Spreadsheet-style editor alongside protocol</h3><p>Provide two clearly named sections, <strong>Inclusion criteria</strong> and <strong>Exclusion criteria</strong>, in the protocol workspace. Each lists one criterion per row. The weight slider is the RIGHTMOST column, with its exact numeric value and keyboard-editable numeric field.</p><p>Recommended desktop columns: criterion/variable; condition or allowed value; source/confirmation; rule mode; <strong>weight [slider + number]</strong>. Example labels may use drug, dose or design, but rows come from the actual protocol. Show source text and complex logic on expansion rather than making the table unreadably wide. Keep the criterion name visible when scrolling, sensible row heights and readable text. On phones, expand a criterion into a labeled editor preserving access to its weight. Follow 1440/903/390px and short-viewport checks.</p><p>Rule mode distinguishes <strong>required eligibility rule</strong>, <strong>weighted recommendation signal</strong>, <strong>inactive</strong>, and any supported not-applicable state. Weight controls for a strict rule must explain that a soft weight cannot cancel a required rule; disable or separate the soft weighting control where it has no mathematical role. A zero weight is not permission to disable a required protocol rule. Changing strict eligibility requires an explicit protocol edit and version increment.</p><p>Sliders may use a 0.00–1.00 importance scale with 0.01 steps, a matching number input, clear endpoints and accessible labels. This is a UI design choice, not a validated probability scale. Show defaults, unsaved changes, revert-to-saved and preview/apply controls. Do not silently normalize visible values; if the scoring method normalizes them, show effective normalized values in the breakdown.</p><p>Draft sliders update a preview, not persisted eligibility or human decisions on every pointer movement. Preview reports affected records and representative score changes against fixed stored evidence. Saving a policy requires suitable project permissions, preserves the prior policy and audit trail, and marks affected evaluations stale/pending recomputation. Scope is project/stage/protocol version; users must not accidentally change other projects or other reviewers' finalized decisions. Distinguish personal view preferences from shared scientific policy.</p><h3>E. Weighted calculation contract</h3><p>Do not replace the current model output with a user-entered value or call a weighted sum a probability. First trace the active engines and every scoring/routing path. Record actual equations and known defaults. Existing code has more than one confidence calculation; identify which produced each displayed result. Both fast and standard paths must consume the same saved criteria and confirmed rules, with explicit unsupported-criterion handling.</p><p>Specify and test the soft aggregation method before implementation. It must expose direction, evidence polarity, raw score, missingness, user weight, effective weight, per-criterion contribution, aggregation formula, final recommendation score and threshold. Any formula introduced here is a new heuristic until calibrated/validated; label it accordingly and compare it against the baseline. Do not learn or invent arbitrary weights from prose.</p><p>For inclusion, stronger supporting evidence may increase the score; for exclusion, stronger evidence of an applicable exclusion may decrease it. Increasing a weight must have the mathematically documented effect given that criterion's evidence; it need not always move the outcome toward inclusion or exclusion regardless of match. Define interactions, missing values, correlated criteria, all-zero weights, normalization and grouped conditions. Avoid double-counting synonymous drug/design rules. Never let positive soft signals compensate for a confirmed hard exclusion, or let a required inclusion failure be hidden by unrelated positive signals. Human review remains final.</p><p>Numerical formula changes and comparison operators require regression tests and versioning. Preview numbers are provisional; they must not appear in finalized exports as validated results. No ad hoc threshold/weight change can retain the old calibration badge.</p><h3>F. Explain the actual recommendation, not a generated story</h3><p>Store an immutable evaluation trace linked to project, study/report, stage, protocol, criterion set, model/version/config, input-text hash, policy/weights, threshold and calibration versions, timestamp and actual fallback provider. Preserve raw outputs at adequate precision; round only for display. Include criterion applicability/unknown states, checked source text and page/offset when available. Never present an invented quotation or a model score as proof of a source passage.</p><p>Current inspected local scorer uses <code>softmax(logits / temperature)</code> for categorical outputs; <code>noul</code> takes a particular class output. Choice confidence can be normalized entropy <code>1 - H(p)/log(K)</code>. That measures output concentration, not validated correctness. The wrapper uses the strongest exclusion candidate, population/intervention complements and a minimum-match inclusion score; another module has logistic fusion with fixed defaults. These distinct quantities must have separate labels. A generic 95% badge is unacceptable without identifying its quantity and validation.</p><p>Show a concise study summary and expandable <strong>How calculated</strong> table: criterion → evidence/missingness → raw score → weight/contribution → threshold/policy result. State why a clarification was requested and which confirmed answer was used. The protocol page shows rules/settings/validation, not fabricated study-specific scores before any study was evaluated. Offer exportable JSON/CSV traces and a human-readable methods summary matching the actual computation. Replaying the trace under the same version must reproduce the score and recommendation.</p><h3>G. Research validation and statistical intervals</h3><p>Primary sources reviewed for this specification are listed below. There is no universal best confidence algorithm. Calibrating probability estimates, selecting an exclusion threshold, estimating recall, and quantifying per-study uncertainty are different tasks. A model's self-reported confidence, a softmax output, entropy, two agreeing prompts, or sigmoid fusion is not a validation study.</p><p><strong>Observed defect requiring regression:</strong> <code>screening_confidence.py::_sens_lower_bound</code> uses a normal/Wald approximation. When observed sensitivity is one, its variance is zero and its lower bound becomes one for any positive sample size. <code>ALPHA=0.95</code> is also ambiguously named and the inspected function ignores that argument while hardcoding the 95% quantile. <code>select_threshold</code> searches multiple cutoffs on the same positives, returns fixed fusion weights, and calls this conformal calibration. Audit this before preserving any guarantee language. Verify live callers; an unused function is a code defect, not proof that a current project's displayed confidence used it.</p><p>For a fixed classifier/threshold evaluated on an independent representative set of adjudicated eligible studies, use a defensible one-sided binomial lower bound on sensitivity; a conservative default for sparse failures is Clopper–Pearson. For k successes among n eligible studies, confidence 1-alpha, lower bound is 0 if k=0, otherwise <code>BetaQuantile(alpha; k, n-k+1)</code>. With no misses, it is <code>alpha^(1/n)</code>, not one. At 95% one-sided confidence, 50/50 gives about 0.941845; at least 149 independent eligible examples with no misses are needed for that bound to exceed 0.98. These are illustrative binomial calculations, not a universal sample-size rule or a guarantee for this project. Multiple thresholds, dependent reports, adaptive samples and reused test data invalidate that naive interpretation. Sources: NIST references below.</p><p>Separate model fitting, calibration/policy selection, and independent final validation at study/review level to prevent leakage from duplicate reports. Fix the operating policy before the final validation. If sample size precludes this, show insufficient evidence rather than relaxing the requirement. Check any multiplicity/sequential tuning through an appropriate validated statistical procedure. A generic bootstrap over actively selected labels does not solve selection bias. Account for clustered reports and finite-population/random-audit designs; use a justified cluster or design-based method where binomial independence is inappropriate.</p><p>Evaluate probability calibration on representative human-adjudicated labels with reliability plots, proper scoring metrics such as Brier/log loss and uncertainty; do not use accuracy or a single ECE number alone as a safety claim. Temperature scaling or other calibration is a candidate to compare with appropriate held-out data, not an automatically best method for every criterion. The full weighted/policy output needs its own validation; calibrated individual criterion outputs do not imply a calibrated aggregate. Preset temperature buckets are not proof of project-specific calibration.</p><p>Report recall/sensitivity, precision where estimable, specificity, confusion counts, missing-text coverage and workload separately, at both TA and FT stages as applicable. Show TP/FN denominators and the exact interval method/confidence level; do not infer specificity from an eligible-only test set. Report by important designs, language, publication period and review domain when the sample supports it; otherwise disclose sparse evidence. A lower-bound target and a confidence level are separate settings. Use a pre-specified 95% validation confidence level by default; any change must be explicit, versioned and must not silently manufacture a passed safety target.</p><p>Keep recommendations human-confirmed by default. Thresholds/weights may help prioritize and explain; new automated final exclusion is outside this handoff. Existing automatic-routing behavior must be identified and constrained to a reviewable proposal queue until separately validated and explicitly enabled under protocol governance. Preserve historical actions. Do not claim 98% sensitivity at 95% confidence merely because 50 labels exist, prompts agree, or a code constant says so. Existing targets are product choices to justify, not universal research standards.</p><p>If a conformal/risk-control method is retained, identify the actual published algorithm, risk definition, finite-sample correction, sampling/exchangeability assumptions and precise guarantee. Expected-risk control is not interchangeable with a high-probability guarantee that recall exceeds a target. A Wald-bound cutoff search must not be labeled conformal risk control without a valid derivation and tests.</p><p>Any protocol, model, weighting, threshold, stage or material domain change invalidates prior applicability unless supported by a documented validation scope. Show not calibrated / validation insufficient / validation stale instead of recycling the old percentage. Continue human review rather than blocking all work when validation data are insufficient. Use model-independent, appropriately sampled audits; record sampling design and adjudicated reversals. Repeated monitoring needs a sequentially valid plan or pre-specified fixed audits, not unlimited repeated unadjusted 95% intervals.</p><h3>H. Required tests and acceptance artifacts for this addition</h3><ul><li>Arbitrary medication/dose/duration/comparator and other protocol criteria round-trip with stable IDs, evidence and logical grouping; no species-only implementation.</li><li>Omitted consequential restriction creates one project-scoped question; stated/unrestricted/not-applicable rules do not get re-asked; contradictory rules are flagged. Answers survive refresh, job restart and project switching and are included in every affected scoring path.</li><li>Project answer versus study-only answer has correct scope; another project/user cannot read or mutate unauthorized policy/questions. Failed answer/save retains the draft and does not advance or claim success.</li><li>Both inclusion and exclusion lists have accessible slider/numeric controls in the rightmost column. Preview does not mutate data; apply versions the policy, preserves history and marks affected evaluations stale. Cancel/reset restores saved values.</li><li>Hand-computed aggregation examples reproduce contributions and final score; enforce correct polarity, bounds, grouped-rule behavior, hard-rule precedence, unknown/missing evidence, all-zero weights and normalization. No NaN, fabricated contribution or silently renormalized slider display.</li><li>Raw-model score, entropy confidence, heuristic aggregate, calibrated estimate and validation CI are never mislabeled or mixed. Evidence text/anchors are actually in the saved source.</li><li>Exact-binomial reference tests cover n=0, k=0, k=n, one miss and boundary confidence levels. The 50/50 lower bound must not be 1. Test consistent alpha/confidence semantics, score ties, &gt;= versus &gt; operators and threshold selection/validation separation.</li><li>Changing weights/protocol invalidates the validation badge and affected traces; human decisions remain untouched. Replay/export of a historical evaluation uses historical settings, not today's sliders.</li><li>Independent blinded adjudication/validation and representative sampling are documented. No automatic high-confidence claim when there are too few positives, unresolved labels, label leakage or out-of-scope populations. Review methodology/statistical validation with an appropriately qualified reviewer before making safety/guarantee claims.</li><li>Add screenshots at all target widths of protocol autofill, pending questions, BOTH criterion tables, weight preview, study calculation detail and validation summary. Add trace export, methods report and reproducible mathematical reference tests to final acceptance.</li></ul><h3>I. Primary methodology references and limits</h3><p>These support the design distinctions; they do not validate RadExtract or establish that a particular weighting formula is best. This was a focused primary-source review, not an exhaustive systematic review of all screening tools. Source access date: 27 October 2026.</p><ul><li>Guo C et al. (2017), <a href="https://proceedings.mlr.press/v70/guo17a.html" target="_blank" rel="noopener noreferrer">On Calibration of Modern Neural Networks</a>. Demonstrates miscalibration and evaluates post-hoc calibration including temperature scaling. Its empirical findings are a method candidate, not evidence that this engine is calibrated.</li><li>Thomas J et al. (2021), <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8168828/" target="_blank" rel="noopener noreferrer">Machine learning reduced workload with minimal risk of missing studies: development and evaluation of a randomized controlled trial classifier for Cochrane Reviews</a>. Illustrates distinct development, calibration and evaluation datasets and recall-focused validation. RCT identification results cannot be transferred to arbitrary medication/protocol eligibility.</li><li><a href="https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-04" target="_blank" rel="noopener noreferrer">Cochrane Handbook, Chapter 4: Searching for and selecting studies</a>, especially section 4.6. The accessed text distinguishes supported prioritization from unvalidated automated stopping/elimination, noting the status of that recommendation at its stated time of writing. Do not generalize a narrow validated classifier to all reviews.</li><li><a href="https://itl.nist.gov/div898/software/dataplot/refman2/auxillar/exacbici.htm" target="_blank" rel="noopener noreferrer">NIST exact binomial confidence limits</a> and <a href="https://nvlpubs.nist.gov/nistpubs/TechnicalNotes/NIST.TN.2119.pdf" target="_blank" rel="noopener noreferrer">NIST Technical Note 2119, Estimating Instrument Performance</a>. Binomial interval methodology and boundary behavior; its sampling assumptions still need to be met.</li><li>Angelopoulos AN et al., <a href="https://arxiv.org/abs/2208.02814" target="_blank" rel="noopener noreferrer">Conformal Risk Control</a>, revised 2025. Distinguishes a formally specified expected-loss guarantee from loosely named threshold heuristics. Other guarantee types require their own justified methods and assumptions.</li></ul><h3>J. Files to hand to the implementing agent</h3><p>Provide this entire Markdown handoff and <code>RADEXTRACT_UPDATED_BLUEPRINT.html</code> from the same workspace. The HTML is a detailed target-state feature/layout companion; this Markdown defines implementation order, preservation rules, mathematical safeguards and acceptance gates. Earlier documents are background, not additional competing work orders. The implementing agent needs repository access and must re-check current state.</p></section><footer>RadExtract Platform — Complete System Blueprint · target state · generated 27 Oct 2026 · diagrams render via mermaid.js CDN · authoritative execution and acceptance companion: RADEXTRACT_FINAL_AGENT_HANDOFF.md; all implementation/validation status must be verified</footer>
+</div>
+<script>
+  mermaid.initialize({ startOnLoad:true, theme:"base", themeVariables:{
+    primaryColor:"#eee7ec", primaryTextColor:"#3a0f34", primaryBorderColor:"#3a0f34",
+    lineColor:"#814d75", secondaryColor:"#ffdea6", tertiaryColor:"#fbf9f4", fontSize:"13px" },
+    flowchart:{ curve:"basis", htmlLabels:true } });
+</script>
+</body>
+</html>
