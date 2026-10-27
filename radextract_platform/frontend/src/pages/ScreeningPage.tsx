@@ -334,12 +334,24 @@ export function ScreeningPage() {
     }
   };
 
-  const studyList = Array.isArray(studies) ? studies : [];
+  const studyList = useMemo(() => (Array.isArray(studies) ? studies : []), [studies]);
+
+  // Performance optimization: O(1) Set lookup for bookmarks instead of O(N*B) array searches
+  const bookmarkSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids]);
+
+  // Memoized count of bookmarked/saved studies to avoid filtering inside JSX render loops
+  const savedCount = useMemo(() => {
+    let count = 0;
+    for (let i = 0; i < studyList.length; i++) {
+      if (bookmarkSet.has(studyList[i].study_id)) count++;
+    }
+    return count;
+  }, [studyList, bookmarkSet]);
 
   // Filtered Studies List with Instant Bundle Filtering
   const filteredStudies = useMemo(() => {
     return studyList.filter((s) => {
-      if (savedOnly && !bookmarks.ids.includes(s.study_id)) return false;
+      if (savedOnly && !bookmarkSet.has(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
 
       // Stage filter
@@ -398,7 +410,7 @@ export function ScreeningPage() {
       }
       return true;
     });
-  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarks.ids, tagIndex.data, tagFilter]);
+  }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarkSet, tagIndex.data, tagFilter]);
 
   // Auto-select first study in filtered set if current selectedStudyId is filtered out
   useEffect(() => {
@@ -779,7 +791,7 @@ export function ScreeningPage() {
       );
     }
 
-    // Resolve character-level priority so keywords (green/red) are never swallowed by broad sentence spans
+    // Resolve priority via Cut-Point Boundary Set algorithm to avoid O(text_length) character array allocations
     const priorityMap: Record<string, number> = {
       exclude_keyword: 40,
       include_keyword: 30,
@@ -790,31 +802,42 @@ export function ScreeningPage() {
       outcome: 10,
     };
 
-    const charSpans: (HighlightSpan | null)[] = new Array(rawText.length).fill(null);
+    const cutsSet = new Set<number>([0, rawText.length]);
     for (const span of activeSpans) {
-      const start = Math.max(0, span.start);
-      const end = Math.min(rawText.length, span.end);
-      if (end <= start) continue;
-      const prio = priorityMap[span.type] || 0;
-      for (let i = start; i < end; i++) {
-        const curr = charSpans[i];
-        if (!curr || (priorityMap[curr.type] || 0) < prio) {
-          charSpans[i] = span;
-        }
+      const s = Math.max(0, span.start);
+      const e = Math.min(rawText.length, span.end);
+      if (e > s) {
+        cutsSet.add(s);
+        cutsSet.add(e);
       }
     }
+    const cuts = Array.from(cutsSet).sort((a, b) => a - b);
 
     const segments: { start: number; end: number; span: HighlightSpan | null }[] = [];
-    let currentSpan = charSpans[0];
-    let currentStart = 0;
-    for (let i = 1; i < rawText.length; i++) {
-      if (charSpans[i] !== currentSpan) {
-        segments.push({ start: currentStart, end: i, span: currentSpan });
-        currentSpan = charSpans[i];
-        currentStart = i;
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const segStart = cuts[i];
+      const segEnd = cuts[i + 1];
+      let topSpan: HighlightSpan | null = null;
+      let topPrio = -1;
+
+      for (const span of activeSpans) {
+        const s = Math.max(0, span.start);
+        const e = Math.min(rawText.length, span.end);
+        if (s <= segStart && e >= segEnd) {
+          const prio = priorityMap[span.type] || 0;
+          if (prio > topPrio) {
+            topPrio = prio;
+            topSpan = span;
+          }
+        }
+      }
+
+      if (segments.length > 0 && segments[segments.length - 1].span === topSpan) {
+        segments[segments.length - 1].end = segEnd;
+      } else {
+        segments.push({ start: segStart, end: segEnd, span: topSpan });
       }
     }
-    segments.push({ start: currentStart, end: rawText.length, span: currentSpan });
 
     const elements: React.ReactNode[] = segments.map((seg, idx) => {
       const segText = rawText.substring(seg.start, seg.end);
@@ -1312,7 +1335,7 @@ export function ScreeningPage() {
                 onChange={(e) => setSavedOnly(e.target.checked)}
                 className="rounded text-[#3a0f34] focus:ring-[#814d75]"
               />
-              <span className="font-medium">Saved ({studyList.filter((s) => bookmarks.ids.includes(s.study_id)).length})</span>
+              <span className="font-medium">Saved ({savedCount})</span>
             </label>
 
             {/* Tag Filter */}
@@ -1864,7 +1887,7 @@ export function ScreeningPage() {
                       <h3 className="text-xs font-semibold text-[#3a0f34] line-clamp-2 leading-snug">
                         {study.title}
                       </h3>
-                      <BookmarkButton saved={bookmarks.ids.includes(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
+                      <BookmarkButton saved={bookmarkSet.has(study.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(study.study_id)} />
                       {conf !== null && (
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap animate-tag-pop ${
@@ -1989,7 +2012,7 @@ export function ScreeningPage() {
                       true
                     )}
                   </h2>
-                  <BookmarkButton saved={bookmarks.ids.includes(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
+                  <BookmarkButton saved={bookmarkSet.has(selectedStudy.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(selectedStudy.study_id)} />
                   <span
                     className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider whitespace-nowrap animate-tag-pop ${
                       selectedStudy.screening_status === "included" || selectedStudy.screening_status === "ta_included"

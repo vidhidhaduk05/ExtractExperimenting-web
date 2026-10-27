@@ -647,5 +647,20 @@ Source: `app_shell_ui_plan.md` / Agent Work Order.
 - **Landing Page Invariant**: The landing page at `/` remains untouched and outside the AppShell layout.
 - **Repository Sync**: Single source of truth is `radextract_platform/frontend`, synchronized via `sync_web_repo.py` to `ExtractExperimenting-web` and GitHub Pages.
 
+## 2026-10-27 — HTTP 405 Resolution & Verified Branch Consolidation
+
+- **HTTP 405 Method Not Allowed Root Cause & Resolution**:
+  - *FastAPI SPA Catch-all Route*: Changed `@app.get("/{full_path:path}")` in `radextract_platform/backend/main.py` to `@app.api_route("/{full_path:path}", methods=["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])`. Catch-all returns `404 Not Found` for unhandled mutations instead of Starlette's automatic `405 Method Not Allowed`.
+  - *API Base URL Normalization*: Added `normalizeApiBase(url)` in `radextract_platform/frontend/src/lib/api.ts` to ensure `/api` suffix is cleanly maintained and prevent hitting root SPA router.
+  - *Static GitHub Pages Demo Fallback*: Added automatic fallback in `request()` and `authenticatedRequest()` to client-side storage when HTTP 405 or network disconnect occurs on static demo deployments.
+  - *Collaboration Inquiry Form*: Updated `collab-form` in `landing_body.html` from `POST [[FORM_ENDPOINT]]` to `action="#" method="GET" id="collab-inquiry-form"`, and wired `handleCollab` event listener in `LandingPage.tsx` with `e.preventDefault()` and confirmation text.
+- **Consolidation of Verified Feature Branches**:
+  - *Hypothesis Generation Hardening (`fix/hypothesis-generation`)*: Added `generation_source` ("llm" | "template" | "failed") and `generation_error` fields to `HypothesisResponse`; implemented PICO grounding validation; added `POST /projects/{id}/generate-hypothesis` with `X-Confirm-Overwrite` protection; wired Co-Scientist styled warning banner in `PicoHypothesisPage.tsx`.
+  - *Durable Dedup & PRISMA Reconciliation (`feat/zoplicate-dedup`)*: Merged DB-backed durable merge runs (`dedup_merge_plans`, `dedup_merge_runs`), PRISMA tier reconciliation, duplicate family pooling guards in meta-analysis, exact DOI/title matching with rejection history, and gold standard evaluator (`eval_dedup_gold.py`).
+  - *Bolt Performance Optimizations*: Applied O(1) Set bookmark lookups (`bookmarkSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids])`) and memoized study counts in `ScreeningPage.tsx` and `StudyList.tsx`; memoized live PRISMA flow calculations in `PrismaFlowPage.tsx`; replaced O(text_length) character array allocations in `renderHighlightedText` with cut-point interval boundary set merging.
+- **Verification & Sync**:
+  - 58/58 backend tests passed across hypothesis generation, zoplicate dedup, safety vetoes, duplicate review, and gold evaluator suites.
+  - Synchronized and verified across both `ExtractExperimenting` and `ExtractExperimenting-web` repositories.
+
 
 

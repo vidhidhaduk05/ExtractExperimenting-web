@@ -10,21 +10,27 @@ Combines:
 from __future__ import annotations
 
 import os
+import sys
 import re
 import json
 import time
 import math
 import hashlib
 import logging
+from threading import Lock
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Any, Optional, Tuple
 
+_workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _workspace_root not in sys.path:
+    sys.path.insert(0, _workspace_root)
+_backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _backend_root not in sys.path:
+    sys.path.insert(0, _backend_root)
+
 import httpx
 import numpy as np
-try:
-    import onnxruntime as ort
-except ImportError:
-    ort = None
+import onnxruntime as ort
 
 from config import settings
 
@@ -32,6 +38,29 @@ logger = logging.getLogger("claimscape.pipeline")
 
 # Multi-tier caching
 _CLAIMSCAPE_CACHE: Dict[str, Dict[str, Any]] = {}
+_CLAIMSCAPE_CACHE_MAX_ENTRIES = 128
+_CLAIMSCAPE_CACHE_LOCK = Lock()
+
+
+def _memory_cache_get(key: str) -> Optional[Dict[str, Any]]:
+    """Return a copy and refresh recency while holding the cache lock."""
+    with _CLAIMSCAPE_CACHE_LOCK:
+        result = _CLAIMSCAPE_CACHE.pop(key, None)
+        if result is None:
+            return None
+        _CLAIMSCAPE_CACHE[key] = result
+        return dict(result)
+
+
+def _memory_cache_put(key: str, result: Dict[str, Any]) -> None:
+    """Bound retained results using dictionary insertion order as LRU order."""
+    with _CLAIMSCAPE_CACHE_LOCK:
+        _CLAIMSCAPE_CACHE.pop(key, None)
+        _CLAIMSCAPE_CACHE[key] = dict(result)
+        while len(_CLAIMSCAPE_CACHE) > _CLAIMSCAPE_CACHE_MAX_ENTRIES:
+            del _CLAIMSCAPE_CACHE[next(iter(_CLAIMSCAPE_CACHE))]
+
+
 CACHE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "claimscape_cache"))
 os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -49,18 +78,28 @@ def _get_http_client() -> httpx.Client:
     return _HTTP_CLIENT
 
 
-# Laya Model singleton with multi-threaded execution
+# Laya / Jev Model singleton with multi-threaded execution
 _laya_instance: Any = None
 _laya_failed = False
 
 
 def _get_laya_model():
-    """Get or initialize singleton Laya ONNX engine with multi-threaded parallel execution."""
+    """Get or initialize singleton Laya / Jev ONNX engine with multi-threaded parallel execution."""
     global _laya_instance, _laya_failed
     if _laya_instance is not None:
         return _laya_instance
-    if _laya_failed or ort is None:
+    if _laya_failed:
         return None
+
+    # First attempt via jev_client if available
+    try:
+        from services.jev_client import _get_laya_engine
+        engine = _get_laya_engine()
+        if engine is not None:
+            _laya_instance = engine
+            return _laya_instance
+    except Exception as e:
+        logger.debug("jev_client._get_laya_engine failed: %s", e)
 
     try:
         from laya.laya_engine import LayaModel
@@ -157,6 +196,201 @@ def _classify_study_tier(pub_types: List[str], text: str) -> str:
     return "obs"
 
 
+_TENS = {
+    "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+    "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90
+}
+_ONES = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+    "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19
+}
+
+
+def _parse_english_number(s: str) -> Optional[int]:
+    """Parse integer from digits or common English count words/hyphenated words."""
+    if not s:
+        return None
+    s = s.lower().strip()
+    if s in _ONES:
+        return _ONES[s]
+    if s in _TENS:
+        return _TENS[s]
+    parts = s.replace("-", " ").split()
+    if len(parts) == 2 and parts[0] in _TENS and parts[1] in _ONES:
+        return _TENS[parts[0]] + _ONES[parts[1]]
+    clean = re.sub(r"[\s,]", "", s)
+    if clean.isdigit():
+        return int(clean)
+    return None
+
+
+def _normalize_claim_hypothesis(claim: str) -> str:
+    """Normalize interrogative claims to affirmative propositions for stance entailment."""
+    c = claim.strip().rstrip("?").strip()
+    m = re.match(r"^are\s+(.+?)\s+(more|less|likely|at\s+increased\s+risk|at\s+higher\s+risk|associated\s+with)\b(.*)$", c, re.I)
+    if m:
+        return f"{m.group(1)} are {m.group(2)}{m.group(3)}".strip()
+
+    m = re.match(r"^is\s+(.+?)\s+(associated\s+with|effective|beneficial|protective|safe|better|linked\s+to|indicated|superior)\b(.*)$", c, re.I)
+    if m:
+        return f"{m.group(1)} is {m.group(2)}{m.group(3)}".strip()
+
+    m = re.match(r"^does\s+(.+?)\s+(reduce|decrease|increase|improve|worsen|prevent|cause|lead\s+to|protect|lower|elevate|benefit|extend)\b(.*)$", c, re.I)
+    if m:
+        verb = m.group(2).lower()
+        verb_s = "leads to" if verb == "lead to" else (verb[:-1] + "ies" if verb.endswith("y") else (verb + "s" if verb.endswith("e") else verb + "s"))
+        return f"{m.group(1)} {verb_s}{m.group(3)}".strip()
+
+    m = re.match(r"^(?:do|can|will|should)\s+(.+?)\s+(reduce|decrease|increase|improve|worsen|prevent|cause|lead\s+to|protect|lower|elevate|benefit|extend)\b(.*)$", c, re.I)
+    if m:
+        return f"{m.group(1)} {m.group(2)}{m.group(3)}".strip()
+
+    return c
+
+
+def _extract_sample_size(abstract: str, title: str, tier: str, pub_types: List[str]) -> Dict[str, Any]:
+    """Extract participant count / sample size and contextual display string."""
+    text = (title + " " + abstract).strip()
+    text_lower = text.lower()
+    lower_pts = [p.lower() for p in (pub_types or [])]
+
+    # 1. Systematic Review / Meta-Analysis
+    is_meta = (
+        tier == "meta"
+        or any("meta-analysis" in pt or "systematic review" in pt for pt in lower_pts)
+        or "systematic review" in text_lower
+        or "meta-analysis" in text_lower
+    )
+    if is_meta:
+        n_studies = None
+        m_st = re.search(
+            r"\b(\d{1,4}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty(?:-\w+)?|thirty(?:-\w+)?|forty(?:-\w+)?|fifty(?:-\w+)?)\s+(?:eligible\s+|included\s+|relevant\s+|randomized\s+|observational\s+)?(?:studies|trials|articles|rcts|cohorts|publications)\b",
+            text_lower
+        )
+        if m_st:
+            n_studies = _parse_english_number(m_st.group(1))
+        if not n_studies:
+            m_st2 = re.search(r"(?:total of|included|analyzed|identified|pooled\s+from)\s+(\d{1,4})\s+(?:studies|trials|articles)", text_lower)
+            if m_st2:
+                n_studies = _parse_english_number(m_st2.group(1))
+
+        n_pts = None
+        m_pts = re.search(
+            r"(?:total of|comprising|including|enrolling|analyzed|sample size of|pooled\s+(?:data\s+from)?|n\s*=\s*)\s*(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})\s*(?:patients|participants|individuals|subjects|cases|children|women|men|adults)?",
+            text_lower
+        )
+        if m_pts:
+            n_pts = _parse_english_number(m_pts.group(1))
+        if not n_pts:
+            m_pts2 = re.search(
+                r"(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})\s+(?:patients|participants|individuals|subjects)\s+(?:were\s+included|were\s+analyzed|across)",
+                text_lower
+            )
+            if m_pts2:
+                n_pts = _parse_english_number(m_pts2.group(1))
+
+        if n_studies and n_pts:
+            disp = f"{n_studies:,} studies, {n_pts:,} patients (Systematic Review)"
+        elif n_studies:
+            disp = f"{n_studies:,} studies (Systematic Review)"
+        elif n_pts:
+            disp = f"{n_pts:,} pooled patients (Systematic Review)"
+        else:
+            disp = "Systematic Review / Meta-Analysis"
+
+        return {
+            "sample_size": n_pts or n_studies,
+            "sample_size_display": disp,
+            "study_type_label": "Systematic Review & Meta-Analysis"
+        }
+
+    # 2. Case Report (Single Patient)
+    is_case_report = (
+        "case report" in title.lower()
+        or any("case reports" in pt for pt in lower_pts)
+        or (tier == "case" and "case series" not in text_lower and not re.search(r"\b(?:\d+|two|three|four|five|six|seven|eight|nine|ten)\s+cases\b", text_lower))
+    )
+    if is_case_report:
+        return {
+            "sample_size": 1,
+            "sample_size_display": "1 patient (Case Report)",
+            "study_type_label": "Case Report"
+        }
+
+    # 3. Case Series (Multiple Patients)
+    is_case_series = (
+        "case series" in text_lower
+        or (tier == "case" and ("case series" in text_lower or re.search(r"\b(?:\d+|two|three|four|five|six|seven|eight|nine|ten)\s+cases\b", text_lower)))
+    )
+    if is_case_series:
+        n_cases = None
+        m_cs = re.search(
+            r"(?:case series of|series of|in a series of|in|among)\s*(\d{1,4}|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty(?:-\w+)?)\s*(?:consecutive\s+)?(?:patients|cases|subjects)",
+            text_lower
+        )
+        if m_cs:
+            n_cases = _parse_english_number(m_cs.group(1))
+        if not n_cases:
+            m_cs2 = re.search(
+                r"\b(\d{1,4}|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty(?:-\w+)?)\s*(?:consecutive\s+)?(?:patients|cases|subjects)\b",
+                text_lower
+            )
+            if m_cs2:
+                n_cases = _parse_english_number(m_cs2.group(1))
+        disp = f"{n_cases:,} patients (Case Series)" if n_cases else "Case Series"
+        return {
+            "sample_size": n_cases,
+            "sample_size_display": disp,
+            "study_type_label": "Case Series"
+        }
+
+    # 4. Preclinical Models (Animal / In Vitro)
+    if tier == "animal":
+        return {
+            "sample_size": None,
+            "sample_size_display": "Animal Model (Preclinical)",
+            "study_type_label": "Animal Study"
+        }
+    if tier == "in_vitro":
+        return {
+            "sample_size": None,
+            "sample_size_display": "In Vitro / Cell Model",
+            "study_type_label": "In Vitro Study"
+        }
+
+    # 5. RCTs, Cohorts, and Clinical Studies
+    patterns = [
+        r"(?:total of|enrolled|included|randomized|recruited|analyzed|evaluated|cohort of|comprising)\s+(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})\s*(?:patients|participants|individuals|subjects|children|adults|women|men)?",
+        r"among\s+(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})\s+(?:patients|participants|individuals|children|women|men|adults|subjects)",
+        r"(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})\s+(?:patients|participants|individuals|subjects|women|men|children|adults)\s*(?:were\s+enrolled|were\s+included|were\s+randomized|underwent|received|were\s+evaluated)",
+        r"(?:sample size|sample size of|n\s*=\s*)\s*(\d{1,3}(?:[,\s]\d{3})+|\d{2,7})",
+    ]
+    for pat in patterns:
+        m = re.search(pat, text_lower)
+        if m:
+            val = _parse_english_number(m.group(1))
+            if val and 1 < val < 50_000_000:
+                tier_label = (
+                    "RCT" if tier == "rct"
+                    else "Clinical Trial" if tier == "trial"
+                    else "Cohort" if "cohort" in text_lower
+                    else "Observational"
+                )
+                return {
+                    "sample_size": val,
+                    "sample_size_display": f"{val:,} participants ({tier_label})",
+                    "study_type_label": tier_label
+                }
+
+    tier_label = "Randomized Trial" if tier == "rct" else "Observational Study" if tier == "obs" else "Review" if tier == "review" else "Study"
+    return {
+        "sample_size": None,
+        "sample_size_display": None,
+        "study_type_label": tier_label
+    }
+
+
 def _parse_efetch_xml(xml_text: str) -> List[Dict[str, Any]]:
     """Single-pass parser extracting article metadata and structured abstract in one pass."""
     articles = []
@@ -225,6 +459,7 @@ def _parse_efetch_xml(xml_text: str) -> List[Dict[str, Any]]:
 
             sentences = _split_sentences(abstract_str)
             tier = _classify_study_tier(pub_types, title + " " + abstract_str)
+            sample_info = _extract_sample_size(abstract_str, title, tier, pub_types)
 
             articles.append({
                 "pmid": pmid,
@@ -237,6 +472,9 @@ def _parse_efetch_xml(xml_text: str) -> List[Dict[str, Any]]:
                 "abstract": abstract_str,
                 "sentences": sentences,
                 "tier": tier,
+                "sample_size": sample_info.get("sample_size"),
+                "sample_size_display": sample_info.get("sample_size_display"),
+                "study_type_label": sample_info.get("study_type_label"),
             })
     except ET.ParseError as e:
         raise RuntimeError("PubMed returned invalid article XML") from e
@@ -260,12 +498,30 @@ def _batch_eval_laya(laya_model: Any, articles: List[Dict[str, Any]], clean_clai
         items = []
 
         for p_idx, art in enumerate(chunk_articles):
+            sents = art.get("sentences", [])
+            if not sents and art.get("abstract"):
+                sents = _split_sentences(art["abstract"])
+                art["sentences"] = sents
+
+            # Prefix abstract sentences with S01|, S02|, etc.
+            prefixed_abstract = " ".join(f"S{i+1:02d}| {s}" for i, s in enumerate(sents)) if sents else art.get("abstract", "")
             state = {
                 "claim": clean_claim,
-                "paper": {"title": art.get("title", ""), "abstract": art.get("abstract", "")}
+                "paper": {"title": art.get("title", ""), "abstract": prefixed_abstract}
             }
-            for qid in qids:
-                q = _to_internal(q_defs[qid])
+
+            paper_q_defs = dict(q_defs)
+            if sents:
+                # Cap finding sentence choices to fit within head_max_len
+                sents_for_finding = sents[:25]
+                paper_q_defs["finding"] = {
+                    "type": "choice",
+                    "criteria": {f"S{i+1:02d}": s for i, s in enumerate(sents_for_finding)},
+                    "instructions": "Which sentence of the abstract reports this paper's own result that bears most directly on the claim?"
+                }
+
+            for qid, q_def in paper_q_defs.items():
+                q = _to_internal(q_def)
                 seq, markers = laya_model._build_sequence(state, q)
                 items.append({
                     "p_idx": p_idx,
@@ -326,48 +582,86 @@ def _batch_eval_laya(laya_model: Any, articles: List[Dict[str, Any]], clean_clai
             if q["t"] == "choice":
                 keys = list(q.get("crit", {}).keys())
                 paper_answers[p_idx][qid] = {
-                    k_name: round(float(p[idx]), 4) for idx, k_name in enumerate(keys)
+                    keys[idx]: round(float(p[idx]), 4) for idx in range(min(k, len(keys)))
                 }
 
         for p_idx, art in enumerate(chunk_articles):
             pmid = art["pmid"]
             ans = paper_answers.get(p_idx, {})
-            on_topic_p = ans.get("onTopic", {}).get("yes", 0.92)
-            st_p = ans.get("stance", {})
-            supports_p = float(st_p.get("supports", 0.5))
-            contradicts_p = float(st_p.get("contradicts", 0.5))
-            direct_p = 0.94 if art.get("tier") in ("meta", "rct", "trial", "obs") else 0.45
+            on_topic_p = float(ans.get("onTopic", {}).get("yes", 0.92))
+            # Real direct evidence question response from Laya
+            direct_p = float(ans.get("direct", {}).get("yes", 0.85))
 
-            # Extractive finding sentence selection
+            st_p = ans.get("stance", {})
+            st_check_p = ans.get("stanceCheck", st_p)
+
+            supports_p = float(st_p.get("supports", 0.0))
+            contradicts_p = float(st_p.get("contradicts", 0.0))
+            mixed_p = float(st_p.get("mixed", 0.0))
+            no_result_p = float(st_p.get("no_result", 0.0))
+
+            chk_supports = float(st_check_p.get("supports", supports_p))
+            chk_contradicts = float(st_check_p.get("contradicts", contradicts_p))
+            chk_mixed = float(st_check_p.get("mixed", mixed_p))
+            chk_no_result = float(st_check_p.get("no_result", no_result_p))
+
+            # Finding sentence extracted directly from Laya choice
             sents = art.get("sentences", [])
-            finding = None
-            if sents:
-                claim_words = set(clean_claim.lower().split())
-                best_s = sents[0]
-                best_score = -1
-                for s in sents:
-                    s_low = s.lower()
-                    mult = 1.8 if any(w in s_low for w in ["conclude", "found that", "associated with", "reduced", "increased", "significantly", "demonstrated", "observed", "results"]) else 1.0
-                    overlap = sum(1 for w in claim_words if w in s_low)
-                    sc = overlap * mult
-                    if sc > best_score:
-                        best_score = sc
-                        best_s = s
-                finding = best_s
+            finding_ans = ans.get("finding", {})
+            finding_sentence = None
+            finding_dict = None
+            if finding_ans and sents:
+                chosen_opt_id = max(finding_ans.items(), key=lambda kv: kv[1])[0]
+                m_id = re.match(r"^S(\d+)$", chosen_opt_id)
+                if m_id:
+                    s_idx = int(m_id.group(1)) - 1
+                    if 0 <= s_idx < len(sents):
+                        finding_sentence = sents[s_idx]
+                        finding_dict = {
+                            "index": s_idx,
+                            "confidence": float(finding_ans[chosen_opt_id]),
+                        }
+            if finding_sentence:
+                art["findingText"] = finding_sentence
+
+            # Admission & stance consensus rules (Phase 3)
+            # Verdict counts iff stance and stanceCheck pick the SAME option AND their average probability >= 0.60; otherwise unclear.
+            top_st = max(st_p.items(), key=lambda kv: kv[1])[0] if st_p else "unclear"
+            top_chk = max(st_check_p.items(), key=lambda kv: kv[1])[0] if st_check_p else "unclear"
+
+            avg_probs = {}
+            for k in ("supports", "contradicts", "mixed", "no_result"):
+                avg_probs[k] = (st_p.get(k, 0.0) + st_check_p.get(k, 0.0)) / 2.0
+
+            top_avg_k, top_avg_p = max(avg_probs.items(), key=lambda kv: kv[1]) if avg_probs else ("unclear", 0.0)
+
+            agree = (top_st == top_chk)
+            if agree and top_st == top_avg_k and top_avg_p >= 0.60:
+                category = top_avg_k
+            else:
+                category = "unclear"
 
             judgments.append({
                 "pmid": pmid,
                 "onTopic": float(on_topic_p),
                 "direct": float(direct_p),
+                "category": category,
+                "agree": bool(agree),
+                "strength": round(float(top_avg_p), 4),
                 "stance": {
                     "supports": supports_p,
                     "contradicts": contradicts_p,
+                    "mixed": mixed_p,
+                    "no_result": no_result_p,
                 },
                 "stanceCheck": {
-                    "supports": supports_p,
-                    "contradicts": contradicts_p,
+                    "supports": chk_supports,
+                    "contradicts": chk_contradicts,
+                    "mixed": chk_mixed,
+                    "no_result": chk_no_result,
                 },
-                "findingSentence": finding,
+                "finding": finding_dict,
+                "findingSentence": finding_sentence,
             })
 
     return judgments
@@ -393,13 +687,13 @@ def evaluate_claim_fast(
     # Cache key
     # Versioned structured keys exclude historical preset/unknown-provenance results.
     cache_key = hashlib.sha256(json.dumps(
-        ["live-v2", clean_claim, search_query, count], ensure_ascii=False
+        ["live-v3", clean_claim, search_query, count], ensure_ascii=False
     ).encode("utf-8")).hexdigest()
 
     # Tier 1: In-memory cache (< 0.1 ms)
-    if cache_key in _CLAIMSCAPE_CACHE:
+    res = _memory_cache_get(cache_key)
+    if res is not None:
         logger.info("ClaimScape served from memory cache: %s", search_query)
-        res = dict(_CLAIMSCAPE_CACHE[cache_key])
         res["cached"] = True
         return res
 
@@ -409,7 +703,7 @@ def evaluate_claim_fast(
         try:
             with open(disk_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                _CLAIMSCAPE_CACHE[cache_key] = data
+                _memory_cache_put(cache_key, data)
                 data["cached"] = True
                 logger.info("ClaimScape served from disk cache: %s", search_query)
                 return data
@@ -420,8 +714,59 @@ def evaluate_claim_fast(
     client = _get_http_client()
     api_key = api_key or getattr(settings, "ncbi_api_key", "")
 
+    # 0. Live ClaimScape Scan Engine
+    # When connected to the live web, optionally query the remote ClaimScape scan service if opt-in enabled
+    if getattr(settings, "claimscape_remote_scan", False) and isinstance(getattr(client, "_transport", None), httpx.HTTPTransport):
+        try:
+            scan_url = "https://www.k-dense.ai/api/claimscape/scan"
+            scan_resp = client.post(
+                scan_url,
+                json={
+                    "claim": clean_claim,
+                    "query": search_query,
+                    "size": count,
+                    "includeCommentary": False,
+                },
+                timeout=25.0,
+            )
+            if scan_resp.status_code == 200 and scan_resp.text:
+                lines = [l.strip() for l in scan_resp.text.splitlines() if l.strip()]
+                events = []
+                for line in lines:
+                    try:
+                        events.append(json.loads(line))
+                    except Exception:
+                        pass
+                search_ev = next((e for e in events if e.get("type") == "search"), None)
+                papers_ev = next((e for e in events if e.get("type") == "papers"), None)
+                judged_items = []
+                for e in events:
+                    if e.get("type") == "judged":
+                        judged_items.extend(e.get("items", []))
+
+                if search_ev and papers_ev and judged_items:
+                    res_payload = {
+                        "claim": clean_claim,
+                        "query": search_query,
+                        "total": search_ev.get("total", len(papers_ev.get("papers", []))),
+                        "papers": papers_ev.get("papers", []),
+                        "judgments": judged_items,
+                        "elapsed_ms": round((time.perf_counter() - t0) * 1000, 1),
+                        "cached": False,
+                        "engine": "claimscape_live_v1",
+                    }
+                    _memory_cache_put(cache_key, res_payload)
+                    try:
+                        with open(disk_path, "w", encoding="utf-8") as f:
+                            json.dump(res_payload, f, ensure_ascii=False)
+                    except Exception:
+                        pass
+                    return res_payload
+        except Exception as e:
+            logger.debug("Live ClaimScape scan bypassed: %s", e)
+
     # 1. PubMed E-Search (Retmax up to count)
-    filter_tail = "hasabstract AND english[la] NOT (editorial[pt] OR comment[pt] OR letter[pt] OR news[pt])"
+    filter_tail = "hasabstract AND english[la] NOT ((review[pt] NOT systematic[sb]) OR editorial[pt] OR comment[pt] OR letter[pt] OR news[pt]) NOT (Retracted Publication[pt] OR Retraction of Publication[pt] OR Published Erratum[pt] OR Expression of Concern[pt])"
     full_term = f"({search_query}) AND {filter_tail}"
 
     params = {
@@ -438,14 +783,44 @@ def evaluate_claim_fast(
         resp = client.get("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi", params=params)
         resp.raise_for_status()
         data = resp.json()
-        esearch_res = data["esearchresult"]
+        esearch_res = data.get("esearchresult", {})
         if data.get("error") or esearch_res.get("ERROR"):
-            raise ValueError("PubMed reported a search error")
-        total_pubmed = int(esearch_res["count"])
-        raw_pmids = esearch_res["idlist"]
+            raise RuntimeError("PubMed reported a search error")
+
+        # Search-term validation: if esearch response contains ErrorList / QuotedPhraseNotFound / ignored-term fields,
+        # STOP and return a 400 naming the unrecognized term - never silently search without it
+        error_list = esearch_res.get("ErrorList") or {}
+        warning_list = esearch_res.get("WarningList") or {}
+
+        unrecognized = []
+        for field in ("PhraseNotFound", "FieldNotFound"):
+            vals = error_list.get(field, [])
+            if isinstance(vals, str):
+                vals = [vals]
+            unrecognized.extend(vals)
+
+        for field in ("QuotedPhraseNotFound", "OutputMessage"):
+            vals = warning_list.get(field, [])
+            if isinstance(vals, str):
+                vals = [vals]
+            if field == "QuotedPhraseNotFound":
+                unrecognized.extend(vals)
+            elif field == "OutputMessage":
+                for msg in vals:
+                    if any(k in msg.lower() for k in ("ignored", "not found", "unknown phrase")):
+                        unrecognized.append(msg)
+
+        if unrecognized:
+            bad_terms = ", ".join(f"'{u}'" for u in unrecognized)
+            raise ValueError(f"Unrecognized search term or quoted phrase in PubMed query: {bad_terms}")
+
+        total_pubmed = int(esearch_res.get("count", 0))
+        raw_pmids = esearch_res.get("idlist", [])
         if not isinstance(raw_pmids, list) or total_pubmed < 0 or (total_pubmed > 0 and not raw_pmids):
-            raise ValueError("PubMed returned an incomplete search response")
+            raise RuntimeError("PubMed returned an incomplete search response")
         pmids = [str(x) for x in raw_pmids]
+    except ValueError:
+        raise
     except Exception as e:
         logger.error("PubMed esearch failed: %s", e)
         raise RuntimeError("PubMed search failed; please retry") from e
@@ -493,22 +868,49 @@ def evaluate_claim_fast(
 
     # 3. High-Throughput Batched Laya System-1 Tensor Inference
     laya = _get_laya_model()
+    hypothesis = _normalize_claim_hypothesis(clean_claim)
     q_defs = {
         "onTopic": {
             "type": "choice",
-            "criteria": {"yes": "investigates relationship", "no": "does not"},
-            "instructions": "Does the paper investigate the relationship described in the claim?"
+            "criteria": {
+                "yes": "study investigates or reports on this relationship/outcome",
+                "no": "study does not investigate or report on this relationship"
+            },
+            "instructions": "Does the paper investigate or report on the relationship described in the claim?"
         },
         "stance": {
             "type": "choice",
-            "criteria": {"supports": "agrees with claim", "contradicts": "disagrees with claim"},
-            "instructions": "What do the results say about the claim?"
+            "criteria": {
+                "supports": "an effect in the direction the claim states (or no effect, when the claim asserts none)",
+                "contradicts": "no effect where the claim asserts one, an effect in the opposite direction, or harm where the claim asserts benefit",
+                "mixed": "some results agree with the claim and others disagree, across outcomes, doses, subgroups or time",
+                "no_result": "the paper reports no result bearing on the claim (protocol, method, or review without a conclusion)"
+            },
+            "instructions": "What do the paper's own results say about the claim?"
+        },
+        "stanceCheck": {
+            "type": "choice",
+            "criteria": {
+                "supports": "an effect in the direction the claim states (or no effect, when the claim asserts none)",
+                "contradicts": "no effect where the claim asserts one, an effect in the opposite direction, or harm where the claim asserts benefit",
+                "mixed": "some results agree with the claim and others disagree, across outcomes, doses, subgroups or time",
+                "no_result": "the paper reports no result bearing on the claim (protocol, method, or review without a conclusion)"
+            },
+            "instructions": "Taken as a whole, which way does the paper's evidence point on the claim?"
+        },
+        "direct": {
+            "type": "choice",
+            "criteria": {
+                "yes": "same population, exposure/intervention, and outcome that the claim names",
+                "no": "different population, species or laboratory model, or a stand-in exposure or outcome"
+            },
+            "instructions": "Does the paper test the claim directly?"
         }
     }
 
     if laya is not None and articles:
         try:
-            judgments = _batch_eval_laya(laya, articles, clean_claim, q_defs)
+            judgments = _batch_eval_laya(laya, articles, hypothesis, q_defs)
         except Exception as e:
             logger.warning("Batched Laya evaluation encountered exception, falling back: %s", e)
             judgments = []
@@ -525,16 +927,54 @@ def evaluate_claim_fast(
             if art["pmid"] in existing_pmids:
                 continue
             text = (art.get("title", "") + " " + art.get("abstract", "")).lower()
-            sup = 0.78 if any(w in text for w in ["reduced", "decreased risk", "benefit", "protective", "efficacy"]) else 0.22 if any(w in text for w in ["increased risk", "harm", "no significant"]) else 0.5
+            if any(w in text for w in ["reduced", "decreased risk", "benefit", "protective", "efficacy", "effective", "improved"]):
+                sup, con, mix, nr = 0.70, 0.10, 0.10, 0.10
+            elif any(w in text for w in ["increased risk", "harm", "worse", "ineffective", "failed to"]):
+                sup, con, mix, nr = 0.10, 0.70, 0.10, 0.10
+            elif any(w in text for w in ["mixed", "conflicting", "inconsistent", "heterogeneous"]):
+                sup, con, mix, nr = 0.20, 0.20, 0.50, 0.10
+            elif any(w in text for w in ["no significant", "no association", "not observed", "no difference"]):
+                sup, con, mix, nr = 0.10, 0.10, 0.10, 0.70
+            else:
+                sup, con, mix, nr = 0.25, 0.25, 0.25, 0.25
+
             sents = art.get("sentences", [])
+            tier = art.get("tier", "obs")
+            direct_p = 0.90 if tier in ("meta", "rct", "trial", "obs") else 0.45 if tier == "case" else 0.20
+
+            st_dict = {"supports": sup, "contradicts": con, "mixed": mix, "no_result": nr}
+            top_k, top_p = max(st_dict.items(), key=lambda kv: kv[1])
+            cat = top_k if top_p >= 0.60 else "unclear"
+
+            finding_s = sents[0] if sents else None
+            finding_d = {"index": 0, "confidence": 0.5} if sents else None
+            if finding_s:
+                art["findingText"] = finding_s
+
             judgments.append({
                 "pmid": art["pmid"],
                 "onTopic": 0.92,
-                "direct": 0.88,
-                "stance": {"supports": sup, "contradicts": round(1.0 - sup, 4)},
-                "stanceCheck": {"supports": sup, "contradicts": round(1.0 - sup, 4)},
-                "findingSentence": sents[0] if sents else None,
+                "direct": direct_p,
+                "category": cat,
+                "agree": True,
+                "strength": top_p,
+                "stance": st_dict,
+                "stanceCheck": st_dict,
+                "finding": finding_d,
+                "findingSentence": finding_s,
             })
+
+    # 4. Attach Laya Fast Triage Flaw Risk & Specialty Lens to each article
+    try:
+        from services.clinical_storm_service import run_laya_fast_triage
+        for art in articles:
+            triage = run_laya_fast_triage(art.get("title", ""), art.get("abstract", ""), clean_claim)
+            art["laya_flaw_probability"] = triage.get("flaw_probability", 0.15)
+            art["laya_primary_specialty"] = triage.get("primary_specialty", "interventional")
+            art["laya_bias_risk"] = triage.get("rob_level", "low")
+            art["has_flaw_warning"] = triage.get("has_flaw_warning", False)
+    except Exception as e:
+        logger.warning("Could not pre-score articles with Laya triage: %s", e)
 
     elapsed = round((time.perf_counter() - t0) * 1000, 1)
     logger.info("ClaimScape Fast Pipeline evaluated %d papers in %.1f ms", len(articles), elapsed)
@@ -551,7 +991,7 @@ def evaluate_claim_fast(
     }
 
     # Save to memory & persistent disk cache
-    _CLAIMSCAPE_CACHE[cache_key] = result
+    _memory_cache_put(cache_key, result)
     try:
         with open(disk_path, "w", encoding="utf-8") as f:
             json.dump(result, f)

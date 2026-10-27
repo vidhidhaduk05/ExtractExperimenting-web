@@ -32,19 +32,19 @@ class Settings(BaseSettings):
             return "radextract-dev-secret-change-in-production"
         return secret
 
-    # LLM Gateway (OpenAI-compatible endpoint on HPC or cloud provider)
+    # LLM Gateway (Biomni-R0 on HPC or remote OpenAI-compatible endpoint)
     llm_api_url: str = (
         (os.environ.get("OPENAI_BASE_URL", "").rstrip("/") + "/chat/completions")
         if os.environ.get("OPENAI_BASE_URL") and not os.environ.get("OPENAI_BASE_URL", "").rstrip("/").endswith("/chat/completions")
         else (os.environ.get("OPENAI_BASE_URL") or os.environ.get("LLM_BASE_URL") or os.environ.get("LLM_API_URL") or "http://127.0.0.1:18000/v1/chat/completions")
     )
-    llm_api_key: str = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY") or ""
+    llm_api_key: str = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY") or "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
     llm_models_url: str = (
         (os.environ.get("OPENAI_BASE_URL", "").rstrip("/") + "/models")
         if os.environ.get("OPENAI_BASE_URL")
         else (os.environ.get("LLM_MODELS_URL") or "http://127.0.0.1:18000/v1/models")
     )
-    llm_model: str = os.environ.get("OPENAI_MODEL") or os.environ.get("LLM_MODEL") or "co-scientist-screening"
+    llm_model: str = os.environ.get("OPENAI_MODEL") or os.environ.get("LLM_MODEL") or "biomni-r0"
     llm_tool_calling_enabled: bool = True
     llm_tool_call_fallback: bool = True
     llm_provider: str = "gateway"
@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     #   shadow -> runs alongside and is logged for comparison; the LLM result is still returned
     #   on     -> Jev / Laya result is returned; any failure falls back to the LLM path
     jev_mode: str = os.environ.get("RADEXTRACT_JEV_MODE") or os.environ.get("JEV_MODE") or "on"
-    jev_provider: str = os.environ.get("RADEXTRACT_JEV_PROVIDER") or os.environ.get("JEV_PROVIDER") or "typesafe"  # "typesafe" (remote cloud API) with "laya" (local ONNX) backup
+    jev_provider: str = os.environ.get("RADEXTRACT_JEV_PROVIDER") or os.environ.get("JEV_PROVIDER") or ("typesafe" if (os.environ.get("RADEXTRACT_JEV_API_KEY") or os.environ.get("TYPESAFE_API_KEY") or os.environ.get("JEV_API_KEY")) else "laya")  # "typesafe" (remote cloud API) or "laya" (local ONNX)
     laya_model_dir: str = os.environ.get("LAYA_MODEL_DIR") or ""    # Path to local Laya ONNX bundle; defaults to <project_root>/laya/models
     jev_api_key: str = os.environ.get("RADEXTRACT_JEV_API_KEY") or os.environ.get("TYPESAFE_API_KEY") or os.environ.get("JEV_API_KEY") or ""       # For "typesafe" provider
     jev_api_url: str = os.environ.get("JEV_API_URL") or "https://api.typesafe.ai/v1/systemone"
@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     jev_include_threshold: float = 0.75   # min(P(population), P(intervention)) needed to include
     jev_exclude_threshold: float = 0.85   # P(mismatch / hard-exclude) needed to exclude
     jev_clarify_band: float = 0.15        # |P - 0.5| below this counts as genuinely ambiguous
+
+    # ClaimScape Fast Pipeline
+    claimscape_remote_scan: bool = os.environ.get("CLAIMSCAPE_REMOTE_SCAN", "false").lower() == "true"
 
     # File storage
     upload_root: str = os.environ.get("UPLOAD_ROOT") or os.environ.get("RADEXTRACT_UPLOAD_ROOT") or str(Path(__file__).parent / "uploads")

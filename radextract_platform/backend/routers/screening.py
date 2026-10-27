@@ -50,8 +50,10 @@ async def list_screening(
     project_id: str,
     stage: Optional[str] = Query(None, description="Filter by stage: ta, ft, or all"),
     status: Optional[str] = Query(None, description="Filter by status: pending, included, excluded"),
+    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
+    check_project_access(conn, project_id, user)
     query = "SELECT * FROM studies WHERE project_id = ?"
     params = [project_id]
     if stage and stage != "all":
@@ -81,30 +83,24 @@ async def update_screening(
 
     check_project_access(conn, row["project_id"], user, min_role="reviewer")
 
-    # H4: Validate stage before mutating so stage guards are not bypassed
-    record_stage = row["screening_stage"] or ("ft" if row["screening_status"] == "awaiting_pdf" else "ta")
-    if body.stage and body.stage not in ("ta", "ft"):
-        raise HTTPException(status_code=400, detail="Invalid screening stage")
+    if body.stage in ("ta", "ft"):
+        conn.execute("UPDATE studies SET screening_stage = ? WHERE study_id = ?", (body.stage, study_id))
+        conn.commit()
 
     if body.status in ("included", "excluded", "maybe"):
         await create_screening_decision(study_id, ScreeningDecisionCreate(
             study_id=study_id, project_id=row["project_id"], decision=body.status,
-            stage=body.stage or record_stage, reason_text=body.reason,
+            stage=body.stage, reason_text=body.reason,
         ), background_tasks, user, conn)
         return dict(conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone())
 
-    target_stage = body.stage or record_stage
     conn.execute(
         """UPDATE studies
            SET screening_status = ?, screening_stage = ?, screening_reason = ?
            WHERE study_id = ?""",
-        (body.status, target_stage, body.reason, study_id),
+        (body.status, body.stage, body.reason, study_id),
     )
     conn.commit()
-
-    # Auto-fill extraction sheet only when study is included at Full-Text stage
-    if body.status == "included" and target_stage == "ft":
-        auto_prefill_study_bibliographic_extractions(conn, study_id, row["project_id"])
 
     # Auto-create + AI-prefill RoB when a study is included at full-text stage
     if body.status == "included" and body.stage == "ft":
@@ -112,6 +108,10 @@ async def update_screening(
         background_tasks.add_task(
             rob_service.auto_assess_study, study_id, row["project_id"],
         )
+
+    if body.status == "included":
+        from services.fulltext_retrieval import transition_study_to_extraction
+        transition_study_to_extraction(study_id, conn, background_tasks)
 
     row = conn.execute(
         "SELECT * FROM studies WHERE study_id = ?", (study_id,)
@@ -318,6 +318,243 @@ async def resolve_duplicate(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+# ═══════════════════════════════════════════════════════════════════════
+#  Zoplicate-style dedup review sheet + Merge All
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.get("/projects/{project_id}/dedup/candidates")
+async def get_dedup_candidates(
+    project_id: str,
+    status: str = Query("pending", description="pending | accepted | rejected | keep_both | all"),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Candidate rows for the accept/reject review sheet, with side-by-side
+    field diffs and stats. Rejected groups are backed by the non_duplicates
+    memory and never reappear as pending."""
+    check_project_access(conn, project_id, user)
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    from services.dedup_service import get_candidate_groups
+    try:
+        return get_candidate_groups(project_id, status=status, db=conn)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/{group_id}/accept")
+async def accept_dedup_group(
+    project_id: str,
+    group_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Accept (merge) a candidate group: master wins conflicts, missing
+    fields filled from duplicates, duplicates soft-marked, audit row written."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.dedup_service import accept_group
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        return accept_group(project_id, group_id, db=conn, actor=actor)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/{group_id}/reject")
+async def reject_dedup_group(
+    project_id: str,
+    group_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Reject a candidate group as not-duplicates. Every pair is recorded in
+    the non_duplicates memory and never flagged again."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.dedup_service import reject_group
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        return reject_group(project_id, group_id, db=conn, actor=actor)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/{group_id}/keep-both")
+async def keep_both_dedup_group(
+    project_id: str,
+    group_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Keep both records: unmark any duplicate flags inside the group and
+    close it as keep_both (reversible)."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.dedup_service import keep_both_group, MergeUndoConflictError
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        return keep_both_group(project_id, group_id, db=conn, actor=actor)
+    except MergeUndoConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/{group_id}/set-master")
+async def set_dedup_group_master(
+    project_id: str,
+    group_id: str,
+    payload: dict,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Choose a different master for a pending group."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    master_study_id = (payload or {}).get("master_study_id", "")
+    if not master_study_id:
+        raise HTTPException(status_code=400, detail="master_study_id is required")
+    from services.dedup_service import set_group_master
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        return set_group_master(project_id, group_id, master_study_id, db=conn, actor=actor)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/merge-all")
+async def merge_all_dedup(
+    project_id: str,
+    payload: dict,
+    background_tasks: BackgroundTasks,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Bulk-merge pending duplicate groups (Zoplicate BulkMergeController port).
+
+    body: { master_strategy: "most_complete"|"newest"|"oldest"|"has_decision",
+            dry_run: bool,
+            plan_id?: str }
+    Dry-run returns the full merge plan for a confirm dialog without executing.
+    Records with human decisions are skipped and reported."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    from services.dedup_service import (
+        merge_all as _merge_all,
+        StalePlanError,
+        ActiveRunExistsError,
+    )
+    from starlette.concurrency import run_in_threadpool
+    payload = payload or {}
+    actor = (user or {}).get("user_id", "user") or "user"
+    dry_run = bool(payload.get("dry_run", False))
+    plan_id = payload.get("plan_id")
+    if not dry_run and not plan_id:
+        raise HTTPException(status_code=400, detail="plan_id is required to execute merge-all")
+    try:
+        result = await run_in_threadpool(
+            _merge_all,
+            project_id,
+            payload.get("master_strategy", "most_complete"),
+            bool(payload.get("include_auto", True)),
+            dry_run,
+            conn,
+            actor,
+            None,
+            plan_id,
+        )
+        return result
+    except (StalePlanError, ActiveRunExistsError) as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/dedup/merge-all/resume")
+async def merge_all_resume(
+    project_id: str,
+    payload: dict,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Resume a paused or failed merge-all run."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    run_id = (payload or {}).get("run_id", "")
+    if not run_id:
+        raise HTTPException(status_code=400, detail="run_id is required")
+    from services.dedup_service import (
+        resume_merge_all as _resume_merge_all,
+        StalePlanError,
+        ActiveRunExistsError,
+    )
+    from starlette.concurrency import run_in_threadpool
+    actor = (user or {}).get("user_id", "user") or "user"
+    try:
+        return await run_in_threadpool(
+            _resume_merge_all,
+            project_id,
+            run_id,
+            conn,
+            actor,
+        )
+    except (StalePlanError, ActiveRunExistsError) as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/projects/{project_id}/dedup/merge-all/status")
+async def merge_all_status(
+    project_id: str,
+    run_id: str = Query(..., description="Run id returned by merge-all"),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Progress for a merge-all run (Zoplicate activeRun pattern)."""
+    check_project_access(conn, project_id, user)
+    from services.dedup_service import get_merge_all_status
+    try:
+        run = get_merge_all_status(run_id, db=conn)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if run.get("project_id") != project_id:
+        raise HTTPException(status_code=404, detail="Run does not belong to this project")
+    return run
+
+
+@router.post("/projects/{project_id}/dedup/merge-all/pause")
+async def merge_all_pause(
+    project_id: str,
+    payload: dict,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Request a pause of a running merge-all (checked between groups)."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.dedup_service import pause_merge_all
+    run_id = (payload or {}).get("run_id", "")
+    if not run_id:
+        raise HTTPException(status_code=400, detail="run_id is required")
+    try:
+        run = pause_merge_all(run_id, db=conn)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if run.get("project_id") != project_id:
+        raise HTTPException(status_code=404, detail="Run does not belong to this project")
+    return run
+
 
 # ═══════════════════════════════════════════════════════════════════════
 #  v2.4: Exclusion Reason Taxonomy
@@ -482,78 +719,6 @@ async def update_screening_config(project_id: str, body: ScreeningConfigUpdate, 
 #  v2.4: Multi-Reviewer Screening Decisions
 # ═══════════════════════════════════════════════════════════════════════
 
-def auto_prefill_study_bibliographic_extractions(conn: Any, study_id: str, project_id: str):
-    """Auto-fill extraction sheet with Study ID, Year, Author, etc. when study is included."""
-    try:
-        import datetime
-        study = conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone()
-        if not study:
-            return
-        study_dict = dict(study)
-
-        # 1. Compute and ensure study_label is set
-        label = study_dict.get("study_label") or ""
-        if not label:
-            first_author = study_dict.get("authors", "").split(",")[0].split(";")[0].split(" et al")[0].strip() if study_dict.get("authors") else ""
-            year_str = str(study_dict.get("publication_year")) if study_dict.get("publication_year") else ""
-            if first_author and year_str:
-                label = f"{first_author} {year_str}"
-            elif first_author:
-                label = first_author
-            elif study_dict.get("title"):
-                label = study_dict["title"][:28]
-            else:
-                label = study_id[:8]
-            conn.execute("UPDATE studies SET study_label = ? WHERE study_id = ?", (label, study_id))
-
-        # 2. Query project variables
-        variables = conn.execute("SELECT * FROM variables WHERE project_id = ? ORDER BY order_index ASC", (project_id,)).fetchall()
-        now = datetime.datetime.utcnow().isoformat()
-
-        for v in variables:
-            var_id = v["variable_id"]
-            name_norm = v["name"].strip().lower()
-            val = ""
-
-            if name_norm in ("study id", "study label", "study_id", "studylabel", "study"):
-                val = label
-            elif name_norm in ("year", "publication year", "pub year", "pub_year"):
-                val = str(study_dict.get("publication_year") or "")
-            elif name_norm in ("author", "first author", "authors", "lead author"):
-                val = study_dict.get("authors") or ""
-                if "," in val:
-                    val = val.split(",")[0].strip()
-            elif name_norm in ("doi", "article doi"):
-                val = study_dict.get("doi") or ""
-            elif name_norm in ("pmid", "pubmed id"):
-                val = study_dict.get("pmid") or ""
-            elif name_norm in ("journal", "source journal"):
-                val = study_dict.get("journal") or ""
-
-            if val:
-                existing = conn.execute("SELECT * FROM extractions WHERE study_id = ? AND variable_id = ?", (study_id, var_id)).fetchone()
-                if not existing:
-                    conn.execute(
-                        """INSERT INTO extractions
-                           (extraction_id, study_id, variable_id, value, confidence, verification_status, verified_at, verified_by, source_text)
-                           VALUES (?, ?, ?, ?, 0.99, 'verified', ?, 'system_prefill', ?)""",
-                        (str(uuid.uuid4()), study_id, var_id, val, now, f"Bibliographic prefill: {val}"),
-                    )
-                elif not dict(existing).get("is_verified") and dict(existing).get("verification_status") != "verified":
-                    if not dict(existing).get("value"):
-                        conn.execute(
-                            """UPDATE extractions
-                               SET value = ?, verification_status = 'verified', verified_at = ?, verified_by = 'system_prefill'
-                               WHERE extraction_id = ?""",
-                            (val, now, existing["extraction_id"]),
-                        )
-        if hasattr(conn, "commit"):
-            conn.commit()
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning("Failed auto-prefill for included study %s: %s", study_id, e)
-
-
 def _check_and_record_conflict(
     conn: Any,
     study_id: str,
@@ -574,16 +739,12 @@ def _check_and_record_conflict(
 
     all_decisions = [dict(d) for d in raw_decisions]
 
-    def _norm_dec(d_val: str) -> str:
-        d_clean = (d_val or "").strip().lower()
-        if d_clean in ("ta_included", "included"):
-            return "included"
-        return d_clean
-
     conflict_detected = False
-    decisions_set = {_norm_dec(d["decision"]) for d in all_decisions}
+    decisions_set = {d["decision"] for d in all_decisions}
     if latest_decision:
-        decisions_set.add(_norm_dec(latest_decision))
+        decisions_set.add(latest_decision)
+
+    reviewers = {d.get("reviewer_id") for d in all_decisions if d.get("reviewer_id")}
 
     if len(decisions_set) > 1 and len(all_decisions) >= 1:
         conflict_detected = True
@@ -604,12 +765,12 @@ def _check_and_record_conflict(
                    (conflict_id, study_id, project_id, stage,
                     reviewer1_id, reviewer1_decision,
                     reviewer2_id, reviewer2_decision, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unresolved')""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unresolved')""",
                 (str(uuid.uuid4()), study_id, project_id, stage,
                  r1_id, r1_dec, r2_id, r2_dec),
             )
-    elif len(all_decisions) >= 2 and len(decisions_set) == 1:
-        # All agree — resolve any existing conflict and update study status
+    elif len(reviewers) >= 2 and len(decisions_set) == 1:
+        # All distinct reviewers agree — resolve any existing conflict and update study status
         decision = latest_decision or all_decisions[0]["decision"]
         conn.execute(
             """UPDATE screening_conflicts SET
@@ -618,15 +779,24 @@ def _check_and_record_conflict(
                WHERE study_id = ? AND stage = ? AND status = 'unresolved'""",
             (decision, study_id, stage),
         )
-        # Update study screening status
-        reason_val = reason_text or all_decisions[0].get("reason_text") or all_decisions[0].get("reason_code") or ""
-        conn.execute(
-            """UPDATE studies SET
-               screening_status = ?, screening_stage = ?,
-               screening_reason = ?
-               WHERE study_id = ?""",
-            (decision, stage, reason_val, study_id),
-        )
+        # Update study screening status if not currently awaiting clarification
+        current_study = conn.execute(
+            "SELECT screening_status FROM studies WHERE study_id = ?",
+            (study_id,),
+        ).fetchone()
+        curr_status = dict(current_study).get("screening_status") if current_study else ""
+        if curr_status != "awaiting_clarification":
+            reason_val = reason_text or all_decisions[0].get("reason_text") or all_decisions[0].get("reason_code") or ""
+            conn.execute(
+                """UPDATE studies SET
+                   screening_status = ?, screening_stage = ?,
+                   screening_reason = ?
+                   WHERE study_id = ?""",
+                (decision, stage, reason_val, study_id),
+            )
+            if decision == "included":
+                from services.fulltext_retrieval import transition_study_to_extraction
+                transition_study_to_extraction(study_id, conn, None)
 
     if hasattr(conn, "commit"):
         conn.commit()
@@ -668,8 +838,8 @@ async def create_screening_decision(
     if body.stage != record_stage:
         raise HTTPException(status_code=409, detail="Screening stage changed or does not match this record. Refresh before saving.")
 
-    reviewer_id = (user and user.get("user_id")) or body.reviewer_id or "anonymous_reviewer"
-    reviewer_name = (user and user.get("username")) or body.reviewer_name or "Anonymous Reviewer"
+    reviewer_id = user.get("user_id", "")
+    reviewer_name = user.get("username") or user.get("email") or "reviewer"
 
     # Get screening config for blind mode
     proj = conn.execute(
@@ -715,27 +885,21 @@ async def create_screening_decision(
         )
 
     # Auto-detect conflicts via shared helper
-    has_conflict = _check_and_record_conflict(
+    _check_and_record_conflict(
         conn, study_id, body.project_id, body.stage,
         latest_decision=body.decision,
         reason_text=body.reason_text or body.reason_code,
     )
 
-    # If there is an unresolved conflict between reviewers, preserve conflict status rather than last-writer-wins
-    study_status = "conflict" if has_conflict else body.decision
-
+    # Always update study screening status (single or multi reviewer)
     conn.execute(
         """UPDATE studies SET
            screening_status = ?, screening_stage = ?,
            screening_reason = ?
            WHERE study_id = ?""",
-        (study_status, body.stage,
+        (body.decision, body.stage,
          body.reason_text or body.reason_code, study_id),
     )
-
-    # Auto-fill extraction sheet with Study ID, Year, Author, etc. ONLY when study is included at Full-Text stage
-    if body.decision == "included" and body.stage == "ft":
-        auto_prefill_study_bibliographic_extractions(conn, study_id, body.project_id)
 
     # Auto-create + AI-prefill RoB on full-text inclusion
     if body.decision == "included" and body.stage == "ft":
@@ -743,6 +907,11 @@ async def create_screening_decision(
         background_tasks.add_task(
             rob_service.auto_assess_study, study_id, body.project_id,
         )
+
+    # Auto-move included study to data extraction stage & trigger OA retrieval if PDF missing
+    if body.decision == "included":
+        from services.fulltext_retrieval import transition_study_to_extraction
+        transition_study_to_extraction(study_id, conn, background_tasks)
 
     # Laya background verification of exclusion reason for PRISMA audit
     if body.decision == "excluded" and (body.reason_text or body.reason_code):
@@ -758,17 +927,6 @@ async def create_screening_decision(
             verify_exclusion_with_laya, title, abstract, reason_to_verify,
         )
 
-    # Record human decision feedback for calibrated screening confidence and audit
-    if reviewer_id not in ("ai_screener", "ai_reviewer"):
-        from services.screening_confidence import record_human_decision_feedback
-        record_human_decision_feedback(
-            project_id=body.project_id,
-            study_id=study_id,
-            human_decision=body.decision,
-            stage=body.stage,
-            db=conn,
-        )
-
     if hasattr(conn, "commit"):
         conn.commit()
 
@@ -776,32 +934,6 @@ async def create_screening_decision(
         "SELECT * FROM screening_decisions WHERE decision_id = ?", (decision_id,)
     ).fetchone()
     return ScreeningDecisionResponse(**dict(row))
-
-
-@router.get("/projects/{project_id}/screening-calibration")
-async def get_screening_calibration_endpoint(
-    project_id: str,
-    stage: str = Query("ta", description="Screening stage: ta or ft"),
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Retrieve conformal calibration parameters, re-inclusion recall, and workload savings metrics."""
-    check_project_access(conn, project_id, user, min_role="reviewer")
-    from services.screening_confidence import compute_workload_and_recall
-    return compute_workload_and_recall(project_id, stage=stage, db=conn)
-
-
-@router.post("/projects/{project_id}/screening-calibration/recalibrate")
-async def recalibrate_screening_endpoint(
-    project_id: str,
-    stage: str = Query("ta", description="Screening stage: ta or ft"),
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Recompute and update conformal risk control thresholds from human screening decisions."""
-    check_project_access(conn, project_id, user, min_role="editor")
-    from services.screening_confidence import recalibrate_project
-    return recalibrate_project(project_id, stage=stage, db=conn)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1553,16 +1685,10 @@ async def batch_ai_screen(
     sig_res = generate_signals(project_id, db=conn, force=False)
     signals = sig_res.get("signals", {})
 
-    if stage == "ft":
-        studies = conn.execute(
-            "SELECT * FROM studies WHERE project_id = ? AND screening_status IN ('ta_included', 'awaiting_pdf', 'pending_ft')",
-            (project_id,),
-        ).fetchall()
-    else:
-        studies = conn.execute(
-            "SELECT * FROM studies WHERE project_id = ? AND screening_status = 'pending'",
-            (project_id,),
-        ).fetchall()
+    studies = conn.execute(
+        "SELECT * FROM studies WHERE project_id = ? AND screening_status = 'pending'",
+        (project_id,),
+    ).fetchall()
 
     total_screened = 0
     included = 0
@@ -1576,86 +1702,50 @@ async def batch_ai_screen(
     from services.pdf_service import get_pdf_data
 
     pico = json.loads(proj["pico_json"]) if proj["pico_json"] else {}
-
-    # Parse project search string
-    search_str = ""
-    proj_dict = dict(proj) if proj else {}
-    if proj_dict.get("search_strings_json"):
-        try:
-            s_dict = json.loads(proj_dict["search_strings_json"])
-            if isinstance(s_dict, dict):
-                search_str = s_dict.get("pubmed") or s_dict.get("default") or next(iter(s_dict.values()), "")
-            elif isinstance(s_dict, str):
-                search_str = s_dict
-        except Exception:
-            search_str = ""
-    if search_str:
-        pico = dict(pico)
-        pico["search_string"] = search_str
-
-    reasons_raw = proj["exclusion_reasons_json"] if proj["exclusion_reasons_json"] else "[]"
-    try:
-        reasons_data = json.loads(reasons_raw) if reasons_raw else []
-    except json.JSONDecodeError:
-        reasons_data = []
-    reason_labels = []
-    for reason in reasons_data:
-        if isinstance(reason, dict) and reason.get("label"):
-            reason_labels.append(reason["label"])
-        elif isinstance(reason, str):
-            reason_labels.append(reason)
-
-    try:
-        inclusion_data = json.loads(proj["inclusion_criteria_json"]) if proj["inclusion_criteria_json"] else []
-    except (json.JSONDecodeError, KeyError, TypeError):
-        inclusion_data = []
-    inclusion_labels = []
-    for item in inclusion_data:
-        if isinstance(item, dict) and item.get("text"):
-            inclusion_labels.append(item["text"])
-        elif isinstance(item, str):
-            inclusion_labels.append(item)
-    if inclusion_labels:
-        pico = dict(pico)
-        pico["inclusion_criteria"] = inclusion_labels
-
-    from services import jev_client, jev_screener
-    batch_jev_results = None
-    if stage == "ta" and jev_client.is_jev_enabled() and jev_client.jev_mode() == "on":
-        study_payloads = [
-            {"title": (s["title"] or "").strip(), "abstract": (s["abstract"] or "").strip()}
-            for s in studies
-        ]
-        batch_jev_results = jev_screener.screen_batch(
-            stage="abstract",
-            studies=study_payloads,
-            pico=pico,
-            exclusion_reasons=reason_labels,
-            search_string=search_str,
-            fast_mode=True,
-        )
-
     clarifications_generated = 0
 
-    for i, s in enumerate(studies):
+    from services.ctgov_service import enrich_study_with_ctgov
+
+    for s in studies:
         sid = s["study_id"]
-        title = (s["title"] or "").strip()
-        abstract = (s["abstract"] or "").strip()
+        s_dict = enrich_study_with_ctgov(dict(s))
+        title = (s_dict.get("title") or "").strip()
+        abstract = (s_dict.get("abstract") or "").strip()
 
         if stage == "ta":
             pre = prefilter_study(title=title, abstract=abstract, signals=signals, stage="ta")
-            if batch_jev_results and i < len(batch_jev_results) and batch_jev_results[i]:
-                llm_res = jev_screener.to_clarification_shape(batch_jev_results[i])
-            else:
-                llm_res = screen_with_clarification(
-                    title=title,
-                    abstract=abstract,
-                    pico_criteria=pico,
-                    exclusion_reasons=reason_labels,
-                    stage="ta",
-                    signals=signals,
-                    search_string=search_str,
-                )
+            reasons_raw = proj["exclusion_reasons_json"] if proj["exclusion_reasons_json"] else "[]"
+            try:
+                reasons_data = json.loads(reasons_raw) if reasons_raw else []
+            except json.JSONDecodeError:
+                reasons_data = []
+            reason_labels = []
+            for reason in reasons_data:
+                if isinstance(reason, dict) and reason.get("label"):
+                    reason_labels.append(reason["label"])
+                elif isinstance(reason, str):
+                    reason_labels.append(reason)
+            try:
+                inclusion_data = json.loads(proj["inclusion_criteria_json"]) if proj["inclusion_criteria_json"] else []
+            except (json.JSONDecodeError, KeyError, TypeError):
+                inclusion_data = []
+            inclusion_labels = []
+            for item in inclusion_data:
+                if isinstance(item, dict) and item.get("text"):
+                    inclusion_labels.append(item["text"])
+                elif isinstance(item, str):
+                    inclusion_labels.append(item)
+            if inclusion_labels:
+                pico = dict(pico)
+                pico["inclusion_criteria"] = inclusion_labels
+            llm_res = screen_with_clarification(
+                title=title,
+                abstract=abstract,
+                pico_criteria=pico,
+                exclusion_reasons=reason_labels,
+                stage="ta",
+                signals=signals,
+            )
             final_res = apply_overrides(llm_res, pre, signals=signals, stage="ta", pdf_text_available=True)
             if llm_res.get("recommendation") == "needs_clarification" and final_res.get("recommendation") == "needs_clarification":
                 final_res["clarification"] = llm_res.get("clarification")
@@ -1747,21 +1837,15 @@ async def batch_ai_screen(
                     (dec_id, sid, project_id, rec, reason_code, reason_text, stage),
                 )
 
-            status_to_set = rec
-            if rec == "included" and stage == "ta":
-                status_to_set = "ta_included"
-
             conn.execute(
-                "UPDATE studies SET screening_status = ?, screening_stage = ?, screening_reason = ? WHERE study_id = ?",
-                (status_to_set, stage, reason_text, sid),
+                "UPDATE studies SET screening_status = ?, screening_reason = ? WHERE study_id = ?",
+                (rec, reason_text, sid),
             )
 
             is_conflict = _check_and_record_conflict(conn, sid, project_id, stage, latest_decision=rec, reason_text=reason_text)
 
             if rec == "included":
                 included += 1
-                if stage == "ft":
-                    auto_prefill_study_bibliographic_extractions(conn, sid, project_id)
             elif rec == "excluded":
                 excluded += 1
             else:

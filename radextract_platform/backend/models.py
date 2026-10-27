@@ -94,6 +94,8 @@ class HypothesisResponse(BaseModel):
     hypothesis: str = ""
     research_question: str = ""
     secondary_hypotheses: list[SecondaryHypothesis] = Field(default_factory=list)
+    generation_source: str = "template"   # "llm" | "template" | "failed"
+    generation_error: str = ""
 
 
 # ── PubMed API Key ──
@@ -135,6 +137,23 @@ class ResearchQuestionResponse(BaseModel):
     project_id: str
     pico: dict
     strings: dict = {}
+    hypothesis: str = ""
+    secondary_hypotheses: list[str] = Field(default_factory=list)
+
+
+class PicoFromQuestionRequest(BaseModel):
+    question: str
+    persist: bool = True
+
+
+class PicoFromQuestionResponse(BaseModel):
+    project_id: str
+    pico: dict = Field(default_factory=dict)
+    hypothesis: str = ""
+    null_hypothesis: str = ""
+    secondary_hypotheses: list[str] = Field(default_factory=list)
+    ambiguities: list[str] = Field(default_factory=list)
+    missing_fields: list[str] = Field(default_factory=list)
 
 
 # ── PICO Extraction ──
@@ -175,12 +194,78 @@ class OpenAlexFetchRequest(BaseModel):
     maxdate: str = "2026-08-31"
 
 
-# ── Reference Upload ──
+# ── Reference Upload & Import Batches ──
 
 class MalformedRecordDetail(BaseModel):
     index: Optional[int] = None
     reason: str
     snippet: Optional[str] = None
+
+
+class ImportBatchRecord(BaseModel):
+    index: Optional[int] = None
+    study_id: Optional[str] = None
+    title: str = ""
+    authors: str = ""
+    publication_year: Optional[int] = None
+    journal: str = ""
+    doi: str = ""
+    pmid: str = ""
+    status: str = "added"  # "added" | "duplicate" | "error"
+    match_reason: Optional[str] = None
+    study_active: bool = True  # whether the linked study currently exists in the project studies table
+
+
+class ImportBatchResponse(BaseModel):
+    batch_id: str
+    project_id: str
+    filename: str
+    source: str = "Unknown"
+    format: str = "Unknown"
+    total_records: int = 0
+    imported_count: int = 0
+    duplicate_count: int = 0
+    merged_count: int = 0
+    failed_count: int = 0
+    status: str = "completed"  # "completed" | "completed_with_errors" | "failed" | "undone"
+    undone_at: Optional[str] = None
+    created_at: str
+    created_by: str = ""
+    retained_studies_count: int = 0
+
+
+class ImportBatchDetailResponse(ImportBatchResponse):
+    records: list[ImportBatchRecord] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
+    malformed_records: list[MalformedRecordDetail] = Field(default_factory=list)
+
+
+class UpdateBatchSourceRequest(BaseModel):
+    source: str
+
+
+class UndoImpactPreviewResponse(BaseModel):
+    batch_id: str
+    filename: str
+    status: str
+    can_undo: bool
+    blocking_reason: Optional[str] = None
+    studies_to_remove_count: int
+    studies_to_remove: list[dict] = Field(default_factory=list)
+    studies_retained_count: int
+    studies_retained: list[dict] = Field(default_factory=list)
+    downstream_work: dict = Field(default_factory=dict)
+    has_downstream_work: bool = False
+
+
+class UndoBatchResponse(BaseModel):
+    batch_id: str
+    status: str  # "undone"
+    undone_at: str
+    studies_removed_count: int
+    studies_retained_count: int
+    message: str
+
 
 class ReferenceUploadResponse(BaseModel):
     imported_count: int
@@ -189,6 +274,11 @@ class ReferenceUploadResponse(BaseModel):
     format: Optional[str] = None
     errors: list[str] = []
     malformed_records: list[MalformedRecordDetail] = []
+    batch_id: Optional[str] = None
+    batch_ids: list[str] = Field(default_factory=list)
+    total_records: int = 0
+    batches: list[ImportBatchResponse] = Field(default_factory=list)
+    imported_studies: list[dict] = Field(default_factory=list)
 
 class ReferencePreviewResponse(BaseModel):
     format: str
@@ -309,7 +399,7 @@ class VariableCreate(BaseModel):
     range_min: Optional[float] = None
     range_max: Optional[float] = None
     description: str = ""
-    order_index: Optional[int] = None
+    order_index: int = 0
     is_base: bool = False
 
 
@@ -568,7 +658,7 @@ class RobAIPrefillRequest(BaseModel):
     """Request AI pre-fill for an assessment."""
     full_text: Optional[str] = None  # full text of the study (from PDF processing)
     abstract: Optional[str] = None   # fallback if no full text
-    model_fn_name: str = "llm"       # default to real LLM (not mock)
+    model_fn_name: str = "mock"      # which model_fn to use
 
 
 class RobAIPrefillResult(BaseModel):
@@ -637,8 +727,9 @@ class DuplicateMatch(BaseModel):
     abstract: str = ""
     is_duplicate: int = 0
     screening_status: str = "pending"
-    match_reason: str  # "doi" | "pmid" | "title_similarity" | "author_year"
+    match_reason: str  # "doi" | "pmid" | "nct" | "exact_title_author_year" | "fuzzy_title_corroborated" | ...
     similarity_score: float = 0.0
+    tier: str = ""  # "T0" | "T1" | "T2" | "T3" | "T4" | "conflict" | "human_review"
 
 
 class DuplicateGroup(BaseModel):
@@ -662,6 +753,8 @@ class DeduplicationResult(BaseModel):
     duplicate_groups: list[DuplicateGroup] = Field(default_factory=list)
     total_duplicates: int
     duplicates_marked: int
+    tier_breakdown: dict = Field(default_factory=dict)   # tier -> merged count
+    review_queue_size: int = 0
 
 
 class DuplicateResolveRequest(BaseModel):

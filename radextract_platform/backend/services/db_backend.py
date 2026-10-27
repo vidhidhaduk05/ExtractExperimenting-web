@@ -70,6 +70,11 @@ TABLE_PK = {
     "reporting_profile_assessments": "profile_assessment_id",
     "reporting_profile_items": "profile_item_id",
     "extraction_decisions": "decision_id",
+    "dedup_groups": "group_id",
+    "non_duplicates": "non_dup_id",
+    "dedup_audit": "audit_id",
+    "dedup_merge_plans": "plan_id",
+    "dedup_merge_runs": "run_id",
 }
 
 # Tables that have project_id for GSI
@@ -102,7 +107,7 @@ class DBBackend(ABC):
         ...
 
     @abstractmethod
-    def query(self, table: str, filters: dict, order_by: str = "",
+    def query(self, table: str, filters: Optional[dict] = None, order_by: str = "",
               limit: int = 0) -> list[dict]:
         """Query rows with equality filters. Returns list of dicts."""
         ...
@@ -181,8 +186,9 @@ class SQLiteBackend(DBBackend):
         ).fetchone()
         return dict(row) if row else None
 
-    def query(self, table: str, filters: dict, order_by: str = "",
+    def query(self, table: str, filters: Optional[dict] = None, order_by: str = "",
               limit: int = 0) -> list[dict]:
+        filters = filters or {}
         where_parts = [f"{k} = ?" for k in filters]
         params = tuple(filters.values())
         sql = f"SELECT * FROM {table}"
@@ -360,8 +366,9 @@ class DynamoDBBackend(DBBackend):
         except Exception:
             return None
 
-    def query(self, table: str, filters: dict, order_by: str = "",
+    def query(self, table: str, filters: Optional[dict] = None, order_by: str = "",
               limit: int = 0) -> list[dict]:
+        filters = filters or {}
         pk = TABLE_PK.get(table, f"{table.rstrip('s')}_id")
 
         # If filtering by PK, use GetItem

@@ -8,10 +8,89 @@ Extends the original RadExtract schema with:
   - Dual-reviewer columns on extractions and rob_assessments (via migration)
 """
 from __future__ import annotations
+import os
+import atexit
+import shutil
 import sqlite3
+import logging
+from pathlib import Path
 from typing import Generator, Union
 from config import settings, ensure_dirs
 from services.db_backend import DBBackend, SQLiteBackend, get_db_backend, init_dynamodb_tables
+
+logger = logging.getLogger("radextract.database")
+
+_ORIGINAL_PERSISTENT_DB_PATH: str | None = None
+_SCRATCH_STAGED: bool = False
+
+
+def stage_db_to_scratch(scratch_dir: str | None = None) -> str:
+    """Stage radextract.db from academic NFS onto fast node-local scratch storage (/tmp or $TMPDIR).
+    Eliminates SQLite 'database is locked' errors under multi-worker concurrent loads.
+    """
+    global _ORIGINAL_PERSISTENT_DB_PATH, _SCRATCH_STAGED
+    if _SCRATCH_STAGED:
+        return settings.db_path
+
+    persistent_path = Path(settings.db_path).resolve()
+    target_dir = Path(scratch_dir or os.environ.get("TMPDIR") or "/tmp")
+    target_dir.mkdir(parents=True, exist_ok=True)
+    scratch_path = (target_dir / "radextract.db").resolve()
+
+    # Do not stage if already in scratch directory
+    if persistent_path == scratch_path or str(persistent_path).startswith(str(target_dir)):
+        _SCRATCH_STAGED = True
+        return str(persistent_path)
+
+    _ORIGINAL_PERSISTENT_DB_PATH = str(persistent_path)
+
+    # If persistent DB exists, copy over to node-local scratch
+    if persistent_path.exists():
+        if not scratch_path.exists() or persistent_path.stat().st_mtime > scratch_path.stat().st_mtime:
+            shutil.copy2(persistent_path, scratch_path)
+            for ext in ("-wal", "-shm"):
+                src = Path(f"{persistent_path}{ext}")
+                dst = Path(f"{scratch_path}{ext}")
+                if src.exists():
+                    shutil.copy2(src, dst)
+            logger.info(f"Staged persistent DB {persistent_path} to local scratch {scratch_path}")
+
+    settings.db_path = str(scratch_path)
+    _SCRATCH_STAGED = True
+
+    atexit.register(sync_scratch_to_persistent)
+    return str(scratch_path)
+
+
+def sync_scratch_to_persistent():
+    """Checkpoint WAL and sync node-local scratch DB back to persistent NFS storage on exit."""
+    global _ORIGINAL_PERSISTENT_DB_PATH, _SCRATCH_STAGED
+    if not _SCRATCH_STAGED or not _ORIGINAL_PERSISTENT_DB_PATH:
+        return
+    scratch_path = Path(settings.db_path)
+    persistent_path = Path(_ORIGINAL_PERSISTENT_DB_PATH)
+
+    if scratch_path.exists():
+        try:
+            conn = sqlite3.connect(str(scratch_path), timeout=30.0)
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            conn.close()
+        except Exception as e:
+            logger.warning(f"WAL checkpoint before sync warning: {e}")
+
+        try:
+            persistent_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(scratch_path, persistent_path)
+            for ext in ("-wal", "-shm"):
+                p = Path(f"{persistent_path}{ext}")
+                if p.exists():
+                    try:
+                        p.unlink()
+                    except Exception:
+                        pass
+            logger.info(f"Successfully synced scratch DB {scratch_path} back to persistent {persistent_path}")
+        except Exception as e:
+            logger.error(f"Failed to sync scratch DB to {persistent_path}: {e}")
 
 
 SCHEMA_SQL = """
@@ -574,6 +653,115 @@ CREATE TABLE IF NOT EXISTS search_logs (
     FOREIGN KEY (project_id) REFERENCES projects(project_id)
 );
 
+-- ── Reference Import Batches & Multi-Batch Study Provenance ──
+
+CREATE TABLE IF NOT EXISTS import_batches (
+    batch_id         TEXT PRIMARY KEY,
+    project_id       TEXT NOT NULL,
+    filename         TEXT NOT NULL,
+    source           TEXT DEFAULT 'Unknown',
+    format           TEXT DEFAULT 'Unknown',
+    total_records    INTEGER NOT NULL DEFAULT 0,
+    imported_count   INTEGER NOT NULL DEFAULT 0,
+    duplicate_count  INTEGER NOT NULL DEFAULT 0,
+    merged_count     INTEGER NOT NULL DEFAULT 0,
+    failed_count     INTEGER NOT NULL DEFAULT 0,
+    status           TEXT DEFAULT 'completed', -- completed | completed_with_errors | failed | undone
+    undone_at        TEXT DEFAULT NULL,
+    created_at       TEXT DEFAULT (datetime('now')),
+    created_by       TEXT DEFAULT '',
+    details_json     TEXT DEFAULT '{}',
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS batch_study_contributions (
+    contribution_id  TEXT PRIMARY KEY,
+    batch_id         TEXT NOT NULL,
+    study_id         TEXT NOT NULL,
+    project_id       TEXT NOT NULL,
+    is_primary_creator INTEGER DEFAULT 1,
+    created_at       TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (batch_id) REFERENCES import_batches(batch_id) ON DELETE CASCADE,
+    FOREIGN KEY (study_id) REFERENCES studies(study_id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE,
+    UNIQUE(batch_id, study_id)
+);
+
+-- ── Zoplicate-style deduplication: candidate groups, non-duplicates memory, audit ──
+
+CREATE TABLE IF NOT EXISTS dedup_groups (
+    group_id          TEXT PRIMARY KEY,
+    project_id        TEXT NOT NULL,
+    master_study_id   TEXT DEFAULT '',          -- master item (Zoplicate mergeItems semantics)
+    tier              TEXT DEFAULT '',           -- T0 | T1 | T2 | T3 | conflict | human_review
+    score             REAL DEFAULT 0.0,
+    status            TEXT DEFAULT 'pending',    -- pending | accepted | rejected | keep_both
+    member_study_ids  TEXT DEFAULT '[]',         -- JSON array of study_ids
+    field_diffs       TEXT DEFAULT '',           -- JSON side-by-side metadata diff
+    decided_by        TEXT DEFAULT '',           -- 'auto' | user id
+    decided_at        TEXT DEFAULT '',
+    created_at        TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS non_duplicates (
+    non_dup_id        TEXT PRIMARY KEY,
+    project_id        TEXT NOT NULL,
+    study_id_a        TEXT NOT NULL,
+    study_id_b        TEXT NOT NULL,             -- stored as sorted pair (a < b)
+    fingerprint_a     TEXT DEFAULT '',           -- JSON typed keys of record A (doi:/pmid:/title:)
+    fingerprint_b     TEXT DEFAULT '',           -- JSON typed keys of record B — rejection
+                                                 -- memory survives re-import with new study_ids
+    created_at        TEXT DEFAULT (datetime('now')),
+    decided_by        TEXT DEFAULT '',
+    UNIQUE (project_id, study_id_a, study_id_b)
+);
+
+CREATE TABLE IF NOT EXISTS dedup_audit (
+    audit_id          TEXT PRIMARY KEY,
+    project_id        TEXT NOT NULL,
+    group_id          TEXT DEFAULT '',
+    tier              TEXT DEFAULT '',
+    score             REAL DEFAULT 0.0,
+    master_study_id   TEXT DEFAULT '',
+    duplicate_study_id TEXT DEFAULT '',
+    action            TEXT DEFAULT '',           -- auto_merge | accept_merge | keep_both | reject | set_master | revert
+    actor             TEXT DEFAULT 'auto',       -- 'auto' | user id
+    filled_fields     TEXT DEFAULT '',           -- JSON {field: previous master value} for undo
+    created_at        TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
+
+-- ── Durable bulk-merge plans and runs (Zoplicate BulkMergeController port) ──
+
+CREATE TABLE IF NOT EXISTS dedup_merge_plans (
+    plan_id           TEXT PRIMARY KEY,
+    project_id        TEXT NOT NULL,
+    fingerprint       TEXT DEFAULT '',           -- sha256 of canonical plan content
+    plan_json         TEXT DEFAULT '[]',         -- JSON: groups with master + fields to fill
+    skip_report       TEXT DEFAULT '{}',         -- JSON: skipped_human_decided etc.
+    created_at        TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS dedup_merge_runs (
+    run_id            TEXT PRIMARY KEY,
+    plan_id           TEXT DEFAULT '',
+    project_id        TEXT NOT NULL,
+    status            TEXT DEFAULT 'running',    -- running | paused | completed | failed
+    total_groups      INTEGER DEFAULT 0,
+    processed         INTEGER DEFAULT 0,
+    merged            INTEGER DEFAULT 0,
+    failed            INTEGER DEFAULT 0,
+    skipped_human_decided INTEGER DEFAULT 0,
+    merged_group_ids  TEXT DEFAULT '[]',         -- JSON array
+    errors            TEXT DEFAULT '[]',         -- JSON array
+    pause_requested   INTEGER DEFAULT 0,
+    created_at        TEXT DEFAULT (datetime('now')),
+    updated_at        TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
+
 -- ── Indexes ──
 
 CREATE INDEX IF NOT EXISTS idx_studies_project ON studies(project_id);
@@ -603,6 +791,16 @@ CREATE INDEX IF NOT EXISTS idx_review_state_user ON user_review_state(user_id);
 CREATE INDEX IF NOT EXISTS idx_review_state_project ON user_review_state(project_id);
 CREATE INDEX IF NOT EXISTS idx_screening_keywords_project ON screening_keywords(project_id);
 CREATE INDEX IF NOT EXISTS idx_search_logs_project ON search_logs(project_id);
+CREATE INDEX IF NOT EXISTS idx_import_batches_project ON import_batches(project_id);
+CREATE INDEX IF NOT EXISTS idx_batch_contributions_batch ON batch_study_contributions(batch_id);
+CREATE INDEX IF NOT EXISTS idx_batch_contributions_study ON batch_study_contributions(study_id);
+CREATE INDEX IF NOT EXISTS idx_batch_contributions_project ON batch_study_contributions(project_id);
+CREATE INDEX IF NOT EXISTS idx_dedup_groups_project ON dedup_groups(project_id);
+CREATE INDEX IF NOT EXISTS idx_dedup_groups_status ON dedup_groups(project_id, status);
+CREATE INDEX IF NOT EXISTS idx_dedup_audit_project ON dedup_audit(project_id);
+CREATE INDEX IF NOT EXISTS idx_dedup_audit_master ON dedup_audit(master_study_id);
+CREATE INDEX IF NOT EXISTS idx_dedup_plans_project ON dedup_merge_plans(project_id);
+CREATE INDEX IF NOT EXISTS idx_dedup_runs_project ON dedup_merge_runs(project_id, status);
 """
 
 # ── Column migrations for existing tables ──
@@ -663,13 +861,11 @@ MIGRATION_COLUMNS = [
     ("rob_signaling_answers", "reviewed_by", "TEXT DEFAULT ''"),
     ("rob_signaling_answers", "reviewed_at", "TEXT DEFAULT ''"),
     ("studies", "pdf_processor_engine", "TEXT DEFAULT ''"),
-    ("studies", "study_label", "TEXT DEFAULT ''"),
-    # Calibrated confidence & continuous audit columns
-    ("studies", "ai_p_include", "REAL DEFAULT NULL"),
-    ("studies", "auto_decision", "INTEGER DEFAULT 0"),
-    ("studies", "sampled_audit", "INTEGER DEFAULT 0"),
-    ("screening_decisions", "auto_decision", "INTEGER DEFAULT 0"),
-    ("screening_decisions", "sampled_audit", "INTEGER DEFAULT 0"),
+    ("studies", "import_batch_id", "TEXT DEFAULT ''"),
+    # Zoplicate dedup: fingerprint rejection memory + undoable merge fills
+    ("non_duplicates", "fingerprint_a", "TEXT DEFAULT ''"),
+    ("non_duplicates", "fingerprint_b", "TEXT DEFAULT ''"),
+    ("dedup_audit", "filled_fields", "TEXT DEFAULT ''"),
 ]
 
 
@@ -690,6 +886,7 @@ def get_connection() -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=60000")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA synchronous=NORMAL")
     return conn
 
 
@@ -711,89 +908,6 @@ def get_db() -> Generator[Union[sqlite3.Connection, DBBackend], None, None]:
             backend.close()
 
 
-def _seed_default_pam_review(conn: sqlite3.Connection):
-    """Seed the default Pure Arterial Malformations (PAM) review if not already present."""
-    try:
-        cur = conn.cursor()
-        cur.execute("SELECT 1 FROM projects WHERE project_id = 'pam_review_2026'")
-        if cur.fetchone():
-            return
-
-        cur.execute("""
-            INSERT INTO projects (project_id, name, description, research_question, hypothesis, pico_json)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            "pam_review_2026",
-            "Pure Arterial Malformations (PAM) Systematic Review",
-            "A multicenter systematic review of anatomical and clinical outcomes in intracranial pure arterial malformations.",
-            "What are the morphological and clinical treatment outcomes of intracranial PAM?",
-            "Pure arterial malformations represent non-shunting developmental vascular anomalies with high lifetime propensity for flow pseudoaneurysms (~40%).",
-            '{"population":"patients with pure arterial malformations","index_test":"digital subtraction angiography","comparator":"MRA / CTA","outcome":"pseudoaneurysm formation, stroke, hemorrhage","study_design":"cohort, case series"}'
-        ))
-
-        variables = [
-            ("pam_var_study_id", "pam_review_2026", "General", "Study ID", "text", 0, "Unique study identifier label (e.g. Birua 2022)"),
-            ("pam_var_year", "pam_review_2026", "Bibliographic", "Year", "number", 1, "Year of publication"),
-            ("pam_var_author", "pam_review_2026", "Bibliographic", "Author", "text", 2, "First author surname"),
-            ("pam_var_country", "pam_review_2026", "Demographics", "Country", "text", 3, "Country where study was conducted"),
-            ("pam_var_sample_size", "pam_review_2026", "Clinical", "Sample size", "number", 4, "Total number of confirmed PAM patients"),
-            ("pam_var_aneurysm_rate", "pam_review_2026", "Outcomes", "Aneurysm Rate (%)", "number", 5, "Percentage of patients presenting with associated aneurysm"),
-            ("pam_var_management", "pam_review_2026", "Clinical", "Primary Management", "text", 6, "Conservative observation vs endovascular/surgical treatment"),
-        ]
-        for v in variables:
-            cur.execute("""
-                INSERT OR REPLACE INTO variables (variable_id, project_id, section, name, field_type, order_index, description)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, v)
-
-        studies = [
-            ("study_birua_2022", "pam_review_2026", "Pure arterial malformation of the posterior cerebral artery: A case report", "Birua et al.", 2022, "Birua 2022", "Birua_2022.pdf", "included", "complete"),
-            ("study_albina_2024", "pam_review_2026", "A Hybrid Approach for the Treatment of a Pure Arterial Malformation Located at an Accessory Middle Cerebral Artery", "Albina-Palmarola et al.", 2024, "Albina 2024", "Albina-Palmarola_2024.pdf", "included", "complete"),
-            ("study_brinjikji_2018", "pam_review_2026", "Pure arterial malformations: a systematic review of clinical characteristics and treatment outcomes", "Brinjikji et al.", 2018, "Brinjikji 2018", "Brinjikji_2018.pdf", "included", "complete"),
-            ("study_deshmukh_2023", "pam_review_2026", "Pure Arterial Malformation (PAM) Case Report and Review of Literature", "Deshmukh et al.", 2023, "Deshmukh 2023", "Deshmukh_2023.pdf", "included", "in_progress"),
-        ]
-        for s in studies:
-            cur.execute("""
-                INSERT OR REPLACE INTO studies (study_id, project_id, title, authors, publication_year, study_label, pdf_path, screening_status, extraction_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, s)
-
-        extractions = [
-            ("ext_birua_1", "study_birua_2022", "pam_var_study_id", "Birua 2022", 0.98, 1, "dysplastic right cavernous and clinoidal segments of internal carotid artery (ICA) along with tortuous, redundant vascular compact loops of purely arterial mass (PAM)", "verified"),
-            ("ext_birua_2", "study_birua_2022", "pam_var_year", "2022", 0.99, 1, "Published online: 2022", "verified"),
-            ("ext_birua_3", "study_birua_2022", "pam_var_author", "Birua", 0.95, 1, "Birua CA, Department of Neurosurgery", "verified"),
-            ("ext_birua_4", "study_birua_2022", "pam_var_country", "India", 0.90, 1, "All India Institute of Medical Sciences, New Delhi, India", "verified"),
-            ("ext_birua_5", "study_birua_2022", "pam_var_sample_size", "1", 0.92, 1, "A 45-year-old female presented with sudden-onset headache", "verified"),
-            ("ext_birua_6", "study_birua_2022", "pam_var_aneurysm_rate", "100", 0.88, 1, "coexisting dissecting aneurysm of the proximal segment", "verified"),
-            ("ext_birua_7", "study_birua_2022", "pam_var_management", "Conservative", 0.95, 1, "managed conservatively with serial MR angiographic surveillance", "verified"),
-
-            ("ext_albina_1", "study_albina_2024", "pam_var_study_id", "Albina 2024", 0.98, 1, "Albina-Palmarola N, et al.", "verified"),
-            ("ext_albina_2", "study_albina_2024", "pam_var_year", "2024", 0.99, 1, "World Neurosurgery, 2024", "verified"),
-            ("ext_albina_3", "study_albina_2024", "pam_var_author", "Albina-Palmarola", 0.95, 1, "Albina-Palmarola N", "verified"),
-            ("ext_albina_4", "study_albina_2024", "pam_var_country", "Spain", 0.92, 1, "Hospital Clinic de Barcelona, Barcelona, Spain", "verified"),
-            ("ext_albina_5", "study_albina_2024", "pam_var_sample_size", "1", 0.95, 1, "A 52-year-old male was admitted with acute ischemic symptoms", "verified"),
-            ("ext_albina_6", "study_albina_2024", "pam_var_aneurysm_rate", "0", 0.90, 1, "No associated aneurysms were visualized on 3D-rotational angiography", "verified"),
-            ("ext_albina_7", "study_albina_2024", "pam_var_management", "Hybrid flow diverter", 0.94, 1, "successful deployment of a low-profile visualized intraluminal support device", "verified"),
-
-            ("ext_brinj_1", "study_brinjikji_2018", "pam_var_study_id", "Brinjikji 2018", 0.98, 1, "Brinjikji W, et al.", "verified"),
-            ("ext_brinj_2", "study_brinjikji_2018", "pam_var_year", "2018", 0.99, 1, "Journal of NeuroInterventional Surgery 2018", "verified"),
-            ("ext_brinj_3", "study_brinjikji_2018", "pam_var_author", "Brinjikji", 0.96, 1, "Brinjikji W, Department of Radiology, Mayo Clinic", "verified"),
-            ("ext_brinj_4", "study_brinjikji_2018", "pam_var_country", "USA", 0.95, 1, "Mayo Clinic, Rochester, Minnesota, USA", "verified"),
-            ("ext_brinj_5", "study_brinjikji_2018", "pam_var_sample_size", "28", 0.97, 1, "We identified 28 individual cases of PAM across international centers", "verified"),
-            ("ext_brinj_6", "study_brinjikji_2018", "pam_var_aneurysm_rate", "42.8", 0.94, 1, "Associated aneurysms were reported in 12 of 28 patients (42.8%)", "verified"),
-            ("ext_brinj_7", "study_brinjikji_2018", "pam_var_management", "Observation (65%)", 0.91, 1, "The majority of unruptured cases (18/28) were managed with clinical observation alone", "verified"),
-        ]
-        for ext in extractions:
-            cur.execute("""
-                INSERT OR REPLACE INTO extractions (extraction_id, study_id, variable_id, value, confidence, source_page, source_text, verification_status, is_edited)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-            """, ext)
-        conn.commit()
-    except Exception as e:
-        import logging
-        logging.getLogger("radextract").warning(f"Error seeding default PAM review: {e}")
-
-
 def init_sqlite_db(conn: sqlite3.Connection | None = None):
     """Create all SQLite tables and run column migrations."""
     close_after = False
@@ -803,7 +917,6 @@ def init_sqlite_db(conn: sqlite3.Connection | None = None):
     try:
         conn.executescript(SCHEMA_SQL)
         _run_migrations(conn)
-        _seed_default_pam_review(conn)
         conn.commit()
     finally:
         if close_after:
@@ -844,7 +957,11 @@ def reset_db():
             "project_members",
             "sessions",
             "extraction_decisions",
-            "extractions", "audit_log", "variables", "studies",
+            "extractions", "audit_log", "variables",
+            "batch_study_contributions", "import_batches",
+            "dedup_groups", "non_duplicates", "dedup_audit",
+            "dedup_merge_plans", "dedup_merge_runs",
+            "studies",
             "search_logs",
             "projects", "users", "cache_store",
         ]

@@ -50,10 +50,10 @@ def project():
     conn = get_connection()
     try:
         conn.execute("INSERT INTO projects (project_id, name) VALUES (?, ?)", (pid, "P"))
-        a = _add_study(conn, pid, "Deep learning for chest X-ray", doi="10.1/x", abstract="short", journal="")
-        b = _add_study(conn, pid, "Deep learning for chest X-ray.", doi="10.1/x",
+        a = _add_study(conn, pid, "Deep learning for chest X-ray", doi="10.1234/x", abstract="short", journal="")
+        b = _add_study(conn, pid, "Deep learning for chest X-ray.", doi="10.1234/x",
                        abstract="A much longer abstract that the other record lacks entirely.", journal="Radiology")
-        c = _add_study(conn, pid, "Something completely different about MRI", doi="10.2/y")
+        c = _add_study(conn, pid, "Something completely different about MRI", doi="10.2234/y")
         conn.commit()
     finally:
         conn.close()

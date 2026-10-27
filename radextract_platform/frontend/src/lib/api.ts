@@ -2144,6 +2144,8 @@ export interface HypothesisResponse {
   hypothesis: string;
   research_question: string;
   secondary_hypotheses: SecondaryHypothesis[];
+  generation_source?: string; // "llm" | "template" | "failed"
+  generation_error?: string;
 }
 
 export interface HypothesisUpdate {
@@ -3530,6 +3532,11 @@ export const api = {
     request<HypothesisResponse>(`/projects/${projectId}/hypothesis`),
   updateHypothesis: (projectId: string, data: HypothesisUpdate) =>
     request<HypothesisResponse>(`/projects/${projectId}/hypothesis`, { method: "PUT", body: JSON.stringify(data) }),
+  generateHypothesis: (projectId: string, confirmOverwrite?: boolean) =>
+    request<HypothesisResponse>(`/projects/${projectId}/generate-hypothesis`, {
+      method: "POST",
+      headers: confirmOverwrite ? { "X-Confirm-Overwrite": "true" } : {},
+    }),
 
   // Criteria
   getCriteria: (projectId: string) =>
