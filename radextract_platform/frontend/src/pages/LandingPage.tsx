@@ -328,6 +328,19 @@ export const LandingPage: React.FC = () => {
     };
     listen(waitlistForm, "submit", handleWaitlist);
 
+    // 5b. Collaboration inquiry form
+    const collabForm = container.querySelector("#collab-inquiry-form, .collab-form");
+    const collabBtn = collabForm?.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    const handleCollab = (e: Event) => {
+      e.preventDefault();
+      if (collabBtn) {
+        collabBtn.textContent = "✓ Inquiry sent! We'll be in touch.";
+        collabBtn.style.background = "var(--sage)";
+        collabBtn.disabled = true;
+      }
+    };
+    listen(collabForm, "submit", handleCollab);
+
     // 6. Smooth anchor scroll with Lenis
     const handleAnchor = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
