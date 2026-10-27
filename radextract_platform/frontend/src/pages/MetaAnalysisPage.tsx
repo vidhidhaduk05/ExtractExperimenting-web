@@ -85,7 +85,7 @@ export function MetaAnalysisPage() {
       ci_lower: Number(s.ci_lower ?? ((s.effect || 1.0) * 0.8)),
       ci_upper: Number(s.ci_upper ?? ((s.effect || 1.0) * 1.25)),
       weight: Number(s.weight ?? (100 / Math.max(1, results?.studies?.length || 1))),
-      se: Number(s.se ?? (Math.abs(Number(s.ci_upper || 1.5) - Number(s.ci_lower || 0.9)) / 3.92) || 0.25),
+      se: Number(s.se ?? ((Math.abs(Number(s.ci_upper || 1.5) - Number(s.ci_lower || 0.9)) / 3.92) || 0.25)),
     }));
 
     try {

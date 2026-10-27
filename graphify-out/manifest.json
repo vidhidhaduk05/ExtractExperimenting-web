@@ -5472,21 +5472,39 @@
     "semantic_hash": ""
   },
   "RADEXTRACT_FINAL_AGENT_HANDOFF.md": {
-    "mtime": 1793108274.9779668,
-    "seen": 1793108385.3902268,
-    "ast_hash": "d3aa150c250e2866a2833fddd3fafe0d",
+    "mtime": 1793108574.9055364,
+    "seen": 1793140055.175084,
+    "ast_hash": "c5f3ab8489553cfba89a737dc81e210c",
     "semantic_hash": ""
   },
   "RADEXTRACT_UPDATED_BLUEPRINT.html": {
-    "mtime": 1793108230.9518068,
-    "seen": 1793108385.3902268,
-    "ast_hash": "14fa2212f7fe6ea9277ac09bebb6c0bc",
+    "mtime": 1793108620.1379404,
+    "seen": 1793140055.175084,
+    "ast_hash": "95754782a022a286ebd9564ff5af572c",
     "semantic_hash": ""
   },
   "docs/archives/2026-10-27-agent-handoff/RADEXTRACT_FINAL_AGENT_HANDOFF.before-confidence-1793107749103.md": {
     "mtime": 1793107749.1060104,
     "seen": 1793108385.4129653,
     "ast_hash": "5f12e19fcd10804a1ee7c681cb8a1932",
+    "semantic_hash": ""
+  },
+  "docs/archives/2026-10-27-final-audit-1793108886653/manifest.json": {
+    "mtime": 1793108886.685241,
+    "seen": 1793140054.937224,
+    "ast_hash": "9b214f7c2cea8a94ce57a4f241e96074",
+    "semantic_hash": ""
+  },
+  "docs/archives/2026-10-27-final-audit-1793108886653/RADEXTRACT_FINAL_AGENT_HANDOFF.md": {
+    "mtime": 1793108886.6553018,
+    "seen": 1793140055.1934214,
+    "ast_hash": "c5f3ab8489553cfba89a737dc81e210c",
+    "semantic_hash": ""
+  },
+  "docs/archives/2026-10-27-final-audit-1793108886653/RADEXTRACT_UPDATED_BLUEPRINT.html": {
+    "mtime": 1793108886.685241,
+    "seen": 1793140055.1934214,
+    "ast_hash": "95754782a022a286ebd9564ff5af572c",
     "semantic_hash": ""
   }
 }
