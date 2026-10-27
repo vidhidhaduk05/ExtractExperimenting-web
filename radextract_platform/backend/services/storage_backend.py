@@ -73,7 +73,7 @@ class LocalStorage(StorageBackend):
 
     def _full_path(self, key: str) -> Path:
         resolved_root = self.root.resolve()
-        key_norm = key.replace("\\", "/")
+        key_norm = key.replace("\\", "/").lstrip("/")
         resolved_path = (self.root / key_norm).resolve()
         if not resolved_path.is_relative_to(resolved_root):
             raise ValueError(f"Access denied: path traversal attempt in key '{key}'")
@@ -199,7 +199,7 @@ def get_storage(bucket_type: str = "upload") -> StorageBackend:
             region=settings.aws_region,
         )
     else:
-        root = settings.upload_root if bucket_type == "upload" else settings.export_root
+        root = settings.storage_root
         backend = LocalStorage(root=root)
 
     _storage_instances[cache_key] = backend
@@ -231,20 +231,19 @@ def init_s3_buckets():
 def resolve_pdf_path(stored_path: str) -> Optional[str]:
     """Resolve a stored pdf_path from the database to a local file path.
 
-    Handles three cases:
-    1. New-style storage key (e.g. "proj123/study456.pdf") — uses storage backend
-    2. Old-style absolute path that still exists on disk — returns it directly
-    3. Old-style absolute path that no longer exists — tries as a storage key
-
-    Returns None if the file cannot be located.
+    Resolves paths stored relative to settings.storage_root (e.g. "{project}/01_SOURCE/{file}.pdf"),
+    as well as old legacy absolute or uploads-relative paths for backward compatibility.
     """
     if not stored_path:
         return None
 
-    # Case 2: old-style absolute path that still exists
-    if os.path.isabs(stored_path) and os.path.exists(stored_path):
-        return stored_path
+    from services.storage_manager import resolve_storage_path
+    resolved = resolve_storage_path(stored_path)
+    if resolved and resolved.exists():
+        return str(resolved)
 
-    # Case 1 & 3: treat as a storage key
-    storage = get_storage("upload")
-    return storage.get_file_path(stored_path)
+    if settings.storage_backend == "s3":
+        storage = get_storage("upload")
+        return storage.get_file_path(stored_path)
+
+    return None

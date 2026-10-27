@@ -19,10 +19,7 @@ BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BACKEND not in sys.path:
     sys.path.insert(0, BACKEND)
 
-PROTOCOL = os.environ.get(
-    "PAM_PROTOCOL",
-    r"d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protocol_V2.docx",
-)
+PROTOCOL = os.environ.get("PAM_PROTOCOL", "")
 API = os.environ.get("RADEXTRACT_API", "http://127.0.0.1:8000/api")
 MINDATE = "1960/01/01"
 MAXDATE = "2026/08/31"

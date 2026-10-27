@@ -60,14 +60,18 @@ async def lifespan(app: FastAPI):
     )
     logger.info(f"Starting RadExtract API (env={settings.env}, db={settings.db_backend}, storage={settings.storage_backend})")
 
-    # Stage radextract.db onto node-local scratch (/tmp or $TMPDIR) to avoid NFS locking under multi-worker loads
-    if os.environ.get("STAGE_DB_SCRATCH", "1") == "1" and settings.db_backend == "sqlite":
+    # Stage radextract.db onto node-local scratch only if explicitly opted-in via STAGE_DB_SCRATCH=1
+    if os.environ.get("STAGE_DB_SCRATCH", "0") == "1" and settings.db_backend == "sqlite":
         from database import stage_db_to_scratch, sync_scratch_to_persistent
         stage_db_to_scratch()
 
     ensure_dirs()
     init_db()
     init_s3_buckets()
+
+    # Run boot self-check, reconciliation, and cleanup on startup
+    from services.boot_check import run_boot_self_check
+    run_boot_self_check()
     yield
     # On graceful exit, flush WAL and sync scratch DB back to persistent NFS storage
     if settings.db_backend == "sqlite":
@@ -186,6 +190,14 @@ def create_app() -> FastAPI:
             "storage_backend": settings.storage_backend,
             "metrics": metrics_collector.get_stats(),
         }
+
+    @app.get("/health/full")
+    @app.get("/api/health/full")
+    async def health_full():
+        from services.boot_check import get_boot_report
+        report = get_boot_report()
+        status_code = 200 if report.get("overall_ok") else 503
+        return JSONResponse(status_code=status_code, content=report)
 
     # Mount built frontend dist files if present
     import os

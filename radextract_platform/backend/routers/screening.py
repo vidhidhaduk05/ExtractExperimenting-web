@@ -1293,6 +1293,9 @@ async def prisma_flow_svg(project_id: str, user: Optional[dict] = Depends(get_cu
     if not svg:
         raise HTTPException(status_code=500, detail="PRISMA diagram generation failed")
 
+    from services.storage_manager import save_stage_file
+    save_stage_file(project_id, "07_EXPORTS", f"prisma_flow_{project_id}.svg", svg, db=conn)
+
     return Response(content=svg, media_type="image/svg+xml")
 
 
@@ -1308,6 +1311,9 @@ async def prisma_flow_png(project_id: str, user: Optional[dict] = Depends(get_cu
     png = render_prisma_png(flow_data)
     if not png:
         raise HTTPException(status_code=500, detail="PRISMA PNG generation failed")
+
+    from services.storage_manager import save_stage_file
+    save_stage_file(project_id, "07_EXPORTS", f"prisma_flow_{project_id}.png", png, db=conn)
 
     return Response(
         content=png,
@@ -1336,6 +1342,9 @@ async def prisma_flow_docx(project_id: str, user: Optional[dict] = Depends(get_c
     png = render_prisma_png(flow_data)
     docx_bytes = render_prisma_docx(flow_data, project_name=project_name, png_bytes=png)
 
+    from services.storage_manager import save_stage_file
+    save_stage_file(project_id, "07_EXPORTS", f"prisma_flow_{project_id}.docx", docx_bytes, db=conn)
+
     return Response(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -1353,6 +1362,10 @@ async def prisma2020_csv(project_id: str, user: Optional[dict] = Depends(get_cur
     check_project_access(conn, project_id, user)
     payload = sync_prisma2020(project_id, conn)
     csv_text = render_prisma2020_csv(payload["fields"])
+
+    from services.storage_manager import save_stage_file
+    save_stage_file(project_id, "07_EXPORTS", f"PRISMA2020_{project_id}.csv", csv_text.encode("utf-8"), db=conn)
+
     return Response(
         content=csv_text,
         media_type="text/csv; charset=utf-8",

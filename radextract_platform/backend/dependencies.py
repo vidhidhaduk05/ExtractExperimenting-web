@@ -13,7 +13,17 @@ from typing import Any, Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+try:
+    from jose import JWTError, jwt
+except ImportError:
+    try:
+        import jwt  # PyJWT fallback
+        class JWTError(Exception):
+            pass
+    except ImportError:
+        class JWTError(Exception):
+            pass
+        jwt = None
 import bcrypt
 import sqlite3
 
@@ -135,26 +145,41 @@ async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
     db: DBBackend = Depends(get_db),
 ) -> dict:
-    """Decode JWT and return user info. Fallback to default reviewer if no auth provided."""
-    default_user = {
-        "user_id": "usr_default_coscientist",
-        "username": "Co-Scientist Reviewer",
-        "email": "reviewer@radextract.local",
-        "role": "owner",
-    }
+    """Decode JWT and return user info. Raises 401 if unauthenticated or token is invalid."""
     if not token:
-        return default_user
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not jwt:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="JWT library not available",
+        )
     try:
         payload = jwt.decode(token, settings.effective_jwt_secret, algorithms=[settings.jwt_algorithm])
         user_id = payload.get("sub")
         if user_id is None:
-            return default_user
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         user = db.get("users", user_id)
         if not user:
-            return default_user
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User account no longer exists",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         return user
-    except Exception:
-        return default_user
+    except (JWTError, Exception):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 async def get_current_user_optional(

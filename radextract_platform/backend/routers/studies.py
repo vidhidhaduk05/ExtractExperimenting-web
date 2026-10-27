@@ -158,21 +158,57 @@ async def update_study(study_id: str, body: StudyUpdate, user: Optional[dict] = 
 @router.delete("/studies/{study_id}")
 async def delete_study(study_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
-    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
-    if _pid: check_project_access(conn, _pid["project_id"], user)
+    _study = conn.execute("SELECT project_id, pdf_path FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if not _study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    project_id = _study["project_id"]
+    pdf_path = _study["pdf_path"]
+    check_project_access(conn, project_id, user)
+
+    # 1. Clean up user state and annotations
     for bookmark in conn.query("user_review_state", {"study_id": study_id, "stage": "bookmark"}):
-        if not conn.delete("user_review_state", bookmark["state_id"]):
-            raise HTTPException(status_code=503, detail="Study bookmarks could not be removed. Please retry.")
+        conn.delete("user_review_state", bookmark["state_id"])
     for table, pk in (("record_annotations", "annotation_id"), ("study_tag_links", "link_id")):
         for row in conn.query(table, {"study_id": study_id}):
-            if not conn.delete(table, row[pk]):
-                raise HTTPException(status_code=503, detail="Record collaboration data could not be removed. Please retry.")
+            conn.delete(table, row[pk])
+
+    # 2. Clean up child database records to prevent FK violations and orphaned rows
+    conn.execute("DELETE FROM extractions WHERE study_id = ?", (study_id,))
+    conn.execute("DELETE FROM pdf_documents WHERE study_id = ?", (study_id,))
+    conn.execute("DELETE FROM pdf_highlights WHERE study_id = ?", (study_id,))
+    conn.execute("DELETE FROM audit_log WHERE study_id = ?", (study_id,))
+    conn.execute("DELETE FROM screening_decisions WHERE study_id = ?", (study_id,))
+    conn.execute("DELETE FROM screening_conflicts WHERE study_id = ?", (study_id,))
+    conn.execute("DELETE FROM extraction_decisions WHERE study_id = ?", (study_id,))
+
+    # Clean up RoB assessments & judgments
+    rob_rows = conn.execute("SELECT assessment_id FROM rob_assessments WHERE study_id = ?", (study_id,)).fetchall()
+    for r in rob_rows:
+        aid = r["assessment_id"]
+        conn.execute("DELETE FROM rob_signaling_answers WHERE judgment_id IN (SELECT judgment_id FROM rob_domain_judgments WHERE assessment_id = ?)", (aid,))
+        conn.execute("DELETE FROM rob_domain_judgments WHERE assessment_id = ?", (aid,))
+        conn.execute("DELETE FROM rob_assessments WHERE assessment_id = ?", (aid,))
+
+    # 3. Clean up physical files on storage and local disk
+    if pdf_path:
+        try:
+            storage = get_storage("upload")
+            storage.delete_file(pdf_path)
+        except Exception:
+            pass
+        try:
+            upload_dir = Path(settings.upload_dir)
+            f_pdf = upload_dir / pdf_path
+            f_pdf.unlink(missing_ok=True)
+            f_docling = Path(os.path.splitext(str(f_pdf))[0] + ".docling.json")
+            f_docling.unlink(missing_ok=True)
+        except Exception as e_file:
+            logger.warning(f"Could not remove PDF files for study {study_id}: {e_file}")
+
     cursor = conn.execute(
         "DELETE FROM studies WHERE study_id = ?", (study_id,)
     )
     conn.commit()
-    if cursor.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Study not found")
     return {"deleted": True, "study_id": study_id}
 
 
@@ -194,28 +230,79 @@ async def upload_pdf(
     project_id = row["project_id"]
     check_project_access(conn, project_id, user)
 
-    # Save file via storage backend
-    storage = get_storage("upload")
-    storage_key = f"{project_id}/{study_id}.pdf"
-    content = await file.read()
-    if len(content) > settings.max_upload_mb * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large")
-    storage.save_bytes(storage_key, content)
-    filepath = storage.get_file_path(storage_key)
+    # 1. Stream validation of upload size (max_upload_mb) before accumulating entire body
+    max_bytes = settings.max_upload_mb * 1024 * 1024
+    total_bytes = 0
+    chunks = []
+    while chunk := await file.read(65536):
+        total_bytes += len(chunk)
+        if total_bytes > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File exceeds maximum upload size of {settings.max_upload_mb} MB"
+            )
+        chunks.append(chunk)
+
+    content = b"".join(chunks)
+
+    # 2. Magic byte check for valid PDF (%PDF)
+    if not content.startswith(b"%PDF"):
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported Media Type: uploaded file is not a valid PDF (missing %PDF header)"
+        )
+
+    # Save file via Study Data storage manager (01_SOURCE / FirstAuthor-Year-ShortTitle.pdf)
+    from services.storage_manager import save_study_pdf
+    storage_key, abs_path = save_study_pdf(
+        project_id=project_id,
+        study_id=study_id,
+        content=content,
+        author=dict(row).get("authors"),
+        year=dict(row).get("publication_year"),
+        title=dict(row).get("title"),
+        db=conn,
+    )
+    filepath = str(abs_path)
 
     conn.execute(
-        "UPDATE studies SET pdf_path = ?, pdf_status = 'uploaded' WHERE study_id = ?",
+        "UPDATE studies SET pdf_path = ?, pdf_status = 'uploaded', error_message = '' WHERE study_id = ?",
         (storage_key, study_id),
     )
     conn.commit()
 
-    # Always process PDF into Docling structured JSON for data extraction
+    # Process PDF into Docling structured JSON for data extraction
     engine_used = "docling"
     try:
         proc_doc = pdf_service.process_pdf(study_id, conn)
         engine_used = proc_doc.get("processor_engine", "docling")
+        conn.execute(
+            "UPDATE studies SET pdf_status = 'processed', error_message = '', pdf_processor_engine = ? WHERE study_id = ?",
+            (engine_used, study_id),
+        )
+        conn.commit()
     except Exception as e_proc:
-        pass
+        logger.error(f"[UploadPDF] Processing failed for study {study_id}: {e_proc}", exc_info=True)
+        pdf_status = f"failed: {str(e_proc)}"
+        error_msg = str(e_proc)
+        conn.execute(
+            "UPDATE studies SET pdf_status = ?, error_message = ? WHERE study_id = ?",
+            (pdf_status, error_msg, study_id),
+        )
+        conn.commit()
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "study_id": study_id,
+                "project_id": project_id,
+                "pdf_path": filepath,
+                "pdf_status": pdf_status,
+                "error_message": error_msg,
+                "processor_engine": "none",
+                "extraction_status": "error",
+                "message": f"PDF upload succeeded but processing failed: {error_msg}",
+            }
+        )
 
     # Advance extraction status to ready_for_extraction if study was awaiting_pdf or included
     curr_ext = row["extraction_status"] or ""
@@ -459,26 +546,64 @@ async def upload_included_files(
     def attach_pdf_to_study(study: dict, pdf_bytes: bytes, source_note: str) -> bool:
         nonlocal processed_docling_count
         s_id = study["study_id"]
-        storage_key = f"{project_id}/{s_id}.pdf"
-        storage.save_bytes(storage_key, pdf_bytes)
+        from services.storage_manager import save_study_pdf
+        storage_key, _ = save_study_pdf(
+            project_id=project_id,
+            study_id=s_id,
+            content=pdf_bytes,
+            author=study.get("authors"),
+            year=study.get("publication_year"),
+            title=study.get("title"),
+            db=conn,
+        )
         conn.execute(
-            "UPDATE studies SET pdf_path = ?, pdf_status = 'uploaded', extraction_status = 'ready_for_extraction' WHERE study_id = ?",
+            "UPDATE studies SET pdf_path = ?, pdf_status = 'uploaded', error_message = '', extraction_status = 'ready_for_extraction' WHERE study_id = ?",
             (storage_key, s_id),
         )
         conn.commit()
         try:
-            pdf_service.process_pdf(s_id, conn)
+            proc_doc = pdf_service.process_pdf(s_id, conn)
+            engine = proc_doc.get("processor_engine", "docling")
+            conn.execute(
+                "UPDATE studies SET pdf_status = 'processed', error_message = '', pdf_processor_engine = ? WHERE study_id = ?",
+                (engine, s_id)
+            )
+            conn.commit()
             processed_docling_count += 1
         except Exception as e_proc:
+            err_str = str(e_proc)
             logger.warning("Docling processing failed for %s: %s", s_id, e_proc)
+            conn.execute(
+                "UPDATE studies SET pdf_status = ?, error_message = ? WHERE study_id = ?",
+                (f"failed: {err_str}", err_str, s_id)
+            )
+            conn.commit()
         return True
 
+    max_bytes = settings.max_upload_mb * 1024 * 1024
     for upload_file in files:
         fname = upload_file.filename or "unknown"
         ext = os.path.splitext(fname)[1].lower()
-        content = await upload_file.read()
+
+        # Stream chunk reading with early size cutoff
+        chunks = []
+        tot = 0
+        while chunk := await upload_file.read(65536):
+            tot += len(chunk)
+            if tot > max_bytes:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File {fname} exceeds max upload limit of {settings.max_upload_mb} MB"
+                )
+            chunks.append(chunk)
+        content = b"".join(chunks)
 
         if ext == ".pdf":
+            if not content.startswith(b"%PDF"):
+                raise HTTPException(
+                    status_code=415,
+                    detail=f"File {fname} is not a valid PDF (missing %PDF header)"
+                )
             matched = match_study_for_pdf(fname, content)
             if matched:
                 attach_pdf_to_study(matched, content, f"Direct PDF: {fname}")
@@ -919,9 +1044,26 @@ async def batch_upload_pdf(
 
     storage = get_storage("upload")
 
+    max_bytes = settings.max_upload_mb * 1024 * 1024
     for file in files:
         fname = file.filename or ""
-        content = await file.read()
+        chunks = []
+        tot = 0
+        while chunk := await file.read(65536):
+            tot += len(chunk)
+            if tot > max_bytes:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File {fname} exceeds max upload limit of {settings.max_upload_mb} MB"
+                )
+            chunks.append(chunk)
+        content = b"".join(chunks)
+
+        if not content.startswith(b"%PDF"):
+            raise HTTPException(
+                status_code=415,
+                detail=f"File {fname} is not a valid PDF (missing %PDF header)"
+            )
         target_study = None
 
         # Try PMID match
@@ -945,8 +1087,16 @@ async def batch_upload_pdf(
 
         if target_study:
             sid = target_study["study_id"]
-            storage_key = f"{project_id}/{sid}.pdf"
-            storage.save_bytes(storage_key, content)
+            from services.storage_manager import save_study_pdf
+            storage_key, _ = save_study_pdf(
+                project_id=project_id,
+                study_id=sid,
+                content=content,
+                author=target_study.get("authors"),
+                year=target_study.get("publication_year"),
+                title=target_study.get("title"),
+                db=conn,
+            )
 
             conn.execute(
                 "UPDATE studies SET pdf_path = ?, pdf_status = 'uploaded' WHERE study_id = ?",
@@ -973,8 +1123,16 @@ async def batch_upload_pdf(
                 authors = meta.get("authors", "")
 
                 sid = str(uuid.uuid4())
-                storage_key = f"{project_id}/{sid}.pdf"
-                storage.save_bytes(storage_key, content)
+                from services.storage_manager import save_study_pdf
+                storage_key, _ = save_study_pdf(
+                    project_id=project_id,
+                    study_id=sid,
+                    content=content,
+                    author=authors,
+                    year=None,
+                    title=title,
+                    db=conn,
+                )
 
                 conn.execute(
                     """INSERT INTO studies

@@ -1175,9 +1175,11 @@ Return JSON with exact keys:
     except Exception:
         pass
 
-    # Fallback: if LLM didn't produce results, try improved multi-domain extraction
-    if not any(pico.values()):
-        pico = _simple_pico_extraction(research_question)
+    # Fill in any missing or empty fields with robust multi-domain heuristics
+    simple_pico = _simple_pico_extraction(research_question)
+    for k, v in simple_pico.items():
+        if not pico.get(k) and v:
+            pico[k] = v
 
     # Formulate falsifiable research hypotheses
     hypotheses = generate_hypothesis_from_pico(pico, research_question)

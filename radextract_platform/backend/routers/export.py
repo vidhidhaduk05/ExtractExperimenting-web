@@ -76,8 +76,8 @@ async def export_canonical_srma_workbook(
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     xlsx_bytes = generate_srma_extraction_workbook(project_id, db)
     filename = f"srma_extraction_workbook_{project_id}_{timestamp}.xlsx"
-    storage = get_storage("export")
-    storage.save_bytes(filename, xlsx_bytes)
+    from services.storage_manager import save_stage_file
+    save_stage_file(project_id, "03_EXTRACTION", filename, xlsx_bytes, db=db)
     return Response(
         content=xlsx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -192,8 +192,8 @@ async def _export_csv(project_id: str, timestamp: str, include_rob: bool, db: DB
 
     csv_bytes = output.getvalue().encode("utf-8")
     filename = f"project_{project_id}_{timestamp}.csv"
-    storage = get_storage("export")
-    storage.save_bytes(filename, csv_bytes)
+    from services.storage_manager import save_stage_file
+    save_stage_file(project_id, "03_EXTRACTION", filename, csv_bytes, db=db)
 
     return Response(
         content=csv_bytes,
@@ -282,8 +282,8 @@ async def _export_xlsx(project_id: str, timestamp: str, include_rob: bool, db: D
     wb.save(out_stream)
     xlsx_bytes = out_stream.getvalue()
     filename = f"project_{project_id}_{timestamp}.xlsx"
-    storage = get_storage("export")
-    storage.save_bytes(filename, xlsx_bytes)
+    from services.storage_manager import save_stage_file
+    save_stage_file(project_id, "03_EXTRACTION", filename, xlsx_bytes, db=db)
 
     return Response(
         content=xlsx_bytes,
@@ -341,6 +341,8 @@ async def export_references(
 
     content_bytes = content.encode("utf-8")
     filename = f"references_{project_id}_{status}_{timestamp}.{ext}"
+    from services.storage_manager import save_stage_file
+    save_stage_file(project_id, "02_SCREENING", filename, content_bytes, db=db)
 
     return Response(
         content=content_bytes,

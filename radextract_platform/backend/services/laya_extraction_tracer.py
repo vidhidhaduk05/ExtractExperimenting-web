@@ -36,7 +36,7 @@ def _split_into_sentences(text: str) -> List[str]:
 
 
 def _extract_page_sentences(pdf_data: dict, full_text: str = "") -> List[Tuple[int, str]]:
-    """Return a list of (page_number, sentence) pairs across the document."""
+    """Return a list of (page_number, sentence) pairs across the document text and tables."""
     items: List[Tuple[int, str]] = []
     pages = pdf_data.get("pages") or []
     if pages:
@@ -48,6 +48,26 @@ def _extract_page_sentences(pdf_data: dict, full_text: str = "") -> List[Tuple[i
     elif full_text:
         for sent in _split_into_sentences(full_text):
             items.append((1, sent))
+
+    # Also extract structured table text & cells with their exact page numbers
+    tables = pdf_data.get("tables") or []
+    for t in tables:
+        if isinstance(t, dict):
+            pnum = int(t.get("page", t.get("page_number", 1)))
+            caption = t.get("caption") or t.get("title") or ""
+            if caption:
+                items.append((pnum, f"Table: {caption}"))
+            rows = t.get("data") or t.get("rows") or []
+            for row in rows:
+                if isinstance(row, list):
+                    cells = [str(c).strip() for c in row if c and str(c).strip()]
+                    if cells:
+                        items.append((pnum, " | ".join(cells)))
+                elif isinstance(row, dict):
+                    cells = [f"{k}: {v}" for k, v in row.items() if v]
+                    if cells:
+                        items.append((pnum, " | ".join(cells)))
+
     return items
 
 
@@ -146,23 +166,32 @@ def trace_all_extractions(
     """Run Laya tracing across a batch of extraction records.
 
     Updates or annotates existing extractions with verified quotes,
-    pages, and Laya confidence scores.
+    pages, and Laya confidence scores. Adds tracing_status ('disabled' | 'failed' | 'verified').
     """
-    if not is_jev_enabled():
-        return extractions
+    jev_active = is_jev_enabled()
 
     for item in extractions:
         val = str(item.get("value", "")).strip()
-        if not val or val in ("-99", "-77", "-88"):
+        if not val or val in ("-99", "-77", "-88", "not reported", "none", "n/a"):
+            item["tracing_status"] = "disabled" if not jev_active else "none"
             continue
 
         var_name = item.get("name") or item.get("variable_name") or ""
         if not var_name:
+            item["tracing_status"] = "disabled" if not jev_active else "none"
+            continue
+
+        if not jev_active:
+            item["tracing_status"] = "disabled"
+            item["laya_verified"] = False
+            item["verification_note"] = "Tracing disabled (Laya ONNX model or JEV mode inactive)"
             continue
 
         # If already has verbatim quote and page, run a quick Laya confirmation
         existing_quote = item.get("source_text") or ""
-        if existing_quote and len(existing_quote) > 15 and not existing_quote.startswith("[MISSING"):
+        quote_in_doc = bool(existing_quote and full_text and existing_quote[:35].lower() in full_text.lower())
+
+        if existing_quote and len(existing_quote) > 15 and not existing_quote.startswith("[MISSING") and quote_in_doc:
             try:
                 q = {
                     "verify": {
@@ -176,23 +205,42 @@ def trace_all_extractions(
                 }
                 res = ask(state=existing_quote[:350], questions=q)
                 noul_val = res.get("verify", {}).get("noul", 0.0)
-                item["laya_verified"] = bool(noul_val >= 0.50)
+                verified = bool(noul_val >= 0.50)
+                item["laya_verified"] = verified
                 item["laya_confidence"] = round(float(noul_val), 4)
+                item["tracing_status"] = "verified" if verified else "failed"
+                item["verification_note"] = f"Laya Noul confirmation score: {noul_val:.2f}"
                 if noul_val >= 0.70:
                     item["confidence_tag"] = "[DS]"
+                elif verified:
+                    item["confidence_tag"] = "[VERIFIED]"
+                else:
+                    item["confidence_tag"] = "[UNVERIFIED]"
                 continue
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[LayaTracer] Confirmation error for {var_name}: {e}")
+                item["tracing_status"] = "failed"
+                item["verification_note"] = f"Laya confirmation failed: {str(e)}"
+                item["laya_verified"] = False
+                continue
 
-        # Otherwise trace from document text
+        # Otherwise trace candidate evidence from document text and tables
         traced = trace_variable_evidence(var_name, val, pdf_data, full_text)
         if traced and traced.get("verified"):
             item["source_text"] = traced["source_text"]
             item["source_page"] = traced["source_page"]
             item["laya_confidence"] = traced["confidence"]
             item["laya_verified"] = True
-            # Upgrade tag to [DS] if strongly verified
+            item["tracing_status"] = "verified"
+            item["verification_note"] = f"Laya verified from page {traced['source_page']} with score {traced['confidence']:.2f}"
             if traced["confidence"] >= 0.70:
                 item["confidence_tag"] = "[DS]"
+            else:
+                item["confidence_tag"] = "[VERIFIED]"
+        else:
+            item["tracing_status"] = "failed"
+            item["laya_verified"] = False
+            item["verification_note"] = "No candidate sentence verified by Laya"
+            item["confidence_tag"] = "[UNVERIFIED]"
 
     return extractions

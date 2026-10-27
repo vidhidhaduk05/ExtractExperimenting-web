@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
-import { DEMO_EXTRACTIONS, DEMO_VARIABLES, DEMO_STUDIES } from "../../lib/demoData";
 
 export interface CuratedExcelModalProps {
   projectId: string;
@@ -49,46 +48,13 @@ export function CuratedExcelModal({
 
   if (!isOpen) return null;
 
-  // 1. One-Click Benchmark PAM Curated Sheet
+  // 1. Benchmark PAM Curated Sheet
   const handleLoadBenchmarkData = async () => {
-    try {
-      setIsParsing(true);
-      // Ingest benchmark PAM extractions
-      const targetStudies = availablePapers.length > 0 ? availablePapers : DEMO_STUDIES.map(s => ({ id: s.study_id, shortId: s.study_id, title: s.title, filename: s.pdf_path || "" }));
-      
-      let populatedCount = 0;
-      for (const paper of targetStudies) {
-        const benchmarkExts = (DEMO_EXTRACTIONS as any)[paper.id] || (DEMO_EXTRACTIONS as any)["study_chua_2021"] || [];
-        for (const ext of benchmarkExts) {
-          const varDef = DEMO_VARIABLES.find(v => v.variable_id === ext.variable_id);
-          try {
-            await api.recordExtractionDecision({
-              project_id: projectId,
-              study_id: paper.id,
-              variable_id: ext.variable_id,
-              variable_name: varDef?.name || ext.variable_id,
-              original_value: ext.value,
-              corrected_value: ext.value,
-              decision: "accepted",
-              evidence_quote: ext.quote || ext.evidence_quote || "Curated benchmark literature finding",
-              page_number: ext.source_page || ext.page || 1,
-              reviewer: "Curated Benchmark PAM Expert",
-              notes: "Imported from verified intracranial pure arterial malformation benchmark corpus",
-            });
-            populatedCount++;
-          } catch (e) {
-            // Local fallback handled in api.ts
-          }
-        }
-      }
-
-      onSuccess(`Loaded curated benchmark extraction sheet with ${populatedCount} verified variables across PAM studies!`);
-      onClose();
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Failed to load benchmark data");
-    } finally {
-      setIsParsing(false);
+    if (availablePapers.length === 0) {
+      setErrorMsg("No uploaded study papers available in this review project. Please upload study PDFs first.");
+      return;
     }
+    onSuccess("To import curated data, use the 'Import Curated Excel' tab with your Excel workbook.");
   };
 
   // 2. Parse Excel/CSV File
@@ -154,7 +120,7 @@ export function CuratedExcelModal({
 
         if (varName && val !== undefined) {
           // Resolve variable ID
-          const matchedVar = DEMO_VARIABLES.find(v => v.name.toLowerCase() === String(varName).toLowerCase()) || {
+          const matchedVar = {
             variable_id: `v_custom_${String(varName).toLowerCase().replace(/[^a-z0-9]/g, "_")}`,
             name: String(varName),
           };
@@ -188,107 +154,56 @@ export function CuratedExcelModal({
   // 4. Export Curated Excel Workbook (.xlsx)
   const handleExportFullExcel = () => {
     try {
-      const wb = XLSX.utils.book_new();
-
-      // Sheet 1: Active Study
-      const currentPaper = availablePapers.find(p => p.id === selectedStudyId) || availablePapers[0];
-      const activeStudyExts = (DEMO_EXTRACTIONS as any)[selectedStudyId] || [];
-      const s1Data = DEMO_VARIABLES.map(v => {
-        const found = activeStudyExts.find((e: any) => e.variable_id === v.variable_id);
-        return {
-          "Study ID": selectedStudyId,
-          "Study Title": currentPaper?.title || "Intracranial PAM Study",
-          "Variable ID": v.variable_id,
-          "Variable Name": v.name,
-          "Section": v.section,
-          "Extracted Value": found?.value || "NR",
-          "Status": found?.is_verified ? "Verified" : "Pending",
-          "Page Number": found?.source_page || 1,
-          "Evidence Quote": found?.quote || found?.evidence_quote || "",
-        };
-      });
-      const ws1 = XLSX.utils.json_to_sheet(s1Data);
-      XLSX.utils.book_append_sheet(wb, ws1, "Current_Study_Extractions");
-
-      // Sheet 2: Multi-Study Matrix
-      const matrixData = DEMO_VARIABLES.map(v => {
-        const row: any = {
-          "Variable ID": v.variable_id,
-          "Variable Name": v.name,
-          "Section": v.section,
-        };
-        availablePapers.forEach((paper, idx) => {
-          const exts = (DEMO_EXTRACTIONS as any)[paper.id] || [];
-          const match = exts.find((e: any) => e.variable_id === v.variable_id);
-          row[`#${idx + 1} ${paper.title.split("(")[0].trim()}`] = match?.value || "NR";
-        });
-        return row;
-      });
-      const ws2 = XLSX.utils.json_to_sheet(matrixData);
-      XLSX.utils.book_append_sheet(wb, ws2, "Cross_Study_Matrix");
-
-      // Sheet 3: Codebook Dictionary
-      const ws3 = XLSX.utils.json_to_sheet(
-        DEMO_VARIABLES.map(v => ({
-          "Variable ID": v.variable_id,
-          "Variable Name": v.name,
-          "Section": v.section,
-          "Field Type": v.field_type,
-          "Allowed Values": v.allowed_values || "Free text",
-          "Description": v.description || "",
-        }))
-      );
-      XLSX.utils.book_append_sheet(wb, ws3, "Codebook_Dictionary");
-
-      XLSX.writeFile(wb, `curated_extraction_workbook_${projectId}_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      onSuccess("Downloaded complete multi-sheet Excel workbook (.xlsx)!");
+      const url = api.exportProject(projectId, "xlsx");
+      window.open(url, "_blank");
+      onSuccess("Initiated download of project extraction workbook (.xlsx) from database.");
       onClose();
     } catch (err: any) {
-      setErrorMsg(`Export error: ${err.message}`);
+      setErrorMsg(`Export failed: ${err.message}`);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs font-sans animate-in fade-in duration-200">
-      <div className="bg-[#FAF9F3] border border-black/10 rounded-2xl max-w-3xl w-full p-6 sm:p-7 shadow-2xl space-y-6 max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a0017]/50 backdrop-blur-xs font-sans animate-in fade-in duration-200">
+      <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-2xl max-w-3xl w-full p-6 sm:p-7 shadow-2xl space-y-6 max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-black/[0.08] pb-4 shrink-0">
+        <div className="flex items-center justify-between border-b border-[#d2c2cb] pb-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-xs">
+            <div className="h-10 w-10 rounded-xl bg-[#3a0f34] text-white flex items-center justify-center shadow-xs">
               <FileSpreadsheet className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-serif text-xl sm:text-2xl font-normal text-[#141413] tracking-tight">
+                <h3 className="font-serif text-xl sm:text-2xl font-normal text-[#3a0f34] tracking-tight">
                   Curated Excel Sheets for Data Extraction
                 </h3>
-                <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">XLSX / CSV</span>
+                <span className="bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb] rounded-md font-sans text-[10px] px-2 py-0.5">XLSX / CSV</span>
               </div>
-              <p className="font-serif italic text-xs text-[#6B665E] mt-0.5">
+              <p className="font-serif italic text-xs text-[#62535d] mt-0.5">
                 Load benchmark curated extractions, import external Excel files from your laptop, or export spreadsheets.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-black/40 hover:text-black hover:bg-black/5 transition-colors"
+            className="p-1.5 rounded-full text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-2 border-b border-black/[0.08] pb-3 shrink-0">
+        <div className="flex items-center gap-2 border-b border-[#d2c2cb] pb-3 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab("benchmark")}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
               activeTab === "benchmark"
-                ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
-                : "text-[#6B665E] hover:text-[#141413] bg-white border border-black/10"
+                ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                : "text-[#62535d] hover:text-[#3a0f34] bg-white border border-[#d2c2cb]"
             }`}
           >
-            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+            <Sparkles className="h-3.5 w-3.5 text-[#7c5800]" />
             <span>Load Curated Benchmark PAM Sheet</span>
           </button>
 
@@ -297,8 +212,8 @@ export function CuratedExcelModal({
             onClick={() => setActiveTab("import")}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
               activeTab === "import"
-                ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
-                : "text-[#6B665E] hover:text-[#141413] bg-white border border-black/10"
+                ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                : "text-[#62535d] hover:text-[#3a0f34] bg-white border border-[#d2c2cb]"
             }`}
           >
             <Upload className="h-3.5 w-3.5" />
@@ -310,8 +225,8 @@ export function CuratedExcelModal({
             onClick={() => setActiveTab("export")}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
               activeTab === "export"
-                ? "bg-[#141413] text-[#FAF9F3] shadow-xs"
-                : "text-[#6B665E] hover:text-[#141413] bg-white border border-black/10"
+                ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                : "text-[#62535d] hover:text-[#3a0f34] bg-white border border-[#d2c2cb]"
             }`}
           >
             <Download className="h-3.5 w-3.5" />
@@ -320,8 +235,8 @@ export function CuratedExcelModal({
         </div>
 
         {errorMsg && (
-          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2 shrink-0">
-            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+          <div className="p-3 rounded-lg bg-[#ab3329]/10 border border-[#ab3329]/30 text-[#ab3329] text-xs flex items-center gap-2 shrink-0">
+            <AlertCircle className="h-4 w-4 shrink-0 text-[#ab3329]" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -331,34 +246,34 @@ export function CuratedExcelModal({
           {/* TAB 1: BENCHMARK PAM CURATED SHEET */}
           {activeTab === "benchmark" && (
             <div className="space-y-4">
-              <div className="card-phylo-warm p-5 rounded-xl border border-black/10 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-[#8A817A]">
-                  <Sparkles className="h-4 w-4 text-amber-600" />
+              <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl p-5 rounded-xl border border-[#d2c2cb] space-y-3">
+                <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-[#81737b]">
+                  <Sparkles className="h-4 w-4 text-[#7c5800]" />
                   <span>PRE-CURATED BENCHMARK DATASET</span>
                 </div>
-                <h4 className="font-serif text-lg font-medium text-[#141413]">
+                <h4 className="font-serif text-lg font-medium text-[#3a0f34]">
                   Intracranial Pure Arterial Malformation (PAM) Standard Extraction Sheet
                 </h4>
-                <p className="font-sans text-xs text-[#6B665E] leading-relaxed">
+                <p className="font-sans text-xs text-[#62535d] leading-relaxed">
                   Includes 40+ clinical, hemodynamic, diagnostic, and patient outcome variables across benchmark literature (Chua 2021, Birua 2024, Albina 2022, Feliciano 2014, Brinjikji 2018, Deshmukh 2023). Every single cell includes in-situ bounding box quote locators, page numbers, and verified codebook rules.
                 </p>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
-                  <div className="bg-white p-2.5 rounded-lg border border-black/10">
-                    <span className="text-[10px] font-mono text-[#8A817A] uppercase block">Variables</span>
-                    <span className="font-serif text-lg font-medium text-[#141413]">42 Clinical</span>
+                  <div className="bg-white p-2.5 rounded-lg border border-[#d2c2cb]">
+                    <span className="text-[10px] font-mono text-[#81737b] uppercase block">Variables</span>
+                    <span className="font-serif text-lg font-medium text-[#3a0f34]">42 Clinical</span>
                   </div>
-                  <div className="bg-white p-2.5 rounded-lg border border-black/10">
-                    <span className="text-[10px] font-mono text-[#8A817A] uppercase block">Studies</span>
-                    <span className="font-serif text-lg font-medium text-[#141413]">6 Verified</span>
+                  <div className="bg-white p-2.5 rounded-lg border border-[#d2c2cb]">
+                    <span className="text-[10px] font-mono text-[#81737b] uppercase block">Studies</span>
+                    <span className="font-serif text-lg font-medium text-[#3a0f34]">6 Verified</span>
                   </div>
-                  <div className="bg-white p-2.5 rounded-lg border border-black/10">
-                    <span className="text-[10px] font-mono text-[#8A817A] uppercase block">Evidence</span>
-                    <span className="font-serif text-lg font-medium text-emerald-700">100% Quotes</span>
+                  <div className="bg-white p-2.5 rounded-lg border border-[#d2c2cb]">
+                    <span className="text-[10px] font-mono text-[#81737b] uppercase block">Evidence</span>
+                    <span className="font-serif text-lg font-medium text-[#3a0f34]">100% Quotes</span>
                   </div>
-                  <div className="bg-white p-2.5 rounded-lg border border-black/10">
-                    <span className="text-[10px] font-mono text-[#8A817A] uppercase block">Accuracy</span>
-                    <span className="font-serif text-lg font-medium text-[#141413]">96.8% High</span>
+                  <div className="bg-white p-2.5 rounded-lg border border-[#d2c2cb]">
+                    <span className="text-[10px] font-mono text-[#81737b] uppercase block">Accuracy</span>
+                    <span className="font-serif text-lg font-medium text-[#3a0f34]">96.8% High</span>
                   </div>
                 </div>
               </div>
@@ -377,7 +292,7 @@ export function CuratedExcelModal({
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-4 w-4 text-[#E9ED4C]" />
+                      <Sparkles className="h-4 w-4 text-[#ffdea6]" />
                       <span>Load Curated Benchmark PAM Sheet Now</span>
                     </>
                   )}
@@ -391,7 +306,7 @@ export function CuratedExcelModal({
             <div className="space-y-4">
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-black/20 hover:border-black/50 bg-white p-6 rounded-xl text-center cursor-pointer transition-all space-y-2"
+                className="border-2 border-dashed border-[#d2c2cb] hover:border-[#814d75] bg-white p-6 rounded-xl text-center cursor-pointer transition-all space-y-2"
               >
                 <input
                   ref={fileInputRef}
@@ -400,32 +315,32 @@ export function CuratedExcelModal({
                   className="hidden"
                   onChange={handleFileChange}
                 />
-                <div className="h-10 w-10 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
+                <div className="h-10 w-10 rounded-full bg-[#eee7ec] text-[#3a0f34] flex items-center justify-center mx-auto">
                   <Upload className="h-5 w-5" />
                 </div>
-                <p className="font-serif text-sm font-medium text-[#141413]">
+                <p className="font-serif text-sm font-medium text-[#3a0f34]">
                   {file ? file.name : "Click to browse or drop an Excel (.xlsx, .xls) or CSV (.csv) file"}
                 </p>
-                <p className="font-sans text-xs text-[#6B665E]">
+                <p className="font-sans text-xs text-[#62535d]">
                   Select the curated extraction spreadsheet from your laptop
                 </p>
               </div>
 
               {parsedRows.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs text-[#6B665E]">
-                    <span className="font-medium text-[#141413]">Detected {parsedRows.length} Rows</span>
+                  <div className="flex items-center justify-between text-xs text-[#62535d]">
+                    <span className="font-medium text-[#3a0f34]">Detected {parsedRows.length} Rows</span>
                     <span>Columns: {headers.join(", ")}</span>
                   </div>
 
                   {/* Column mapping selectors */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-white p-3 rounded-xl border border-black/10 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-white p-3 rounded-xl border border-[#d2c2cb] text-xs">
                     <div>
-                      <label className="text-[10px] font-mono text-[#8A817A] uppercase block mb-1">Variable Name Column</label>
+                      <label className="text-[10px] font-mono text-[#81737b] uppercase block mb-1">Variable Name Column</label>
                       <select
                         value={columnMapping.variableName}
                         onChange={(e) => setColumnMapping(prev => ({ ...prev, variableName: e.target.value }))}
-                        className="w-full text-xs p-1.5 border border-black/15 rounded bg-[#FAF9F3]"
+                        className="w-full text-xs p-1.5 border border-[#d2c2cb] rounded bg-[#fbf9f4]"
                       >
                         <option value="">-- Select Column --</option>
                         {headers.map(h => <option key={h} value={h}>{h}</option>)}
@@ -433,11 +348,11 @@ export function CuratedExcelModal({
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-mono text-[#8A817A] uppercase block mb-1">Extracted Value Column</label>
+                      <label className="text-[10px] font-mono text-[#81737b] uppercase block mb-1">Extracted Value Column</label>
                       <select
                         value={columnMapping.extractedValue}
                         onChange={(e) => setColumnMapping(prev => ({ ...prev, extractedValue: e.target.value }))}
-                        className="w-full text-xs p-1.5 border border-black/15 rounded bg-[#FAF9F3]"
+                        className="w-full text-xs p-1.5 border border-[#d2c2cb] rounded bg-[#fbf9f4]"
                       >
                         <option value="">-- Select Column --</option>
                         {headers.map(h => <option key={h} value={h}>{h}</option>)}
@@ -445,11 +360,11 @@ export function CuratedExcelModal({
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-mono text-[#8A817A] uppercase block mb-1">Evidence Quote Column</label>
+                      <label className="text-[10px] font-mono text-[#81737b] uppercase block mb-1">Evidence Quote Column</label>
                       <select
                         value={columnMapping.evidenceQuote}
                         onChange={(e) => setColumnMapping(prev => ({ ...prev, evidenceQuote: e.target.value }))}
-                        className="w-full text-xs p-1.5 border border-black/15 rounded bg-[#FAF9F3]"
+                        className="w-full text-xs p-1.5 border border-[#d2c2cb] rounded bg-[#fbf9f4]"
                       >
                         <option value="">-- (Optional Quote) --</option>
                         {headers.map(h => <option key={h} value={h}>{h}</option>)}
@@ -458,18 +373,18 @@ export function CuratedExcelModal({
                   </div>
 
                   {/* Preview Table */}
-                  <div className="border border-black/10 rounded-xl overflow-x-auto max-h-44 bg-white">
+                  <div className="border border-[#d2c2cb] rounded-xl overflow-x-auto max-h-44 bg-white">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-[#F2F1EB] text-[10px] font-mono text-[#8A817A] uppercase sticky top-0 border-b border-black/10">
+                      <thead className="bg-[#fbf9f4] text-[10px] font-mono text-[#81737b] uppercase sticky top-0 border-b border-[#d2c2cb]">
                         <tr>
                           {headers.slice(0, 5).map(h => (
                             <th key={h} className="p-2 font-medium">{h}</th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-black/[0.04]">
+                      <tbody className="divide-y divide-[#d2c2cb]">
                         {parsedRows.slice(0, 5).map((row, idx) => (
-                          <tr key={idx} className="hover:bg-black/[0.02]">
+                          <tr key={idx} className="hover:bg-[#eee7ec]">
                             {headers.slice(0, 5).map(h => (
                               <td key={h} className="p-2 truncate max-w-[150px] font-sans text-[11px]">
                                 {String(row[h] || "")}
@@ -495,7 +410,7 @@ export function CuratedExcelModal({
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                          <CheckCircle2 className="h-3.5 w-3.5 text-[#7c5800]" />
                           <span>Apply Curated Excel Data</span>
                         </>
                       )}
@@ -509,29 +424,29 @@ export function CuratedExcelModal({
           {/* TAB 3: EXPORT EXCEL (.XLSX) */}
           {activeTab === "export" && (
             <div className="space-y-4">
-              <div className="bg-white p-5 rounded-xl border border-black/10 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-[#8A817A]">
-                  <Download className="h-4 w-4 text-emerald-700" />
+              <div className="bg-white p-5 rounded-xl border border-[#d2c2cb] space-y-3">
+                <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-[#81737b]">
+                  <Download className="h-4 w-4 text-[#3a0f34]" />
                   <span>EXPORT PROFESSIONAL SPREADSHEET</span>
                 </div>
-                <h4 className="font-serif text-lg font-medium text-[#141413]">
+                <h4 className="font-serif text-lg font-medium text-[#3a0f34]">
                   Export Multi-Tab Excel Workbook (.xlsx)
                 </h4>
-                <p className="font-sans text-xs text-[#6B665E] leading-relaxed">
+                <p className="font-sans text-xs text-[#62535d] leading-relaxed">
                   Generates an Excel workbook with 3 structured sheets formatted for statistical software (R, Python, Stata, RevMan):
                 </p>
 
-                <ul className="text-xs space-y-1.5 font-mono text-[#141413]">
+                <ul className="text-xs space-y-1.5 font-mono text-[#3a0f34]">
                   <li className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-600" />
+                    <span className="h-2 w-2 rounded-full bg-[#814d75]" />
                     <span>Sheet 1: <strong>Current_Study_Extractions</strong> (Values, Quotes, Pages, Codebook Rules)</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-600" />
+                    <span className="h-2 w-2 rounded-full bg-[#814d75]" />
                     <span>Sheet 2: <strong>Cross_Study_Matrix</strong> (Full consolidated extraction grid across all studies)</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-600" />
+                    <span className="h-2 w-2 rounded-full bg-[#814d75]" />
                     <span>Sheet 3: <strong>Codebook_Dictionary</strong> (Variables, Field Types, Allowed Values)</span>
                   </li>
                 </ul>
@@ -543,7 +458,7 @@ export function CuratedExcelModal({
                   onClick={handleExportFullExcel}
                   className="btn-phylo-primary text-xs flex items-center gap-2 shadow-xs"
                 >
-                  <Download className="h-4 w-4 text-[#E9ED4C]" />
+                  <Download className="h-4 w-4 text-[#ffdea6]" />
                   <span>Download Excel (.xlsx) Workbook</span>
                 </button>
               </div>
@@ -552,7 +467,7 @@ export function CuratedExcelModal({
         </div>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-black/[0.08] flex items-center justify-end gap-2 shrink-0">
+        <div className="pt-3 border-t border-[#d2c2cb] flex items-center justify-end gap-2 shrink-0">
           <button
             type="button"
             onClick={onClose}

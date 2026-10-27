@@ -82,10 +82,11 @@ def sync_scratch_to_persistent():
             persistent_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(scratch_path, persistent_path)
             for ext in ("-wal", "-shm"):
-                p = Path(f"{persistent_path}{ext}")
-                if p.exists():
+                src_ext = Path(f"{scratch_path}{ext}")
+                dst_ext = Path(f"{persistent_path}{ext}")
+                if src_ext.exists():
                     try:
-                        p.unlink()
+                        shutil.copy2(src_ext, dst_ext)
                     except Exception:
                         pass
             logger.info(f"Successfully synced scratch DB {scratch_path} back to persistent {persistent_path}")
@@ -142,7 +143,8 @@ CREATE TABLE IF NOT EXISTS projects (
     created_by        TEXT DEFAULT '',
     status            TEXT DEFAULT 'active',
     auto_rob_enabled  INTEGER DEFAULT 0,
-    rob_confidence_threshold REAL DEFAULT 0.7
+    rob_confidence_threshold REAL DEFAULT 0.7,
+    storage_folder    TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS studies (
@@ -160,6 +162,8 @@ CREATE TABLE IF NOT EXISTS studies (
     pdf_path          TEXT DEFAULT '',
     pdf_status        TEXT DEFAULT 'none',
     pdf_processor_engine TEXT DEFAULT '',
+    error_message     TEXT DEFAULT '',
+    tracing_status    TEXT DEFAULT 'none',
     screening_status  TEXT DEFAULT 'pending',
     screening_reason  TEXT DEFAULT '',
     screening_stage   TEXT DEFAULT '',
@@ -194,6 +198,8 @@ CREATE TABLE IF NOT EXISTS extractions (
     source_page      INTEGER,
     source_bbox      TEXT DEFAULT '',
     source_text      TEXT DEFAULT '',
+    tracing_status   TEXT DEFAULT 'none',
+    verification_note TEXT DEFAULT '',
     extracted_by     TEXT DEFAULT '',
     extracted_at     TEXT DEFAULT (datetime('now')),
     is_edited        INTEGER DEFAULT 0,
@@ -742,6 +748,7 @@ MIGRATION_COLUMNS = [
     # v2.2: PICO/hypothesis/PubMed/citation columns
     ("projects", "secondary_hypotheses_json", "TEXT DEFAULT '[]'"),
     ("projects", "pubmed_api_key", "TEXT DEFAULT ''"),
+    ("projects", "storage_folder", "TEXT DEFAULT ''"),
     ("studies", "citation_format", "TEXT DEFAULT 'vancouver'"),
     # v2.3: criteria + search strings columns
     ("projects", "inclusion_criteria_json", "TEXT DEFAULT '[]'"),
@@ -781,6 +788,10 @@ MIGRATION_COLUMNS = [
     ("rob_signaling_answers", "reviewed_at", "TEXT DEFAULT ''"),
     ("studies", "pdf_processor_engine", "TEXT DEFAULT ''"),
     ("studies", "import_batch_id", "TEXT DEFAULT ''"),
+    ("studies", "error_message", "TEXT DEFAULT ''"),
+    ("studies", "tracing_status", "TEXT DEFAULT 'none'"),
+    ("extractions", "tracing_status", "TEXT DEFAULT 'none'"),
+    ("extractions", "verification_note", "TEXT DEFAULT ''"),
 ]
 
 
@@ -819,6 +830,13 @@ def get_db() -> Generator[Union[sqlite3.Connection, DBBackend], None, None]:
         backend = SQLiteBackend(conn)
         try:
             yield backend
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            raise
         finally:
             backend.close()
 

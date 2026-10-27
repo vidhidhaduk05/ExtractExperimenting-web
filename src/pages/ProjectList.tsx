@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { api, DEMO_PROJECT } from "../lib/api";
+import { api } from "../lib/api";
 import { Plus, Folder, Calendar, Sparkles, RefreshCw } from "lucide-react";
 
 export function ProjectList() {
@@ -9,8 +9,7 @@ export function ProjectList() {
     queryFn: api.listProjects,
   });
 
-  // Always ensure at least the landmark review project is accessible if list is empty or offline
-  const projects = (rawProjects && rawProjects.length > 0) ? rawProjects : [DEMO_PROJECT];
+  const projects = rawProjects || [];
 
   return (
     <div className="min-h-screen bg-[#fbf9f4] p-6 sm:p-10 font-['Work_Sans']">

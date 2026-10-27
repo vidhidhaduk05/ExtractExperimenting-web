@@ -627,6 +627,7 @@ def export_grade_csv(project_id: str, db: Optional[DBBackend] = None) -> str:
 
     csv_bytes = output.getvalue().encode("utf-8")
     filename = f"grade_{project_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
-    storage = get_storage("export")
-    return storage.save_bytes(filename, csv_bytes)
+    from services.storage_manager import save_stage_file
+    rel_path, abs_path = save_stage_file(project_id, "05_GRADE", filename, csv_bytes)
+    return str(abs_path)
 

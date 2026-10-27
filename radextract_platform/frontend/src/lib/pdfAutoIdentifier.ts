@@ -4,7 +4,6 @@
  * from uploaded PDF files via client-side heuristics & NLP, converting them into structured JSON.
  */
 
-import { DEMO_PDF_DATA, DEMO_PDF_SUMMARIES, DEMO_EXTRACTIONS, DEMO_VARIABLES } from "./demoData";
 import { type Study } from "./api";
 
 export interface AutoIdentifiedStudy {
@@ -176,114 +175,8 @@ export async function autoIdentifyPdf(file: File, projectId = "proj_pam_current"
     ai_decision: "include",
   };
 
-  // Register in-memory / demo structures so PDF viewer, quotes, and extraction sheet work right away
-  registerStudyJsonData(study, file, objectUrl);
 
   return study;
-}
-
-function registerStudyJsonData(study: AutoIdentifiedStudy, file: File, objectUrl: string) {
-  const { study_id, title, authors, publication_year, journal, abstract } = study;
-
-  // 1. PDF Data with text pages
-  (DEMO_PDF_DATA as any)[study_id] = {
-    study_id,
-    pdf_url: objectUrl,
-    page_count: 4,
-    pages: [
-      {
-        page_number: 1,
-        text: `${title}\n${authors}\n${journal} (${publication_year})\nDOI: ${study.doi}\n\nAbstract:\n${abstract}\n\nIntroduction:\nHigh-resolution vascular catheter angiography remains the diagnostic gold standard for resolving complex dysplastic arterial anomalies and anomalous parent-artery loops.`,
-      },
-      {
-        page_number: 2,
-        text: `Methods and Interventional Technique:\nPatients underwent three-dimensional rotational angiography with quantitative vessel diameter calibration. Superselective microcatheterization was performed without sacrificing the parent arterial trunk.`,
-      },
-      {
-        page_number: 3,
-        text: `Results & Angiographic Analysis:\nComplete hemodynamic lesion stabilization was documented in all cases. No procedural thromboembolic events or secondary intracranial hemorrhages occurred during median follow-up.`,
-      },
-      {
-        page_number: 4,
-        text: `Discussion & Clinical Conclusions:\nPreservation of normal parent vessel flow prevents distal ischemic complications while providing durable protection against flow-related pseudoaneurysms.`,
-      },
-    ],
-  };
-
-  // 2. PDF Summary with extracted quotes
-  (DEMO_PDF_SUMMARIES as any)[study_id] = {
-    study_id,
-    title,
-    authors,
-    publication_year,
-    journal,
-    key_findings: [
-      `Auto-identified study from full-text PDF: ${file.name}.`,
-      `Verified complete parent vessel preservation with no distal territorial infarction.`,
-      `Automated NLP analysis extracted clinical, hemodynamic, and diagnostic variables into JSON.`,
-    ],
-    methodology: `Catheter digital subtraction angiography with 3D rotational reconstructions and clinical cohort follow-up.`,
-    conclusions: `Targeted preservation of parent vessel flow yields optimal neurological outcomes.`,
-    evidence_quotes: [
-      { text: `High-resolution vascular catheter angiography remains the diagnostic gold standard.`, page: 1, variable: "Imaging Modality" },
-      { text: `Superselective microcatheterization was performed without sacrificing the parent arterial trunk.`, page: 2, variable: "Treatment Approach" },
-      { text: `Complete hemodynamic lesion stabilization was documented in all cases.`, page: 3, variable: "Lesion Obliteration" },
-    ],
-  };
-
-  // 3. Auto-populate extractions for standard variables
-  (DEMO_EXTRACTIONS as any)[study_id] = [
-    {
-      variable_id: "v_modality",
-      variable_name: "Diagnostic Modality",
-      value: "Catheter DSA + 3D Rotational Angiography",
-      confidence: 0.98,
-      evidence_quote: "High-resolution vascular catheter angiography remains the diagnostic gold standard.",
-      page: 1,
-      is_verified: true,
-      is_edited: false,
-    },
-    {
-      variable_id: "v_treatment",
-      variable_name: "Treatment Approach",
-      value: "Parent-Artery Preserving Targeted Endovascular Coiling",
-      confidence: 0.95,
-      evidence_quote: "Superselective microcatheterization was performed without sacrificing the parent arterial trunk.",
-      page: 2,
-      is_verified: true,
-      is_edited: false,
-    },
-    {
-      variable_id: "v_outcome",
-      variable_name: "Angiographic Outcome",
-      value: "Complete Hemodynamic Obliteration / Stable Preservation",
-      confidence: 0.96,
-      evidence_quote: "Complete hemodynamic lesion stabilization was documented in all cases.",
-      page: 3,
-      is_verified: true,
-      is_edited: false,
-    },
-    {
-      variable_id: "v_mrs",
-      variable_name: "Follow-up mRS",
-      value: "mRS 0-1 (Favorable Neurological Outcome)",
-      confidence: 0.93,
-      evidence_quote: "No procedural thromboembolic events or secondary intracranial hemorrhages occurred.",
-      page: 3,
-      is_verified: true,
-      is_edited: false,
-    },
-    {
-      variable_id: "v_aneurysm",
-      variable_name: "Associated Pseudoaneurysm",
-      value: "Identified and Successfully Excluded",
-      confidence: 0.94,
-      evidence_quote: "Preservation of normal parent vessel flow prevents distal ischemic complications.",
-      page: 4,
-      is_verified: true,
-      is_edited: false,
-    },
-  ];
 }
 
 // Backward compatibility for Jules clinical research workflow

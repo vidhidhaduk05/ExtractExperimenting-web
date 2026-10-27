@@ -146,9 +146,16 @@ def _store_pdf(db, study: dict, pdf_bytes: bytes, source: str, source_url: str =
 
     study_id = study["study_id"]
     project_id = study.get("project_id") or "default"
-    storage = get_storage("upload")
-    storage_key = f"{project_id}/{study_id}.pdf"
-    storage.save_bytes(storage_key, pdf_bytes)
+    from services.storage_manager import save_study_pdf
+    storage_key, _ = save_study_pdf(
+        project_id=project_id,
+        study_id=study_id,
+        content=pdf_bytes,
+        author=study.get("authors"),
+        year=study.get("publication_year"),
+        title=study.get("title"),
+        db=db,
+    )
 
     db.update("studies", study_id, {
         "pdf_path": storage_key,

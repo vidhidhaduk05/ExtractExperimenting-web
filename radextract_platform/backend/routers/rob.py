@@ -300,7 +300,6 @@ async def ai_prefill(
     full_text = pdf_full_text if pdf_full_text and len(pdf_full_text) > 100 else (body.full_text or "")
     used_full_text = len(full_text) > 100
 
-    # Select model_fn
     if body.model_fn_name == "mock":
         model_fn = rob_ai.mock_model_fn
     else:
@@ -309,7 +308,10 @@ async def ai_prefill(
         if is_llm_available():
             model_fn = get_client().as_model_fn("prefill_rob_domain")
         else:
-            model_fn = rob_ai.mock_model_fn
+            raise HTTPException(
+                status_code=503,
+                detail="LLM service unavailable for Risk of Bias prefill. Configure an LLM provider to prefill assessments.",
+            )
 
     # Build study metadata from the actual study row (was: all empty strings,
     # which gave the LLM no study context and degraded every prefill)

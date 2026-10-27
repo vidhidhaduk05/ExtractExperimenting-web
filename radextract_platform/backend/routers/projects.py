@@ -68,13 +68,16 @@ async def create_project(
     conn: DBBackend = Depends(get_db),
 ):
     project_id = str(uuid.uuid4())
+    from services.storage_manager import ensure_project_storage
+    folder_name, _ = ensure_project_storage(project_id, project_name=body.name, db=conn)
+
     conn.execute(
         """INSERT INTO projects (project_id, name, description, pico_json,
-           hypothesis, research_question, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+           hypothesis, research_question, created_by, storage_folder)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (project_id, body.name, body.description, body.pico_json,
          body.hypothesis, body.research_question,
-         user["user_id"] if user else "system"),
+         user["user_id"] if user else "system", folder_name),
     )
     # Auto-create owner membership
     if user:
@@ -89,6 +92,7 @@ async def create_project(
         pico_json=body.pico_json, hypothesis=body.hypothesis,
         research_question=body.research_question,
         created_by=user["user_id"] if user else "system",
+        storage_folder=folder_name,
     )
 
 
@@ -245,8 +249,32 @@ async def delete_project(
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user, min_role="owner")
-    # Children first: foreign keys are enforced, so a project that has members,
-    # studies, tags or assessments cannot be deleted with a bare DELETE.
+    # Archive project folder to PROJECTS/_ARCHIVE per Rule 3 ("Never delete a project folder")
+    from services.storage_manager import archive_project_storage
+    try:
+        archive_project_storage(project_id, db=conn)
+    except Exception:
+        pass
+
+    from pathlib import Path
+    from config import settings
+    storage_dir = Path(settings.storage_dir)
+    study_rows = conn.execute("SELECT study_id FROM studies WHERE project_id = ?", (project_id,)).fetchall()
+    for s_row in study_rows:
+        sid = s_row["study_id"]
+        pdf_path = storage_dir / f"{sid}.pdf"
+        docling_path = storage_dir / f"{sid}.docling.json"
+        if pdf_path.exists():
+            try:
+                pdf_path.unlink()
+            except OSError:
+                pass
+        if docling_path.exists():
+            try:
+                docling_path.unlink()
+            except OSError:
+                pass
+
     study_ids = "SELECT study_id FROM studies WHERE project_id = ?"
     for table in ("extractions", "pdf_documents", "pdf_highlights", "audit_log"):
         conn.execute(f"DELETE FROM {table} WHERE study_id IN ({study_ids})", (project_id,))

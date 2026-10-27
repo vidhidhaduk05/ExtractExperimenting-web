@@ -53,6 +53,7 @@ class ProjectResponse(ORMBase):
     created_at: str = ""
     created_by: str = ""
     status: str = "active"
+    storage_folder: str = ""
 
 
 # ── PICO ──
@@ -633,7 +634,7 @@ class RobAIPrefillRequest(BaseModel):
     """Request AI pre-fill for an assessment."""
     full_text: Optional[str] = None  # full text of the study (from PDF processing)
     abstract: Optional[str] = None   # fallback if no full text
-    model_fn_name: str = "mock"      # which model_fn to use
+    model_fn_name: str = "llm"      # which model_fn to use (llm gateway)
 
 
 class RobAIPrefillResult(BaseModel):

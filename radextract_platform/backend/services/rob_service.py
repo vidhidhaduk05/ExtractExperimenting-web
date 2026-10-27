@@ -715,7 +715,9 @@ def export_project_rob(project_id: str, format: str = "csv", db: Optional[DBBack
                                 os.remove(tmp_csv_path)
 
         filename = f"rob_export_{project_id}_{timestamp}.zip"
-        return storage.save_bytes(filename, out_zip.getvalue())
+        from services.storage_manager import save_stage_file
+        rel_path, abs_path = save_stage_file(project_id, "04_ROB", filename, out_zip.getvalue())
+        return str(abs_path)
 
     elif format == "xlsx":
         import openpyxl
@@ -730,7 +732,9 @@ def export_project_rob(project_id: str, format: str = "csv", db: Optional[DBBack
         out_stream = io.BytesIO()
         wb.save(out_stream)
         filename = f"rob_export_{project_id}_{timestamp}.xlsx"
-        return storage.save_bytes(filename, out_stream.getvalue())
+        from services.storage_manager import save_stage_file
+        rel_path, abs_path = save_stage_file(project_id, "04_ROB", filename, out_stream.getvalue())
+        return str(abs_path)
     else:
         output = io.StringIO()
         if rows:
@@ -740,7 +744,9 @@ def export_project_rob(project_id: str, format: str = "csv", db: Optional[DBBack
         else:
             output.write("No RoB assessments found for this project.\n")
         filename = f"rob_export_{project_id}_{timestamp}.csv"
-        return storage.save_bytes(filename, output.getvalue().encode("utf-8"))
+        from services.storage_manager import save_stage_file
+        rel_path, abs_path = save_stage_file(project_id, "04_ROB", filename, output.getvalue().encode("utf-8"))
+        return str(abs_path)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -872,7 +878,8 @@ def auto_assess_study(
             from services.llm_client import get_client
             model_fn = get_client().as_model_fn("prefill_rob_domain")
         else:
-            model_fn = rob_ai.mock_model_fn
+            logger.info(f"[RoB] LLM unavailable; skipping automatic AI prefill for {study_id}")
+            return {**assessment, "created": True, "prefilled": False}
 
         pdf_data = pdf_service.get_pdf_data(study_id, db=db)
         full_text = (pdf_data or {}).get("full_text", "") or ""

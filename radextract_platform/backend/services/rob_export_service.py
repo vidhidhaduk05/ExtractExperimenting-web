@@ -200,7 +200,7 @@ def export_project_package(project_id: str, db: DBBackend) -> str:
         for name, content in files.items():
             archive.writestr(name, content)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    return get_storage("export").save_bytes(
-        f"rob_package_{project_id}_{timestamp}.zip",
-        stream.getvalue(),
-    )
+    filename = f"rob_package_{project_id}_{timestamp}.zip"
+    from services.storage_manager import save_stage_file
+    rel_path, abs_path = save_stage_file(project_id, "04_ROB", filename, stream.getvalue())
+    return str(abs_path)

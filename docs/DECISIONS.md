@@ -228,3 +228,15 @@ This document is the canonical ledger of all engineering, architectural, scienti
 - Direct-evidence and narrative-review filters now share the visible paper set across the map, counts, inventory, and inspector. Systematic reviews/meta-analyses remain distinct from narrative reviews; classification and Wilson calculations are unchanged.
 - Launching the review workspace carries the entered claim to new-project setup. An explicit prefill action copies it into editable project name and primary hypothesis fields. Creating the project saves the reviewed hypothesis through the existing API; the demo store preserves it across subsequent reads.
 - This handoff does not automatically import studies or create a project. Existing project setup and screening policies remain unchanged.
+
+---
+
+## 16. Study Data Storage Plan & Portable Relative Path Architecture
+* **Date**: 2026-10-26
+* **Decision**: Adopt the official per-study "STUDY DATA" storage hierarchy with relative database path resolution:
+  * **Top-Level Root**: Configured strictly via `settings.storage_root` (`STUDY DATA/PROJECTS`), with top-level `_INBOX/`, `_BACKUPS/`, `_TEMPLATES/`, and `PROJECTS/_ARCHIVE/`. Zero hardcoded user or desktop paths exist outside `config.py`.
+  * **Per-Project Organization**: Every review receives a dedicated folder `YYYY-MM-DD_SHORT-NAME` created at project initialization containing 8 canonical stage subfolders: `01_SOURCE` (PDFs + `.docling.json`), `02_SCREENING` (RIS + screening decisions), `03_EXTRACTION` (extraction sheets + SRMA workbooks), `04_ROB` (RoB assessments & reports), `05_GRADE` (GRADE evidence profiles), `06_META` (meta-analysis forest/funnel plots), `07_EXPORTS` (PRISMA diagrams + final figures), `08_AUDIT` (paper trails + search logs).
+  * **Naming Invariant**: PDFs in `01_SOURCE` follow `FirstAuthor-Year-ShortTitle.pdf` (fallback to `{study_id}.pdf` if metadata missing; never browser filename).
+  * **Movable Storage (Relative Paths)**: Database `studies.pdf_path` stores paths relative to `storage_root` (`{folder}/01_SOURCE/{filename}`). Moving the entire `STUDY DATA` folder to another drive/path and updating `STORAGE_ROOT` keeps all studies and exports fully accessible without database rewrites.
+  * **Database Backup Retention**: Automated WAL-safe SQLite backups are captured into `_BACKUPS/radextract-YYYY-MM-DD.db`, maintaining the last 8 copies and pruning older backups.
+  * **Archive Invariant**: Projects are never deleted from disk; on project deletion, their folder is relocated into `PROJECTS/_ARCHIVE/`.

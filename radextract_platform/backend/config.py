@@ -38,7 +38,7 @@ class Settings(BaseSettings):
         if os.environ.get("OPENAI_BASE_URL") and not os.environ.get("OPENAI_BASE_URL", "").rstrip("/").endswith("/chat/completions")
         else (os.environ.get("OPENAI_BASE_URL") or os.environ.get("LLM_BASE_URL") or os.environ.get("LLM_API_URL") or "http://127.0.0.1:18000/v1/chat/completions")
     )
-    llm_api_key: str = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY") or "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
+    llm_api_key: str = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY") or ""
     llm_models_url: str = (
         (os.environ.get("OPENAI_BASE_URL", "").rstrip("/") + "/models")
         if os.environ.get("OPENAI_BASE_URL")
@@ -69,8 +69,19 @@ class Settings(BaseSettings):
     jev_clarify_band: float = 0.15        # |P - 0.5| below this counts as genuinely ambiguous
 
     # File storage
+    storage_root: str = os.environ.get(
+        "STORAGE_ROOT",
+        r"C:\Users\fomowad00026\Desktop\STUDY DATA\PROJECTS"
+        if os.name == "nt"
+        else os.path.join(os.path.expanduser("~"), "Desktop", "STUDY DATA", "PROJECTS")
+    )
     upload_root: str = os.environ.get("UPLOAD_ROOT") or os.environ.get("RADEXTRACT_UPLOAD_ROOT") or str(Path(__file__).parent / "uploads")
     export_root: str = os.environ.get("EXPORT_ROOT") or os.environ.get("RADEXTRACT_EXPORT_ROOT") or str(Path(__file__).parent / "exports")
+
+    @property
+    def storage_dir(self) -> str:
+        """Alias for storage_root for backward compatibility."""
+        return self.storage_root
 
     # ── AWS / LocalStack settings (single block — no duplicates) ──
     aws_endpoint_url: str = ""           # "" = real AWS; "http://localhost:4566" = LocalStack
@@ -146,3 +157,8 @@ def ensure_dirs():
     os.makedirs(settings.upload_root, exist_ok=True)
     os.makedirs(settings.export_root, exist_ok=True)
     Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
+    try:
+        from services.storage_manager import ensure_storage_tree
+        ensure_storage_tree()
+    except Exception:
+        pass
