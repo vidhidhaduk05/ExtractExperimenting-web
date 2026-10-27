@@ -306,3 +306,110 @@ These support the design distinctions; they do not validate RadExtract or establ
 ### J. Files to hand to the implementing agent
 
 Provide this entire Markdown handoff and `RADEXTRACT_UPDATED_BLUEPRINT.html` from the same workspace. The HTML is a detailed target-state feature/layout companion; this Markdown defines implementation order, preservation rules, mathematical safeguards and acceptance gates. Earlier documents are background, not additional competing work orders. The implementing agent needs repository access and must re-check current state.
+
+## Extraction click-to-sheet correctness: explicit acceptance contract
+
+The user specifically asked whether clicking extraction actions correctly registers in the extraction sheet. Do not answer yes merely because a value changes on screen. Verify the exact action: automatic extraction, manual edit, PDF Accept/Modify/Reject, sheet Verify, paste, undo and redo. These are separate paths and all must preserve the same persisted study/variable identity.
+
+### Observed source-level risks to reproduce and repair
+
+1. `ExtractionSheetPage.tsx::handleCommitCellValue` optimistically changes local state and submits the batch API. Sheet verification buttons call it with the existing value plus a new verification status. In the inspected `routers/extraction.py::batch_update_extractions`, existing rows are updated only inside `if cell.value != old_val`. A status-only verification request can therefore return success with zero updates while leaving verification unchanged. Do not gate status/evidence-only writes on value inequality.
+2. The same client checks `res.failed_count`, but the inspected API returns created/updated/skipped counts without that field. Define a shared typed result with per-cell outcomes. A successful HTTP response alone does not prove the requested cell mutation happened.
+3. In `record_extraction_decision`, the existing-row query selects `extraction_id, value`, but the Accept/Reject path accesses `existing['is_edited']`. Verify that this column is selected or read safely from authoritative state; otherwise existing-row acceptance/rejection can fail before persistence.
+4. The PDF handler invalidates the sheet/grid cache after a successful decision, but catches errors by logging to the console. Display a visible error and preserve the selected variable/draft/retry state. The review-page bulk extraction path swallows individual study errors and does not explicitly invalidate the extraction-grid cache in the inspected code. Surface partial results and refresh all relevant views.
+5. Check evidence payload mapping (`evidence_quote` versus backend `source_text`), status vocabulary, nullable page anchors, source-of-truth extraction IDs and verification timestamps/authorship. Do not default unknown pages to page 1 or invent confidence 1.0 for missing evidence.
+
+These observations identify code risks; they are not a claim that a live browser/HTTP/DB integration test passed or failed. Recheck the actual checkout and reproduce with isolated test data. Do not alter the user's real review as a diagnostic.
+
+### Save contract and tests
+
+- Capture project, study/report, variable, source and extraction version when the click occurs; switching the selected row mid-save must not retarget the result.
+- Authenticate/authorize and validate that every study and variable belongs to the target project, including every cell in a batch. Reject cross-project substitutions before writes.
+- Commit the intended value/status/evidence and matching audit decision transactionally; a failure must not leave a value saved without its audit decision, or vice versa. Protect against duplicate clicks/retries and stale conflicting edits.
+- Return actual saved IDs, values, verification states and per-cell outcomes. Reconcile optimistic UI to the server response; preserve an unsaved draft visibly on failure rather than labeling it saved.
+- Invalidate/refetch extraction grid, per-study values, review matrix and progress where affected. Read back persisted rows and show status/provenance accurately. Do not let an old query overwrite a newly saved cell.
+- Prove a real cell survives navigation, hard refresh and backend restart. Prove it appears in the downloaded extraction export under the correct study/variable. Prove no duplicate cell or decision appears after a retry.
+- Cover status-only Verify with unchanged value; Accept/Reject on an existing extraction; Modify; unverified auto-extraction; provenance-only update; paste with partial errors; unauthorized save; network/server failure; undo/redo restoring both value and verification metadata; and same-study multi-reviewer conflict. Human-modified values must not be overwritten silently by a subsequent automatic extraction.
+- Show UI states for pending, saving, saved/verified, failed and stale/conflicted. Keep separate meanings for extracted, reviewed and independently verified; do not inflate completion from optimistic state.
+
+## Updated Mermaid flow diagrams
+
+These diagrams describe the required target flow. Keep them synchronized in the HTML blueprint and this Markdown. They do not assert that missing code has been implemented.
+
+### 1. Whole review and downstream invalidation
+
+```mermaid
+flowchart TD
+    A["Create empty project"] --> B["Upload or enter protocol"]
+    B --> C["Autofill proposed criteria and evidence"]
+    C --> D["Clarify consequential gaps and confirm rules"]
+    D --> E["Save versioned protocol and inclusion/exclusion weights"]
+    E --> F["Import and record source batches"]
+    F --> G["Review duplicates; preserve reversible history"]
+    G --> H["Title and abstract screening; human decisions"]
+    H --> I["Record full-text retrieval and full-text decisions"]
+    I --> J["Extract values and verify provenance"]
+    J --> K["Resolve applicable risk-of-bias assessment"]
+    K --> L{"Compatible verified data for pooling?"}
+    L -->|Yes| M["Real pooled synthesis"]
+    L -->|No| N["Descriptive synthesis; explicit missingness"]
+    M --> O["Finalize applicable outcome-specific GRADE"]
+    N --> O
+    O --> P["Export current results, methods and audit trail"]
+    E -.-> Q["Upstream rule or evidence edit"]
+    J -.-> Q
+    K -.-> Q
+    Q --> R["Mark affected outputs stale; retain history"]
+    R --> S["Recompute and obtain required human review"]
+    S --> L
+```
+
+### 2. Protocol clarification, both weight tables and recommendation trace
+
+```mermaid
+flowchart TD
+    A["Protocol text and manual criteria"] --> B["Extract atomic criteria with source and logic groups"]
+    B --> C{"Missing or conflicting consequential rule?"}
+    C -->|Yes| D["Persist one scope-aware clarification"]
+    D --> E["Show inline question and notification inbox"]
+    E --> F["Human answer; explicit project or study scope"]
+    F --> G["Save confirmed rule and new protocol version"]
+    C -->|No| G
+    G --> H["Inclusion sheet: criterion rows; weight slider at right"]
+    G --> I["Exclusion sheet: criterion rows; weight slider at right"]
+    H --> J["Preview changes against stored study evidence"]
+    I --> J
+    J --> K["Save versioned policy; invalidate old validation applicability"]
+    G --> L["Model evaluates actual study evidence per criterion"]
+    K --> M["Backend applies explicit hard-rule logic and soft weights"]
+    L --> M
+    M --> N["Save scores, contributions, thresholds and source trace"]
+    N --> O["Display Co-Scientist recommendation and How calculated"]
+    O --> P["Human confirms or requests clarification"]
+    P -->|Study ambiguity| D
+    K --> Q["Independent validation: counts, calibration and appropriate bounds"]
+    Q --> R["Show validated, insufficient or stale status"]
+    R --> O
+```
+
+### 3. Extraction click to persisted sheet and export
+
+```mermaid
+flowchart TD
+    A["Extract, edit, Accept, Reject or Verify click"] --> B["Capture project, study, variable and version"]
+    B --> C["Show saving; guard duplicate submission"]
+    C --> D["Authenticated API and ownership validation"]
+    D --> E{"Authorized and current?"}
+    E -->|No| F["Visible error or conflict; preserve draft and selection"]
+    E -->|Yes| G["Transaction: value, status, evidence and audit record"]
+    G --> H{"Commit succeeded?"}
+    H -->|No| F
+    H -->|Yes| I["Return authoritative per-cell saved result"]
+    I --> J["Reconcile UI and refetch grid, study and progress"]
+    J --> K["Read back saved cell by study and variable"]
+    K --> L["Show saved or verified; advance only after success"]
+    L --> M["Reload and restart retain same value and provenance"]
+    M --> N["Export contains matching persisted cell"]
+    F --> O["Retry safely with original captured identity"]
+    O --> D
+```
