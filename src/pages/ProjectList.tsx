@@ -12,7 +12,7 @@ export function ProjectList() {
   const projects = rawProjects || [];
 
   return (
-    <div className="min-h-screen bg-[#fbf9f4] p-6 sm:p-10 font-['Work_Sans']">
+    <div className="p-6 sm:p-10 font-['Work_Sans']">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header with Master Theme */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#d2c2cb] pb-6">
@@ -20,7 +20,7 @@ export function ProjectList() {
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#814d75] bg-[#eee7ec] px-2 py-0.5 rounded">
               Systematic Literature Review
             </span>
-            <h1 className="text-3xl sm:text-4xl font-serif font-bold text-[#3a0f34] mt-2 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-['Serifon_Editorial'] font-bold text-[#3a0f34] mt-2 tracking-tight">
               Research & Extraction Projects
             </h1>
             <p className="text-[#62535d] text-sm mt-1">

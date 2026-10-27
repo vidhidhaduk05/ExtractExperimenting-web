@@ -677,25 +677,25 @@ export function ExtractionSheetPage() {
   }, [selectedCell, filteredStudies, variables, cellsMap]);
 
   return (
-    <div className="flex flex-col h-screen bg-[#fbf9f4] overflow-hidden select-none font-['Work_Sans']">
-      {/* ── TOP APPLICATION HEADER (Master Theme Wine #3a0f34) ── */}
-      <header className="bg-[#3a0f34] text-[#fbf9f4] px-5 py-2.5 shrink-0 flex items-center justify-between border-b border-[#3a0f34]/80 z-30 shadow-xs">
+    <div className="flex-1 flex flex-col min-h-0 bg-[#fbf9f4] overflow-hidden select-none font-['Work_Sans']">
+      {/* ── TOP SECTION HEADER (Paper with Hairline #d2c2cb) ── */}
+      <header className="bg-[#fbf9f4] text-[#4f444b] px-5 py-2.5 shrink-0 flex items-center justify-between border-b border-[#d2c2cb] z-30">
         <div className="flex items-center gap-3">
           <Link
             to={`/projects/${projectId}/studies`}
-            className="text-xs font-semibold text-[#ffdea6] hover:text-[#fbf9f4] flex items-center gap-1.5 bg-[#ffffff]/10 hover:bg-[#ffffff]/20 px-3 py-1.5 rounded-lg border border-[#ffffff]/20 transition-colors shadow-2xs"
+            className="text-xs font-semibold text-[#3a0f34] hover:text-[#1a0017] flex items-center gap-1.5 bg-[#ffffff] hover:bg-[#eee7ec] px-3 py-1.5 rounded border border-[#d2c2cb] transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Studies
           </Link>
 
-          <div className="h-4 w-px bg-[#d2c2cb]/30" />
+          <div className="h-4 w-px bg-[#d2c2cb]" />
 
           <div>
-            <h1 className="font-['Serifon_Editorial'] text-base font-bold text-[#fbf9f4] flex items-center gap-2 leading-none">
-              <FileSpreadsheet className="h-4 w-4 text-[#ffdea6]" />
+            <h1 className="font-['Serifon_Editorial'] text-base font-bold text-[#3a0f34] flex items-center gap-2 leading-none">
+              <FileSpreadsheet className="h-4 w-4 text-[#814d75]" />
               Extraction Spreadsheet Workspace
             </h1>
-            <p className="text-[11px] text-[#d2c2cb] font-['Work_Sans'] mt-0.5">
+            <p className="text-[11px] text-[#62535d] font-['Work_Sans'] mt-0.5">
               One ordered variable list · {filteredStudies.length} Studies · {variables.length} Variables
             </p>
           </div>
@@ -704,18 +704,18 @@ export function ExtractionSheetPage() {
         {/* Center Live Save Feedback Indicator */}
         <div className="flex items-center gap-2">
           {saveStatus === "saving" && (
-            <span className="flex items-center gap-1.5 text-xs text-[#ffdea6] bg-[#1a0017] px-3 py-1 rounded-full border border-[#d2c2cb]/30 animate-pulse font-mono font-bold">
+            <span className="flex items-center gap-1.5 text-xs text-[#7c5800] bg-[#ffdea6]/50 px-3 py-1 rounded-full border border-[#d2c2cb] animate-pulse font-mono font-bold">
               <Loader2 className="h-3 w-3 animate-spin" /> Saving changes...
             </span>
           )}
           {saveStatus === "saved" && (
-            <span className="flex items-center gap-1.5 text-xs text-emerald-300 bg-[#1a0017] px-3 py-1 rounded-full border border-emerald-500/40 font-mono font-bold">
-              <Check className="h-3 w-3 text-emerald-400" /> Saved to Project Database
+            <span className="flex items-center gap-1.5 text-xs text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 font-mono font-bold">
+              <Check className="h-3 w-3 text-emerald-600" /> Saved to Project Database
             </span>
           )}
           {saveStatus === "error" && (
-            <span className="flex items-center gap-1.5 text-xs text-rose-300 bg-rose-950 px-3 py-1 rounded-full border border-rose-600 font-mono font-bold">
-              <AlertCircle className="h-3 w-3 text-rose-400" /> Save Error: {saveError || "Failed to commit"}
+            <span className="flex items-center gap-1.5 text-xs text-rose-800 bg-rose-50 px-3 py-1 rounded-full border border-rose-200 font-mono font-bold">
+              <AlertCircle className="h-3 w-3 text-rose-600" /> Save Error: {saveError || "Failed to commit"}
             </span>
           )}
         </div>
@@ -723,11 +723,11 @@ export function ExtractionSheetPage() {
         {/* Right Tools & Exports */}
         <div className="flex items-center gap-2">
           {/* Undo / Redo controls */}
-          <div className="flex bg-[#1a0017] rounded-lg border border-[#d2c2cb]/30 p-0.5">
+          <div className="flex bg-[#ffffff] rounded border border-[#d2c2cb] p-0.5">
             <button
               onClick={handleUndo}
               disabled={undoStack.length === 0}
-              className="p-1.5 text-[#d2c2cb] hover:text-[#fbf9f4] disabled:opacity-30 disabled:pointer-events-none rounded"
+              className="p-1.5 text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec] disabled:opacity-30 disabled:pointer-events-none rounded transition-colors"
               title="Undo edit (Ctrl+Z)"
             >
               <Undo2 className="h-3.5 w-3.5" />
@@ -735,7 +735,7 @@ export function ExtractionSheetPage() {
             <button
               onClick={handleRedo}
               disabled={redoStack.length === 0}
-              className="p-1.5 text-[#d2c2cb] hover:text-[#fbf9f4] disabled:opacity-30 disabled:pointer-events-none rounded"
+              className="p-1.5 text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec] disabled:opacity-30 disabled:pointer-events-none rounded transition-colors"
               title="Redo edit (Ctrl+Y)"
             >
               <Redo2 className="h-3.5 w-3.5" />
@@ -745,16 +745,16 @@ export function ExtractionSheetPage() {
           {/* Bibliographic Prefill */}
           <button
             onClick={handlePrefillBibliographic}
-            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#ffffff]/10 hover:bg-[#ffffff]/20 text-[#fbf9f4] border border-[#ffffff]/20 transition-all flex items-center gap-1.5 shadow-2xs"
+            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all flex items-center gap-1.5"
             title="Auto-prefill Year, Author, DOI, and Study ID from imported reference metadata"
           >
-            <Sparkles className="h-3.5 w-3.5 text-[#ffdea6]" /> Prefill Metadata
+            <Sparkles className="h-3.5 w-3.5 text-[#814d75]" /> Prefill Metadata
           </button>
 
           {/* Variable Designer Button */}
           <button
             onClick={() => setShowCodebookDesigner(true)}
-            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-bold rounded-lg bg-[#ffdea6] text-[#3a0f34] hover:bg-[#ffdea6]/90 transition-all flex items-center gap-1.5 shadow-xs"
+            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-bold rounded bg-[#ffdea6] text-[#3a0f34] hover:bg-[#ffdea6]/80 border border-[#d2c2cb] transition-all flex items-center gap-1.5"
             title="Open Variable Designer to configure, paste, or reorder project variables"
           >
             <Sliders className="h-3.5 w-3.5" /> Variable Designer
@@ -764,16 +764,16 @@ export function ExtractionSheetPage() {
           <a
             href={api.exportTemplateUrl(projectId || "demo")}
             download
-            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#ffffff]/10 hover:bg-[#ffffff]/20 text-[#fbf9f4] border border-[#ffffff]/20 transition-all flex items-center gap-1.5 shadow-2xs"
+            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all flex items-center gap-1.5"
             title="Download blank extraction template (.xlsx) with exact saved column sequence"
           >
-            <Download className="h-3.5 w-3.5 text-[#ffdea6]" /> Blank Template (.xlsx)
+            <Download className="h-3.5 w-3.5 text-[#814d75]" /> Blank Template (.xlsx)
           </a>
 
           <a
             href={api.exportProjectXlsxUrl(projectId || "demo")}
             download
-            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-bold rounded-lg bg-[#814d75] hover:bg-[#814d75]/90 text-[#fbf9f4] border border-[#d2c2cb]/40 transition-all flex items-center gap-1.5 shadow-xs"
+            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-bold rounded bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] transition-all flex items-center gap-1.5"
             title="Download completed extraction results workbook (.xlsx) with linked Evidence sheet"
           >
             <FileSpreadsheet className="h-3.5 w-3.5 text-[#ffdea6]" /> Completed Results (.xlsx)

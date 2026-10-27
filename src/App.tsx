@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { AppLayout } from "./components/layout/AppLayout";
+import { AppShell } from "./components/AppShell";
 import { ProjectList } from "./pages/ProjectList";
 import { ProjectCreate } from "./pages/ProjectCreate";
 import { ProjectDetail } from "./pages/ProjectDetail";
@@ -28,7 +28,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route element={<AppLayout />}>
+      <Route element={<AppShell />}>
         <Route path="/claimscape" element={<ClaimscapePage />} />
         <Route path="/tools/claimscape" element={<Navigate to="/claimscape" replace />} />
         <Route path="/evidence-map" element={<Navigate to="/claimscape" replace />} />
