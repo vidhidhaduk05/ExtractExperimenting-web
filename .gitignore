@@ -81,3 +81,4 @@ scratch/ai_ich_lvo/
 jobs/logs/
 jobs/.shift_state.json
 *.log
+radextract_platform/backend/venv_backend/
