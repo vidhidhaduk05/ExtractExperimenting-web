@@ -942,17 +942,17 @@ export function PdfViewerPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#ECE9E2] overflow-hidden font-sans">
-      {/* ── TOP NAV HEADER ── */}
-      <header className="bg-[#FAF9F3] border-b border-[#381A61]/10 px-5 py-2.5 shrink-0 flex items-center justify-between shadow-xs z-30">
+    <div className="flex-1 flex flex-col min-h-0 bg-[#fbf9f4] overflow-hidden font-['Work_Sans']">
+      {/* ── TOP NAV HEADER (Master Theme Paper & Hairline #d2c2cb) ── */}
+      <header className="bg-[#fbf9f4] border-b border-[#d2c2cb] px-5 py-2.5 shrink-0 flex items-center justify-between z-30">
         <div className="flex items-center gap-3">
           <Link
             to={`/projects/${projectId}/studies`}
-            className="text-xs font-semibold text-[#381A61] hover:text-[#381A61] flex items-center gap-1.5 bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 px-3 py-1.5 rounded-xl border border-[#88A0DC]/40 transition-colors shadow-2xs"
+            className="text-xs font-semibold text-[#3a0f34] hover:text-[#1a0017] flex items-center gap-1.5 bg-[#ffffff] hover:bg-[#eee7ec] px-3 py-1.5 rounded border border-[#d2c2cb] transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Studies
           </Link>
-          <div className="h-4 w-px bg-[#381A61]/15" />
+          <div className="h-4 w-px bg-[#d2c2cb]" />
 
           {/* Study Stepper */}
           <div className="flex items-center gap-2">
@@ -965,12 +965,12 @@ export function PdfViewerPage() {
                 }
               }}
               disabled={currentStudyIndex === 0}
-              className="p-1 rounded-lg hover:bg-[#381A61]/5 disabled:opacity-30 disabled:pointer-events-none text-[#381A61]"
+              className="p-1 rounded hover:bg-[#eee7ec] disabled:opacity-30 disabled:pointer-events-none text-[#62535d]"
               title="Previous Study"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-xs font-bold text-[#381A61] bg-[#7C4B73]/10 border border-[#7C4B73]/20 px-2.5 py-1 rounded-lg">
+            <span className="text-xs font-bold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] px-2.5 py-1 rounded">
               Study {currentStudyIndex + 1} of {allStudies.length}
             </span>
             <button
@@ -982,17 +982,17 @@ export function PdfViewerPage() {
                 }
               }}
               disabled={currentStudyIndex === allStudies.length - 1}
-              className="p-1 rounded-lg hover:bg-[#381A61]/5 disabled:opacity-30 disabled:pointer-events-none text-[#381A61]"
+              className="p-1 rounded hover:bg-[#eee7ec] disabled:opacity-30 disabled:pointer-events-none text-[#62535d]"
               title="Next Study"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
 
             <div className="ml-2">
-              <h1 className="font-serif font-bold text-[#381A61] text-sm sm:text-base leading-tight truncate max-w-md">
+              <h1 className="font-['Serifon_Editorial'] font-bold text-[#3a0f34] text-sm sm:text-base leading-tight truncate max-w-md">
                 {currentStudy?.title || "Study PDF & Extraction"}
               </h1>
-              <p className="text-[11px] text-[#6B665E] font-serif italic truncate max-w-sm">
+              <p className="text-[11px] text-[#62535d] font-['Work_Sans'] truncate max-w-sm">
                 {currentStudy?.authors} · {currentStudy?.publication_year} · {currentStudy?.journal}
               </p>
             </div>
@@ -1000,17 +1000,17 @@ export function PdfViewerPage() {
         </div>
 
         {/* Center Progress Bar */}
-        <div className="hidden lg:flex items-center gap-3 bg-white border border-[#381A61]/10 px-4 py-1.5 rounded-full shadow-2xs">
-          <div className="text-xs font-medium text-[#381A61]">
-            Extraction Progress: <span className="font-bold text-[#7C4B73] font-mono">{verifiedCount}/{variableList.length}</span> Verified
+        <div className="hidden lg:flex items-center gap-3 bg-[#ffffff] border border-[#d2c2cb] px-4 py-1.5 rounded-full">
+          <div className="text-xs font-medium text-[#4f444b]">
+            Extraction Progress: <span className="font-bold text-[#3a0f34] font-mono">{verifiedCount}/{variableList.length}</span> Verified
           </div>
-          <div className="w-28 bg-[#88A0DC]/25 rounded-full h-2 overflow-hidden">
+          <div className="w-28 bg-[#eee7ec] rounded-full h-2 overflow-hidden border border-[#d2c2cb]/50">
             <div
-              className="bg-gradient-to-r from-[#381A61] to-[#7C4B73] h-2 rounded-full transition-all duration-300"
+              className="bg-[#3a0f34] h-2 rounded-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <span className="text-[11px] font-bold text-[#381A61] font-mono">{progressPercent}%</span>
+          <span className="text-[11px] font-bold text-[#3a0f34] font-mono">{progressPercent}%</span>
         </div>
 
         {/* Right Action Tools */}
@@ -1018,26 +1018,26 @@ export function PdfViewerPage() {
           {/* In-App Codebook Designer Button */}
           <button
             onClick={() => setShowCodebookDesigner(true)}
-            className="px-3 py-1.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 bg-[#88A0DC]/20 hover:bg-[#88A0DC]/35 text-[#381A61] border border-[#88A0DC]/40 transition-colors shadow-2xs"
+            className="px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-1.5 bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-colors"
             title="Design and customize codebook variables directly in-app (No file upload required)"
           >
-            <Sliders className="h-3.5 w-3.5 text-[#381A61]" />
+            <Sliders className="h-3.5 w-3.5 text-[#814d75]" />
             <span>In-App Codebook</span>
           </button>
 
-          {/* AIDE-Web Style Recorded Answers Data Sheet Button & Full Page Link */}
+          {/* Recorded Answers Data Sheet Button & Full Page Link */}
           <button
             onClick={() => setShowDataSheetModal(true)}
-            className="px-3 py-1.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 bg-[#7C4B73]/10 hover:bg-[#7C4B73]/20 text-[#7C4B73] border border-[#7C4B73]/30 transition-colors shadow-2xs"
+            className="px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-1.5 bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-colors"
             title="Inspect recorded study answers matrix modal"
           >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-[#7C4B73]" />
+            <FileSpreadsheet className="h-3.5 w-3.5 text-[#814d75]" />
             <span>Recorded Sheet</span>
           </button>
 
           <Link
             to={`/projects/${projectId}/extraction-sheet?study=${selectedPaperId}`}
-            className="px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 bg-[#381A61] hover:bg-[#4E2487] text-[#FAF9F3] transition-colors shadow-xs"
+            className="px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-1.5 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] transition-colors"
             title="Open full dedicated Extraction Sheet page with multi-study matrix"
           >
             <ExternalLink className="h-3.5 w-3.5" />
@@ -1048,15 +1048,15 @@ export function PdfViewerPage() {
           <button
             onClick={() => setShowCodebookPanel(!showCodebookPanel)}
             className={cn(
-              "px-3 py-1.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 border transition-colors",
+              "px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-1.5 border transition-colors",
               showCodebookPanel
-                ? "bg-[#7C4B73]/15 text-[#7C4B73] border-[#7C4B73]/40"
-                : "bg-white text-[#381A61] border-[#381A61]/15 hover:bg-[#381A61]/5"
+                ? "bg-[#ffdea6]/40 text-[#3a0f34] border-[#814d75]"
+                : "bg-[#ffffff] text-[#4f444b] border-[#d2c2cb] hover:bg-[#eee7ec]"
             )}
             title={showCodebookPanel ? "Minimize Protocol Rules Panel" : "Open Protocol Rules & Guidelines"}
           >
             {showCodebookPanel ? (
-              <PanelRightClose className="h-3.5 w-3.5 text-[#7C4B73]" />
+              <PanelRightClose className="h-3.5 w-3.5 text-[#814d75]" />
             ) : (
               <PanelRightOpen className="h-3.5 w-3.5 text-[#6B665E]" />
             )}
