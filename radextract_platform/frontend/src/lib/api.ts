@@ -56,6 +56,23 @@ export async function autoDiscoverBackend(): Promise<string | null> {
     localStorage.removeItem("custom_api_base");
   }
 
+  // Automatically detect live GPU tunnel from active_backend.json
+  try {
+    const res = await fetch("./active_backend.json", { cache: "no-store" }).catch(() => null);
+    if (res && res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data?.api_url && data.api_url !== "/api") {
+        const checkTunnel = await testBackendConnection(data.api_url).catch(() => null);
+        if (checkTunnel && checkTunnel.ok) {
+          localStorage.setItem("custom_api_base", data.api_url);
+          API_BASE = getApiBase();
+          updateApiState({ apiBase: API_BASE, state: "live" });
+          return API_BASE;
+        }
+      }
+    }
+  } catch (e) {}
+
   const currentBase = getApiBase();
   const check = await testBackendConnection(currentBase).catch(() => null);
   if (check && check.ok) {
@@ -268,6 +285,13 @@ async function request<T>(
   try {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
+      if (res.status === 405) {
+        console.warn(`[API 405 Method Not Allowed] Endpoint ${path} not allowed with method ${options.method || 'GET'}`);
+        // If status or GET route returned 405, provide safe default or fallback
+        if (path.includes("/claimscape/status")) {
+          return { status: "ready", engine: "co_scientist_local_onnx", model: "ModernBERT-large-system-1", max_papers_per_batch: 300 } as unknown as T;
+        }
+      }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }

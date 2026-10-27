@@ -449,7 +449,7 @@ export const ClaimscapePage: React.FC = () => {
         <div role="alert" className="mx-6 mt-3 border border-[#d2c2cb] bg-[#ffdea6]/35 p-3.5 text-sm text-[#7c5800] font-['Work_Sans'] flex items-center gap-2.5 rounded-lg">
           <ShieldAlert className="w-4 h-4 text-[#7c5800] shrink-0" />
           <span>
-            <strong>Laya model offline</strong> — verdicts are keyword approximations.
+            <strong>Co-Scientist verification offline</strong> — verdicts are keyword approximations.
           </span>
         </div>
       )}
