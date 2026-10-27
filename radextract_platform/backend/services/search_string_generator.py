@@ -16,11 +16,14 @@ Also generates inclusion/exclusion criteria from PICO elements.
 """
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 import json
 from functools import lru_cache
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 # ── MeSH / Emtree / CINAHL heading mapping ──
 # Covers radiology/cancer (original) plus general medicine: cardiology, neurology,
@@ -1022,24 +1025,47 @@ def generate_criteria_from_pico(pico: dict) -> dict:
     return {"inclusion": inclusion, "exclusion": exclusion}
 
 
+def _hypothesis_is_grounded(hypothesis: str, pico: dict) -> bool:
+    """Check the hypothesis references stems of every non-empty PICO element."""
+    import re as _re
+    text = hypothesis.lower()
+    for key in ("population", "index_test", "comparator", "outcome"):
+        val = (pico.get(key) or "").strip().lower()
+        if not val:
+            continue
+        # take the 2 most significant words of the element
+        words = [w for w in _re.findall(r"[a-z]{4,}", val) if w not in
+                 {"with", "without", "patients", "study", "trial", "using", "based", "compared", "versus", "against"}]
+        if not words:
+            continue
+        if not any(w[:6] in text for w in words[:2]):
+            return False
+    return True
+
+
 def generate_hypothesis_from_pico(pico: dict, research_question: str = "") -> dict:
     """Generate falsifiable primary, null, and secondary hypotheses from PICO elements.
 
-    Produces:
-      - primary_hypothesis (H1): Directional alternative hypothesis with clear polarity
-      - null_hypothesis (H0): Rigorous null hypothesis of no difference or inferiority
-      - secondary_hypotheses: List of secondary, subgroup, or safety hypotheses
+    Returns dict with keys: primary_hypothesis, null_hypothesis,
+    secondary_hypotheses, generation_source ("llm"|"template"|"failed"),
+    generation_error (str).
     """
     hypotheses = {
         "primary_hypothesis": "",
         "null_hypothesis": "",
         "secondary_hypotheses": [],
+        "generation_source": "failed",
+        "generation_error": "",
     }
 
-    # 1. Attempt generation via ToolCallingClient (Biomni or local LLM)
+    llm_ok = False
+    llm_error = ""
     try:
         from services.tool_calling_client import ToolCallingClient
         client = ToolCallingClient()
+        if not client.api_url or not client.api_key:
+            llm_error = "LLM not configured (missing api_url or api_key)"
+            raise RuntimeError(llm_error)
 
         prompt = f"""You are a senior scientific methodologist. Formulate rigorous, falsifiable research hypotheses based on this PICO framework across ANY domain:
 Population (P): {pico.get('population', '')}
@@ -1049,9 +1075,14 @@ Outcome (O): {pico.get('outcome', '')}
 Study Design: {pico.get('study_design', '')}
 Research Question: {research_question}
 
+Rules:
+- Every hypothesis MUST explicitly name the population, intervention, comparator, and outcome.
+- State the expected DIRECTION of effect (e.g., "higher", "lower", "reduces", "increases"). Never use the word "significant" as an expectation.
+- If the study design is non-inferiority, the null hypothesis must state being worse than the comparator by more than the non-inferiority margin.
+
 Derive:
 1. primary_hypothesis (H1): Directional, testable alternative hypothesis stating expected direction of effect.
-2. null_hypothesis (H0): Rigorous null hypothesis of no difference, no effect, or inferiority.
+2. null_hypothesis (H0): Rigorous null hypothesis of no difference, no effect, or (for non-inferiority) inferiority beyond the margin.
 3. secondary_hypotheses: 2-3 specific secondary, subgroup, or safety hypotheses."""
 
         result = client.call_with_tool(
@@ -1069,48 +1100,61 @@ Derive:
                 hypotheses["null_hypothesis"] = str(result["null_hypothesis"]).strip()
             if result.get("secondary_hypotheses") and isinstance(result["secondary_hypotheses"], list):
                 hypotheses["secondary_hypotheses"] = [str(s).strip() for s in result["secondary_hypotheses"] if str(s).strip()]
-    except Exception:
-        pass
-
-    # 2. Deterministic directional fallback if AI is unavailable or missed keys
-    if not hypotheses["primary_hypothesis"]:
-        pop = (pico.get("population") or "").strip()
-        idx = (pico.get("index_test") or "").strip()
-        comp = (pico.get("comparator") or "").strip()
-        out = (pico.get("outcome") or "").strip()
-        design = (pico.get("study_design") or "").lower()
-
-        # Clean trailing punctuation
-        pop_str = f" in {pop}" if pop else ""
-        comp_str = f" compared to {comp}" if comp else ""
-        out_str = f" regarding {out}" if out else ""
-
-        if "non-inferior" in design or "non-inferior" in research_question.lower():
-            hypotheses["primary_hypothesis"] = (
-                f"{idx or 'The evaluated intervention'} is non-inferior to {comp or 'standard control'}"
-                f"{out_str}{pop_str}."
-            )
-            hypotheses["null_hypothesis"] = (
-                f"{idx or 'The evaluated intervention'} is inferior to {comp or 'standard control'}"
-                f"{out_str}{pop_str}."
-            )
-            hypotheses["secondary_hypotheses"] = [
-                f"{idx or 'The evaluated intervention'} and {comp or 'standard control'} will exhibit comparable adherence, completion, and safety profiles.",
-                f"Treatment equivalence is consistent across demographic and baseline severity subgroups{pop_str}.",
-            ]
+        if not hypotheses["primary_hypothesis"]:
+            llm_error = llm_error or "LLM returned no primary_hypothesis"
         else:
-            hypotheses["primary_hypothesis"] = (
-                f"{idx or 'The evaluated intervention'} demonstrates superior/significant effect on {out or 'target outcomes'}"
-                f"{comp_str}{pop_str}."
-            )
-            hypotheses["null_hypothesis"] = (
-                f"{idx or 'The evaluated intervention'} does not demonstrate significant difference on {out or 'target outcomes'}"
-                f"{comp_str}{pop_str}."
-            )
-            hypotheses["secondary_hypotheses"] = [
-                f"{idx or 'The evaluated intervention'} maintains an acceptable safety profile{comp_str}.",
-                f"The magnitude of effect on {out or 'target outcomes'} is consistent across prespecified baseline subgroups{pop_str}.",
-            ]
+            llm_ok = True
+    except Exception as e:
+        llm_error = llm_error or f"{type(e).__name__}: {e}"
+        logger.warning(f"[hypothesis] LLM generation failed: {llm_error}")
+
+    if llm_ok and _hypothesis_is_grounded(hypotheses["primary_hypothesis"], pico):
+        hypotheses["generation_source"] = "llm"
+        return hypotheses
+
+    if llm_ok:
+        hypotheses["generation_error"] = "LLM hypothesis failed PICO grounding check"
+
+    # Deterministic fallback (flagged as template, never presented as LLM output)
+    hypotheses["generation_source"] = "template"
+    if not hypotheses["generation_error"]:
+        hypotheses["generation_error"] = llm_error
+    pop = (pico.get("population") or "").strip()
+    idx = (pico.get("index_test") or "").strip()
+    comp = (pico.get("comparator") or "").strip()
+    out = (pico.get("outcome") or "").strip()
+    design = (pico.get("study_design") or "").lower()
+
+    pop_str = f" in {pop}" if pop else ""
+    comp_str = f" compared to {comp}" if comp else ""
+    out_str = f" regarding {out}" if out else ""
+
+    if "non-inferior" in design or "non-inferior" in research_question.lower():
+        hypotheses["primary_hypothesis"] = (
+            f"{idx or 'The evaluated intervention'} is non-inferior to {comp or 'standard control'}"
+            f"{out_str}{pop_str}."
+        )
+        hypotheses["null_hypothesis"] = (
+            f"{idx or 'The evaluated intervention'} is worse than {comp or 'standard control'} by more than the non-inferiority margin"
+            f"{out_str}{pop_str}."
+        )
+        hypotheses["secondary_hypotheses"] = [
+            f"{idx or 'The evaluated intervention'} and {comp or 'standard control'} will exhibit comparable adherence, completion, and safety profiles{pop_str}.",
+            f"Non-inferiority is consistent across demographic and baseline severity subgroups{pop_str}.",
+        ]
+    else:
+        hypotheses["primary_hypothesis"] = (
+            f"{idx or 'The evaluated intervention'} results in higher {out or 'target outcome rates'}"
+            f"{comp_str}{pop_str}."
+        )
+        hypotheses["null_hypothesis"] = (
+            f"{idx or 'The evaluated intervention'} results in no difference in {out or 'target outcome rates'}"
+            f"{comp_str}{pop_str}."
+        )
+        hypotheses["secondary_hypotheses"] = [
+            f"{idx or 'The evaluated intervention'} maintains an acceptable safety profile{comp_str}.",
+            f"The direction of effect on {out or 'target outcomes'} is consistent across prespecified baseline subgroups{pop_str}.",
+        ]
 
     return hypotheses
 
@@ -1172,8 +1216,8 @@ Return JSON with exact keys:
             for k in pico:
                 if result.get(k):
                     pico[k] = str(result[k]).strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[pico-extract] LLM extraction failed, using heuristic fallback: {type(e).__name__}: {e}")
 
     # Fallback: if LLM didn't produce results, try improved multi-domain extraction
     if not any(pico.values()):

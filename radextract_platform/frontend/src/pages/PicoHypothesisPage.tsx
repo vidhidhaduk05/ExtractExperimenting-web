@@ -31,6 +31,7 @@ export function PicoHypothesisPage() {
   // ── Stage Navigation State ──
   // Stage 1: Set up PICO | Stage 2: Review protocol | Stage 3: Generate search strings
   const [currentStage, setCurrentStage] = useState<1 | 2 | 3>(1);
+  const [genWarning, setGenWarning] = useState("");
 
   // ── Data queries ──
   const { data: pico, isLoading: picoLoading } = useQuery({
@@ -113,6 +114,11 @@ export function PicoHypothesisPage() {
   useEffect(() => {
     if (hyp) {
       setHypothesis(hyp.hypothesis || "");
+      if (hyp.generation_source && hyp.generation_source !== "llm" && hyp.hypothesis) {
+        setGenWarning(hyp.generation_error || "Hypothesis was generated from a fallback template, not the LLM. Check API settings.");
+      } else {
+        setGenWarning("");
+      }
       if (hyp.research_question) {
         setResearchQuestion(hyp.research_question);
         setResearchQuestionInput(hyp.research_question);
@@ -1096,6 +1102,12 @@ export function PicoHypothesisPage() {
 
                 {showHypothesesAccordion && (
                   <div className="p-4 border-t border-[#d2c2cb] space-y-4 bg-[#ffffff]">
+                    {genWarning && (
+                      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                        <span className="text-xs text-amber-800">{genWarning}</span>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-xs font-bold text-[#3a0f34] mb-1">
                         Primary Alternative Hypothesis (H₁)

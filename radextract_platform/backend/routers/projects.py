@@ -5,7 +5,7 @@ import os
 import tempfile
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import Optional
@@ -14,7 +14,7 @@ import sqlite3
 from models import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
     PICOUpdate, PICOResponse,
-    HypothesisUpdate, HypothesisResponse,
+    HypothesisUpdate, HypothesisResponse, SecondaryHypothesis,
     PubMedKeyUpdate,
     Criterion, CriteriaUpdate, CriteriaResponse,
     SearchStringsResponse,
@@ -914,6 +914,7 @@ async def generate_pico_from_question(
 @router.post("/projects/{project_id}/generate-hypothesis", response_model=HypothesisResponse)
 async def generate_project_hypothesis(
     project_id: str,
+    request: Request,
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
@@ -930,6 +931,9 @@ async def generate_project_hypothesis(
     pico = json.loads(row["pico_json"]) if row["pico_json"] else {}
     question = row["research_question"] or ""
 
+    if not any((pico.get(k) or "").strip() for k in ("population", "index_test", "comparator", "outcome")):
+        raise HTTPException(status_code=400, detail="No PICO saved for this project. Extract or enter a PICO before generating a hypothesis.")
+
     hypo_result = await run_in_threadpool(
         search_string_generator.generate_hypothesis_from_pico, pico, question
     )
@@ -941,9 +945,28 @@ async def generate_project_hypothesis(
     ]
     secondary_json = json.dumps(secondary_objs)
 
+    # Overwrite protection: if the stored hypothesis was human-edited (differs from
+    # a previously generated one), require explicit confirmation.
+    existing = row["hypothesis"] or ""
+    if existing and existing.strip() and existing.strip() != primary.strip():
+        meta_raw = row["hypothesis_meta_json"] if "hypothesis_meta_json" in row.keys() else None
+        last_generated = ""
+        if meta_raw:
+            try:
+                last_generated = json.loads(meta_raw).get("last_generated", "")
+            except Exception:
+                last_generated = ""
+        if existing.strip() != (last_generated or "").strip() and not request.headers.get("X-Confirm-Overwrite"):
+            raise HTTPException(status_code=409, detail="Hypothesis was manually edited. Re-generate with confirmation to overwrite.")
+
+    meta = {"last_generated": primary, "source": hypo_result.get("generation_source", "template"), "error": hypo_result.get("generation_error", "")}
+    try:
+        conn.execute("ALTER TABLE projects ADD COLUMN hypothesis_meta_json TEXT", ())
+    except Exception:
+        pass  # column already exists
     conn.execute(
-        "UPDATE projects SET hypothesis = ?, secondary_hypotheses_json = ? WHERE project_id = ?",
-        (primary, secondary_json, project_id),
+        "UPDATE projects SET hypothesis = ?, secondary_hypotheses_json = ?, hypothesis_meta_json = ? WHERE project_id = ?",
+        (primary, secondary_json, json.dumps(meta), project_id),
     )
     conn.commit()
 
@@ -952,6 +975,8 @@ async def generate_project_hypothesis(
         hypothesis=primary,
         research_question=question,
         secondary_hypotheses=[SecondaryHypothesis(**h) for h in secondary_objs],
+        generation_source=hypo_result.get("generation_source", "template"),
+        generation_error=hypo_result.get("generation_error", ""),
     )
 
 
