@@ -1,0 +1,6 @@
+#!/home/vd00026/Desktop/Software/radextract_platform/backend/venv_backend/bin/python3.10
+import sys
+from onnxruntime.tools.onnxruntime_test import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())
