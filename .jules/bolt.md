@@ -17,3 +17,7 @@
 ## 2026-03-31 - Memoizing Multi-Pass Flow & Dashboard Aggregation Logic
 **Learning:** Computing live PRISMA diagram counts, dual-reviewer agreement matrices, and filtered study lists at the top-level of pages without `useMemo` causes redundant multi-pass array iterations on every polling interval or UI state change.
 **Action:** Wrapped `computeLivePrismaData` in `PrismaFlowPage`, study filtering & bookmark counts in `StudyList`, agreement/kappa metrics in `DualBlindedDashboard`, and factor classifications in `GradePage` in `useMemo`.
+
+## 2026-10-27 - Indexing Intermediate Link Relations with Hash Maps in Graph Traversals
+**Learning:** Executing nested `graph.links.forEach` scans to resolve multi-hop edge relations (e.g. `study -> extraction` and `extraction -> variable` into direct `study -> variable` edges) causes $O(L^2)$ quadratic operations on every filter or toggle frame.
+**Action:** Pre-build an $O(1)$ lookup Map (`extractionToVarMap`) for intermediate relation targets in a single $O(L)$ pass prior to edge construction, reducing graph processing complexity from $O(L^2)$ to $O(L)$.
