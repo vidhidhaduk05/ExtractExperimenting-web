@@ -24,10 +24,18 @@ type ApiListener = (info: ApiConnectionInfo) => void;
 const apiListeners: Set<ApiListener> = new Set();
 
 export function getApiBase(): string {
-  const custom = typeof localStorage !== "undefined" ? localStorage.getItem("custom_api_base") : null;
-  if (custom && custom.trim()) return custom.trim().replace(/\/+$/, "");
   if (typeof window === "undefined") return "/api";
-  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
+  const custom = localStorage.getItem("custom_api_base");
+  if (custom && custom.trim()) {
+    let url = custom.trim().replace(/\/+$/, "");
+    if (!url.endsWith("/api")) url = `${url}/api`;
+    return url;
+  }
+  if (import.meta.env.VITE_API_BASE_URL) {
+    let url = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
+    if (!url.endsWith("/api")) url = `${url}/api`;
+    return url;
+  }
   return "/api";
 }
 
@@ -39,7 +47,7 @@ export async function autoDiscoverBackend(): Promise<string | null> {
   if (custom && custom.trim()) {
     const checkCustom = await testBackendConnection(custom.trim()).catch(() => null);
     if (checkCustom && checkCustom.ok) {
-      API_BASE = custom.trim().replace(/\/+$/, "");
+      API_BASE = getApiBase();
       updateApiState({ apiBase: API_BASE, state: "live" });
       return API_BASE;
     }
@@ -70,6 +78,11 @@ export function isDemoModeEnabled(): boolean {
 }
 
 export function shouldUseDemoFallback(): boolean {
+  if (typeof window === "undefined") return true;
+  if (isDemoModeEnabled()) return true;
+  const isGithubPages = window.location.hostname.includes("github.io");
+  const hasCustomApi = !!localStorage.getItem("custom_api_base");
+  if (isGithubPages && !hasCustomApi) return true;
   return false;
 }
 
@@ -269,6 +282,10 @@ async function request<T>(
   if (path.startsWith("/auth/login")) {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     if (!res.ok) {
+      if (res.status === 405 || (res.status === 404 && isBrowser && window.location.hostname.includes("github.io"))) {
+        console.warn(`[API 405/404 Fallback] Route ${path} handled client-side`);
+        return handleDemoRequest<T>(path, options);
+      }
       const error = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(error.detail || `HTTP ${res.status}`);
     }
@@ -279,6 +296,10 @@ async function request<T>(
   try {
     res = await fetch(`${base}${path}`, { ...options, headers });
   } catch (err: any) {
+    if (isBrowser && (window.location.hostname.includes("github.io") || err?.message?.includes("405"))) {
+      console.warn(`[API Error Fallback] Handled client-side for ${path}:`, err);
+      return handleDemoRequest<T>(path, options);
+    }
     const msg = err?.message || "Network request failed";
     console.warn(`[API Connection Failed] ${base}${path}:`, err);
     updateApiState({ state: "error", apiBase: base, errorMessage: msg });
@@ -295,23 +316,32 @@ async function request<T>(
 }
 
 async function authenticatedRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = typeof localStorage !== "undefined" ? localStorage.getItem("token") : null;
-  if (!token) {
-    throw new Error("Sign in to record decisions under your account");
+  const isBrowser = typeof window !== "undefined";
+  const token = isBrowser ? (localStorage.getItem("token") || "guest_reviewer_token") : "guest_reviewer_token";
+  try {
+    const res = await fetch(`${getApiBase()}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...((options.headers as Record<string, string>) || {}),
+      },
+    });
+    if (!res.ok) {
+      if (res.status === 405 || (res.status === 404 && isBrowser && window.location.hostname.includes("github.io"))) {
+        console.warn(`[API 405/404 Fallback] Authenticated route ${path} handled client-side`);
+        return handleDemoRequest<T>(path, options);
+      }
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(error.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  } catch (err: any) {
+    if (isBrowser && (window.location.hostname.includes("github.io") || err?.message?.includes("405"))) {
+      return handleDemoRequest<T>(path, options);
+    }
+    throw err;
   }
-  const res = await fetch(`${getApiBase()}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...((options.headers as Record<string, string>) || {}),
-    },
-  });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
-  }
-  return res.json();
 }
 
 // ── Types ──
