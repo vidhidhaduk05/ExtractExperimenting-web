@@ -510,3 +510,122 @@ Then show one primary button labeled `Generate Search Strings`, leading to edita
   - `demoRigorData.ts`: Deprecated and cleared dead demo data file.
   - Full regression test suite (`test_demo_removal_regressions.py` + `test_laya_extraction_tracer.py`): 19 passed.
 
+## 2026-10-27 — Master Summary & Registry of Platform Plans (`PLANS/`)
+
+Consolidated index and architectural memory of all active, implemented, and backlog plans in `PLANS/` for future agent reference. All future implementations must align with the decisions, invariants, and constraints documented below.
+
+### 1. AI Screening Confidence & Decision Logic (`PLANS/screening_confidence_logic_spec.md`)
+- **Status**: Implemented (`services/screening_confidence.py`, `services/ai_screening_pipeline.py`, `tests/test_screening_confidence.py`).
+- **Core Principles**:
+  - **Sensitivity-First Invariant**: Target sensitivity $\ge 0.98$ (95% one-sided conformal risk bound). Missed eligible studies are irrecoverable; extra human screening is recoverable.
+  - **Never Auto-Include**: AI includes are strictly marked `proposed_include` and require human confirmation to become final.
+  - **Calibrated Auto-Exclusion**: Records are auto-excluded only when: (1) dual independent passes agree on exclude; (2) calibrated $P(\text{include}) \le t_{\text{excl}}$; (3) $\ge 1$ specific exclusion criterion is clearly met; (4) safety-net override flag is absent.
+  - **Dual-Pass Framing**: Pass A is include-focused (evaluates PICO potential); Pass B is exclude-focused (evaluates exclusion criteria).
+  - **Logistic Signal Fusion**: Fuses pass agreement, mean score, winning criterion margin, safety-net flag, and abstract length.
+  - **Active Learning Queue**: Uncertain studies ($|P - 0.5|$ ascending) are prioritized for human screening to maximize calibration information per reviewer minute.
+  - **Continuous Audit**: 5% random sample of auto-exclusions is routed blind into the human queue; re-inclusion of an auto-excluded study immediately triggers recalibration and threshold tightening.
+
+### 2. Fatal Systematic Review Logic Audit & Remediation (`PLANS/sr_logic_fix_plan.md`)
+- **Status**: Phase 0 (fabrication removal, RoB polarity) and Phase 1 (PRISMA routing, dedup safety) completed/in-progress; Phases 2–4 codified.
+- **Core Findings & Decisions**:
+  - **Phase 0 (Stop Silent Fabrication)**:
+    - *F1 (Fatal)*: Eliminated sine-wave effect size fabrication (`eff = 1.35 + 0.15*sin(idx+1)`) and constant pooled outcomes in `routers/meta.py`. Endpoints must compute real data via `ma.run_meta_analysis` or return 404/insufficient data.
+    - *F2–F4 (Fatal)*: Fixed inverted signaling question polarity in `services/rob_tools.py` for RoB 2 and ROBINS-I. Harm questions answering "yes" (e.g. baseline imbalance, missingness bias, awareness) must map to High/Serious risk, never Low. Unanswered signaling questions must be treated as `no_information`/`unclear`, never silently defaulting to Low.
+  - **Phase 1 (PRISMA Flow Integrity)**:
+    - *F5–F6 (Fatal)*: Full-text screening (`stage=ft`) must select `ta_included` records and update `screening_stage='ft'`. TA includes must become `ta_included` awaiting FT review, never skipping straight to extraction.
+    - *F7 (Fatal)*: Deduplication must never auto-mark records with existing human decisions; canonical selection must prioritize completeness and screening status over earliest import.
+    - *F8 (High)*: PRISMA "studies in meta-analysis" box in `PrismaFlowPage.tsx` must read the distinct backend extraction count, never hardcoded equal to all included studies.
+  - **Phase 2 (Pooling Correctness)**:
+    - *F9–F11 (Fatal)*: Jointly filter effects and variances in `services/analysis_service.py` to prevent silent array mispairing; fix leave-one-out indexing; persist back-transformed pooled effect estimates alongside natural-scale CIs.
+    - *F12 (High)*: Enforce unique `(meta_id, study_id)` constraints and warn when multiple rows/arm-pairs originate from one study.
+  - **Phase 3 (GRADE & RoB Consistency)**:
+    - *F13–F15 (Fatal/High)*: Restrict GRADE RoB downgrading to studies within the specific outcome; normalize lowercase RoB judgment vocabulary across all endpoints; replace arbitrary CI-width thresholds with Optimal Information Size (OIS).
+  - **Phase 4 (Trust & Audit)**:
+    - *H1–H12 (High)*: AI decisions set proposed status in dual/blind review; normalize AI-vs-human decision vocabulary (`ta_included` vs `included`) to avoid artificial conflicts; require secondary corroboration (author overlap or DOI/PMID) for title merges.
+
+### 3. Data Extraction Tracing & Demo Removal (`PLANS/extraction_tracing_demo_removal_plan.md`)
+- **Status**: Implemented and verified (`test_demo_removal_regressions.py`, `test_laya_extraction_tracer.py`).
+- **Core Decisions**:
+  - **Part A (Evidence Tracing Honesty)**:
+    - Candidate model path resolution across both `laya/models/` and `laya/onnx/` with explicit warning logs if weights are absent.
+    - Structured table row and caption indexing in `laya_extraction_tracer.py` (`_extract_page_sentences`, `_locate_quote`) with exact page attribution.
+    - Transparent extraction status: every extracted field is annotated with `tracing_status` (`verified`, `unverified`, `failed`, `disabled`), and the batch returns a summary.
+    - Elimination of character-offset page guessing (`m.start() // 3000 + 1`) and hardcoded page 1 derivations; unlocated quotes are tagged `[UNVERIFIED QUOTE]` with `source_page: null`. Keyword fallbacks emit `[KEYWORD]` with conservative 0.50 score, never `[DS]`.
+  - **Part B (Production Demo Removal)**:
+    - Deleted silent 404/5xx and catch-block fallbacks to `handleDemoRequest` in `src/lib/api.ts`; real server errors throw cleanly.
+    - Removed `isDemo` on default project `proj_pam_current`; unpopulated real projects return empty array `[]`.
+    - Deprecated and emptied dead demo data (`demoRigorData.ts`).
+    - Defaulted RoB AI prefill to real LLM, raising 503 if unavailable; `mock_model_fn` is restricted strictly to test fixtures (`PYTEST_CURRENT_TEST`).
+    - Sanitized configuration: removed hardcoded secret keys (`sk-biomni-...`), proprietary model names, Cloudflare tunnel URLs, and public GitHub discovery of backend URLs. Example endpoints are gated behind `ENABLE_EXAMPLE_ENDPOINTS`.
+
+### 4. Code Graph Dual-View Architecture (`PLANS/CODE_GRAPH_DUAL_VIEW_PLAN.md` & `apply_code_graph_dual_view.py`)
+- **Status**: Implemented (`radextract_platform/backend/routers/graphify.py`, `radextract_platform/frontend/src/pages/CodeGraphPage.tsx`, `radextract_web_repo`).
+- **Core Decisions**:
+  - **Two-View Interface**:
+    1. *Workflow Overview*: Visual Mermaid flowchart depicting actual functional data flow across Inputs, Multi-Stage Screening, PDF Parsing & Evidence Tracing, Database, Synthesis, and PRISMA.
+    2. *Dependency Graph*: Interactive Graphify knowledge graph explorer with community clustering, search, symbol/file drill-down, and no hardcoded 2685 node cap.
+  - **Invariants**:
+    - Workflow overview complements Graphify; it never replaces, fakes, or claims to contain all 11,000+ AST nodes.
+    - Zero fallback to mock/sample data when the backend or graph is unavailable.
+    - Strict Master Theme styling (Primary Wine `#3a0f34`, Paper Canvas `#fbf9f4`, Editorial Plum `#814d75`) and public "Co-Scientist" terminology.
+
+### 5. Deduplication & Study Grouping Architecture (`PLANS/dedup_plan.md` & `PLANS/zoplicate_integration_plan.md`)
+- **Status**: Architectural blueprint and Zoplicate 5.1.1 port specification.
+- **Core Decisions**:
+  - **Two Distinct Problems**:
+    1. *Record Deduplication*: Same publication indexed by multiple databases $\rightarrow$ merge duplicate into canonical record and tally in PRISMA `duplicates_removed`.
+    2. *Study Grouping*: Multiple reports of the same clinical study (e.g., protocol, primary outcome, 5-year follow-up) $\rightarrow$ link via `study_groups` table, never merge or exclude; prevents double-counting in meta-analysis.
+  - **Tiered Matching Cascade**:
+    - **T0**: Exact normalized DOI, PMID, PMCID, or ClinicalTrials.gov NCT ID $\rightarrow$ auto-merge.
+    - **T1**: Exact normalized title match + first-author surname + year $\pm 1$ $\rightarrow$ auto-merge.
+    - **T2**: Fuzzy title (Jaro-Winkler $\ge 0.90$) + corroborating signal (author overlap $\ge 0.5$, same year, same journal) $\rightarrow$ auto-merge.
+    - **T3**: Fuzzy title alone or conflicting identifiers $\rightarrow$ human review queue.
+    - **T4**: Multiple publications of same study $\rightarrow$ propose study group for human confirmation.
+  - **Zoplicate Proven Patterns**:
+    - Port `DuplicateFinder` candidate SQL indexing and string cleaners (`cleanDOI`, `normalizeString`).
+    - Implement `mergeItems` master semantics: master record wins field conflicts; non-conflicting fields are additively filled; duplicates are retained as `is_duplicate=1` (reversible).
+    - Persistent `non_duplicates` memory table: rejected pairs are remembered forever and never re-flagged across imports.
+    - "Merge All" service (`BulkMergeController`) with dry-run confirmation, progress tracking, and pause/resume.
+    - Hard safety rule: Never auto-mark records with existing human decisions; canonical record chosen by completeness (DOI+PMID > either > most filled fields > has decision), never earliest import.
+
+### 6. Backend Persistence & System Integrity (`PLANS/make_it_legit_plan.md`)
+- **Status**: Phase 1 & 2 implemented (demo removal, tracing honesty); persistence hardening roadmap codified.
+- **Core Decisions**:
+  - **Eliminate `/tmp` DB Staging**: Set `STAGE_DB_SCRATCH=False` by default to prevent silent data loss upon process exit or container restart. Replace with SQLite WAL mode and periodic checkpoint sync.
+  - **Truthful Upload Status**: Remove swallowed exceptions in PDF uploads; report real status (`processed` vs `failed: <reason>`) with an `error_message` column. Validate uploads (magic `%PDF` bytes, stream size limits) before in-memory reads.
+  - **File Lifecycle & Reconciliation**: Delete orphaned PDFs and Docling sidecars when studies are removed; reconcile DB records with files on disk on startup.
+  - **Boot Self-Check**: Verify requirements, DB writability, upload directories, and model presence on startup, exposing status at `/api/health/full`.
+
+### 7. Screening to PRISMA Demo Master Plan & Coding Agent Handoff (`PLANS/SCREENING_TO_PRISMA_DEMO_MASTER_PLAN.md` & `PLANS/CODING_AGENT_HANDOFF_SCREENING_TO_PRISMA.md`)
+- **Status**: 10-Work-Package specification bridging protocol setup to live PRISMA 2020 export.
+- **Core Packages**:
+  - WP1: Real Import History & source provenance logging.
+  - WP2: Source-column duplicate review matrix.
+  - WP3: PICO & criteria setup without destructive data loss.
+  - WP4: Ultrafast local Laya ONNX multi-stage screening execution.
+  - WP5: Reviewer conflict resolution & active learning human queue.
+  - WP6: Reliable Full-Text retrieval, PDF viewer, and stage transition.
+  - WP7: Extraction worksheet with quote locator and optional SLIDERS long-document adapter.
+  - WP8: Rigor Scan authentic document verification (replacing synthetic reader).
+  - WP9: Master Theme repair (shield icons, typography, responsive viewports).
+  - WP10: Code Graph dual-view and Graphify integration.
+
+### 8. Future Plans Suite (`PLANS/Future Plans/`)
+- **Website Launch Checklist (`future_plans_for_website.md`)**:
+  - Comprehensive backlog of 47 items (WEB-001 to WEB-047) covering legal privacy disclosures (CC0 templates from `General-Legal/legal-templates`), terms of service, HTTPS enforcement, sitemap/robots.txt, metadata, mobile friendliness, branded 404 page, color contrast, and usability features (reading progress bar, table of contents, auto-save drafts).
+- **Security Pre-Launch Checklist (`future_plans_for_security.md`)**:
+  - 20-point security audit backlog (SEC-001 to SEC-020): HSTS headers, CSRF tokens, session invalidation on password change, upload type allowlists, prompt injection defense, AI usage/cost caps, payload size limits, password reset throttling, secure cookie flags, and least-privilege DB access.
+- **Marketing & Search Visibility Playbook (`future_plans_for_marketing.md`)**:
+  - Backlog for organic search visibility: upcoming-year query research, reproducible research benchmarks on Zenodo, concise answer-first LinkedIn articles, educational decks, and policy-compliant Reddit discussion answers. Invariants: Strict Master Theme adherence and zero disclosure of patented method names (use "Co-Scientist").
+
+### 9. Cloud, Infrastructure & Design Foundations
+- **HPC Deployment (`PLANS/HPC_AI_AGENT_DEPLOYMENT_PLAN.md`)**:
+  - Slurm batch job templates (`jobs/radextract_web.slurm`, `screening_laya_gpu.slurm`) for WVU CTSI HPC cluster; Open OnDemand reverse proxy integration; offline GPU acceleration for Laya ONNX; scratch staging with persistent sync.
+- **AWS Migration (`PLANS/VDExtract_Cleanup_AWS_Migration_Plan.md`)**:
+  - Containerized production architecture: ECS/Fargate stateless backend, S3 document storage, RDS PostgreSQL, and removal of legacy local scripts.
+- **Cost & Precision Enhancements (`PLANS/Improvements_Precision_Cost_Deployment.md`)**:
+  - Tiered precision architecture, prompt caching, token reduction, and local ONNX inference acceleration.
+- **Interactive Screening Clarifications (`PLANS/plan_interactive_clarification.md`)**:
+  - Universal inline screening clarification banner with multi-question carousel, instant re-evaluation, and scoped non-intrusive toast notifications on non-screening routes.
+
+
