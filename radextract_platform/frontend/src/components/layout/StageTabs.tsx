@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
@@ -102,7 +102,19 @@ export function StageTabs() {
   if (!projectId) return null;
 
   const studyCount = studies?.length || 0;
-  const includedCount = studies?.filter((s) => s.screening_status === "included").length || 0;
+
+  // Single-pass study inclusion count wrapped in useMemo to prevent redundant O(N) array filtering on render
+  const includedCount = useMemo(() => {
+    if (!studies) return 0;
+    let count = 0;
+    for (let i = 0; i < studies.length; i++) {
+      if (studies[i].screening_status === "included") {
+        count++;
+      }
+    }
+    return count;
+  }, [studies]);
+
   const robCount = robSummary?.total_assessments || 0;
   const metaCount = metaList?.length || 0;
 
