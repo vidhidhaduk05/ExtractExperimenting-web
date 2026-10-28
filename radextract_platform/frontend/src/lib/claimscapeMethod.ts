@@ -236,29 +236,78 @@ export function classifyPaper(paper: Paper, judgment: Judgment): ProcessedPaper 
   };
 }
 
+// Optimization: computeSwarmY uses early-exiting collision checks & zero micro-allocations
 export function computeSwarmY(xPositions: number[], y0 = 0, padding = 1.5): number[] {
   const d = 13 + padding; // minimum spacing between dots
+  const dSq = d * d;
+  const n = xPositions.length;
+  if (n === 0) return [];
+
   const indexed = xPositions.map((x, idx) => [x, idx] as [number, number]).sort((a, b) => a[0] - b[0]);
-  const yOffsets = new Array(xPositions.length).fill(0);
+  const yOffsets = new Array(n).fill(0);
   const placed: { x: number; y: number }[] = [];
   let left = 0;
 
-  for (const [x, idx] of indexed) {
+  // Pre-allocated reusable buffers to eliminate inner loop allocations and GC pressure
+  const candidates: number[] = [];
+  const nearbyY: number[] = [];
+  const nearbyYDist: number[] = [];
+
+  for (let k = 0; k < n; k++) {
+    const [x, idx] = indexed[k];
+
     while (left < placed.length && x - placed[left].x >= d) {
       left++;
     }
-    const nearby = placed.slice(left);
-    const intervals: [number, number][] = [];
-    const candidates = [0];
 
-    for (const pt of nearby) {
-      const yDist = Math.sqrt(Math.max(0, d * d - (x - pt.x) ** 2));
-      intervals.push([pt.y - yDist, pt.y + yDist]);
+    const placedLen = placed.length;
+    const nearbyCount = placedLen - left;
+
+    if (nearbyCount === 0) {
+      yOffsets[idx] = 0;
+      placed.push({ x, y: 0 });
+      continue;
+    }
+
+    candidates.length = 0;
+    nearbyY.length = 0;
+    nearbyYDist.length = 0;
+
+    candidates.push(0);
+
+    for (let i = left; i < placedLen; i++) {
+      const pt = placed[i];
+      const dx = x - pt.x;
+      const yDist = Math.sqrt(Math.max(0, dSq - dx * dx));
+      nearbyY.push(pt.y);
+      nearbyYDist.push(yDist);
       candidates.push(pt.y - yDist, pt.y + yDist);
     }
 
     candidates.sort((a, b) => Math.abs(a) - Math.abs(b));
-    const chosen = candidates.find((cand) => intervals.every(([low, high]) => cand <= low + 1e-6 || cand >= high - 1e-6)) ?? 0;
+
+    let chosen = 0;
+    const candLen = candidates.length;
+
+    for (let c = 0; c < candLen; c++) {
+      const cand = candidates[c];
+      let valid = true;
+
+      for (let j = 0; j < nearbyCount; j++) {
+        const py = nearbyY[j];
+        const yd = nearbyYDist[j];
+        // Collision occurs if candidate falls strictly inside (py - yd + 1e-6, py + yd - 1e-6)
+        if (cand > py - yd + 1e-6 && cand < py + yd - 1e-6) {
+          valid = false;
+          break; // Early exit on collision
+        }
+      }
+
+      if (valid) {
+        chosen = cand;
+        break; // Early exit on finding valid candidate
+      }
+    }
 
     yOffsets[idx] = chosen;
     placed.push({ x, y: chosen });
