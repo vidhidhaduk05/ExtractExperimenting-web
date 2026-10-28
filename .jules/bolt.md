@@ -17,3 +17,7 @@
 ## 2026-03-31 - Memoizing Multi-Pass Flow & Dashboard Aggregation Logic
 **Learning:** Computing live PRISMA diagram counts, dual-reviewer agreement matrices, and filtered study lists at the top-level of pages without `useMemo` causes redundant multi-pass array iterations on every polling interval or UI state change.
 **Action:** Wrapped `computeLivePrismaData` in `PrismaFlowPage`, study filtering & bookmark counts in `StudyList`, agreement/kappa metrics in `DualBlindedDashboard`, and factor classifications in `GradePage` in `useMemo`.
+
+## 2026-03-31 - Zero-Allocation Bee-Swarm Layout for Interactive Claim Maps
+**Learning:** In interactive bee-swarm scatter maps (e.g., ClaimScape evidence maps with hundreds of publication dots), allocating array slices (`placed.slice()`) and interval tuples (`[low, high]`) inside candidate placement loops creates $O(N \cdot K)$ GC pressure per render/resize frame.
+**Action:** Pre-allocate candidate buffers and use early-exiting imperative collision checks (`cand > py - yd + 1e-6 && cand < py + yd - 1e-6`) to achieve $O(1)$ memory allocation during swarm positioning.
