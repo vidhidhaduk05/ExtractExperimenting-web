@@ -17,3 +17,7 @@
 ## 2026-03-31 - Memoizing Multi-Pass Flow & Dashboard Aggregation Logic
 **Learning:** Computing live PRISMA diagram counts, dual-reviewer agreement matrices, and filtered study lists at the top-level of pages without `useMemo` causes redundant multi-pass array iterations on every polling interval or UI state change.
 **Action:** Wrapped `computeLivePrismaData` in `PrismaFlowPage`, study filtering & bookmark counts in `StudyList`, agreement/kappa metrics in `DualBlindedDashboard`, and factor classifications in `GradePage` in `useMemo`.
+
+## 2026-03-31 - Single-Pass Memoized Layout Aggregation in AppShell & StageTabs
+**Learning:** Re-evaluating 5+ separate `.filter()` array transformations on `studies` in top-level layout components (`AppShell` and `StageTabs`) on every route change, dock toggle, or timer tick creates unnecessary array allocations and repeated $O(N)$ passes.
+**Action:** Consolidate multiple `.filter()` queries into a single $O(N)$ loop inside `useMemo`, computing all status counts (screened, included, duplicates, excluded, extracted) in a single pass that only recalculates when `studies` reference changes.

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Outlet, NavLink, useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, type PrismaFlow, type Project } from "../lib/api";
@@ -191,18 +191,49 @@ export function AppShell() {
   // Derive workflow checklist status & PRISMA numbers
   const hasPico = Boolean(project?.pico_json && project.pico_json.trim().length > 10);
   const totalStudies = (prismaFlow?.identification?.total ?? (prismaFlow as any)?.identified) || studies.length;
+
+  // Single-pass study counts memoized to eliminate 5x O(N) array filter passes and GC pressure per layout render frame
+  const studyCountsFallback = useMemo(() => {
+    let screened = 0;
+    let duplicates = 0;
+    let included = 0;
+    let abstractExcluded = 0;
+    let extracted = 0;
+
+    for (let i = 0; i < studies.length; i++) {
+      const s = studies[i];
+      if (s.screening_status && s.screening_status !== "pending") {
+        screened++;
+      }
+      if (s.is_duplicate === 1) {
+        duplicates++;
+      }
+      if (s.screening_status === "included") {
+        included++;
+      }
+      if (s.screening_status === "excluded") {
+        abstractExcluded++;
+      }
+      if (s.extractions && s.extractions.length > 0) {
+        extracted++;
+      }
+    }
+
+    return { screened, duplicates, included, abstractExcluded, extracted };
+  }, [studies]);
+
   const screenedCount =
     prismaFlow?.screening?.records_screened ??
     (prismaFlow as any)?.screened ??
-    studies.filter((s) => s.screening_status && s.screening_status !== "pending").length;
+    studyCountsFallback.screened;
   const duplicatesRemovedCount =
     prismaFlow?.identification?.duplicates_removed ??
     (prismaFlow as any)?.duplicates_removed ??
-    studies.filter((s) => s.is_duplicate === 1).length;
+    studyCountsFallback.duplicates;
   const includedCount =
     prismaFlow?.included?.studies_in_review ??
     (prismaFlow as any)?.included ??
-    studies.filter((s) => s.screening_status === "included").length;
+    studyCountsFallback.included;
   const fullTextAssessedCount =
     prismaFlow?.eligibility?.full_text_assessed ??
     (prismaFlow as any)?.full_text_assessed ??
@@ -214,8 +245,8 @@ export function AppShell() {
   const abstractExcludedCount =
     prismaFlow?.screening?.records_excluded ??
     (prismaFlow as any)?.excluded ??
-    studies.filter((s) => s.screening_status === "excluded").length;
-  const extractedCount = studies.filter((s) => s.extractions && s.extractions.length > 0).length;
+    studyCountsFallback.abstractExcluded;
+  const extractedCount = studyCountsFallback.extracted;
   const robAssessmentsCount = robSummary?.total_assessments || 0;
   const metaCount = metaList.length;
   const gradeCount = gradeList.length;
