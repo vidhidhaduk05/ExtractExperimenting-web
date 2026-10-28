@@ -16,6 +16,7 @@ import sqlite3
 router = APIRouter(prefix="/api/scientific-export", tags=["scientific_exports"])
 
 class PrismaMermaidRequest(BaseModel):
+    project_id: Optional[str] = None
     identification_db: int = 1240
     identification_registers: int = 35
     duplicates_removed: int = 210
@@ -42,8 +43,14 @@ class ManuscriptDraftRequest(BaseModel):
     p_val: Optional[float] = 0.001
 
 @router.post("/prisma-mermaid")
-def export_prisma_mermaid(req: PrismaMermaidRequest):
+def export_prisma_mermaid(
+    req: PrismaMermaidRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     """Generate official PRISMA 2020 Flow Diagram in editable Mermaid syntax."""
+    if req.project_id:
+        check_project_access(conn, req.project_id, user)
     mermaid_code = generate_prisma_flow_mermaid(
         identification_db=req.identification_db,
         identification_registers=req.identification_registers,

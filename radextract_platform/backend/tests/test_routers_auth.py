@@ -307,3 +307,26 @@ class TestLogout:
         )
         assert r.status_code == 404
         assert r.json()["detail"] == "Session not found"
+
+
+def test_export_prisma_mermaid_unauthorized(client):
+    """Verify that export_prisma_mermaid checks project permissions when project_id is specified for an authenticated user without project access."""
+    # Register & Login user
+    client.post("/api/auth/register", json={
+        "username": "unauthorized_user",
+        "password": "password123",
+        "email": "unauth@example.com",
+    })
+    login_data = client.post("/api/auth/login", json={
+        "username": "unauthorized_user",
+        "password": "password123",
+    }).json()
+
+    token = login_data["access_token"]
+
+    r = client.post(
+        "/api/scientific-export/prisma-mermaid",
+        json={"project_id": "unauthorized-proj-123"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 403
