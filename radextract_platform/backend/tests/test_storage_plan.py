@@ -247,3 +247,119 @@ def test_database_backup_retention(isolated_storage):
     assert backup_path.parent == backups_dir
     assert backup_path.name.startswith("radextract-")
     assert backup_path.name.endswith(".db")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Storage settings UI endpoints (GET/PUT /api/settings/storage, migrate)
+# ═══════════════════════════════════════════════════════════════════════
+
+@pytest.fixture
+def isolated_storage_config(tmp_path, monkeypatch):
+    """Redirect the persisted storage config file to a tmp location."""
+    from services import storage_settings_service
+    config_file = tmp_path / "data" / "storage_config.json"
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(storage_settings_service, "CONFIG_FILE", config_file)
+    return config_file
+
+
+def test_storage_get_reflects_default(isolated_storage, isolated_storage_config):
+    """GET /api/settings/storage reports the resolved root, writability, and project count."""
+    client = TestClient(app)
+    res = client.get("/api/settings/storage")
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["status"] == "success"
+    assert Path(data["storage_root"]) == Path(settings.storage_root).resolve()
+    assert data["exists"] is True
+    assert data["writable"] is True
+    assert isinstance(data["disk_free_gb"], float)
+    assert data["project_count"] == 0
+
+
+def test_storage_put_validates_and_persists(isolated_storage, isolated_storage_config, tmp_path):
+    """PUT /api/settings/storage: absolute path required, created if missing, probe-written,
+    persisted, and GET reflects it. Existing files are never moved."""
+    client = TestClient(app)
+
+    # Relative path must be rejected
+    res = client.put("/api/settings/storage", json={"storage_root": "relative/path"})
+    assert res.status_code == 400
+
+    # New absolute path (does not exist yet) must be created and accepted
+    new_root = tmp_path / "NewDrive" / "STUDY DATA" / "PROJECTS"
+    res = client.put("/api/settings/storage", json={"storage_root": str(new_root)})
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["moved_files"] is False
+    assert "Existing files stay in the old folder" in data["message"]
+    assert Path(data["storage_root"]) == new_root.resolve()
+    assert data["exists"] is True and data["writable"] is True
+    assert new_root.exists()
+
+    # GET reflects the change
+    res = client.get("/api/settings/storage")
+    assert Path(res.json()["storage_root"]) == new_root.resolve()
+
+    # Persisted for restart
+    import json as _json
+    saved = _json.loads(isolated_storage_config.read_text())
+    assert saved["storage_root"] == str(new_root.resolve())
+
+
+def test_storage_migrate_copies_files_and_db(isolated_storage, isolated_storage_config, tmp_path):
+    """Migrate copies files + DB to the new root; the app then serves an uploaded PDF from it."""
+    client = TestClient(app)
+
+    # Project + uploaded PDF in the ORIGINAL root
+    p_res = client.post("/api/projects", json={"name": "Migrate Review"})
+    project_id = p_res.json()["project_id"]
+    storage_folder = p_res.json()["storage_folder"]
+
+    study_id = str(uuid.uuid4())
+    rel_path, abs_path = save_study_pdf(
+        project_id=project_id,
+        study_id=study_id,
+        content=MINIMAL_PDF,
+        author="Kastrati, Adnan",
+        year=2019,
+        title="Migrate Review Title",
+    )
+    assert abs_path.exists()
+
+    old_root = Path(settings.storage_root).resolve()
+    new_root = tmp_path / "DriveE" / "STUDY DATA" / "PROJECTS"
+
+    # PUT points the root at the new folder (files stay), then migrate copies everything
+    res = client.put("/api/settings/storage", json={"storage_root": str(new_root)})
+    assert res.status_code == 200, res.text
+
+    res = client.post("/api/settings/storage/migrate", json={"target_root": str(new_root)})
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["files_copied"] >= 1
+    assert data["errors"] == []
+
+    # Old folder untouched (never delete)
+    assert abs_path.exists(), "Migration must never delete files from the old folder"
+
+    # PDF copied into the NEW root and served from there
+    copied = new_root / rel_path
+    assert copied.exists(), f"PDF must be copied to {copied}"
+    assert copied.read_bytes() == MINIMAL_PDF
+
+    # DB copied into the new root's database/ subfolder and now active
+    new_db = new_root / "database" / "radextract.db"
+    assert new_db.exists()
+    assert Path(settings.db_path).resolve() == new_db.resolve()
+
+    # The app still serves the uploaded PDF from the new root
+    resolved = resolve_storage_path(rel_path)
+    assert resolved is not None and resolved.exists()
+    assert str(new_root) in str(resolved)
+    assert resolved.read_bytes() == MINIMAL_PDF
+
+    # Project count still correct from the new DB
+    res = client.get("/api/settings/storage")
+    assert res.json()["project_count"] >= 1

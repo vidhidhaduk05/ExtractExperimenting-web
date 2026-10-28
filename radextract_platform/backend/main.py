@@ -66,6 +66,11 @@ async def lifespan(app: FastAPI):
         from database import stage_db_to_scratch, sync_scratch_to_persistent
         stage_db_to_scratch()
 
+    # Apply the user's saved data directory (Zotero-style single folder) before
+    # the database initializes, so the DB inside it is the one that opens.
+    from services.storage_settings_service import apply_persisted_storage
+    apply_persisted_storage()
+
     ensure_dirs()
     init_db()
     init_s3_buckets()

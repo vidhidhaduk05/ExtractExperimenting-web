@@ -1,6 +1,7 @@
 """Projects router: CRUD for systematic review projects."""
 from __future__ import annotations
 import json
+import logging
 import os
 import tempfile
 import uuid
@@ -327,6 +328,25 @@ async def delete_project(
 #  PICO Endpoints
 # ═══════════════════════════════════════════════════════════════════════
 
+def _load_project_criteria(row) -> "CriteriaLists":
+    """Read inclusion/exclusion criteria from the project row's JSON columns."""
+    from models import CriteriaLists
+
+    def _texts(raw: str) -> list[str]:
+        if not raw:
+            return []
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return []
+        return [str(item.get("text", "")).strip() for item in data if isinstance(item, dict) and str(item.get("text", "")).strip()]
+
+    return CriteriaLists(
+        inclusion=_texts(row["inclusion_criteria_json"]) if "inclusion_criteria_json" in row.keys() else [],
+        exclusion=_texts(row["exclusion_criteria_json"]) if "exclusion_criteria_json" in row.keys() else [],
+    )
+
+
 @router.get("/projects/{project_id}/pico", response_model=PICOResponse)
 async def get_pico(
     project_id: str,
@@ -334,13 +354,14 @@ async def get_pico(
     conn: DBBackend = Depends(get_db),
 ):
     row = conn.execute(
-        "SELECT pico_json FROM projects WHERE project_id = ?", (project_id,)
+        "SELECT pico_json, inclusion_criteria_json, exclusion_criteria_json FROM projects WHERE project_id = ?", (project_id,)
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user, min_role="viewer")
     pico = json.loads(row["pico_json"]) if row["pico_json"] else {}
     is_defined = any(v.strip() for v in pico.values() if isinstance(v, str))
+    criteria = _load_project_criteria(row)
     return PICOResponse(
         project_id=project_id,
         population=pico.get("population", ""),
@@ -348,6 +369,7 @@ async def get_pico(
         comparator=pico.get("comparator", ""),
         outcome=pico.get("outcome", ""),
         study_design=pico.get("study_design", ""),
+        criteria=criteria,
         is_defined=is_defined,
     )
 
@@ -372,14 +394,27 @@ async def update_pico(
         "outcome": body.outcome,
         "study_design": body.study_design,
     }
+    sets = ["pico_json = ?"]
+    params: list = [json.dumps(pico)]
+    if body.criteria is not None:
+        sets.append("inclusion_criteria_json = ?")
+        sets.append("exclusion_criteria_json = ?")
+        params.append(json.dumps([{"id": str(uuid.uuid4()), "text": t} for t in body.criteria.inclusion if t.strip()]))
+        params.append(json.dumps([{"id": str(uuid.uuid4()), "text": t} for t in body.criteria.exclusion if t.strip()]))
+    params.append(project_id)
     conn.execute(
-        "UPDATE projects SET pico_json = ? WHERE project_id = ?",
-        (json.dumps(pico), project_id),
+        f"UPDATE projects SET {', '.join(sets)} WHERE project_id = ?",
+        params,
     )
     conn.commit()
+    updated_row = conn.execute(
+        "SELECT inclusion_criteria_json, exclusion_criteria_json FROM projects WHERE project_id = ?",
+        (project_id,),
+    ).fetchone()
+    criteria = _load_project_criteria(updated_row)
     is_defined = any(v.strip() for v in pico.values())
     return PICOResponse(
-        project_id=project_id, is_defined=is_defined, **pico,
+        project_id=project_id, criteria=criteria, is_defined=is_defined, **pico,
     )
 
 
@@ -521,17 +556,15 @@ def _persist_protocol_extraction(conn, project_id: str, result: dict) -> None:
     }
 
     if (not inclusion or not exclusion) and has_pico:
-        try:
-            from services.search_string_generator import generate_criteria_from_pico
-            draft = generate_criteria_from_pico(pico)
-            if not inclusion and draft.get("inclusion"):
-                inclusion = [item["text"] for item in draft["inclusion"]]
-                result["inclusion"] = inclusion
-            if not exclusion and draft.get("exclusion"):
-                exclusion = [item["text"] for item in draft["exclusion"]]
-                result["exclusion"] = exclusion
-        except Exception:
-            pass
+        # No fabrication: criteria come only from the uploaded protocol or user
+        # edits. If the protocol had no criteria sections, they stay empty and
+        # the user adds them on the Protocol page.
+        logger = logging.getLogger("radextract.pico")
+        logger.info(
+            f"[PICO] Project {project_id}: protocol had no "
+            f"{'inclusion' if not inclusion else ''}{'/' if not inclusion and not exclusion else ''}"
+            f"{'exclusion' if not exclusion else ''} criteria sections; leaving empty for user entry."
+        )
 
     sets = ["pico_json = ?", "hypothesis = ?", "research_question = ?"]
     params = [

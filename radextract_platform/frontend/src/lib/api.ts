@@ -826,6 +826,11 @@ export interface SofTable {
 
 // ── PICO ──
 
+export interface CriteriaLists {
+  inclusion: string[];
+  exclusion: string[];
+}
+
 export interface PICO {
   project_id: string;
   population: string;
@@ -833,6 +838,7 @@ export interface PICO {
   comparator: string;
   outcome: string;
   study_design: string;
+  criteria?: CriteriaLists;
   is_defined: boolean;
 }
 
@@ -842,6 +848,24 @@ export interface PICOUpdate {
   comparator: string;
   outcome: string;
   study_design: string;
+  criteria?: CriteriaLists;
+}
+
+// ── Storage settings (single data directory) ──
+
+export interface StorageStatus {
+  status: string;
+  storage_root: string;
+  exists: boolean;
+  writable: boolean;
+  disk_free_gb: number | null;
+  project_count: number;
+  db_path: string;
+  db_inside_root: boolean;
+  moved_files?: boolean;
+  message?: string;
+  files_copied?: number;
+  errors?: string[];
 }
 
 // ── PICO Extraction ──
@@ -2085,6 +2109,14 @@ export const api = {
     request<PICO>(`/projects/${projectId}/pico`),
   updatePico: (projectId: string, data: PICOUpdate) =>
     request<PICO>(`/projects/${projectId}/pico`, { method: "PUT", body: JSON.stringify(data) }),
+
+  // Storage settings (single data directory)
+  getStorageSettings: () =>
+    request<StorageStatus>(`/settings/storage`),
+  updateStorageRoot: (storageRoot: string) =>
+    request<StorageStatus>(`/settings/storage`, { method: "PUT", body: JSON.stringify({ storage_root: storageRoot }) }),
+  migrateStorage: (targetRoot: string) =>
+    request<StorageStatus>(`/settings/storage/migrate`, { method: "POST", body: JSON.stringify({ target_root: targetRoot }) }),
   extractPico: async (projectId: string, file: File): Promise<ProtocolExtractionResponse> => {
     const isBrowser = typeof window !== "undefined";
     try {

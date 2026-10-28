@@ -58,12 +58,19 @@ class ProjectResponse(ORMBase):
 
 # ── PICO ──
 
+class CriteriaLists(BaseModel):
+    inclusion: list[str] = Field(default_factory=list)
+    exclusion: list[str] = Field(default_factory=list)
+
+
 class PICOUpdate(BaseModel):
     population: str = ""
     index_test: str = ""
     comparator: str = ""
     outcome: str = ""
     study_design: str = ""
+    # None = leave the saved criteria untouched; a value overwrites them.
+    criteria: Optional[CriteriaLists] = None
 
 
 class PICOResponse(BaseModel):
@@ -73,6 +80,7 @@ class PICOResponse(BaseModel):
     comparator: str = ""
     outcome: str = ""
     study_design: str = ""
+    criteria: CriteriaLists = Field(default_factory=CriteriaLists)
     is_defined: bool = False
 
 

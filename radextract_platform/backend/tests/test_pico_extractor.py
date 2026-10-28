@@ -248,6 +248,39 @@ class TestExtractPicoFromFile:
         with pytest.raises(ValueError, match="Unsupported"):
             extract_pico_from_file(str(bad_file), "document.xyz")
 
+    def test_docx_bulleted_criteria_one_item_per_bullet(self, tmp_path):
+        """A protocol DOCX with bulleted inclusion/exclusion lists: each bullet becomes one criterion string."""
+        try:
+            import docx
+        except ImportError:
+            pytest.skip("python-docx not installed")
+
+        docx_file = tmp_path / "protocol_criteria.docx"
+        doc = docx.Document()
+        doc.add_heading("Study Design", level=1)
+        doc.add_paragraph("Prospective multicenter cohort study.")
+        doc.add_heading("Inclusion Criteria", level=1)
+        for bullet in [
+            "Adults aged 18 years or older with radiographically confirmed PAM.",
+            "Angiographic follow-up of at least 12 months.",
+            "Peer-reviewed original research or clinical case series.",
+        ]:
+            doc.add_paragraph(bullet, style="List Bullet")
+        doc.add_heading("Exclusion Criteria", level=1)
+        for bullet in [
+            "Classic AVM with nidus or dural arteriovenous fistula.",
+            "Previous surgical or endovascular treatment of the lesion.",
+        ]:
+            doc.add_paragraph(bullet, style="List Bullet")
+
+        doc.save(str(docx_file))
+
+        result = extract_pico_from_file(str(docx_file), "protocol_criteria.docx")
+        assert len(result["inclusion"]) == 3, f"expected 3 inclusion criteria, got {result['inclusion']}"
+        assert any("18 years" in c for c in result["inclusion"])
+        assert len(result["exclusion"]) == 2, f"expected 2 exclusion criteria, got {result['exclusion']}"
+        assert any("nidus" in c for c in result["exclusion"])
+
     def test_extract_standard_protocol_with_explicit_criteria(self, tmp_path):
         """Standard clinical protocol with explicit inclusion and exclusion criteria."""
         content = """
@@ -289,8 +322,8 @@ Exclusion Criteria:
         assert any("intracranial hemorrhage" in c.lower() for c in result["exclusion"])
         assert any("aspects" in c.lower() for c in result["exclusion"])
 
-    def test_extract_protocol_auto_generates_criteria_when_missing(self):
-        """Protocol text without explicit criteria sections should auto-draft criteria from PICO."""
+    def test_extract_protocol_without_criteria_sections_returns_empty_lists(self):
+        """No fabrication: a protocol without criteria sections yields empty lists, no error."""
         content = """
 Population: Patients with symptomatic intracranial atherosclerotic stenosis.
 Index Test: High-resolution vessel wall MRI.
@@ -299,7 +332,23 @@ Outcome: Luminal stenosis percentage and plaque intraplaque hemorrhage.
 Study Design: Prospective cross-sectional diagnostic accuracy study.
 """
         result = extract_pico_from_text(content)
-        assert len(result["inclusion"]) > 0
-        assert any("atherosclerotic stenosis" in c.lower() for c in result["inclusion"])
-        assert len(result["exclusion"]) > 0
+        assert result["inclusion"] == []
+        assert result["exclusion"] == []
+        # PICO fields still extracted
+        assert "atherosclerotic stenosis" in result["population"].lower()
+
+    def test_extract_criteria_sentence_patterns(self):
+        """Sentence patterns 'we will include studies that…' / 'we will exclude…' become criteria."""
+        content = """
+Study Design: Prospective cohort study.
+We will include studies that report angiographic follow-up of at least 12 months.
+We will include studies with adult participants aged 18 or older.
+We will exclude studies without radiographic confirmation of the lesion.
+We will exclude case reports with fewer than five patients.
+"""
+        result = extract_pico_from_text(content)
+        assert len(result["inclusion"]) >= 2
+        assert any("angiographic follow-up" in c.lower() for c in result["inclusion"])
+        assert len(result["exclusion"]) >= 2
+        assert any("case reports" in c.lower() for c in result["exclusion"])
 

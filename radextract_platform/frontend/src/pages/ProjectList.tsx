@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { Plus, Folder, Calendar, Sparkles, RefreshCw } from "lucide-react";
+import { StorageSettingsCard } from "../components/common/StorageSettingsCard";
 
 export function ProjectList() {
   const { data: rawProjects, isLoading, error, refetch } = useQuery({
@@ -44,6 +45,9 @@ export function ProjectList() {
             Loading research projects...
           </div>
         )}
+
+        {/* Storage: where all review data lives (Zotero-style single folder) */}
+        <StorageSettingsCard />
 
         {error && (
           <div role="alert" className="p-5 rounded-lg border border-[#d2c2cb] bg-white text-[#4f444b] shadow-2xs space-y-3">

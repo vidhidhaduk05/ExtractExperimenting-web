@@ -266,6 +266,27 @@ export function ScreeningPage() {
     refetchInterval: 5000,
   });
 
+  // Protocol PICO + eligibility criteria for the slide-over criteria panel —
+  // always available while deciding, so the screener never has to leave the study.
+  const { data: picoData } = useQuery({
+    queryKey: ["pico", projectId],
+    queryFn: () => api.getPico(projectId!),
+    enabled: !!projectId,
+  });
+  const { data: criteriaData, isLoading: criteriaLoading } = useQuery({
+    queryKey: ["criteria", projectId],
+    queryFn: () => api.getCriteria(projectId!),
+    enabled: !!projectId,
+  });
+  const inclusionCriteria = criteriaData?.inclusion || [];
+  const exclusionCriteria = criteriaData?.exclusion || [];
+  const picoFields = [
+    { key: "population", label: "Population", letter: "P", color: "p-3 bg-indigo-50/70 border border-indigo-100 rounded-lg text-indigo-900" },
+    { key: "index_test", label: "Intervention / Index Test", letter: "I", color: "p-3 bg-sky-50/70 border border-sky-100 rounded-lg text-sky-900" },
+    { key: "comparator", label: "Comparator", letter: "C", color: "p-3 bg-purple-50/70 border border-purple-100 rounded-lg text-purple-900" },
+    { key: "outcome", label: "Outcomes", letter: "O", color: "p-3 bg-emerald-50/70 border border-emerald-100 rounded-lg text-emerald-900" },
+  ] as const;
+
   const startBatchRobMutation = useMutation({
     mutationFn: () => api.startRobRun(projectId!),
     onSuccess: () => {
@@ -1406,73 +1427,61 @@ export function ScreeningPage() {
                   <span className="text-[10px] bg-[#3a0f34] text-[#fbf9f4] font-semibold px-2 py-0.5 rounded">Automated Triage</span>
                 </div>
 
-                {/* PICO Cards */}
+                {/* PICO Cards — from the project's extracted protocol */}
                 <div className="space-y-2.5">
-                  <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-lg">
-                    <div className="font-bold text-indigo-900 flex items-center gap-1.5 mb-1 text-[11px]">
-                      <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">P</span>
-                      <span>Population</span>
+                  {picoFields.map(({ key, label, letter, color }) => (
+                    <div key={key} className={color}>
+                      <div className="font-bold text-inherit flex items-center gap-1.5 mb-1 text-[11px]">
+                        <span className="w-4 h-4 rounded-full bg-[#3a0f34] text-white flex items-center justify-center text-[10px] font-black">{letter}</span>
+                        <span>{label}</span>
+                      </div>
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        {picoData?.[key]?.trim() || "Not defined yet — upload the protocol on the Protocol page."}
+                      </p>
                     </div>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Patients with pure arterial malformations (PAM) or tortuous dilated intracranial arteries without nidus or direct arteriovenous shunts.
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-sky-50/70 border border-sky-100 rounded-lg">
-                    <div className="font-bold text-sky-900 flex items-center gap-1.5 mb-1 text-[11px]">
-                      <span className="w-4 h-4 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-black">I</span>
-                      <span>Intervention</span>
-                    </div>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Endovascular embolization (coiling, onyx, flow diverter stenting), microsurgical clipping/resection, or conservative clinical surveillance.
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-lg">
-                    <div className="font-bold text-purple-900 flex items-center gap-1.5 mb-1 text-[11px]">
-                      <span className="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">C</span>
-                      <span>Comparator</span>
-                    </div>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Conservative angiographic follow-up vs active interventional occlusion or historical lesion cohorts.
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-lg">
-                    <div className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1 text-[11px]">
-                      <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">O</span>
-                      <span>Outcomes</span>
-                    </div>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Aneurysm co-occurrence, angiographic obliteration, recurrent hemorrhage, ischemic stroke, and modified Rankin Scale (mRS).
-                    </p>
-                  </div>
+                  ))}
                 </div>
 
-                {/* Mandatory Inclusion & Explicit Exclusion */}
+                {/* Inclusion & Exclusion — from the project's protocol criteria */}
                 <div className="space-y-2.5 pt-1">
                   <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg">
                     <span className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
                       <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                      Mandatory Inclusion Criteria
+                      Inclusion Criteria
                     </span>
-                    <ul className="text-[11px] text-emerald-800 space-y-1 list-disc list-inside">
-                      <li>Human subjects (in vivo) with radiographically confirmed intracranial PAM.</li>
-                      <li>Reports angiographic details (DSA, CTA, or 3T MRA) and clinical management.</li>
-                      <li>Peer-reviewed original research, cohort studies, or clinical case series.</li>
-                    </ul>
+                    {criteriaLoading ? (
+                      <p className="text-[11px] text-emerald-800">Loading criteria...</p>
+                    ) : inclusionCriteria.length > 0 ? (
+                      <ul className="text-[11px] text-emerald-800 space-y-1 list-disc list-inside">
+                        {inclusionCriteria.map((c) => (
+                          <li key={c.id}>{c.text}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[11px] text-emerald-800/70">
+                        No inclusion criteria defined — add them on the Protocol page.
+                      </p>
+                    )}
                   </div>
 
                   <div className="p-3 bg-rose-50/60 border border-rose-200 rounded-lg">
                     <span className="font-bold text-rose-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
                       <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                      Explicit Exclusion Disqualifiers
+                      Exclusion Criteria
                     </span>
-                    <ul className="text-[11px] text-rose-800 space-y-1 list-disc list-inside">
-                      <li>Classic AVMs with parenchymal nidus or early draining cortical veins.</li>
-                      <li>Dural arteriovenous fistulas (dAVF) or cavernous hemangiomas without PAM.</li>
-                      <li>Animal models, in vitro hydrodynamic bench studies, or non-English abstracts.</li>
-                    </ul>
+                    {criteriaLoading ? (
+                      <p className="text-[11px] text-rose-800">Loading criteria...</p>
+                    ) : exclusionCriteria.length > 0 ? (
+                      <ul className="text-[11px] text-rose-800 space-y-1 list-disc list-inside">
+                        {exclusionCriteria.map((c) => (
+                          <li key={c.id}>{c.text}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[11px] text-rose-800/70">
+                        No exclusion criteria defined — add them on the Protocol page.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

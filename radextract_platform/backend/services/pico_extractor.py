@@ -317,7 +317,40 @@ def _extract_criteria_sections(text: str) -> tuple[list[str], list[str]]:
         if exc_match:
             exc_lines = [l.strip() for l in exc_match.group(1).split("\n") if l.strip()]
 
+    # 3. Sentence-pattern fallback: "we will include studies that…", "we will exclude…"
+    if not inc_lines:
+        inc_lines = _criteria_sentences(text, include=True)
+    if not exc_lines:
+        exc_lines = _criteria_sentences(text, include=False)
+
     return _criteria_lines(inc_lines), _criteria_lines(exc_lines)
+
+
+_CRITERIA_SENTENCE_PATTERNS = {
+    True: [  # inclusion
+        r"(?:we|this (?:review|study)|the review)\s+(?:will|shall)?\s*include\s+(?:studies|trials|articles|reports|participants|patients|subjects)?\s*(?:that|which|if|with|where)?\s*[:\-]?\s*([^.;\n]+)",
+        r"(?:inclusion criteria(?:\s+(?:are|were|is))?)\s*[:\-]\s*([^.;\n]+)",
+    ],
+    False: [  # exclusion
+        r"(?:we|this (?:review|study)|the review)\s+(?:will|shall)?\s*exclude\s+(?:studies|trials|articles|reports|participants|patients|subjects)?\s*(?:that|which|if|with|where)?\s*[:\-]?\s*([^.;\n]+)",
+        r"(?:exclusion criteria(?:\s+(?:are|were|is))?)\s*[:\-]\s*([^.;\n]+)",
+    ],
+}
+
+
+def _criteria_sentences(text: str, include: bool) -> list[str]:
+    """One criterion per sentence matching 'we will include/exclude …' patterns."""
+    criteria: list[str] = []
+    seen: set[str] = set()
+    for pattern in _CRITERIA_SENTENCE_PATTERNS[include]:
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            sentence = match.group(0).strip()
+            sentence = re.sub(r"\s+", " ", sentence)
+            if len(sentence) < 15 or sentence.lower() in seen:
+                continue
+            seen.add(sentence.lower())
+            criteria.append(sentence)
+    return criteria
 
 
 def _db_key(label: str) -> str:
@@ -615,17 +648,9 @@ Return JSON with exact keys:
         except Exception:
             pass
 
-    # 5. If criteria are still missing, auto-draft criteria from extracted PICO
-    if (not result.get("inclusion") or not result.get("exclusion")) and (result.get("population") or result.get("index_test")):
-        try:
-            from services.search_string_generator import generate_criteria_from_pico
-            draft = generate_criteria_from_pico(result)
-            if not result.get("inclusion") and draft.get("inclusion"):
-                result["inclusion"] = [item["text"] for item in draft["inclusion"]]
-            if not result.get("exclusion") and draft.get("exclusion"):
-                result["exclusion"] = [item["text"] for item in draft["exclusion"]]
-        except Exception:
-            pass
+    # 5. No fabrication: if the protocol has no criteria sections or sentence
+    # patterns, inclusion/exclusion stay empty lists. The user adds them on
+    # the Protocol page.
 
     if found_count >= 4:
         result["extraction_confidence"] = "high"
