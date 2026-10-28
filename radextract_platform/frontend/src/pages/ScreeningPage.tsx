@@ -5,7 +5,7 @@ import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags } from "../lib/recordCollaboration";
 import { RecordCollaborationPanel, TagBadges, TagFilter } from "../components/common/RecordCollaboration";
 import { useState, useRef, useMemo, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useIsMutating } from "@tanstack/react-query";
 import {
   api,
@@ -74,6 +74,7 @@ import { ExploratoryScreeningView } from "../components/screening/ExploratoryScr
 
 export function ScreeningPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"standard" | "exploratory">("standard");
   const bookmarks = useBookmarks(projectId);
   const tagIndex = useProjectTags(projectId);
@@ -437,15 +438,48 @@ export function ScreeningPage() {
     });
   }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarkSet, tagIndex.data, tagFilter]);
 
+  // Listen for external study selection (e.g. from Questions dock sidepanel)
+  useEffect(() => {
+    const handleExternalSelect = (e: Event) => {
+      const customEvent = e as CustomEvent<{ studyId: string }>;
+      if (customEvent.detail && customEvent.detail.studyId) {
+        const targetId = customEvent.detail.studyId;
+        // If the target study is currently excluded by filters, reset filter to 'all' so it is visible
+        const isInFiltered = filteredStudies.some((s) => s.study_id === targetId);
+        if (!isInFiltered) {
+          setStatusFilter("all");
+          setStageFilter("all");
+          setSearchQuery("");
+        }
+        setSelectedStudyId(targetId);
+      }
+    };
+    window.addEventListener("select-study-abstract", handleExternalSelect);
+    return () => window.removeEventListener("select-study-abstract", handleExternalSelect);
+  }, [filteredStudies]);
+
+  // Check URL studyId query parameter on mount or change
+  useEffect(() => {
+    const studyIdParam = searchParams.get("studyId");
+    if (studyIdParam && studyIdParam !== selectedStudyId) {
+      const isInFiltered = filteredStudies.some((s) => s.study_id === studyIdParam);
+      if (!isInFiltered) {
+        setStatusFilter("all");
+        setStageFilter("all");
+      }
+      setSelectedStudyId(studyIdParam);
+    }
+  }, [searchParams]);
+
   // Auto-select first study in filtered set if current selectedStudyId is filtered out
   useEffect(() => {
     if (filteredStudies.length > 0) {
       const isVisible = filteredStudies.some((s) => s.study_id === selectedStudyId);
-      if (!isVisible) {
+      if (!isVisible && !searchParams.get("studyId")) {
         setSelectedStudyId(filteredStudies[0].study_id);
       }
     }
-  }, [statusFilter, stageFilter, filteredStudies, selectedStudyId]);
+  }, [statusFilter, stageFilter, filteredStudies, selectedStudyId, searchParams]);
 
   // Selection and keyboard actions use the same visible record set as all filters.
   const selectedStudy = filteredStudies.find(s => s.study_id === selectedStudyId) || filteredStudies[0] || (failedDecision ? studyList.find(s => s.study_id === failedDecision.studyId) : null) || null;
@@ -1199,7 +1233,10 @@ export function ScreeningPage() {
             {/* QUESTIONS */}
             <button
               type="button"
-              onClick={() => handleBundleClick("awaiting_clarification")}
+              onClick={() => {
+                handleBundleClick("awaiting_clarification");
+                window.dispatchEvent(new CustomEvent("open-clarification-dock"));
+              }}
               className={`text-left rounded px-3 py-1.5 transition-all cursor-pointer border ${
                 statusFilter === "awaiting_clarification"
                   ? "bg-[#ffdea6]/30 border-[#3a0f34] ring-1 ring-[#3a0f34]"

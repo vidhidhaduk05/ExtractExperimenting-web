@@ -33,6 +33,9 @@ import { cn } from "../lib/utils";
 import { ErrorBoundary } from "./common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "./common/ClarificationNotificationCenter";
 import { GoogleTasksPanel } from "./common/GoogleTasksPanel";
+import { ClarificationSidePanel } from "./screening/ClarificationSidePanel";
+import type { ClarificationQuestion } from "../lib/api";
+import { GripVertical } from "lucide-react";
 
 interface NavItemDef {
   to: (projectId?: string) => string;
@@ -126,7 +129,20 @@ export function AppShell() {
     return true;
   });
 
-  const [activeDockTab, setActiveDockTab] = useState<"todos" | "tasks" | "results" | "prisma">("todos");
+  const [activeDockTab, setActiveDockTab] = useState<"todos" | "tasks" | "questions" | "results" | "prisma">("todos");
+
+  // Adjustable dock width state (persisted in localStorage, default 380px, clamped [280px, 720px])
+  const [dockWidth, setDockWidth] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("radextract_dock_width");
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 280 && parsed <= 800) return parsed;
+      }
+    }
+    return 380;
+  });
+  const [isResizing, setIsResizing] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
   // Fetch project details for breadcrumbs
@@ -153,6 +169,54 @@ export function AppShell() {
     enabled: !!projectId,
     staleTime: 10000,
   });
+
+  // Pending clarifications query for the Questions tab badge
+  const { data: pendingClarifications = [] } = useQuery<ClarificationQuestion[]>({
+    queryKey: ["pending-clarifications", projectId],
+    queryFn: () => (projectId ? api.listClarifications(projectId, "pending") : Promise.resolve([])),
+    enabled: !!projectId,
+    refetchInterval: 6000,
+  });
+
+  // Listen for global custom event to open Questions dock tab from anywhere (e.g. ScreeningPage Questions bundle button)
+  useEffect(() => {
+    const handleOpenQuestions = () => {
+      setIsDockOpen(true);
+      setActiveDockTab("questions");
+    };
+    window.addEventListener("open-clarification-dock", handleOpenQuestions);
+    return () => window.removeEventListener("open-clarification-dock", handleOpenQuestions);
+  }, []);
+
+  // Mouse move and mouse up for resizing the right dock
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Dock is on the right side: width = window.innerWidth - mouseX
+      const newWidth = Math.min(Math.max(window.innerWidth - e.clientX, 280), Math.min(window.innerWidth * 0.75, 800));
+      setDockWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      localStorage.setItem("radextract_dock_width", dockWidth.toString());
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, dockWidth]);
 
   // RoB summary query
   const { data: robSummary } = useQuery({
@@ -506,16 +570,29 @@ export function AppShell() {
             />
           )}
 
-          {/* 4. RIGHT DOCK (340px) - Paper background, 1px hairline border-l */}
+          {/* 4. RIGHT DOCK (Adjustable width) - Paper background, 1px hairline border-l */}
           <aside
+            style={{ width: typeof window !== "undefined" && window.innerWidth >= 1024 ? `${dockWidth}px` : undefined }}
             className={cn(
-              "border-l border-[#d2c2cb] bg-[#fbf9f4] flex flex-col z-50 select-none transition-all duration-200",
+              "border-l border-[#d2c2cb] bg-[#fbf9f4] flex flex-col z-50 select-none",
+              isResizing ? "transition-none select-none" : "transition-all duration-200",
               // Mobile (<1024px): Slide-over drawer
-              "fixed inset-y-0 right-0 w-[340px] max-w-[85vw] shadow-2xl lg:shadow-none lg:static lg:h-full",
+              "fixed inset-y-0 right-0 w-[340px] max-w-[85vw] shadow-2xl lg:shadow-none lg:static lg:h-full relative",
               isDockOpen ? "translate-x-0" : "translate-x-full lg:hidden"
             )}
             aria-label="Review workspace dock"
           >
+            {/* Desktop Drag Handle for Adjustable Width */}
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsResizing(true);
+              }}
+              className="hidden lg:flex absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize items-center justify-center group z-50 hover:bg-[#814d75]/10 transition-colors"
+              title="Drag to resize dock width"
+            >
+              <div className="w-[3px] h-8 rounded-full bg-[#d2c2cb] group-hover:bg-[#814d75] group-hover:h-12 transition-all shadow-xs" />
+            </div>
             {/* Dock Tab Header (Hairline Tab Row) */}
             <div className="h-11 border-b border-[#d2c2cb] bg-[#fbf9f4] flex items-center justify-between px-2">
               <div className="flex gap-1 text-xs font-semibold">
@@ -536,7 +613,7 @@ export function AppShell() {
                   type="button"
                   onClick={() => setActiveDockTab("tasks")}
                   className={cn(
-                    "px-2.5 py-2 rounded-t transition-colors",
+                    "px-2 py-2 rounded-t transition-colors",
                     activeDockTab === "tasks"
                       ? "text-[#3a0f34] border-b-2 border-[#3a0f34] font-bold"
                       : "text-[#62535d] hover:text-[#3a0f34]"
@@ -544,6 +621,24 @@ export function AppShell() {
                   title="Google Tasks style custom to-do list"
                 >
                   Tasks
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDockTab("questions")}
+                  className={cn(
+                    "px-2 py-2 rounded-t transition-colors flex items-center gap-1",
+                    activeDockTab === "questions"
+                      ? "text-[#3a0f34] border-b-2 border-[#3a0f34] font-bold"
+                      : "text-[#62535d] hover:text-[#3a0f34]"
+                  )}
+                  title="Co-Scientist clarification questions"
+                >
+                  <span>Questions</span>
+                  {pendingClarifications.length > 0 && (
+                    <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold rounded-full bg-[#ffdea6] text-[#3a0f34] border border-[#d2c2cb]">
+                      {pendingClarifications.length}
+                    </span>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -584,6 +679,13 @@ export function AppShell() {
 
             {/* Dock Tab Content (Hairline-separated list rows, no card boxes) */}
             <div className="flex-1 overflow-y-auto">
+              {/* TAB: QUESTIONS (Co-Scientist Clarifications MCQ Side Panel) */}
+              {activeDockTab === "questions" && (
+                <div className="h-full">
+                  <ClarificationSidePanel projectId={projectId} />
+                </div>
+              )}
+
               {/* TAB: GOOGLE TASKS (User Tasks & Notes) */}
               {activeDockTab === "tasks" && (
                 <div className="h-full">
