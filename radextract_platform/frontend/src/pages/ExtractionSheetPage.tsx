@@ -203,16 +203,24 @@ export function ExtractionSheetPage() {
       // Status filter
       if (statusFilter !== "all") {
         const studyCells = cellsMap[study.study_id] || {};
-        const cellValues = variables.map((v) => studyCells[v.variable_id]);
 
         if (statusFilter === "verified") {
-          const hasUnverified = cellValues.some((c) => !c || !c.is_verified);
+          const hasUnverified = variables.some((v) => {
+            const c = studyCells[v.variable_id];
+            return !c || !c.is_verified;
+          });
           if (hasUnverified) return false;
         } else if (statusFilter === "pending") {
-          const allVerified = cellValues.length > 0 && cellValues.every((c) => c && c.is_verified);
+          const allVerified = variables.length > 0 && variables.every((v) => {
+            const c = studyCells[v.variable_id];
+            return c && c.is_verified;
+          });
           if (allVerified) return false;
         } else if (statusFilter === "missing") {
-          const hasMissing = cellValues.some((c) => !c || !c.value || c.value === "NR" || c.value === "-99");
+          const hasMissing = variables.some((v) => {
+            const c = studyCells[v.variable_id];
+            return !c || !c.value || c.value === "NR" || c.value === "-99";
+          });
           if (!hasMissing) return false;
         }
       }

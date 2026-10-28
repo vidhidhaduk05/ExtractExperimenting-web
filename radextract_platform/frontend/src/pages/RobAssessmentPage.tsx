@@ -26,12 +26,8 @@ import {
   Eye,
   PanelLeftClose,
   PanelLeftOpen,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
   Quote as QuoteIcon,
   Zap,
-  BookOpen,
 } from "lucide-react";
 import { judgmentColor, judgmentLabel, judgmentDotColor, cn } from "../lib/utils";
 import { ActualPdfViewer, type PdfHighlightItem } from "../components/common/ActualPdfViewer";
@@ -137,6 +133,17 @@ export function RobAssessmentPage() {
     }
   }, [assessment]);
 
+  // Memoize domain definition map for O(1) lookups
+  const domainDefMap = useMemo(() => {
+    const map = new Map<string, any>();
+    if (assessment?.tool_definition?.domains) {
+      for (const d of assessment.tool_definition.domains) {
+        map.set(d.key, d);
+      }
+    }
+    return map;
+  }, [assessment?.tool_definition?.domains]);
+
   // Flatten signaling questions list for linear hotkey navigation
   const allSignalingQuestions = useMemo(() => {
     if (!assessment) return [];
@@ -148,9 +155,10 @@ export function RobAssessmentPage() {
     }> = [];
     let idx = 1;
     for (const dj of assessment.domain_judgments) {
-      const domainDef = assessment.tool_definition?.domains.find((d) => d.key === dj.domain_key);
+      const domainDef = domainDefMap.get(dj.domain_key);
+      const sqMap = new Map(domainDef?.signaling_questions?.map((q: any) => [q.key, q]));
       for (const sa of dj.signaling_answers) {
-        const sqDef = domainDef?.signaling_questions.find((q) => q.key === sa.question_key);
+        const sqDef = sqMap.get(sa.question_key);
         list.push({
           answer: sa,
           domain: dj,
@@ -160,7 +168,7 @@ export function RobAssessmentPage() {
       }
     }
     return list;
-  }, [assessment]);
+  }, [assessment, domainDefMap]);
 
   // Map RoB signaling questions to spatial PDF highlight items for ActualPdfViewer
   const pdfHighlightItems = useMemo<PdfHighlightItem[]>(() => {
@@ -464,30 +472,39 @@ export function RobAssessmentPage() {
     }
   }, [isReviewMode, assessment]);
 
+  const toolDef = assessment?.tool_definition;
+  const hasAiSuggestions = useMemo(() => {
+    if (!assessment?.domain_judgments) return false;
+    return assessment.domain_judgments.some((dj) =>
+      dj.signaling_answers.some((sa) => sa.ai_answer)
+    );
+  }, [assessment?.domain_judgments]);
+
+  // Compute NOS Star scores if using NOS tool (memoized)
+  const isNosTool = assessment?.tool === "nos";
+  const nosStars = useMemo(() => {
+    if (!isNosTool || !assessment?.domain_judgments) return [];
+    return assessment.domain_judgments.map((dj) => {
+      const stars = dj.signaling_answers.filter((sa) => sa.answer === "yes").length;
+      return { domain_key: dj.domain_key, label: dj.domain_label, stars };
+    });
+  }, [isNosTool, assessment?.domain_judgments]);
+
+  const totalNosStars = useMemo(() => {
+    return nosStars.reduce((acc, curr) => acc + curr.stars, 0);
+  }, [nosStars]);
+
+  // Filter domain judgments when Review Mode is active (memoized)
+  const displayedDomainJudgments = useMemo(() => {
+    if (!assessment?.domain_judgments) return [];
+    if (!isReviewMode) return assessment.domain_judgments;
+    return assessment.domain_judgments.filter((dj) =>
+      dj.signaling_answers.some((sa) => sa.needs_human_review === 1)
+    );
+  }, [isReviewMode, assessment?.domain_judgments]);
+
   if (isLoading) return <div className="p-8 text-gray-400">Loading risk of bias assessment...</div>;
   if (!assessment) return <div className="p-8 text-gray-400">Assessment not found.</div>;
-
-  const toolDef = assessment.tool_definition;
-  const hasAiSuggestions = assessment.domain_judgments.some((dj) =>
-    dj.signaling_answers.some((sa) => sa.ai_answer)
-  );
-
-  // Compute NOS Star scores if using NOS tool
-  const isNosTool = assessment.tool === "nos";
-  const nosStars = isNosTool
-    ? assessment.domain_judgments.map((dj) => {
-        const stars = dj.signaling_answers.filter((sa) => sa.answer === "yes").length;
-        return { domain_key: dj.domain_key, label: dj.domain_label, stars };
-      })
-    : [];
-  const totalNosStars = nosStars.reduce((acc, curr) => acc + curr.stars, 0);
-
-  // Filter domain judgments when Review Mode is active
-  const displayedDomainJudgments = isReviewMode
-    ? assessment.domain_judgments.filter((dj) =>
-        dj.signaling_answers.some((sa) => sa.needs_human_review === 1)
-      )
-    : assessment.domain_judgments;
 
   return (
     <div className="flex flex-col h-screen bg-[#ECE9E2] overflow-hidden font-sans">
@@ -767,12 +784,13 @@ export function RobAssessmentPage() {
           {/* Main Scrollable Review Area: Domains & Signaling Questions */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {displayedDomainJudgments.map((dj) => {
-              const domainDef = toolDef?.domains.find((d) => d.key === dj.domain_key);
+              const domainDef = domainDefMap.get(dj.domain_key);
               const isExpanded = expandedDomains.has(dj.domain_key);
               const allVerified = dj.signaling_answers.every((sa) => sa.human_verified === 1);
               const flaggedInDomain = dj.signaling_answers.filter(
                 (sa) => sa.needs_human_review === 1
               ).length;
+              const answerMap = new Map(dj.signaling_answers.map((a) => [a.question_key, a]));
 
               return (
                 <div key={dj.judgment_id} className="rounded-2xl border border-[#381A61]/10 bg-white shadow-xs overflow-hidden">
@@ -824,7 +842,7 @@ export function RobAssessmentPage() {
                   {isExpanded && domainDef && (
                     <div className="p-4 space-y-3.5 bg-[#FAF9F3]/40">
                       {domainDef.signaling_questions.map((sq) => {
-                        const sa = dj.signaling_answers.find((a) => a.question_key === sq.key);
+                        const sa = answerMap.get(sq.key);
                         if (!sa) return null;
                         if (isReviewMode && sa.needs_human_review !== 1) return null;
 

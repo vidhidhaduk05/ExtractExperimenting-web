@@ -398,8 +398,8 @@ export const LandingPage: React.FC = () => {
         const pctY = parseFloat(note.dataset.y || "10");
         const rot = parseFloat(note.dataset.rot || "0");
 
-        let left = Math.max(16, Math.min(bW - nW - 16, (pctX / 100) * bW));
-        let top = Math.max(60, Math.min(bH - nH - 16, (pctY / 100) * bH));
+        const left = Math.max(16, Math.min(bW - nW - 16, (pctX / 100) * bW));
+        const top = Math.max(60, Math.min(bH - nH - 16, (pctY / 100) * bH));
 
         note.style.left = left + "px";
         note.style.top = top + "px";

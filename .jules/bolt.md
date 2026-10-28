@@ -17,3 +17,7 @@
 ## 2026-03-31 - Memoizing Multi-Pass Flow & Dashboard Aggregation Logic
 **Learning:** Computing live PRISMA diagram counts, dual-reviewer agreement matrices, and filtered study lists at the top-level of pages without `useMemo` causes redundant multi-pass array iterations on every polling interval or UI state change.
 **Action:** Wrapped `computeLivePrismaData` in `PrismaFlowPage`, study filtering & bookmark counts in `StudyList`, agreement/kappa metrics in `DualBlindedDashboard`, and factor classifications in `GradePage` in `useMemo`.
+
+## 2026-03-31 - O(1) Map Lookups & Short-Circuit Predicates in Domain Appraisal and Grid Filtering
+**Learning:** Executing `.find()` inside nested render loops (e.g. matching signaling questions to domain definitions in `RobAssessmentPage`) or creating intermediate arrays via `.map()` inside `.filter()` predicates (e.g. `ExtractionSheetPage`) produces quadratic lookups and garbage collection churn on every keystroke or selection change.
+**Action:** Pre-indexed domain definitions into a `Map<string, DomainDef>` in `RobAssessmentPage`, converted signaling answer lookups to a `Map`, memoized `studiesData` in `MetaAnalysisPage`, and replaced intermediate `.map()` array allocations in `ExtractionSheetPage` filter callbacks with short-circuiting `.some()`/`.every()` predicates.
