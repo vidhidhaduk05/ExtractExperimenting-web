@@ -32,8 +32,8 @@ _NON_ALNUM_RE = re.compile(r"\W+")
 try:
     from Levenshtein import ratio as _lev_ratio
 
-    @lru_cache(maxsize=2048)
-    def _title_similarity(a: str, b: str) -> float:
+    @lru_cache(maxsize=4096)
+    def _title_similarity(a: str, b: str, threshold: float = TITLE_SIMILARITY_THRESHOLD) -> float:
         if a == b:
             return 1.0
         la, lb = len(a), len(b)
@@ -43,7 +43,7 @@ try:
         # Fast path: Mathematical upper bound on Levenshtein ratio based on string lengths.
         # Evaluated BEFORE lowercasing to skip string allocations for dissimilar titles.
         min_len = la if la < lb else lb
-        if (2 * min_len) / (la + lb) < TITLE_SIMILARITY_THRESHOLD:
+        if (2 * min_len) / (la + lb) < threshold:
             return 0.0
 
         a_lower, b_lower = a.lower(), b.lower()
@@ -56,15 +56,15 @@ try:
 
         min_len = la if la < lb else lb
         max_ratio = (2 * min_len) / (la + lb)
-        if max_ratio < TITLE_SIMILARITY_THRESHOLD:
+        if max_ratio < threshold:
             return 0.0
 
         return _lev_ratio(a_lower, b_lower)
 except ImportError:
     import difflib
 
-    @lru_cache(maxsize=2048)
-    def _title_similarity(a: str, b: str) -> float:
+    @lru_cache(maxsize=4096)
+    def _title_similarity(a: str, b: str, threshold: float = TITLE_SIMILARITY_THRESHOLD) -> float:
         # Fast path 1: Exact string identity
         if a == b:
             return 1.0
@@ -76,7 +76,7 @@ except ImportError:
         # SequenceMatcher ratio is defined as 2 * M / (la + lb), where M <= min(la, lb).
         # Evaluated BEFORE lowercasing to skip string allocations for dissimilar titles.
         min_len = la if la < lb else lb
-        if (2 * min_len) / (la + lb) < TITLE_SIMILARITY_THRESHOLD:
+        if (2 * min_len) / (la + lb) < threshold:
             return 0.0
 
         a_lower, b_lower = a.lower(), b.lower()
@@ -153,13 +153,93 @@ def _author_overlap(a1: str, a2: str) -> float:
     return _author_overlap_sets(s1, s2)
 
 
-def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DBBackend] = None) -> dict:
+# Blocking caps: a generic title-phrase bucket shared by an entire PubMed search
+# (e.g. every title starts "Cerebrovascular outcomes and...") must not explode
+# into an O(N^2) cross-product. Blocks larger than this are skipped for the
+# title-word key — those pairs are still covered by the surname/year key.
+MAX_TITLE_BLOCK_SIZE = 30
+
+
+def _first_surname_prefix(authors: str, prefix_len: int = 3) -> str:
+    """First author surname prefix (default 3 chars) for blocking."""
+    if not authors:
+        return ""
+    parts = _AUTHOR_DELIM_RE.split(authors)
+    words = parts[0].strip().split() if parts else []
+    if not words:
+        return ""
+    return words[0].lower()[:prefix_len]
+
+
+def _title_block_key(title: str, words: int = 6) -> str:
+    """First N normalized title words as a blocking key."""
+    parts = _normalize_title(title).split()
+    return " ".join(parts[:words]) if len(parts) >= words else ""
+
+
+def find_candidate_pairs(
+    studies: list[dict],
+    title_threshold: float = TITLE_SIMILARITY_THRESHOLD,
+    author_threshold: float = 0.50,
+) -> set[tuple[int, int]]:
+    """Generate candidate pairs via blocking instead of a full O(N^2) scan.
+
+    Blocking keys (a pair is a candidate if it shares ANY key):
+      - (publication_year // 2, first-author surname prefix)  — corroborated
+      - first 6 normalized title words — capped: generic phrase buckets with
+        more than MAX_TITLE_BLOCK_SIZE studies are skipped (they would
+        otherwise collide every study sharing the search terms)
+
+    Deterministic: same studies -> same candidate set, always.
+    """
+    n = len(studies)
+    candidates: set[tuple[int, int]] = set()
+
+    surname_year: dict[tuple, list[int]] = {}
+    title_words: dict[str, list[int]] = {}
+    for i, s in enumerate(studies):
+        year = s.get("publication_year")
+        surname = _first_surname_prefix(s.get("authors", ""))
+        if surname and year:
+            surname_year.setdefault((year // 2, surname), []).append(i)
+        key = _title_block_key(s.get("title", ""))
+        if key:
+            title_words.setdefault(key, []).append(i)
+
+    # Surname+year blocks are corroborated by two independent fields — keep
+    # the cross-product even for larger blocks.
+    for indices in surname_year.values():
+        for a in range(len(indices)):
+            for b in range(a + 1, len(indices)):
+                candidates.add((indices[a], indices[b]))
+
+    # Title-word blocks: skip oversized generic buckets.
+    for indices in title_words.values():
+        if len(indices) > MAX_TITLE_BLOCK_SIZE:
+            continue
+        for a in range(len(indices)):
+            for b in range(a + 1, len(indices)):
+                candidates.add((indices[a], indices[b]))
+
+    return candidates
+
+
+def deduplicate_studies(
+    project_id: str,
+    auto_mark: bool = True,
+    db: Optional[DBBackend] = None,
+    title_threshold: float = TITLE_SIMILARITY_THRESHOLD,
+    author_threshold: float = 0.50,
+) -> dict:
     """Detect and optionally mark duplicate studies in a project.
 
     Args:
         project_id: The project to deduplicate.
         auto_mark: If True, mark duplicates in the studies table
                    (is_duplicate, duplicate_of_study_id, duplicate_group_id).
+        title_threshold: Minimum title similarity (0.50-1.00) for a fuzzy match.
+        author_threshold: Minimum author-overlap ratio required when the title
+                          similarity is below 0.95 and the year does not match.
 
     Returns:
         Dict with:
@@ -254,43 +334,47 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
         for j in range(1, len(indices)):
             union(indices[0], indices[j])
 
-    # Strategy 3: Title similarity + author/year
+    # Strategy 5: fuzzy title similarity + author/year — restricted to blocked
+    # candidate pairs (find_candidate_pairs) instead of the full O(N^2) scan.
     titles = [s.get("title", "") for s in studies]
     years = [s.get("publication_year") for s in studies]
-    authors = [s.get("authors", "") for s in studies]
 
-    for i in range(len(studies)):
+    candidate_pairs = find_candidate_pairs(studies, title_threshold, author_threshold)
+
+    for i, j in candidate_pairs:
+        if find(i) == find(j):
+            continue  # already grouped
+
         t_i = titles[i]
-        if not t_i:
+        t_j = titles[j]
+        if not t_i or not t_j:
             continue
-        y_i = years[i]
-        a_i = authors[i]
 
-        for j in range(i + 1, len(studies)):
-            if find(i) == find(j):
-                continue  # already grouped
+        # Length-ratio pre-check: titles whose lengths differ too much cannot
+        # reach the threshold — skip the similarity calculation entirely.
+        li, lj = len(t_i), len(t_j)
+        lo, hi = (li, lj) if li <= lj else (lj, li)
+        if lo / hi < (title_threshold - 0.15):
+            continue
 
-            t_j = titles[j]
-            if not t_j:
-                continue
+        sim = _title_similarity(t_i, t_j, title_threshold)
 
-            sim = _title_similarity(t_i, t_j)
+        if sim >= title_threshold:
+            # Strong title match — check author/year as secondary signal
+            y_i = years[i]
+            y_j = years[j]
+            year_match = (
+                y_i is not None
+                and y_j is not None
+                and y_i == y_j
+            )
+            # Bolt Optimization: Use pre-computed author sets to avoid O(N^2) redundant string parsing
+            author_sim = _author_overlap_sets(norm_author_sets[i], norm_author_sets[j])
 
-            if sim >= TITLE_SIMILARITY_THRESHOLD:
-                # Strong title match — check author/year as secondary signal
-                y_j = years[j]
-                year_match = (
-                    y_i is not None
-                    and y_j is not None
-                    and y_i == y_j
-                )
-                # Bolt Optimization: Use pre-computed author sets to avoid O(N^2) redundant string parsing
-                author_sim = _author_overlap_sets(norm_author_sets[i], norm_author_sets[j])
-
-                # If title is very similar (>0.95), group regardless
-                # If title is 0.90-0.95, require either year match or author overlap > 0.3
-                if sim >= 0.95 or year_match or author_sim > 0.3:
-                    union(i, j)
+            # If title is very similar (>0.95), group regardless
+            # Otherwise require year match or author overlap >= author_threshold
+            if sim >= 0.95 or year_match or author_sim >= author_threshold:
+                union(i, j)
 
     # Build groups from union-find
     groups: dict[int, list[int]] = {}

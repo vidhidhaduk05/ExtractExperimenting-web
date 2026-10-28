@@ -255,6 +255,8 @@ async def screening_summary(project_id: str, user: Optional[dict] = Depends(get_
 async def deduplicate_studies(
     project_id: str,
     auto_mark: bool = Query(True, description="Mark duplicates in the database"),
+    title_threshold: float = Query(0.90, ge=0.50, le=1.00, description="Minimum title similarity for a fuzzy match"),
+    author_threshold: float = Query(0.50, ge=0.00, le=1.00, description="Minimum author-overlap ratio when title < 0.95 and year differs"),
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
@@ -269,13 +271,15 @@ async def deduplicate_studies(
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    result = _dedup(project_id, auto_mark=auto_mark)
+    result = _dedup(project_id, auto_mark=auto_mark, title_threshold=title_threshold, author_threshold=author_threshold)
     return DeduplicationResult(**result)
 
 
 @router.get("/projects/{project_id}/studies/duplicates", response_model=DeduplicationResult)
 async def get_duplicate_studies(
     project_id: str,
+    title_threshold: float = Query(0.90, ge=0.50, le=1.00, description="Minimum title similarity for a fuzzy match"),
+    author_threshold: float = Query(0.50, ge=0.00, le=1.00, description="Minimum author-overlap ratio when title < 0.95 and year differs"),
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
@@ -289,7 +293,7 @@ async def get_duplicate_studies(
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    result = _dedup(project_id, auto_mark=False, db=conn)
+    result = _dedup(project_id, auto_mark=False, db=conn, title_threshold=title_threshold, author_threshold=author_threshold)
     return DeduplicationResult(**result)
 
 

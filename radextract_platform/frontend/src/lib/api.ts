@@ -2501,10 +2501,10 @@ export const api = {
   prisma2020CsvUrl: (projectId: string) => `${API_BASE}/projects/${projectId}/prisma/prisma2020.csv`,
 
   // v2.4: Duplicate Detection & Review
-  deduplicateStudies: (projectId: string, autoMark = true) =>
-    request<DeduplicationResult>(`/projects/${projectId}/studies/deduplicate?auto_mark=${autoMark}`, { method: "POST" }),
-  getDuplicateGroups: (projectId: string) =>
-    request<DeduplicationResult>(`/projects/${projectId}/studies/duplicates`),
+  deduplicateStudies: (projectId: string, autoMark = true, titleThreshold = 0.9, authorThreshold = 0.5) =>
+    request<DeduplicationResult>(`/projects/${projectId}/studies/deduplicate?auto_mark=${autoMark}&title_threshold=${titleThreshold}&author_threshold=${authorThreshold}`, { method: "POST" }),
+  getDuplicateGroups: (projectId: string, titleThreshold = 0.9, authorThreshold = 0.5) =>
+    request<DeduplicationResult>(`/projects/${projectId}/studies/duplicates?title_threshold=${titleThreshold}&author_threshold=${authorThreshold}`),
   resolveDuplicate: (projectId: string, payload: DuplicateResolveRequest) =>
     request<{
       status: string;

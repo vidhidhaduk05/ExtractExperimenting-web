@@ -38,6 +38,27 @@ export function DuplicateReviewModal({
   const [isMergingInteractive, setIsMergingInteractive] = useState(false);
   const [customMergedFields, setCustomMergedFields] = useState<Record<string, any>>({});
 
+  // Threshold sliders (Zoplicate-style): draft values requery after a 300ms debounce
+  const [titleThreshold, setTitleThreshold] = useState(0.90);
+  const [authorThreshold, setAuthorThreshold] = useState(0.50);
+  const [debouncedTitleThreshold, setDebouncedTitleThreshold] = useState(0.90);
+  const [debouncedAuthorThreshold, setDebouncedAuthorThreshold] = useState(0.50);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedTitleThreshold(titleThreshold), 300);
+    return () => clearTimeout(t);
+  }, [titleThreshold]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedAuthorThreshold(authorThreshold), 300);
+    return () => clearTimeout(t);
+  }, [authorThreshold]);
+
+  // Reset group/candidate selection when the candidate set changes
+  useEffect(() => {
+    setActiveGroupIndex(0);
+    setActiveDuplicateIndex(0);
+  }, [debouncedTitleThreshold, debouncedAuthorThreshold]);
+
   // Query duplicates
   const {
     data: dedupResult,
@@ -45,8 +66,8 @@ export function DuplicateReviewModal({
     refetch,
     isRefetching
   } = useQuery<DeduplicationResult>({
-    queryKey: ["duplicate_groups", projectId],
-    queryFn: () => api.getDuplicateGroups(projectId),
+    queryKey: ["duplicate_groups", projectId, debouncedTitleThreshold, debouncedAuthorThreshold],
+    queryFn: () => api.getDuplicateGroups(projectId, debouncedTitleThreshold, debouncedAuthorThreshold),
     enabled: isOpen && !!projectId,
   });
 
@@ -265,6 +286,61 @@ export function DuplicateReviewModal({
               <X className="h-5 w-5" />
             </button>
           </div>
+        </div>
+
+        {/* Threshold sliders — Zoplicate-style sensitivity controls (Master Theme) */}
+        <div className="px-6 py-2.5 border-b border-black/10 bg-[#FAF9F3] flex flex-wrap items-center gap-x-6 gap-y-2 shrink-0">
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="title-threshold-slider"
+              className="text-xs font-medium text-[#3a0f34] whitespace-nowrap"
+            >
+              Title similarity
+            </label>
+            <input
+              id="title-threshold-slider"
+              type="range"
+              min={80}
+              max={100}
+              step={1}
+              value={Math.round(titleThreshold * 100)}
+              onChange={(e) => setTitleThreshold(parseInt(e.target.value, 10) / 100)}
+              className="w-36 accent-[#3a0f34] cursor-pointer"
+            />
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#ffdea6] text-[#3a0f34] border border-[#3a0f34]/20 min-w-[42px] text-center"
+            >
+              {Math.round(titleThreshold * 100)}%
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="author-threshold-slider"
+              className="text-xs font-medium text-[#3a0f34] whitespace-nowrap"
+            >
+              Author overlap
+            </label>
+            <input
+              id="author-threshold-slider"
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={Math.round(authorThreshold * 100)}
+              onChange={(e) => setAuthorThreshold(parseInt(e.target.value, 10) / 100)}
+              className="w-36 accent-[#3a0f34] cursor-pointer"
+            />
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#ffdea6] text-[#3a0f34] border border-[#3a0f34]/20 min-w-[42px] text-center"
+            >
+              {Math.round(authorThreshold * 100)}%
+            </span>
+          </div>
+          <span className="text-[11px] text-[#6B665E] ml-auto">
+            {isRefetching
+              ? "Updating candidates..."
+              : `${duplicateGroups.length} candidate group${duplicateGroups.length === 1 ? "" : "s"} at these thresholds`}
+          </span>
         </div>
 
         {/* Status Alert Banner */}
