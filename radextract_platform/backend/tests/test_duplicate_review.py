@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 import services.db_backend as db_mod
 from config import settings
 from database import get_connection, init_db, reset_db
+from dependencies import create_access_token
 from routers import screening
 
 
@@ -21,6 +22,11 @@ def fresh_db(tmp_path, monkeypatch):
     db_mod._backend_instance = None
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute("INSERT INTO users (user_id, username, password_hash) VALUES (?, ?, ?)",
+                 ("dedup-review-owner", "dedup-review-owner", "unused-test-password"))
+    conn.commit()
+    conn.close()
     yield
     reset_db()
     db_mod._backend_instance = None
@@ -30,7 +36,8 @@ def fresh_db(tmp_path, monkeypatch):
 def client():
     app = FastAPI()
     app.include_router(screening.router)
-    return TestClient(app)
+    token = create_access_token("dedup-review-owner", "dedup-review-owner", "owner")
+    return TestClient(app, headers={"Authorization": f"Bearer {token}"})
 
 
 def _add_study(conn, pid, title, doi="", abstract="", year=2020, journal="", status="pending"):
@@ -50,6 +57,8 @@ def project():
     conn = get_connection()
     try:
         conn.execute("INSERT INTO projects (project_id, name) VALUES (?, ?)", (pid, "P"))
+        conn.execute("INSERT INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)",
+                     (str(uuid.uuid4()), pid, "dedup-review-owner", "owner"))
         a = _add_study(conn, pid, "Deep learning for chest X-ray", doi="10.1234/x", abstract="short", journal="")
         b = _add_study(conn, pid, "Deep learning for chest X-ray.", doi="10.1234/x",
                        abstract="A much longer abstract that the other record lacks entirely.", journal="Radiology")
@@ -166,7 +175,7 @@ def test_bad_resolve_requests_are_rejected(client, project, payload, code):
     assert r.status_code == code
 
 
-def test_unknown_project_is_404(client):
-    assert client.get("/api/projects/missing/studies/duplicates").status_code == 404
+def test_unknown_project_is_inaccessible(client):
+    assert client.get("/api/projects/missing/studies/duplicates").status_code == 403
     assert client.post("/api/projects/missing/studies/deduplicate/resolve",
-                       json={"action": "keep_both", "primary_study_id": "x"}).status_code == 404
+                       json={"action": "keep_both", "primary_study_id": "x"}).status_code == 403

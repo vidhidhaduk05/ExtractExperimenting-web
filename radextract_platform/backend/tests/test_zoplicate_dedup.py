@@ -13,13 +13,22 @@ from __future__ import annotations
 import uuid
 
 import pytest
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient as FastAPITestClient
 
 import services.db_backend as db_mod
 from config import settings
 from database import get_connection, init_db, reset_db
+from dependencies import create_access_token
 from routers import screening
 from services import dedup_service, duplicate_finder
+
+
+TEST_USER_ID = "dedup-test-owner"
+
+
+def TestClient(app):
+    token = create_access_token(TEST_USER_ID, "dedup-owner", "owner")
+    return FastAPITestClient(app, headers={"Authorization": f"Bearer {token}"})
 
 
 @pytest.fixture(autouse=True)
@@ -30,6 +39,12 @@ def fresh_db(tmp_path, monkeypatch):
     db_mod._backend_instance = None
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute("INSERT INTO users (user_id, username, password_hash) VALUES (?, ?, ?)",
+                 (TEST_USER_ID, "dedup-owner", "unused-test-password"))
+    conn.commit()
+    conn.close()
+    dedup_service._merge_runs.clear()
     yield
     reset_db()
     db_mod._backend_instance = None
@@ -67,6 +82,8 @@ def _make_project(*studies_rows):
     conn = get_connection()
     try:
         conn.execute("INSERT INTO projects (project_id, name) VALUES (?, ?)", (pid, "P"))
+        conn.execute("INSERT INTO project_members (member_id, project_id, user_id, role) VALUES (?, ?, ?, ?)",
+                     (str(uuid.uuid4()), pid, TEST_USER_ID, "owner"))
         sids = [_add_study(conn, pid, *row) if isinstance(row, tuple) else _add_study(conn, pid, **row)
                 for row in studies_rows]
         conn.commit()
@@ -500,6 +517,140 @@ def test_merge_all_pause_and_resume_durability():
 
 
 # ── Step 7: PRISMA by-tier & Undo reconciliation ──
+
+
+def test_merge_all_executes_the_previewed_master_strategy():
+    pid, (older, newer) = _make_project(
+        {"title": "Stable duplicate", "doi": "10.5555/master", "pmid": "123", "year": 2020},
+        {"title": "Stable duplicate", "doi": "10.5555/master", "year": 2022},
+    )
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+    preview = dedup_service.merge_all(pid, dry_run=True, master_strategy="newest")
+    assert preview["plan"][0]["master_study_id"] == newer
+    result = dedup_service.merge_all(pid, plan_id=preview["plan_id"], master_strategy="newest")
+    assert result["merged"] == 1 and result["failed"] == 0
+    assert _study(older)["duplicate_of_study_id"] == newer
+    assert _study(newer)["is_duplicate"] == 0
+
+
+def test_merge_all_leaves_conflicting_identifiers_for_individual_review():
+    pid, (a, b) = _make_project(
+        {"title": "Identical title", "doi": "10.5555/a", "authors": "Smith J", "year": 2020},
+        {"title": "Identical title", "doi": "10.5555/b", "authors": "Smith J", "year": 2020},
+    )
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+    preview = dedup_service.merge_all(pid, dry_run=True)
+    assert preview["total_groups"] == 0
+    assert _study(a)["is_duplicate"] == _study(b)["is_duplicate"] == 0
+
+
+def test_merge_all_rejects_metadata_changes_after_preview():
+    pid, (a, b) = _make_project(
+        {"title": "Original title", "doi": "10.5555/stale", "year": 2020},
+        {"title": "Original title", "doi": "10.5555/stale", "year": 2020},
+    )
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+    preview = dedup_service.merge_all(pid, dry_run=True)
+    conn = get_connection()
+    conn.execute("UPDATE studies SET title = 'Edited by reviewer' WHERE study_id = ?", (a,))
+    conn.commit()
+    conn.close()
+    with pytest.raises(dedup_service.StalePlanError):
+        dedup_service.merge_all(pid, plan_id=preview["plan_id"])
+
+
+def test_rescan_does_not_merge_the_same_duplicate_twice():
+    pid, (a, b) = _make_project(
+        {"title": "Repeat scan", "doi": "10.5555/repeat"},
+        {"title": "Repeat scan", "doi": "10.5555/repeat"},
+    )
+    assert dedup_service.deduplicate_studies(pid, auto_mark=True)["duplicates_marked"] == 1
+    assert dedup_service.deduplicate_studies(pid, auto_mark=True)["duplicates_marked"] == 0
+    conn = get_connection()
+    count = conn.execute("SELECT COUNT(*) FROM dedup_audit WHERE project_id = ? AND action = 'auto_merge'", (pid,)).fetchone()[0]
+    conn.close()
+    assert count == 1
+
+
+def test_failed_bulk_group_rolls_back_metadata_flags_and_audit(monkeypatch):
+    pid, (a, b) = _make_project(
+        {"title": "Atomic group", "doi": "10.5555/atomic", "pmid": "123"},
+        {"title": "Atomic group", "doi": "10.5555/atomic", "abstract": "Source abstract"},
+    )
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+    preview = dedup_service.merge_all(pid, dry_run=True)
+    original = dedup_service._execute_merge
+
+    def fail_after_writes(*args, **kwargs):
+        original(*args, **kwargs)
+        raise RuntimeError("simulated interrupted group")
+
+    monkeypatch.setattr(dedup_service, "_execute_merge", fail_after_writes)
+    result = dedup_service.merge_all(pid, plan_id=preview["plan_id"])
+    assert result["failed"] == 1 and result["merged"] == 0
+    assert _study(a)["abstract"] == ""
+    assert _study(b)["is_duplicate"] == 0
+    conn = get_connection()
+    assert conn.execute("SELECT COUNT(*) FROM dedup_audit WHERE project_id = ? AND action = 'accept_merge'", (pid,)).fetchone()[0] == 0
+    conn.close()
+    monkeypatch.setattr(dedup_service, "_execute_merge", original)
+    resumed = dedup_service.resume_merge_all(pid, result["run_id"])
+    assert resumed["status"] == "completed"
+    assert resumed["merged"] == 1 and resumed["failed"] == 0
+
+
+def test_non_default_master_strategy_survives_pause_and_restart(monkeypatch):
+    pid, ids = _make_project(
+        {"title": "First independent pair", "doi": "10.5555/first", "year": 2019, "pmid": "123"},
+        {"title": "First independent pair", "doi": "10.5555/first", "year": 2022},
+        {"title": "Second independent pair", "doi": "10.5555/second", "year": 2018, "pmid": "456"},
+        {"title": "Second independent pair", "doi": "10.5555/second", "year": 2023},
+    )
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+    preview = dedup_service.merge_all(pid, dry_run=True, master_strategy="newest")
+    original = dedup_service.accept_group
+
+    def pause_after_group(*args, **kwargs):
+        result = original(*args, **kwargs)
+        for run in dedup_service._merge_runs.values():
+            run["pause_requested"] = True
+        return result
+
+    monkeypatch.setattr(dedup_service, "accept_group", pause_after_group)
+    paused = dedup_service.merge_all(pid, plan_id=preview["plan_id"], master_strategy="newest")
+    assert paused["status"] == "paused"
+    monkeypatch.setattr(dedup_service, "accept_group", original)
+    dedup_service._merge_runs.clear()
+    result = dedup_service.resume_merge_all(pid, paused["run_id"])
+    assert result["status"] == "completed" and result["merged"] == 2
+    assert _study(ids[0])["duplicate_of_study_id"] == ids[1]
+    assert _study(ids[2])["duplicate_of_study_id"] == ids[3]
+
+
+def test_identifier_confirmed_protocol_duplicates_merge_in_bulk():
+    pid, (a, b) = _make_project(
+        {"title": "Protocol for imaging trial", "doi": "10.5555/protocol"},
+        {"title": "Protocol for imaging trial.", "doi": "10.5555/protocol"},
+    )
+    dedup_service.deduplicate_studies(pid, auto_mark=False)
+    preview = dedup_service.merge_all(pid, dry_run=True)
+    assert preview["total_groups"] == 1
+    result = dedup_service.merge_all(pid, plan_id=preview["plan_id"])
+    assert result["merged"] == 1 and result["failed"] == 0
+
+
+def test_dedup_api_still_requires_authentication_and_project_membership():
+    pid, _ = _make_project({"title": "Private study"})
+    client = FastAPITestClient(_make_app())
+    assert client.get(f"/api/projects/{pid}/dedup/candidates").status_code == 401
+    conn = get_connection()
+    conn.execute("INSERT INTO users (user_id, username, password_hash) VALUES ('outsider', 'outsider', 'unused')")
+    conn.commit()
+    conn.close()
+    token = create_access_token("outsider", "outsider", "owner")
+    response = client.post(f"/api/projects/{pid}/dedup/merge-all", json={"dry_run": True},
+                           headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 403
 
 def test_prisma_duplicates_removed_by_tier():
     from services.prisma_service import get_prisma_2020_data

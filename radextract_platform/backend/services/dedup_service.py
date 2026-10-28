@@ -498,9 +498,10 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
         non_dup_pairs = non_dup_pairs | _fingerprint_rejected_pairs(studies, fp_pairs)
 
     # ── Cascading candidate generation (Zoplicate DuplicateFinder port) ──
-    pairs = duplicate_finder.find_candidate_pairs(studies, human_decided_ids, non_dup_pairs)
+    active_studies = [s for s in studies if not s.get("is_duplicate")]
+    pairs = duplicate_finder.find_candidate_pairs(active_studies, human_decided_ids, non_dup_pairs)
     auto_groups, oversize_pairs = duplicate_finder.build_merge_groups(
-        studies, pairs, non_dup_pairs)
+        active_studies, pairs, non_dup_pairs)
 
     studies_by_id = {s["study_id"]: s for s in studies}
     id_to_pair = {(p.study_id_a, p.study_id_b): p for p in pairs}
@@ -546,7 +547,8 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
                            member_ids, studies_by_id, status="pending")
 
     # ── Review-queue pairs: T3/T4/conflict/human_review + oversize chains ──
-    review_pairs = [p for p in pairs if not p.auto_mergeable] + oversize_pairs
+    review_pairs = list({(p.study_id_a, p.study_id_b): p
+                         for p in [p for p in pairs if not p.auto_mergeable] + oversize_pairs}.values())
     for p in review_pairs:
         a, b = studies_by_id.get(p.study_id_a), studies_by_id.get(p.study_id_b)
         if not a or not b:
@@ -704,7 +706,8 @@ def _get_group_or_raise(db: DBBackend, project_id: str, group_id: str) -> dict:
 
 
 def accept_group(project_id: str, group_id: str, db: Optional[DBBackend] = None,
-                 actor: str = "user") -> dict:
+                 actor: str = "user", master_study_id: Optional[str] = None,
+                 commit: bool = True) -> dict:
     """Accept a candidate group: merge duplicates into master (master wins
     conflicts, missing fields filled), soft-mark duplicates, audit row."""
     db = db or get_db_backend()
@@ -724,17 +727,32 @@ def accept_group(project_id: str, group_id: str, db: Optional[DBBackend] = None,
     # Never merge through a human-decided record without explicit action (F7):
     # the human-decided record becomes master and is never marked duplicate.
     # Honour a master chosen via set-master; otherwise select by strategy.
-    if g.get("master_study_id") in {m["study_id"] for m in members}:
+    if master_study_id is not None:
+        if master_study_id not in {m["study_id"] for m in members}:
+            raise ValueError("Planned master is no longer a member of this group.")
+        master = studies_by_id[master_study_id]
+    elif g.get("master_study_id") in {m["study_id"] for m in members}:
         master = next(m for m in members if m["study_id"] == g["master_study_id"])
     else:
         master = _select_master(members, "most_complete")
-    filled: list[str] = []
+    # Validate the complete group before writing any member. A protocol and
+    # results paper stay separate, but two imports of the same protocol may merge.
     for dup in members:
         if dup["study_id"] == master["study_id"]:
             continue
         if duplicate_finder._is_secondary_report(dup) or duplicate_finder._is_secondary_report(master):
-            # T4 groups are grouping proposals, not merges — refuse safely
-            raise ValueError("This group contains a protocol/secondary report; use keep-both or study grouping instead.")
+            same_doi = duplicate_finder.clean_doi(master.get("doi", ""))
+            same_pmid = duplicate_finder.normalize_id(master.get("pmid", ""))
+            identifier_confirmed = (
+                (same_doi and same_doi == duplicate_finder.clean_doi(dup.get("doi", "")))
+                or (same_pmid and same_pmid == duplicate_finder.normalize_id(dup.get("pmid", "")))
+            ) and not duplicate_finder._conflicting_identifiers(master, dup)
+            if not identifier_confirmed:
+                raise ValueError("This group contains a protocol/secondary report; use keep-both or study grouping instead.")
+    filled: list[str] = []
+    for dup in members:
+        if dup["study_id"] == master["study_id"]:
+            continue
         fills = _execute_merge(db, project_id, group_id, g["tier"], g["score"],
                                master, dup, actor=actor)
         filled.extend(fills)
@@ -745,7 +763,8 @@ def accept_group(project_id: str, group_id: str, db: Optional[DBBackend] = None,
         "decided_by": actor,
         "decided_at": datetime.utcnow().isoformat(),
     })
-    db.commit()
+    if commit:
+        db.commit()
     return {
         "status": "success",
         "action": "accept",
@@ -939,14 +958,16 @@ def _parse_db_datetime(dt_str: Optional[str]) -> Optional[datetime]:
 
 
 def _plan_fingerprint(plan: list[dict]) -> str:
-    """Canonical sha256 fingerprint over [group_id, master_study_id, duplicate_ids, fields_to_fill]."""
+    """Fingerprint the selected master, merge values and source study snapshots."""
     canonical = []
     for item in sorted(plan, key=lambda x: str(x.get("group_id", ""))):
         canonical.append([
             str(item.get("group_id", "")),
             str(item.get("master_study_id", "")),
             sorted(str(d) for d in item.get("duplicate_ids", [])),
-            {k: sorted(v) if isinstance(v, list) else v for k, v in sorted((item.get("fields_to_fill") or {}).items())}
+            item.get("fields_to_fill") or {},
+            item.get("study_snapshot") or {},
+            item.get("master_strategy", "most_complete"),
         ])
     payload = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -957,6 +978,13 @@ def _build_plan_items(db: DBBackend, project_id: str, master_strategy: str = "mo
     studies_by_id = {s["study_id"]: s for s in studies_rows}
     human_decided_ids = _get_human_decided_ids(db, project_id)
     groups = _load_groups(db, project_id, status="pending")
+    active_studies = [s for s in studies_rows if not s.get("is_duplicate")]
+    rejected = _load_non_duplicate_pairs(db, project_id)
+    fingerprints = _load_non_duplicate_fingerprints(db, project_id)
+    rejected |= _fingerprint_rejected_pairs(active_studies, fingerprints)
+    pairs = duplicate_finder.find_candidate_pairs(active_studies, human_decided_ids, rejected)
+    safe_groups, _ = duplicate_finder.build_merge_groups(active_studies, pairs, rejected)
+    safe_members = {frozenset(ids) for ids in safe_groups}
 
     plan = []
     skipped_human_decided = 0
@@ -966,6 +994,8 @@ def _build_plan_items(db: DBBackend, project_id: str, master_strategy: str = "mo
             continue
         if any(sid in human_decided_ids for sid in member_ids):
             skipped_human_decided += 1
+            continue
+        if frozenset(member_ids) not in safe_members:
             continue
         members = [studies_by_id[sid] for sid in member_ids]
         master = _select_master(members, master_strategy)
@@ -981,6 +1011,8 @@ def _build_plan_items(db: DBBackend, project_id: str, master_strategy: str = "mo
             "master_title": master.get("title", ""),
             "duplicate_ids": [sid for sid in member_ids if sid != master["study_id"]],
             "fields_to_fill": fills,
+            "master_strategy": master_strategy,
+            "study_snapshot": {sid: studies_by_id[sid] for sid in sorted(member_ids)},
         })
     return plan, skipped_human_decided
 
@@ -1119,20 +1151,28 @@ def _execute_plan_items(db: DBBackend, project_id: str, items: list[dict], run: 
             db.commit()
             break
 
+        db.execute("SAVEPOINT dedup_merge_group")
         try:
-            accept_group(project_id, item["group_id"], db=db, actor=actor)
+            for sid, snapshot in item.get("study_snapshot", {}).items():
+                if db.get("studies", sid) != snapshot:
+                    raise StalePlanError("Study data changed while the merge was running; preview again.")
+            accept_group(project_id, item["group_id"], db=db, actor=actor,
+                         master_study_id=item["master_study_id"], commit=False)
             run["merged"] += 1
             run["merged_group_ids"].append(item["group_id"])
         except Exception as e:
+            db.execute("ROLLBACK TO SAVEPOINT dedup_merge_group")
             run["failed"] += 1
             run.setdefault("errors", []).append({"group_id": item["group_id"], "error": str(e)})
 
         run["processed"] += 1
         _write_run_row(db, run)
+        # Commit the group's metadata/audit changes and progress together.
+        db.execute("RELEASE SAVEPOINT dedup_merge_group")
         db.commit()
     else:
         if run["status"] == "running":
-            run["status"] = "completed"
+            run["status"] = "failed" if run["failed"] else "completed"
             _write_run_row(db, run)
             db.commit()
 
@@ -1145,6 +1185,7 @@ def _execute_plan_items(db: DBBackend, project_id: str, items: list[dict], run: 
         "processed": run["processed"],
         "merged": run["merged"],
         "failed": run["failed"],
+        "errors": run.get("errors", []),
         "skipped_human_decided": run["skipped_human_decided"],
         "merged_group_ids": run["merged_group_ids"],
         "plan": items,
@@ -1262,12 +1303,16 @@ def resume_merge_all(project_id: str, run_id: str, db: Optional[DBBackend] = Non
     merged_ids = set(run.get("merged_group_ids") or [])
     remaining_items = [item for item in saved_plan["plan"] if item["group_id"] not in merged_ids]
 
-    current_plan, _ = _build_plan_items(db, project_id)
+    strategy = saved_plan["plan"][0].get("master_strategy", "most_complete") if saved_plan["plan"] else "most_complete"
+    current_plan, _ = _build_plan_items(db, project_id, strategy)
     if _plan_fingerprint(remaining_items) != _plan_fingerprint(current_plan):
         raise StalePlanError("Plan is stale; remaining study data or groups have changed")
 
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     run["status"] = "running"
+    run["failed"] = 0
+    run["processed"] = run.get("merged", 0)
+    run["errors"] = []
     run["pause_requested"] = False
     run["updated_at"] = now_str
     _write_run_row(db, run)

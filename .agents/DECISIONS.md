@@ -728,3 +728,13 @@ Implemented and verified the 5-phase correctness fix work order ([`PLANS/correct
 
 User confirmed generic protocol criteria (medications and any inclusion/exclusion variable), with spreadsheet-style inclusion AND exclusion lists and right-column importance-weight sliders. Weights are not probability overrides or confidence intervals. Missing consequential protocol rules require persisted scope-aware clarifications. Required rules remain distinct from soft scoring. Updated RADEXTRACT_FINAL_AGENT_HANDOFF.md and RADEXTRACT_UPDATED_BLUEPRINT.html specify score traces, independent validation and boundary-safe sensitivity bounds. This was documentation only; no feature/statistical fix is claimed implemented. Prior handoff was archived without deletion. Primary methodology references are in the handoff.
 
+
+## 2026-10-28 — Deduplication bulk merge reliability
+
+- Keep deterministic Zoplicate-style candidate matching as the bulk-merge gate. Recompute safe groups before preview/execution; identifier conflicts, human decisions, rejected pairs and dissolved groups remain for individual review.
+- Execute the master shown in the saved preview. Fingerprint source study snapshots and the selected master strategy, and preserve that strategy across pause/resume.
+- Exclude already-merged records from new candidate scans so rescans do not duplicate merges or audit counts. Deduplicate dissolved review pairs.
+- Commit each bulk group's metadata, flags, audit and progress together; roll back failed groups. Report failed runs as failed and allow retry of unmerged groups.
+- Allow duplicate imports of an identifier-confirmed protocol to merge while keeping distinct protocol/results reports separate.
+- Restore authenticated owner/member fixtures in dedup API tests; access controls remain enforced. Added regression cases for master mismatch, stale metadata, conflicting identifiers, repeat scans, rollback/retry, durable non-default strategy, protocol duplicates and unauthorized access.
+- Scope: local dedup service and tests. No Zotero parity or production-library accuracy claim; no new model-based deduplication behavior.
