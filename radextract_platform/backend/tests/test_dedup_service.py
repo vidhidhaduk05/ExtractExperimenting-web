@@ -1,10 +1,16 @@
 """Tests for duplicate detection service (v2.4 feature 1)."""
 import pytest
 from fastapi.testclient import TestClient
-from main import app
+from fastapi import FastAPI
+from routers import projects, studies, screening
 from database import reset_db, init_db, get_connection
 from config import settings
+from dependencies import create_access_token
 from services.dedup_service import deduplicate_studies, _title_similarity, _author_overlap
+
+app = FastAPI()
+for router in (projects.router, studies.router, screening.router):
+    app.include_router(router)
 
 
 import os
@@ -24,8 +30,14 @@ def fresh_db(monkeypatch):
     monkeypatch.setattr(settings, "db_path", db_file)
     monkeypatch.setattr(settings, "upload_root", upload_dir)
     monkeypatch.setattr(settings, "export_root", export_dir)
+    monkeypatch.setattr(settings, "storage_root", os.path.join(TEST_TMP, "storage"))
     reset_db()
     init_db()
+    conn = get_connection()
+    conn.execute("INSERT INTO users (user_id, username, password_hash) VALUES (?, ?, ?)",
+                 ("legacy-dedup-owner", "legacy-dedup-owner", "unused-test-password"))
+    conn.commit()
+    conn.close()
     yield
     reset_db()
     shutil.rmtree(TEST_TMP, ignore_errors=True)
@@ -34,11 +46,13 @@ def fresh_db(monkeypatch):
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    token = create_access_token("legacy-dedup-owner", "legacy-dedup-owner", "owner")
+    return TestClient(app, headers={"Authorization": f"Bearer {token}"})
 
 
 def _create_project(client):
     r = client.post("/api/projects", json={"name": "Dedup Test"})
+    assert r.status_code == 200, r.text
     return r.json()["project_id"]
 
 
@@ -50,6 +64,7 @@ def _create_study(client, pid, **kwargs):
                "pmid": kwargs.get("pmid", ""),
                "abstract": kwargs.get("abstract", "")}
     r = client.post(f"/api/projects/{pid}/studies", json=payload)
+    assert r.status_code == 200, r.text
     return r.json()["study_id"]
 
 
@@ -292,3 +307,46 @@ def test_resolve_merge_metadata(client):
     finally:
         conn.close()
 
+
+def test_dedup_none_title_handling():
+    """Ensure studies with None or empty title in DB do not raise TypeError during deduplication."""
+    class MockDB:
+        def query(self, table, filter_dict, order_by=None):
+            if table != "studies":
+                return []
+            return [
+                {"study_id": "s1", "title": None, "doi": "10.8888/none1", "authors": "Smith J", "publication_year": 2021},
+                {"study_id": "s2", "title": None, "doi": "10.8888/none2", "authors": "Jones K", "publication_year": 2022},
+            ]
+
+        def commit(self):
+            pass
+
+        def execute(self, sql, params=()):
+            return self
+
+        def fetchall(self):
+            return []
+
+    db = MockDB()
+    res = deduplicate_studies("test_project", auto_mark=False, db=db)
+    assert res["total_studies"] == 2
+    assert res["total_duplicates"] == 0
+
+
+def test_dedup_title_formatting_variations(client):
+    """Ensure titles differing only by punctuation or formatting are correctly detected as duplicates."""
+    pid = _create_project(client)
+    sid1 = _create_study(
+        client, pid,
+        title="Diagnostic accuracy of CT for acute appendicitis: a systematic review",
+        authors="Smith J; Jones K", year=2022
+    )
+    sid2 = _create_study(
+        client, pid,
+        title="Diagnostic accuracy of CT for acute appendicitis - a systematic review",
+        authors="Smith J & Jones K", year=2022
+    )
+
+    res = deduplicate_studies(pid)
+    assert res["total_duplicates"] >= 1

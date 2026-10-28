@@ -140,6 +140,23 @@ def get_prisma_2020_data(project_id: str, db) -> Dict[str, Any]:
     ai_count = decisions_stats["ai_decisions"] if decisions_stats else 0
     human_count = decisions_stats["human_decisions"] if decisions_stats else 0
 
+    # Duplicates removed by tier (dedup_plan §7 / zoplicate plan §4):
+    # Active markings reconciled with duplicates_removed (s.is_duplicate = 1).
+    # Joined with dedup_groups for tier; unclassified bucket covers legacy markings.
+    duplicates_removed_by_tier: Dict[str, int] = {}
+    try:
+        for row in db.execute(
+            """SELECT COALESCE(NULLIF(g.tier, ''), 'unclassified') AS tier, COUNT(*) AS c
+               FROM studies s LEFT JOIN dedup_groups g ON s.duplicate_group_id = g.group_id
+               WHERE s.project_id = ? AND s.is_duplicate = 1 GROUP BY tier""",
+            (project_id,),
+        ).fetchall():
+            r = dict(row) if not isinstance(row, dict) else row
+            tier = r.get("tier") or "unclassified"
+            duplicates_removed_by_tier[tier] = duplicates_removed_by_tier.get(tier, 0) + r["c"]
+    except Exception:
+        pass
+
     return {
         "project_id": project_id,
         "identification": {
@@ -147,6 +164,7 @@ def get_prisma_2020_data(project_id: str, db) -> Dict[str, Any]:
             "registers": 0,
             "other_sources": 0,
             "duplicates_removed": duplicates_removed,
+            "duplicates_removed_by_tier": duplicates_removed_by_tier,
             "records_after_duplicates": records_after_dups,
             "total": total_records,
         },

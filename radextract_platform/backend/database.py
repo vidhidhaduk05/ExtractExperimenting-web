@@ -106,6 +106,86 @@ CREATE TABLE IF NOT EXISTS record_annotations (
     visibility TEXT NOT NULL CHECK (visibility IN ('shared', 'private')),
     created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS dedup_groups (
+    group_id          TEXT PRIMARY KEY,
+    project_id        TEXT NOT NULL,
+    master_study_id   TEXT DEFAULT '',          -- master item (Zoplicate mergeItems semantics)
+    tier              TEXT DEFAULT '',           -- T0 | T1 | T2 | T3 | conflict | human_review
+    score             REAL DEFAULT 0.0,
+    status            TEXT DEFAULT 'pending',    -- pending | accepted | rejected | keep_both
+    member_study_ids  TEXT DEFAULT '[]',         -- JSON array of study_ids
+    field_diffs       TEXT DEFAULT '',           -- JSON side-by-side metadata diff
+    decided_by        TEXT DEFAULT '',           -- 'auto' | user id
+    decided_at        TEXT DEFAULT '',
+    created_at        TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS non_duplicates (
+    non_dup_id        TEXT PRIMARY KEY,
+    project_id        TEXT NOT NULL,
+    study_id_a        TEXT NOT NULL,
+    study_id_b        TEXT NOT NULL,             -- stored as sorted pair (a < b)
+    fingerprint_a     TEXT DEFAULT '',           -- JSON typed keys of record A (doi:/pmid:/title:)
+    fingerprint_b     TEXT DEFAULT '',           -- JSON typed keys of record B — rejection
+                                                 -- memory survives re-import with new study_ids
+    created_at        TEXT DEFAULT (datetime('now')),
+    decided_by        TEXT DEFAULT '',
+    UNIQUE (project_id, study_id_a, study_id_b)
+);
+
+CREATE TABLE IF NOT EXISTS dedup_audit (
+    audit_id          TEXT PRIMARY KEY,
+    project_id        TEXT NOT NULL,
+    group_id          TEXT DEFAULT '',
+    tier              TEXT DEFAULT '',
+    score             REAL DEFAULT 0.0,
+    master_study_id   TEXT DEFAULT '',
+    duplicate_study_id TEXT DEFAULT '',
+    action            TEXT DEFAULT '',           -- auto_merge | accept_merge | keep_both | reject | set_master | revert
+    actor             TEXT DEFAULT 'auto',       -- 'auto' | user id
+    filled_fields     TEXT DEFAULT '',           -- JSON {field: previous master value} for undo
+    created_at        TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
+
+-- ── Durable bulk-merge plans and runs (Zoplicate BulkMergeController port) ──
+
+CREATE TABLE IF NOT EXISTS dedup_merge_plans (
+    plan_id           TEXT PRIMARY KEY,
+    project_id        TEXT NOT NULL,
+    fingerprint       TEXT DEFAULT '',           -- sha256 of canonical plan content
+    plan_json         TEXT DEFAULT '[]',         -- JSON: groups with master + fields to fill
+    skip_report       TEXT DEFAULT '{}',         -- JSON: skipped_human_decided etc.
+    created_at        TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS dedup_merge_runs (
+    run_id            TEXT PRIMARY KEY,
+    plan_id           TEXT DEFAULT '',
+    project_id        TEXT NOT NULL,
+    status            TEXT DEFAULT 'running',    -- running | paused | completed | failed
+    total_groups      INTEGER DEFAULT 0,
+    processed         INTEGER DEFAULT 0,
+    merged            INTEGER DEFAULT 0,
+    failed            INTEGER DEFAULT 0,
+    skipped_human_decided INTEGER DEFAULT 0,
+    merged_group_ids  TEXT DEFAULT '[]',         -- JSON array
+    errors            TEXT DEFAULT '[]',         -- JSON array
+    pause_requested   INTEGER DEFAULT 0,
+    created_at        TEXT DEFAULT (datetime('now')),
+    updated_at        TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_dedup_groups_project ON dedup_groups(project_id);
+CREATE INDEX IF NOT EXISTS idx_dedup_groups_status ON dedup_groups(project_id, status);
+CREATE INDEX IF NOT EXISTS idx_dedup_audit_project ON dedup_audit(project_id);
+CREATE INDEX IF NOT EXISTS idx_dedup_audit_master ON dedup_audit(master_study_id);
+CREATE INDEX IF NOT EXISTS idx_dedup_plans_project ON dedup_merge_plans(project_id);
+CREATE INDEX IF NOT EXISTS idx_dedup_runs_project ON dedup_merge_runs(project_id, status);
+
 CREATE INDEX IF NOT EXISTS idx_record_annotations_study ON record_annotations(study_id, visibility, author_id);
 CREATE TABLE IF NOT EXISTS project_tags (
     tag_id TEXT PRIMARY KEY,
@@ -749,6 +829,9 @@ CREATE INDEX IF NOT EXISTS idx_todos_notification ON todos(notification_id);
 # SQLite ALTER TABLE ADD COLUMN is safe on existing databases.
 # Each tuple: (table, column_name, column_def)
 MIGRATION_COLUMNS = [
+    ("non_duplicates", "fingerprint_a", "TEXT DEFAULT ''"),
+    ("non_duplicates", "fingerprint_b", "TEXT DEFAULT ''"),
+    ("dedup_audit", "filled_fields", "TEXT DEFAULT ''"),
     ("clarification_questions", "is_tracked", "INTEGER DEFAULT 0"),
     # Dual-reviewer columns on extractions
     ("extractions", "verification_status", "TEXT DEFAULT 'pending'"),
@@ -915,6 +998,8 @@ def reset_db():
             "extraction_decisions",
             "extractions", "audit_log", "variables",
             "batch_study_contributions", "import_batches",
+            "dedup_groups", "non_duplicates", "dedup_audit",
+            "dedup_merge_plans", "dedup_merge_runs",
             "studies",
             "search_logs",
             "projects", "users", "cache_store",
