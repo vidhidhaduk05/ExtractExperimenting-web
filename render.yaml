@@ -1,0 +1,31 @@
+# Render Blueprint — RadExtract backend
+# Deploy: Render Dashboard -> New -> Blueprint -> point at this repo, or
+# https://render.com/deploy?repo=https://github.com/vidhidhaduk05/ExtractExperimenting-web
+#
+# SQLite lives on a persistent disk mounted at /data. Free instances have an
+# EPHEMERAL disk — attach this disk (or upgrade) or the database resets on
+# every restart.
+services:
+  - type: web
+    name: radextract-backend
+    runtime: docker
+    dockerfilePath: ./radextract_platform/backend/Dockerfile
+    dockerContext: ./radextract_platform/backend
+    plan: starter          # paid plan needed for persistent disk; free works but disk is ephemeral
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_PATH
+        value: /data/database/radextract.db
+      - key: STORAGE_ROOT
+        value: /data/storage/PROJECTS
+      - key: ENV
+        value: production
+      - key: CORS_ORIGINS
+        value: https://vidhidhaduk05.github.io
+      # Optional: set in the Render dashboard, never commit keys
+      - key: PUBMED_API_KEY
+        sync: false
+    disk:
+      name: radextract-data
+      mountPath: /data
+      sizeGB: 5

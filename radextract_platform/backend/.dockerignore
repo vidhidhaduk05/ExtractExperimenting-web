@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.test_tmp/
+radextract.db
+radextract.db-wal
+radextract.db-shm
+uploads/
+exports/
+data/llm_config.json
+data/storage_config.json
+venv*/
+.venv/
+tests/
+scripts/backup_db.sh
