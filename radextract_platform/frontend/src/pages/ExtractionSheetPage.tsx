@@ -8,7 +8,7 @@ import {
   type ExtractionGridCell,
   type ExtractionGridResponse
 } from "../lib/api";
-import { type CodebookRule } from "../lib/api";
+import { DEMO_STUDIES, DEMO_VARIABLES, DEMO_EXTRACTIONS, type CodebookRule } from "../lib/demoData";
 import {
   FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
@@ -79,6 +79,34 @@ export function ExtractionSheetPage() {
   // Inspect Side Panel toggle
   const [showInspectorPanel, setShowInspectorPanel] = useState<boolean>(true);
 
+  // Upload Variables / Extraction Sheet state
+  const excelUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const [isImportingSheet, setIsImportingSheet] = useState<boolean>(false);
+
+  const handleUploadExtractionSheet = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !projectId) return;
+    setIsImportingSheet(true);
+    setSaveStatus("saving");
+    try {
+      const res = await api.importVariablesFromExcel(projectId, file, true);
+      await queryClient.invalidateQueries({ queryKey: ["extraction-grid", projectId] });
+      await queryClient.invalidateQueries({ queryKey: ["variables", projectId] });
+      setSaveStatus("saved");
+      setFeedbackToast(`Imported ${res.total_variables} extraction variables as questions from "${file.name}"!`);
+      setTimeout(() => {
+        setSaveStatus("idle");
+        setFeedbackToast(null);
+      }, 4000);
+    } catch (err: any) {
+      setSaveStatus("error");
+      setSaveError(`Failed importing variables: ${err?.message || "File error"}`);
+    } finally {
+      setIsImportingSheet(false);
+      e.target.value = "";
+    }
+  };
+
   // Grid container reference for keyboard capture
   const gridContainerRef = useRef<HTMLDivElement | null>(null);
   const activeInputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
@@ -102,6 +130,9 @@ export function ExtractionSheetPage() {
     if (gridData?.variables && gridData.variables.length > 0) {
       return [...gridData.variables].sort((a, b) => a.order_index - b.order_index);
     }
+    if (projectId === "demo") {
+      return [...DEMO_VARIABLES].sort((a, b) => a.order_index - b.order_index);
+    }
     return [];
   }, [gridData, projectId]);
 
@@ -109,6 +140,18 @@ export function ExtractionSheetPage() {
   const studies: ExtractionGridStudy[] = useMemo(() => {
     if (gridData?.studies && gridData.studies.length > 0) {
       return gridData.studies;
+    }
+    if (projectId === "demo") {
+      return DEMO_STUDIES.map((s, idx) => ({
+        study_id: s.study_id,
+        study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || 2024}`,
+        title: s.title,
+        authors: s.authors,
+        publication_year: s.publication_year,
+        journal: s.journal,
+        doi: s.doi,
+        pmid: s.pmid,
+      }));
     }
     return [];
   }, [gridData, projectId]);
@@ -120,6 +163,28 @@ export function ExtractionSheetPage() {
     const cellsData = gridData?.cells || (gridData as any)?.extractions;
     if (cellsData) {
       setCellsMap(cellsData);
+    } else if (projectId === "demo") {
+      const demoCells: Record<string, Record<string, any>> = {};
+      DEMO_STUDIES.forEach((s) => {
+        demoCells[s.study_id] = {};
+        const exts = (DEMO_EXTRACTIONS as any)[s.study_id] || [];
+        exts.forEach((e: any) => {
+          if (e.variable_id) {
+            demoCells[s.study_id][e.variable_id] = {
+              extraction_id: e.extraction_id || `ext_${s.study_id}_${e.variable_id}`,
+              value: e.value || "",
+              confidence: e.confidence ?? 0.95,
+              evidence_quote: e.quote || "",
+              source_page: e.source_page || 1,
+              is_verified: !!e.is_verified,
+              is_edited: !!e.is_edited,
+              verification_status: e.is_verified ? (e.is_edited ? "modified" : "verified") : "unverified",
+              extraction_source: e.is_edited ? "manual" : "ai",
+            };
+          }
+        });
+      });
+      setCellsMap(demoCells);
     }
   }, [gridData, projectId]);
 
@@ -747,6 +812,31 @@ export function ExtractionSheetPage() {
             title="Auto-prefill Year, Author, DOI, and Study ID from imported reference metadata"
           >
             <Sparkles className="h-3.5 w-3.5 text-[#814d75]" /> Prefill Metadata
+          </button>
+
+          {/* Hidden File Input for Extraction Sheet */}
+          <input
+            ref={excelUploadInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={handleUploadExtractionSheet}
+          />
+
+          {/* Upload Extraction Sheet / Variables Button */}
+          <button
+            type="button"
+            onClick={() => excelUploadInputRef.current?.click()}
+            disabled={isImportingSheet}
+            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all flex items-center gap-1.5 disabled:opacity-50"
+            title="Upload an Excel sheet (.xlsx) or CSV containing custom variables to act as extraction questions"
+          >
+            {isImportingSheet ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#814d75]" />
+            ) : (
+              <Upload className="h-3.5 w-3.5 text-[#814d75]" />
+            )}
+            <span>Upload Variables (.xlsx)</span>
           </button>
 
           {/* Variable Designer Button */}

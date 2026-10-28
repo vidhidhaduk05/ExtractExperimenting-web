@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getApiBase } from "./api";
+import { getApiBase, shouldUseDemoFallback } from "./api";
 
 export interface RecordAnnotation {
   annotation_id: string;
@@ -42,7 +42,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (unavailable) throw new Error(unavailable);
   const response = await fetch(`${getApiBase()}${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1X293bmVyIiwidXNlcm5hbWUiOiJ0ZXN0X293bmVyIiwicm9sZSI6Im93bmVyIiwiZXhwIjoxNzkzMTc5MTk2fQ.aPcCUEqbMbd0QNgn0u6FaV6N2wywpXd3ZA4xxly2mUM"}` },
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RecordCollaborationPanel, TagFilter } from "./RecordCollaboration";
 import { recordCollaboration } from "../../lib/recordCollaboration";
 
-vi.mock("../../lib/api", () => ({ getApiBase: () => "/api" }));
+vi.mock("../../lib/api", () => ({ getApiBase: () => "/api", shouldUseDemoFallback: () => false }));
 const note = { annotation_id: "a1", study_id: "s1", project_id: "p1", author_id: "alice", author_name: "Alice",
   text: "Check the supplement", visibility: "shared" as const, created_at: "2026-10-11T10:00:00+00:00" };
 

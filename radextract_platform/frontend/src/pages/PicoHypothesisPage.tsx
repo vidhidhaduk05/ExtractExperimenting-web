@@ -23,96 +23,6 @@ const DATABASES = [
   { key: "cinahl", label: "CINAHL", hasAutoFetch: false },
 ] as const;
 
-// ── Criteria row: text + rule-mode toggle + weight controls (weighted only) ──
-function CriteriaRow(props: {
-  criterion: Criterion;
-  index: number;
-  placeholder: string;
-  onText: (text: string) => void;
-  onMode: (mode: "required" | "weighted") => void;
-  onWeight: (weight: number) => void;
-  onRemove: () => void;
-}) {
-  const { criterion: c, index, placeholder, onText, onMode, onWeight, onRemove } = props;
-  const weighted = c.rule_mode === "weighted";
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white/60 p-2 space-y-2">
-      <div className="flex gap-2 items-start">
-        <span className="text-sm font-medium text-gray-400 mt-2 w-6 shrink-0">
-          {index + 1}.
-        </span>
-        <textarea
-          className="input min-h-[36px] flex-1 text-sm"
-          value={c.text}
-          onChange={(e) => onText(e.target.value)}
-          placeholder={placeholder}
-        />
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-gray-400 hover:text-red-500 mt-1"
-          aria-label="Remove criterion"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-      <div className="flex items-center gap-3 pl-8 flex-wrap">
-        {/* Rule-mode toggle */}
-        <div className="inline-flex rounded-md border border-gray-200 overflow-hidden text-xs">
-          <button
-            type="button"
-            onClick={() => onMode("required")}
-            className={`px-2 py-1 ${!weighted ? "bg-phylo-blue text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-          >
-            Required rule
-          </button>
-          <button
-            type="button"
-            onClick={() => onMode("weighted")}
-            className={`px-2 py-1 ${weighted ? "bg-phylo-blue text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-          >
-            Weighted signal
-          </button>
-        </div>
-        {/* Weight slider + exact number box — weighted mode only */}
-        {weighted && (
-          <div className="flex items-center gap-2 text-xs text-gray-600">
-            <span>Weight</span>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={c.weight}
-              onChange={(e) => onWeight(parseFloat(e.target.value))}
-              className="w-32 accent-phylo-blue"
-              aria-label="Criterion weight"
-            />
-            <input
-              type="number"
-              min={0}
-              max={1}
-              step={0.05}
-              value={c.weight}
-              onChange={(e) => {
-                const v = parseFloat(e.target.value);
-                if (!isNaN(v)) onWeight(Math.min(1, Math.max(0, v)));
-              }}
-              className="input w-16 h-7 text-xs"
-              aria-label="Criterion weight (exact)"
-            />
-          </div>
-        )}
-        {!weighted && (
-          <span className="text-xs text-gray-400">
-            Strict eligibility rule — must be satisfied
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function PicoHypothesisPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
@@ -228,9 +138,6 @@ export function PicoHypothesisPage() {
   const [inclusion, setInclusion] = useState<Criterion[]>([]);
   const [exclusion, setExclusion] = useState<Criterion[]>([]);
   const [criteriaSaved, setCriteriaSaved] = useState(false);
-  // Draft flow: mode/weight edits stay DRAFT until "Preview effect" → "Save".
-  const [criteriaPreview, setCriteriaPreview] = useState<Awaited<ReturnType<typeof api.previewCriteria>> | null>(null);
-  const [criteriaPreviewed, setCriteriaPreviewed] = useState(false);
 
   useEffect(() => {
     if (criteria) {
@@ -239,29 +146,12 @@ export function PicoHypothesisPage() {
     }
   }, [criteria]);
 
-  // Any draft edit invalidates the last preview.
-  useEffect(() => {
-    setCriteriaPreviewed(false);
-    setCriteriaPreview(null);
-  }, [inclusion, exclusion]);
-
-  const criteriaPreviewMutation = useMutation({
-    mutationFn: () => api.previewCriteria(projectId!, { inclusion, exclusion }),
-    onSuccess: (data) => {
-      setCriteriaPreview(data);
-      setCriteriaPreviewed(true);
-    },
-  });
-
   const criteriaSaveMutation = useMutation({
     mutationFn: () =>
       api.updateCriteria(projectId!, { inclusion, exclusion }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["criteria", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["criteriaEvaluation", projectId] });
       setCriteriaSaved(true);
-      setCriteriaPreviewed(false);
-      setCriteriaPreview(null);
       setTimeout(() => setCriteriaSaved(false), 2500);
     },
   });
@@ -279,8 +169,6 @@ export function PicoHypothesisPage() {
     const newCrit: Criterion = {
       id: `crit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       text: "",
-      rule_mode: "required",
-      weight: 0.5,
     };
     if (type === "inclusion") setInclusion([...inclusion, newCrit]);
     else setExclusion([...exclusion, newCrit]);
@@ -298,38 +186,6 @@ export function PicoHypothesisPage() {
     } else {
       const next = [...exclusion];
       next[i] = { ...next[i], text };
-      setExclusion(next);
-    }
-  };
-
-  const updateCriterionMode = (
-    type: "inclusion" | "exclusion",
-    i: number,
-    rule_mode: "required" | "weighted"
-  ) => {
-    if (type === "inclusion") {
-      const next = [...inclusion];
-      next[i] = { ...next[i], rule_mode };
-      setInclusion(next);
-    } else {
-      const next = [...exclusion];
-      next[i] = { ...next[i], rule_mode };
-      setExclusion(next);
-    }
-  };
-
-  const updateCriterionWeight = (
-    type: "inclusion" | "exclusion",
-    i: number,
-    weight: number
-  ) => {
-    if (type === "inclusion") {
-      const next = [...inclusion];
-      next[i] = { ...next[i], weight };
-      setInclusion(next);
-    } else {
-      const next = [...exclusion];
-      next[i] = { ...next[i], weight };
       setExclusion(next);
     }
   };
@@ -958,16 +814,24 @@ export function PicoHypothesisPage() {
             )}
             <div className="space-y-2">
               {inclusion.map((c, i) => (
-                <CriteriaRow
-                  key={c.id}
-                  criterion={c}
-                  index={i}
-                  placeholder="Inclusion criterion..."
-                  onText={(text) => updateCriterion("inclusion", i, text)}
-                  onMode={(mode) => updateCriterionMode("inclusion", i, mode)}
-                  onWeight={(w) => updateCriterionWeight("inclusion", i, w)}
-                  onRemove={() => removeCriterion("inclusion", i)}
-                />
+                <div key={c.id} className="flex gap-2 items-start">
+                  <span className="text-sm font-medium text-gray-400 mt-2 w-6 shrink-0">
+                    {i + 1}.
+                  </span>
+                  <textarea
+                    className="input min-h-[36px] flex-1 text-sm"
+                    value={c.text}
+                    onChange={(e) => updateCriterion("inclusion", i, e.target.value)}
+                    placeholder="Inclusion criterion..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeCriterion("inclusion", i)}
+                    className="text-gray-400 hover:text-red-500 mt-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -989,16 +853,24 @@ export function PicoHypothesisPage() {
             )}
             <div className="space-y-2">
               {exclusion.map((c, i) => (
-                <CriteriaRow
-                  key={c.id}
-                  criterion={c}
-                  index={i}
-                  placeholder="Exclusion criterion..."
-                  onText={(text) => updateCriterion("exclusion", i, text)}
-                  onMode={(mode) => updateCriterionMode("exclusion", i, mode)}
-                  onWeight={(w) => updateCriterionWeight("exclusion", i, w)}
-                  onRemove={() => removeCriterion("exclusion", i)}
-                />
+                <div key={c.id} className="flex gap-2 items-start">
+                  <span className="text-sm font-medium text-gray-400 mt-2 w-6 shrink-0">
+                    {i + 1}.
+                  </span>
+                  <textarea
+                    className="input min-h-[36px] flex-1 text-sm"
+                    value={c.text}
+                    onChange={(e) => updateCriterion("exclusion", i, e.target.value)}
+                    placeholder="Exclusion criterion..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeCriterion("exclusion", i)}
+                    className="text-gray-400 hover:text-red-500 mt-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -1007,61 +879,19 @@ export function PicoHypothesisPage() {
             <ErrorBanner msg={(criteriaSaveMutation.error as Error).message} />
           )}
 
-          {/* Draft flow: Preview effect → Save. Nothing changes for any study
-              until Save commits; the preview shows what would change. */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => criteriaPreviewMutation.mutate()}
-                disabled={criteriaPreviewMutation.isPending}
-              >
-                {criteriaPreviewMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Preview effect
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => criteriaSaveMutation.mutate()}
-                disabled={criteriaSaveMutation.isPending || !criteriaPreviewed}
-                title={criteriaPreviewed ? "Save criteria" : "Run Preview effect first"}
-              >
-                {criteriaSaveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Save Criteria
-              </button>
-              {criteriaSaved && (
-                <span className="flex items-center gap-1 text-sm text-phylo-green">
-                  <CheckCircle className="h-4 w-4" /> Saved
-                </span>
-              )}
-            </div>
-            {criteriaPreview && (
-              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
-                <span className="font-semibold">
-                  Preview: {criteriaPreview.studies_affected} of {criteriaPreview.studies_evaluated} studies
-                  {" "}would change
-                </span>{" "}
-                (flags or scores). Saving applies these modes/weights; no study decision is ever
-                changed automatically.
-                {criteriaPreview.affected.slice(0, 5).map((a) => (
-                  <div key={a.study_id} className="mt-1 text-gray-600">
-                    • {a.title || a.study_id}: score {a.current_score.toFixed(2)} →{" "}
-                    {a.proposed_score.toFixed(2)}
-                    {a.flags_added.length > 0 && `; +${a.flags_added.length} flag(s)`}
-                    {a.flags_removed.length > 0 && `; −${a.flags_removed.length} flag(s)`}
-                  </div>
-                ))}
-                {criteriaPreview.affected.length > 5 && (
-                  <div className="mt-1 text-gray-500">
-                    …and {criteriaPreview.affected.length - 5} more studies.
-                  </div>
-                )}
-              </div>
-            )}
-            {criteriaPreviewMutation.isError && (
-              <span className="text-sm text-red-600">
-                {(criteriaPreviewMutation.error as Error).message}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => criteriaSaveMutation.mutate()}
+              disabled={criteriaSaveMutation.isPending}
+            >
+              {criteriaSaveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save Criteria
+            </button>
+            {criteriaSaved && (
+              <span className="flex items-center gap-1 text-sm text-phylo-green">
+                <CheckCircle className="h-4 w-4" /> Saved
               </span>
             )}
           </div>

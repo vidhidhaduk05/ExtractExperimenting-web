@@ -5,7 +5,7 @@ import {
   FileText, Copy, RotateCcw, Save, GripVertical, ChevronUp, ChevronDown,
   AlertTriangle, Loader2, ArrowRight, ListOrdered, FileSpreadsheet
 } from "lucide-react";
-import { type CodebookRule } from "../../lib/api";
+import { type CodebookRule, DEMO_CODEBOOK_RULES, DEMO_VARIABLES } from "../../lib/demoData";
 import { api, type ReviewVariable } from "../../lib/api";
 
 interface CodebookDesignerModalProps {
@@ -31,14 +31,8 @@ const PREDEFINED_TEMPLATES: Record<string, { name: string; description: string; 
   pam_vascular: {
     name: "Pure Arterial Malformations (PAM) Protocol (Default)",
     description: "Angioarchitecture, aneurysm association, vessel involvement, and stroke outcomes in intracranial PAMs.",
-    rules: {},
-    variables: [
-      { variable_id: "v1_vessel_involved", project_id: "proj_pam_current", name: "Vessel Involved", section: "Anatomy", order_index: 0, description: "Arterial vessel/branch harboring the malformation", field_type: "text" },
-      { variable_id: "v9_associated_aneurysm", project_id: "proj_pam_current", name: "Associated Aneurysm", section: "Angioarchitecture", order_index: 1, description: "Presence of aneurysm along the looping arterial trunk", field_type: "text" },
-      { variable_id: "v18_treatment_type", project_id: "proj_pam_current", name: "Treatment Type", section: "Management", order_index: 2, description: "Management modality (conservative, endovascular, surgical)", field_type: "categorical" },
-      { variable_id: "v4_presentation", project_id: "proj_pam_current", name: "Presentation", section: "Clinical", order_index: 3, description: "Initial symptom (headache, seizure, hemorrhage, incidental)", field_type: "categorical" },
-      { variable_id: "v12_age", project_id: "proj_pam_current", name: "Patient Age", section: "Demographics", order_index: 4, description: "Age at diagnosis in years", field_type: "numeric" },
-    ],
+    rules: DEMO_CODEBOOK_RULES,
+    variables: DEMO_VARIABLES,
   },
   clinical_trial: {
     name: "RCT / Clinical Trial Systematic Review",
@@ -96,7 +90,7 @@ export function CodebookDesignerModal({
       const saved = localStorage.getItem("radextract_codebook_rules");
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return {};
+    return DEMO_CODEBOOK_RULES;
   });
 
   const [variables, setVariables] = useState<ReviewVariable[]>(() => {
@@ -104,7 +98,7 @@ export function CodebookDesignerModal({
       const saved = localStorage.getItem("radextract_variables");
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return [];
+    return DEMO_VARIABLES;
   });
 
   const [selectedVarId, setSelectedVarId] = useState<string>(() => {

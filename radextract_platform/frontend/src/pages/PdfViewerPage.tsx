@@ -6,7 +6,7 @@ import {
   type PdfDocumentData,
   type PdfHighlight as ApiPdfHighlight,
 } from "../lib/api";
-import { type CodebookRule } from "../lib/api";
+import { DEMO_CODEBOOK_RULES, DEMO_STUDIES, DEMO_EXTRACTIONS, DEMO_VARIABLES, type CodebookRule } from "../lib/demoData";
 import {
   ArrowLeft, FileText, Loader2, Upload, Sparkles,
   CheckCircle, Table, Tag, Highlighter, ArrowRight,
@@ -151,7 +151,7 @@ export function PdfViewerPage() {
       const saved = localStorage.getItem("radextract_codebook_rules");
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return {};
+    return DEMO_CODEBOOK_RULES;
   });
 
   // Undo system
@@ -231,7 +231,7 @@ export function PdfViewerPage() {
 
   // Ensure variable list strictly respects global saved order_index
   const variableList = useMemo(() => {
-    const list = variables || [];
+    const list = (variables && variables.length > 0) ? variables : DEMO_VARIABLES;
     return [...list].sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
   }, [variables]);
   useEffect(() => {
@@ -254,7 +254,8 @@ export function PdfViewerPage() {
   const currentVar = variableList.find((v: any) => v.variable_id === selectedVarId) || variableList[0];
   const extractionMap: Record<string, any> = useMemo(() => {
     const map: Record<string, any> = {};
-    const sourceList = extractions || [];
+    const fallbackList = (DEMO_EXTRACTIONS as any)[activeStudyId] || (DEMO_EXTRACTIONS as any)["study_birua_2022"] || [];
+    const sourceList = (extractions && extractions.length > 0) ? extractions : fallbackList;
     sourceList.forEach((e: any) => {
       if (e.variable_id) {
         map[e.variable_id] = {
@@ -270,7 +271,7 @@ export function PdfViewerPage() {
   }, [extractions, activeStudyId]);
 
   const currentExtraction = currentVar ? extractionMap[currentVar.variable_id] : null;
-  const currentRule: CodebookRule | undefined = currentVar ? (customRules[currentVar.variable_id]) : undefined;
+  const currentRule: CodebookRule | undefined = currentVar ? (customRules[currentVar.variable_id] || DEMO_CODEBOOK_RULES[currentVar.variable_id]) : undefined;
 
   // Progress metrics
   const currentVarIndex = Math.max(0, variableList.findIndex((v: any) => v.variable_id === selectedVarId));
@@ -603,7 +604,7 @@ export function PdfViewerPage() {
       for (const v of highConfPendingVariables) {
         const ext = extractionMap[v.variable_id];
         const val = ext?.value || "";
-        const rule = customRules[v.variable_id];
+        const rule = customRules[v.variable_id] || DEMO_CODEBOOK_RULES[v.variable_id];
 
         batchUndos.push({
           studyId: activeStudyId,
@@ -1578,7 +1579,7 @@ export function PdfViewerPage() {
               const isSelected = v.variable_id === selectedVarId;
               const isVerified = ext?.is_verified;
               const isEdited = ext?.is_edited;
-              const rule = customRules[v.variable_id];
+              const rule = customRules[v.variable_id] || DEMO_CODEBOOK_RULES[v.variable_id];
               const isTransitioning = acceptTransitioningId === v.variable_id;
 
               const confPercent = Math.round((ext?.confidence || 0) * 100);

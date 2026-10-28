@@ -20,13 +20,19 @@ import {
   FileText,
   LineChart,
   ArrowRight,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Home,
   X,
   ExternalLink,
   Table,
+  Layers,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ErrorBoundary } from "./common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "./common/ClarificationNotificationCenter";
+import { GoogleTasksPanel } from "./common/GoogleTasksPanel";
 
 interface NavItemDef {
   to: (projectId?: string) => string;
@@ -41,6 +47,12 @@ const SHELL_NAV_ITEMS: NavItemDef[] = [
     matchPattern: /^\/projects(\/[^/]+)?$/,
     label: "Projects",
     icon: Folder,
+  },
+  {
+    to: (pid) => (pid ? `/projects/${pid}/studies` : "/projects"),
+    matchPattern: /\/(studies|deduplicat)/,
+    label: "Deduplication",
+    icon: Layers,
   },
   {
     to: (pid) => (pid ? `/projects/${pid}/screening` : "/projects"),
@@ -81,6 +93,7 @@ const SHELL_NAV_ITEMS: NavItemDef[] = [
 ];
 
 function getStageName(pathname: string): string {
+  if (pathname.includes("/studies") || pathname.includes("/deduplicate")) return "Studies & Deduplication";
   if (pathname.includes("/screening")) return "Eligibility Screening";
   if (pathname.includes("/extraction-sheet")) return "Extraction Sheet";
   if (pathname.includes("/extraction")) return "PDF Extraction";
@@ -113,7 +126,7 @@ export function AppShell() {
     return true;
   });
 
-  const [activeDockTab, setActiveDockTab] = useState<"todos" | "results" | "prisma">("todos");
+  const [activeDockTab, setActiveDockTab] = useState<"todos" | "tasks" | "results" | "prisma">("todos");
   const [shareCopied, setShareCopied] = useState(false);
 
   // Fetch project details for breadcrumbs
@@ -175,15 +188,91 @@ export function AppShell() {
     }
   };
 
-  // Derive workflow checklist status
+  // Derive workflow checklist status & PRISMA numbers
   const hasPico = Boolean(project?.pico_json && project.pico_json.trim().length > 10);
-  const totalStudies = studies.length;
-  const screenedCount = studies.filter((s) => s.screening_status && s.screening_status !== "pending").length;
-  const includedCount = studies.filter((s) => s.screening_status === "included").length;
+  const totalStudies = (prismaFlow?.identification?.total ?? (prismaFlow as any)?.identified) || studies.length;
+  const screenedCount =
+    prismaFlow?.screening?.records_screened ??
+    (prismaFlow as any)?.screened ??
+    studies.filter((s) => s.screening_status && s.screening_status !== "pending").length;
+  const duplicatesRemovedCount =
+    prismaFlow?.identification?.duplicates_removed ??
+    (prismaFlow as any)?.duplicates_removed ??
+    studies.filter((s) => s.is_duplicate === 1).length;
+  const includedCount =
+    prismaFlow?.included?.studies_in_review ??
+    (prismaFlow as any)?.included ??
+    studies.filter((s) => s.screening_status === "included").length;
+  const fullTextAssessedCount =
+    prismaFlow?.eligibility?.full_text_assessed ??
+    (prismaFlow as any)?.full_text_assessed ??
+    0;
+  const fullTextExcludedCount =
+    prismaFlow?.eligibility?.full_text_excluded ??
+    (prismaFlow as any)?.full_text_excluded ??
+    0;
+  const abstractExcludedCount =
+    prismaFlow?.screening?.records_excluded ??
+    (prismaFlow as any)?.excluded ??
+    studies.filter((s) => s.screening_status === "excluded").length;
   const extractedCount = studies.filter((s) => s.extractions && s.extractions.length > 0).length;
   const robAssessmentsCount = robSummary?.total_assessments || 0;
   const metaCount = metaList.length;
   const gradeCount = gradeList.length;
+
+  // Hotkeys for browser-style Back / Forward navigation (Alt+ArrowLeft, Alt+ArrowRight)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.altKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.altKey && e.key === 'ArrowRight') {
+        e.preventDefault();
+        navigate(1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
+  // Review stage sequence for Stage Prev / Next Stepper
+  const stageOrder = [
+    { label: "Overview", path: projectId ? `/projects/${projectId}` : "/projects" },
+    { label: "Deduplication", path: projectId ? `/projects/${projectId}/studies` : "/projects" },
+    { label: "Screening", path: projectId ? `/projects/${projectId}/screening` : "/projects" },
+    { label: "Extraction", path: projectId ? `/projects/${projectId}/extraction-sheet` : "/projects" },
+    { label: "Risk of Bias", path: projectId ? `/projects/${projectId}/rob` : "/projects" },
+    { label: "Synthesis", path: projectId ? `/projects/${projectId}/meta-analysis` : "/projects" },
+    { label: "GRADE", path: projectId ? `/projects/${projectId}/grade` : "/projects" },
+    { label: "PRISMA", path: projectId ? `/projects/${projectId}/prisma` : "/projects" },
+  ];
+
+  const currentStageIndex = stageOrder.findIndex((s) => {
+    if (s.path === location.pathname) return true;
+    if (location.pathname.includes("/studies") && s.path.includes("/studies")) return true;
+    if (location.pathname.includes("/screening") && s.path.includes("/screening")) return true;
+    if (location.pathname.includes("/extraction") && s.path.includes("/extraction")) return true;
+    if (location.pathname.includes("/rob") && s.path.includes("/rob")) return true;
+    if ((location.pathname.includes("/meta-analysis") || location.pathname.includes("/analysis")) && s.path.includes("/meta-analysis")) return true;
+    if (location.pathname.includes("/grade") && s.path.includes("/grade")) return true;
+    if (location.pathname.includes("/prisma") && s.path.includes("/prisma")) return true;
+    if (projectId && location.pathname === `/projects/${projectId}`) return true;
+    return false;
+  });
+
+  const prevStage = currentStageIndex > 0 ? stageOrder[currentStageIndex - 1] : null;
+  const nextStage = currentStageIndex >= 0 && currentStageIndex < stageOrder.length - 1 ? stageOrder[currentStageIndex + 1] : null;
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#fbf9f4] text-[#4f444b] font-['Work_Sans']">
@@ -197,10 +286,9 @@ export function AppShell() {
           <Link
             to={projectId ? `/projects/${projectId}` : "/projects"}
             className="w-9 h-9 rounded flex items-center justify-center font-serif text-lg font-bold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
-            title="V"
-            aria-label="Home"
+            title="RadExtract"
           >
-            V
+            R
           </Link>
 
           {/* Navigation Items */}
@@ -263,19 +351,93 @@ export function AppShell() {
           className="h-[56px] min-h-[56px] max-h-[56px] bg-[#3a0f34] text-[#fbf9f4] px-4 flex items-center justify-between z-20 select-none shadow-xs"
           role="banner"
         >
-          {/* Left Breadcrumb */}
-          <div className="flex items-center gap-2 min-w-0">
-            <Link
-              to={projectId ? `/projects/${projectId}` : "/projects"}
-              className="font-serif font-bold text-sm text-[#fbf9f4] hover:underline truncate max-w-[280px] sm:max-w-[420px]"
-              title={project?.name || "Projects"}
-            >
-              {project?.name || (projectId ? `Project ${projectId.slice(0, 8)}` : "V")}
-            </Link>
-            <span className="text-[#814d75] font-sans text-xs">/</span>
-            <span className="text-xs font-['Work_Sans'] font-medium text-[#ffdea6] truncate">
-              {stageName}
-            </span>
+          {/* Left Navigation Controls & Breadcrumb */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* History Back / Forward Controls */}
+            <div className="flex items-center gap-1 shrink-0 bg-[#4e1c47] p-0.5 rounded border border-[#814d75]">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="p-1 text-[#fbf9f4] hover:bg-[#66365c] rounded transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+                title="Go back (Alt+Left)"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(1)}
+                className="p-1 text-[#fbf9f4] hover:bg-[#66365c] rounded transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+                title="Go forward (Alt+Right)"
+                aria-label="Go forward"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <Link
+                to="/projects"
+                className="p-1 text-[#fbf9f4] hover:bg-[#66365c] rounded transition-colors border-l border-[#814d75]/60 pl-1.5"
+                title="All Projects"
+                aria-label="All Projects"
+              >
+                <Home className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* Stage Stepper: Previous / Next Stage */}
+            {projectId && (
+              <div className="hidden md:flex items-center gap-1 shrink-0 bg-[#4e1c47] px-1.5 py-0.5 rounded border border-[#814d75] text-[11px]">
+                {prevStage ? (
+                  <Link
+                    to={prevStage.path}
+                    className="flex items-center gap-0.5 text-[#fbf9f4]/80 hover:text-[#fbf9f4] hover:underline px-1 py-0.5"
+                    title={`Previous stage: ${prevStage.label}`}
+                  >
+                    <ChevronLeft className="w-3 h-3 text-[#ffdea6]" />
+                    <span>{prevStage.label}</span>
+                  </Link>
+                ) : (
+                  <span className="text-[#814d75] px-1 py-0.5">Start</span>
+                )}
+                <span className="text-[#814d75]">|</span>
+                {nextStage ? (
+                  <Link
+                    to={nextStage.path}
+                    className="flex items-center gap-0.5 text-[#fbf9f4]/80 hover:text-[#fbf9f4] hover:underline px-1 py-0.5"
+                    title={`Next stage: ${nextStage.label}`}
+                  >
+                    <span>{nextStage.label}</span>
+                    <ChevronRight className="w-3 h-3 text-[#ffdea6]" />
+                  </Link>
+                ) : (
+                  <span className="text-[#814d75] px-1 py-0.5">End</span>
+                )}
+              </div>
+            )}
+
+            {/* Clickable Breadcrumbs */}
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 min-w-0 text-xs">
+              <Link
+                to="/projects"
+                className="hidden lg:inline font-sans text-[#fbf9f4]/80 hover:text-[#fbf9f4] hover:underline shrink-0"
+              >
+                Projects
+              </Link>
+              <span className="hidden lg:inline text-[#814d75] font-sans text-xs">/</span>
+
+              <Link
+                to={projectId ? `/projects/${projectId}` : "/projects"}
+                className="font-serif font-bold text-sm text-[#fbf9f4] hover:underline truncate max-w-[180px] sm:max-w-[280px] md:max-w-[360px]"
+                title={project?.name || "Project Overview"}
+              >
+                {project?.name || (projectId ? `Project ${projectId.slice(0, 8)}` : "RadExtract")}
+              </Link>
+
+              <span className="text-[#814d75] font-sans text-xs">/</span>
+
+              <span className="font-['Work_Sans'] font-medium text-[#ffdea6] truncate">
+                {stageName}
+              </span>
+            </nav>
           </div>
 
           {/* Right Action Controls */}
@@ -289,7 +451,7 @@ export function AppShell() {
               >
                 <GitBranch className="h-3.5 w-3.5 text-[#ffdea6]" />
                 <span>
-                  {prismaFlow ? `${prismaFlow.screened || 0} / ${prismaFlow.identified || 0} screened` : "PRISMA Flow"}
+                  {`${screenedCount} / ${totalStudies} screened`}
                 </span>
               </Link>
             )}
@@ -306,16 +468,7 @@ export function AppShell() {
               </Link>
             )}
 
-            {/* Share Action */}
-            <button
-              type="button"
-              onClick={handleShare}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#fbf9f4] bg-[#4e1c47] hover:bg-[#1a0017] border border-[#814d75] rounded transition-colors"
-              title="Share review workspace link"
-            >
-              <Share2 className="h-3.5 w-3.5" />
-              <span className="hidden md:inline">{shareCopied ? "Copied!" : "Share"}</span>
-            </button>
+
 
             {/* Dock Toggle Button */}
             <button
@@ -370,13 +523,27 @@ export function AppShell() {
                   type="button"
                   onClick={() => setActiveDockTab("todos")}
                   className={cn(
-                    "px-3 py-2 rounded-t transition-colors",
+                    "px-2.5 py-2 rounded-t transition-colors",
                     activeDockTab === "todos"
                       ? "text-[#3a0f34] border-b-2 border-[#3a0f34] font-bold"
                       : "text-[#62535d] hover:text-[#3a0f34]"
                   )}
+                  title="Stage-by-stage review checklist"
                 >
-                  To-dos
+                  Checklist
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDockTab("tasks")}
+                  className={cn(
+                    "px-2.5 py-2 rounded-t transition-colors",
+                    activeDockTab === "tasks"
+                      ? "text-[#3a0f34] border-b-2 border-[#3a0f34] font-bold"
+                      : "text-[#62535d] hover:text-[#3a0f34]"
+                  )}
+                  title="Google Tasks style custom to-do list"
+                >
+                  Tasks
                 </button>
                 <button
                   type="button"
@@ -417,6 +584,13 @@ export function AppShell() {
 
             {/* Dock Tab Content (Hairline-separated list rows, no card boxes) */}
             <div className="flex-1 overflow-y-auto">
+              {/* TAB: GOOGLE TASKS (User Tasks & Notes) */}
+              {activeDockTab === "tasks" && (
+                <div className="h-full">
+                  <GoogleTasksPanel projectId={projectId} />
+                </div>
+              )}
+
               {/* TAB 1: TO-DOS (Live API checklist) */}
               {activeDockTab === "todos" && (
                 <div className="divide-y divide-[rgba(210,194,203,0.45)] text-xs">
@@ -478,7 +652,7 @@ export function AppShell() {
                       <div className="truncate">
                         <div className="font-semibold text-[#4f444b] truncate">Full-Text Assessment</div>
                         <div className="text-[11px] text-[#62535d]">
-                          {prismaFlow ? `${prismaFlow.included || 0} studies included` : "0 included"}
+                          {`${includedCount} studies included`}
                         </div>
                       </div>
                     </div>
@@ -689,7 +863,7 @@ export function AppShell() {
                       2. Duplicates Removed
                     </div>
                     <div className="font-serif text-xl font-bold text-[#3a0f34]">
-                      {prismaFlow?.duplicates_removed ?? 0}
+                      {duplicatesRemovedCount}
                     </div>
                     <div className="text-[11px] text-[#62535d]">Exact & fuzzy duplicates eliminated</div>
                   </div>
@@ -703,10 +877,10 @@ export function AppShell() {
                       3. Title / Abstract Screened
                     </div>
                     <div className="font-serif text-xl font-bold text-[#3a0f34]">
-                      {prismaFlow?.screened ?? screenedCount}
+                      {screenedCount}
                     </div>
                     <div className="text-[11px] text-[#62535d]">
-                      {prismaFlow?.excluded ?? 0} excluded at abstract stage
+                      {abstractExcludedCount} excluded at abstract stage
                     </div>
                   </div>
 
@@ -719,10 +893,10 @@ export function AppShell() {
                       4. Full-Text Assessed
                     </div>
                     <div className="font-serif text-xl font-bold text-[#3a0f34]">
-                      {prismaFlow?.full_text_assessed ?? 0}
+                      {fullTextAssessedCount}
                     </div>
                     <div className="text-[11px] text-[#62535d]">
-                      {prismaFlow?.full_text_excluded ?? 0} excluded with specific reason
+                      {fullTextExcludedCount} excluded with specific reason
                     </div>
                   </div>
 
@@ -735,7 +909,7 @@ export function AppShell() {
                       5. Included in Synthesis
                     </div>
                     <div className="font-serif text-2xl font-bold text-[#3a0f34]">
-                      {prismaFlow?.included ?? includedCount}
+                      {includedCount}
                     </div>
                     <div className="text-[11px] text-[#62535d]">Studies included in systematic review</div>
                   </div>

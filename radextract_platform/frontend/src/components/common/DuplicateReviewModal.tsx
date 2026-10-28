@@ -38,27 +38,6 @@ export function DuplicateReviewModal({
   const [isMergingInteractive, setIsMergingInteractive] = useState(false);
   const [customMergedFields, setCustomMergedFields] = useState<Record<string, any>>({});
 
-  // Threshold sliders (Zoplicate-style): draft values requery after a 300ms debounce
-  const [titleThreshold, setTitleThreshold] = useState(0.90);
-  const [authorThreshold, setAuthorThreshold] = useState(0.50);
-  const [debouncedTitleThreshold, setDebouncedTitleThreshold] = useState(0.90);
-  const [debouncedAuthorThreshold, setDebouncedAuthorThreshold] = useState(0.50);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedTitleThreshold(titleThreshold), 300);
-    return () => clearTimeout(t);
-  }, [titleThreshold]);
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedAuthorThreshold(authorThreshold), 300);
-    return () => clearTimeout(t);
-  }, [authorThreshold]);
-
-  // Reset group/candidate selection when the candidate set changes
-  useEffect(() => {
-    setActiveGroupIndex(0);
-    setActiveDuplicateIndex(0);
-  }, [debouncedTitleThreshold, debouncedAuthorThreshold]);
-
   // Query duplicates
   const {
     data: dedupResult,
@@ -66,8 +45,8 @@ export function DuplicateReviewModal({
     refetch,
     isRefetching
   } = useQuery<DeduplicationResult>({
-    queryKey: ["duplicate_groups", projectId, debouncedTitleThreshold, debouncedAuthorThreshold],
-    queryFn: () => api.getDuplicateGroups(projectId, debouncedTitleThreshold, debouncedAuthorThreshold),
+    queryKey: ["duplicate_groups", projectId],
+    queryFn: () => api.getDuplicateGroups(projectId),
     enabled: isOpen && !!projectId,
   });
 
@@ -158,6 +137,35 @@ export function DuplicateReviewModal({
       group_id: currentGroup.group_id,
       merged_fields: action === "merge_metadata" ? customMergedFields : undefined,
     });
+  };
+
+  const [isMergingAll, setIsMergingAll] = useState(false);
+
+  const handleMergeAllMetadata = async () => {
+    if (!duplicateGroups.length) return;
+    setIsMergingAll(true);
+    setStatusMessage(null);
+    try {
+      const res = await api.mergeAllDuplicateMetadata(projectId, "most_complete");
+      setStatusMessage({
+        type: "success",
+        text: res.message || `Successfully merged metadata across all candidate duplicate groups.`,
+      });
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma", projectId] });
+      if (onResolved) onResolved();
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: `Error merging metadata across all studies: ${err?.message || "Unknown error"}`,
+      });
+    } finally {
+      setIsMergingAll(false);
+    }
   };
 
   const handleAutoResolveExactDois = async () => {
@@ -259,6 +267,18 @@ export function DuplicateReviewModal({
           </div>
 
           <div className="flex items-center gap-2">
+            {duplicateGroups.length > 0 && (
+              <button
+                type="button"
+                onClick={handleMergeAllMetadata}
+                disabled={isMergingAll}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 text-xs font-semibold transition-colors shadow-2xs disabled:opacity-50"
+                title="Merge all missing/richer metadata into canonical studies and mark duplicates for all groups"
+              >
+                <GitMerge className={`h-3.5 w-3.5 ${isMergingAll ? "animate-spin" : ""}`} />
+                <span>{isMergingAll ? "Merging All Studies..." : "Merge All Metadata (All Studies)"}</span>
+              </button>
+            )}
             {duplicateGroups.some((g) => g.duplicates.some((d) => d.match_reason === "doi" || d.match_reason === "pmid")) && (
               <button
                 type="button"
@@ -286,61 +306,6 @@ export function DuplicateReviewModal({
               <X className="h-5 w-5" />
             </button>
           </div>
-        </div>
-
-        {/* Threshold sliders — Zoplicate-style sensitivity controls (Master Theme) */}
-        <div className="px-6 py-2.5 border-b border-black/10 bg-[#FAF9F3] flex flex-wrap items-center gap-x-6 gap-y-2 shrink-0">
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="title-threshold-slider"
-              className="text-xs font-medium text-[#3a0f34] whitespace-nowrap"
-            >
-              Title similarity
-            </label>
-            <input
-              id="title-threshold-slider"
-              type="range"
-              min={80}
-              max={100}
-              step={1}
-              value={Math.round(titleThreshold * 100)}
-              onChange={(e) => setTitleThreshold(parseInt(e.target.value, 10) / 100)}
-              className="w-36 accent-[#3a0f34] cursor-pointer"
-            />
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#ffdea6] text-[#3a0f34] border border-[#3a0f34]/20 min-w-[42px] text-center"
-            >
-              {Math.round(titleThreshold * 100)}%
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="author-threshold-slider"
-              className="text-xs font-medium text-[#3a0f34] whitespace-nowrap"
-            >
-              Author overlap
-            </label>
-            <input
-              id="author-threshold-slider"
-              type="range"
-              min={0}
-              max={100}
-              step={5}
-              value={Math.round(authorThreshold * 100)}
-              onChange={(e) => setAuthorThreshold(parseInt(e.target.value, 10) / 100)}
-              className="w-36 accent-[#3a0f34] cursor-pointer"
-            />
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#ffdea6] text-[#3a0f34] border border-[#3a0f34]/20 min-w-[42px] text-center"
-            >
-              {Math.round(authorThreshold * 100)}%
-            </span>
-          </div>
-          <span className="text-[11px] text-[#6B665E] ml-auto">
-            {isRefetching
-              ? "Updating candidates..."
-              : `${duplicateGroups.length} candidate group${duplicateGroups.length === 1 ? "" : "s"} at these thresholds`}
-          </span>
         </div>
 
         {/* Status Alert Banner */}
@@ -887,7 +852,7 @@ export function DuplicateReviewModal({
                     <span>Keep Both</span>
                   </button>
 
-                  {/* Merge Metadata */}
+                  {/* Merge Metadata (This Pair) */}
                   <button
                     type="button"
                     disabled={resolveMutation.isPending}
@@ -908,6 +873,20 @@ export function DuplicateReviewModal({
                     <GitMerge className="h-4 w-4" />
                     <span>{isMergingInteractive ? "Apply Merge & Keep Primary" : "Merge Metadata"}</span>
                   </button>
+
+                  {/* Merge All Metadata for All Studies */}
+                  {totalGroups > 1 && (
+                    <button
+                      type="button"
+                      disabled={isMergingAll}
+                      onClick={handleMergeAllMetadata}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-400 bg-amber-100 text-amber-950 hover:bg-amber-200 text-xs font-semibold transition-all shadow-2xs disabled:opacity-50"
+                      title="Merge metadata for ALL duplicate study groups across the entire project at once"
+                    >
+                      <Layers className={`h-4 w-4 ${isMergingAll ? "animate-spin" : ""}`} />
+                      <span>{isMergingAll ? "Merging All..." : "Merge All Metadata (All Studies)"}</span>
+                    </button>
+                  )}
 
                   {/* Keep This Record (Primary) */}
                   <button

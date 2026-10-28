@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, saveStoredProjectStudies, type Study } from "../lib/api";
+import { api, saveStoredProjectStudies, type Study, type ImportBatchResponse } from "../lib/api";
 import { autoIdentifyPdf } from "../lib/pdfAutoIdentifier";
 import {
   Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2,
@@ -54,19 +54,32 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   const directFileInputRef = useRef<HTMLInputElement>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.location.hash.includes("dedup") || window.location.search.includes("dedup");
+    }
+    return false;
+  });
 
-  // Direct Drag & Drop and Batch History State
-  const [importBatches, setImportBatches] = useState<ImportBatch[]>(() => getInitialBatches(projectId || "default"));
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (window.location.hash.includes("dedup") || window.location.search.includes("dedup")) {
+        setIsDuplicateModalOpen(true);
+      }
+    }
+  }, []);
+
+  // Direct Drag & Drop and Persistent Server Batch History State
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessingDirect, setIsProcessingDirect] = useState(false);
   const [directProcessMsg, setDirectProcessMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (projectId) {
-      setImportBatches(getInitialBatches(projectId));
-    }
-  }, [projectId]);
+  const { data: serverBatches = [], refetch: refetchBatches } = useQuery<ImportBatchResponse[]>({
+    queryKey: ["import-batches", projectId],
+    queryFn: () => (projectId ? api.listImportBatches(projectId).catch(() => []) : Promise.resolve([])),
+    enabled: !!projectId,
+    refetchInterval: isProcessingDirect ? 2000 : false,
+  });
 
   const { data: studies, isLoading } = useQuery({
     queryKey: ["studies", projectId],
@@ -117,6 +130,9 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       }
       setUploadMsg(parts.join(", "));
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
     },
     onError: (err: Error) => {
       setUploadMsg(`Error: ${err.message}`);
@@ -192,27 +208,14 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         ? "RIS File"
         : "Direct PDF Upload";
 
-      const newBatch: ImportBatch = {
-        id: `batch_${Date.now()}`,
-        projectId: projectId!,
-        date: todayStr,
-        filename: mainName,
-        addedCount: totalAdded,
-        referencesCount: totalRefs || totalAdded,
-        duplicatesCount: totalDuplicates,
-        mergedCount: 0,
-        source: sourceGuess,
-        studyIds: batchStudyIds,
-      };
-
-      const nextBatches = [newBatch, ...importBatches];
-      setImportBatches(nextBatches);
-      try {
-        localStorage.setItem(`radextract_import_batches_${projectId}`, JSON.stringify(nextBatches));
-      } catch (e) {}
-
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
       queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
       setUploadMsg(`Import successful: ${totalAdded} studies added to screening from ${mainName}.`);
     } catch (err: any) {
       setUploadMsg(`Import error: ${err.message || "Failed to process files"}`);
@@ -223,38 +226,39 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   };
 
   const handleUndoImport = async (batchId: string) => {
-    const batch = importBatches.find(b => b.id === batchId);
-    if (!batch || batch.undoneAt) return;
+    const batch = serverBatches.find(b => b.batch_id === batchId);
+    if (!batch || batch.status === "undone") return;
 
-    if (!window.confirm(`Undo import of ${batch.filename}? This will remove the studies imported in this batch.`)) {
+    if (!window.confirm(`Undo import of ${batch.filename}? This will atomically remove studies introduced in this batch from the database.`)) {
       return;
     }
 
-    const todayStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-    const updated = importBatches.map(b => b.id === batchId ? { ...b, undoneAt: todayStr } : b);
-    setImportBatches(updated);
     try {
-      localStorage.setItem(`radextract_import_batches_${projectId}`, JSON.stringify(updated));
-    } catch (e) {}
-
-    try {
-      const curStudies = await api.listStudies(projectId!);
-      let remaining: Study[];
-      if (batch.studyIds && batch.studyIds.length > 0) {
-        const toRemove = new Set(batch.studyIds);
-        remaining = curStudies.filter(s => !toRemove.has(s.study_id));
-        for (const id of batch.studyIds) {
-          api.deleteStudy(id).catch(() => {});
-        }
-      } else {
-        remaining = curStudies.slice(0, Math.max(0, curStudies.length - (batch.addedCount || 1)));
-      }
-      saveStoredProjectStudies(projectId!, remaining);
+      const res = await api.undoImportBatch(projectId!, batchId, false);
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
       queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
-      setUploadMsg(`Import undone: ${batch.filename} was successfully undone on ${todayStr}.`);
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
+      setUploadMsg(res.message || `Import of ${batch.filename} successfully undone.`);
     } catch (err: any) {
-      console.error("Error undoing import:", err);
+      if (err.message && err.message.includes("409")) {
+        if (window.confirm(`Studies in this batch have downstream work (screening decisions or extractions). Force undo and remove downstream data?`)) {
+          const forceRes = await api.undoImportBatch(projectId!, batchId, true);
+          queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+          setUploadMsg(forceRes.message || `Import of ${batch.filename} forcibly undone.`);
+          return;
+        }
+      }
+      setUploadMsg(`Error undoing batch: ${err.message || "Failed to undo import"}`);
     }
   };
 
@@ -262,6 +266,9 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
     if (window.confirm("Start blank workspace? This will clear benchmark demo studies so you can upload and extract your own literature.")) {
       await api.resetStudies(projectId!, true);
       queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
       setUploadMsg("Workspace cleared. Repository is now blank and ready for custom study uploads.");
     }
   };
@@ -269,6 +276,9 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   const handleRestoreBenchmark = async () => {
     await api.resetStudies(projectId!, false);
     queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
     setUploadMsg("Benchmark clinical studies restored (6 verified intracranial PAM literature datasets).");
   };
 
@@ -402,44 +412,6 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         </div>
       </div>
 
-
-      {/* Quick Extraction Banner */}
-      <div className="card-phylo-warm p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
-        <div className="flex items-start gap-4">
-          <div className="h-10 w-10 rounded-full bg-[#141413] text-[#FAF9F3] flex items-center justify-center shrink-0 shadow-xs">
-            <Highlighter className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="font-serif text-lg font-medium text-[#141413]">
-                Direct Co-Scientist Quote Extraction & Verification
-              </h2>
-              <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">FAST-TRACK EXTRACTION</span>
-            </div>
-            <p className="font-sans text-xs text-[#6B665E] max-w-xl leading-relaxed">
-              Upload multiple study PDFs to automatically parse clinical metadata into JSON and jump directly to the Extraction Sheet without manual screening.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto">
-          <Link
-            to={`/projects/${projectId}/extraction-sheet`}
-            className="btn-phylo-primary text-xs px-4 py-2 flex-1 md:flex-initial"
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5" />
-            <span>Extraction Sheet</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-          <Link
-            to={`/projects/${projectId}/extraction`}
-            className="btn-phylo-secondary text-xs px-4 py-2 flex-1 md:flex-initial bg-white/80"
-          >
-            <Highlighter className="h-3.5 w-3.5 text-[#141413]" />
-            <span>In-situ PDF Viewer</span>
-          </Link>
-        </div>
-      </div>
 
       {/* Duplicate Detection Alert Banner */}
       {dedupData && dedupData.total_duplicates > 0 && (
@@ -575,52 +547,52 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         )}
       </div>
 
-      {/* ── Import Batches History (Covidence-Style Cards with Undo Import) ── */}
-      {importBatches.length > 0 && (
+      {/* ── Import Batches History (Real Server Persistent Batches with Atomic Undo) ── */}
+      {serverBatches.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-black/[0.08] pb-2">
+          <div className="flex items-center justify-between border-b border-[#d2c2cb] pb-2">
             <div className="flex items-center gap-2">
-              <h3 className="font-serif text-lg font-normal text-[#141413]">
+              <h3 className="font-serif text-lg font-bold text-[#3a0f34]">
                 Import Batches & Screening History
               </h3>
-              <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-black/[0.05] text-[#6B665E]">
-                {importBatches.length} Batches
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb]">
+                {serverBatches.length} Batches Recorded
               </span>
             </div>
-            <span className="text-xs text-[#8A817A] italic font-serif hidden sm:inline">
-              Click "Undo import" on any batch to revert study inclusions
+            <span className="text-xs text-[#62535d] italic font-serif hidden sm:inline">
+              Click "Undo import" on any batch to revert study inclusions and remove from review
             </span>
           </div>
 
           <div className="space-y-4">
-            {importBatches.map((batch) => (
+            {serverBatches.map((batch) => (
               <div
-                key={batch.id}
-                className="bg-white border border-black/10 rounded-2xl p-5 sm:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4 transition-all hover:border-black/20"
+                key={batch.batch_id}
+                className="bg-white border border-[#d2c2cb] rounded p-5 sm:p-6 shadow-xs space-y-4 transition-all hover:border-[#814d75]"
               >
                 {/* Header: Date + Filename on Left, Status / Undo Import on Right */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/[0.04] pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#d2c2cb]/40 pb-3">
                   <div>
-                    <div className="text-xs text-[#8A817A] font-sans font-medium">{batch.date}</div>
-                    <div className="text-sm font-semibold font-mono text-[#141413] mt-0.5 break-all">
+                    <div className="text-xs text-[#62535d] font-sans font-medium">{batch.created_at} &middot; format: <span className="uppercase font-mono">{batch.format}</span></div>
+                    <div className="text-sm font-semibold font-mono text-[#3a0f34] mt-0.5 break-all">
                       {batch.filename}
                     </div>
                   </div>
 
                   <div className="shrink-0">
-                    {batch.undoneAt ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans text-slate-500 bg-slate-100 border border-slate-200">
-                        <Check className="h-3.5 w-3.5 text-slate-400" />
-                        <span>Undone on {batch.undoneAt}</span>
+                    {batch.status === "undone" ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-sans text-[#62535d] bg-[#eee7ec] border border-[#d2c2cb]">
+                        <Check className="h-3.5 w-3.5 text-[#7c5800]" />
+                        <span>Undone {batch.undone_at ? `on ${batch.undone_at}` : ""}</span>
                       </span>
                     ) : (
                       <button
                         type="button"
-                        onClick={() => handleUndoImport(batch.id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-rose-700 bg-black/[0.03] hover:bg-rose-50 border border-black/10 hover:border-rose-200 transition-colors"
+                        onClick={() => handleUndoImport(batch.batch_id)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold text-[#3a0f34] hover:text-rose-700 bg-white hover:bg-rose-50 border border-[#d2c2cb] hover:border-rose-300 transition-colors cursor-pointer"
                         title="Revert this batch and remove its studies from review"
                       >
-                        <Undo2 className="h-3.5 w-3.5 text-slate-500 hover:text-rose-600" />
+                        <Undo2 className="h-3.5 w-3.5 text-[#814d75] hover:text-rose-600" />
                         <span>Undo import</span>
                       </button>
                     )}
@@ -630,54 +602,54 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                 {/* 5 Metric Cards in a Row */}
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   {/* Card 1: Added to title and abstract screening */}
-                  <div className="bg-slate-100/70 border border-slate-200/80 rounded-xl p-3.5 flex flex-col justify-between">
-                    <span className="text-[11px] text-slate-600 font-sans leading-tight">
-                      Added to title and abstract screening
+                  <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded p-3.5 flex flex-col justify-between">
+                    <span className="text-[11px] text-[#62535d] font-sans leading-tight">
+                      Added to Screening
                     </span>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
-                      {batch.addedCount}
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#3a0f34] mt-2">
+                      {batch.imported_count}
                     </span>
                   </div>
 
                   {/* Card 2: References */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <span className="text-[11px] text-slate-600 font-sans leading-tight">
-                      References
+                  <div className="bg-white border border-[#d2c2cb] rounded p-3.5 flex flex-col justify-between">
+                    <span className="text-[11px] text-[#62535d] font-sans leading-tight">
+                      Total Records
                     </span>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
-                      {batch.referencesCount}
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#4f444b] mt-2">
+                      {batch.total_records || batch.imported_count}
                     </span>
                   </div>
 
                   {/* Card 3: Duplicates */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
+                  <div className="bg-white border border-[#d2c2cb] rounded p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center gap-1 text-[11px] text-[#62535d] font-sans leading-tight">
                       <span>Duplicates</span>
-                      <ExternalLink className="h-3 w-3 text-slate-400" />
+                      <ExternalLink className="h-3 w-3 text-[#81737b]" />
                     </div>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
-                      {batch.duplicatesCount}
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#4f444b] mt-2">
+                      {batch.duplicate_count}
                     </span>
                   </div>
 
-                  {/* Card 4: Merged */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
-                      <span>Merged</span>
-                      <HelpCircle className="h-3 w-3 text-slate-400" />
+                  {/* Card 4: Retained Active */}
+                  <div className="bg-white border border-[#d2c2cb] rounded p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center gap-1 text-[11px] text-[#62535d] font-sans leading-tight">
+                      <span>Retained Active</span>
+                      <HelpCircle className="h-3 w-3 text-[#81737b]" />
                     </div>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 mt-2">
-                      {batch.mergedCount}
+                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#4f444b] mt-2">
+                      {batch.retained_studies_count ?? batch.imported_count}
                     </span>
                   </div>
 
                   {/* Card 5: Source */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-slate-600 font-sans leading-tight">
-                      <span>Source</span>
-                      <Edit3 className="h-3 w-3 text-slate-400" />
+                  <div className="bg-white border border-[#d2c2cb] rounded p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center gap-1 text-[11px] text-[#62535d] font-sans leading-tight">
+                      <span>Source Database</span>
+                      <Edit3 className="h-3 w-3 text-[#81737b]" />
                     </div>
-                    <span className="text-sm sm:text-base font-semibold font-sans text-slate-800 mt-2 truncate" title={batch.source}>
+                    <span className="text-sm sm:text-base font-semibold font-sans text-[#3a0f34] mt-2 truncate" title={batch.source}>
                       {batch.source}
                     </span>
                   </div>
@@ -742,6 +714,9 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
           onSuccess={(count, fastTrack) => {
             setIsBulkModalOpen(false);
             queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
             setUploadMsg(`Successfully processed and converted ${count} PDF(s) to JSON!`);
             if (fastTrack) {
               navigate(`/projects/${projectId}/extraction-sheet`);
@@ -757,6 +732,9 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         onClose={() => setIsDuplicateModalOpen(false)}
         onResolved={() => {
           queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
           queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
         }}
       />

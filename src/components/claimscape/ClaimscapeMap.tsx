@@ -245,7 +245,6 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                           category={paper.category}
                           direct={paper.direct}
                           strength={paper.strength}
-                          unread={paper.unread}
                           r={6.5}
                         />
 
@@ -305,28 +304,14 @@ interface DotSymbolProps {
   category: ProcessedPaper["category"];
   direct: boolean;
   strength: number;
-  unread: boolean;
   r: number;
 }
 
-const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, unread, r }) => {
+const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, r }) => {
   const opacity =
     category === "supports" || category === "contradicts" || category === "mixed"
       ? 0.45 + 0.55 * Math.min(1, Math.max(0, (strength - 0.6) / 0.4))
       : 0.85;
-
-  // Unread: no backend judgment exists. Hollow grey dot — never a verdict color.
-  if (unread) {
-    return (
-      <circle
-        r={r - 1}
-        fill="var(--cs-surface)"
-        stroke="var(--cs-ink-3)"
-        strokeOpacity={0.9}
-        strokeWidth={2}
-      />
-    );
-  }
 
   if (category === "no_result") {
     return (
@@ -544,28 +529,22 @@ const Tooltip: React.FC<TooltipProps> = ({ paper, left, top, width }) => {
         </span>
         <span
           className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-          style={
-            paper.unread
-              ? { background: "rgba(137, 135, 129, 0.15)", color: "var(--cs-ink-3)" }
-              : {
-                  background:
-                    paper.category === "supports"
-                      ? "var(--cs-for-soft)"
-                      : paper.category === "contradicts"
-                      ? "var(--cs-against-soft)"
-                      : "rgba(137, 135, 129, 0.15)",
-                  color:
-                    paper.category === "supports"
-                      ? "var(--cs-for)"
-                      : paper.category === "contradicts"
-                      ? "var(--cs-against)"
-                      : "var(--cs-neutral)"
-                }
-          }
+          style={{
+            background:
+              paper.category === "supports"
+                ? "var(--cs-for-soft)"
+                : paper.category === "contradicts"
+                ? "var(--cs-against-soft)"
+                : "rgba(137, 135, 129, 0.15)",
+            color:
+              paper.category === "supports"
+                ? "var(--cs-for)"
+                : paper.category === "contradicts"
+                ? "var(--cs-against)"
+                : "var(--cs-neutral)"
+          }}
         >
-          {paper.unread
-            ? "Unread"
-            : paper.category === "supports"
+          {paper.category === "supports"
             ? "For"
             : paper.category === "contradicts"
             ? "Against"
@@ -586,7 +565,7 @@ const Tooltip: React.FC<TooltipProps> = ({ paper, left, top, width }) => {
       )}
 
       <div className="mt-2 text-[11px] cs-muted flex items-center justify-between">
-        <span>{paper.unread ? "No model reading yet" : paper.direct ? "Direct evidence" : "Indirect model/proxy"}</span>
+        <span>{paper.direct ? "Direct evidence" : "Indirect model/proxy"}</span>
         <span className="text-[#381A61] dark:text-[#F9D14A] font-bold">Click to inspect</span>
       </div>
     </div>

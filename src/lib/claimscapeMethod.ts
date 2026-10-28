@@ -25,8 +25,7 @@ export interface Judgment {
 
 export interface ProcessedPaper {
   paper: Paper;
-  judgment: Judgment | null;
-  unread: boolean;
+  judgment: Judgment;
   tier: string | null;
   tierSource: {
     kind: "pubmed" | "model" | "none";
@@ -171,36 +170,7 @@ function argmax(record: Record<string, number>): [string, number] {
   return [bestKey, bestVal];
 }
 
-export function classifyPaper(paper: Paper, judgment: Judgment | null): ProcessedPaper {
-  // No backend judgment: the paper is Unread. Only metadata-derived facts
-  // (PubMed publication types) are resolved; no verdict is invented.
-  if (!judgment) {
-    let unreadTier: string | null = null;
-    let unreadSource: ProcessedPaper["tierSource"] = { kind: "none" };
-    for (const rule of PUBTYPE_RULES) {
-      const matchedType = rule.types.find((t) => paper.pubTypes?.includes(t));
-      if (matchedType) {
-        unreadTier = rule.tier;
-        unreadSource = { kind: "pubmed", type: matchedType };
-        break;
-      }
-    }
-    return {
-      paper,
-      judgment: null,
-      unread: true,
-      tier: unreadTier,
-      tierSource: unreadSource,
-      onTopic: false,
-      direct: false,
-      probs: {},
-      agree: false,
-      category: "unclear",
-      strength: 0,
-      finding: null
-    };
-  }
-
+export function classifyPaper(paper: Paper, judgment: Judgment): ProcessedPaper {
   // Stance averaging over the two worded questions
   const stanceProbs: Record<string, number> = {};
   for (const st of STANCES) {
@@ -254,7 +224,6 @@ export function classifyPaper(paper: Paper, judgment: Judgment | null): Processe
   return {
     paper,
     judgment,
-    unread: false,
     tier: resolvedTier,
     tierSource: resolvedSource,
     onTopic,
@@ -299,18 +268,13 @@ export function computeSwarmY(xPositions: number[], y0 = 0, padding = 1.5): numb
 }
 
 export function computeTierSummaries(papers: ProcessedPaper[], directOnly = false): TierSummary[] {
-  // Unread papers (no backend judgment) are placed on the map as hollow grey
-  // dots but never count toward row verdicts, intervals, or the headline.
-  const eligible = papers.filter(
-    (p) => p.tier && (p.unread || (p.onTopic && (!directOnly || p.direct)))
-  );
+  const eligible = papers.filter((p) => p.onTopic && p.tier && (!directOnly || p.direct));
 
   return TIERS.map((tier) => {
     const tierPapers = eligible.filter((p) => p.tier === tier.id);
     const counts = { supports: 0, contradicts: 0, mixed: 0, no_result: 0, unclear: 0 };
 
     for (const p of tierPapers) {
-      if (p.unread) continue;
       counts[p.category]++;
     }
 

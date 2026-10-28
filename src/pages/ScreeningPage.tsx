@@ -1,4 +1,5 @@
 import { resolveScreeningStage } from "../lib/screeningStage";
+import { DuplicateReviewModal } from "../components/common/DuplicateReviewModal";
 import { BookmarkButton } from "../components/common/BookmarkButton";
 import { useBookmarks } from "../lib/bookmarks";
 import { matchesTag, useProjectTags } from "../lib/recordCollaboration";
@@ -35,7 +36,6 @@ import {
   Upload,
   FileText,
   Shield,
-  ShieldCheck,
   Check,
   ExternalLink,
   HelpCircle,
@@ -195,6 +195,13 @@ export function ScreeningPage() {
 
   // Bulk Upload & Hotkeys state
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+
+  const { data: duplicateData } = useQuery({
+    queryKey: ["duplicate-groups", projectId],
+    queryFn: () => (projectId ? api.getDuplicateGroups(projectId).catch(() => null) : Promise.resolve(null)),
+    enabled: !!projectId,
+  });
   const [showHotkeysModal, setShowHotkeysModal] = useState(false);
   const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
 
@@ -235,6 +242,24 @@ export function ScreeningPage() {
     enabled: !!projectId,
   });
   const exclusionReasons = exclusionReasonsData?.reasons || [];
+
+  const { data: projectPico } = useQuery({
+    queryKey: ["pico", projectId],
+    queryFn: () => (projectId ? api.getPico(projectId).catch(() => null) : Promise.resolve(null)),
+    enabled: !!projectId,
+  });
+
+  const { data: projectCriteria } = useQuery({
+    queryKey: ["criteria", projectId],
+    queryFn: () => (projectId ? api.getCriteria(projectId).catch(() => null) : Promise.resolve(null)),
+    enabled: !!projectId,
+  });
+
+  const { data: calibrationData } = useQuery({
+    queryKey: ["calibration", projectId],
+    queryFn: () => (projectId ? api.getScreeningCalibration(projectId).catch(() => null) : Promise.resolve(null)),
+    enabled: !!projectId,
+  });
 
   const { data: keywords = [] } = useQuery<ScreeningKeyword[]>({
     queryKey: ["screening-keywords", projectId],
@@ -933,6 +958,21 @@ export function ScreeningPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Deduplication & Duplicate Review Modal Button */}
+            <button
+              onClick={() => setIsDuplicateModalOpen(true)}
+              className="px-3 py-2 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1.5 transition-all"
+              title="Review side-by-side duplicates and merge records before screening"
+            >
+              <Layers className="w-3.5 h-3.5 text-[#814d75]" />
+              <span>Deduplication</span>
+              {duplicateData && duplicateData.total_duplicates > 0 && (
+                <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-[#ffdea6] text-[#3a0f34] rounded">
+                  {duplicateData.total_duplicates}
+                </span>
+              )}
+            </button>
+
             {/* Bulk Upload from Laptop Button */}
             <button
               onClick={() => setShowBulkUploadModal(true)}
@@ -1401,51 +1441,111 @@ export function ScreeningPage() {
 
               {/* Drawer Content */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-['Work_Sans']">
-                {/* Protocol Badge */}
+                {/* Protocol Header & Navigation */}
                 <div className="flex items-center justify-between bg-[#fbf9f4] border border-[#d2c2cb] p-2.5 rounded">
-                  <span className="font-bold text-[#3a0f34] text-[11px]">PRISMA Protocol Active</span>
-                  <span className="text-[10px] bg-[#3a0f34] text-[#fbf9f4] font-semibold px-2 py-0.5 rounded">Automated Triage</span>
+                  <div>
+                    <span className="font-bold text-[#3a0f34] text-[11px] block">PRISMA Protocol Active</span>
+                    <span className="text-[10px] text-[#62535d]">Dual-Pass Mathematical Screening</span>
+                  </div>
+                  <Link
+                    to={`/projects/${projectId}/pico`}
+                    className="text-[11px] bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] font-semibold px-2.5 py-1 rounded transition-colors inline-flex items-center gap-1"
+                  >
+                    <span>Edit Criteria</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </Link>
+                </div>
+
+                {/* Mathematical Screening Model & Stanford SLIDERS Calibration */}
+                <div className="p-3 bg-[#fbf9f4] border border-[#814d75] rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#3a0f34] text-[11px] flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-[#814d75]" />
+                      Mathematical Scoring Engine
+                    </span>
+                    <span className="text-[10px] font-mono font-bold bg-[#eee7ec] text-[#3a0f34] px-1.5 py-0.5 rounded border border-[#d2c2cb]">
+                      SLIDERS Microbatch
+                    </span>
+                  </div>
+                  
+                  <div className="p-2 bg-white rounded border border-[#d2c2cb] font-mono text-[10.5px] text-[#4f444b] space-y-1">
+                    <div className="text-[11px] font-semibold text-[#3a0f34]">Logistic Match Equation:</div>
+                    <div className="bg-[#fbf9f4] p-1.5 rounded border border-[#eee7ec] text-[#814d75] font-bold">
+                      P(Include) = σ(β₀ + Σ wᵢ · sᵢ)
+                    </div>
+                    <div className="text-[10px] text-[#62535d] pt-1">
+                      Intercept β₀ = {calibrationData?.calibration?.intercept ?? -2.0} | w = [
+                      {(calibrationData?.calibration?.weights ?? [1.5, 4.0, -2.5, -2.0, -1.0]).join(", ")}]
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[10px] text-[#4f444b]">
+                    <div className="p-1.5 bg-white rounded border border-[#d2c2cb]">
+                      <span className="text-[#62535d] block">Auto-Include Threshold:</span>
+                      <strong className="text-emerald-700 font-mono text-[11px]">
+                        P &ge; {Math.round((calibrationData?.calibration?.t_include ?? 0.90) * 100)}%
+                      </strong>
+                    </div>
+                    <div className="p-1.5 bg-white rounded border border-[#d2c2cb]">
+                      <span className="text-[#62535d] block">Auto-Exclude Threshold:</span>
+                      <strong className="text-rose-700 font-mono text-[11px]">
+                        P &le; {Math.round((calibrationData?.calibration?.t_excl ?? 0.20) * 100)}%
+                      </strong>
+                    </div>
+                  </div>
                 </div>
 
                 {/* PICO Cards */}
                 <div className="space-y-2.5">
                   <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-lg">
-                    <div className="font-bold text-indigo-900 flex items-center gap-1.5 mb-1 text-[11px]">
-                      <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">P</span>
-                      <span>Population</span>
+                    <div className="font-bold text-indigo-900 flex items-center justify-between mb-1 text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">P</span>
+                        <span>Population</span>
+                      </div>
+                      <span className="text-[9.5px] font-mono text-indigo-700 bg-indigo-100 px-1.5 py-0.2 rounded font-semibold">Weight: 1.5</span>
                     </div>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Patients with pure arterial malformations (PAM) or tortuous dilated intracranial arteries without nidus or direct arteriovenous shunts.
+                    <p className="text-slate-700 text-[11px] leading-relaxed">
+                      {projectPico?.population || "Patients meeting systematic review population criteria."}
                     </p>
                   </div>
 
                   <div className="p-3 bg-sky-50/70 border border-sky-100 rounded-lg">
-                    <div className="font-bold text-sky-900 flex items-center gap-1.5 mb-1 text-[11px]">
-                      <span className="w-4 h-4 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-black">I</span>
-                      <span>Intervention</span>
+                    <div className="font-bold text-sky-900 flex items-center justify-between mb-1 text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-black">I</span>
+                        <span>Intervention / Index Test</span>
+                      </div>
+                      <span className="text-[9.5px] font-mono text-sky-700 bg-sky-100 px-1.5 py-0.2 rounded font-semibold">Weight: 4.0</span>
                     </div>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Endovascular embolization (coiling, onyx, flow diverter stenting), microsurgical clipping/resection, or conservative clinical surveillance.
+                    <p className="text-slate-700 text-[11px] leading-relaxed">
+                      {projectPico?.index_test || (projectPico as any)?.intervention || "Evaluated intervention or diagnostic modality."}
                     </p>
                   </div>
 
                   <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-lg">
-                    <div className="font-bold text-purple-900 flex items-center gap-1.5 mb-1 text-[11px]">
-                      <span className="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">C</span>
-                      <span>Comparator</span>
+                    <div className="font-bold text-purple-900 flex items-center justify-between mb-1 text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">C</span>
+                        <span>Comparator</span>
+                      </div>
+                      <span className="text-[9.5px] font-mono text-purple-700 bg-purple-100 px-1.5 py-0.2 rounded font-semibold">Weight: 1.0</span>
                     </div>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Conservative angiographic follow-up vs active interventional occlusion or historical lesion cohorts.
+                    <p className="text-slate-700 text-[11px] leading-relaxed">
+                      {projectPico?.comparator || "Reference standard or comparative control group."}
                     </p>
                   </div>
 
                   <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-lg">
-                    <div className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1 text-[11px]">
-                      <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">O</span>
-                      <span>Outcomes</span>
+                    <div className="font-bold text-emerald-900 flex items-center justify-between mb-1 text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">O</span>
+                        <span>Outcomes</span>
+                      </div>
+                      <span className="text-[9.5px] font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded font-semibold">Weight: 1.5</span>
                     </div>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Aneurysm co-occurrence, angiographic obliteration, recurrent hemorrhage, ischemic stroke, and modified Rankin Scale (mRS).
+                    <p className="text-slate-700 text-[11px] leading-relaxed">
+                      {projectPico?.outcome || "Primary and secondary clinical endpoints."}
                     </p>
                   </div>
                 </div>
@@ -1453,26 +1553,56 @@ export function ScreeningPage() {
                 {/* Mandatory Inclusion & Explicit Exclusion */}
                 <div className="space-y-2.5 pt-1">
                   <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg">
-                    <span className="font-bold text-emerald-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                      Mandatory Inclusion Criteria
+                    <span className="font-bold text-emerald-900 flex items-center justify-between mb-1.5 text-[11px]">
+                      <span className="flex items-center gap-1.5">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        Inclusion Criteria &amp; Mathematical Filters
+                      </span>
+                      <span className="text-[10px] font-mono text-emerald-800">
+                        {projectCriteria?.inclusion?.length || 0} active
+                      </span>
                     </span>
-                    <ul className="text-[11px] text-emerald-800 space-y-1 list-disc list-inside">
-                      <li>Human subjects (in vivo) with radiographically confirmed intracranial PAM.</li>
-                      <li>Reports angiographic details (DSA, CTA, or 3T MRA) and clinical management.</li>
-                      <li>Peer-reviewed original research, cohort studies, or clinical case series.</li>
+                    <ul className="text-[11px] text-emerald-800 space-y-1.5 list-disc list-inside">
+                      {projectCriteria?.inclusion && projectCriteria.inclusion.length > 0 ? (
+                        projectCriteria.inclusion.map((crit, idx) => (
+                          <li key={crit.id || idx} className="leading-snug">
+                            {crit.text}
+                          </li>
+                        ))
+                      ) : (
+                        <>
+                          <li>Human subjects with confirmed clinical diagnosis.</li>
+                          <li>Peer-reviewed original research reporting relevant endpoints.</li>
+                        </>
+                      )}
                     </ul>
                   </div>
 
                   <div className="p-3 bg-rose-50/60 border border-rose-200 rounded-lg">
-                    <span className="font-bold text-rose-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
-                      <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                      Explicit Exclusion Disqualifiers
+                    <span className="font-bold text-rose-900 flex items-center justify-between mb-1.5 text-[11px]">
+                      <span className="flex items-center gap-1.5">
+                        <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                        Exclusion Criteria &amp; Absolute Penalties
+                      </span>
+                      <span className="text-[10px] font-mono text-rose-800">
+                        {(projectCriteria?.exclusion?.length || 0) + (exclusionReasons?.length || 0)} active
+                      </span>
                     </span>
-                    <ul className="text-[11px] text-rose-800 space-y-1 list-disc list-inside">
-                      <li>Classic AVMs with parenchymal nidus or early draining cortical veins.</li>
-                      <li>Dural arteriovenous fistulas (dAVF) or cavernous hemangiomas without PAM.</li>
-                      <li>Animal models, in vitro hydrodynamic bench studies, or non-English abstracts.</li>
+                    <ul className="text-[11px] text-rose-800 space-y-1.5 list-disc list-inside">
+                      {projectCriteria?.exclusion && projectCriteria.exclusion.length > 0 ? (
+                        projectCriteria.exclusion.map((crit, idx) => (
+                          <li key={crit.id || idx} className="leading-snug">
+                            {crit.text}
+                          </li>
+                        ))
+                      ) : (
+                        <li>Non-clinical, animal, or in vitro studies.</li>
+                      )}
+                      {exclusionReasons && exclusionReasons.slice(0, 3).map((r, idx) => (
+                        <li key={idx} className="leading-snug">
+                          {typeof r === "string" ? r : r.label}
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 </div>
@@ -2922,6 +3052,21 @@ export function ScreeningPage() {
             if (firstStudyId) {
               setSelectedStudyId(firstStudyId);
             }
+          }}
+        />
+      )}
+
+      {/* ── Deduplication Review Modal ── */}
+      {projectId && (
+        <DuplicateReviewModal
+          projectId={projectId}
+          isOpen={isDuplicateModalOpen}
+          onClose={() => setIsDuplicateModalOpen(false)}
+          onResolved={() => {
+            queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["duplicate-groups", projectId] });
           }}
         />
       )}

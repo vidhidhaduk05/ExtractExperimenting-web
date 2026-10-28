@@ -139,6 +139,35 @@ export function DuplicateReviewModal({
     });
   };
 
+  const [isMergingAll, setIsMergingAll] = useState(false);
+
+  const handleMergeAllMetadata = async () => {
+    if (!duplicateGroups.length) return;
+    setIsMergingAll(true);
+    setStatusMessage(null);
+    try {
+      const res = await api.mergeAllDuplicateMetadata(projectId, "most_complete");
+      setStatusMessage({
+        type: "success",
+        text: res.message || `Successfully merged metadata across all candidate duplicate groups.`,
+      });
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma", projectId] });
+      if (onResolved) onResolved();
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: `Error merging metadata across all studies: ${err?.message || "Unknown error"}`,
+      });
+    } finally {
+      setIsMergingAll(false);
+    }
+  };
+
   const handleAutoResolveExactDois = async () => {
     if (!duplicateGroups.length) return;
     let resolvedCount = 0;
@@ -238,6 +267,18 @@ export function DuplicateReviewModal({
           </div>
 
           <div className="flex items-center gap-2">
+            {duplicateGroups.length > 0 && (
+              <button
+                type="button"
+                onClick={handleMergeAllMetadata}
+                disabled={isMergingAll}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 text-xs font-semibold transition-colors shadow-2xs disabled:opacity-50"
+                title="Merge all missing/richer metadata into canonical studies and mark duplicates for all groups"
+              >
+                <GitMerge className={`h-3.5 w-3.5 ${isMergingAll ? "animate-spin" : ""}`} />
+                <span>{isMergingAll ? "Merging All Studies..." : "Merge All Metadata (All Studies)"}</span>
+              </button>
+            )}
             {duplicateGroups.some((g) => g.duplicates.some((d) => d.match_reason === "doi" || d.match_reason === "pmid")) && (
               <button
                 type="button"
@@ -811,7 +852,7 @@ export function DuplicateReviewModal({
                     <span>Keep Both</span>
                   </button>
 
-                  {/* Merge Metadata */}
+                  {/* Merge Metadata (This Pair) */}
                   <button
                     type="button"
                     disabled={resolveMutation.isPending}
@@ -832,6 +873,20 @@ export function DuplicateReviewModal({
                     <GitMerge className="h-4 w-4" />
                     <span>{isMergingInteractive ? "Apply Merge & Keep Primary" : "Merge Metadata"}</span>
                   </button>
+
+                  {/* Merge All Metadata for All Studies */}
+                  {totalGroups > 1 && (
+                    <button
+                      type="button"
+                      disabled={isMergingAll}
+                      onClick={handleMergeAllMetadata}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-400 bg-amber-100 text-amber-950 hover:bg-amber-200 text-xs font-semibold transition-all shadow-2xs disabled:opacity-50"
+                      title="Merge metadata for ALL duplicate study groups across the entire project at once"
+                    >
+                      <Layers className={`h-4 w-4 ${isMergingAll ? "animate-spin" : ""}`} />
+                      <span>{isMergingAll ? "Merging All..." : "Merge All Metadata (All Studies)"}</span>
+                    </button>
+                  )}
 
                   {/* Keep This Record (Primary) */}
                   <button
