@@ -19,6 +19,7 @@ import {
   type ClarificationOption,
   type ClarificationAnswerResponse,
   type BatchUploadResult,
+  type CriteriaEvaluation,
 } from "../lib/api";
 import {
   ArrowLeft,
@@ -66,6 +67,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Sliders,
+  Minus,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
@@ -280,6 +282,23 @@ export function ScreeningPage() {
   });
   const inclusionCriteria = criteriaData?.inclusion || [];
   const exclusionCriteria = criteriaData?.exclusion || [];
+
+  // Criteria evaluation (Stage C): deterministic per-study match results + score.
+  // DISPLAY ONLY — the score sorts and explains; it never changes a decision.
+  const { data: criteriaEvalBatch } = useQuery({
+    queryKey: ["criteriaEvaluation", projectId],
+    queryFn: () => api.evaluateCriteriaBatch(projectId!),
+    enabled: !!projectId,
+  });
+  const criteriaEvalByStudy = useMemo(() => {
+    const map = new Map<string, CriteriaEvaluation>();
+    (criteriaEvalBatch?.evaluations || []).forEach((e) => map.set(e.study_id, e));
+    return map;
+  }, [criteriaEvalBatch]);
+  const selectedStudyEval = selectedStudyId
+    ? criteriaEvalByStudy.get(selectedStudyId) || null
+    : null;
+
   const picoFields = [
     { key: "population", label: "Population", letter: "P", color: "p-3 bg-indigo-50/70 border border-indigo-100 rounded-lg text-indigo-900" },
     { key: "index_test", label: "Intervention / Index Test", letter: "I", color: "p-3 bg-sky-50/70 border border-sky-100 rounded-lg text-sky-900" },
@@ -431,6 +450,18 @@ export function ScreeningPage() {
       return true;
     });
   }, [studyList, stageFilter, statusFilter, searchQuery, confidenceFilter, savedOnly, bookmarkSet, tagIndex.data, tagFilter]);
+
+  // Sort control for the study list: default order or by criteria score.
+  const [studySort, setStudySort] = useState<"default" | "score_desc" | "score_asc">("default");
+  const displayStudies = useMemo(() => {
+    if (studySort === "default") return filteredStudies;
+    const dir = studySort === "score_desc" ? -1 : 1;
+    return [...filteredStudies].sort((a, b) => {
+      const sa = criteriaEvalByStudy.get(a.study_id)?.score ?? -1;
+      const sb = criteriaEvalByStudy.get(b.study_id)?.score ?? -1;
+      return (sa - sb) * dir;
+    });
+  }, [filteredStudies, studySort, criteriaEvalByStudy]);
 
   // Auto-select first study in filtered set if current selectedStudyId is filtered out
   useEffect(() => {
@@ -1484,6 +1515,68 @@ export function ScreeningPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Criteria match for the selected study (Stage C) — display only */}
+                {selectedStudy && (
+                  <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-lg">
+                    <span className="font-bold text-indigo-900 flex items-center gap-1.5 mb-1.5 text-[11px]">
+                      <ListChecks className="w-3.5 h-3.5 text-indigo-600" />
+                      Criteria match — this study
+                    </span>
+                    {selectedStudyEval ? (
+                      <>
+                        <p className="text-[11px] text-indigo-900 font-semibold mb-2">
+                          Criteria match: {selectedStudyEval.score.toFixed(2)}{" "}
+                          ({selectedStudyEval.weighted_matched} of {selectedStudyEval.weighted_total} weighted
+                          {selectedStudyEval.required_flagged > 0
+                            ? `, ${selectedStudyEval.required_flagged} required rule${selectedStudyEval.required_flagged > 1 ? "s" : ""} flagged`
+                            : ""}
+                          )
+                        </p>
+                        {selectedStudyEval.flags.length > 0 && (
+                          <ul className="text-[11px] text-amber-800 space-y-0.5 mb-2 list-disc list-inside">
+                            {selectedStudyEval.flags.map((f, fi) => (
+                              <li key={fi}>{f.message} — AI proposes, the human confirms.</li>
+                            ))}
+                          </ul>
+                        )}
+                        <ul className="space-y-1">
+                          {selectedStudyEval.results.map((r) => (
+                            <li key={r.criterion_id} className="flex items-start gap-1.5 text-[11px]">
+                              <span className="mt-0.5 shrink-0">
+                                {r.status === "matched" ? (
+                                  <Check className="w-3 h-3 text-emerald-600" />
+                                ) : r.status === "needs_clarification" ? (
+                                  <HelpCircle className="w-3 h-3 text-amber-500" />
+                                ) : (
+                                  <Minus className="w-3 h-3 text-slate-400" />
+                                )}
+                              </span>
+                              <span
+                                className={`${r.side === "exclusion" ? "text-rose-900" : "text-slate-700"}`}
+                                title={r.snippet ? `Matched text: "${r.snippet}"` : "No matching text found in title/abstract"}
+                              >
+                                {r.text}
+                                <span className="ml-1 text-[9px] uppercase tracking-wide text-slate-400">
+                                  {r.rule_mode === "required" ? "required" : `w ${r.weight.toFixed(2)}`}
+                                </span>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-[10px] text-indigo-700/70 mt-2">
+                          Display only — the score sorts and explains; it never changes a study's decision.
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-[11px] text-indigo-800/70">
+                        {inclusionCriteria.length + exclusionCriteria.length === 0
+                          ? "Define criteria on the Protocol page to see matches."
+                          : "Loading criteria match..."}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Drawer Footer */}
@@ -1824,6 +1917,17 @@ export function ScreeningPage() {
             <span className="text-xs font-semibold text-[#3a0f34]">
               Studies ({filteredStudies.length})
             </span>
+            <select
+              value={studySort}
+              onChange={(e) => setStudySort(e.target.value as typeof studySort)}
+              className="text-[11px] border border-[#d2c2cb] rounded px-1.5 py-0.5 bg-white text-[#3a0f34]"
+              title="Sort studies"
+              aria-label="Sort studies"
+            >
+              <option value="default">Default order</option>
+              <option value="score_desc">Criteria score ↓</option>
+              <option value="score_asc">Criteria score ↑</option>
+            </select>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => continuePipelineMutation.mutate("abstract")}
@@ -1872,9 +1976,10 @@ export function ScreeningPage() {
                 No studies match the selected filters.
               </div>
             ) : (
-              filteredStudies.map((study) => {
+              displayStudies.map((study) => {
                 const isSelected = selectedStudy?.study_id === study.study_id;
                 const conf = study.ai_confidence ? Math.round(study.ai_confidence * 100) : null;
+                const studyEval = criteriaEvalByStudy.get(study.study_id);
                 const isCurrent = !!progress?.active && progress.current_study_id === study.study_id;
                 const isQueued = !isCurrent && queuedIds.has(study.study_id);
                 const isJustDone = doneIds.has(study.study_id);
@@ -1907,6 +2012,14 @@ export function ScreeningPage() {
                           }`}
                         >
                           {conf}%
+                        </span>
+                      )}
+                      {studyEval && (
+                        <span
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap bg-indigo-50 text-indigo-800 border border-indigo-200"
+                          title={`Criteria match: ${studyEval.score.toFixed(2)} (${studyEval.weighted_matched} of ${studyEval.weighted_total} weighted${studyEval.required_flagged > 0 ? `, ${studyEval.required_flagged} required rule${studyEval.required_flagged > 1 ? "s" : ""} flagged` : ""}) — display only, never a decision`}
+                        >
+                          {studyEval.score.toFixed(2)}
                         </span>
                       )}
                     </div>

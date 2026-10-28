@@ -913,15 +913,76 @@ export interface HypothesisUpdate {
 
 // ── Criteria ──
 
+export type CriterionRuleMode = "required" | "weighted";
+
 export interface Criterion {
   id: string;
   text: string;
+  direction?: "inclusion" | "exclusion";
+  rule_mode: CriterionRuleMode;
+  /** Relative influence for weighted signals, 0.00–1.00 (default 0.50). */
+  weight: number;
 }
 
 export interface CriteriaResponse {
   project_id: string;
   inclusion: Criterion[];
   exclusion: Criterion[];
+}
+
+// ── Criteria evaluation (Stage C: deterministic matching + weighted score) ──
+
+export type CriterionMatchStatus = "matched" | "not_matched" | "needs_clarification";
+
+export interface CriterionMatchResult {
+  criterion_id: string;
+  text: string;
+  side: "inclusion" | "exclusion";
+  rule_mode: "required" | "weighted";
+  weight: number;
+  status: CriterionMatchStatus;
+  snippet: string;
+}
+
+export interface CriteriaFlag {
+  type: "excluded_by_required_rule" | "missing_required_criterion";
+  criterion_id: string;
+  criterion: string;
+  snippet: string;
+  message: string;
+}
+
+export interface CriteriaEvaluation {
+  project_id: string;
+  study_id: string;
+  results: CriterionMatchResult[];
+  flags: CriteriaFlag[];
+  /** DISPLAY ONLY — never writes a screening decision. */
+  score: number;
+  weighted_matched: number;
+  weighted_total: number;
+  required_flagged: number;
+}
+
+export interface CriteriaEvaluationBatch {
+  project_id: string;
+  evaluations: CriteriaEvaluation[];
+}
+
+export interface CriteriaPreviewAffected {
+  study_id: string;
+  title: string;
+  current_score: number;
+  proposed_score: number;
+  flags_added: string[];
+  flags_removed: string[];
+}
+
+export interface CriteriaPreviewResponse {
+  project_id: string;
+  studies_evaluated: number;
+  studies_affected: number;
+  affected: CriteriaPreviewAffected[];
 }
 
 // ── Search Strings ──
@@ -2159,6 +2220,15 @@ export const api = {
     request<CriteriaResponse>(`/projects/${projectId}/criteria`, { method: "PUT", body: JSON.stringify(data) }),
   generateCriteria: (projectId: string) =>
     request<CriteriaResponse>(`/projects/${projectId}/criteria/generate`, { method: "POST" }),
+  evaluateCriteria: (projectId: string, studyId: string) =>
+    request<CriteriaEvaluation>(`/projects/${projectId}/criteria-evaluation/${studyId}`),
+  evaluateCriteriaBatch: (projectId: string) =>
+    request<CriteriaEvaluationBatch>(`/projects/${projectId}/criteria-evaluation`),
+  previewCriteria: (projectId: string, data: { inclusion: Criterion[]; exclusion: Criterion[] }) =>
+    request<CriteriaPreviewResponse>(`/projects/${projectId}/criteria/preview`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // Search Strings
   getSearchStrings: (projectId: string) =>

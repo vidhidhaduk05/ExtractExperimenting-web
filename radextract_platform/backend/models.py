@@ -117,8 +117,9 @@ class Criterion(BaseModel):
     id: str
     text: str
     direction: str = "inclusion"  # "inclusion" | "exclusion"
-    rule_mode: str = "weighted"   # "strict" | "weighted"
-    threshold: float = 0.90
+    rule_mode: str = "required"   # "required" (strict eligibility rule) | "weighted" (signal)
+    weight: float = Field(default=0.50, ge=0.0, le=1.0)  # relative influence for weighted signals
+    threshold: float = 0.90       # model-score threshold (threshold-based evaluator path)
     score_source: str = "model"   # "keyword" | "model" | "hybrid"
     enabled: bool = True
     version: int = 1

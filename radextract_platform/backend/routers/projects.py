@@ -700,19 +700,8 @@ async def get_criteria(project_id: str,
     except json.JSONDecodeError:
         pass
 
-    if not inclusion and not exclusion:
-        from services.criterion_evaluator import DEFAULT_CRITERIA
-        for c in DEFAULT_CRITERIA:
-            c_dict = c.dict()
-            if c.direction == "exclusion":
-                exclusion.append(c_dict)
-            else:
-                inclusion.append(c_dict)
-        conn.execute(
-            "UPDATE projects SET inclusion_criteria_json = ?, exclusion_criteria_json = ? WHERE project_id = ?",
-            (json.dumps(inclusion), json.dumps(exclusion), project_id),
-        )
-        conn.commit()
+    # No auto-seeding: empty means empty. Criteria come only from the uploaded
+    # protocol (PICO extraction) or user edits — never fabricated defaults.
 
     return CriteriaResponse(
         project_id=project_id,
@@ -765,6 +754,49 @@ async def generate_criteria(project_id: str,
         inclusion=[Criterion(**c) for c in result["inclusion"]],
         exclusion=[Criterion(**c) for c in result["exclusion"]],
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Criteria Evaluation (Stage C: deterministic matching + weighted score)
+#  Score is DISPLAY ONLY — it never writes a screening decision.
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.get("/projects/{project_id}/criteria-evaluation/{study_id}")
+async def evaluate_study_criteria(project_id: str, study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional), conn: DBBackend = Depends(get_db)):
+    """Per-study per-criterion match results + computed criteria score."""
+    from services.criteria_matching import evaluate_criteria
+    check_project_access(conn, project_id, user, min_role="viewer")
+    try:
+        return evaluate_criteria(project_id, study_id, conn=conn)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/projects/{project_id}/criteria-evaluation")
+async def evaluate_project_criteria(project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional), conn: DBBackend = Depends(get_db)):
+    """Batch evaluation of every study (for sorting the screening table by score)."""
+    from services.criteria_matching import evaluate_project
+    check_project_access(conn, project_id, user, min_role="viewer")
+    return {"project_id": project_id, "evaluations": evaluate_project(project_id, conn=conn)}
+
+
+@router.post("/projects/{project_id}/criteria/preview")
+async def preview_criteria(project_id: str,
+    body: CriteriaUpdate, user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db)):
+    """Dry-run proposed criteria: how many studies' flags/scores would change?
+
+    Mutates nothing — the human reviews the diff, then PUTs the criteria to commit.
+    """
+    from services.criteria_matching import preview_criteria_change
+    check_project_access(conn, project_id, user, min_role="viewer")
+    proposed = {
+        "inclusion": [c.model_dump() for c in body.inclusion],
+        "exclusion": [c.model_dump() for c in body.exclusion],
+    }
+    return preview_criteria_change(project_id, proposed, conn=conn)
 
 
 # ═══════════════════════════════════════════════════════════════════════
