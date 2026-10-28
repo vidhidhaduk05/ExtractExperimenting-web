@@ -17,3 +17,7 @@
 ## 2026-03-31 - Memoizing Multi-Pass Flow & Dashboard Aggregation Logic
 **Learning:** Computing live PRISMA diagram counts, dual-reviewer agreement matrices, and filtered study lists at the top-level of pages without `useMemo` causes redundant multi-pass array iterations on every polling interval or UI state change.
 **Action:** Wrapped `computeLivePrismaData` in `PrismaFlowPage`, study filtering & bookmark counts in `StudyList`, agreement/kappa metrics in `DualBlindedDashboard`, and factor classifications in `GradePage` in `useMemo`.
+
+## 2026-03-31 - Memoizing Radial Spoke & Domain Grouping Calculations in Rigor Scan Page
+**Learning:** Re-filtering 70+ reporting checks across 6 domain groups ($O(\text{domains} \times \text{checks})$) on every render frame (e.g. when interacting with PDF reader, selecting spokes, or copying share links) creates array garbage collection pressure and breaks reference equality for child spoke ring SVG components.
+**Action:** Wrap `selectedCheck`, `filteredChecks`, and `checksByDomain` in `useMemo` in `RigorScanPage` and hoist static SVG arc geometries to module scope in `RigorFingerprint`.
