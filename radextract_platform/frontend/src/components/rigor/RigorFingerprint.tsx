@@ -13,6 +13,64 @@ interface RigorFingerprintProps {
   onShowOnPage?: (page: number) => void;
 }
 
+// Static domain arc SVG definitions matching the published geometry (allocated once at module scope)
+const DOMAIN_ARCS = [
+  {
+    id: "design",
+    label: "Study design",
+    score: 67,
+    path: "M437.78 67.76 A260 260 0 0 1 644.24 235.85",
+    textX: 576.78,
+    textY: 79.86,
+    align: "start" as const,
+  },
+  {
+    id: "stats",
+    label: "Statistics",
+    score: 80,
+    path: "M656.75 284.01 A260 260 0 0 1 617.01 468.21",
+    textX: 673.7,
+    textY: 388.05,
+    align: "start" as const,
+  },
+  {
+    id: "materials",
+    label: "Materials",
+    score: 89,
+    path: "M585.75 506.92 A260 260 0 0 1 349.41 580.03",
+    textX: 482.74,
+    textY: 606.49,
+    align: "start" as const,
+  },
+  {
+    id: "openness",
+    label: "Data & code",
+    score: 62,
+    path: "M301.75 565.72 A260 260 0 0 1 164.95 436.13",
+    textX: 207.44,
+    textY: 542.28,
+    align: "end" as const,
+  },
+  {
+    id: "ethics",
+    label: "Ethics & disclosure",
+    score: 89,
+    path: "M148.08 389.32 A260 260 0 0 1 181.81 183.61",
+    textX: 123.69,
+    textY: 283.7,
+    align: "end" as const,
+  },
+  {
+    id: "claims",
+    label: "Claims",
+    score: 87,
+    path: "M212.74 144.63 A260 260 0 0 1 362.22 67.76",
+    textX: 271.95,
+    textY: 48,
+    align: "end" as const,
+  },
+];
+
 export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
   completenessIndex,
   checks,
@@ -24,64 +82,6 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
   onShowOnPage,
 }) => {
   const selectedSpoke = selectedCheck.spoke;
-
-  // Domain arc SVG definitions matching the published geometry
-  const domainArcs = [
-    {
-      id: "design",
-      label: "Study design",
-      score: 67,
-      path: "M437.78 67.76 A260 260 0 0 1 644.24 235.85",
-      textX: 576.78,
-      textY: 79.86,
-      align: "start" as const,
-    },
-    {
-      id: "stats",
-      label: "Statistics",
-      score: 80,
-      path: "M656.75 284.01 A260 260 0 0 1 617.01 468.21",
-      textX: 673.7,
-      textY: 388.05,
-      align: "start" as const,
-    },
-    {
-      id: "materials",
-      label: "Materials",
-      score: 89,
-      path: "M585.75 506.92 A260 260 0 0 1 349.41 580.03",
-      textX: 482.74,
-      textY: 606.49,
-      align: "start" as const,
-    },
-    {
-      id: "openness",
-      label: "Data & code",
-      score: 62,
-      path: "M301.75 565.72 A260 260 0 0 1 164.95 436.13",
-      textX: 207.44,
-      textY: 542.28,
-      align: "end" as const,
-    },
-    {
-      id: "ethics",
-      label: "Ethics & disclosure",
-      score: 89,
-      path: "M148.08 389.32 A260 260 0 0 1 181.81 183.61",
-      textX: 123.69,
-      textY: 283.7,
-      align: "end" as const,
-    },
-    {
-      id: "claims",
-      label: "Claims",
-      score: 87,
-      path: "M212.74 144.63 A260 260 0 0 1 362.22 67.76",
-      textX: 271.95,
-      textY: 48,
-      align: "end" as const,
-    },
-  ];
 
   return (
     <div className="rs-card">
@@ -170,7 +170,7 @@ export const RigorFingerprint: React.FC<RigorFingerprintProps> = ({
           )}
 
           {/* Outer Domain Boundary Arcs & Labels */}
-          {domainArcs.map((d) => (
+          {DOMAIN_ARCS.map((d) => (
             <g
               key={d.id}
               onClick={() => onSelectDomain(selectedDomain === d.id ? "all" : d.id)}

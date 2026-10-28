@@ -114,19 +114,23 @@ export const RigorScanPage: React.FC = () => {
     return null;
   }, [scanResult, isReferenceActive]);
 
-  const selectedCheck: RigorCheckItem | undefined = activeDataset
-    ? (activeDataset.checks.find((c) => c.id === selectedCheckId) || activeDataset.checks[0])
-    : undefined;
+  // Memoize selectedCheck to avoid re-searching activeDataset.checks on non-selection re-renders
+  const selectedCheck: RigorCheckItem | undefined = React.useMemo(() => {
+    if (!activeDataset) return undefined;
+    return activeDataset.checks.find((c) => c.id === selectedCheckId) || activeDataset.checks[0];
+  }, [activeDataset, selectedCheckId]);
 
-  const filteredChecks = activeDataset
-    ? activeDataset.checks.filter((c) => {
-        if (selectedDomain !== "all" && c.domain !== selectedDomain) return false;
-        if (filterMode === "good" && c.outcome !== "good") return false;
-        if (filterMode === "mid" && c.outcome !== "mid") return false;
-        if (filterMode === "bad" && c.outcome !== "bad") return false;
-        return true;
-      })
-    : [];
+  // Memoize filteredChecks to avoid redundant array iterations on unrelated state changes
+  const filteredChecks = React.useMemo(() => {
+    if (!activeDataset) return [];
+    return activeDataset.checks.filter((c) => {
+      if (selectedDomain !== "all" && c.domain !== selectedDomain) return false;
+      if (filterMode === "good" && c.outcome !== "good") return false;
+      if (filterMode === "mid" && c.outcome !== "mid") return false;
+      if (filterMode === "bad" && c.outcome !== "bad") return false;
+      return true;
+    });
+  }, [activeDataset, selectedDomain, filterMode]);
 
   const handleSelectCheck = (id: string) => {
     setSelectedCheckId(id);
@@ -186,12 +190,14 @@ export const RigorScanPage: React.FC = () => {
     }, 600);
   };
 
-  const checksByDomain = activeDataset
-    ? activeDataset.domains.map((dom) => ({
-        domain: dom,
-        checks: filteredChecks.filter((c) => c.domain === dom.id),
-      })).filter((group) => group.checks.length > 0)
-    : [];
+  // Memoize checksByDomain to prevent multi-pass O(domains * checks) re-filtering on every render frame
+  const checksByDomain = React.useMemo(() => {
+    if (!activeDataset) return [];
+    return activeDataset.domains.map((dom) => ({
+      domain: dom,
+      checks: filteredChecks.filter((c) => c.domain === dom.id),
+    })).filter((group) => group.checks.length > 0);
+  }, [activeDataset, filteredChecks]);
 
   return (
     <div className="rs min-h-screen bg-[var(--rs-card)] text-[var(--rs-ink)] pb-24 font-sans selection:bg-[#F9D14A] selection:text-[#381A61]">
