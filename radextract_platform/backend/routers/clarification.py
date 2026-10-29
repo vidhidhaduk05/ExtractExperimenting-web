@@ -64,7 +64,6 @@ def _row_to_clarification_response(row: Any) -> ClarificationQuestionResponse:
         final_confidence=float(r.get("final_confidence", 0.0) or 0.0),
         final_reason_text=r.get("final_reason_text", "") or "",
         created_at=r.get("created_at", "") or "",
-        is_tracked=bool(r.get("is_tracked", 0)),
         study_title=r.get("study_title", "") or "",
         study_authors=r.get("study_authors", "") or "",
         study_abstract=r.get("study_abstract", "") or "",

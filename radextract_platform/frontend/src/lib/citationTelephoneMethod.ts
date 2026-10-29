@@ -354,32 +354,32 @@ export const PRESET_TELEPHONE_EXAMPLES: {
 
 export const VERDICT_BADGE_STYLES: Record<string, { bg: string; text: string; border: string; label: string }> = {
   same: {
-    bg: "bg-[#eee7ec]/15 dark:bg-[#eee7ec]/25",
-    text: "text-[#3a0f34] dark:text-[#eee7ec]",
-    border: "border-[#eee7ec]/40",
+    bg: "bg-[#88A0DC]/15 dark:bg-[#88A0DC]/25",
+    text: "text-[#381A61] dark:text-[#88A0DC]",
+    border: "border-[#88A0DC]/40",
     label: "Matches Source"
   },
   partial: {
-    bg: "bg-[#ffdea6]/20 dark:bg-[#ffdea6]/25",
-    text: "text-[#3a0f34] dark:text-[#ffdea6]",
-    border: "border-[#ffdea6]/50",
+    bg: "bg-[#F9D14A]/20 dark:bg-[#F9D14A]/25",
+    text: "text-[#381A61] dark:text-[#F9D14A]",
+    border: "border-[#F9D14A]/50",
     label: "Partly Matches"
   },
   stronger: {
-    bg: "bg-[#7c5800]/15 dark:bg-[#7c5800]/25",
-    text: "text-[#7c5800] dark:text-[#7c5800]",
-    border: "border-[#7c5800]/40",
+    bg: "bg-[#E78429]/15 dark:bg-[#E78429]/25",
+    text: "text-[#E78429] dark:text-[#E78429]",
+    border: "border-[#E78429]/40",
     label: "Goes Further (Overclaimed)"
   },
   weaker: {
-    bg: "bg-[#814d75]/15 dark:bg-[#814d75]/25",
-    text: "text-[#814d75] dark:text-[#d2c2cb]",
-    border: "border-[#814d75]/40",
+    bg: "bg-[#7C4B73]/15 dark:bg-[#7C4B73]/25",
+    text: "text-[#7C4B73] dark:text-[#C8C2BA]",
+    border: "border-[#7C4B73]/40",
     label: "More Cautious"
   },
   different: {
     bg: "bg-[#AB3329]/15 dark:bg-[#AB3329]/25",
-    text: "text-[#AB3329] dark:text-[#ffdea6]",
+    text: "text-[#AB3329] dark:text-[#ED968C]",
     border: "border-[#AB3329]/40",
     label: "Changed / Inverted"
   },

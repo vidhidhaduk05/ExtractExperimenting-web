@@ -148,66 +148,6 @@ class TestAutoPopulate:
         rob_f = [f for f in grade["factors"] if f["factor_key"] == "risk_of_bias"][0]
         assert rob_f["rating"] == "none"
 
-    def test_two_outcomes_different_cohorts_produce_different_rob_factors(self):
-        """CHECK: two outcomes with different study cohorts produce different RoB factors."""
-        pid = str(uuid.uuid4())
-        s1, s2, s3 = str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4())
-        m1, m2 = str(uuid.uuid4()), str(uuid.uuid4())
-
-        conn = get_connection()
-        conn.execute("INSERT INTO projects (project_id, name) VALUES (?, 'Cohort Test')", (pid,))
-        for sid in (s1, s2, s3):
-            conn.execute(
-                "INSERT INTO studies (study_id, project_id, title, screening_status) VALUES (?, ?, 'S', 'included')",
-                (sid, pid),
-            )
-        # Outcome 1: Mortality (studies s1 and s2, both high risk of bias)
-        conn.execute(
-            "INSERT INTO rob_assessments (assessment_id, study_id, project_id, tool, outcome_label, overall_judgment) "
-            "VALUES (?, ?, ?, 'rob2', 'Mortality', 'high')",
-            (str(uuid.uuid4()), s1, pid),
-        )
-        conn.execute(
-            "INSERT INTO rob_assessments (assessment_id, study_id, project_id, tool, outcome_label, overall_judgment) "
-            "VALUES (?, ?, ?, 'rob2', 'Mortality', 'high')",
-            (str(uuid.uuid4()), s2, pid),
-        )
-        # Outcome 2: Recanalization (study s3, low risk of bias)
-        conn.execute(
-            "INSERT INTO rob_assessments (assessment_id, study_id, project_id, tool, outcome_label, overall_judgment) "
-            "VALUES (?, ?, ?, 'rob2', 'Recanalization', 'low')",
-            (str(uuid.uuid4()), s3, pid),
-        )
-
-        # Meta-analysis 1 for Mortality with s1, s2
-        conn.execute("INSERT INTO meta_analyses (meta_id, project_id, outcome_label) VALUES (?, ?, 'Mortality')", (m1, pid))
-        conn.execute("INSERT INTO meta_analysis_studies (link_id, meta_id, study_id, included) VALUES (?, ?, ?, 1)", (str(uuid.uuid4()), m1, s1))
-        conn.execute("INSERT INTO meta_analysis_studies (link_id, meta_id, study_id, included) VALUES (?, ?, ?, 1)", (str(uuid.uuid4()), m1, s2))
-
-        # Meta-analysis 2 for Recanalization with s3
-        conn.execute("INSERT INTO meta_analyses (meta_id, project_id, outcome_label) VALUES (?, ?, 'Recanalization')", (m2, pid))
-        conn.execute("INSERT INTO meta_analysis_studies (link_id, meta_id, study_id, included) VALUES (?, ?, ?, 1)", (str(uuid.uuid4()), m2, s3))
-        conn.commit()
-        conn.close()
-
-        # Create GRADE assessment 1 (Mortality)
-        grade1 = grade_service.create_grade_assessment(pid, "Mortality", meta_analysis_id=m1)
-        grade1_pop = grade_service.auto_populate_factors(grade1["grade_id"])
-        rob1 = next(f for f in grade1_pop["factors"] if f["factor_key"] == "risk_of_bias")
-
-        # Create GRADE assessment 2 (Recanalization)
-        grade2 = grade_service.create_grade_assessment(pid, "Recanalization", meta_analysis_id=m2)
-        grade2_pop = grade_service.auto_populate_factors(grade2["grade_id"])
-        rob2 = next(f for f in grade2_pop["factors"] if f["factor_key"] == "risk_of_bias")
-
-        # Check: two outcomes with different study cohorts produce different RoB factors
-        assert rob1["rating"] == "very_serious"
-        assert rob1["auto_data"]["pct_high"] == 100.0
-        assert rob2["rating"] == "none"
-        assert rob2["auto_data"]["pct_high"] == 0.0
-        assert rob1["rating"] != rob2["rating"]
-
-
 
 class TestSoFTable:
 

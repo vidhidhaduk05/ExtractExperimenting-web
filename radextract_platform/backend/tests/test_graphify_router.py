@@ -33,8 +33,8 @@ def _make_corpus_fixture(num_nodes: int = 3100, commit: str = "abc1234") -> dict
 
     # Add key application symbols referenced by the workflow diagram
     core_symbols = [
-        ("backend/services/laya_screener.py::AIScreeningPipeline", "AIScreeningPipeline", "backend/services/laya_screener.py", 1, "code"),
-        ("backend/services/laya_client.py::LayaModel", "LayaModel", "backend/services/laya_client.py", 1, "code"),
+        ("backend/services/jev_screener.py::AIScreeningPipeline", "AIScreeningPipeline", "backend/services/jev_screener.py", 1, "code"),
+        ("backend/services/jev_client.py::LayaModel", "LayaModel", "backend/services/jev_client.py", 1, "code"),
         ("backend/services/coded_extraction_service.py::coded_extraction_service", "coded_extraction_service", "backend/services/coded_extraction_service.py", 2, "code"),
         ("backend/services/laya_extraction_tracer.py::laya_extraction_tracer", "laya_extraction_tracer", "backend/services/laya_extraction_tracer.py", 2, "code"),
         ("backend/services/prisma2020_sync.py::prisma2020_sync", "prisma2020_sync", "backend/services/prisma2020_sync.py", 3, "code"),
@@ -52,8 +52,8 @@ def _make_corpus_fixture(num_nodes: int = 3100, commit: str = "abc1234") -> dict
 
     # Link core symbols with both extracted and inferred relationships
     links.append({
-        "source": "backend/services/laya_screener.py::AIScreeningPipeline",
-        "target": "backend/services/laya_client.py::LayaModel",
+        "source": "backend/services/jev_screener.py::AIScreeningPipeline",
+        "target": "backend/services/jev_client.py::LayaModel",
         "relation": "calls",
         "provenance": "extracted",
     })
@@ -258,7 +258,7 @@ class TestGraphifyRouter(unittest.TestCase):
         mappings = wf["mappings"]
         # Verified implemented symbols
         self.assertTrue(mappings["S"]["available"])
-        self.assertEqual(mappings["S"]["primary_source_file"], "backend/services/laya_screener.py")
+        self.assertEqual(mappings["S"]["primary_source_file"], "backend/services/jev_screener.py")
         self.assertTrue(mappings["L"]["available"])
         self.assertTrue(mappings["V"]["available"])
         self.assertTrue(mappings["PR"]["available"])

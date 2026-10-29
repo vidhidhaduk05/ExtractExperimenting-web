@@ -97,11 +97,30 @@ def fit_bivariate_model(
     if n_studies < 2:
         raise ValueError("Need at least 2 studies for bivariate model")
 
-    # Transform to logit scale
-    logit_sens = np.array([_logit(s) for s in sensitivities])
-    logit_spec = np.array([_logit(sp) for sp in specificities])
-    var_sens = np.array([_logit_se(s, n) ** 2 for s, n in zip(sensitivities, n_pos)])
-    var_spec = np.array([_logit_se(sp, n) ** 2 for sp, n in zip(specificities, n_neg)])
+    # Standard continuity correction: if p == 0 or p == 1, adjust by 0.5 events
+    adj_sens = []
+    adj_spec = []
+    for s, n in zip(sensitivities, n_pos):
+        if n > 0 and (s <= 0.0 or s >= 1.0):
+            events = s * n
+            corrected = (events + 0.5) / (n + 1.0)
+            adj_sens.append(corrected)
+        else:
+            adj_sens.append(max(min(s, 0.999), 0.001))
+
+    for sp, n in zip(specificities, n_neg):
+        if n > 0 and (sp <= 0.0 or sp >= 1.0):
+            events = sp * n
+            corrected = (events + 0.5) / (n + 1.0)
+            adj_spec.append(corrected)
+        else:
+            adj_spec.append(max(min(sp, 0.999), 0.001))
+
+    # Transform to logit scale with corrected rates
+    logit_sens = np.array([_logit(s) for s in adj_sens])
+    logit_spec = np.array([_logit(sp) for sp in adj_spec])
+    var_sens = np.array([_logit_se(s, n) ** 2 for s, n in zip(adj_sens, n_pos)])
+    var_spec = np.array([_logit_se(sp, n) ** 2 for sp, n in zip(adj_spec, n_neg)])
 
     # Negative log-likelihood for bivariate normal model
     def neg_log_lik(params):
@@ -238,6 +257,29 @@ def compute_effect_size(
     # Shortcut: if pre-computed effect_size and variance are provided, use them directly
     if "effect_size" in study_data and "variance" in study_data:
         return (float(study_data["effect_size"]), float(study_data["variance"]))
+
+    is_ratio = em in ("or", "odds_ratio", "log_or", "rr", "risk_ratio", "log_rr", "hr", "hazard_ratio", "log_hr")
+
+    if ("effect" in study_data or "effect_size" in study_data) and "variance" in study_data:
+        eff = float(study_data.get("effect", study_data.get("effect_size")))
+        var = float(study_data["variance"])
+        return (math.log(eff) if is_ratio and eff > 0 else eff, var)
+
+    if ("effect" in study_data or "effect_size" in study_data) and "se" in study_data:
+        eff = float(study_data.get("effect", study_data.get("effect_size")))
+        se = float(study_data["se"])
+        return (math.log(eff) if is_ratio and eff > 0 else eff, se ** 2)
+
+    if ("effect" in study_data or "effect_size" in study_data) and "ci_lower" in study_data and "ci_upper" in study_data:
+        eff = float(study_data.get("effect", study_data.get("effect_size")))
+        ci_l = float(study_data["ci_lower"])
+        ci_u = float(study_data["ci_upper"])
+        if is_ratio and ci_l > 0 and ci_u > 0:
+            se = (math.log(ci_u) - math.log(ci_l)) / (2 * 1.96)
+            return (math.log(eff) if eff > 0 else 0.0, se ** 2)
+        else:
+            se = (ci_u - ci_l) / (2 * 1.96)
+            return (eff, se ** 2)
 
     if em in ("md", "mean_difference"):
         # Mean difference: needs mean1, sd1, n1, mean2, sd2, n2

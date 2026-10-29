@@ -4,10 +4,10 @@ import uuid
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from typing import Optional, Any
+from typing import Optional
 import sqlite3
 
-from models import ExtractionCreate, ExtractionUpdate, ExtractionResponse, MissingDataSummary
+from models import ExtractionCreate, ExtractionUpdate, ExtractionResponse, MissingDataSummary, ExtractionBatchUpsert, ExtractionBatchCell
 from database import get_db
 from services.db_backend import DBBackend
 from dependencies import get_current_user_optional, check_project_access
@@ -16,20 +16,6 @@ router = APIRouter(prefix="/api", tags=["extraction"])
 
 
 # ── Dual-reviewer models ──
-
-class BatchCellItem(BaseModel):
-    study_id: str
-    variable_id: str
-    value: str
-    evidence_quote: Optional[str] = None
-    source_page: Optional[int] = 1
-    confidence: Optional[float] = None
-    verification_status: Optional[str] = None
-
-
-class BatchExtractionRequest(BaseModel):
-    cells: list[BatchCellItem]
-
 
 class ExtractionVerifyRequest(BaseModel):
     """Second reviewer verification of a primary extraction."""
@@ -45,6 +31,175 @@ class ExtractionAdjudicateRequest(BaseModel):
     notes: str = ""
 
 
+@router.get("/projects/{project_id}/extractions/grid")
+async def get_extraction_grid(
+    project_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Retrieve full project extraction workspace grid: variables (ordered), studies, and all extraction cells."""
+    check_project_access(conn, project_id, user)
+
+    # 1. Variables ordered globally
+    var_rows = conn.execute(
+        "SELECT * FROM variables WHERE project_id = ? ORDER BY order_index ASC, name ASC",
+        (project_id,),
+    ).fetchall()
+    variables = [dict(v) for v in var_rows]
+
+    # 2. Studies
+    study_rows = conn.execute(
+        "SELECT * FROM studies WHERE project_id = ? ORDER BY created_at DESC",
+        (project_id,),
+    ).fetchall()
+    studies = []
+    for r in study_rows:
+        d = dict(r)
+        if not d.get("study_label"):
+            first_author = d.get("authors", "").split(",")[0].split(";")[0].split(" et al")[0].strip() if d.get("authors") else ""
+            year_str = str(d.get("publication_year")) if d.get("publication_year") else ""
+            if first_author and year_str:
+                d["study_label"] = f"{first_author} {year_str}"
+            elif first_author:
+                d["study_label"] = first_author
+            elif d.get("title"):
+                d["study_label"] = d["title"][:30]
+            else:
+                d["study_label"] = d.get("study_id", "Study")[:8]
+        studies.append(d)
+
+    # 3. All extractions for studies in this project
+    ext_rows = conn.execute(
+        """SELECT e.*, v.name as variable_name
+           FROM extractions e
+           JOIN studies s ON e.study_id = s.study_id
+           LEFT JOIN variables v ON e.variable_id = v.variable_id
+           WHERE s.project_id = ?""",
+        (project_id,),
+    ).fetchall()
+
+    extractions: dict[str, dict[str, dict]] = {s["study_id"]: {} for s in studies}
+    for r in ext_rows:
+        sid = r["study_id"]
+        vid = r["variable_id"]
+        if sid in extractions:
+            d = dict(r)
+            d["evidence_quote"] = d.get("source_text") or d.get("quote") or ""
+            d["is_verified"] = d.get("verification_status") in ("verified", "accepted")
+            extractions[sid][vid] = d
+
+    return {
+        "project_id": project_id,
+        "variables": variables,
+        "studies": studies,
+        "cells": extractions,
+        "extractions": extractions,
+    }
+
+
+@router.post("/projects/{project_id}/extractions/batch")
+async def batch_update_extractions(
+    project_id: str,
+    body: ExtractionBatchUpsert,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Upsert a rectangular batch of extraction cells with change tracking and verification guards."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    username = user["username"] if user else "reviewer"
+    now_iso = datetime.datetime.utcnow().isoformat()
+
+    updated_count = 0
+    created_count = 0
+    skipped_verified = 0
+
+    # Pre-fetch variable names for audit logging
+    var_map = {
+        r["variable_id"]: r["name"]
+        for r in conn.execute("SELECT variable_id, name FROM variables WHERE project_id = ?", (project_id,)).fetchall()
+    }
+
+    for cell in body.cells:
+        # Check existing
+        existing = conn.execute(
+            "SELECT * FROM extractions WHERE study_id = ? AND variable_id = ?",
+            (cell.study_id, cell.variable_id),
+        ).fetchone()
+
+        if existing:
+            old_val = existing["value"]
+            has_val_change = cell.value != old_val
+            has_verif_change = cell.verification_status is not None and cell.verification_status != existing["verification_status"]
+            has_conf_change = cell.confidence is not None and cell.confidence != existing["confidence"]
+            has_tag_change = cell.confidence_tag is not None and cell.confidence_tag != existing["confidence_tag"]
+            has_page_change = cell.source_page is not None and cell.source_page != existing["source_page"]
+            has_text_change = cell.source_text is not None and cell.source_text != existing["source_text"]
+            has_missing_change = cell.missing_code is not None and cell.missing_code != existing["missing_code"]
+
+            if (has_val_change or has_verif_change or has_conf_change or
+                    has_tag_change or has_page_change or has_text_change or has_missing_change):
+                is_edited_flag = 1 if (has_val_change or existing["is_edited"]) else 0
+                conn.execute(
+                    """UPDATE extractions SET
+                       value = ?, is_edited = ?, edited_by = ?, edited_at = ?,
+                       verification_status = COALESCE(?, verification_status),
+                       confidence = COALESCE(?, confidence),
+                       confidence_tag = COALESCE(?, confidence_tag),
+                       source_page = COALESCE(?, source_page),
+                       source_text = COALESCE(?, source_text),
+                       missing_code = COALESCE(?, missing_code)
+                       WHERE extraction_id = ?""",
+                    (cell.value, is_edited_flag, username, now_iso,
+                     cell.verification_status, cell.confidence, cell.confidence_tag,
+                     cell.source_page, cell.source_text, cell.missing_code,
+                     existing["extraction_id"]),
+                )
+                audit_reason = "Spreadsheet batch update" if has_val_change else f"Metadata updated ({cell.verification_status or 'verified'})"
+                conn.execute(
+                    """INSERT INTO audit_log
+                       (audit_id, study_id, variable_id, variable_name,
+                        old_value, new_value, changed_by, reason)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (str(uuid.uuid4()), cell.study_id, cell.variable_id,
+                     var_map.get(cell.variable_id, ""), old_val, cell.value,
+                     username, audit_reason),
+                )
+                updated_count += 1
+        else:
+            ext_id = str(uuid.uuid4())
+            conn.execute(
+                """INSERT INTO extractions
+                   (extraction_id, study_id, variable_id, value, confidence, confidence_tag,
+                    source_page, source_text, extracted_by, verification_status, missing_code)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (ext_id, cell.study_id, cell.variable_id, cell.value,
+                 cell.confidence if cell.confidence is not None else 1.0,
+                 cell.confidence_tag or "manual",
+                 cell.source_page, cell.source_text or "",
+                 username, cell.verification_status or "pending",
+                 cell.missing_code or ""),
+            )
+            conn.execute(
+                """INSERT INTO audit_log
+                   (audit_id, study_id, variable_id, variable_name,
+                    old_value, new_value, changed_by, reason)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (str(uuid.uuid4()), cell.study_id, cell.variable_id,
+                 var_map.get(cell.variable_id, ""), "", cell.value,
+                 username, "Spreadsheet initial entry"),
+            )
+            created_count += 1
+
+    conn.commit()
+    return {
+        "status": "success",
+        "total_submitted": len(body.cells),
+        "updated_count": updated_count,
+        "created_count": created_count,
+        "skipped_verified": skipped_verified,
+    }
+
+
 @router.get("/studies/{study_id}/extractions")
 async def list_extractions(study_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
@@ -55,7 +210,7 @@ async def list_extractions(study_id: str, user: Optional[dict] = Depends(get_cur
            FROM extractions e
            LEFT JOIN variables v ON e.variable_id = v.variable_id
            WHERE e.study_id = ?
-           ORDER BY v.section, v.order_index""",
+           ORDER BY v.order_index ASC, v.name ASC""",
         (study_id,),
     ).fetchall()
     return [dict(r) for r in rows]
@@ -272,213 +427,6 @@ async def adjudicate_extraction(
     return dict(row)
 
 
-@router.get("/projects/{project_id}/extractions/grid")
-async def get_extractions_grid(
-    project_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Return structured extraction matrix (studies, variables, and cell values) for a project."""
-    check_project_access(conn, project_id, user)
-    proj = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
-    if not proj:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    variables = [dict(r) for r in conn.execute(
-        "SELECT * FROM variables WHERE project_id = ? ORDER BY order_index ASC", (project_id,)
-    ).fetchall()]
-
-    studies = [dict(r) for r in conn.execute(
-        "SELECT study_id, title, authors, publication_year, journal, doi, pmid FROM studies WHERE project_id = ? ORDER BY created_at DESC", (project_id,)
-    ).fetchall()]
-
-    ext_rows = conn.execute(
-        """SELECT e.* FROM extractions e
-           JOIN studies s ON s.study_id = e.study_id
-           WHERE s.project_id = ?""",
-        (project_id,),
-    ).fetchall()
-
-    cells: dict[str, dict[str, Any]] = {s["study_id"]: {} for s in studies}
-    for r in ext_rows:
-        row = dict(r)
-        sid = row.get("study_id")
-        vid = row.get("variable_id")
-        if sid and vid and sid in cells:
-            is_v = bool(row.get("is_verified"))
-            is_e = bool(row.get("is_edited"))
-            cells[sid][vid] = {
-                "extraction_id": row.get("extraction_id"),
-                "value": row.get("value") or "",
-                "confidence": row.get("confidence") or 0.95,
-                "evidence_quote": row.get("source_text") or row.get("quote") or row.get("evidence_quote") or "",
-                "source_page": row.get("source_page") or 1,
-                "is_verified": is_v or row.get("verification_status") in ("verified", "adjudicated"),
-                "is_edited": is_e,
-                "verification_status": row.get("verification_status") or ("modified" if (is_v and is_e) else ("verified" if is_v else "unverified")),
-                "extraction_source": "manual" if is_e else (row.get("extraction_source") or "ai"),
-            }
-
-    return {
-        "project_id": project_id,
-        "variables": variables,
-        "studies": studies,
-        "cells": cells,
-    }
-
-
-@router.post("/projects/{project_id}/extractions/batch")
-async def batch_update_extractions(
-    project_id: str,
-    body: BatchExtractionRequest,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Batch upsert extraction cells directly from the spreadsheet editor."""
-    check_project_access(conn, project_id, user)
-    proj = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
-    if not proj:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    username = user["username"] if user else "reviewer"
-    now = datetime.datetime.utcnow().isoformat()
-    saved_count = 0
-    skipped_count = 0
-    failed_count = 0
-    details = []
-
-    valid_studies = {
-        r["study_id"]
-        for r in conn.execute(
-            "SELECT study_id FROM studies WHERE project_id = ?", (project_id,)
-        ).fetchall()
-    }
-    valid_vars = {
-        r["variable_id"]: r["name"]
-        for r in conn.execute(
-            "SELECT variable_id, name FROM variables WHERE project_id = ?", (project_id,)
-        ).fetchall()
-    }
-
-    for cell in body.cells:
-        sid = cell.study_id
-        vid = cell.variable_id
-
-        if sid not in valid_studies or vid not in valid_vars:
-            failed_count += 1
-            details.append({
-                "study_id": sid,
-                "variable_id": vid,
-                "status": "failed",
-                "error": "Study or variable does not belong to project",
-            })
-            continue
-
-        existing = conn.execute(
-            "SELECT * FROM extractions WHERE study_id = ? AND variable_id = ?",
-            (sid, vid),
-        ).fetchone()
-
-        v_name = valid_vars.get(vid, "")
-        ver_status = cell.verification_status or (
-            "verified" if (existing and existing["verification_status"] == "verified") else "unverified"
-        )
-
-        if existing:
-            ext_id = existing["extraction_id"]
-            old_val = existing["value"] or ""
-            new_val = cell.value
-
-            if old_val != new_val:
-                conn.execute(
-                    """INSERT INTO audit_log
-                       (audit_id, study_id, variable_id, variable_name,
-                        old_value, new_value, changed_by, reason)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (str(uuid.uuid4()), sid, vid, v_name, old_val, new_val, username, "Spreadsheet batch update"),
-                )
-
-            conn.execute(
-                """UPDATE extractions SET
-                   value = ?,
-                   source_text = COALESCE(?, source_text),
-                   source_page = COALESCE(?, source_page),
-                   confidence = COALESCE(?, confidence),
-                   verification_status = ?,
-                   is_edited = 1,
-                   edited_by = ?,
-                   edited_at = ?,
-                   verified_at = CASE WHEN ? = 'verified' THEN ? ELSE verified_at END
-                   WHERE extraction_id = ?""",
-                (
-                    new_val,
-                    cell.evidence_quote,
-                    cell.source_page,
-                    cell.confidence,
-                    ver_status,
-                    username,
-                    now,
-                    ver_status,
-                    now,
-                    ext_id,
-                ),
-            )
-            saved_count += 1
-            details.append({
-                "study_id": sid,
-                "variable_id": vid,
-                "extraction_id": ext_id,
-                "status": "updated",
-            })
-        else:
-            ext_id = str(uuid.uuid4())
-            conn.execute(
-                """INSERT INTO extractions
-                   (extraction_id, study_id, variable_id, value,
-                    confidence, source_page, source_text, verification_status,
-                    is_edited, edited_by, edited_at, extracted_by, extracted_at,
-                    verified_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)""",
-                (
-                    ext_id,
-                    sid,
-                    vid,
-                    cell.value,
-                    cell.confidence if cell.confidence is not None else 1.0,
-                    cell.source_page or 1,
-                    cell.evidence_quote or "",
-                    ver_status,
-                    username,
-                    now,
-                    username,
-                    now,
-                    now if ver_status == "verified" else "",
-                ),
-            )
-            conn.execute(
-                """INSERT INTO audit_log
-                   (audit_id, study_id, variable_id, variable_name,
-                    old_value, new_value, changed_by, reason)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (str(uuid.uuid4()), sid, vid, v_name, "", cell.value, username, "Spreadsheet batch insert"),
-            )
-            saved_count += 1
-            details.append({
-                "study_id": sid,
-                "variable_id": vid,
-                "extraction_id": ext_id,
-                "status": "inserted",
-            })
-
-    conn.commit()
-    return {
-        "saved_count": saved_count,
-        "skipped_verified_count": skipped_count,
-        "failed_count": failed_count,
-        "details": details,
-    }
-
-
 # ═══════════════════════════════════════════════════════════════════════
 #  v2.4: Missing Data Summary Endpoint
 # ═══════════════════════════════════════════════════════════════════════
@@ -548,6 +496,52 @@ async def get_missing_data_summary(
 #  Coded Extraction (per-variable prompts + confidence tags + missing codes)
 # ═══════════════════════════════════════════════════════════════════════
 
+@router.post("/projects/{project_id}/extractions/ai-batch")
+@router.post("/projects/{project_id}/extraction/batch-run")
+async def run_ai_batch_extraction(
+    project_id: str,
+    require_fulltext: bool = Query(False),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Run AI batch extraction across all included studies in the project."""
+    check_project_access(conn, project_id, user)
+    from services.coded_extraction_service import coded_extract_study
+    from services.llm_extractor import is_llm_available
+
+    studies = conn.execute(
+        "SELECT study_id FROM studies WHERE project_id = ? AND (screening_status IN ('included', 'ta_included') OR is_duplicate = 0)",
+        (project_id,),
+    ).fetchall()
+
+    model_fn = None
+    if is_llm_available():
+        from services.llm_client import get_client
+        model_fn = get_client().as_model_fn("coded_extract")
+
+    results = []
+    for s in studies:
+        try:
+            res = coded_extract_study(
+                s["study_id"],
+                project_id,
+                db=conn,
+                model_fn=model_fn,
+                reviewer=user["username"] if user else "ai_batch",
+                require_fulltext=require_fulltext,
+            )
+            results.append({"study_id": s["study_id"], "status": "success", "extractions": res})
+        except Exception as e:
+            results.append({"study_id": s["study_id"], "status": "error", "error": str(e)})
+
+    return {
+        "project_id": project_id,
+        "total_studies": len(studies),
+        "processed": len(results),
+        "results": results,
+    }
+
+
 @router.post("/studies/{study_id}/coded-extract")
 async def coded_extract(
     study_id: str,
@@ -610,6 +604,7 @@ async def extraction_prompts(project_id: str, user: Optional[dict] = Depends(get
 
 
 @router.get("/projects/{project_id}/extraction/xlsx-coded")
+@router.get("/projects/{project_id}/extraction/srma-workbook")
 async def coded_extraction_xlsx(project_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
     """Download the coded extraction workbook (Excel).
@@ -685,7 +680,7 @@ async def record_extraction_decision(
     actor = body.reviewer or (user["username"] if user else "") or "reviewer"
     now = datetime.datetime.utcnow().isoformat()
     existing = conn.execute(
-        "SELECT extraction_id, value FROM extractions WHERE study_id = ? AND variable_id = ?",
+        "SELECT extraction_id, value, is_edited FROM extractions WHERE study_id = ? AND variable_id = ?",
         (body.study_id, body.variable_id),
     ).fetchone()
 
@@ -702,14 +697,26 @@ async def record_extraction_decision(
     final_value = (
         body.corrected_value if body.decision == "modified"
         else "NR" if body.decision == "rejected"
-        else body.original_value
+        else (body.corrected_value or body.original_value or "")
     )
+    verification_status = "verified" if body.decision == "accepted" else ("modified" if body.decision == "modified" else "unverified")
+    is_edited_flag = 1 if body.decision == "modified" else (existing["is_edited"] if existing else 0)
+
     if existing:
+        conn.execute(
+            """UPDATE extractions
+               SET value = ?, is_edited = ?, edited_by = ?, edited_at = ?,
+                   verification_status = ?, verified_at = ?, verified_by = ?,
+                   source_text = COALESCE(NULLIF(?, ''), source_text),
+                   source_page = COALESCE(NULLIF(?, 0), source_page)
+               WHERE extraction_id = ?""",
+            (final_value, is_edited_flag, actor, now,
+             verification_status, now if verification_status == "verified" else "",
+             actor if verification_status == "verified" else "",
+             body.evidence_quote or "", body.page_number or 0,
+             existing["extraction_id"]),
+        )
         if final_value != existing["value"]:
-            conn.execute(
-                "UPDATE extractions SET value = ?, is_edited = 1, edited_by = ?, edited_at = ? WHERE extraction_id = ?",
-                (final_value, actor, now, existing["extraction_id"]),
-            )
             conn.execute(
                 """INSERT INTO audit_log
                    (audit_id, study_id, variable_id, variable_name, old_value, new_value, changed_by, reason)
@@ -719,8 +726,13 @@ async def record_extraction_decision(
             )
     else:
         conn.execute(
-            "INSERT INTO extractions (extraction_id, study_id, variable_id, value, extracted_by) VALUES (?, ?, ?, ?, ?)",
-            (str(uuid.uuid4()), body.study_id, body.variable_id, final_value, actor),
+            """INSERT INTO extractions
+               (extraction_id, study_id, variable_id, value, extracted_by, verification_status, verified_at, verified_by, source_text, source_page)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (str(uuid.uuid4()), body.study_id, body.variable_id, final_value, actor,
+             verification_status, now if verification_status == "verified" else "",
+             actor if verification_status == "verified" else "",
+             body.evidence_quote or "", body.page_number or 1),
         )
     conn.commit()
 
@@ -757,32 +769,3 @@ async def export_extraction_training_data(
     from services import error_analysis_service as eas
     check_project_access(conn, project_id, user)
     return eas.export_training_dataset(conn, project_id)
-
-
-@router.get("/projects/{project_id}/extraction/srma-workbook")
-async def download_srma_workbook(
-    project_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Download the canonical 8-sheet SRMA extraction workbook."""
-    from fastapi.responses import Response
-    from services.srma_sheet_generator import generate_srma_extraction_workbook
-    check_project_access(conn, project_id, user)
-    xlsx_bytes = generate_srma_extraction_workbook(project_id, conn)
-    return Response(
-        content=xlsx_bytes,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="srma_extraction_{project_id}.xlsx"'},
-    )
-
-
-@router.get("/extraction/srma-workbook")
-async def download_srma_workbook_query(
-    project_id: str = Query(...),
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Download the canonical 8-sheet SRMA extraction workbook via query param."""
-    return await download_srma_workbook(project_id, user, conn)
-

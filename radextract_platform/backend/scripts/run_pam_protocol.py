@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-import time
 import uuid
 from datetime import datetime, timezone
 
@@ -19,7 +18,10 @@ BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BACKEND not in sys.path:
     sys.path.insert(0, BACKEND)
 
-PROTOCOL = os.environ.get("PAM_PROTOCOL", "")
+PROTOCOL = os.environ.get(
+    "PAM_PROTOCOL",
+    r"d:\Desktop\Pure Arterial Malformation\PAM_Systematic_Review_Protocol_V2.docx",
+)
 API = os.environ.get("RADEXTRACT_API", "http://127.0.0.1:8000/api")
 MINDATE = "1960/01/01"
 MAXDATE = "2026/08/31"
@@ -27,23 +29,13 @@ OPENALEX_MIN = "1960-01-01"
 OPENALEX_MAX = "2026-08-31"
 
 
-def _api(method: str, path: str, timeout: int = 120, retries: int = 5, **kwargs):
-    for attempt in range(1, retries + 1):
-        try:
-            response = requests.request(method, f"{API}{path}", timeout=timeout, **kwargs)
-            if response.status_code in (502, 503, 504) and attempt < retries:
-                time.sleep(attempt * 2)
-                continue
-            if response.status_code >= 400:
-                raise RuntimeError(f"{method} {path} -> {response.status_code}: {response.text[:800]}")
-            if not response.content:
-                return {}
-            return response.json()
-        except (requests.ConnectionError, requests.Timeout) as e:
-            if attempt < retries:
-                time.sleep(attempt * 2)
-                continue
-            raise
+def _api(method: str, path: str, timeout: int = 120, **kwargs):
+    response = requests.request(method, f"{API}{path}", timeout=timeout, **kwargs)
+    if response.status_code >= 400:
+        raise RuntimeError(f"{method} {path} -> {response.status_code}: {response.text[:800]}")
+    if not response.content:
+        return {}
+    return response.json()
 
 
 def _store_pmc_text(conn, study_id: str, fulltext: str, source: str) -> None:

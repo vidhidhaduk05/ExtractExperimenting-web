@@ -130,6 +130,28 @@ def test_empty_project_hides_optional_arms():
     assert payload["notes"] == []
 
 
+def test_one_imported_unscreened_record_reproduction():
+    """Reviewer reproduction test: one imported, unscreened record.
+    Identified=1, screened=0, pending=1 — nothing else.
+    Must never classify unscreened records as screened or notretrieved.
+    """
+    studies = [_study("PubMed", "pending", "ta")]
+    payload = build_prisma2020_sync(studies, meta_studies=0)
+    counts = payload["counts"]
+    fields = payload["fields"]
+
+    assert counts["database_results"] == 1
+    assert counts["records_screened"] == 0
+    assert counts["pending_screening"] == 1
+    assert counts["records_excluded"] == 0
+    assert counts["dbr_sought_reports"] == 0
+    assert counts["dbr_notretrieved_reports"] == 0
+    assert counts["dbr_assessed"] == 0
+    assert counts["new_studies"] == 0
+    assert counts["total_studies"] == 0
+    assert fields["records_screened"] == "0"
+
+
 def test_shiny_url_uses_template_data_names():
     fields = {"database_results": "12", "dbr_excluded": "Wrong population, 3"}
     options = {"previous": 0, "other": 1, "dbDetail": 0, "regDetail": 0, "metaAnalysis": 0}
@@ -161,61 +183,40 @@ def test_csv_overwrites_template_n_and_keeps_official_columns():
 
 
 def test_endpoint_matches_service(client):
-    created = client.post("/api/projects", json={"name": "PRISMA2020 sync"})
+    from dependencies import create_access_token
+    conn = get_connection()
+    conn.execute("INSERT OR REPLACE INTO users (user_id, username, role, password_hash) VALUES ('u_prisma', 'prisma_user', 'owner', 'hash_test')")
+    conn.commit()
+    conn.close()
+
+    token = create_access_token(user_id="u_prisma", username="prisma_user", role="owner")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    created = client.post("/api/projects", json={"name": "PRISMA2020 sync"}, headers=headers)
     project_id = created.json()["project_id"]
     added = client.post(f"/api/projects/{project_id}/studies", json={
         "project_id": project_id,
         "title": "Included PubMed study",
         "source": "PubMed",
-    })
+    }, headers=headers)
     study_id = added.json()["study_id"]
     client.put(f"/api/studies/{study_id}", json={
         "screening_stage": "ft",
         "screening_status": "included",
-    })
+    }, headers=headers)
 
     from services.db_backend import SQLiteBackend
 
     expected = sync_prisma2020(project_id, SQLiteBackend(get_connection()))
-    response = client.get(f"/api/projects/{project_id}/prisma/prisma2020")
+    response = client.get(f"/api/projects/{project_id}/prisma/prisma2020", headers=headers)
     assert response.status_code == 200
     body = response.json()
     assert body["counts"] == expected["counts"]
     assert body["shiny_url"].startswith("https://estech.shinyapps.io/prisma_flowdiagram/?")
     assert "database_results=1" in body["shiny_url"]
 
-    csv_response = client.get(f"/api/projects/{project_id}/prisma/prisma2020.csv")
+    csv_response = client.get(f"/api/projects/{project_id}/prisma/prisma2020.csv", headers=headers)
     assert csv_response.status_code == 200
     assert "text/csv" in csv_response.headers["content-type"]
     assert b"database_results" in csv_response.content
     assert b",1\n" in csv_response.content or b",1\r\n" in csv_response.content
-
-
-def test_reproduction_one_imported_unscreened_record(client):
-    """CHECK: one imported, unscreened record → identified=1, screened=0, pending=1."""
-    # 1. Test via build_prisma2020_sync directly
-    studies = [_study("PubMed", "pending", "ta")]
-    payload = build_prisma2020_sync(studies)
-    assert payload["counts"]["identified"] == 1
-    assert payload["counts"]["screened"] == 0
-    assert payload["counts"]["pending"] == 1
-
-    # 2. Test end-to-end via API endpoint
-    created = client.post("/api/projects", json={"name": "Reproduction Project"})
-    project_id = created.json()["project_id"]
-    client.post(
-        f"/api/projects/{project_id}/studies",
-        json={
-            "project_id": project_id,
-            "title": "Unscreened Imported Record",
-            "source": "PubMed",
-        },
-    )
-
-    response = client.get(f"/api/projects/{project_id}/prisma/prisma2020")
-    assert response.status_code == 200
-    counts = response.json()["counts"]
-    assert counts["identified"] == 1
-    assert counts["screened"] == 0
-    assert counts["pending"] == 1
-

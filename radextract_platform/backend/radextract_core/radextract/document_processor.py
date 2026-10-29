@@ -156,32 +156,43 @@ class DoclingProcessor:
         if self._converter is None and self._available:
             gc.collect()
             try:
+                import torch
+                has_cuda = torch.cuda.is_available()
+            except ImportError:
+                has_cuda = False
+
+            try:
                 from docling.document_converter import DocumentConverter, PdfFormatOption
-                from docling.datamodel.pipeline_options import PdfPipelineOptions, AcceleratorOptions, AcceleratorDevice
+                from docling.datamodel.base_models import InputFormat
+                from docling.datamodel.pipeline_options import PdfPipelineOptions
+                from docling.datamodel.accelerator_options import AcceleratorOptions, AcceleratorDevice
 
-                pipeline_options = PdfPipelineOptions()
-                pipeline_options.do_table_structure = True
-                pipeline_options.do_ocr = False
+                num_threads = int(os.environ.get("DOCLING_NUM_THREADS", "8"))
+                env_device = os.environ.get("DOCLING_DEVICE", "").lower()
+                if env_device == "cuda" or (env_device != "cpu" and has_cuda):
+                    device = AcceleratorDevice.CUDA
+                else:
+                    device = AcceleratorDevice.AUTO
 
-                device = AcceleratorDevice.CPU
-                try:
-                    import torch
-                    if torch.cuda.is_available():
-                        device = AcceleratorDevice.CUDA
-                except Exception:
-                    pass
-
-                pipeline_options.accelerator_options = AcceleratorOptions(
+                accelerator_options = AcceleratorOptions(
+                    num_threads=num_threads,
                     device=device,
-                    num_threads=8
                 )
-
+                pipeline_options = PdfPipelineOptions(
+                    do_ocr=True,
+                    do_table_structure=True,
+                    accelerator_options=accelerator_options,
+                )
                 self._converter = DocumentConverter(
                     format_options={
-                        "pdf": PdfFormatOption(pipeline_options=pipeline_options)
+                        InputFormat.PDF: PdfFormatOption(
+                            pipeline_options=pipeline_options
+                        )
                     }
                 )
-            except Exception:
+                logger.info(f"[DoclingProcessor] Initialized GPU-accelerated Docling DocumentConverter (device={device}, threads={num_threads})")
+            except Exception as e:
+                logger.warning(f"[DoclingProcessor] Could not initialize accelerated Docling converter ({e}), falling back to default.")
                 from docling.document_converter import DocumentConverter
                 self._converter = DocumentConverter()
         return self._converter
@@ -221,6 +232,7 @@ class DoclingProcessor:
                 "source_path": pdf_path,
                 "conversion_time_seconds": round(elapsed, 3),
                 "docling_version": getattr(__import__('docling'), '__version__', 'unknown'),
+                "docling_dict": doc_dict,
             },
         )
 
@@ -675,6 +687,8 @@ def process_batch(pdf_paths: List[str], *, prefer_docling: bool = True, autorota
 def save_processed_document(doc: ProcessedDocument, output_path: str) -> str:
     """Save a ProcessedDocument to JSON. Stages in /workspace for S3 safety."""
     data = doc.as_dict()
+    if "docling_dict" in doc.metadata:
+        data["docling_document"] = doc.metadata["docling_dict"]
     content = json.dumps(data, indent=2, ensure_ascii=False)
 
     # If destination is on an S3 mount, stage locally first

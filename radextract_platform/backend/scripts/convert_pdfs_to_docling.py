@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""Batch PDF to Docling JSON Converter.
+"""Batch PDF to Docling Structured JSON Converter for RadExtract (HPC GPU Accelerated).
 
-Converts PDF documents to IBM Docling structured JSON with layout bounding boxes,
-reconstructed tables, and clean Markdown text.
-Supports Tesla V100S GPU acceleration (CUDA) or multi-threaded CPU fallback,
-and can optionally synchronize the parsed documents with the RadExtract database.
+Converts a directory of clinical PDFs into Docling structured JSON (.docling.json)
+using Docling's DocumentConverter accelerated with CUDA on NVIDIA Tesla V100S GPU
+and multi-threaded layout parsing.
 
 Usage:
-    python convert_pdfs_to_docling.py --input-dir /path/to/pdfs --device cuda --threads 8 --sync-db
+    # Convert all PDFs in a folder to .docling.json files (e.g. on HPC)
+    python convert_pdfs_to_docling.py --input-dir /home/vd00026/Desktop/Software/TESTING/files
+
+    # Specify output directory and force CUDA:
+    python convert_pdfs_to_docling.py --input-dir ./pdfs --output-dir ./docling_json --device cuda --threads 8
+
+    # Convert and automatically sync with the RadExtract database:
+    python convert_pdfs_to_docling.py --input-dir ./pdfs --project-id stroke_sr_ich_lvo --sync-db
 """
 from __future__ import annotations
 
@@ -18,279 +24,242 @@ import logging
 import os
 import sys
 import time
-import uuid
-from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
-# Add backend to Python path so radextract_core can be imported as a package
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-BACKEND_DIR = os.path.dirname(SCRIPT_DIR)
+# Setup path to import backend modules
+SCRIPT_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = SCRIPT_DIR.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+CORE_DIR = BACKEND_DIR / "radextract_core"
+if str(CORE_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_DIR))
 
-if BACKEND_DIR not in sys.path:
-    sys.path.insert(0, BACKEND_DIR)
-
-
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    format="[%(asctime)s] [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger("docling_batch")
+logger = logging.getLogger("convert_pdfs_to_docling")
+
+from radextract_core.radextract.document_processor import (
+    DoclingProcessor,
+    convert_with_fallback,
+    save_processed_document,
+)
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Batch convert PDFs to Docling JSON format.")
+def convert_pdf_to_docling_json(
+    pdf_path: str,
+    output_dir: Optional[str] = None,
+    overwrite: bool = False,
+    processor: Optional[DoclingProcessor] = None,
+) -> tuple[bool, str, float]:
+    """Convert a single PDF file to .docling.json.
+
+    Returns:
+        (success: bool, output_json_path: str, elapsed_seconds: float)
+    """
+    pdf_path = os.path.abspath(pdf_path)
+    stem = Path(pdf_path).stem
+
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        json_path = os.path.join(output_dir, f"{stem}.docling.json")
+    else:
+        json_path = os.path.splitext(pdf_path)[0] + ".docling.json"
+
+    if os.path.exists(json_path) and not overwrite:
+        logger.info(f"[SKIP] Already exists: {os.path.basename(json_path)}")
+        return True, json_path, 0.0
+
+    t0 = time.time()
+    try:
+        if processor and processor.available:
+            doc = processor.convert(pdf_path)
+        else:
+            doc = convert_with_fallback(pdf_path, prefer_docling=True)
+
+        save_processed_document(doc, json_path)
+        elapsed = time.time() - t0
+        n_pages = doc.parsed.get("n_pages", 0)
+        n_tables = len(doc.parsed.get("tables", []))
+        engine = doc.metadata.get("engine", "unknown")
+        logger.info(
+            f"[OK] {os.path.basename(pdf_path)} -> {os.path.basename(json_path)} "
+            f"({elapsed:.2f}s, {n_pages} pages, {n_tables} tables, engine={engine})"
+        )
+        return True, json_path, elapsed
+    except Exception as e:
+        elapsed = time.time() - t0
+        logger.error(f"[ERROR] Failed to convert {os.path.basename(pdf_path)}: {e}")
+        return False, json_path, elapsed
+
+
+def sync_document_with_db(study_id: str, json_path: str, db_path: Optional[str] = None) -> bool:
+    """Sync a converted .docling.json file into the SQLite database."""
+    try:
+        from database import get_db_backend
+        import uuid
+        from datetime import datetime, timezone
+
+        db = get_db_backend()
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        parsed = data.get("parsed", {})
+        annotations = data.get("annotations", {})
+        metadata = data.get("metadata", {})
+        engine = metadata.get("engine", "docling")
+        now = datetime.now(timezone.utc).isoformat()
+
+        # Delete existing record
+        for old in db.query("pdf_documents", {"study_id": study_id}):
+            db.delete("pdf_documents", old["doc_id"])
+
+        # Insert new record
+        db.insert("pdf_documents", {
+            "doc_id": str(uuid.uuid4()),
+            "study_id": study_id,
+            "full_text": parsed.get("full_text", ""),
+            "pages_json": json.dumps(parsed.get("pages", []), ensure_ascii=False),
+            "annotations_json": json.dumps(annotations, ensure_ascii=False),
+            "tables_json": json.dumps(parsed.get("tables", []), ensure_ascii=False),
+            "metadata_json": json.dumps(metadata, ensure_ascii=False),
+            "processor_engine": engine,
+            "processed_at": now,
+        })
+
+        db.update("studies", study_id, {
+            "pdf_status": "processed",
+            "pdf_processor_engine": engine,
+        })
+        db.commit()
+        return True
+    except Exception as e:
+        logger.warning(f"Could not sync {study_id} with database: {e}")
+        return False
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Batch convert PDFs to Docling structured JSON (.docling.json) on HPC GPU."
+    )
     parser.add_argument(
         "--input-dir",
         type=str,
-        default=os.path.join(os.path.dirname(BACKEND_DIR), "TESTING", "files"),
-        help="Directory containing PDF files to convert",
+        required=True,
+        help="Directory containing PDF files to convert.",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
         default=None,
-        help="Optional destination directory for .docling.json files (default: alongside source PDF)",
+        help="Optional directory to save .docling.json files (defaults to same folder as PDFs).",
     )
     parser.add_argument(
         "--device",
         type=str,
-        choices=["auto", "cuda", "cpu"],
         default="auto",
-        help="Accelerator device: 'cuda', 'cpu', or 'auto' (default: auto)",
+        choices=["auto", "cuda", "cpu"],
+        help="Hardware accelerator to use: 'cuda' (NVIDIA GPU), 'cpu', or 'auto'.",
     )
     parser.add_argument(
         "--threads",
         type=int,
         default=8,
-        help="Number of CPU worker threads (default: 8)",
+        help="Number of CPU threads for layout/pipeline execution (default: 8).",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Re-convert files even if .docling.json already exists.",
+    )
+    parser.add_argument(
+        "--project-id",
+        type=str,
+        default=None,
+        help="Optional project ID to match and sync studies in SQLite database.",
     )
     parser.add_argument(
         "--sync-db",
         action="store_true",
-        help="Synchronize converted documents with the RadExtract SQLite database",
+        help="Sync converted output with the active database.",
     )
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force re-conversion even if .docling.json file already exists",
-    )
-    parser.add_argument(
-        "--max-docs",
-        type=int,
-        default=None,
-        help="Maximum number of documents to convert",
-    )
-    return parser.parse_args()
 
+    args = parser.parse_args()
 
-def get_converter(device_mode: str, threads: int):
-    """Initialize Docling converter with GPU or CPU acceleration."""
-    has_torch = False
-    cuda_available = False
-    device_name = "CPU"
+    # Set environment variables for Docling accelerator configuration
+    if args.device != "auto":
+        os.environ["DOCLING_DEVICE"] = args.device
+    os.environ["DOCLING_NUM_THREADS"] = str(args.threads)
+
+    # Detect CUDA
     try:
         import torch
-        has_torch = True
         cuda_available = torch.cuda.is_available()
-        if cuda_available:
-            device_name = torch.cuda.get_device_name(0)
-    except Exception:
-        pass
+        gpu_name = torch.cuda.get_device_name(0) if cuda_available else "None"
+    except ImportError:
+        cuda_available = False
+        gpu_name = "PyTorch not installed"
 
-    device_str = "CPU"
-    if device_mode == "cuda" or (device_mode == "auto" and cuda_available):
-        if cuda_available:
-            device_str = f"CUDA ({device_name})"
-        else:
-            logger.warning("CUDA requested or auto-detected but torch.cuda.is_available() is False. Using CPU.")
-            device_str = "CPU"
+    logger.info("========================================================================")
+    logger.info(" RadExtract - High-Throughput Docling GPU PDF Converter")
+    logger.info(f" Input Directory:  {os.path.abspath(args.input_dir)}")
+    logger.info(f" Output Directory: {os.path.abspath(args.output_dir) if args.output_dir else 'Adjacent to PDFs'}")
+    logger.info(f" CUDA Acceleration: {'ACTIVE (' + gpu_name + ')' if cuda_available else 'INACTIVE (CPU Fallback)'}")
+    logger.info(f" Pipeline Threads:  {args.threads}")
+    logger.info("========================================================================")
 
-    logger.info(f"Initializing Docling Converter on {device_str} with {threads} threads...")
-
-    
-    from radextract_core.radextract.document_processor import DoclingProcessor, convert_with_fallback
-    proc = DoclingProcessor()
-    if proc.available:
-        logger.info("[+] IBM Docling engine successfully initialized.")
-    else:
-        logger.warning("[-] Docling not available in this environment. Will use FallbackProcessor (pdfplumber/pypdfium2).")
-    
-    return proc
-
-
-def sync_document_to_db(pdf_path: str, doc_dict: dict, db):
-    """Synchronize a converted Docling document with the SQLite database."""
-    pdf_filename = os.path.basename(pdf_path)
-    stem = os.path.splitext(pdf_filename)[0]
-
-    # Look for matching study by pdf_path or title
-    matched_study = None
-    try:
-        all_studies = db.query("studies", {})
-        for s in all_studies:
-            s_path = s.get("pdf_path") or ""
-            s_title = s.get("title") or ""
-            if os.path.basename(s_path) == pdf_filename or stem.lower() in s_title.lower():
-                matched_study = s
-                break
-    except Exception as e:
-        logger.warning(f"Error querying studies table: {e}")
-
-    study_id = matched_study["study_id"] if matched_study else str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
-    doc_id = str(uuid.uuid4())
-
-    parsed = doc_dict.get("parsed", {})
-    full_text = parsed.get("full_text", "")
-    pages_json = json.dumps(parsed.get("pages", []), ensure_ascii=False)
-    annotations = doc_dict.get("annotations", {})
-    annotations_json = json.dumps(annotations, ensure_ascii=False)
-    tables_json = json.dumps(parsed.get("tables", []), ensure_ascii=False)
-    metadata_json = json.dumps(doc_dict.get("metadata", {}), ensure_ascii=False)
-    engine = doc_dict.get("metadata", {}).get("engine", "docling")
-
-    # If study exists, replace record in pdf_documents
-    try:
-        if matched_study:
-            existing = db.query("pdf_documents", {"study_id": study_id})
-            for ex in existing:
-                db.delete("pdf_documents", ex["doc_id"])
-
-        db.insert("pdf_documents", {
-            "doc_id": doc_id,
-            "study_id": study_id,
-            "full_text": full_text,
-            "pages_json": pages_json,
-            "annotations_json": annotations_json,
-            "tables_json": tables_json,
-            "metadata_json": metadata_json,
-            "processor_engine": engine,
-            "processed_at": now,
-        })
-
-        if matched_study:
-            db.update("studies", study_id, {
-                "pdf_status": "processed",
-                "pdf_processor_engine": engine,
-            })
-        db.commit()
-        logger.info(f"  [DB Sync] Document synced to study_id={study_id[:8]}... (engine={engine})")
-    except Exception as e_db:
-        logger.warning(f"  [DB Sync Warning] Could not sync {pdf_filename} to DB: {e_db}")
-
-
-def main():
-    args = parse_args()
-    input_dir = os.path.abspath(args.input_dir)
-
-    if not os.path.isdir(input_dir):
-        logger.error(f"Input directory does not exist: {input_dir}")
-        sys.exit(1)
-
-    output_dir = os.path.abspath(args.output_dir) if args.output_dir else None
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-
-    # Discover all PDF files
-    pdf_files = sorted(glob.glob(os.path.join(input_dir, "**", "*.pdf"), recursive=True))
+    pdf_files = sorted(glob.glob(os.path.join(args.input_dir, "**", "*.pdf"), recursive=True))
     if not pdf_files:
-        # Check non-recursive
-        pdf_files = sorted(glob.glob(os.path.join(input_dir, "*.pdf")))
+        pdf_files = sorted(glob.glob(os.path.join(args.input_dir, "*.pdf")))
 
     if not pdf_files:
-        logger.warning(f"No PDF files found in {input_dir}")
-        sys.exit(0)
+        logger.warning(f"No PDF files found in {args.input_dir}")
+        return
 
-    if args.max_docs:
-        pdf_files = pdf_files[:args.max_docs]
+    logger.info(f"Found {len(pdf_files)} PDF file(s) to process.")
 
-    logger.info("=" * 70)
-    logger.info(" RadExtract Batch PDF to Docling JSON Converter")
-    logger.info(f" Input Directory:  {input_dir}")
-    logger.info(f" Total PDFs Found: {len(pdf_files)}")
-    logger.info(f" Output Target:    {output_dir or 'Alongside source PDFs'}")
-    logger.info(f" Device Mode:      {args.device}")
-    logger.info(f" CPU Threads:      {args.threads}")
-    logger.info(f" Sync to DB:       {args.sync_db}")
-    logger.info(f" Force Overwrite:  {args.force}")
-    logger.info("=" * 70)
+    processor = DoclingProcessor()
+    if not processor.available:
+        logger.warning("Docling is not installed in current environment; will use fallback parser.")
 
-    from radextract_core.radextract.document_processor import convert_with_fallback
-    get_converter(args.device, args.threads)
+    success_count = 0
+    fail_count = 0
+    total_time = 0.0
 
-    db = None
-    if args.sync_db:
-        try:
-            from database import get_db_backend
-            db = get_db_backend()
-            logger.info("[+] Connected to RadExtract database backend.")
-        except Exception as e_db:
-            logger.warning(f"[-] Could not connect to database backend: {e_db}")
-
-    start_time = time.time()
-    successful = 0
-    skipped = 0
-    failed = 0
-    total_pages = 0
-    total_tables = 0
-
-    for i, pdf_path in enumerate(pdf_files, 1):
-        filename = os.path.basename(pdf_path)
-        if output_dir:
-            json_filename = os.path.splitext(filename)[0] + ".docling.json"
-            dest_json_path = os.path.join(output_dir, json_filename)
+    start_all = time.time()
+    for idx, pdf_path in enumerate(pdf_files, 1):
+        logger.info(f"[{idx}/{len(pdf_files)}] Processing {os.path.basename(pdf_path)}...")
+        ok, json_path, elapsed = convert_pdf_to_docling_json(
+            pdf_path=pdf_path,
+            output_dir=args.output_dir,
+            overwrite=args.overwrite,
+            processor=processor,
+        )
+        if ok:
+            success_count += 1
+            total_time += elapsed
+            if args.sync_db:
+                # Attempt to extract study_id from filename or folder
+                study_id = Path(pdf_path).stem
+                sync_document_with_db(study_id, json_path)
         else:
-            dest_json_path = os.path.splitext(pdf_path)[0] + ".docling.json"
+            fail_count += 1
 
-        if os.path.exists(dest_json_path) and not args.force:
-            logger.info(f"[{i}/{len(pdf_files)}] [SKIPPED] Already exists: {os.path.basename(dest_json_path)}")
-            skipped += 1
-            continue
+    total_elapsed = time.time() - start_all
+    avg_time = (total_time / success_count) if success_count > 0 else 0.0
 
-        logger.info(f"[{i}/{len(pdf_files)}] [CONVERTING] {filename}...")
-        t0 = time.time()
-        try:
-            doc = convert_with_fallback(pdf_path, prefer_docling=True)
-            doc_dict = doc.as_dict()
-
-            with open(dest_json_path, "w", encoding="utf-8") as f:
-                json.dump(doc_dict, f, ensure_ascii=False, indent=2)
-
-            elapsed = time.time() - t0
-            pages = doc.parsed.get("n_pages", 0)
-            tables = len(doc.parsed.get("tables", []))
-            engine = doc.metadata.get("engine", "unknown")
-            size_kb = os.path.getsize(dest_json_path) / 1024
-
-            total_pages += pages
-            total_tables += tables
-            successful += 1
-
-            logger.info(
-                f"  [+] Success in {elapsed:.2f}s | Engine: {engine} | Pages: {pages} | "
-                f"Tables: {tables} | JSON Size: {size_kb:.1f} KB"
-            )
-
-            if db:
-                sync_document_to_db(pdf_path, doc_dict, db)
-
-        except Exception as e:
-            logger.error(f"  [-] Failed {filename}: {e}")
-            failed += 1
-
-    total_elapsed = time.time() - start_time
-    logger.info("=" * 70)
-    logger.info(" Batch Conversion Complete")
-    logger.info(f" Total Processed: {len(pdf_files)}")
-    logger.info(f" Successful:      {successful}")
-    logger.info(f" Skipped:         {skipped}")
-    logger.info(f" Failed:          {failed}")
-    logger.info(f" Total Pages:     {total_pages}")
-    logger.info(f" Total Tables:    {total_tables}")
-    logger.info(f" Total Time:      {total_elapsed:.2f}s (avg: {total_elapsed/max(successful, 1):.2f}s/doc)")
-    logger.info("=" * 70)
+    logger.info("========================================================================")
+    logger.info(" BATCH DOCLING CONVERSION COMPLETE:")
+    logger.info(f" Total Files:     {len(pdf_files)}")
+    logger.info(f" Succeeded:       {success_count}")
+    logger.info(f" Failed:          {fail_count}")
+    logger.info(f" Wall Clock Time: {total_elapsed:.2f}s")
+    logger.info(f" Average Speed:   {avg_time:.2f}s per PDF")
+    logger.info("========================================================================")
 
 
 if __name__ == "__main__":

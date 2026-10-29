@@ -1,16 +1,11 @@
 """Tests for duplicate detection service (v2.4 feature 1)."""
 import pytest
 from fastapi.testclient import TestClient
-from fastapi import FastAPI
-from routers import projects, studies, screening
+from main import app
 from database import reset_db, init_db, get_connection
 from config import settings
 from dependencies import create_access_token
 from services.dedup_service import deduplicate_studies, _title_similarity, _author_overlap
-
-app = FastAPI()
-for router in (projects.router, studies.router, screening.router):
-    app.include_router(router)
 
 
 import os
@@ -30,7 +25,6 @@ def fresh_db(monkeypatch):
     monkeypatch.setattr(settings, "db_path", db_file)
     monkeypatch.setattr(settings, "upload_root", upload_dir)
     monkeypatch.setattr(settings, "export_root", export_dir)
-    monkeypatch.setattr(settings, "storage_root", os.path.join(TEST_TMP, "storage"))
     reset_db()
     init_db()
     conn = get_connection()

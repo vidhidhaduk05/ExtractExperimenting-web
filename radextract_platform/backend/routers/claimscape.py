@@ -36,6 +36,8 @@ async def evaluate_claim(request: EvaluateRequest) -> Dict[str, Any]:
             count=effective_count,
         )
         return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error("ClaimScape evaluation failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Evaluation pipeline error: {str(e)}")

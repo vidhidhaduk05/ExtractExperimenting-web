@@ -73,13 +73,12 @@ def _find_keyword_in_text(text: str, keywords: list[str]) -> Optional[dict]:
 
             sentence = text[start:end].strip()
             if len(sentence) > 10:
-                est_page = max(1, idx // 2500 + 1)
                 return {
                     "value": sentence[:150],
-                    "source_page": est_page,
-                    "confidence": 0.70,
+                    "source_page": None,
+                    "confidence": 0.50,
                     "source_text": sentence[:300],
-                    "confidence_tag": "[DS]",
+                    "confidence_tag": "[KEYWORD]",
                 }
     return None
 
@@ -246,7 +245,7 @@ def auto_extract(study_id: str, project_id: str, reviewer: str = "auto", db: Opt
         val = None
         conf = 0.0
         quote = ""
-        src_page = 1
+        src_page = None
         conf_tag = ""
 
         # Check LLM output
@@ -257,7 +256,8 @@ def auto_extract(study_id: str, project_id: str, reviewer: str = "auto", db: Opt
                 val = l_val
                 quote = str(l_item.get("source_text", l_item.get("quote", ""))).strip()
                 conf = float(l_item.get("confidence", 0.90))
-                src_page = int(l_item.get("source_page", 1))
+                raw_sp = l_item.get("source_page")
+                src_page = int(raw_sp) if raw_sp is not None and str(raw_sp).isdigit() else None
                 conf_tag = l_item.get("confidence_tag", "[DS]")
 
         # Check Keyword match if LLM missed
@@ -347,10 +347,8 @@ def auto_extract(study_id: str, project_id: str, reviewer: str = "auto", db: Opt
         val = str(item.get("value", "-99"))
         conf = float(item.get("confidence", 0.0))
         conf_tag = item.get("confidence_tag", "")
+        quote = item.get("source_text", "")
         src_page = item.get("source_page")
-        tracing_status = item.get("tracing_status", "none")
-        verification_note = item.get("verification_note", "")
-        quote = item.get("source_text") or ""
 
         # §1.2 Quote/provenance verification guardrail
         if quote and val not in ("-99", "-77", "-88", None, ""):
@@ -370,8 +368,7 @@ def auto_extract(study_id: str, project_id: str, reviewer: str = "auto", db: Opt
                 "value": str(existing[0].get("value", ""))[:100],
                 "confidence": float(existing[0].get("confidence", 1.0)),
                 "confidence_tag": existing[0].get("confidence_tag", "[HUMAN]"),
-                "source_page": existing[0].get("source_page"),
-                "tracing_status": existing[0].get("tracing_status", "verified"),
+                "source_page": existing[0].get("source_page", 1),
             })
             extracted += 1
             continue
@@ -383,8 +380,6 @@ def auto_extract(study_id: str, project_id: str, reviewer: str = "auto", db: Opt
             "source_page": src_page,
             "source_bbox": "",
             "source_text": quote,
-            "tracing_status": tracing_status,
-            "verification_note": verification_note,
             "extracted_by": reviewer,
             "extracted_at": now,
             "is_edited": 0,
@@ -417,10 +412,29 @@ def auto_extract(study_id: str, project_id: str, reviewer: str = "auto", db: Opt
     db.update("studies", study_id, {"extraction_status": "auto_extracted"})
     db.commit()
 
+    from services.jev_client import is_jev_enabled
+    jev_on = is_jev_enabled()
+    verified_count = sum(1 for it in extractions_work if it.get("laya_verified"))
+    failed_count = sum(1 for it in extractions_work if it.get("tracing_status") == "failed")
+    if not jev_on:
+        tracing_state = "disabled"
+    elif failed_count > 0 and verified_count == 0:
+        tracing_state = "failed"
+    elif verified_count > 0:
+        tracing_state = "verified"
+    else:
+        tracing_state = "unverified"
+
     return {
         "study_id": study_id,
         "extracted": extracted,
         "skipped": skipped,
         "total_variables": len(variables),
         "results": results,
+        "tracing": {
+            "status": tracing_state,
+            "verified_count": verified_count,
+            "failed_count": failed_count,
+            "total_candidates": len(extractions_work),
+        },
     }

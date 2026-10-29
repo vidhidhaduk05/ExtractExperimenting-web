@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Outlet, NavLink, useParams, useLocation, Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type PrismaFlow, type Project } from "../lib/api";
 import {
   Folder,
@@ -28,6 +28,11 @@ import {
   ExternalLink,
   Table,
   Layers,
+  Play,
+  Loader2,
+  Sparkles,
+  Pause,
+  Square,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ErrorBoundary } from "./common/ErrorBoundary";
@@ -130,6 +135,76 @@ export function AppShell() {
   });
 
   const [activeDockTab, setActiveDockTab] = useState<"todos" | "tasks" | "questions" | "results" | "prisma">("todos");
+
+  const queryClient = useQueryClient();
+
+  const continuePipelineMutation = useMutation({
+    mutationFn: (stage: "abstract" | "fulltext") => api.continueAIScreening(projectId!, stage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+    },
+  });
+
+  const { data: screeningProgress } = useQuery({
+    queryKey: ["screening-progress", projectId],
+    queryFn: () => (projectId ? api.getAIScreeningProgress(projectId) : Promise.resolve(null)),
+    enabled: !!projectId,
+    refetchInterval: (query) => (query.state.data?.active ? 1500 : 8000),
+  });
+
+  const { data: missingDataSummary } = useQuery({
+    queryKey: ["missing-data-summary", projectId],
+    queryFn: () => (projectId && projectId !== "demo" ? api.getMissingDataSummary(projectId) : Promise.resolve(null)),
+    enabled: !!projectId && projectId !== "demo",
+  });
+
+  const startAnalysisMutation = useMutation({
+    mutationFn: () => api.startAIAnalysis(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+    },
+  });
+
+  const startFullPipelineMutation = useMutation({
+    mutationFn: () => api.startAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+    },
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: () => api.pauseAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: () => api.resumeAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => api.cancelAIScreening(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-progress", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+    },
+  });
 
   // Adjustable dock width state (persisted in localStorage, default 380px, clamped [280px, 720px])
   const [dockWidth, setDockWidth] = useState<number>(() => {
@@ -490,10 +565,15 @@ export function AppShell() {
 
               <Link
                 to={projectId ? `/projects/${projectId}` : "/projects"}
-                className="font-serif font-bold text-sm text-[#fbf9f4] hover:underline truncate max-w-[180px] sm:max-w-[280px] md:max-w-[360px]"
+                className="font-serif font-bold text-sm text-[#fbf9f4] hover:underline truncate max-w-[180px] sm:max-w-[280px] md:max-w-[360px] flex items-center gap-1.5"
                 title={project?.name || "Project Overview"}
               >
-                {project?.name || (projectId ? `Project ${projectId.slice(0, 8)}` : "RadExtract")}
+                <span>{project?.name || (projectId ? `Project ${projectId.slice(0, 8)}` : "RadExtract")}</span>
+                {project?.review_type && (
+                  <span className="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.2 rounded bg-[#814d75]/50 text-[#ffdea6] font-normal border border-[#814d75]">
+                    {project.review_type}
+                  </span>
+                )}
               </Link>
 
               <span className="text-[#814d75] font-sans text-xs">/</span>
@@ -718,26 +798,160 @@ export function AppShell() {
                   </div>
 
                   {/* Step 2: Title & Abstract Screening */}
-                  <div
-                    onClick={() => projectId && navigate(`/projects/${projectId}/screening?stage=ta`)}
-                    className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {screenedCount >= totalStudies && totalStudies > 0 ? (
-                        <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
-                      )}
-                      <div className="truncate">
-                        <div className="font-semibold text-[#4f444b] truncate">Title / Abstract Screening</div>
-                        <div className="text-[11px] text-[#62535d]">
-                          {totalStudies > 0 ? `${screenedCount} of ${totalStudies} decided` : "No studies imported"}
+                  <div className="p-3.5 hover:bg-black/[0.02] transition-colors">
+                    <div
+                      onClick={() => projectId && navigate(`/projects/${projectId}/screening?stage=ta`)}
+                      className="cursor-pointer flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {screenedCount >= totalStudies && totalStudies > 0 ? (
+                          <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
+                        )}
+                        <div className="truncate">
+                          <div className="font-semibold text-[#4f444b] truncate">Title / Abstract Screening</div>
+                          <div className="text-[11px] text-[#62535d]">
+                            {totalStudies > 0 ? `${screenedCount} of ${totalStudies} decided` : "No studies imported"}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-mono text-[11px] text-[#814d75] font-semibold">
+                          {screenedCount}/{totalStudies}
+                        </span>
+                        <ArrowRight className="h-3.5 w-3.5 text-[#81737b]" />
+                      </div>
                     </div>
-                    <span className="font-mono text-[11px] text-[#814d75] font-semibold shrink-0">
-                      {screenedCount}/{totalStudies}
-                    </span>
+
+                    {/* Stage Pipeline Execution Controls within Checklist */}
+                    {projectId && (
+                      <div className="mt-2.5 pt-2 border-t border-[#d2c2cb]/40 space-y-2">
+                        {screeningProgress?.active ? (
+                          <div className="p-2.5 bg-[#fbf9f4] border border-[#d2c2cb] rounded-lg space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-semibold text-[#3a0f34] flex items-center gap-1.5">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#814d75]" />
+                                {screeningProgress.paused ? "Screening Paused" : "Screening in Progress..."}
+                              </span>
+                              <span className="font-mono text-[11px] text-[#62535d] font-bold">
+                                {screeningProgress.screened}/{screeningProgress.total}
+                              </span>
+                            </div>
+                            <div className="w-full bg-[#eee7ec] rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className="bg-[#814d75] h-full transition-all duration-300"
+                                style={{
+                                  width: `${Math.min(
+                                    100,
+                                    screeningProgress.total > 0
+                                      ? (screeningProgress.screened / screeningProgress.total) * 100
+                                      : 0
+                                  )}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="flex items-center gap-1.5 justify-end pt-1">
+                              {screeningProgress.paused ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    resumeMutation.mutate();
+                                  }}
+                                  disabled={resumeMutation.isPending}
+                                  className="text-[10px] font-semibold px-2 py-1 rounded bg-emerald-100 text-emerald-900 border border-emerald-300 hover:bg-emerald-200 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Play className="w-3 h-3 fill-emerald-800 text-emerald-800" />
+                                  <span>Resume</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    pauseMutation.mutate();
+                                  }}
+                                  disabled={pauseMutation.isPending}
+                                  className="text-[10px] font-semibold px-2 py-1 rounded bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Pause className="w-3 h-3 fill-amber-800 text-amber-800" />
+                                  <span>Pause</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  cancelMutation.mutate();
+                                }}
+                                disabled={cancelMutation.isPending}
+                                className="text-[10px] font-semibold px-2 py-1 rounded bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100 flex items-center gap-1 cursor-pointer"
+                              >
+                                <Square className="w-3 h-3 fill-rose-600 text-rose-600" />
+                                <span>Stop</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startAnalysisMutation.mutate();
+                              }}
+                              disabled={startAnalysisMutation.isPending || startFullPipelineMutation.isPending}
+                              className="text-[10px] text-[#3a0f34] hover:text-[#1a0017] font-semibold px-2 py-1 rounded bg-[#ffffff] hover:bg-[#eee7ec] border border-[#d2c2cb] transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                              title="Run Stage 1: Automated Title & Abstract screening triage"
+                            >
+                              {startAnalysisMutation.isPending ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Play className="w-2.5 h-2.5 fill-[#3a0f34] text-[#3a0f34]" />
+                              )}
+                              <span>Start Stage 1 (T&amp;A)</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startFullPipelineMutation.mutate();
+                              }}
+                              disabled={startFullPipelineMutation.isPending || startAnalysisMutation.isPending}
+                              className="text-[10px] text-[#fbf9f4] hover:bg-[#1a0017] font-semibold px-2 py-1 rounded bg-[#3a0f34] transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                              title="Start Full Co-Scientist Screening across all stages"
+                            >
+                              {startFullPipelineMutation.isPending ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-3 h-3 text-[#ffdea6]" />
+                              )}
+                              <span>Start Full Pipeline</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                continuePipelineMutation.mutate("abstract");
+                              }}
+                              disabled={continuePipelineMutation.isPending}
+                              className="col-span-full text-[10px] text-[#62535d] hover:text-[#3a0f34] font-medium px-2 py-0.5 rounded bg-[#eee7ec]/60 hover:bg-[#eee7ec] border border-[#d2c2cb]/60 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                              title="Advance Abstract: Run Stage 2 on pending and uncertain studies"
+                            >
+                              {continuePipelineMutation.isPending && continuePipelineMutation.variables === "abstract" ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Play className="w-2.5 h-2.5 fill-[#62535d] text-[#62535d]" />
+                              )}
+                              <span>Advance Abstract &rarr;</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Step 3: Full-Text Eligibility */}
@@ -758,7 +972,28 @@ export function AppShell() {
                         </div>
                       </div>
                     </div>
-                    <ArrowRight className="h-3.5 w-3.5 text-[#81737b] shrink-0" />
+                    <div className="flex items-center gap-2 shrink-0">
+                      {projectId && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            continuePipelineMutation.mutate("fulltext");
+                          }}
+                          disabled={continuePipelineMutation.isPending}
+                          className="text-[10px] text-[#3a0f34] hover:text-[#1a0017] font-semibold px-2 py-0.5 rounded bg-[#eee7ec] hover:bg-[#d2c2cb] border border-[#d2c2cb] transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Advance Full-Text: Run Stage 3 on included studies with PDFs"
+                        >
+                          {continuePipelineMutation.isPending && continuePipelineMutation.variables === "fulltext" ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Play className="w-2.5 h-2.5 fill-[#3a0f34] text-[#3a0f34]" />
+                          )}
+                          <span>Advance Full-Text &rarr;</span>
+                        </button>
+                      )}
+                      <ArrowRight className="h-3.5 w-3.5 text-[#81737b]" />
+                    </div>
                   </div>
 
                   {/* Step 4: Data Extraction */}
@@ -830,28 +1065,71 @@ export function AppShell() {
                     </span>
                   </div>
 
-                  {/* Step 7: GRADE Certainty (finalized after synthesis) */}
-                  <div
-                    onClick={() => projectId && navigate(`/projects/${projectId}/grade`)}
-                    className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {gradeCount > 0 ? (
-                        <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
-                      )}
-                      <div className="truncate">
-                        <div className="font-semibold text-[#4f444b] truncate">GRADE Certainty</div>
-                        <div className="text-[11px] text-[#62535d]">
-                          {gradeCount > 0 ? `${gradeCount} outcomes evaluated` : "Finalized after synthesis"}
+                  {/* Step 7: GRADE Certainty (gated for systematic / both reviews; hidden for scoping) */}
+                  {project?.review_type !== "scoping" && (
+                    <div
+                      onClick={() => projectId && navigate(`/projects/${projectId}/grade`)}
+                      className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {gradeCount > 0 ? (
+                          <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
+                        )}
+                        <div className="truncate">
+                          <div className="font-semibold text-[#4f444b] truncate">GRADE Certainty</div>
+                          <div className="text-[11px] text-[#62535d]">
+                            {gradeCount > 0 ? `${gradeCount} outcomes evaluated` : "Finalized after synthesis"}
+                          </div>
                         </div>
                       </div>
+                      <span className="font-mono text-[11px] text-[#814d75] font-semibold shrink-0">
+                        {gradeCount}
+                      </span>
                     </div>
-                    <span className="font-mono text-[11px] text-[#814d75] font-semibold shrink-0">
-                      {gradeCount}
-                    </span>
-                  </div>
+                  )}
+
+                  {/* Pinned Missing-Data Summary Box (per Extraction Plan) */}
+                  {location.pathname.includes("/extraction") && missingDataSummary && (
+                    <div className="p-3 bg-[#fbf9f4] border-t border-[#d2c2cb] mt-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-mono uppercase font-bold text-[#814d75] tracking-wider">
+                          Missing-Data Summary
+                        </span>
+                        <span className="text-[10px] font-mono text-[#62535d]">Top variables</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {missingDataSummary.variables && missingDataSummary.variables.length > 0 ? (
+                          missingDataSummary.variables.slice(0, 4).map((item: any, idx: number) => {
+                            const pct = Math.round(item.missing_pct || (item.missing_count / (missingDataSummary.total_studies || 1)) * 100);
+                            return (
+                              <div key={idx} className="flex items-center justify-between text-xs">
+                                <span className="truncate max-w-[150px] text-[#4f444b] font-medium" title={item.name}>
+                                  {item.name}
+                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <div className="w-12 h-1.5 bg-[#eee7ec] rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-[#814d75]"
+                                      style={{ width: `${Math.min(100, pct)}%` }}
+                                    />
+                                  </div>
+                                  <span className="font-mono text-[10px] text-[#3a0f34] font-bold w-7 text-right">
+                                    {pct}%
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="text-[11px] text-[#81737b] italic text-center py-1">
+                            No missing values flagged across variables.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

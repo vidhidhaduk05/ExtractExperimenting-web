@@ -38,7 +38,7 @@ class Settings(BaseSettings):
         if os.environ.get("OPENAI_BASE_URL") and not os.environ.get("OPENAI_BASE_URL", "").rstrip("/").endswith("/chat/completions")
         else (os.environ.get("OPENAI_BASE_URL") or os.environ.get("LLM_BASE_URL") or os.environ.get("LLM_API_URL") or "http://127.0.0.1:18000/v1/chat/completions")
     )
-    llm_api_key: str = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY") or ""
+    llm_api_key: str = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY") or "sk-biomni-4f8a29b3c1e7492d80ef7195a62bc34e"
     llm_models_url: str = (
         (os.environ.get("OPENAI_BASE_URL", "").rstrip("/") + "/models")
         if os.environ.get("OPENAI_BASE_URL")
@@ -68,28 +68,38 @@ class Settings(BaseSettings):
     jev_exclude_threshold: float = 0.85   # P(mismatch / hard-exclude) needed to exclude
     jev_clarify_band: float = 0.15        # |P - 0.5| below this counts as genuinely ambiguous
 
+    # ClaimScape Fast Pipeline
+    claimscape_remote_scan: bool = os.environ.get("CLAIMSCAPE_REMOTE_SCAN", "false").lower() == "true"
+
     # File storage
-    storage_root: str = os.environ.get(
-        "STORAGE_ROOT",
-        r"C:\Users\fomowad00026\Desktop\STUDY DATA\PROJECTS"
-        if os.name == "nt"
-        else os.path.join(os.path.expanduser("~"), "Desktop", "STUDY DATA", "PROJECTS")
-    )
-    upload_root: str = os.environ.get("UPLOAD_ROOT") or os.environ.get("RADEXTRACT_UPLOAD_ROOT") or str(Path(__file__).parent / "uploads")
-    export_root: str = os.environ.get("EXPORT_ROOT") or os.environ.get("RADEXTRACT_EXPORT_ROOT") or str(Path(__file__).parent / "exports")
+    storage_root: str = os.environ.get("STORAGE_ROOT") or os.environ.get("RADEXTRACT_STORAGE_ROOT") or ""
+    upload_root: str = os.environ.get("UPLOAD_ROOT") or os.environ.get("RADEXTRACT_UPLOAD_ROOT") or ""
+    export_root: str = os.environ.get("EXPORT_ROOT") or os.environ.get("RADEXTRACT_EXPORT_ROOT") or ""
 
     @property
-    def storage_dir(self) -> str:
-        """Alias for storage_root for backward compatibility."""
-        return self.storage_root
+    def effective_storage_root(self) -> Path:
+        """Base local storage directory chosen on disk. Defaults to backend/storage if not set."""
+        if self.storage_root and self.storage_root.strip():
+            return Path(self.storage_root.strip()).resolve()
+        return (Path(__file__).parent / "storage").resolve()
 
     @property
-    def upload_dir(self) -> str:
-        return self.upload_root
+    def effective_upload_root(self) -> str:
+        """Directory for uploaded PDF/references. Resolves to storage_root/UPLOADS if storage_root is set."""
+        if self.upload_root and self.upload_root.strip():
+            return str(Path(self.upload_root.strip()).resolve())
+        if self.storage_root and self.storage_root.strip():
+            return str((self.effective_storage_root / "UPLOADS").resolve())
+        return str((Path(__file__).parent / "uploads").resolve())
 
     @property
-    def export_dir(self) -> str:
-        return self.export_root
+    def effective_export_root(self) -> str:
+        """Directory for generated exports. Resolves to storage_root/EXPORTS if storage_root is set."""
+        if self.export_root and self.export_root.strip():
+            return str(Path(self.export_root.strip()).resolve())
+        if self.storage_root and self.storage_root.strip():
+            return str((self.effective_storage_root / "EXPORTS").resolve())
+        return str((Path(__file__).parent / "exports").resolve())
 
     # ── AWS / LocalStack settings (single block — no duplicates) ──
     aws_endpoint_url: str = ""           # "" = real AWS; "http://localhost:4566" = LocalStack
@@ -97,7 +107,8 @@ class Settings(BaseSettings):
     aws_access_key_id: str = "test"
     aws_secret_access_key: str = "test"
     storage_backend: str = "local"       # "local" | "s3"
-    db_backend: str = "sqlite"           # "sqlite" | "dynamodb"
+    db_backend: str = "sqlite"
+    database_url: str = ""           # "sqlite" | "dynamodb"
     s3_pdf_bucket: str = "radextract-pdfs"
     s3_export_bucket: str = "radextract-exports"
     dynamodb_table_prefix: str = "radextract_"
@@ -161,12 +172,29 @@ settings = Settings()
 
 
 def ensure_dirs():
-    """Create required directories if they don't exist."""
-    os.makedirs(settings.upload_root, exist_ok=True)
-    os.makedirs(settings.export_root, exist_ok=True)
+    """Create required directories and standard subfolders if they don't exist."""
+    # Ensure active storage root and its standard systematic review lifecycle folders
+    if settings.storage_root and settings.storage_root.strip():
+        root = settings.effective_storage_root
+        subdirs = [
+            "_INBOX",
+            "_BACKUPS",
+            "_TEMPLATES",
+            "PROJECTS",
+            "UPLOADS",
+            "EXPORTS",
+            "01_SOURCE",
+            "02_SCREENING",
+            "03_EXTRACTION",
+            "04_ROB",
+            "05_GRADE",
+            "06_META",
+            "07_EXPORTS",
+            "08_AUDIT",
+        ]
+        for sub in subdirs:
+            (root / sub).mkdir(parents=True, exist_ok=True)
+
+    os.makedirs(settings.effective_upload_root, exist_ok=True)
+    os.makedirs(settings.effective_export_root, exist_ok=True)
     Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
-    try:
-        from services.storage_manager import ensure_storage_tree
-        ensure_storage_tree()
-    except Exception:
-        pass

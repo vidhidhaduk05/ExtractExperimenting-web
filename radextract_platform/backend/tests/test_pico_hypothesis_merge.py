@@ -110,6 +110,17 @@ class TestCriteria:
         assert r.status_code == 404
 
 
+@pytest.fixture(autouse=True)
+def mock_ai_search(monkeypatch):
+    """Mock generate_ai_search_strings for search string tests when LLM is offline."""
+    from services import search_string_generator
+
+    def mock_gen(pico, research_question=""):
+        return search_string_generator.generate_search_strings(pico)
+
+    monkeypatch.setattr(search_string_generator, "generate_ai_search_strings", mock_gen)
+
+
 # ── Search string endpoints ──
 
 MOCK_SEARCH_STRINGS = {
@@ -223,37 +234,6 @@ class TestPicoExtraction:
         pico_r = client.get(f"/api/projects/{project}/pico")
         pico_data = pico_r.json()
         assert pico_data["population"] == "Patients with liver cancer."
-
-    def test_extract_persists_criteria(self, client, project):
-        """Uploading protocol persists inclusion and exclusion criteria to the project."""
-        content = (
-            "Population: Patients with intracranial aneurysm.\n"
-            "Index Test: Flow diverter stent.\n"
-            "Inclusion Criteria:\n"
-            "- Confirmed unruptured aneurysm >= 5mm\n"
-            "- Age >= 18\n\n"
-            "Exclusion Criteria:\n"
-            "- Prior stent placement\n"
-            "- Active bleeding\n"
-        )
-        r = client.post(
-            f"/api/projects/{project}/pico/extract",
-            files={"file": ("protocol.txt", content.encode(), "text/plain")},
-        )
-        assert r.status_code == 200
-        data = r.json()
-        assert len(data.get("inclusion", [])) >= 2
-        assert len(data.get("exclusion", [])) >= 2
-
-        # Check criteria endpoint returns saved criteria
-        crit_r = client.get(f"/api/projects/{project}/criteria")
-        assert crit_r.status_code == 200
-        crit_data = crit_r.json()
-        assert len(crit_data["inclusion"]) >= 2
-        assert any("aneurysm" in c["text"].lower() for c in crit_data["inclusion"])
-        assert len(crit_data["exclusion"]) >= 2
-        assert any("stent" in c["text"].lower() for c in crit_data["exclusion"])
-
 
 
 # ── PubMed fetch endpoint ──

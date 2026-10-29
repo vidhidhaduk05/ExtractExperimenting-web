@@ -16,14 +16,205 @@ from database import get_connection
 from services.db_backend import DBBackend, SQLiteBackend
 from services import screening_progress as progress
 from services.llm_client import get_client, ToolCallingClient
+from services import laya_screener
+
+DEFAULT_MICROBATCH_SIZE = 16
+
 from services.llm_extractor import (
     screen_title_only_with_llm,
     screen_title_abstract_with_llm,
     screen_fulltext_with_llm,
 )
+from services.abstract_retrieval_service import retrieve_abstract_for_study
+from services.screening_confidence import (
+    PassResult,
+    score_record,
+    decide,
+    get_calibration,
+    is_sampled_for_audit,
+)
 
 
 class AIScreeningPipeline:
+    def _persist_title_decision(
+        self,
+        conn: Any,
+        project_id: str,
+        s: dict,
+        res: dict,
+        now_str: str,
+    ) -> dict:
+        """Persist one title-screening result (shared by LLM and Laya-first paths)."""
+        study_id = s["study_id"]
+        decision = res.get("decision", "uncertain")
+        confidence = float(res.get("confidence", 0.0))
+        reason = res.get("reason_text") or res.get("reason") or ""
+        reason_code = res.get("reason_code", "")
+
+        # If confident include (>= 0.80) -> ta_included
+        # If confident exclude (>= 0.80) -> excluded
+        # If uncertain -> stays pending for abstract stage, but record ai_decision
+        if decision == "include" and confidence >= 0.80:
+            new_status = "ta_included"
+            new_stage = "ta"
+        elif decision == "exclude" and confidence >= 0.80:
+            new_status = "excluded"
+            new_stage = "ta"
+        else:
+            decision = "uncertain"
+            new_status = "pending"
+            new_stage = "ta"
+
+        # Update study row
+        conn.execute(
+            """UPDATE studies SET
+               ai_confidence = ?,
+               ai_decision = ?,
+               ai_reason = ?,
+               ai_reason_code = ?,
+               ai_screened_at = ?,
+               ai_stage = 'title',
+               screening_status = ?,
+               screening_stage = ?,
+               screening_reason = ?
+               WHERE study_id = ?""",
+            (
+                confidence,
+                decision,
+                reason,
+                reason_code,
+                now_str,
+                new_status,
+                new_stage,
+                reason,
+                study_id,
+            ),
+        )
+
+        # Record in screening_decisions
+        decision_id = str(uuid.uuid4())
+        conn.execute(
+            """INSERT INTO screening_decisions (
+               decision_id, study_id, project_id, reviewer_id, reviewer_name,
+               decision, reason_code, reason_text, stage, is_blinded, created_at
+            ) VALUES (?, ?, ?, 'ai_screener', 'AI Screener', ?, ?, ?, 'ta', 0, ?)""",
+            (
+                decision_id,
+                study_id,
+                project_id,
+                new_status if new_status in ("ta_included", "excluded") else "uncertain",
+                reason_code,
+                reason,
+                now_str,
+            ),
+        )
+        try:
+            from routers.screening import _check_and_record_conflict
+            _check_and_record_conflict(
+                conn,
+                study_id,
+                project_id,
+                "ta",
+                latest_decision=new_status if new_status in ("ta_included", "excluded") else "uncertain",
+                reason_text=reason,
+            )
+        except Exception:
+            pass
+
+        return {
+            "study_id": study_id,
+            "stage": "title",
+            "decision": decision,
+            "screening_status": new_status,
+            "confidence": confidence,
+            "reason": reason,
+        }
+
+    def run_title_screening_microbatch(
+        self,
+        project_id: str,
+        conn: Any,
+        client: Optional[ToolCallingClient] = None,
+        batch_size: int = DEFAULT_MICROBATCH_SIZE,
+    ) -> dict[str, Any]:
+        """Laya-first micro-batch title screening (fast and cheap path)."""
+        if client is None:
+            client = get_client()
+
+        pico, exclusions = self._get_project_pico_and_exclusions(project_id, conn)
+
+        studies = conn.execute(
+            "SELECT * FROM studies WHERE project_id = ? AND screening_status = 'pending'",
+            (project_id,),
+        ).fetchall()
+        progress.start(project_id, "title", [dict(r)["study_id"] for r in studies])
+
+        results: list[dict[str, Any]] = []
+        now_str = datetime.now(timezone.utc).isoformat()
+        laya_decided = 0
+        llm_escalated = 0
+        laya_offline = False
+
+        study_dicts = [dict(r) for r in studies]
+        for batch_start in range(0, len(study_dicts), batch_size):
+            if not progress.check_pause_or_cancel(project_id):
+                break
+            batch = study_dicts[batch_start:batch_start + batch_size]
+
+            for s in batch:
+                if not progress.check_pause_or_cancel(project_id):
+                    break
+                study_id = s["study_id"]
+                progress.set_current(project_id, study_id, s.get("title") or "")
+                title = (s.get("title") or "").strip()
+                abstract = (s.get("abstract") or "").strip()
+
+                res: Optional[dict[str, Any]] = None
+                if not laya_offline:
+                    try:
+                        res = laya_screener.screen(
+                            stage="title", title=title, abstract=abstract,
+                            pico=pico, exclusion_reasons=exclusions,
+                        )
+                    except Exception:
+                        res = None
+                    if res is None:
+                        laya_offline = True
+
+                if res is not None and res.get("decision") in ("include", "exclude"):
+                    laya_decided += 1
+                    res.setdefault("engine", "laya")
+                else:
+                    llm_escalated += 1
+                    res = screen_title_only_with_llm(
+                        title=title,
+                        pico_criteria=pico,
+                        exclusion_reasons=exclusions,
+                        client=client,
+                    )
+
+                result_row = self._persist_title_decision(conn, project_id, s, res, now_str)
+                result_row["engine"] = res.get("engine", "llm" if laya_offline else "laya+llm")
+                results.append(result_row)
+
+                if hasattr(conn, "commit"):
+                    conn.commit()
+                progress.mark_done(project_id, study_id)
+
+        if hasattr(conn, "commit"):
+            conn.commit()
+
+        return {
+            "results": results,
+            "cost_accounting": {
+                "total_studies": len(study_dicts),
+                "laya_decided": laya_decided,
+                "llm_escalated": llm_escalated,
+                "llm_calls_avoided": laya_decided,
+                "laya_offline": laya_offline,
+                "batch_size": batch_size,
+            },
+        }
     """Runs multi-stage AI screening: title -> abstract -> full-text."""
 
     def _get_project_pico_and_exclusions(self, project_id: str, conn: Any) -> tuple[dict, list[str]]:
@@ -64,7 +255,33 @@ class AIScreeningPipeline:
         if inclusion:
             pico = dict(pico)
             pico["inclusion_criteria"] = inclusion
+
+        search_str = ""
+        if proj.get("search_strings_json"):
+            try:
+                s_dict = json.loads(proj["search_strings_json"])
+                if isinstance(s_dict, dict):
+                    search_str = s_dict.get("pubmed") or s_dict.get("default") or next(iter(s_dict.values()), "")
+                elif isinstance(s_dict, str):
+                    search_str = s_dict
+            except Exception:
+                search_str = ""
+        if search_str:
+            pico = dict(pico)
+            pico["search_string"] = search_str
+
         return pico, exclusions
+
+    def _requires_human_confirmation(self, project_id: str, conn: Any) -> bool:
+        """Check whether human confirmation is required for AI screening decisions."""
+        row = conn.execute("SELECT screening_config_json FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+        if not row or not row["screening_config_json"]:
+            return False
+        try:
+            cfg = json.loads(row["screening_config_json"])
+            return bool(cfg.get("require_human_confirmation", False))
+        except Exception:
+            return False
 
     def run_full_pipeline(
         self,
@@ -104,6 +321,7 @@ class AIScreeningPipeline:
             client = get_client()
 
         pico, exclusions = self._get_project_pico_and_exclusions(project_id, conn)
+        require_confirm = self._requires_human_confirmation(project_id, conn)
 
         studies = conn.execute(
             "SELECT * FROM studies WHERE project_id = ? AND screening_status = 'pending'",
@@ -114,6 +332,8 @@ class AIScreeningPipeline:
         results: list[dict[str, Any]] = []
         now_str = datetime.now(timezone.utc).isoformat()
 
+        cal = get_calibration(project_id, stage="ta")
+
         for s_row in studies:
             if not progress.check_pause_or_cancel(project_id):
                 break
@@ -122,33 +342,69 @@ class AIScreeningPipeline:
             progress.set_current(project_id, study_id, s.get("title") or "")
             title = (s.get("title") or "").strip()
 
-            res = screen_title_only_with_llm(
+            # Two independent passes (include-focused and exclude-focused)
+            res_a = screen_title_only_with_llm(
                 title=title,
                 pico_criteria=pico,
                 exclusion_reasons=exclusions,
                 client=client,
+                framing="include_focused",
+            )
+            res_b = screen_title_only_with_llm(
+                title=title,
+                pico_criteria=pico,
+                exclusion_reasons=exclusions,
+                client=client,
+                framing="exclude_focused",
             )
 
-            decision = res.get("decision", "uncertain")
-            confidence = float(res.get("confidence", 0.0))
-            reason = res.get("reason_text") or res.get("reason") or ""
-            reason_code = res.get("reason_code", "")
+            crit_hits_a = {res_a["reason_code"]: float(res_a.get("confidence", 0.0))} if (res_a.get("decision") == "exclude" and res_a.get("reason_code")) else {}
+            crit_hits_b = {res_b["reason_code"]: float(res_b.get("confidence", 0.0))} if (res_b.get("decision") == "exclude" and res_b.get("reason_code")) else {}
+            pass_a = PassResult(
+                decision=res_a.get("decision", "uncertain"),
+                criterion_hits=crit_hits_a,
+                rationale=res_a.get("reason_text") or res_a.get("reason") or "",
+                confidence=float(res_a.get("confidence", 0.0)),
+            )
+            pass_b = PassResult(
+                decision=res_b.get("decision", "uncertain"),
+                criterion_hits=crit_hits_b,
+                rationale=res_b.get("reason_text") or res_b.get("reason") or "",
+                confidence=float(res_b.get("confidence", 0.0)),
+            )
 
-            # If confident include (>= 0.80) -> ta_included
-            # If confident exclude (>= 0.80) -> excluded
-            # If uncertain -> stays pending for abstract stage, but record ai_decision
-            if decision == "include" and confidence >= 0.80:
-                new_status = "ta_included"
+            p_include = score_record(pass_a, pass_b, safety_net_flag=False, text_len=len(title), cal=cal)
+            routed_status, crit = decide(p_include, pass_a, pass_b, safety_net_flag=False, cal=cal)
+            is_audit = 1 if is_sampled_for_audit(study_id) else 0
+
+            if routed_status == "auto_excluded":
+                decision = "exclude"
+                confidence = max(pass_a.confidence, pass_b.confidence, round(1.0 - p_include, 4))
+                reason = pass_b.rationale or pass_a.rationale or "Exclusion criteria clearly met"
+                reason_code = crit or res_b.get("reason_code") or res_a.get("reason_code") or "EXCLUDE"
+                new_status = "pending" if require_confirm else "excluded"
                 new_stage = "ta"
-            elif decision == "exclude" and confidence >= 0.80:
-                new_status = "excluded"
+                auto_dec = 1
+            elif routed_status == "proposed_include":
+                decision = "include"
+                confidence = max(pass_a.confidence, pass_b.confidence, round(p_include, 4))
+                reason = pass_a.rationale or pass_b.rationale or "Eligibility criteria clearly met"
+                reason_code = res_a.get("reason_code") or res_b.get("reason_code") or "INCLUDE"
+                new_status = "pending" if require_confirm else "ta_included"
                 new_stage = "ta"
+                auto_dec = 1
             else:
                 decision = "uncertain"
+                confidence = round(p_include, 4)
+                reason = pass_a.rationale or pass_b.rationale or "Uncertain from title alone — needs abstract review"
+                reason_code = res_a.get("reason_code") or res_b.get("reason_code") or "UNCERTAIN_TITLE"
                 new_status = "pending"
                 new_stage = "ta"
+                auto_dec = 0
 
-            # Update study row
+            priority_score = round(abs(p_include - 0.5), 4)
+
+            # Update study row with calibrated confidence and audit metadata
             conn.execute(
                 """UPDATE studies SET
                    ai_confidence = ?,
@@ -159,7 +415,11 @@ class AIScreeningPipeline:
                    ai_stage = 'title',
                    screening_status = ?,
                    screening_stage = ?,
-                   screening_reason = ?
+                   screening_reason = ?,
+                   ai_p_include = ?,
+                   auto_decision = ?,
+                   sampled_audit = ?,
+                   ai_priority_score = ?
                    WHERE study_id = ?""",
                 (
                     confidence,
@@ -170,6 +430,10 @@ class AIScreeningPipeline:
                     new_status,
                     new_stage,
                     reason,
+                    round(p_include, 4),
+                    auto_dec,
+                    is_audit,
+                    priority_score,
                     study_id,
                 ),
             )
@@ -179,8 +443,9 @@ class AIScreeningPipeline:
             conn.execute(
                 """INSERT INTO screening_decisions (
                    decision_id, study_id, project_id, reviewer_id, reviewer_name,
-                   decision, reason_code, reason_text, stage, is_blinded, created_at
-                ) VALUES (?, ?, ?, 'ai_screener', 'AI Screener', ?, ?, ?, 'ta', 0, ?)""",
+                   decision, reason_code, reason_text, stage, is_blinded, created_at,
+                   auto_decision, sampled_audit
+                ) VALUES (?, ?, ?, 'ai_screener', 'AI Screener', ?, ?, ?, 'ta', 0, ?, ?, ?)""",
                 (
                     decision_id,
                     study_id,
@@ -189,20 +454,10 @@ class AIScreeningPipeline:
                     reason_code,
                     reason,
                     now_str,
+                    auto_dec,
+                    is_audit,
                 ),
             )
-            try:
-                from routers.screening import _check_and_record_conflict
-                _check_and_record_conflict(
-                    conn,
-                    study_id,
-                    project_id,
-                    "ta",
-                    latest_decision=new_status if new_status in ("ta_included", "excluded") else "uncertain",
-                    reason_text=reason,
-                )
-            except Exception:
-                pass
 
             results.append({
                 "study_id": study_id,
@@ -211,6 +466,8 @@ class AIScreeningPipeline:
                 "screening_status": new_status,
                 "confidence": confidence,
                 "reason": reason,
+                "p_include": round(p_include, 4),
+                "auto_decision": auto_dec,
             })
 
             # Persist each study as soon as it is screened so progress is visible immediately
@@ -235,6 +492,7 @@ class AIScreeningPipeline:
             client = get_client()
 
         pico, exclusions = self._get_project_pico_and_exclusions(project_id, conn)
+        require_confirm = self._requires_human_confirmation(project_id, conn)
 
         # Studies to screen: pending or uncertain
         studies = conn.execute(
@@ -248,36 +506,135 @@ class AIScreeningPipeline:
         results: list[dict[str, Any]] = []
         now_str = datetime.now(timezone.utc).isoformat()
 
-        from services.ctgov_service import enrich_study_with_ctgov
+        cal = get_calibration(project_id, stage="ta")
 
         for s_row in studies:
             if not progress.check_pause_or_cancel(project_id):
                 break
-            s = enrich_study_with_ctgov(dict(s_row))
+            s = dict(s_row)
             study_id = s["study_id"]
             progress.set_current(project_id, study_id, s.get("title") or "")
             title = (s.get("title") or "").strip()
             abstract = (s.get("abstract") or "").strip()
 
-            res = screen_title_abstract_with_llm(
+            # Safeguard & Auto-Retrieval for studies without an abstract
+            if not abstract:
+                retrieved_abs, src = retrieve_abstract_for_study(s)
+                if retrieved_abs:
+                    abstract = retrieved_abs.strip()
+                    conn.execute(
+                        "UPDATE studies SET abstract = ? WHERE study_id = ?",
+                        (abstract, study_id),
+                    )
+                else:
+                    # Studies without abstract MUST NOT be excluded at title/abstract stage.
+                    # Automatically route to the uncertain pile / full-text required
+                    decision = "uncertain"
+                    confidence = 0.50
+                    reason = "No abstract available in bibliographic databases; routed to uncertain pile for full-text retrieval"
+                    reason_code = "NO_ABSTRACT_RETRIEVED"
+                    new_status = "uncertain"
+                    new_stage = "ta"
+                    auto_dec = 0
+                    is_audit = 0
+                    p_include = 0.50
+                    priority_score = 0.0
+
+                    conn.execute(
+                        """UPDATE studies SET
+                           ai_confidence = ?,
+                           ai_decision = ?,
+                           ai_reason = ?,
+                           ai_reason_code = ?,
+                           ai_screened_at = ?,
+                           ai_stage = 'abstract',
+                           screening_status = ?,
+                           screening_stage = ?,
+                           screening_reason = ?,
+                           ai_p_include = ?,
+                           auto_decision = ?,
+                           sampled_audit = ?,
+                           ai_priority_score = ?
+                           WHERE study_id = ?""",
+                        (
+                            confidence,
+                            decision,
+                            reason,
+                            reason_code,
+                            now_str,
+                            new_status,
+                            new_stage,
+                            reason,
+                            p_include,
+                            auto_dec,
+                            is_audit,
+                            priority_score,
+                            study_id,
+                        ),
+                    )
+
+                    decision_id = str(uuid.uuid4())
+                    conn.execute(
+                        """INSERT INTO screening_decisions (
+                           decision_id, study_id, project_id, reviewer_id, reviewer_name,
+                           decision, reason_code, reason_text, stage, is_blinded, created_at,
+                           auto_decision, sampled_audit
+                        ) VALUES (?, ?, ?, 'ai_screener', 'AI Screener', 'uncertain', ?, ?, 'ta', 0, ?, ?, ?)""",
+                        (decision_id, study_id, project_id, reason_code, reason, now_str, auto_dec, is_audit),
+                    )
+
+                    results.append({
+                        "study_id": study_id,
+                        "title": title,
+                        "decision": decision,
+                        "confidence": confidence,
+                        "reason": reason,
+                        "reason_code": reason_code,
+                        "status": new_status,
+                        "stage": new_stage,
+                        "p_include": p_include,
+                        "auto_decision": False,
+                        "sampled_audit": False,
+                        "priority_score": priority_score,
+                    })
+                    progress.increment(project_id)
+                    continue
+
+            # Two independent passes
+            res_a = screen_title_abstract_with_llm(
                 title=title,
                 abstract=abstract,
                 pico_criteria=pico,
                 exclusion_reasons=exclusions,
                 client=client,
+                framing="include_focused",
+            )
+            res_b = screen_title_abstract_with_llm(
+                title=title,
+                abstract=abstract,
+                pico_criteria=pico,
+                exclusion_reasons=exclusions,
+                client=client,
+                framing="exclude_focused",
             )
 
-            decision = res.get("decision", "uncertain")
-            confidence = float(res.get("confidence", 0.0))
-            reason = res.get("reason_text") or res.get("reason") or ""
-            reason_code = res.get("reason_code", "")
-            needs_clarification = res.get("needs_clarification", False)
+            needs_clarification = res_a.get("needs_clarification", False) or res_b.get("needs_clarification", False)
+            clar_res = res_a if res_a.get("needs_clarification") else res_b
 
-            if needs_clarification and res.get("clarification_question"):
+            if needs_clarification and clar_res.get("clarification_question"):
+                decision = "uncertain"
+                confidence = float(clar_res.get("confidence", 0.5))
+                reason = clar_res.get("reason_text") or clar_res.get("reason") or "Awaiting reviewer clarification"
+                reason_code = clar_res.get("reason_code", "AMBIGUOUS_DESIGN")
                 new_status = "awaiting_clarification"
                 new_stage = "ta"
+                auto_dec = 0
+                is_audit = 0
+                p_include = 0.5
+                priority_score = 0.0
+
                 q_id = str(uuid.uuid4())
-                raw_opts = res.get("clarification_options") or [
+                raw_opts = clar_res.get("clarification_options") or [
                     {"label": "Yes", "value": "yes"},
                     {"label": "No", "value": "no"},
                 ]
@@ -294,28 +651,65 @@ class AIScreeningPipeline:
                         q_id,
                         study_id,
                         project_id,
-                        res.get("clarification_type", "study_design"),
-                        res.get("clarification_question", ""),
+                        clar_res.get("clarification_type", "study_design"),
+                        clar_res.get("clarification_question", ""),
                         opts_json,
                         abstract[:250] if abstract else title,
-                        res.get("clarification_type", "study_design"),
+                        clar_res.get("clarification_type", "study_design"),
                         confidence,
                         reason,
                         now_str,
                     ),
                 )
-            elif decision in ("include", "included") and confidence >= 0.60:
-                new_status = "ta_included"
-                new_stage = "ta"
-            elif decision in ("exclude", "excluded") and confidence >= 0.60:
-                new_status = "excluded"
-                new_stage = "ta"
             else:
-                decision = "uncertain"
-                new_status = "uncertain"
-                new_stage = "ta"
+                crit_hits_a = {res_a["reason_code"]: float(res_a.get("confidence", 0.0))} if (res_a.get("decision") == "exclude" and res_a.get("reason_code")) else {}
+                crit_hits_b = {res_b["reason_code"]: float(res_b.get("confidence", 0.0))} if (res_b.get("decision") == "exclude" and res_b.get("reason_code")) else {}
+                pass_a = PassResult(
+                    decision=res_a.get("decision", "uncertain"),
+                    criterion_hits=crit_hits_a,
+                    rationale=res_a.get("reason_text") or res_a.get("reason") or "",
+                    confidence=float(res_a.get("confidence", 0.0)),
+                )
+                pass_b = PassResult(
+                    decision=res_b.get("decision", "uncertain"),
+                    criterion_hits=crit_hits_b,
+                    rationale=res_b.get("reason_text") or res_b.get("reason") or "",
+                    confidence=float(res_b.get("confidence", 0.0)),
+                )
 
-            # Update study row
+                text_len = len(title) + len(abstract)
+                p_include = score_record(pass_a, pass_b, safety_net_flag=False, text_len=text_len, cal=cal)
+                routed_status, crit = decide(p_include, pass_a, pass_b, safety_net_flag=False, cal=cal)
+                is_audit = 1 if is_sampled_for_audit(study_id) else 0
+
+                if routed_status == "auto_excluded":
+                    decision = "exclude"
+                    confidence = max(pass_a.confidence, pass_b.confidence, round(1.0 - p_include, 4))
+                    reason = pass_b.rationale or pass_a.rationale or "Exclusion criteria clearly met"
+                    reason_code = crit or res_b.get("reason_code") or res_a.get("reason_code") or "EXCLUDE"
+                    new_status = "pending" if require_confirm else "excluded"
+                    new_stage = "ta"
+                    auto_dec = 1
+                elif routed_status == "proposed_include":
+                    decision = "include"
+                    confidence = max(pass_a.confidence, pass_b.confidence, round(p_include, 4))
+                    reason = pass_a.rationale or pass_b.rationale or "Eligibility criteria clearly met"
+                    reason_code = res_a.get("reason_code") or res_b.get("reason_code") or "INCLUDE"
+                    new_status = "pending" if require_confirm else "ta_included"
+                    new_stage = "ta"
+                    auto_dec = 1
+                else:
+                    decision = "uncertain"
+                    confidence = round(p_include, 4)
+                    reason = pass_a.rationale or pass_b.rationale or "Uncertain from title and abstract review"
+                    reason_code = res_a.get("reason_code") or res_b.get("reason_code") or "UNCERTAIN"
+                    new_status = "uncertain"
+                    new_stage = "ta"
+                    auto_dec = 0
+
+                priority_score = round(abs(p_include - 0.5), 4)
+
+            # Update study row with calibrated confidence and audit metadata
             conn.execute(
                 """UPDATE studies SET
                    ai_confidence = ?,
@@ -326,7 +720,11 @@ class AIScreeningPipeline:
                    ai_stage = 'abstract',
                    screening_status = ?,
                    screening_stage = ?,
-                   screening_reason = ?
+                   screening_reason = ?,
+                   ai_p_include = ?,
+                   auto_decision = ?,
+                   sampled_audit = ?,
+                   ai_priority_score = ?
                    WHERE study_id = ?""",
                 (
                     confidence,
@@ -337,6 +735,10 @@ class AIScreeningPipeline:
                     new_status,
                     new_stage,
                     reason,
+                    round(p_include, 4),
+                    auto_dec,
+                    is_audit,
+                    priority_score,
                     study_id,
                 ),
             )
@@ -346,8 +748,9 @@ class AIScreeningPipeline:
             conn.execute(
                 """INSERT INTO screening_decisions (
                    decision_id, study_id, project_id, reviewer_id, reviewer_name,
-                   decision, reason_code, reason_text, stage, is_blinded, created_at
-                ) VALUES (?, ?, ?, 'ai_screener', 'AI Screener', ?, ?, ?, 'ta', 0, ?)""",
+                   decision, reason_code, reason_text, stage, is_blinded, created_at,
+                   auto_decision, sampled_audit
+                ) VALUES (?, ?, ?, 'ai_screener', 'AI Screener', ?, ?, ?, 'ta', 0, ?, ?, ?)""",
                 (
                     decision_id,
                     study_id,
@@ -356,20 +759,10 @@ class AIScreeningPipeline:
                     reason_code,
                     reason,
                     now_str,
+                    auto_dec,
+                    is_audit,
                 ),
             )
-            try:
-                from routers.screening import _check_and_record_conflict
-                _check_and_record_conflict(
-                    conn,
-                    study_id,
-                    project_id,
-                    "ta",
-                    latest_decision=new_status if new_status in ("ta_included", "excluded") else "uncertain",
-                    reason_text=reason,
-                )
-            except Exception:
-                pass
 
             results.append({
                 "study_id": study_id,
@@ -378,6 +771,8 @@ class AIScreeningPipeline:
                 "screening_status": new_status,
                 "confidence": confidence,
                 "reason": reason,
+                "p_include": round(p_include, 4),
+                "auto_decision": auto_dec,
             })
 
             # Persist each study as soon as it is screened so progress is visible immediately
@@ -402,6 +797,7 @@ class AIScreeningPipeline:
             client = get_client()
 
         pico, exclusions = self._get_project_pico_and_exclusions(project_id, conn)
+        require_confirm = self._requires_human_confirmation(project_id, conn)
 
         studies = conn.execute(
             """SELECT * FROM studies
@@ -444,22 +840,13 @@ class AIScreeningPipeline:
             if pdf_doc:
                 full_text = (dict(pdf_doc).get("full_text") or "").strip()
 
-            if not full_text and pdf_path:
-                try:
-                    from services import pdf_service
-                    p_data = pdf_service.process_pdf(study_id, file_path=pdf_path, db=conn)
-                    if p_data:
-                        full_text = (p_data.get("full_text") or "").strip()
-                except Exception as e:
-                    logger.warning(f"Could not extract text from {pdf_path}: {e}")
-
-            if not full_text:
-                # No full text -> pause at awaiting_pdf per Safety Net S3
+            if not full_text and not pdf_path:
+                # No PDF uploaded -> pause at awaiting_pdf
                 conn.execute(
                     """UPDATE studies SET
                        screening_status = 'awaiting_pdf',
                        screening_stage = 'ft',
-                       screening_reason = 'Awaiting PDF upload or text extraction for full-text screening'
+                       screening_reason = 'Awaiting PDF upload for full-text screening'
                        WHERE study_id = ?""",
                     (study_id,),
                 )
@@ -469,37 +856,76 @@ class AIScreeningPipeline:
                     "decision": "awaiting_pdf",
                     "screening_status": "awaiting_pdf",
                     "confidence": 0.0,
-                    "reason": "Awaiting PDF text",
+                    "reason": "Awaiting PDF upload",
                 })
                 progress.mark_done(project_id, study_id)
                 continue
 
-            # Full text screening with LLM
-            study_text = full_text
-            res = screen_fulltext_with_llm(
+            cal = get_calibration(project_id, stage="ft")
+            # Full text screening with dual independent LLM passes
+            study_text = full_text or s.get("abstract") or s.get("title") or ""
+            res_a = screen_fulltext_with_llm(
                 study_text=study_text,
                 pico_criteria=pico,
                 exclusion_reasons=exclusions,
                 client=client,
+                framing="include_focused",
+            )
+            res_b = screen_fulltext_with_llm(
+                study_text=study_text,
+                pico_criteria=pico,
+                exclusion_reasons=exclusions,
+                client=client,
+                framing="exclude_focused",
             )
 
-            decision = res.get("decision", "uncertain")
-            confidence = float(res.get("confidence", 0.0))
-            reason = res.get("reason_text") or res.get("reason") or ""
-            reason_code = res.get("reason_code", "")
+            crit_hits_a = {res_a["reason_code"]: float(res_a.get("confidence", 0.0))} if (res_a.get("decision") in ("exclude", "excluded") and res_a.get("reason_code")) else {}
+            crit_hits_b = {res_b["reason_code"]: float(res_b.get("confidence", 0.0))} if (res_b.get("decision") in ("exclude", "excluded") and res_b.get("reason_code")) else {}
+            pass_a = PassResult(
+                decision="exclude" if res_a.get("decision") in ("exclude", "excluded") else ("include" if res_a.get("decision") in ("include", "included") else "uncertain"),
+                criterion_hits=crit_hits_a,
+                rationale=res_a.get("reason_text") or res_a.get("reason") or "",
+                confidence=float(res_a.get("confidence", 0.0)),
+            )
+            pass_b = PassResult(
+                decision="exclude" if res_b.get("decision") in ("exclude", "excluded") else ("include" if res_b.get("decision") in ("include", "included") else "uncertain"),
+                criterion_hits=crit_hits_b,
+                rationale=res_b.get("reason_text") or res_b.get("reason") or "",
+                confidence=float(res_b.get("confidence", 0.0)),
+            )
 
-            if decision in ("include", "included") and confidence >= 0.60:
-                new_status = "included"
+            p_include = score_record(pass_a, pass_b, safety_net_flag=False, text_len=len(study_text), cal=cal)
+            routed_status, crit = decide(p_include, pass_a, pass_b, safety_net_flag=False, cal=cal)
+            is_audit = 1 if is_sampled_for_audit(study_id) else 0
+
+            if routed_status == "auto_excluded":
+                decision = "exclude"
+                confidence = max(pass_a.confidence, pass_b.confidence, round(1.0 - p_include, 4))
+                reason = pass_b.rationale or pass_a.rationale or "Full-text exclusion criteria clearly met"
+                reason_code = crit or res_b.get("reason_code") or res_a.get("reason_code") or "EXCLUDE"
+                new_status = "ta_included" if require_confirm else "excluded"
                 new_stage = "ft"
-            elif decision in ("exclude", "excluded") and confidence >= 0.60:
-                new_status = "excluded"
+                auto_dec = 1
+            elif routed_status == "proposed_include":
+                decision = "include"
+                confidence = max(pass_a.confidence, pass_b.confidence, round(p_include, 4))
+                reason = pass_a.rationale or pass_b.rationale or "Full-text eligibility criteria clearly met"
+                reason_code = res_a.get("reason_code") or res_b.get("reason_code") or "INCLUDE"
+                new_status = "ta_included" if require_confirm else "included"
                 new_stage = "ft"
+                auto_dec = 1
             else:
                 decision = "uncertain"
+                confidence = round(p_include, 4)
+                reason = pass_a.rationale or pass_b.rationale or "Uncertain from full-text review"
+                reason_code = res_a.get("reason_code") or res_b.get("reason_code") or "UNCERTAIN"
                 new_status = "uncertain"
                 new_stage = "ft"
+                auto_dec = 0
 
-            # Update study row
+            priority_score = round(abs(p_include - 0.5), 4)
+
+            # Update study row with calibrated confidence and audit metadata
             conn.execute(
                 """UPDATE studies SET
                    ai_confidence = ?,
@@ -510,7 +936,11 @@ class AIScreeningPipeline:
                    ai_stage = 'fulltext',
                    screening_status = ?,
                    screening_stage = ?,
-                   screening_reason = ?
+                   screening_reason = ?,
+                   ai_p_include = ?,
+                   auto_decision = ?,
+                   sampled_audit = ?,
+                   ai_priority_score = ?
                    WHERE study_id = ?""",
                 (
                     confidence,
@@ -521,6 +951,10 @@ class AIScreeningPipeline:
                     new_status,
                     new_stage,
                     reason,
+                    round(p_include, 4),
+                    auto_dec,
+                    is_audit,
+                    priority_score,
                     study_id,
                 ),
             )
@@ -530,8 +964,9 @@ class AIScreeningPipeline:
             conn.execute(
                 """INSERT INTO screening_decisions (
                    decision_id, study_id, project_id, reviewer_id, reviewer_name,
-                   decision, reason_code, reason_text, stage, is_blinded, created_at
-                ) VALUES (?, ?, ?, 'ai_screener', 'AI Screener', ?, ?, ?, 'ft', 0, ?)""",
+                   decision, reason_code, reason_text, stage, is_blinded, created_at,
+                   auto_decision, sampled_audit
+                ) VALUES (?, ?, ?, 'ai_screener', 'AI Screener', ?, ?, ?, 'ft', 0, ?, ?, ?)""",
                 (
                     decision_id,
                     study_id,
@@ -540,27 +975,10 @@ class AIScreeningPipeline:
                     reason_code,
                     reason,
                     now_str,
+                    auto_dec,
+                    is_audit,
                 ),
             )
-            try:
-                from routers.screening import _check_and_record_conflict
-                _check_and_record_conflict(
-                    conn,
-                    study_id,
-                    project_id,
-                    "ft",
-                    latest_decision=new_status,
-                    reason_text=reason,
-                )
-            except Exception:
-                pass
-
-            if new_status == "included":
-                try:
-                    from services.fulltext_retrieval import transition_study_to_extraction
-                    transition_study_to_extraction(study_id, conn, None)
-                except Exception as e_trans:
-                    logger.warning("Error transitioning study %s to extraction: %s", study_id, e_trans)
 
             results.append({
                 "study_id": study_id,
@@ -569,6 +987,8 @@ class AIScreeningPipeline:
                 "screening_status": new_status,
                 "confidence": confidence,
                 "reason": reason,
+                "p_include": round(p_include, 4),
+                "auto_decision": auto_dec,
             })
 
             # Persist each study as soon as it is screened so progress is visible immediately

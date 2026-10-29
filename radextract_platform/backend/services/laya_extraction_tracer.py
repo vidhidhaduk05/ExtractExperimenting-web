@@ -15,9 +15,50 @@ import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from services.laya_client import ask, is_jev_enabled
+from services.jev_client import ask, is_jev_enabled
 
 logger = logging.getLogger(__name__)
+MAX_VERIFICATION_CHARS = 350
+
+
+def _page_number(page: dict) -> Optional[int]:
+    """Return a supplied positive page number, never a guessed location."""
+    value = page.get("page_number")
+    if isinstance(value, bool):
+        return None
+    try:
+        number = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return number if number > 0 and str(value).strip() == str(number) else None
+
+
+def _locate_quote(quote: str, pdf_data: dict, full_text: str) -> Tuple[bool, Optional[int]]:
+    """Check the complete quote, allowing whitespace changes only."""
+    normalized = " ".join(quote.split())
+    if not normalized:
+        return False, None
+    matches: List[Optional[int]] = [
+        _page_number(page) for page in pdf_data.get("pages") or []
+        if normalized in " ".join((page.get("text") or "").split())
+    ]
+    # Also check tables for the quote
+    for tbl in pdf_data.get("tables") or []:
+        if not isinstance(tbl, dict):
+            continue
+        tpnum = _page_number(tbl)
+        tbl_text = tbl.get("caption") or tbl.get("text") or ""
+        rows = tbl.get("rows") or []
+        row_texts = [" ".join(str(c) for c in r) if isinstance(r, (list, tuple)) else str(r) for r in rows]
+        all_tbl = " ".join([str(tbl_text)] + row_texts)
+        if normalized in " ".join(all_tbl.split()):
+            matches.append(tpnum)
+
+    if matches:
+        # Repeated excerpts cannot establish one unique page.
+        valid_matches = [m for m in matches if m is not None]
+        return True, valid_matches[0] if len(valid_matches) == 1 else None
+    return normalized in " ".join(full_text.split()), None
 
 
 def _split_into_sentences(text: str) -> List[str]:
@@ -35,38 +76,40 @@ def _split_into_sentences(text: str) -> List[str]:
     return sentences
 
 
-def _extract_page_sentences(pdf_data: dict, full_text: str = "") -> List[Tuple[int, str]]:
-    """Return a list of (page_number, sentence) pairs across the document text and tables."""
-    items: List[Tuple[int, str]] = []
+def _extract_page_sentences(pdf_data: dict, full_text: str = "") -> List[Tuple[Optional[int], str]]:
+    """Return a list of (page_number, sentence) pairs across the document and tables."""
+    items: List[Tuple[Optional[int], str]] = []
     pages = pdf_data.get("pages") or []
     if pages:
         for p in pages:
-            pnum = int(p.get("page_number", 1))
+            pnum = _page_number(p)
             ptext = p.get("text", "") or ""
             for sent in _split_into_sentences(ptext):
                 items.append((pnum, sent))
     elif full_text:
         for sent in _split_into_sentences(full_text):
-            items.append((1, sent))
+            items.append((None, sent))
 
-    # Also extract structured table text & cells with their exact page numbers
+    # Feed table cell / row text into the candidate sentence index (A7)
     tables = pdf_data.get("tables") or []
-    for t in tables:
-        if isinstance(t, dict):
-            pnum = int(t.get("page", t.get("page_number", 1)))
-            caption = t.get("caption") or t.get("title") or ""
-            if caption:
-                items.append((pnum, f"Table: {caption}"))
-            rows = t.get("data") or t.get("rows") or []
-            for row in rows:
-                if isinstance(row, list):
-                    cells = [str(c).strip() for c in row if c and str(c).strip()]
-                    if cells:
-                        items.append((pnum, " | ".join(cells)))
-                elif isinstance(row, dict):
-                    cells = [f"{k}: {v}" for k, v in row.items() if v]
-                    if cells:
-                        items.append((pnum, " | ".join(cells)))
+    for tbl in tables:
+        if not isinstance(tbl, dict):
+            continue
+        tpnum = _page_number(tbl)
+        rows = tbl.get("rows") or []
+        for row in rows:
+            if isinstance(row, (list, tuple)):
+                row_str = " | ".join(str(cell).strip() for cell in row if str(cell).strip())
+                if 12 <= len(row_str) <= MAX_VERIFICATION_CHARS:
+                    items.append((tpnum, row_str))
+            elif isinstance(row, dict):
+                row_str = " | ".join(f"{k}: {v}" for k, v in row.items() if str(v).strip())
+                if 12 <= len(row_str) <= MAX_VERIFICATION_CHARS:
+                    items.append((tpnum, row_str))
+        tbl_text = tbl.get("caption") or tbl.get("text") or ""
+        if tbl_text:
+            for sent in _split_into_sentences(str(tbl_text)):
+                items.append((tpnum, sent))
 
     return items
 
@@ -103,8 +146,11 @@ def trace_variable_evidence(
     var_tokens = [t.lower() for t in re.split(r"[\s_]+", var_name) if len(t) > 2]
     val_tokens = [t.lower() for t in re.split(r"[\s,%\(\)]+", val_str) if t]
 
-    candidates: List[Tuple[int, str, int]] = []
+    candidates: List[Tuple[Optional[int], str, int]] = []
     for pnum, sent in page_sentences:
+        # Do not certify an entire sentence after showing only a prefix to the model.
+        if len(sent) > MAX_VERIFICATION_CHARS:
+            continue
         s_lower = sent.lower()
         # Score candidate based on presence of value tokens and variable tokens
         val_matches = sum(1 for v in val_tokens if v in s_lower)
@@ -124,8 +170,6 @@ def trace_variable_evidence(
     questions: Dict[str, Dict[str, Any]] = {}
     for idx, (pnum, sent, _) in enumerate(top_candidates):
         qid = f"c_{idx}"
-        # Truncate sentence to fit Laya context limit if needed
-        clean_sent = sent[:350]
         questions[qid] = {
             "type": "noul",
             "instructions": f"Does this excerpt state {var_name.replace('_', ' ')}: {val_str}?",
@@ -139,10 +183,11 @@ def trace_variable_evidence(
     best_prob = 0.0
 
     # Test top candidates with Laya System-1
+    has_warned = False
     for idx, (pnum, sent, _) in enumerate(top_candidates):
         try:
             q_single = {f"c_{idx}": questions[f"c_{idx}"]}
-            res = ask(state=sent[:350], questions=q_single)
+            res = ask(state=sent, questions=q_single)
             noul_val = res.get(f"c_{idx}", {}).get("noul", 0.0)
             if noul_val > best_prob:
                 best_prob = noul_val
@@ -153,7 +198,9 @@ def trace_variable_evidence(
                     "verified": bool(noul_val >= min_confidence),
                 }
         except Exception as e:
-            logger.debug(f"[LayaTracer] Verification error on candidate {idx}: {e}")
+            if not has_warned:
+                logger.warning(f"[LayaTracer] Verification error on candidate {idx}: {e}")
+                has_warned = True
 
     return best_result
 
@@ -166,32 +213,46 @@ def trace_all_extractions(
     """Run Laya tracing across a batch of extraction records.
 
     Updates or annotates existing extractions with verified quotes,
-    pages, and Laya confidence scores. Adds tracing_status ('disabled' | 'failed' | 'verified').
+    pages, and Laya confidence scores. Annotates tracing_status:
+    "verified" | "unverified" | "failed" | "disabled".
     """
-    jev_active = is_jev_enabled()
+    enabled = is_jev_enabled()
+    has_warned = False
 
     for item in extractions:
+        # A previous run is not proof that this value/source is verified now.
+        item["laya_verified"] = False
+        item["laya_confidence"] = 0.0
+        item["tracing_status"] = "disabled" if not enabled else "unverified"
+
+        if not enabled:
+            continue
         val = str(item.get("value", "")).strip()
-        if not val or val in ("-99", "-77", "-88", "not reported", "none", "n/a"):
-            item["tracing_status"] = "disabled" if not jev_active else "none"
+        if not val or val in ("-99", "-77", "-88"):
             continue
 
         var_name = item.get("name") or item.get("variable_name") or ""
         if not var_name:
-            item["tracing_status"] = "disabled" if not jev_active else "none"
             continue
 
-        if not jev_active:
-            item["tracing_status"] = "disabled"
-            item["laya_verified"] = False
-            item["verification_note"] = "Tracing disabled (Laya ONNX model or JEV mode inactive)"
-            continue
-
-        # If already has verbatim quote and page, run a quick Laya confirmation
+        # Semantic agreement is useful only after independent source membership.
         existing_quote = item.get("source_text") or ""
-        quote_in_doc = bool(existing_quote and full_text and existing_quote[:35].lower() in full_text.lower())
+        located = False
+        source_page = None
+        if existing_quote:
+            located, source_page = _locate_quote(existing_quote, pdf_data, full_text)
+            if located:
+                item["source_page"] = source_page
+            else:
+                # Quote cannot be found verbatim in the document
+                item["source_page"] = None
+                item["laya_verified"] = False
+                item["laya_confidence"] = 0.0
+                item["tracing_status"] = "unverified"
+                if not existing_quote.startswith("[UNVERIFIED QUOTE]"):
+                    item["confidence_tag"] = "[UNVERIFIED QUOTE]"
 
-        if existing_quote and len(existing_quote) > 15 and not existing_quote.startswith("[MISSING") and quote_in_doc:
+        if located and 15 < len(existing_quote) <= MAX_VERIFICATION_CHARS:
             try:
                 q = {
                     "verify": {
@@ -203,44 +264,37 @@ def trace_all_extractions(
                         },
                     }
                 }
-                res = ask(state=existing_quote[:350], questions=q)
+                res = ask(state=existing_quote, questions=q)
                 noul_val = res.get("verify", {}).get("noul", 0.0)
-                verified = bool(noul_val >= 0.50)
-                item["laya_verified"] = verified
+                is_ver = bool(noul_val >= 0.50)
+                item["laya_verified"] = is_ver
                 item["laya_confidence"] = round(float(noul_val), 4)
-                item["tracing_status"] = "verified" if verified else "failed"
-                item["verification_note"] = f"Laya Noul confirmation score: {noul_val:.2f}"
-                if noul_val >= 0.70:
-                    item["confidence_tag"] = "[DS]"
-                elif verified:
-                    item["confidence_tag"] = "[VERIFIED]"
-                else:
-                    item["confidence_tag"] = "[UNVERIFIED]"
+                item["tracing_status"] = "verified" if is_ver else "unverified"
                 continue
             except Exception as e:
-                logger.debug(f"[LayaTracer] Confirmation error for {var_name}: {e}")
                 item["tracing_status"] = "failed"
-                item["verification_note"] = f"Laya confirmation failed: {str(e)}"
-                item["laya_verified"] = False
-                continue
+                if not has_warned:
+                    logger.warning(f"[LayaTracer] Verification error on existing quote: {e}")
+                    has_warned = True
 
-        # Otherwise trace candidate evidence from document text and tables
-        traced = trace_variable_evidence(var_name, val, pdf_data, full_text)
-        if traced and traced.get("verified"):
-            item["source_text"] = traced["source_text"]
-            item["source_page"] = traced["source_page"]
-            item["laya_confidence"] = traced["confidence"]
-            item["laya_verified"] = True
-            item["tracing_status"] = "verified"
-            item["verification_note"] = f"Laya verified from page {traced['source_page']} with score {traced['confidence']:.2f}"
-            if traced["confidence"] >= 0.70:
-                item["confidence_tag"] = "[DS]"
+        # Otherwise trace from document text
+        try:
+            traced = trace_variable_evidence(var_name, val, pdf_data, full_text)
+            if traced and traced.get("verified"):
+                item["source_text"] = traced["source_text"]
+                item["source_page"] = traced["source_page"]
+                item["laya_confidence"] = traced["confidence"]
+                item["laya_verified"] = True
+                item["tracing_status"] = "verified"
+                # Upgrade tag to [DS] if strongly verified
+                if traced["confidence"] >= 0.70:
+                    item["confidence_tag"] = "[DS]"
             else:
-                item["confidence_tag"] = "[VERIFIED]"
-        else:
+                item["tracing_status"] = "unverified"
+        except Exception as e:
             item["tracing_status"] = "failed"
-            item["laya_verified"] = False
-            item["verification_note"] = "No candidate sentence verified by Laya"
-            item["confidence_tag"] = "[UNVERIFIED]"
+            if not has_warned:
+                logger.warning(f"[LayaTracer] Document text tracing failed: {e}")
+                has_warned = True
 
     return extractions

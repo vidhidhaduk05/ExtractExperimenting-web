@@ -25,7 +25,6 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 from itertools import combinations
-from typing import Callable
 
 TITLE_SIMILARITY_THRESHOLD = 0.90   # Jaro-Winkler floor for T2
 AUTHOR_OVERLAP_THRESHOLD = 0.50     # corroboration threshold for T2
@@ -297,9 +296,6 @@ def find_candidate_pairs(
     studies: list[dict],
     human_decided_ids: set[str] | None = None,
     non_duplicate_pairs: set[tuple[str, str]] | None = None,
-    title_threshold: float = TITLE_SIMILARITY_THRESHOLD,
-    author_threshold: float = AUTHOR_OVERLAP_THRESHOLD,
-    title_similarity: Callable[[str, str], float] | None = None,
 ) -> list[CandidatePair]:
     """Cascading candidate generation (Zoplicate DuplicateFinder pattern).
 
@@ -353,7 +349,7 @@ def find_candidate_pairs(
         if year is not None and surname:
             # bucket both y and y±1 so ±1 neighbours share a block
             for yy in (year - 1, year, year + 1):
-                year_surname_block.setdefault((yy // 2, surname[:3]), []).append(i)
+                year_surname_block.setdefault((yy // 2, surname[0]), []).append(i)
         for key in _title_block_keys(s.get("title", "")):
             title_words_block.setdefault(key, []).append(i)
 
@@ -428,8 +424,6 @@ def find_candidate_pairs(
             for pos_j in range(pos_i + 1, len(members)):
                 candidate_blocks.add((members[pos_i], members[pos_j]))
     for members in title_words_block.values():
-        if len(members) > 30:
-            continue  # Preserve the web branch's cap on generic title buckets.
         for pos_i in range(len(members)):
             for pos_j in range(pos_i + 1, len(members)):
                 candidate_blocks.add((members[pos_i], members[pos_j]))
@@ -442,19 +436,13 @@ def find_candidate_pairs(
         if key in found or _excluded(ids[i], ids[j]):
             continue
         sim = jaro_winkler(norm_titles[i], norm_titles[j])
-        if title_similarity is not None:
-            # Keep the web slider's title metric; retain related-report
-            # proposals for individual review even when their suffix differs.
-            related_report = (_is_secondary_report(studies[i]) or _is_secondary_report(studies[j]))
-            if not related_report or _conflicting_identifiers(studies[i], studies[j]):
-                sim = title_similarity(norm_titles[i], norm_titles[j])
-        if sim < title_threshold:
+        if sim < TITLE_SIMILARITY_THRESHOLD:
             continue
         author_sim = author_overlap(studies[i].get("authors", ""), studies[j].get("authors", ""))
         y_i, y_j = _parse_year(years[i]), _parse_year(years[j])
         same_year = y_i is not None and y_j is not None and y_i == y_j
         same_journal = bool(journals[i]) and journals[i] == journals[j]
-        corroborations = sum([author_sim >= author_threshold, same_year, same_journal])
+        corroborations = sum([author_sim >= AUTHOR_OVERLAP_THRESHOLD, same_year, same_journal])
         signals = {
             "jw": round(sim, 4),
             "author_overlap": round(author_sim, 4),

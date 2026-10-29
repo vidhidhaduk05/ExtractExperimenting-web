@@ -125,9 +125,11 @@ async def create_meta_analysis(
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user)
+
+    # Dedup guard: prevent pooling duplicate family studies
     if body.study_data:
-        included = [s["study_id"] for s in body.study_data if s.get("study_id") and s.get("included", True)]
-        _check_duplicate_family_guard(conn, project_id, included)
+        included_study_ids = [sd["study_id"] for sd in body.study_data if sd.get("study_id") and sd.get("included", True)]
+        _check_duplicate_family_guard(conn, project_id, included_study_ids)
 
     conn.execute(
         """INSERT INTO meta_analyses
@@ -176,7 +178,6 @@ async def list_meta_analyses(project_id: str, user: Optional[dict] = Depends(get
 
 
 @router.get("/meta-analysis/{project_id}")
-@router.get("/projects/{project_id}/meta-analysis/synthesis")
 async def get_project_meta_analysis_synthesis(
     project_id: str,
     model: str = Query("random", pattern="^(random|fixed)$"),
@@ -184,278 +185,236 @@ async def get_project_meta_analysis_synthesis(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    """Compute and return pooled meta-analysis synthesis from real extracted study data."""
+    """Compute and return pooled meta-analysis synthesis for project's included studies.
+    Never fabricates sample studies or sinusoidal numbers."""
     check_project_access(conn, project_id, user)
     proj = conn.execute("SELECT project_id, name FROM projects WHERE project_id = ?", (project_id,)).fetchone()
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    import math
+
+    # 1. First, check if there is an explicit meta-analysis with studies and results
+    ma_row = conn.execute(
+        "SELECT * FROM meta_analyses WHERE project_id = ? ORDER BY created_at DESC LIMIT 1",
+        (project_id,),
+    ).fetchone()
+
+    if ma_row and ma_row["results_json"]:
+        try:
+            saved_results = json.loads(ma_row["results_json"])
+            if "pooled" in saved_results and saved_results.get("n_studies", 0) >= 2:
+                pooled = saved_results["pooled"]
+                het = saved_results.get("heterogeneity", {})
+                studies_list = []
+                s_rows = conn.execute(
+                    "SELECT * FROM meta_analysis_studies WHERE meta_id = ? AND included = 1",
+                    (ma_row["meta_id"],),
+                ).fetchall()
+                for s in s_rows:
+                    s_dict = dict(s) if not isinstance(s, dict) else s
+                    raw = json.loads(s_dict["raw_data_json"]) if s_dict.get("raw_data_json") else {}
+                    eff_val = s_dict.get("effect_size") or raw.get("effect_size") or raw.get("effect")
+                    if eff_val is not None:
+                        eff_num = float(eff_val)
+                        is_log = (ma_row["effect_measure"] or "").lower() in ("rr", "log_rr", "or", "log_or", "hr", "log_hr")
+                        eff_disp = math.exp(eff_num) if is_log and eff_num < 20 else eff_num
+                        ci_l = s_dict.get("ci_lower") or raw.get("ci_lower")
+                        ci_u = s_dict.get("ci_upper")
+                        studies_list.append({
+                            "name": s_dict.get("study_label") or raw.get("label", "Study"),
+                            "study_id": s_dict.get("study_id"),
+                            "effect": round(eff_disp, 4),
+                            "ci_lower": round(float(ci_l), 4) if ci_l is not None else None,
+                            "ci_upper": round(float(ci_u), 4) if ci_u is not None else None,
+                            "weight": round(float(s_dict.get("weight") or raw.get("weight", 0)), 2),
+                            "se": round(float(s_dict.get("se") or raw.get("se", 0)), 4) if (s_dict.get("se") or raw.get("se")) else None,
+                        })
+                if len(studies_list) >= 2:
+                    return {
+                        "status": "pooled",
+                        "pooled_effect": pooled.get("pooled_effect_natural", pooled.get("pooled_effect", 0.0)),
+                        "ci_lower": pooled.get("ci_lower_natural", pooled.get("ci_lower", 0.0)),
+                        "ci_upper": pooled.get("ci_upper_natural", pooled.get("ci_upper", 0.0)),
+                        "i2": het.get("i_squared", 0.0),
+                        "p_heterogeneity": het.get("q_p_value", 1.0),
+                        "measure": ma_row["effect_measure"],
+                        "model": model,
+                        "studies": studies_list,
+                    }
+        except Exception:
+            pass
+
+    # 2. Check included studies from the studies table
     studies_rows = conn.execute(
-        """SELECT study_id, title, authors, publication_year, metadata_json FROM studies
-           WHERE project_id = ? AND screening_status IN ('included', 'ta_included', 'ft_included')
+        """SELECT study_id, title, authors, publication_year FROM studies
+           WHERE project_id = ? AND COALESCE(is_duplicate, 0) = 0
+             AND screening_status IN ('included', 'ta_included', 'ft_included')
            ORDER BY publication_year ASC, title ASC""",
         (project_id,),
     ).fetchall()
 
-    if not studies_rows:
+    if not studies_rows or len(studies_rows) < 2:
+        missing_studies = []
+        for s in (studies_rows or []):
+            s_dict = dict(s) if not isinstance(s, dict) else s
+            missing_studies.append({
+                "study_id": s_dict["study_id"],
+                "name": f"{(s_dict.get('authors') or 'Study').split(',')[0].split(' ')[0]} et al. {s_dict.get('publication_year') or ''}".strip(),
+                "title": s_dict.get("title", ""),
+                "missing_data": "Insufficient study count for pooling (< 2 included studies)"
+            })
         return {
-            "pooled_effect": None,
-            "ci_lower": None,
-            "ci_upper": None,
-            "i2": None,
-            "p_heterogeneity": None,
-            "tau_squared": None,
-            "q_statistic": None,
-            "measure": "Odds Ratio (OR)" if measure == "OR" else measure,
-            "model": model,
-            "studies": [],
-            "excluded_missing_data": [],
-            "message": "No included studies found in this project.",
+            "status": "cannot_pool",
+            "reason": "Need at least 2 included studies with usable extracted effect data to compute pooled meta-analysis",
+            "studies": missing_studies,
         }
 
-    import math
-    import re
-    import numpy as np
-    from scipy import stats
+    # 3. Check extractions for usable effect sizes across the included studies
+    usable_studies = []
+    missing_studies = []
 
-    is_ratio = measure.upper() in ("OR", "RR", "HR")
-    extracted_studies = []
-    excluded_missing_data = []
+    for s in studies_rows:
+        s_dict = dict(s) if not isinstance(s, dict) else s
+        sid = s_dict["study_id"]
+        author = (s_dict.get("authors") or "Study").split(",")[0].split(" ")[0]
+        year = s_dict.get("publication_year") or ""
+        lbl = f"{author} et al. {year}".strip()
 
-    for idx, s in enumerate(studies_rows):
-        sid = s["study_id"]
-        author = (s["authors"] or "Study").split(",")[0].split(" ")[0]
-        year = s["publication_year"] or (2020 + (idx % 5))
-        lbl = f"{author} et al. {year}"
-
-        # Fetch all extractions for this study
         ext_rows = conn.execute(
-            """SELECT e.value, v.name as var_name, v.field_type
+            """SELECT v.name, v.field_type, e.value
                FROM extractions e
-               JOIN variables v ON e.variable_id = v.variable_id
+               JOIN variables v ON v.variable_id = e.variable_id
                WHERE e.study_id = ?""",
             (sid,),
         ).fetchall()
 
-        ext_dict = {}
+        ext_map = {}
         for er in ext_rows:
-            v_key = er["var_name"].strip().lower()
-            val_str = (er["value"] or "").strip()
-            if val_str:
-                ext_dict[v_key] = val_str
+            vname = er["name"].lower().strip()
+            ext_map[vname] = er["value"]
 
-        # Also inspect any linked meta_analysis_studies record
-        mas_row = conn.execute(
-            """SELECT mas.* FROM meta_analysis_studies mas
-               JOIN meta_analyses ma ON mas.meta_id = ma.meta_id
-               WHERE ma.project_id = ? AND mas.study_id = ?""",
-            (project_id, sid),
-        ).fetchone()
+        parsed_data = None
+        for eff_key in ("effect_size", "effect", "or", "odds_ratio", "rr", "risk_ratio", "hr", "hazard_ratio", "md", "smd"):
+            if eff_key in ext_map and ext_map[eff_key]:
+                try:
+                    val = float(str(ext_map[eff_key]).replace(",", "").strip())
+                    parsed_data = {"effect": val, "label": lbl, "study_id": sid}
+                    break
+                except ValueError:
+                    pass
 
-        effect_val = None
-        ci_low = None
-        ci_high = None
-        se_val = None
+        if not parsed_data and all(k in ext_map for k in ("a", "b", "c", "d")):
+            try:
+                parsed_data = {
+                    "a": float(ext_map["a"]), "b": float(ext_map["b"]),
+                    "c": float(ext_map["c"]), "d": float(ext_map["d"]),
+                    "label": lbl, "study_id": sid
+                }
+            except ValueError:
+                pass
 
-        if mas_row:
-            keys = mas_row.keys()
-            m_eff = mas_row["effect_size"] if "effect_size" in keys else None
-            m_var = mas_row["variance"] if "variance" in keys else None
-            m_se = mas_row["se"] if "se" in keys else None
-            m_cil = mas_row["ci_lower"] if "ci_lower" in keys else None
-            m_ciu = mas_row["ci_upper"] if "ci_upper" in keys else None
-            if m_eff is not None:
-                effect_val = float(m_eff)
-            if m_cil is not None:
-                ci_low = float(m_cil)
-            if m_ciu is not None:
-                ci_high = float(m_ciu)
-            if m_se is not None:
-                se_val = float(m_se)
-            elif m_var is not None and float(m_var) > 0:
-                se_val = math.sqrt(float(m_var))
-
-        # Check extracted variables dictionary if not already provided
-        if effect_val is None:
-            # Look for effect key
-            for k, v in ext_dict.items():
-                if any(term in k for term in ("odds_ratio", "odds ratio", "risk_ratio", "risk ratio", "mean_diff", "mean difference", "effect_size", "effect size", "or", "rr", "md", "smd", "hazard_ratio", "hr")):
-                    # Try single string with CI e.g. "1.50 (1.01-2.22)"
-                    m = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(?:\(|\[)?(?:95%\s*CI:?\s*)?([0-9]+(?:\.[0-9]+)?)\s*(?:-|to|,)\s*([0-9]+(?:\.[0-9]+)?)", v)
-                    if m:
-                        try:
-                            effect_val = float(m.group(1))
-                            ci_low = float(m.group(2))
-                            ci_high = float(m.group(3))
-                            break
-                        except ValueError:
-                            pass
+        if parsed_data:
+            has_var = False
+            for se_key in ("se", "standard_error", "variance"):
+                if se_key in ext_map:
                     try:
-                        effect_val = float(re.findall(r"[-+]?\d*\.?\d+", v)[0])
+                        v = float(str(ext_map[se_key]).replace(",", "").strip())
+                        if se_key == "variance":
+                            parsed_data["variance"] = v
+                        else:
+                            parsed_data["se"] = v
+                            parsed_data["variance"] = v ** 2
+                        has_var = True
                         break
-                    except (IndexError, ValueError):
+                    except ValueError:
                         pass
+            if not has_var and "ci_lower" in ext_map and "ci_upper" in ext_map:
+                try:
+                    ci_l = float(str(ext_map["ci_lower"]).replace(",", "").strip())
+                    ci_u = float(str(ext_map["ci_upper"]).replace(",", "").strip())
+                    parsed_data["ci_lower"] = ci_l
+                    parsed_data["ci_upper"] = ci_u
+                    has_var = True
+                except ValueError:
+                    pass
 
-        # Look for CI keys
-        if ci_low is None or ci_high is None:
-            for k, v in ext_dict.items():
-                if any(term in k for term in ("ci lower", "ci_lower", "ci_low", "lower_ci", "lower ci")):
-                    try:
-                        ci_low = float(re.findall(r"[-+]?\d*\.?\d+", v)[0])
-                    except (IndexError, ValueError):
-                        pass
-                elif any(term in k for term in ("ci upper", "ci_upper", "ci_high", "upper_ci", "upper ci")):
-                    try:
-                        ci_high = float(re.findall(r"[-+]?\d*\.?\d+", v)[0])
-                    except (IndexError, ValueError):
-                        pass
-                elif any(term in k for term in ("se", "standard_error", "standard error", "stderr")):
-                    try:
-                        se_val = float(re.findall(r"[-+]?\d*\.?\d+", v)[0])
-                    except (IndexError, ValueError):
-                        pass
-
-        # Validate numbers
-        has_valid_data = False
-        y = None
-        var = None
-
-        if effect_val is not None:
-            if is_ratio:
-                if effect_val > 0:
-                    y = math.log(effect_val)
-                    if ci_low is not None and ci_high is not None and ci_high > ci_low > 0:
-                        se_log = (math.log(ci_high) - math.log(ci_low)) / (2.0 * 1.96)
-                        if se_log > 0:
-                            var = se_log ** 2
-                            se_val = se_log
-                            has_valid_data = True
-                    elif se_val is not None and se_val > 0:
-                        var = se_val ** 2
-                        ci_low = math.exp(y - 1.96 * se_val)
-                        ci_high = math.exp(y + 1.96 * se_val)
-                        has_valid_data = True
+            if has_var:
+                usable_studies.append(parsed_data)
             else:
-                y = effect_val
-                if ci_low is not None and ci_high is not None and ci_high > ci_low:
-                    se = (ci_high - ci_low) / (2.0 * 1.96)
-                    if se > 0:
-                        var = se ** 2
-                        se_val = se
-                        has_valid_data = True
-                elif se_val is not None and se_val > 0:
-                    var = se_val ** 2
-                    ci_low = y - 1.96 * se_val
-                    ci_high = y + 1.96 * se_val
-                    has_valid_data = True
-
-        if has_valid_data and y is not None and var is not None and var > 0:
-            extracted_studies.append({
-                "name": lbl,
-                "study_id": sid,
-                "title": s["title"],
-                "effect": round(effect_val, 4),
-                "ci_lower": round(ci_low, 4),
-                "ci_upper": round(ci_high, 4),
-                "se": round(se_val, 4),
-                "variance": var,
-                "y": y,
-            })
+                missing_studies.append({
+                    "study_id": sid,
+                    "name": lbl,
+                    "title": s_dict.get("title", ""),
+                    "missing_data": "Effect size found but standard error / confidence intervals missing"
+                })
         else:
-            excluded_missing_data.append({
+            missing_studies.append({
                 "study_id": sid,
                 "name": lbl,
-                "title": s["title"],
-                "reason": "Missing extracted effect size or 95% confidence interval / standard error"
+                "title": s_dict.get("title", ""),
+                "missing_data": "No extractable effect data (effect size, odds ratio, risk ratio, or 2x2 table)"
             })
 
-    k = len(extracted_studies)
-    if k < 2:
-        reason = (
-            "At least 2 studies with complete extracted effect data are required for statistical pooling."
-            if k == 1
-            else "No studies with complete extracted effect data available for meta-analysis pooling."
-        )
+    if len(usable_studies) < 2:
         return {
             "status": "cannot_pool",
-            "reason": reason,
-            "pooled_effect": None,
-            "ci_lower": None,
-            "ci_upper": None,
-            "i2": None,
-            "p_heterogeneity": None,
-            "tau_squared": None,
-            "q_statistic": None,
-            "measure": "Odds Ratio (OR)" if measure == "OR" else measure,
-            "model": model,
-            "studies": [],
-            "excluded_missing_data": excluded_missing_data,
-            "message": reason,
+            "reason": f"Need at least 2 included studies with usable extracted effect data to compute pooled meta-analysis (found {len(usable_studies)} usable)",
+            "studies": missing_studies + usable_studies,
         }
 
-    # Meta-analysis pooling
-    y_arr = np.array([st["y"] for st in extracted_studies], dtype=float)
-    v_arr = np.array([st["variance"] for st in extracted_studies], dtype=float)
-    w_fixed = 1.0 / v_arr
-    sum_w_fixed = float(np.sum(w_fixed))
-    theta_fixed = float(np.sum(w_fixed * y_arr) / sum_w_fixed)
-    se_fixed = float(math.sqrt(1.0 / sum_w_fixed))
+    try:
+        eff_sizes = []
+        variances = []
+        labels = []
+        for us in usable_studies:
+            es, var = ma.compute_effect_size(us, measure)
+            eff_sizes.append(es)
+            variances.append(var)
+            labels.append(us["label"])
 
-    if k >= 2:
-        Q = float(np.sum(w_fixed * (y_arr - theta_fixed) ** 2))
-        df = k - 1
-        c = float(sum_w_fixed - np.sum(w_fixed ** 2) / sum_w_fixed)
-        tau2 = max(0.0, (Q - df) / c) if c > 0 else 0.0
-        i2 = max(0.0, (Q - df) / Q * 100.0) if Q > 0 else 0.0
-        p_het = float(1.0 - stats.chi2.cdf(Q, df))
-    else:
-        Q = 0.0
-        df = 0
-        tau2 = 0.0
-        i2 = 0.0
-        p_het = 1.0
+        res = ma.fit_generic_meta_analysis(eff_sizes, variances, measure)
+        out_studies = []
+        tot_weight = sum(1.0 / (v + res["tau_squared"]) for v in variances) if (variances and res.get("tau_squared") is not None) else 1.0
+        for i, us in enumerate(usable_studies):
+            w = (1.0 / (variances[i] + res["tau_squared"])) / tot_weight * 100.0 if tot_weight > 0 else 0
+            se_i = math.sqrt(variances[i])
+            is_log = measure.lower() in ("rr", "log_rr", "or", "log_or", "hr", "log_hr")
+            eff_disp = math.exp(eff_sizes[i]) if is_log else eff_sizes[i]
+            ci_l = math.exp(eff_sizes[i] - 1.96 * se_i) if is_log else eff_sizes[i] - 1.96 * se_i
+            ci_u = math.exp(eff_sizes[i] + 1.96 * se_i) if is_log else eff_sizes[i] + 1.96 * se_i
+            out_studies.append({
+                "name": us["label"],
+                "study_id": us.get("study_id"),
+                "effect": round(eff_disp, 4),
+                "ci_lower": round(ci_l, 4),
+                "ci_upper": round(ci_u, 4),
+                "weight": round(w, 2),
+                "se": round(se_i, 4),
+            })
 
-    if model == "fixed" or k < 2:
-        theta_pooled = theta_fixed
-        se_pooled = se_fixed
-        w_final = w_fixed
-    else:
-        w_random = 1.0 / (v_arr + tau2)
-        sum_w_random = float(np.sum(w_random))
-        theta_pooled = float(np.sum(w_random * y_arr) / sum_w_random)
-        se_pooled = float(math.sqrt(1.0 / sum_w_random))
-        w_final = w_random
+        is_log = measure.lower() in ("rr", "log_rr", "or", "log_or", "hr", "log_hr")
+        pooled_disp = math.exp(res["pooled_effect"]) if is_log else res["pooled_effect"]
+        ci_low_disp = math.exp(res["ci_lower"]) if is_log else res["ci_lower"]
+        ci_high_disp = math.exp(res["ci_upper"]) if is_log else res["ci_upper"]
 
-    total_weight = float(np.sum(w_final))
-    for i, st in enumerate(extracted_studies):
-        pct_weight = round(float(w_final[i] / total_weight * 100.0), 2)
-        st["weight"] = pct_weight
-        del st["y"]
-        del st["variance"]
-
-    if is_ratio:
-        pooled_effect = float(math.exp(theta_pooled))
-        ci_lower = float(math.exp(theta_pooled - 1.96 * se_pooled))
-        ci_upper = float(math.exp(theta_pooled + 1.96 * se_pooled))
-    else:
-        pooled_effect = float(theta_pooled)
-        ci_lower = float(theta_pooled - 1.96 * se_pooled)
-        ci_upper = float(theta_pooled + 1.96 * se_pooled)
-
-    return {
-        "status": "pooled",
-        "pooled_effect": round(pooled_effect, 4),
-        "ci_lower": round(ci_lower, 4),
-        "ci_upper": round(ci_upper, 4),
-        "i2": round(i2, 2),
-        "p_heterogeneity": round(p_het, 4),
-        "tau_squared": round(tau2, 4),
-        "q_statistic": round(Q, 4),
-        "measure": "Odds Ratio (OR)" if measure == "OR" else measure,
-        "model": model,
-        "studies": extracted_studies,
-        "excluded_missing_data": excluded_missing_data,
-    }
+        return {
+            "status": "pooled",
+            "pooled_effect": round(pooled_disp, 4),
+            "ci_lower": round(ci_low_disp, 4),
+            "ci_upper": round(ci_high_disp, 4),
+            "i2": round(res["i_squared"], 2),
+            "p_heterogeneity": round(res["p_value"], 4),
+            "measure": f"Odds Ratio ({measure})" if measure == "OR" else measure,
+            "model": model,
+            "studies": out_studies,
+        }
+    except Exception as e:
+        return {
+            "status": "cannot_pool",
+            "reason": f"Calculation error during meta-analysis pooling: {str(e)}",
+            "studies": missing_studies + usable_studies,
+        }
 
 
 @router.get("/meta-analyses/{meta_id}")
@@ -532,14 +491,43 @@ async def run_meta_analysis(
     ).fetchall()
 
     if len(studies) < 2:
-        raise HTTPException(status_code=400, detail="Need at least 2 included studies to run meta-analysis")
+        missing_studies = []
+        for s in studies:
+            s_dict = dict(s) if not isinstance(s, dict) else s
+            missing_studies.append({
+                "study_id": s_dict.get("study_id", ""),
+                "label": s_dict.get("study_label", ""),
+                "missing_data": "Insufficient study count for pooling (< 2 included studies)"
+            })
+        return {
+            "status": "cannot_pool",
+            "reason": "Need at least 2 included studies with usable extracted effect data to run meta-analysis",
+            "studies": missing_studies,
+        }
 
     study_data = []
+    missing_studies = []
     for s in studies:
-        raw = json.loads(s["raw_data_json"]) if s["raw_data_json"] else {}
-        raw["label"] = s["study_label"] or raw.get("label", f"Study {len(study_data)+1}")
+        s_dict = dict(s) if not isinstance(s, dict) else s
+        raw = json.loads(s_dict["raw_data_json"]) if s_dict.get("raw_data_json") else {}
+        raw["label"] = s_dict.get("study_label") or raw.get("label", f"Study {len(study_data)+1}")
         raw["included"] = True
-        study_data.append(raw)
+        try:
+            ma.compute_effect_size(raw, em)
+            study_data.append(raw)
+        except Exception:
+            missing_studies.append({
+                "study_id": s_dict.get("study_id", ""),
+                "label": raw["label"],
+                "missing_data": f"Missing required effect data for measure '{em}'"
+            })
+
+    if len(study_data) < 2:
+        return {
+            "status": "cannot_pool",
+            "reason": f"Need at least 2 included studies with usable extracted effect data for measure '{em}' to run meta-analysis",
+            "studies": missing_studies + study_data,
+        }
 
     return await _run_analysis(meta_id, at, em, conn, study_data)
 
@@ -547,6 +535,15 @@ async def run_meta_analysis(
 async def _run_analysis(meta_id: str, analysis_type: str, effect_measure: str,
                         conn: sqlite3.Connection, study_data: list[dict] = None) -> dict:
     """Internal: run the analysis and persist results."""
+    meta_row = conn.execute("SELECT project_id FROM meta_analyses WHERE meta_id = ?", (meta_id,)).fetchone()
+    project_id = (meta_row["project_id"] if isinstance(meta_row, dict) else meta_row[0]) if meta_row else ""
+
+    mas_rows = conn.execute(
+        "SELECT study_id FROM meta_analysis_studies WHERE meta_id = ? AND included = 1",
+        (meta_id,),
+    ).fetchall()
+    included_study_ids = [(r["study_id"] if isinstance(r, dict) else r[0]) for r in mas_rows if (r["study_id"] if isinstance(r, dict) else r[0])]
+
     if study_data is None:
         studies = conn.execute(
             "SELECT * FROM meta_analysis_studies WHERE meta_id = ? AND included = 1",
@@ -554,10 +551,19 @@ async def _run_analysis(meta_id: str, analysis_type: str, effect_measure: str,
         ).fetchall()
         study_data = []
         for s in studies:
-            raw = json.loads(s["raw_data_json"]) if s["raw_data_json"] else {}
-            raw["label"] = s["study_label"] or raw.get("label", f"Study {len(study_data)+1}")
+            s_dict = dict(s) if not isinstance(s, dict) else s
+            raw = json.loads(s_dict["raw_data_json"]) if s_dict.get("raw_data_json") else {}
+            raw["label"] = s_dict.get("study_label") or raw.get("label", f"Study {len(study_data)+1}")
             raw["included"] = True
+            if s_dict.get("study_id") and "study_id" not in raw:
+                raw["study_id"] = s_dict["study_id"]
             study_data.append(raw)
+
+    if not included_study_ids and study_data:
+        included_study_ids = [sd["study_id"] for sd in study_data if sd.get("study_id") and sd.get("included", True)]
+
+    if project_id and included_study_ids:
+        _check_duplicate_family_guard(conn, project_id, included_study_ids)
 
     try:
         results = ma.run_meta_analysis(analysis_type, study_data, effect_measure)

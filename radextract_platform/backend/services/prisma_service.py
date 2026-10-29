@@ -16,7 +16,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 
-from services.laya_client import ask, is_jev_enabled
+from services.jev_client import ask, is_jev_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +105,41 @@ def get_prisma_2020_data(project_id: str, db) -> Dict[str, Any]:
 
     ft_excluded_reasons = _aggregate_reasons(ft_reasons_rows)
 
+    # 3b. Retrieval phase (PRISMA 2020 "Reports assessed for eligibility"):
+    # TA inclusion is NOT evidence of retrieval. Studies included at TA that
+    # still need their full text are a distinct retrieval-pending bucket
+    # (awaiting_pdf) and are never counted under "not retrieved".
+    ta_included_expr = """(screening_status IN ('ta_included', 'awaiting_pdf')
+                          OR (screening_stage = 'ta' AND screening_status = 'included'))"""
+    reports_needed = db.execute(
+        f"""SELECT COUNT(*) as c FROM studies
+            WHERE project_id = ? AND {ta_included_expr} AND is_duplicate = 0""",
+        (project_id,),
+    ).fetchone()["c"]
+
+    reports_retrieved = db.execute(
+        f"""SELECT COUNT(*) as c FROM studies
+            WHERE project_id = ? AND {ta_included_expr}
+            AND pdf_status IN ('uploaded', 'processed', 'text_only')
+            AND is_duplicate = 0""",
+        (project_id,),
+    ).fetchone()["c"]
+
+    # Retrieval attempted and failed: no PDF text available and an error recorded.
+    reports_not_retrieved = db.execute(
+        f"""SELECT COUNT(*) as c FROM studies
+            WHERE project_id = ? AND {ta_included_expr}
+            AND (pdf_status IS NULL OR pdf_status IN ('', 'none', 'failed'))
+            AND error_message != ''
+            AND is_duplicate = 0""",
+        (project_id,),
+    ).fetchone()["c"]
+
+    # Retrieval pending (awaiting_pdf): needed but neither retrieved nor failed.
+    retrieval_pending = max(
+        0, reports_needed - reports_retrieved - reports_not_retrieved
+    )
+
     # 4. Included phase
     included_review = db.execute(
         """SELECT COUNT(*) as c FROM studies
@@ -177,6 +212,12 @@ def get_prisma_2020_data(project_id: str, db) -> Dict[str, Any]:
             "full_text_assessed": ft_assessed,
             "full_text_excluded": ft_excluded,
             "excluded_reasons": ft_excluded_reasons,
+        },
+        "retrieval": {
+            "reports_needed": reports_needed,
+            "reports_retrieved": reports_retrieved,
+            "reports_not_retrieved": reports_not_retrieved,
+            "retrieval_pending": retrieval_pending,
         },
         "included": {
             "studies_in_review": included_review,

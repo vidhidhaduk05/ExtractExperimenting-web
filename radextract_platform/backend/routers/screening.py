@@ -8,7 +8,7 @@ import sqlite3
 
 from database import get_db
 from services.db_backend import DBBackend
-from dependencies import get_current_user, get_current_user_optional, check_project_access, require_project_access
+from dependencies import get_current_user, get_current_user_optional, check_project_access
 from models import (
     DeduplicationResult, DuplicateResolveRequest,
     ExclusionReason, ExclusionReasonsUpdate, ExclusionReasonsResponse,
@@ -27,21 +27,22 @@ from models import (
     AbstractHighlightsResponse,
     ScreeningKeywordCreate,
     ScreeningKeywordResponse,
-    CriterionItem,
-    CriteriaListResponse,
-    CriteriaUpdateRequest,
-    StudyEvaluateRequest,
-    StudyEvaluateResponse,
-)
-from services.criterion_evaluator import (
-    Criterion,
-    DEFAULT_CRITERIA,
-    evaluate_study_against_criteria,
-    compute_clopper_pearson_upper_bound,
+    WeightedEvaluateRequest,
+    WeightedEvaluateResponse,
+    WeightedEvidenceItem,
+    WeightedPolicyItem,
 )
 from services.signal_generator import generate_signals
 from services.signal_prefilter import prefilter_study
 from services.safety_net import apply_overrides
+from services.weighted_scoring import (
+    CriterionEvidence,
+    ScreeningPolicy,
+    WeightedCriterion,
+    build_trace,
+    evaluate_weighted,
+    replay_trace,
+)
 from services.keyword_highlight_service import (
     extract_pico_highlights,
     find_keyword_matches,
@@ -251,12 +252,9 @@ async def screening_summary(project_id: str, user: Optional[dict] = Depends(get_
 # ═══════════════════════════════════════════════════════════════════════
 
 @router.post("/projects/{project_id}/studies/deduplicate", response_model=DeduplicationResult)
-@router.post("/projects/{project_id}/deduplicate", response_model=DeduplicationResult)
 async def deduplicate_studies(
     project_id: str,
     auto_mark: bool = Query(True, description="Mark duplicates in the database"),
-    title_threshold: float = Query(0.90, ge=0.50, le=1.00, description="Minimum title similarity for a fuzzy match"),
-    author_threshold: float = Query(0.50, ge=0.00, le=1.00, description="Minimum author-overlap ratio when title < 0.95 and year differs"),
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
@@ -271,15 +269,13 @@ async def deduplicate_studies(
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    result = _dedup(project_id, auto_mark=auto_mark, db=conn, title_threshold=title_threshold, author_threshold=author_threshold)
+    result = _dedup(project_id, auto_mark=auto_mark)
     return DeduplicationResult(**result)
 
 
 @router.get("/projects/{project_id}/studies/duplicates", response_model=DeduplicationResult)
 async def get_duplicate_studies(
     project_id: str,
-    title_threshold: float = Query(0.90, ge=0.50, le=1.00, description="Minimum title similarity for a fuzzy match"),
-    author_threshold: float = Query(0.50, ge=0.00, le=1.00, description="Minimum author-overlap ratio when title < 0.95 and year differs"),
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
@@ -293,7 +289,7 @@ async def get_duplicate_studies(
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    result = _dedup(project_id, auto_mark=False, db=conn, title_threshold=title_threshold, author_threshold=author_threshold)
+    result = _dedup(project_id, auto_mark=False, db=conn)
     return DeduplicationResult(**result)
 
 
@@ -334,8 +330,41 @@ async def resolve_duplicate(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/projects/{project_id}/studies/deduplicate/merge-all-metadata")
+async def merge_all_studies_metadata(
+    project_id: str,
+    payload: Optional[dict] = None,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Merge metadata across all candidate duplicate groups for all studies in the project.
+    Adopts missing/richer fields on each canonical record and marks candidate duplicates reversibly."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.dedup_service import merge_all_groups_metadata
+    actor = (user or {}).get("user_id", "user") or "user"
+    strategy = (payload or {}).get("master_strategy", "most_complete")
+
+    row = conn.execute(
+        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        return merge_all_groups_metadata(
+            project_id=project_id,
+            master_strategy=strategy,
+            db=conn,
+            actor=actor,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 # ═══════════════════════════════════════════════════════════════════════
+#  Zoplicate-style dedup review sheet + Merge All
+# ═══════════════════════════════════════════════════════════════════════
+
 @router.get("/projects/{project_id}/dedup/candidates")
 async def get_dedup_candidates(
     project_id: str,
@@ -346,7 +375,7 @@ async def get_dedup_candidates(
     """Candidate rows for the accept/reject review sheet, with side-by-side
     field diffs and stats. Rejected groups are backed by the non_duplicates
     memory and never reappear as pending."""
-    require_project_access(conn, project_id, user)
+    check_project_access(conn, project_id, user)
     row = conn.execute(
         "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
     ).fetchone()
@@ -369,7 +398,7 @@ async def accept_dedup_group(
 ):
     """Accept (merge) a candidate group: master wins conflicts, missing
     fields filled from duplicates, duplicates soft-marked, audit row written."""
-    require_project_access(conn, project_id, user, min_role="editor")
+    check_project_access(conn, project_id, user, min_role="editor")
     from services.dedup_service import accept_group
     actor = (user or {}).get("user_id", "user") or "user"
     try:
@@ -387,7 +416,7 @@ async def reject_dedup_group(
 ):
     """Reject a candidate group as not-duplicates. Every pair is recorded in
     the non_duplicates memory and never flagged again."""
-    require_project_access(conn, project_id, user, min_role="editor")
+    check_project_access(conn, project_id, user, min_role="editor")
     from services.dedup_service import reject_group
     actor = (user or {}).get("user_id", "user") or "user"
     try:
@@ -405,7 +434,7 @@ async def keep_both_dedup_group(
 ):
     """Keep both records: unmark any duplicate flags inside the group and
     close it as keep_both (reversible)."""
-    require_project_access(conn, project_id, user, min_role="editor")
+    check_project_access(conn, project_id, user, min_role="editor")
     from services.dedup_service import keep_both_group, MergeUndoConflictError
     actor = (user or {}).get("user_id", "user") or "user"
     try:
@@ -425,7 +454,7 @@ async def set_dedup_group_master(
     conn: DBBackend = Depends(get_db),
 ):
     """Choose a different master for a pending group."""
-    require_project_access(conn, project_id, user, min_role="editor")
+    check_project_access(conn, project_id, user, min_role="editor")
     master_study_id = (payload or {}).get("master_study_id", "")
     if not master_study_id:
         raise HTTPException(status_code=400, detail="master_study_id is required")
@@ -452,7 +481,7 @@ async def merge_all_dedup(
             plan_id?: str }
     Dry-run returns the full merge plan for a confirm dialog without executing.
     Records with human decisions are skipped and reported."""
-    require_project_access(conn, project_id, user, min_role="editor")
+    check_project_access(conn, project_id, user, min_role="editor")
     row = conn.execute(
         "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
     ).fetchone()
@@ -498,7 +527,7 @@ async def merge_all_resume(
     conn: DBBackend = Depends(get_db),
 ):
     """Resume a paused or failed merge-all run."""
-    require_project_access(conn, project_id, user, min_role="editor")
+    check_project_access(conn, project_id, user, min_role="editor")
     row = conn.execute(
         "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
     ).fetchone()
@@ -537,7 +566,7 @@ async def merge_all_status(
     conn: DBBackend = Depends(get_db),
 ):
     """Progress for a merge-all run (Zoplicate activeRun pattern)."""
-    require_project_access(conn, project_id, user)
+    check_project_access(conn, project_id, user)
     from services.dedup_service import get_merge_all_status
     try:
         run = get_merge_all_status(run_id, db=conn)
@@ -556,7 +585,7 @@ async def merge_all_pause(
     conn: DBBackend = Depends(get_db),
 ):
     """Request a pause of a running merge-all (checked between groups)."""
-    require_project_access(conn, project_id, user, min_role="editor")
+    check_project_access(conn, project_id, user, min_role="editor")
     from services.dedup_service import pause_merge_all
     run_id = (payload or {}).get("run_id", "")
     if not run_id:
@@ -676,7 +705,7 @@ async def get_screening_config(project_id: str, user: Optional[dict] = Depends(g
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user)
 
-    config = {"blind_mode": False, "n_reviewers": 1, "conflict_mode": "single"}
+    config = {"blind_mode": True, "n_reviewers": 2, "conflict_mode": "manual"}
     if row["screening_config_json"]:
         try:
             config = json.loads(row["screening_config_json"])
@@ -685,16 +714,16 @@ async def get_screening_config(project_id: str, user: Optional[dict] = Depends(g
 
     return ScreeningConfigResponse(
         project_id=project_id,
-        blind_mode=config.get("blind_mode", False),
-        n_reviewers=config.get("n_reviewers", 1),
-        conflict_mode=config.get("conflict_mode", "single"),
+        blind_mode=config.get("blind_mode", True),
+        n_reviewers=config.get("n_reviewers", 2),
+        conflict_mode=config.get("conflict_mode", "manual"),
     )
 
 
 @router.put("/projects/{project_id}/screening-config", response_model=ScreeningConfigResponse)
 async def update_screening_config(project_id: str, body: ScreeningConfigUpdate, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
-    """Update the screening configuration."""
+    """Update the multi-reviewer screening configuration."""
     row = conn.execute(
         "SELECT screening_config_json FROM projects WHERE project_id = ?", (project_id,)
     ).fetchone()
@@ -702,7 +731,7 @@ async def update_screening_config(project_id: str, body: ScreeningConfigUpdate, 
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user)
 
-    config = {"blind_mode": False, "n_reviewers": 1, "conflict_mode": "single"}
+    config = {"blind_mode": True, "n_reviewers": 2, "conflict_mode": "manual"}
     if row["screening_config_json"]:
         try:
             config = json.loads(row["screening_config_json"])
@@ -730,161 +759,126 @@ async def update_screening_config(project_id: str, body: ScreeningConfigUpdate, 
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Threshold-Based Criterion Evaluation API Endpoints
+#  Weighted scoring engine (blueprint §4E): evaluate + immutable traces
 # ═══════════════════════════════════════════════════════════════════════
 
-@router.get("/projects/{project_id}/threshold-criteria", response_model=CriteriaListResponse)
-async def get_project_threshold_criteria(
-    project_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Retrieve continuous threshold criteria list for a project."""
-    check_project_access(conn, project_id, user)
-    row = conn.execute(
-        "SELECT criteria_json, inclusion_criteria_json, exclusion_criteria_json FROM projects WHERE project_id = ?", (project_id,)
+def _load_weighted_criteria(conn: DBBackend, project_id: str) -> list[WeightedCriterion]:
+    """Load project criteria as WeightedCriterion list (legacy strict -> required)."""
+    raw_row = conn.execute(
+        "SELECT criteria_json, inclusion_criteria_json, exclusion_criteria_json FROM projects WHERE project_id = ?",
+        (project_id,),
     ).fetchone()
-    if not row:
+    if not raw_row:
         raise HTTPException(status_code=404, detail="Project not found")
-
-    crit_list = []
-    if row["criteria_json"]:
+    row = dict(raw_row) if not isinstance(raw_row, dict) else raw_row
+    crit_list: list[dict] = []
+    if row.get("criteria_json"):
         try:
             crit_list = json.loads(row["criteria_json"])
         except Exception:
-            pass
+            crit_list = []
     if not crit_list:
-        # Load from inclusion and exclusion or DEFAULT_CRITERIA
-        inc = []
-        exc = []
-        try:
-            inc = json.loads(row["inclusion_criteria_json"]) if row["inclusion_criteria_json"] else []
-        except Exception:
-            pass
-        try:
-            exc = json.loads(row["exclusion_criteria_json"]) if row["exclusion_criteria_json"] else []
-        except Exception:
-            pass
-        for c in inc:
-            c.setdefault("direction", "inclusion")
-            crit_list.append(c)
-        for c in exc:
-            c.setdefault("direction", "exclusion")
-            crit_list.append(c)
-    if not crit_list:
-        crit_list = [c.dict() for c in DEFAULT_CRITERIA]
+        for col, direction in (("inclusion_criteria_json", "inclusion"),
+                               ("exclusion_criteria_json", "exclusion")):
+            try:
+                items = json.loads(row[col]) if row.get(col) else []
+            except Exception:
+                items = []
+            for c in items:
+                c.setdefault("direction", direction)
+                crit_list.append(c)
+    return [WeightedCriterion(**c) for c in crit_list]
+
+
+@router.post("/projects/{project_id}/criteria/evaluate-study-weighted",
+             response_model=WeightedEvaluateResponse)
+async def evaluate_study_weighted(
+    project_id: str,
+    body: WeightedEvaluateRequest,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Weighted inclusion/exclusion evaluation with hard-rule dominance.
+
+    Returns a recommendation for human review plus the full how-calculated
+    table and persists an immutable, replayable evaluation trace. The score is
+    a versioned heuristic, not a calibrated probability.
+    """
+    check_project_access(conn, project_id, user)
+    crits = _load_weighted_criteria(conn, project_id)
+    policy = (ScreeningPolicy(**(body.policy.model_dump() if hasattr(body.policy, 'model_dump') else body.policy.dict())) if body.policy else ScreeningPolicy())
+    evidence = [CriterionEvidence(**(e.model_dump() if hasattr(e, 'model_dump') else e.dict())) for e in body.evidence]
+    result = evaluate_weighted(evidence, crits, policy)
+
+    trace_id = None
+    if body.persist:
+        trace = build_trace(
+            result, trace_id=str(uuid.uuid4()), project_id=project_id,
+            study_id=body.study_id, stage=body.stage, criteria=crits,
+            input_text=body.input_text,
+            model_config={"engine": "weighted_scoring", "formula": result["formula_version"]},
+        )
         conn.execute(
-            "UPDATE projects SET criteria_json = ? WHERE project_id = ?",
-            (json.dumps(crit_list), project_id),
+            """INSERT INTO evaluation_traces (trace_id, project_id, study_id, stage,
+               formula_version, policy_version, criteria_version, criteria_hash,
+               input_text_hash, model_config_json, recommendation, rec_score,
+               contributions_json, missing_json, not_applicable_json, hard_flags_json)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (trace.trace_id, trace.project_id, trace.study_id, trace.stage,
+             trace.formula_version, trace.policy_version, trace.criteria_version,
+             trace.criteria_hash, trace.input_text_hash, trace.model_config_json,
+             trace.recommendation, trace.rec_score,
+             json.dumps(trace.contributions), json.dumps(trace.missing),
+             json.dumps(trace.not_applicable), json.dumps(trace.hard_flags)),
         )
         conn.commit()
+        trace_id = trace.trace_id
 
-    return CriteriaListResponse(
-        project_id=project_id,
-        criteria=[CriterionItem(**c) for c in crit_list],
-    )
-
-
-@router.put("/projects/{project_id}/threshold-criteria", response_model=CriteriaListResponse)
-async def update_project_threshold_criteria(
-    project_id: str,
-    body: CriteriaUpdateRequest,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Update continuous threshold criteria configuration for a project."""
-    check_project_access(conn, project_id, user, min_role="reviewer")
-    row = conn.execute(
-        "SELECT project_id FROM projects WHERE project_id = ?", (project_id,)
-    ).fetchone()
-    if not row:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    crit_dicts = [c.dict() for c in body.criteria]
-    conn.execute(
-        "UPDATE projects SET criteria_json = ? WHERE project_id = ?",
-        (json.dumps(crit_dicts), project_id),
-    )
-    conn.commit()
-
-    return CriteriaListResponse(
-        project_id=project_id,
-        criteria=body.criteria,
-    )
-
-
-@router.post("/projects/{project_id}/criteria/evaluate-study", response_model=StudyEvaluateResponse)
-async def evaluate_study_criteria(
-    project_id: str,
-    body: StudyEvaluateRequest,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Evaluate a study against project criteria with continuous threshold logic."""
-    check_project_access(conn, project_id, user)
-    row = conn.execute(
-        "SELECT criteria_json, inclusion_criteria_json, exclusion_criteria_json FROM projects WHERE project_id = ?", (project_id,)
-    ).fetchone()
-    if not row:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    crit_list = []
-    if row["criteria_json"]:
-        try:
-            crit_list = [Criterion(**c) for c in json.loads(row["criteria_json"])]
-        except Exception:
-            pass
-    if not crit_list:
-        inc = []
-        exc = []
-        try:
-            inc = json.loads(row["inclusion_criteria_json"]) if row["inclusion_criteria_json"] else []
-        except Exception:
-            pass
-        try:
-            exc = json.loads(row["exclusion_criteria_json"]) if row["exclusion_criteria_json"] else []
-        except Exception:
-            pass
-        for c in inc:
-            c.setdefault("direction", "inclusion")
-            crit_list.append(Criterion(**c))
-        for c in exc:
-            c.setdefault("direction", "exclusion")
-            crit_list.append(Criterion(**c))
-    if not crit_list:
-        crit_list = list(DEFAULT_CRITERIA)
-
-    result = evaluate_study_against_criteria(
-        scores=body.scores,
-        criteria=crit_list,
-    )
-    return StudyEvaluateResponse(
+    return WeightedEvaluateResponse(
         study_id=body.study_id,
-        decision=result["decision"],
-        fired=result["fired"],
-        flagged_unscored=result["flagged_unscored"],
+        recommendation=result["recommendation"],
+        rec_score=result["rec_score"],
+        hard_flags=result["hard_flags"],
+        contributions=result["contributions"],
+        missing=result["missing"],
+        not_applicable=result["not_applicable"],
+        formula_version=result["formula_version"],
+        policy_version=result["policy_version"],
+        trace_id=trace_id,
+        note=result["note"],
     )
 
 
-@router.get("/projects/{project_id}/criteria/validation-bounds")
-async def get_validation_bounds(
+@router.get("/projects/{project_id}/criteria/evaluation-traces/{study_id}")
+async def list_evaluation_traces(
     project_id: str,
-    k: int = Query(0, description="Observed false negatives"),
-    n: int = Query(100, description="Sample size"),
-    alpha: float = Query(0.05, description="Significance level"),
+    study_id: str,
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    """Compute Clopper-Pearson exact binomial confidence upper bound for missed inclusions."""
+    """Stored evaluation traces for one study (the How-calculated panel)."""
     check_project_access(conn, project_id, user)
-    upper_bound = compute_clopper_pearson_upper_bound(k, n, alpha=alpha)
-    return {
-        "k_false_negatives": k,
-        "n_samples": n,
-        "alpha": alpha,
-        "confidence_level": 1.0 - alpha,
-        "clopper_pearson_upper_bound": upper_bound,
-    }
+    rows = conn.execute(
+        """SELECT trace_id, stage, formula_version, policy_version, recommendation,
+           rec_score, contributions_json, missing_json, not_applicable_json,
+           hard_flags_json, created_at
+           FROM evaluation_traces WHERE project_id = ? AND study_id = ?
+           ORDER BY created_at DESC""",
+        (project_id, study_id),
+    ).fetchall()
+    traces = []
+    for r in rows:
+        d = dict(r) if not isinstance(r, dict) else r
+        for col, key in (("contributions_json", "contributions"),
+                         ("missing_json", "missing"),
+                         ("not_applicable_json", "not_applicable"),
+                         ("hard_flags_json", "hard_flags")):
+            try:
+                d[key] = json.loads(d.pop(col))
+            except Exception:
+                d[key] = []
+        traces.append(d)
+    return {"study_id": study_id, "traces": traces}
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -902,21 +896,7 @@ def _check_and_record_conflict(
     """Auto-detect conflicts or sync consensus decisions for a study stage.
 
     Returns True if conflict is detected/unresolved, False otherwise.
-    In Single-Reviewer mode (n_reviewers <= 1 or conflict_mode == 'single'), conflict detection is bypassed.
     """
-    proj_row = conn.execute(
-        "SELECT screening_config_json FROM projects WHERE project_id = ?", (project_id,)
-    ).fetchone()
-    if proj_row and proj_row["screening_config_json"]:
-        try:
-            cfg = json.loads(proj_row["screening_config_json"])
-            if cfg.get("n_reviewers", 1) <= 1 or cfg.get("conflict_mode") == "single":
-                return False
-        except Exception:
-            return False
-    else:
-        # Default is single-reviewer mode: bypass conflicts
-        return False
     raw_decisions = conn.execute(
         """SELECT * FROM screening_decisions
            WHERE study_id = ? AND stage = ?""",
@@ -1716,9 +1696,6 @@ async def prisma_flow_svg(project_id: str, user: Optional[dict] = Depends(get_cu
     if not svg:
         raise HTTPException(status_code=500, detail="PRISMA diagram generation failed")
 
-    from services.storage_manager import save_stage_file
-    save_stage_file(project_id, "07_EXPORTS", f"prisma_flow_{project_id}.svg", svg, db=conn)
-
     return Response(content=svg, media_type="image/svg+xml")
 
 
@@ -1734,9 +1711,6 @@ async def prisma_flow_png(project_id: str, user: Optional[dict] = Depends(get_cu
     png = render_prisma_png(flow_data)
     if not png:
         raise HTTPException(status_code=500, detail="PRISMA PNG generation failed")
-
-    from services.storage_manager import save_stage_file
-    save_stage_file(project_id, "07_EXPORTS", f"prisma_flow_{project_id}.png", png, db=conn)
 
     return Response(
         content=png,
@@ -1765,9 +1739,6 @@ async def prisma_flow_docx(project_id: str, user: Optional[dict] = Depends(get_c
     png = render_prisma_png(flow_data)
     docx_bytes = render_prisma_docx(flow_data, project_name=project_name, png_bytes=png)
 
-    from services.storage_manager import save_stage_file
-    save_stage_file(project_id, "07_EXPORTS", f"prisma_flow_{project_id}.docx", docx_bytes, db=conn)
-
     return Response(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -1785,10 +1756,6 @@ async def prisma2020_csv(project_id: str, user: Optional[dict] = Depends(get_cur
     check_project_access(conn, project_id, user)
     payload = sync_prisma2020(project_id, conn)
     csv_text = render_prisma2020_csv(payload["fields"])
-
-    from services.storage_manager import save_stage_file
-    save_stage_file(project_id, "07_EXPORTS", f"PRISMA2020_{project_id}.csv", csv_text.encode("utf-8"), db=conn)
-
     return Response(
         content=csv_text,
         media_type="text/csv; charset=utf-8",
@@ -1910,6 +1877,56 @@ async def batch_ai_screen(
         s_dict = enrich_study_with_ctgov(dict(s))
         title = (s_dict.get("title") or "").strip()
         abstract = (s_dict.get("abstract") or "").strip()
+
+        # Safeguard & Auto-Retrieval for studies without an abstract
+        if stage == "ta" and not abstract:
+            from services.abstract_retrieval_service import retrieve_abstract_for_study
+            retrieved_abs, src = retrieve_abstract_for_study(s_dict)
+            if retrieved_abs:
+                abstract = retrieved_abs.strip()
+                conn.execute(
+                    "UPDATE studies SET abstract = ? WHERE study_id = ?",
+                    (abstract, sid),
+                )
+            else:
+                # When no abstract exists or could be retrieved, study MUST NOT be excluded at title/abstract stage
+                rec = "uncertain"
+                conf = 0.50
+                reason_text = "No abstract available in bibliographic databases; routed to uncertain pile for full-text review"
+                reason_code = "NO_ABSTRACT_RETRIEVED"
+                total_screened += 1
+                decision_id = str(uuid.uuid4())
+                now = datetime.now(timezone.utc).isoformat()
+                conn.execute(
+                    """INSERT INTO screening_decisions (
+                        decision_id, study_id, project_id, reviewer_id, reviewer_name,
+                        decision, reason_code, reason_text, stage, is_blinded, created_at,
+                        auto_decision, sampled_audit
+                    ) VALUES (?, ?, ?, 'ai_screener', 'AI Screener', 'uncertain', ?, ?, 'ta', 0, ?, 1, 0)""",
+                    (decision_id, sid, project_id, reason_code, reason_text, now),
+                )
+                conn.execute(
+                    """UPDATE studies SET
+                        screening_stage = 'ta',
+                        screening_status = 'uncertain',
+                        screening_reason = ?,
+                        ai_decision = 'uncertain',
+                        ai_confidence = ?,
+                        ai_reason = ?,
+                        ai_reason_code = ?,
+                        ai_screened_at = ?
+                    WHERE study_id = ?""",
+                    (reason_text, conf, reason_text, reason_code, now, sid),
+                )
+                results.append({
+                    "study_id": sid,
+                    "title": title,
+                    "recommendation": rec,
+                    "confidence": conf,
+                    "reason_code": reason_code,
+                    "reason_text": reason_text,
+                })
+                continue
 
         if stage == "ta":
             pre = prefilter_study(title=title, abstract=abstract, signals=signals, stage="ta")
@@ -2071,3 +2088,27 @@ async def batch_ai_screen(
         "message": f"Screened {total_screened} studies. {clarifications_generated} need clarification.",
     }
 
+
+
+@router.get("/projects/{project_id}/screening-calibration")
+async def get_project_screening_calibration(
+    project_id: str,
+    stage: str = "ta",
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    check_project_access(conn, project_id, user)
+    from services.screening_confidence import compute_workload_and_recall
+    return compute_workload_and_recall(project_id, stage=stage, db=conn)
+
+
+@router.post("/projects/{project_id}/screening-calibration/recalibrate")
+async def recalibrate_project_endpoint(
+    project_id: str,
+    stage: str = "ta",
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    check_project_access(conn, project_id, user, min_role="editor")
+    from services.screening_confidence import recalibrate_project
+    return recalibrate_project(project_id, stage=stage, db=conn)

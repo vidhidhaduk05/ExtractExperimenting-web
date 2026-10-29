@@ -1,12 +1,12 @@
 """Projects router: CRUD for systematic review projects."""
 from __future__ import annotations
 import json
-import logging
 import os
 import tempfile
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from pathlib import Path
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import Optional
@@ -15,7 +15,7 @@ import sqlite3
 from models import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
     PICOUpdate, PICOResponse,
-    HypothesisUpdate, HypothesisResponse,
+    HypothesisUpdate, HypothesisResponse, SecondaryHypothesis,
     PubMedKeyUpdate,
     Criterion, CriteriaUpdate, CriteriaResponse,
     SearchStringsResponse,
@@ -33,6 +33,41 @@ from models import (
 )
 from database import get_db
 from services.db_backend import DBBackend
+import re
+from config import settings
+
+REVIEW_LIFECYCLE_SUBDIRS = [
+    "01_SOURCE",
+    "02_SCREENING",
+    "03_EXTRACTION",
+    "04_ROB",
+    "05_GRADE",
+    "06_META",
+    "07_EXPORTS",
+    "08_AUDIT",
+    "UPLOADS",
+]
+
+def sanitize_folder_slug(name: str) -> str:
+    """Create a safe, deterministic directory name from a project name."""
+    s = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', (name or '').strip())
+    s = re.sub(r'_+', '_', s).strip('._')
+    return s[:64] if s else "project"
+
+def provision_project_hpc_storage(project_id: str, project_name: str) -> str:
+    """Provision dedicated HPC storage directory with full review lifecycle subfolders."""
+    try:
+        base_storage = settings.effective_storage_root
+        slug = sanitize_folder_slug(project_name)
+        folder_name = f"{project_id}_{slug}"
+        project_dir = (base_storage / "PROJECTS" / folder_name).resolve()
+        project_dir.mkdir(parents=True, exist_ok=True)
+        for sub in REVIEW_LIFECYCLE_SUBDIRS:
+            (project_dir / sub).mkdir(parents=True, exist_ok=True)
+        return str(project_dir)
+    except Exception as e:
+        # Fallback without failing the thinking or creation process
+        return str((Path(__file__).parent.parent / "storage" / "PROJECTS" / project_id).resolve())
 from dependencies import get_current_user_optional, check_project_access
 
 router = APIRouter(prefix="/api", tags=["projects"])
@@ -62,6 +97,18 @@ async def list_projects(
     return [dict(r) for r in rows]
 
 
+ALLOWED_REVIEW_TYPES = {"scoping", "systematic", "both"}
+
+
+def _validate_review_type(value: str) -> str:
+    if value not in ALLOWED_REVIEW_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"review_type must be one of {sorted(ALLOWED_REVIEW_TYPES)}",
+        )
+    return value
+
+
 @router.post("/projects", response_model=ProjectResponse)
 async def create_project(
     body: ProjectCreate,
@@ -69,16 +116,17 @@ async def create_project(
     conn: DBBackend = Depends(get_db),
 ):
     project_id = str(uuid.uuid4())
-    from services.storage_manager import ensure_project_storage
-    folder_name, _ = ensure_project_storage(project_id, project_name=body.name, db=conn)
+    _validate_review_type(body.review_type)
+    # Provision dedicated HPC storage folder and all standard review lifecycle subfolders
+    storage_path = provision_project_hpc_storage(project_id, body.name)
 
     conn.execute(
         """INSERT INTO projects (project_id, name, description, pico_json,
-           hypothesis, research_question, created_by, storage_folder)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+           hypothesis, research_question, created_by, storage_path, review_type)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (project_id, body.name, body.description, body.pico_json,
          body.hypothesis, body.research_question,
-         user["user_id"] if user else "system", folder_name),
+         user["user_id"] if user else "system", storage_path, body.review_type),
     )
     # Auto-create owner membership
     if user:
@@ -93,7 +141,8 @@ async def create_project(
         pico_json=body.pico_json, hypothesis=body.hypothesis,
         research_question=body.research_question,
         created_by=user["user_id"] if user else "system",
-        storage_folder=folder_name,
+        storage_path=storage_path,
+        review_type=body.review_type,
     )
 
 
@@ -129,9 +178,11 @@ async def update_project(
     updates = []
     params = []
     for field in ["name", "description", "pico_json", "hypothesis",
-                   "research_question", "status"]:
+                   "research_question", "status", "review_type"]:
         val = getattr(body, field, None)
         if val is not None:
+            if field == "review_type":
+                val = _validate_review_type(val)
             updates.append(f"{field} = ?")
             params.append(val)
 
@@ -250,32 +301,8 @@ async def delete_project(
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user, min_role="owner")
-    # Archive project folder to PROJECTS/_ARCHIVE per Rule 3 ("Never delete a project folder")
-    from services.storage_manager import archive_project_storage
-    try:
-        archive_project_storage(project_id, db=conn)
-    except Exception:
-        pass
-
-    from pathlib import Path
-    from config import settings
-    storage_dir = Path(settings.storage_dir)
-    study_rows = conn.execute("SELECT study_id FROM studies WHERE project_id = ?", (project_id,)).fetchall()
-    for s_row in study_rows:
-        sid = s_row["study_id"]
-        pdf_path = storage_dir / f"{sid}.pdf"
-        docling_path = storage_dir / f"{sid}.docling.json"
-        if pdf_path.exists():
-            try:
-                pdf_path.unlink()
-            except OSError:
-                pass
-        if docling_path.exists():
-            try:
-                docling_path.unlink()
-            except OSError:
-                pass
-
+    # Children first: foreign keys are enforced, so a project that has members,
+    # studies, tags or assessments cannot be deleted with a bare DELETE.
     study_ids = "SELECT study_id FROM studies WHERE project_id = ?"
     for table in ("extractions", "pdf_documents", "pdf_highlights", "audit_log"):
         conn.execute(f"DELETE FROM {table} WHERE study_id IN ({study_ids})", (project_id,))
@@ -328,25 +355,6 @@ async def delete_project(
 #  PICO Endpoints
 # ═══════════════════════════════════════════════════════════════════════
 
-def _load_project_criteria(row) -> "CriteriaLists":
-    """Read inclusion/exclusion criteria from the project row's JSON columns."""
-    from models import CriteriaLists
-
-    def _texts(raw: str) -> list[str]:
-        if not raw:
-            return []
-        try:
-            data = json.loads(raw)
-        except (json.JSONDecodeError, TypeError):
-            return []
-        return [str(item.get("text", "")).strip() for item in data if isinstance(item, dict) and str(item.get("text", "")).strip()]
-
-    return CriteriaLists(
-        inclusion=_texts(row["inclusion_criteria_json"]) if "inclusion_criteria_json" in row.keys() else [],
-        exclusion=_texts(row["exclusion_criteria_json"]) if "exclusion_criteria_json" in row.keys() else [],
-    )
-
-
 @router.get("/projects/{project_id}/pico", response_model=PICOResponse)
 async def get_pico(
     project_id: str,
@@ -354,14 +362,13 @@ async def get_pico(
     conn: DBBackend = Depends(get_db),
 ):
     row = conn.execute(
-        "SELECT pico_json, inclusion_criteria_json, exclusion_criteria_json FROM projects WHERE project_id = ?", (project_id,)
+        "SELECT pico_json FROM projects WHERE project_id = ?", (project_id,)
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
     check_project_access(conn, project_id, user, min_role="viewer")
     pico = json.loads(row["pico_json"]) if row["pico_json"] else {}
     is_defined = any(v.strip() for v in pico.values() if isinstance(v, str))
-    criteria = _load_project_criteria(row)
     return PICOResponse(
         project_id=project_id,
         population=pico.get("population", ""),
@@ -369,7 +376,6 @@ async def get_pico(
         comparator=pico.get("comparator", ""),
         outcome=pico.get("outcome", ""),
         study_design=pico.get("study_design", ""),
-        criteria=criteria,
         is_defined=is_defined,
     )
 
@@ -394,27 +400,14 @@ async def update_pico(
         "outcome": body.outcome,
         "study_design": body.study_design,
     }
-    sets = ["pico_json = ?"]
-    params: list = [json.dumps(pico)]
-    if body.criteria is not None:
-        sets.append("inclusion_criteria_json = ?")
-        sets.append("exclusion_criteria_json = ?")
-        params.append(json.dumps([{"id": str(uuid.uuid4()), "text": t} for t in body.criteria.inclusion if t.strip()]))
-        params.append(json.dumps([{"id": str(uuid.uuid4()), "text": t} for t in body.criteria.exclusion if t.strip()]))
-    params.append(project_id)
     conn.execute(
-        f"UPDATE projects SET {', '.join(sets)} WHERE project_id = ?",
-        params,
+        "UPDATE projects SET pico_json = ? WHERE project_id = ?",
+        (json.dumps(pico), project_id),
     )
     conn.commit()
-    updated_row = conn.execute(
-        "SELECT inclusion_criteria_json, exclusion_criteria_json FROM projects WHERE project_id = ?",
-        (project_id,),
-    ).fetchone()
-    criteria = _load_project_criteria(updated_row)
     is_defined = any(v.strip() for v in pico.values())
     return PICOResponse(
-        project_id=project_id, criteria=criteria, is_defined=is_defined, **pico,
+        project_id=project_id, is_defined=is_defined, **pico,
     )
 
 
@@ -556,15 +549,17 @@ def _persist_protocol_extraction(conn, project_id: str, result: dict) -> None:
     }
 
     if (not inclusion or not exclusion) and has_pico:
-        # No fabrication: criteria come only from the uploaded protocol or user
-        # edits. If the protocol had no criteria sections, they stay empty and
-        # the user adds them on the Protocol page.
-        logger = logging.getLogger("radextract.pico")
-        logger.info(
-            f"[PICO] Project {project_id}: protocol had no "
-            f"{'inclusion' if not inclusion else ''}{'/' if not inclusion and not exclusion else ''}"
-            f"{'exclusion' if not exclusion else ''} criteria sections; leaving empty for user entry."
-        )
+        try:
+            from services.search_string_generator import generate_criteria_from_pico
+            draft = generate_criteria_from_pico(pico)
+            if not inclusion and draft.get("inclusion"):
+                inclusion = [item["text"] for item in draft["inclusion"]]
+                result["inclusion"] = inclusion
+            if not exclusion and draft.get("exclusion"):
+                exclusion = [item["text"] for item in draft["exclusion"]]
+                result["exclusion"] = exclusion
+        except Exception:
+            pass
 
     sets = ["pico_json = ?", "hypothesis = ?", "research_question = ?"]
     params = [
@@ -699,10 +694,6 @@ async def get_criteria(project_id: str,
         exclusion = json.loads(row["exclusion_criteria_json"]) if row["exclusion_criteria_json"] else []
     except json.JSONDecodeError:
         pass
-
-    # No auto-seeding: empty means empty. Criteria come only from the uploaded
-    # protocol (PICO extraction) or user edits — never fabricated defaults.
-
     return CriteriaResponse(
         project_id=project_id,
         inclusion=[Criterion(**c) for c in inclusion],
@@ -754,49 +745,6 @@ async def generate_criteria(project_id: str,
         inclusion=[Criterion(**c) for c in result["inclusion"]],
         exclusion=[Criterion(**c) for c in result["exclusion"]],
     )
-
-
-# ═══════════════════════════════════════════════════════════════════════
-#  Criteria Evaluation (Stage C: deterministic matching + weighted score)
-#  Score is DISPLAY ONLY — it never writes a screening decision.
-# ═══════════════════════════════════════════════════════════════════════
-
-@router.get("/projects/{project_id}/criteria-evaluation/{study_id}")
-async def evaluate_study_criteria(project_id: str, study_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional), conn: DBBackend = Depends(get_db)):
-    """Per-study per-criterion match results + computed criteria score."""
-    from services.criteria_matching import evaluate_criteria
-    check_project_access(conn, project_id, user, min_role="viewer")
-    try:
-        return evaluate_criteria(project_id, study_id, conn=conn)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
-@router.get("/projects/{project_id}/criteria-evaluation")
-async def evaluate_project_criteria(project_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional), conn: DBBackend = Depends(get_db)):
-    """Batch evaluation of every study (for sorting the screening table by score)."""
-    from services.criteria_matching import evaluate_project
-    check_project_access(conn, project_id, user, min_role="viewer")
-    return {"project_id": project_id, "evaluations": evaluate_project(project_id, conn=conn)}
-
-
-@router.post("/projects/{project_id}/criteria/preview")
-async def preview_criteria(project_id: str,
-    body: CriteriaUpdate, user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db)):
-    """Dry-run proposed criteria: how many studies' flags/scores would change?
-
-    Mutates nothing — the human reviews the diff, then PUTs the criteria to commit.
-    """
-    from services.criteria_matching import preview_criteria_change
-    check_project_access(conn, project_id, user, min_role="viewer")
-    proposed = {
-        "inclusion": [c.model_dump() for c in body.inclusion],
-        "exclusion": [c.model_dump() for c in body.exclusion],
-    }
-    return preview_criteria_change(project_id, proposed, conn=conn)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1022,6 +970,7 @@ async def generate_pico_from_question(
 @router.post("/projects/{project_id}/generate-hypothesis", response_model=HypothesisResponse)
 async def generate_project_hypothesis(
     project_id: str,
+    request: Request,
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
@@ -1038,6 +987,9 @@ async def generate_project_hypothesis(
     pico = json.loads(row["pico_json"]) if row["pico_json"] else {}
     question = row["research_question"] or ""
 
+    if not any((pico.get(k) or "").strip() for k in ("population", "index_test", "comparator", "outcome")):
+        raise HTTPException(status_code=400, detail="No PICO saved for this project. Extract or enter a PICO before generating a hypothesis.")
+
     hypo_result = await run_in_threadpool(
         search_string_generator.generate_hypothesis_from_pico, pico, question
     )
@@ -1049,9 +1001,28 @@ async def generate_project_hypothesis(
     ]
     secondary_json = json.dumps(secondary_objs)
 
+    # Overwrite protection: if the stored hypothesis was human-edited (differs from
+    # a previously generated one), require explicit confirmation.
+    existing = row["hypothesis"] or ""
+    if existing and existing.strip() and existing.strip() != primary.strip():
+        meta_raw = row["hypothesis_meta_json"] if "hypothesis_meta_json" in row.keys() else None
+        last_generated = ""
+        if meta_raw:
+            try:
+                last_generated = json.loads(meta_raw).get("last_generated", "")
+            except Exception:
+                last_generated = ""
+        if existing.strip() != (last_generated or "").strip() and not request.headers.get("X-Confirm-Overwrite"):
+            raise HTTPException(status_code=409, detail="Hypothesis was manually edited. Re-generate with confirmation to overwrite.")
+
+    meta = {"last_generated": primary, "source": hypo_result.get("generation_source", "template"), "error": hypo_result.get("generation_error", "")}
+    try:
+        conn.execute("ALTER TABLE projects ADD COLUMN hypothesis_meta_json TEXT", ())
+    except Exception:
+        pass  # column already exists
     conn.execute(
-        "UPDATE projects SET hypothesis = ?, secondary_hypotheses_json = ? WHERE project_id = ?",
-        (primary, secondary_json, project_id),
+        "UPDATE projects SET hypothesis = ?, secondary_hypotheses_json = ?, hypothesis_meta_json = ? WHERE project_id = ?",
+        (primary, secondary_json, json.dumps(meta), project_id),
     )
     conn.commit()
 
@@ -1060,6 +1031,8 @@ async def generate_project_hypothesis(
         hypothesis=primary,
         research_question=question,
         secondary_hypotheses=[SecondaryHypothesis(**h) for h in secondary_objs],
+        generation_source=hypo_result.get("generation_source", "template"),
+        generation_error=hypo_result.get("generation_error", ""),
     )
 
 
@@ -1132,26 +1105,6 @@ async def pubmed_fetch_studies(project_id: str,
             )
             existing_pmids.add(pmid)
             imported += 1
-
-        # Persist the import event so the import history shows real backend records
-        conn.execute(
-            """INSERT INTO import_batches
-               (batch_id, project_id, filename, source, format,
-                total_records, imported_count, duplicate_count, merged_count, failed_count,
-                status, created_at, created_by, details_json)
-               VALUES (?, ?, ?, 'PubMed', 'Query', ?, ?, ?, 0, 0, 'completed', ?, ?, ?)""",
-            (
-                str(uuid.uuid4()),
-                project_id,
-                f"PubMed query: {pubmed_query[:120]}",
-                len(results),
-                imported,
-                skipped,
-                datetime.utcnow().strftime("%d %b %Y %H:%M UTC"),
-                user.get("username", "") if user else "",
-                json.dumps({"query": pubmed_query, "mindate": body.mindate, "maxdate": body.maxdate}),
-            ),
-        )
 
         conn.commit()
         from services.search_audit_service import log_search
@@ -1269,26 +1222,6 @@ async def openalex_fetch_studies(
         if title_key:
             existing_titles.add(title_key)
         imported += 1
-
-    # Persist the import event so the import history shows real backend records
-    conn.execute(
-        """INSERT INTO import_batches
-           (batch_id, project_id, filename, source, format,
-            total_records, imported_count, duplicate_count, merged_count, failed_count,
-            status, created_at, created_by, details_json)
-           VALUES (?, ?, ?, 'OpenAlex', 'Query', ?, ?, ?, 0, 0, 'completed', ?, ?, ?)""",
-        (
-            str(uuid.uuid4()),
-            project_id,
-            f"OpenAlex query: {(pubmed_query or strings.get('openalex', ''))[:120]}",
-            len(found["results"]),
-            imported,
-            skipped,
-            datetime.utcnow().strftime("%d %b %Y %H:%M UTC"),
-            user.get("username", "") if user else "",
-            json.dumps({"phrases": phrases, "mindate": body.mindate, "maxdate": body.maxdate}),
-        ),
-    )
     conn.commit()
 
     query_record = " OR ".join(f'"{phrase}"' for phrase in phrases)
@@ -1414,6 +1347,7 @@ async def upload_references(
     project_id: str,
     files: list[UploadFile] = File(...),
     column_mapping: Optional[str] = None,
+    source_database: Optional[str] = Form(None),
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)
 ):
@@ -1442,14 +1376,33 @@ async def upload_references(
     # Collect existing DOIs and titles with their study_id for exact duplicate linking
     existing_doi_map: dict[str, str] = {}
     existing_title_map: dict[str, str] = {}
+    existing_studies_map: dict[str, dict] = {}
     rows = conn.execute(
-        "SELECT study_id, doi, title FROM studies WHERE project_id = ?", (project_id,)
+        "SELECT study_id, doi, title, pmid FROM studies WHERE project_id = ?", (project_id,)
     ).fetchall()
     for r in rows:
-        if r["doi"]:
-            existing_doi_map[r["doi"].lower().strip()] = r["study_id"]
-        if r["title"]:
-            existing_title_map[r["title"].lower().strip()] = r["study_id"]
+        row_dict = dict(r) if not isinstance(r, dict) else r
+        sid = row_dict["study_id"]
+        existing_studies_map[sid] = row_dict
+        if row_dict.get("doi"):
+            existing_doi_map[row_dict["doi"].lower().strip()] = sid
+        if row_dict.get("title"):
+            existing_title_map[row_dict["title"].lower().strip()] = sid
+
+    # Rejected pairs to respect rejection memory during intake
+    rejected_pairs: set[tuple[str, str]] = set()
+    try:
+        nd_rows = conn.execute(
+            "SELECT study_id_a, study_id_b FROM non_duplicates WHERE project_id = ?",
+            (project_id,),
+        ).fetchall()
+        for nd in nd_rows:
+            a = nd["study_id_a"] if isinstance(nd, dict) else nd[0]
+            b = nd["study_id_b"] if isinstance(nd, dict) else nd[1]
+            pair = (min(a, b), max(a, b))
+            rejected_pairs.add(pair)
+    except Exception:
+        pass
 
     total_imported = 0
     total_skipped = 0
@@ -1523,15 +1476,34 @@ async def upload_references(
             if err_msg not in overall_errors:
                 overall_errors.append(err_msg)
 
-        # Detect source truthfully without guessing "Scopus"
-        detected_source = "Unknown"
-        if studies:
-            known_sources = {
-                s.get("source") for s in studies
-                if s.get("source") and s.get("source").lower() not in ("reference upload", "unknown", "")
-            }
-            if len(known_sources) == 1:
-                detected_source = list(known_sources)[0]
+        # Truthful database source detection and user-specified override
+        detected_source = (source_database or "").strip()
+        if not detected_source or detected_source.lower() in ("unknown", "auto-detect", ""):
+            content_sample = content[:10000].upper()
+            fn_upper = filename.upper()
+            if "SCOPUS" in fn_upper or "DB  - SCOPUS" in content_sample or "N1  - EID: 2-S2.0-" in content_sample or "HTTPS://WWW.SCOPUS.COM" in content_sample:
+                detected_source = "Scopus"
+            elif "EMBASE" in fn_upper or "DB  - EMBASE" in content_sample or "HTTPS://WWW.EMBASE.COM" in content_sample or "U2  - L" in content_sample:
+                detected_source = "Embase"
+            elif "WEBOFSCI" in fn_upper or "WEB OF SCIENCE" in fn_upper or "WOS" in fn_upper or "AN  - WOS:" in content_sample or "CLARIVATE" in content_sample:
+                detected_source = "Web of Science"
+            elif "PUBMED" in fn_upper or "MEDLINE" in fn_upper or "PMID" in content_sample:
+                detected_source = "PubMed"
+            elif "COCHRANE" in fn_upper:
+                detected_source = "Cochrane Library"
+            elif "CINAHL" in fn_upper or "EBSCO" in fn_upper:
+                detected_source = "CINAHL"
+            elif studies:
+                known_sources = {
+                    s.get("source") for s in studies
+                    if s.get("source") and s.get("source").lower() not in ("reference upload", "unknown", "")
+                }
+                if len(known_sources) == 1:
+                    detected_source = list(known_sources)[0]
+                else:
+                    detected_source = "Reference upload"
+            else:
+                detected_source = "Reference upload"
 
         file_imported = 0
         file_duplicates = 0
@@ -1541,16 +1513,39 @@ async def upload_references(
         for idx, study_data in enumerate(studies, 1):
             doi = study_data.get("doi", "").lower().strip()
             title = study_data.get("title", "").lower().strip()
+            pmid = str(study_data.get("pmid") or "").lower().strip()
 
             matched_study_id: Optional[str] = None
             match_reason: Optional[str] = None
 
+            # LIMITATION & SAFETY CONFLICT GUARD (dedup_plan §5 / Zoplicate):
+            # Exact mapping is an intake shortcut. To prevent false-positive duplicate
+            # linking, matches are guarded against:
+            # 1. Conflicting PMIDs when DOI matches
+            # 2. Conflicting DOIs when title matches
+            # 3. Numeric differences in titles ("Phase 1" vs "Phase 2")
+            # Invariant preserved: file_total = file_imported + file_duplicates + file_failed.
             if doi and doi in existing_doi_map:
-                matched_study_id = existing_doi_map[doi]
-                match_reason = "doi"
+                candidate_id = existing_doi_map[doi]
+                candidate = existing_studies_map.get(candidate_id, {})
+                c_pmid = str(candidate.get("pmid") or "").lower().strip()
+                if pmid and c_pmid and pmid != c_pmid:
+                    candidate_id = None
+                if candidate_id:
+                    matched_study_id = candidate_id
+                    match_reason = "doi"
             elif title and title in existing_title_map:
-                matched_study_id = existing_title_map[title]
-                match_reason = "title"
+                candidate_id = existing_title_map[title]
+                candidate = existing_studies_map.get(candidate_id, {})
+                c_doi = (candidate.get("doi") or "").lower().strip()
+                c_title = (candidate.get("title") or "").lower().strip()
+                if doi and c_doi and doi != c_doi:
+                    candidate_id = None
+                elif re.findall(r"\d+", title) != re.findall(r"\d+", c_title):
+                    candidate_id = None
+                if candidate_id:
+                    matched_study_id = candidate_id
+                    match_reason = "title"
 
             if matched_study_id:
                 # Duplicate record - link batch contribution as secondary creator
@@ -1610,6 +1605,12 @@ async def upload_references(
                 existing_doi_map[doi] = new_study_id
             if title:
                 existing_title_map[title] = new_study_id
+            existing_studies_map[new_study_id] = {
+                "study_id": new_study_id,
+                "doi": doi,
+                "title": title,
+                "pmid": pmid,
+            }
 
             file_imported += 1
             total_imported += 1
@@ -2364,3 +2365,60 @@ async def delete_keyword_group(
         raise HTTPException(status_code=404, detail="Keyword group not found")
     conn.commit()
     return {"deleted": True, "group_id": group_id}
+
+
+class ProvisionFolderRequest(BaseModel):
+    folder_path: str
+    create_subfolders: bool = True
+
+class ProvisionFolderResponse(BaseModel):
+    status: str
+    folder_path: str
+    exists: bool
+    created_subfolders: list[str]
+    message: str
+
+
+@router.post("/system/provision-storage-folder", response_model=ProvisionFolderResponse)
+def provision_storage_folder(payload: ProvisionFolderRequest):
+    """Ensure a chosen disk folder exists and provision all standard review lifecycle subfolders."""
+    folder_str = (payload.folder_path or "").strip()
+    if not folder_str:
+        raise HTTPException(status_code=400, detail="Folder path must not be empty.")
+
+    p = Path(folder_str).expanduser().resolve()
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Cannot create or access folder '{folder_str}': {e}")
+
+    subdirs = [
+        "_INBOX",
+        "_BACKUPS",
+        "_TEMPLATES",
+        "PROJECTS",
+        "UPLOADS",
+        "EXPORTS",
+        "01_SOURCE",
+        "02_SCREENING",
+        "03_EXTRACTION",
+        "04_ROB",
+        "05_GRADE",
+        "06_META",
+        "07_EXPORTS",
+        "08_AUDIT",
+    ]
+    created = []
+    if payload.create_subfolders:
+        for s in subdirs:
+            sub = p / s
+            sub.mkdir(parents=True, exist_ok=True)
+            created.append(s)
+
+    return ProvisionFolderResponse(
+        status="success",
+        folder_path=str(p),
+        exists=p.exists(),
+        created_subfolders=created,
+        message=f"Storage workspace successfully initialized at {p} with {len(created)} standard lifecycle subfolders."
+    )

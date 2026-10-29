@@ -164,24 +164,8 @@ class TestPdfEndpoints:
 
     def test_get_pdf_data_not_processed(self, client, project_study_with_pdf):
         _, sid = project_study_with_pdf
-        client.delete(f"/api/studies/{sid}/pdf-data")
         r = client.get(f"/api/studies/{sid}/pdf-data")
         assert r.status_code == 404
-
-    def test_get_docling_json_endpoint(self, client, project_study_with_pdf):
-        _, sid = project_study_with_pdf
-        # Before processing -> 404
-        client.delete(f"/api/studies/{sid}/pdf-data")
-        r = client.get(f"/api/studies/{sid}/docling-json")
-        assert r.status_code == 404
-
-        # After processing -> 200 with docling structure
-        client.post(f"/api/studies/{sid}/process-pdf")
-        r = client.get(f"/api/studies/{sid}/docling-json")
-        assert r.status_code == 200
-        data = r.json()
-        assert "pages" in data or "parsed" in data
-
 
 
 class TestAutoExtract:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, BackgroundTasks
+from fastapi.responses import FileResponse
 from typing import Optional
 import sqlite3
 
@@ -73,7 +74,22 @@ async def list_studies(project_id: str, user: Optional[dict] = Depends(get_curre
         "SELECT * FROM studies WHERE project_id = ? ORDER BY created_at DESC",
         (project_id,),
     ).fetchall()
-    return [dict(r) for r in rows]
+    results = []
+    for r in rows:
+        d = dict(r)
+        if not d.get("study_label"):
+            first_author = d.get("authors", "").split(",")[0].split(";")[0].split(" et al")[0].strip() if d.get("authors") else ""
+            year_str = str(d.get("publication_year")) if d.get("publication_year") else ""
+            if first_author and year_str:
+                d["study_label"] = f"{first_author} {year_str}"
+            elif first_author:
+                d["study_label"] = first_author
+            elif d.get("title"):
+                d["study_label"] = d["title"][:30]
+            else:
+                d["study_label"] = d.get("study_id", "Study")[:8]
+        results.append(d)
+    return results
 
 
 @router.post("/projects/{project_id}/studies", response_model=StudyResponse)
@@ -87,15 +103,27 @@ async def create_study(
     if body.project_id != project_id:
         raise HTTPException(status_code=400, detail="project_id mismatch")
     study_id = str(uuid.uuid4())
-    status_val = body.screening_status or "pending"
+    study_label = (body.study_label or "").strip()
+    if not study_label:
+        first_author = body.authors.split(",")[0].split(";")[0].split(" et al")[0].strip() if body.authors else ""
+        year_str = str(body.publication_year) if body.publication_year else ""
+        if first_author and year_str:
+            study_label = f"{first_author} {year_str}"
+        elif first_author:
+            study_label = first_author
+        elif body.title:
+            study_label = body.title[:30]
+        else:
+            study_label = "Study"
+
     conn.execute(
         """INSERT INTO studies
            (study_id, project_id, title, authors, publication_year, journal,
-            doi, pmid, abstract, source, study_design, metadata_json, screening_status)
+            doi, pmid, abstract, source, study_design, metadata_json, study_label)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (study_id, project_id, body.title, body.authors,
          body.publication_year, body.journal, body.doi, body.pmid,
-         body.abstract, body.source, body.study_design, body.metadata_json, status_val),
+         body.abstract, body.source, body.study_design, body.metadata_json, study_label),
     )
     conn.commit()
     return StudyResponse(
@@ -104,7 +132,7 @@ async def create_study(
         journal=body.journal, doi=body.doi, pmid=body.pmid,
         abstract=body.abstract, source=body.source,
         study_design=body.study_design, metadata_json=body.metadata_json,
-        screening_status=status_val,
+        study_label=study_label,
     )
 
 
@@ -118,7 +146,19 @@ async def get_study(study_id: str, user: Optional[dict] = Depends(get_current_us
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Study not found")
-    return dict(row)
+    d = dict(row)
+    if not d.get("study_label"):
+        first_author = d.get("authors", "").split(",")[0].split(";")[0].split(" et al")[0].strip() if d.get("authors") else ""
+        year_str = str(d.get("publication_year")) if d.get("publication_year") else ""
+        if first_author and year_str:
+            d["study_label"] = f"{first_author} {year_str}"
+        elif first_author:
+            d["study_label"] = first_author
+        elif d.get("title"):
+            d["study_label"] = d["title"][:30]
+        else:
+            d["study_label"] = d.get("study_id", "Study")[:8]
+    return d
 
 
 @router.put("/studies/{study_id}", response_model=StudyResponse)
@@ -135,7 +175,7 @@ async def update_study(study_id: str, body: StudyUpdate, user: Optional[dict] = 
     updates = []
     params = []
     for field in ["title", "authors", "publication_year", "journal", "doi",
-                   "pmid", "abstract", "study_design", "screening_status",
+                   "pmid", "abstract", "study_design", "study_label", "screening_status",
                    "screening_reason", "screening_stage", "extraction_status",
                    "pdf_status", "metadata_json"]:
         val = getattr(body, field, None)
@@ -154,63 +194,39 @@ async def update_study(study_id: str, body: StudyUpdate, user: Optional[dict] = 
     row = conn.execute(
         "SELECT * FROM studies WHERE study_id = ?", (study_id,)
     ).fetchone()
-    return dict(row)
+    d = dict(row)
+    if not d.get("study_label"):
+        first_author = d.get("authors", "").split(",")[0].split(";")[0].split(" et al")[0].strip() if d.get("authors") else ""
+        year_str = str(d.get("publication_year")) if d.get("publication_year") else ""
+        if first_author and year_str:
+            d["study_label"] = f"{first_author} {year_str}"
+        elif first_author:
+            d["study_label"] = first_author
+        elif d.get("title"):
+            d["study_label"] = d["title"][:30]
+        else:
+            d["study_label"] = d.get("study_id", "Study")[:8]
+    return d
 
 
 @router.delete("/studies/{study_id}")
 async def delete_study(study_id: str, user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db)):
-    _study = conn.execute("SELECT project_id, pdf_path FROM studies WHERE study_id = ?", (study_id,)).fetchone()
-    if not _study:
-        raise HTTPException(status_code=404, detail="Study not found")
-    project_id = _study["project_id"]
-    pdf_path = _study["pdf_path"]
-    check_project_access(conn, project_id, user)
-
-    # 1. Clean up user state and annotations
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid: check_project_access(conn, _pid["project_id"], user)
     for bookmark in conn.query("user_review_state", {"study_id": study_id, "stage": "bookmark"}):
-        conn.delete("user_review_state", bookmark["state_id"])
+        if not conn.delete("user_review_state", bookmark["state_id"]):
+            raise HTTPException(status_code=503, detail="Study bookmarks could not be removed. Please retry.")
     for table, pk in (("record_annotations", "annotation_id"), ("study_tag_links", "link_id")):
         for row in conn.query(table, {"study_id": study_id}):
-            conn.delete(table, row[pk])
-
-    # 2. Clean up child database records to prevent FK violations and orphaned rows
-    conn.execute("DELETE FROM extractions WHERE study_id = ?", (study_id,))
-    conn.execute("DELETE FROM pdf_documents WHERE study_id = ?", (study_id,))
-    conn.execute("DELETE FROM pdf_highlights WHERE study_id = ?", (study_id,))
-    conn.execute("DELETE FROM audit_log WHERE study_id = ?", (study_id,))
-    conn.execute("DELETE FROM screening_decisions WHERE study_id = ?", (study_id,))
-    conn.execute("DELETE FROM screening_conflicts WHERE study_id = ?", (study_id,))
-    conn.execute("DELETE FROM extraction_decisions WHERE study_id = ?", (study_id,))
-
-    # Clean up RoB assessments & judgments
-    rob_rows = conn.execute("SELECT assessment_id FROM rob_assessments WHERE study_id = ?", (study_id,)).fetchall()
-    for r in rob_rows:
-        aid = r["assessment_id"]
-        conn.execute("DELETE FROM rob_signaling_answers WHERE judgment_id IN (SELECT judgment_id FROM rob_domain_judgments WHERE assessment_id = ?)", (aid,))
-        conn.execute("DELETE FROM rob_domain_judgments WHERE assessment_id = ?", (aid,))
-        conn.execute("DELETE FROM rob_assessments WHERE assessment_id = ?", (aid,))
-
-    # 3. Clean up physical files on storage and local disk
-    if pdf_path:
-        try:
-            storage = get_storage("upload")
-            storage.delete_file(pdf_path)
-        except Exception:
-            pass
-        try:
-            upload_dir = Path(settings.upload_dir)
-            f_pdf = upload_dir / pdf_path
-            f_pdf.unlink(missing_ok=True)
-            f_docling = Path(os.path.splitext(str(f_pdf))[0] + ".docling.json")
-            f_docling.unlink(missing_ok=True)
-        except Exception as e_file:
-            logger.warning(f"Could not remove PDF files for study {study_id}: {e_file}")
-
+            if not conn.delete(table, row[pk]):
+                raise HTTPException(status_code=503, detail="Record collaboration data could not be removed. Please retry.")
     cursor = conn.execute(
         "DELETE FROM studies WHERE study_id = ?", (study_id,)
     )
     conn.commit()
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Study not found")
     return {"deleted": True, "study_id": study_id}
 
 
@@ -232,88 +248,22 @@ async def upload_pdf(
     project_id = row["project_id"]
     check_project_access(conn, project_id, user)
 
-    # 1. Stream validation of upload size (max_upload_mb) before accumulating entire body
-    max_bytes = settings.max_upload_mb * 1024 * 1024
-    total_bytes = 0
-    chunks = []
-    while chunk := await file.read(65536):
-        total_bytes += len(chunk)
-        if total_bytes > max_bytes:
-            raise HTTPException(
-                status_code=413,
-                detail=f"File exceeds maximum upload size of {settings.max_upload_mb} MB"
-            )
-        chunks.append(chunk)
-
-    content = b"".join(chunks)
-
-    # 2. Magic byte check for valid PDF (%PDF)
-    if not content.startswith(b"%PDF"):
-        raise HTTPException(
-            status_code=415,
-            detail="Unsupported Media Type: uploaded file is not a valid PDF (missing %PDF header)"
-        )
-
-    # Save file via Study Data storage manager (01_SOURCE / FirstAuthor-Year-ShortTitle.pdf)
-    from services.storage_manager import save_study_pdf
-    storage_key, abs_path = save_study_pdf(
-        project_id=project_id,
-        study_id=study_id,
-        content=content,
-        author=dict(row).get("authors"),
-        year=dict(row).get("publication_year"),
-        title=dict(row).get("title"),
-        db=conn,
-    )
-    filepath = str(abs_path)
+    # Save file via storage backend
+    storage = get_storage("upload")
+    storage_key = f"{project_id}/{study_id}.pdf"
+    content = await file.read()
+    if len(content) > settings.max_upload_mb * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large")
+    storage.save_bytes(storage_key, content)
+    filepath = storage.get_file_path(storage_key)
 
     conn.execute(
-        "UPDATE studies SET pdf_path = ?, pdf_status = 'uploaded', error_message = '' WHERE study_id = ?",
+        "UPDATE studies SET pdf_path = ?, pdf_status = 'uploaded' WHERE study_id = ?",
         (storage_key, study_id),
     )
     conn.commit()
 
-    # Process PDF into Docling structured JSON for data extraction
-    engine_used = "docling"
-    try:
-        proc_doc = pdf_service.process_pdf(study_id, conn)
-        engine_used = proc_doc.get("processor_engine", "docling")
-        conn.execute(
-            "UPDATE studies SET pdf_status = 'processed', error_message = '', pdf_processor_engine = ? WHERE study_id = ?",
-            (engine_used, study_id),
-        )
-        conn.commit()
-    except Exception as e_proc:
-        logger.error(f"[UploadPDF] Processing failed for study {study_id}: {e_proc}", exc_info=True)
-        pdf_status = f"failed: {str(e_proc)}"
-        error_msg = str(e_proc)
-        conn.execute(
-            "UPDATE studies SET pdf_status = ?, error_message = ? WHERE study_id = ?",
-            (pdf_status, error_msg, study_id),
-        )
-        conn.commit()
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "study_id": study_id,
-                "project_id": project_id,
-                "pdf_path": filepath,
-                "pdf_status": pdf_status,
-                "error_message": error_msg,
-                "processor_engine": "none",
-                "extraction_status": "error",
-                "message": f"PDF upload succeeded but processing failed: {error_msg}",
-            }
-        )
-
-    # Advance extraction status to ready_for_extraction if study was awaiting_pdf or included
-    curr_ext = row["extraction_status"] or ""
-    curr_screen = row["screening_status"] or ""
-    if curr_ext in ("awaiting_pdf", "pending", "") or curr_screen == "included":
-        conn.execute("UPDATE studies SET extraction_status = 'ready_for_extraction' WHERE study_id = ?", (study_id,))
-        conn.commit()
-
-    # Run screening pipeline in background if auto_process is set
+    # Always run Docling conversion + AI screening + Data Review auto-extraction in background
     if auto_process:
         background_tasks.add_task(run_pdf_screening_pipeline, study_id, project_id)
 
@@ -321,425 +271,9 @@ async def upload_pdf(
         "study_id": study_id,
         "project_id": project_id,
         "pdf_path": filepath,
-        "pdf_status": "processed",
-        "processor_engine": engine_used,
-        "extraction_status": "ready_for_extraction",
-        "pipeline_status": "queued_in_background" if auto_process else "ready",
-        "message": "PDF uploaded and Docling JSON generated. Ready for extraction.",
-    }
-
-
-def _normalize_title_words(t: str) -> set[str]:
-    import re
-    clean = re.sub(r"[^a-zA-Z0-9\s]", " ", (t or "").lower())
-    words = clean.split()
-    stops = {"the", "a", "an", "and", "or", "of", "in", "on", "at", "to", "for", "with", "by", "from", "is", "was", "are", "pdf"}
-    return {w for w in words if w not in stops and len(w) > 2}
-
-
-def _titles_match(title1: str, title2: str) -> bool:
-    w1 = _normalize_title_words(title1)
-    w2 = _normalize_title_words(title2)
-    if not w1 or not w2:
-        return False
-    inter = len(w1 & w2)
-    union = len(w1 | w2)
-    return (inter / union) >= 0.60 or (inter / min(len(w1), len(w2))) >= 0.75
-
-
-@router.post("/studies/{study_id}/retrieve-oa-pdf")
-async def retrieve_study_oa_pdf(
-    study_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Automatically retrieve and process open-access PDF/text for a single study."""
-    row = conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone()
-    if not row:
-        raise HTTPException(status_code=404, detail="Study not found")
-    check_project_access(conn, row["project_id"], user)
-    from services.fulltext_retrieval import retrieve_and_process_oa_study
-    res = retrieve_and_process_oa_study(study_id, row["project_id"])
-    updated = conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone()
-    return {"result": res, "study": dict(updated)}
-
-
-@router.post("/projects/{project_id}/studies/retrieve-oa-pdfs")
-async def retrieve_project_oa_pdfs(
-    project_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Batch retrieve open-access PDFs for all included studies in a project currently awaiting full-text."""
-    check_project_access(conn, project_id, user)
-    from services import fulltext_retrieval
-    studies = conn.execute(
-        """SELECT * FROM studies WHERE project_id = ?
-           AND (screening_status = 'included' OR screening_stage = 'ft' OR extraction_status IN ('awaiting_pdf', 'pending'))
-           AND (pdf_path IS NULL OR pdf_path = '')""",
-        (project_id,),
-    ).fetchall()
-    study_list = [dict(s) for s in studies]
-    if not study_list:
-        return {"message": "No studies currently awaiting OA PDF retrieval", "total": 0, "active": False}
-    job = fulltext_retrieval.start_job(project_id, study_list, screen=False)
-    return {"message": f"Started OA PDF retrieval for {len(study_list)} studies", "total": len(study_list), "job": job}
-
-
-@router.get("/projects/{project_id}/studies/retrieve-oa-pdfs/status")
-async def get_project_oa_pdfs_status(
-    project_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Get the status of an ongoing or completed OA retrieval job for a project."""
-    check_project_access(conn, project_id, user)
-    from services import fulltext_retrieval
-    return fulltext_retrieval.get_job(project_id)
-
-
-@router.post("/studies/{study_id}/enrich-ctgov")
-async def enrich_single_study_ctgov(
-    study_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Enrich study with ClinicalTrials.gov API v2 metadata if NCT number is present."""
-    row = conn.execute("SELECT * FROM studies WHERE study_id = ?", (study_id,)).fetchone()
-    if not row:
-        raise HTTPException(status_code=404, detail="Study not found")
-    check_project_access(conn, row["project_id"], user)
-    from services.ctgov_service import enrich_study_with_ctgov
-    enriched = enrich_study_with_ctgov(dict(row))
-    if enriched.get("ct_enriched"):
-        import json
-        meta = {}
-        if row.get("metadata_json"):
-            try:
-                meta = json.loads(row["metadata_json"])
-            except Exception:
-                meta = {}
-        meta["ctgov"] = {
-            "nct_id": enriched.get("nct_id"),
-            "status": enriched.get("ct_status"),
-            "phase": enriched.get("ct_phase"),
-            "design": enriched.get("ct_design"),
-        }
-        conn.execute(
-            "UPDATE studies SET abstract = ?, metadata_json = ? WHERE study_id = ?",
-            (enriched.get("abstract", row["abstract"]), json.dumps(meta), study_id),
-        )
-        conn.commit()
-    return {"study_id": study_id, "enriched": bool(enriched.get("ct_enriched")), "study": enriched}
-
-
-@router.post("/projects/{project_id}/studies/enrich-ctgov")
-async def enrich_project_studies_ctgov(
-    project_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Scan all studies in project and enrich any study with NCT identifier via ClinicalTrials.gov API v2."""
-    check_project_access(conn, project_id, user)
-    from services.ctgov_service import enrich_study_with_ctgov
-    import json
-    rows = conn.execute("SELECT * FROM studies WHERE project_id = ?", (project_id,)).fetchall()
-    enriched_count = 0
-    for r in rows:
-        study_dict = dict(r)
-        enriched = enrich_study_with_ctgov(study_dict)
-        if enriched.get("ct_enriched"):
-            meta = {}
-            if study_dict.get("metadata_json"):
-                try:
-                    meta = json.loads(study_dict["metadata_json"])
-                except Exception:
-                    meta = {}
-            meta["ctgov"] = {
-                "nct_id": enriched.get("nct_id"),
-                "status": enriched.get("ct_status"),
-                "phase": enriched.get("ct_phase"),
-                "design": enriched.get("ct_design"),
-            }
-            conn.execute(
-                "UPDATE studies SET abstract = ?, metadata_json = ? WHERE study_id = ?",
-                (enriched.get("abstract", study_dict["abstract"]), json.dumps(meta), study_dict["study_id"]),
-            )
-            enriched_count += 1
-    if enriched_count > 0:
-        conn.commit()
-    return {"project_id": project_id, "total_studies": len(rows), "enriched_count": enriched_count}
-
-
-@router.post("/projects/{project_id}/studies/upload-included-files")
-async def upload_included_files(
-    project_id: str,
-    background_tasks: BackgroundTasks,
-    files: list[UploadFile] = File(...),
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Universal upload handler for remaining included files.
-
-    Accepts:
-      - PDF files (.pdf)
-      - Zip archives of PDFs (.zip)
-      - Reference manager exports (.ris, .xml, .enw, .bib, .ciw, .nbib)
-
-    Matches files against project studies needing PDFs by Study ID, DOI, PMID, or Title.
-    Converts attached PDFs using IBM Docling into structured JSON, updates pdf_documents,
-    and transitions extraction_status = 'ready_for_extraction'.
-    """
-    import io
-    import re
-    import zipfile
-    import logging
-    from services import reference_parser, pdf_service
-    from services.storage_backend import get_storage
-    from services.fulltext_retrieval import _download_pdf, retrieve_and_process_oa_study
-
-    logger = logging.getLogger("radextract.upload_included")
-    check_project_access(conn, project_id, user)
-
-    included_rows = conn.execute(
-        """SELECT * FROM studies WHERE project_id = ?
-           AND (screening_status = 'included' OR screening_stage = 'ft' OR extraction_status IN ('awaiting_pdf', 'pending'))""",
-        (project_id,),
-    ).fetchall()
-    included_studies = [dict(r) for r in included_rows]
-
-    all_rows = conn.execute("SELECT * FROM studies WHERE project_id = ?", (project_id,)).fetchall()
-    all_studies = [dict(r) for r in all_rows]
-
-    storage = get_storage("upload")
-    matched_results = []
-    unmatched_files = []
-    processed_docling_count = 0
-
-    def match_study_for_pdf(filename: str, pdf_bytes: bytes) -> Optional[dict]:
-        fname_lower = filename.lower()
-        # 1. Match by study_id in filename
-        for s in included_studies:
-            if s["study_id"].lower() in fname_lower:
-                return s
-        # 2. Match by PMID in filename
-        for s in included_studies:
-            pmid = (s.get("pmid") or "").strip()
-            if pmid and pmid in fname_lower:
-                return s
-        # 3. Match by DOI in filename
-        for s in included_studies:
-            doi = (s.get("doi") or "").strip().lower()
-            if doi:
-                doi_slug = re.sub(r"[^\w]", "_", doi)
-                if doi in fname_lower or (len(doi_slug) > 6 and doi_slug in fname_lower):
-                    return s
-        # 4. Match by title similarity
-        for s in included_studies:
-            title = s.get("title") or ""
-            if title and _titles_match(fname_lower, title):
-                return s
-        # Fallback: check among all project studies
-        for s in all_studies:
-            if s["study_id"].lower() in fname_lower or ((s.get("pmid") or "").strip() and (s.get("pmid") or "").strip() in fname_lower):
-                return s
-        return None
-
-    def attach_pdf_to_study(study: dict, pdf_bytes: bytes, source_note: str) -> bool:
-        nonlocal processed_docling_count
-        s_id = study["study_id"]
-        from services.storage_manager import save_study_pdf
-        storage_key, _ = save_study_pdf(
-            project_id=project_id,
-            study_id=s_id,
-            content=pdf_bytes,
-            author=study.get("authors"),
-            year=study.get("publication_year"),
-            title=study.get("title"),
-            db=conn,
-        )
-        conn.execute(
-            "UPDATE studies SET pdf_path = ?, pdf_status = 'uploaded', error_message = '', extraction_status = 'ready_for_extraction' WHERE study_id = ?",
-            (storage_key, s_id),
-        )
-        conn.commit()
-        try:
-            proc_doc = pdf_service.process_pdf(s_id, conn)
-            engine = proc_doc.get("processor_engine", "docling")
-            conn.execute(
-                "UPDATE studies SET pdf_status = 'processed', error_message = '', pdf_processor_engine = ? WHERE study_id = ?",
-                (engine, s_id)
-            )
-            conn.commit()
-            processed_docling_count += 1
-        except Exception as e_proc:
-            err_str = str(e_proc)
-            logger.warning("Docling processing failed for %s: %s", s_id, e_proc)
-            conn.execute(
-                "UPDATE studies SET pdf_status = ?, error_message = ? WHERE study_id = ?",
-                (f"failed: {err_str}", err_str, s_id)
-            )
-            conn.commit()
-        return True
-
-    max_bytes = settings.max_upload_mb * 1024 * 1024
-    for upload_file in files:
-        fname = upload_file.filename or "unknown"
-        ext = os.path.splitext(fname)[1].lower()
-
-        # Stream chunk reading with early size cutoff
-        chunks = []
-        tot = 0
-        while chunk := await upload_file.read(65536):
-            tot += len(chunk)
-            if tot > max_bytes:
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"File {fname} exceeds max upload limit of {settings.max_upload_mb} MB"
-                )
-            chunks.append(chunk)
-        content = b"".join(chunks)
-
-        if ext == ".pdf":
-            if not content.startswith(b"%PDF"):
-                raise HTTPException(
-                    status_code=415,
-                    detail=f"File {fname} is not a valid PDF (missing %PDF header)"
-                )
-            matched = match_study_for_pdf(fname, content)
-            if matched:
-                attach_pdf_to_study(matched, content, f"Direct PDF: {fname}")
-                matched_results.append({
-                    "study_id": matched["study_id"],
-                    "title": matched.get("title", ""),
-                    "file": fname,
-                    "matched_by": "filename/identifier",
-                    "status": "ready_for_extraction",
-                })
-            else:
-                unmatched_files.append(fname)
-
-        elif ext == ".zip":
-            try:
-                with zipfile.ZipFile(io.BytesIO(content)) as z:
-                    for zinfo in z.infolist():
-                        if zinfo.is_dir():
-                            continue
-                        zname = os.path.basename(zinfo.filename)
-                        zext = os.path.splitext(zname)[1].lower()
-                        if zext == ".pdf":
-                            pdf_bytes = z.read(zinfo)
-                            matched = match_study_for_pdf(zname, pdf_bytes)
-                            if matched:
-                                attach_pdf_to_study(matched, pdf_bytes, f"Zip archive: {zname}")
-                                matched_results.append({
-                                    "study_id": matched["study_id"],
-                                    "title": matched.get("title", ""),
-                                    "file": zname,
-                                    "matched_by": "zip_pdf",
-                                    "status": "ready_for_extraction",
-                                })
-                            else:
-                                unmatched_files.append(f"{fname}/{zname}")
-            except Exception as e_zip:
-                logger.warning("Error reading zip %s: %s", fname, e_zip)
-
-        elif ext in (".ris", ".xml", ".enw", ".bib", ".ciw", ".nbib", ".txt"):
-            try:
-                try:
-                    text_content = content.decode("utf-8")
-                except UnicodeDecodeError:
-                    text_content = content.decode("latin-1")
-
-                parse_res = reference_parser.parse_references_detailed(text_content, fname)
-                records = parse_res.get("records", [])
-
-                for rec in records:
-                    rec_doi = (rec.get("doi") or "").strip().lower()
-                    rec_pmid = (rec.get("pmid") or "").strip()
-                    rec_title = (rec.get("title") or "").strip()
-                    rec_pdf_link = (rec.get("pdf_link") or "").strip()
-                    rec_url = (rec.get("url") or "").strip()
-
-                    matched_study = None
-                    for s in included_studies:
-                        s_doi = (s.get("doi") or "").strip().lower()
-                        s_pmid = (s.get("pmid") or "").strip()
-                        s_title = (s.get("title") or "").strip()
-                        if rec_doi and s_doi and rec_doi == s_doi:
-                            matched_study = s
-                            break
-                        if rec_pmid and s_pmid and rec_pmid == s_pmid:
-                            matched_study = s
-                            break
-                        if rec_title and s_title and _titles_match(rec_title, s_title):
-                            matched_study = s
-                            break
-
-                    if matched_study:
-                        s_id = matched_study["study_id"]
-                        pdf_attached = False
-
-                        pdf_candidate_url = (
-                            rec_pdf_link if (rec_pdf_link.startswith("http://") or rec_pdf_link.startswith("https://"))
-                            else (rec_url if rec_url.lower().endswith(".pdf") else "")
-                        )
-                        if pdf_candidate_url:
-                            pdf_bytes = _download_pdf(pdf_candidate_url)
-                            if pdf_bytes:
-                                attach_pdf_to_study(matched_study, pdf_bytes, f"Reference URL: {pdf_candidate_url}")
-                                pdf_attached = True
-
-                        if not pdf_attached and rec_pdf_link:
-                            clean_path = rec_pdf_link.replace("file://", "").strip()
-                            if os.path.exists(clean_path) and os.path.isfile(clean_path):
-                                try:
-                                    with open(clean_path, "rb") as f_local:
-                                        local_bytes = f_local.read()
-                                    if len(local_bytes) >= 1000:
-                                        attach_pdf_to_study(matched_study, local_bytes, f"Local path: {clean_path}")
-                                        pdf_attached = True
-                                except Exception:
-                                    pass
-
-                        updates = {}
-                        if rec_doi and not matched_study.get("doi"):
-                            updates["doi"] = rec.get("doi")
-                        if rec_pmid and not matched_study.get("pmid"):
-                            updates["pmid"] = rec_pmid
-                        if updates:
-                            set_clause = ", ".join(f"{k} = ?" for k in updates.keys())
-                            conn.execute(f"UPDATE studies SET {set_clause} WHERE study_id = ?", (*updates.values(), s_id))
-                            conn.commit()
-                            if not pdf_attached and not matched_study.get("pdf_path"):
-                                background_tasks.add_task(retrieve_and_process_oa_study, s_id, project_id)
-
-                        matched_results.append({
-                            "study_id": s_id,
-                            "title": matched_study.get("title", ""),
-                            "matched_by": "reference_record",
-                            "status": "ready_for_extraction" if pdf_attached else "awaiting_pdf",
-                            "pdf_attached": pdf_attached,
-                        })
-            except Exception as e_ref:
-                logger.warning("Error parsing reference file %s: %s", fname, e_ref)
-
-    still_awaiting_rows = conn.execute(
-        """SELECT study_id, title, doi, pmid, screening_status, extraction_status FROM studies
-           WHERE project_id = ?
-           AND (screening_status = 'included' OR screening_stage = 'ft' OR extraction_status IN ('awaiting_pdf', 'pending'))
-           AND (pdf_path IS NULL OR pdf_path = '')""",
-        (project_id,),
-    ).fetchall()
-
-    return {
-        "project_id": project_id,
-        "total_files": len(files),
-        "matched_studies": matched_results,
-        "unmatched_files": unmatched_files,
-        "processed_with_docling": processed_docling_count,
-        "still_awaiting_pdf_count": len(still_awaiting_rows),
-        "still_awaiting_pdf": [dict(r) for r in still_awaiting_rows],
+        "pdf_status": "uploaded",
+        "pipeline_status": "queued_in_background",
+        "message": "PDF uploaded. Docling IBM conversion, full-text screening, and Data Review extraction running in background.",
     }
 
 
@@ -764,7 +298,6 @@ async def ai_screen_fulltext(
         raise HTTPException(status_code=404, detail="Study not found")
 
     project_id = study["project_id"]
-    check_project_access(conn, project_id, user)
     project = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
     pico = json.loads(project["pico_json"]) if project and project["pico_json"] else {}
 
@@ -810,7 +343,7 @@ async def ai_screen_fulltext(
 
     # Check human decision
     human_row = conn.execute(
-        "SELECT decision FROM screening_decisions WHERE study_id = ? AND reviewer_id NOT IN ('ai_reviewer', 'ai_screener', 'ai') AND stage = 'ft' ORDER BY created_at DESC",
+        "SELECT decision FROM screening_decisions WHERE study_id = ? AND reviewer_id != 'ai_reviewer' AND stage = 'ft' ORDER BY created_at DESC",
         (study_id,),
     ).fetchone()
     human_decision = human_row["decision"] if human_row else None
@@ -819,7 +352,7 @@ async def ai_screen_fulltext(
     if record_decision:
         dec_id = str(uuid.uuid4())
         existing_dec = conn.execute(
-            "SELECT * FROM screening_decisions WHERE study_id = ? AND reviewer_id IN ('ai_reviewer', 'ai_screener') AND stage = 'ft'",
+            "SELECT * FROM screening_decisions WHERE study_id = ? AND reviewer_id = 'ai_reviewer' AND stage = 'ft'",
             (study_id,),
         ).fetchone()
         if existing_dec:
@@ -887,18 +420,24 @@ async def ai_screen_title_abstract(
         raise HTTPException(status_code=404, detail="Study not found")
 
     project_id = study["project_id"]
-    check_project_access(conn, project_id, user)
     project = conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,)).fetchone()
     pico = json.loads(project["pico_json"]) if project and project["pico_json"] else {}
+    if project and project["search_strings_json"]:
+        try:
+            s_dict = json.loads(project["search_strings_json"])
+            if isinstance(s_dict, dict):
+                pico["search_string"] = s_dict.get("pubmed") or s_dict.get("default") or next(iter(s_dict.values()), "")
+            elif isinstance(s_dict, str):
+                pico["search_string"] = s_dict
+        except Exception:
+            pass
 
     # Load signals
     sig_res = generate_signals(project_id, db=conn, force=False)
     signals = sig_res.get("signals", {})
 
-    from services.ctgov_service import enrich_study_with_ctgov
-    enriched_study = enrich_study_with_ctgov(dict(study))
-    title = (enriched_study.get("title") or "").strip()
-    abstract = (enriched_study.get("abstract") or "").strip()
+    title = (study["title"] or "").strip()
+    abstract = (study["abstract"] or "").strip()
     text = f"Title: {title}\nAbstract: {abstract}".strip()
 
     from services.clarification_generator import screen_with_clarification
@@ -932,7 +471,7 @@ async def ai_screen_title_abstract(
 
     # Check human decision
     human_row = conn.execute(
-        "SELECT decision FROM screening_decisions WHERE study_id = ? AND reviewer_id NOT IN ('ai_reviewer', 'ai_screener', 'ai') AND stage = 'ta' ORDER BY created_at DESC",
+        "SELECT decision FROM screening_decisions WHERE study_id = ? AND reviewer_id != 'ai_reviewer' AND stage = 'ta' ORDER BY created_at DESC",
         (study_id,),
     ).fetchone()
     human_decision = human_row["decision"] if human_row else None
@@ -969,7 +508,7 @@ async def ai_screen_title_abstract(
         else:
             dec_id = str(uuid.uuid4())
             existing_dec = conn.execute(
-                "SELECT * FROM screening_decisions WHERE study_id = ? AND reviewer_id IN ('ai_reviewer', 'ai_screener') AND stage = 'ta'",
+                "SELECT * FROM screening_decisions WHERE study_id = ? AND reviewer_id = 'ai_reviewer' AND stage = 'ta'",
                 (study_id,),
             ).fetchone()
             if existing_dec:
@@ -1023,7 +562,6 @@ async def batch_upload_pdf(
     background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     auto_screen: bool = Query(True, description="Also trigger AI full-text screening after Docling JSON conversion"),
-    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Batch upload PDFs for full-text screening with automatic Docling JSON conversion.
@@ -1032,7 +570,6 @@ async def batch_upload_pdf(
     Unmatched PDFs auto-create new study records from PDF metadata (title, authors).
     Queues Docling conversion + AI screening + Data Review auto-extraction in the background.
     """
-    check_project_access(conn, project_id, user)
     import re
     studies = conn.execute(
         "SELECT study_id, title, pmid, doi FROM studies WHERE project_id = ?",
@@ -1046,26 +583,9 @@ async def batch_upload_pdf(
 
     storage = get_storage("upload")
 
-    max_bytes = settings.max_upload_mb * 1024 * 1024
     for file in files:
         fname = file.filename or ""
-        chunks = []
-        tot = 0
-        while chunk := await file.read(65536):
-            tot += len(chunk)
-            if tot > max_bytes:
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"File {fname} exceeds max upload limit of {settings.max_upload_mb} MB"
-                )
-            chunks.append(chunk)
-        content = b"".join(chunks)
-
-        if not content.startswith(b"%PDF"):
-            raise HTTPException(
-                status_code=415,
-                detail=f"File {fname} is not a valid PDF (missing %PDF header)"
-            )
+        content = await file.read()
         target_study = None
 
         # Try PMID match
@@ -1089,16 +609,8 @@ async def batch_upload_pdf(
 
         if target_study:
             sid = target_study["study_id"]
-            from services.storage_manager import save_study_pdf
-            storage_key, _ = save_study_pdf(
-                project_id=project_id,
-                study_id=sid,
-                content=content,
-                author=target_study.get("authors"),
-                year=target_study.get("publication_year"),
-                title=target_study.get("title"),
-                db=conn,
-            )
+            storage_key = f"{project_id}/{sid}.pdf"
+            storage.save_bytes(storage_key, content)
 
             conn.execute(
                 "UPDATE studies SET pdf_path = ?, pdf_status = 'uploaded' WHERE study_id = ?",
@@ -1125,16 +637,8 @@ async def batch_upload_pdf(
                 authors = meta.get("authors", "")
 
                 sid = str(uuid.uuid4())
-                from services.storage_manager import save_study_pdf
-                storage_key, _ = save_study_pdf(
-                    project_id=project_id,
-                    study_id=sid,
-                    content=content,
-                    author=authors,
-                    year=None,
-                    title=title,
-                    db=conn,
-                )
+                storage_key = f"{project_id}/{sid}.pdf"
+                storage.save_bytes(storage_key, content)
 
                 conn.execute(
                     """INSERT INTO studies
@@ -1376,6 +880,33 @@ async def get_pdf_data(
     return data
 
 
+@router.get("/studies/{study_id}/docling-json")
+async def get_docling_json(
+    study_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Download the complete Docling structured JSON for a study."""
+    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
+    if _pid:
+        check_project_access(conn, _pid["project_id"], user)
+
+    # Check if .docling.json exists on disk
+    study = conn.get("studies", study_id)
+    if study and study.get("pdf_path"):
+        pdf_path = resolve_pdf_path(study["pdf_path"])
+        if pdf_path:
+            json_path = f"{os.path.splitext(pdf_path)[0]}.docling.json"
+            if os.path.exists(json_path):
+                return FileResponse(json_path, media_type="application/json", filename=f"{study_id}.docling.json")
+
+    # Fallback to pdf_documents table record
+    data = pdf_service.get_pdf_data(study_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="No processed PDF data. Process the PDF first.")
+    return data
+
+
 @router.get("/studies/{study_id}/pdf-summary")
 async def get_pdf_summary(
     study_id: str,
@@ -1387,23 +918,6 @@ async def get_pdf_summary(
     if _pid:
         check_project_access(conn, _pid["project_id"], user)
     return pdf_service.get_pdf_summary(study_id)
-
-
-@router.get("/studies/{study_id}/docling-json")
-async def get_docling_json(
-    study_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
-    """Get the raw Docling JSON structure for a study's PDF."""
-    _pid = conn.execute("SELECT project_id FROM studies WHERE study_id = ?", (study_id,)).fetchone()
-    if _pid:
-        check_project_access(conn, _pid["project_id"], user)
-    data = pdf_service.get_docling_json(study_id, db=conn)
-    if not data:
-        raise HTTPException(status_code=404, detail="No Docling JSON found for this study. Process the PDF first.")
-    return data
-
 
 
 @router.delete("/studies/{study_id}/pdf-data")

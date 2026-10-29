@@ -1,3 +1,4 @@
+import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ExploratoryScreeningView } from "./ExploratoryScreeningView";
@@ -80,7 +81,7 @@ describe("ExploratoryScreeningView", () => {
   it("renders 6 KPI boxes matching Velvet Editorial standard", () => {
     render(<ExploratoryScreeningView />);
 
-    expect(screen.getByText("TURN / PAPERS")).toBeTruthy();
+    expect(screen.getByText("TOTAL PAPERS")).toBeTruthy();
     expect(screen.getByText("JUDGMENTS")).toBeTruthy();
     expect(screen.getAllByText("INCLUDED").length).toBeGreaterThan(0);
     expect(screen.getAllByText("UNCERTAIN").length).toBeGreaterThan(0);

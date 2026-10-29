@@ -37,8 +37,8 @@ _NON_ALNUM_RE = re.compile(r"\W+")
 try:
     from Levenshtein import ratio as _lev_ratio
 
-    @lru_cache(maxsize=4096)
-    def _title_similarity(a: str, b: str, threshold: float = TITLE_SIMILARITY_THRESHOLD) -> float:
+    @lru_cache(maxsize=2048)
+    def _title_similarity(a: str, b: str) -> float:
         if a == b:
             return 1.0
         la, lb = len(a), len(b)
@@ -48,7 +48,7 @@ try:
         # Fast path: Mathematical upper bound on Levenshtein ratio based on string lengths.
         # Evaluated BEFORE lowercasing to skip string allocations for dissimilar titles.
         min_len = la if la < lb else lb
-        if (2 * min_len) / (la + lb) < threshold:
+        if (2 * min_len) / (la + lb) < TITLE_SIMILARITY_THRESHOLD:
             return 0.0
 
         a_lower, b_lower = a.lower(), b.lower()
@@ -61,15 +61,15 @@ try:
 
         min_len = la if la < lb else lb
         max_ratio = (2 * min_len) / (la + lb)
-        if max_ratio < threshold:
+        if max_ratio < TITLE_SIMILARITY_THRESHOLD:
             return 0.0
 
         return _lev_ratio(a_lower, b_lower)
 except ImportError:
     import difflib
 
-    @lru_cache(maxsize=4096)
-    def _title_similarity(a: str, b: str, threshold: float = TITLE_SIMILARITY_THRESHOLD) -> float:
+    @lru_cache(maxsize=2048)
+    def _title_similarity(a: str, b: str) -> float:
         # Fast path 1: Exact string identity
         if a == b:
             return 1.0
@@ -81,7 +81,7 @@ except ImportError:
         # SequenceMatcher ratio is defined as 2 * M / (la + lb), where M <= min(la, lb).
         # Evaluated BEFORE lowercasing to skip string allocations for dissimilar titles.
         min_len = la if la < lb else lb
-        if (2 * min_len) / (la + lb) < threshold:
+        if (2 * min_len) / (la + lb) < TITLE_SIMILARITY_THRESHOLD:
             return 0.0
 
         a_lower, b_lower = a.lower(), b.lower()
@@ -156,79 +156,6 @@ def _author_overlap(a1: str, a2: str) -> float:
     s1 = _normalize_authors(a1)
     s2 = _normalize_authors(a2)
     return _author_overlap_sets(s1, s2)
-
-
-# Blocking caps: a generic title-phrase bucket shared by an entire PubMed search
-# (e.g. every title starts "Cerebrovascular outcomes and...") must not explode
-# into an O(N^2) cross-product. Blocks larger than this are skipped for the
-# title-word key — those pairs are still covered by the surname/year key.
-MAX_TITLE_BLOCK_SIZE = 30
-
-
-def _first_surname_prefix(authors: str, prefix_len: int = 3) -> str:
-    """First author surname prefix (default 3 chars) for blocking."""
-    if not authors:
-        return ""
-    parts = _AUTHOR_DELIM_RE.split(authors)
-    words = parts[0].strip().split() if parts else []
-    if not words:
-        return ""
-    return words[0].lower()[:prefix_len]
-
-
-def _title_block_key(title: str, words: int = 6) -> str:
-    """First N normalized title words as a blocking key."""
-    parts = _normalize_title(title).split()
-    return " ".join(parts[:words]) if len(parts) >= words else ""
-
-
-def find_candidate_pairs(
-    studies: list[dict],
-    title_threshold: float = TITLE_SIMILARITY_THRESHOLD,
-    author_threshold: float = 0.50,
-) -> set[tuple[int, int]]:
-    """Generate candidate pairs via blocking instead of a full O(N^2) scan.
-
-    Blocking keys (a pair is a candidate if it shares ANY key):
-      - (publication_year // 2, first-author surname prefix)  — corroborated
-      - first 6 normalized title words — capped: generic phrase buckets with
-        more than MAX_TITLE_BLOCK_SIZE studies are skipped (they would
-        otherwise collide every study sharing the search terms)
-
-    Deterministic: same studies -> same candidate set, always.
-    """
-    n = len(studies)
-    candidates: set[tuple[int, int]] = set()
-
-    surname_year: dict[tuple, list[int]] = {}
-    title_words: dict[str, list[int]] = {}
-    for i, s in enumerate(studies):
-        year = s.get("publication_year")
-        surname = _first_surname_prefix(s.get("authors", ""))
-        if surname and year:
-            surname_year.setdefault((year // 2, surname), []).append(i)
-        key = _title_block_key(s.get("title", ""))
-        if key:
-            title_words.setdefault(key, []).append(i)
-
-    # Surname+year blocks are corroborated by two independent fields — keep
-    # the cross-product even for larger blocks.
-    for indices in surname_year.values():
-        for a in range(len(indices)):
-            for b in range(a + 1, len(indices)):
-                candidates.add((indices[a], indices[b]))
-
-    # Title-word blocks: skip oversized generic buckets.
-    for indices in title_words.values():
-        if len(indices) > MAX_TITLE_BLOCK_SIZE:
-            continue
-        for a in range(len(indices)):
-            for b in range(a + 1, len(indices)):
-                candidates.add((indices[a], indices[b]))
-
-    return candidates
-
-
 
 
 def _get_human_decided_ids(db: DBBackend, project_id: str) -> set[str]:
@@ -533,8 +460,7 @@ def _load_groups(db: DBBackend, project_id: str, status: Optional[str] = None) -
     return groups
 
 
-def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DBBackend] = None,
-                        title_threshold: float = 0.90, author_threshold: float = 0.50) -> dict:
+def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DBBackend] = None) -> dict:
     """Detect and optionally mark duplicate studies using the Zoplicate-style
     tiered cascade (T0 identifiers, T1 exact title+author+year, T2 fuzzy
     title+corroboration).
@@ -573,9 +499,7 @@ def deduplicate_studies(project_id: str, auto_mark: bool = True, db: Optional[DB
 
     # ── Cascading candidate generation (Zoplicate DuplicateFinder port) ──
     active_studies = [s for s in studies if not s.get("is_duplicate")]
-    pairs = duplicate_finder.find_candidate_pairs(active_studies, human_decided_ids, non_dup_pairs,
-                                                  title_threshold=title_threshold, author_threshold=author_threshold,
-                                                  title_similarity=lambda a, b: _title_similarity(a, b, title_threshold))
+    pairs = duplicate_finder.find_candidate_pairs(active_studies, human_decided_ids, non_dup_pairs)
     auto_groups, oversize_pairs = duplicate_finder.build_merge_groups(
         active_studies, pairs, non_dup_pairs)
 
@@ -1054,6 +978,27 @@ def _build_plan_items(db: DBBackend, project_id: str, master_strategy: str = "mo
     studies_by_id = {s["study_id"]: s for s in studies_rows}
     human_decided_ids = _get_human_decided_ids(db, project_id)
     groups = _load_groups(db, project_id, status="pending")
+    # If no pending groups exist in dedup_groups, check all groups that have candidate duplicates
+    # or dynamically generate candidates if dedup table is empty
+    if not groups:
+        all_groups = _load_groups(db, project_id)
+        # Check if there are groups with candidate duplicates that haven't had their duplicates marked
+        unresolved = []
+        for g in all_groups:
+            # Check if any member other than master is still not marked as duplicate
+            unmarked_members = [
+                sid for sid in g["members"]
+                if sid != g.get("master_study_id") and studies_by_id.get(sid) and not studies_by_id[sid].get("is_duplicate")
+            ]
+            if len(unmarked_members) > 0:
+                unresolved.append(g)
+        
+        if unresolved:
+            groups = unresolved
+        else:
+            # If no groups in DB at all, run deduplicate_studies to find them
+            dedup_run = deduplicate_studies(project_id, auto_mark=False, db=db)
+            groups = _load_groups(db, project_id, status="pending")
     active_studies = [s for s in studies_rows if not s.get("is_duplicate")]
     rejected = _load_non_duplicate_pairs(db, project_id)
     fingerprints = _load_non_duplicate_fingerprints(db, project_id)
@@ -1408,7 +1353,7 @@ def resolve_duplicate_decision(
     db: Optional[DBBackend] = None,
 ) -> dict:
     """Resolve duplicate review decision for a pair or group of studies.
-
+    
     Actions:
       - 'keep_primary': Marks duplicate_study_id as duplicate (is_duplicate=1, excluded)
                         and ensures primary_study_id is not marked as duplicate (is_duplicate=0).
@@ -1417,7 +1362,7 @@ def resolve_duplicate_decision(
       - 'merge_metadata': Keeps primary_study_id, applies non-empty/chosen fields from duplicate
                           (or merged_fields payload) to primary, and marks duplicate_study_id as duplicate.
       - 'revert_duplicate': Alias for keep_both (reversible duplicate marking).
-
+    
     Every action writes a dedup_audit row (dedup_plan §3.4).
     """
     db = db or get_db_backend()
@@ -1503,7 +1448,7 @@ def resolve_duplicate_decision(
         # Merge fields from duplicate or custom payload into primary study
         updates: dict = {}
         fields_to_check = ["doi", "pmid", "abstract", "authors", "publication_year", "journal", "study_design"]
-
+        
         if merged_fields and isinstance(merged_fields, dict):
             for f in fields_to_check:
                 if f in merged_fields and merged_fields[f] not in (None, ""):
@@ -1549,3 +1494,115 @@ def resolve_duplicate_decision(
 
     else:
         raise ValueError(f"Unknown resolution action: {action}")
+
+
+def merge_all_groups_metadata(
+    project_id: str,
+    master_strategy: str = "most_complete",
+    db: Optional[DBBackend] = None,
+    actor: str = "user",
+) -> dict:
+    """Merge metadata across ALL pending duplicate groups for all studies in the project.
+    
+    For every candidate duplicate group:
+      - Selects the canonical/master study using master_strategy (default 'most_complete').
+      - Adopts and merges all non-empty / richer metadata fields (DOI, PMID, abstract,
+        authors, year, journal, study_design) from duplicates into the primary study.
+      - Reversibly marks duplicates (is_duplicate=1, duplicate_of_study_id=primary_id).
+      - Records individual dedup_audit log rows for complete traceability and PRISMA compliance.
+    """
+    db = db or get_db_backend()
+    studies_rows = db.query("studies", {"project_id": project_id})
+    studies_by_id = {s["study_id"]: s for s in studies_rows}
+    groups = _load_groups(db, project_id, status="pending")
+    # If no pending groups exist in dedup_groups, check all groups that have candidate duplicates
+    # or dynamically generate candidates if dedup table is empty
+    if not groups:
+        all_groups = _load_groups(db, project_id)
+        # Check if there are groups with candidate duplicates that haven't had their duplicates marked
+        unresolved = []
+        for g in all_groups:
+            # Check if any member other than master is still not marked as duplicate
+            unmarked_members = [
+                sid for sid in g["members"]
+                if sid != g.get("master_study_id") and studies_by_id.get(sid) and not studies_by_id[sid].get("is_duplicate")
+            ]
+            if len(unmarked_members) > 0:
+                unresolved.append(g)
+        
+        if unresolved:
+            groups = unresolved
+        else:
+            # If no groups in DB at all, run deduplicate_studies to find them
+            dedup_run = deduplicate_studies(project_id, auto_mark=False, db=db)
+            groups = _load_groups(db, project_id, status="pending")
+
+    # If no pending groups exist, check for groups with unmarked duplicate members
+    # or dynamically generate candidate groups if dedup table is empty
+    if not groups:
+        all_groups = _load_groups(db, project_id)
+        unresolved = []
+        for g in all_groups:
+            unmarked_members = [
+                sid for sid in g.get("members", [])
+                if sid != g.get("master_study_id") and studies_by_id.get(sid) and not studies_by_id[sid].get("is_duplicate")
+            ]
+            if len(unmarked_members) > 0:
+                unresolved.append(g)
+
+        if unresolved:
+            groups = unresolved
+        else:
+            deduplicate_studies(project_id, auto_mark=False, db=db)
+            groups = _load_groups(db, project_id, status="pending")
+            studies_rows = db.query("studies", {"project_id": project_id})
+            studies_by_id = {s["study_id"]: s for s in studies_rows}
+
+    merged_groups_count = 0
+    total_duplicates_merged = 0
+    all_updated_fields: dict[str, list[str]] = {}
+
+    for g in groups:
+        member_ids = [sid for sid in g["members"] if sid in studies_by_id]
+        if len(member_ids) < 2:
+            continue
+        members = [studies_by_id[sid] for sid in member_ids]
+        master = _select_master(members, master_strategy)
+        master_id = master["study_id"]
+        group_id = g["group_id"]
+
+        for dup in members:
+            dup_id = dup["study_id"]
+            if dup_id == master_id:
+                continue
+            res = resolve_duplicate_decision(
+                project_id=project_id,
+                action="merge_metadata",
+                primary_study_id=master_id,
+                duplicate_study_id=dup_id,
+                group_id=group_id,
+                db=db,
+            )
+            total_duplicates_merged += 1
+            if res.get("updated_fields"):
+                all_updated_fields[master_id] = res["updated_fields"]
+
+        db.update("dedup_groups", group_id, {
+            "status": "accepted",
+            "master_study_id": master_id,
+            "decided_by": actor,
+            "decided_at": datetime.utcnow().isoformat(),
+        })
+        merged_groups_count += 1
+
+    db.commit()
+    return {
+        "status": "success",
+        "action": "merge_all_metadata",
+        "project_id": project_id,
+        "merged_groups_count": merged_groups_count,
+        "total_duplicates_merged": total_duplicates_merged,
+        "updated_studies": all_updated_fields,
+        "message": f"Successfully merged metadata across all {merged_groups_count} duplicate groups ({total_duplicates_merged} duplicate records processed).",
+    }
+

@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 from config import settings
 from services.json_utils import parse_json_from_text
 from services.tool_calling_client import ToolCallingClient
-from services.laya_screener import jev_gate
+from services.jev_screener import jev_gate
 
 logger = logging.getLogger("aide_extractor")
 
@@ -246,9 +246,12 @@ def _jev_args_title(a: Dict[str, Any]):
 
 
 def _jev_args_abstract(a: Dict[str, Any]):
+    pico = a.get("pico_criteria") or {}
+    search_str = a.get("search_string") or (pico.get("search_string") if isinstance(pico, dict) else "")
     return "abstract", {
         "title": a.get("title"), "abstract": a.get("abstract"),
-        "pico": a.get("pico_criteria"), "exclusion_reasons": a.get("exclusion_reasons"),
+        "pico": pico, "exclusion_reasons": a.get("exclusion_reasons"),
+        "search_string": search_str,
     }
 
 
@@ -272,6 +275,7 @@ def screen_fulltext_with_llm(
     api_url: Optional[str] = None,
     api_key: Optional[str] = None,
     client: Optional[ToolCallingClient] = None,
+    framing: Optional[str] = None,
     # Backward-compat aliases for callers that use different param names
     text: Optional[str] = None,
     pico: Optional[Dict[str, Any]] = None,
@@ -301,10 +305,17 @@ def screen_fulltext_with_llm(
 
     eligibility = _eligibility_block(pico_criteria, exclusion_reasons)
 
+    framing_note = ""
+    if framing == "include_focused":
+        framing_note = "\n\nPass Focus: Include-focused. Evaluate each PICO element. Is this study possibly eligible? Favor inclusion or uncertain if in doubt."
+    elif framing == "exclude_focused":
+        framing_note = "\n\nPass Focus: Exclude-focused. For each exclusion criterion, is it clearly met? Only exclude if an exclusion criterion is definitively met."
+
     prompt = f"""{eligibility}
 
 Study Full Text:
 {study_text[:20000]}
+{framing_note}
 
 Determine if this study should be INCLUDED or EXCLUDED based on the PICO framework and exclusion criteria.
 Return JSON:
@@ -366,6 +377,7 @@ def screen_title_only_with_llm(
     api_url: Optional[str] = None,
     api_key: Optional[str] = None,
     client: Optional[ToolCallingClient] = None,
+    framing: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Runs AI title-only screening against PICO eligibility criteria.
 
@@ -388,9 +400,16 @@ def screen_title_only_with_llm(
 
     eligibility = _eligibility_block(pico_criteria, exclusion_reasons)
 
+    framing_note = ""
+    if framing == "include_focused":
+        framing_note = "\nPass Focus: Include-focused. Evaluate each PICO element. Is this study possibly eligible? Favor inclusion or uncertain if in doubt."
+    elif framing == "exclude_focused":
+        framing_note = "\nPass Focus: Exclude-focused. For each exclusion criterion, is it clearly met? Only exclude if an exclusion criterion is definitively met."
+
     prompt = f"""{eligibility}
 
 Study Title: {title}
+{framing_note}
 
 Based on the TITLE ONLY, determine if this study should be:
 - "include": Title clearly matches the eligibility criteria, including an eligible case report
@@ -465,6 +484,8 @@ def screen_title_abstract_with_llm(
     api_url: Optional[str] = None,
     api_key: Optional[str] = None,
     client: Optional[ToolCallingClient] = None,
+    search_string: Optional[str] = None,
+    framing: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Run AI title/abstract screening against PICO eligibility criteria.
 
@@ -493,10 +514,17 @@ def screen_title_abstract_with_llm(
 
     eligibility = _eligibility_block(pico_criteria, exclusion_reasons)
 
+    framing_note = ""
+    if framing == "include_focused":
+        framing_note = "\nPass Focus: Include-focused. Evaluate each PICO element. Is this study possibly eligible? Favor inclusion or uncertain if in doubt."
+    elif framing == "exclude_focused":
+        framing_note = "\nPass Focus: Exclude-focused. For each exclusion criterion, is it clearly met? Only exclude if an exclusion criterion is definitively met."
+
     prompt = f"""{eligibility}
 
 Study Title: {title}
 Study Abstract: {abstract}
+{framing_note}
 
 Evaluate this study's eligibility based on title AND abstract.
 Also identify keywords relevant to inclusion or exclusion.

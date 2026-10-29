@@ -49,7 +49,7 @@ export default function App() {
         <Route path="/projects/:projectId/studies/new" element={<StudyImport />} />
         <Route path="/projects/:projectId/studies/:studyId/pdf" element={<PdfViewerPage />} />
         <Route path="/projects/:projectId/studies/:studyId/sheet" element={<ExtractionSheetPage />} />
-        <Route path="/projects/:projectId/extraction" element={<PdfViewerPage />} />
+        <Route path="/projects/:projectId/extraction" element={<ExtractionSheetPage />} />
         <Route path="/projects/:projectId/extraction/:studyId" element={<PdfViewerPage />} />
         <Route path="/projects/:projectId/extraction-sheet" element={<ExtractionSheetPage />} />
         <Route path="/projects/:projectId/extraction-sheet/:studyId" element={<ExtractionSheetPage />} />

@@ -130,19 +130,17 @@ def verify_statistical_consistencies(text: str) -> List[Dict[str, Any]]:
     items = []
     # Match patterns like HR, 0.76; 95% CI, 0.63-0.92 or OR 1.25 (95% CI 1.05 to 1.50)
     pattern = re.compile(
-        r"(hazard\s+ratio|odds\s+ratio|relative\s+risk|HR|OR|RR)[,\s:]+([0-9\.]+)[;\s,]+(?:(?:95%\s*CI|\(95%\s*CI\))[,\s:]+)?([0-9\.]+)\s*(?:-|–|—|to)\s*([0-9\.]+)\)?(?:[;\s,]+[pP]\s*([<=><]\s*[0-9\.]+))?",
+        r"(HR|OR|RR)[,\s:]+([0-9\.]+)[;\s,]+95%\s*CI[,\s:]+([0-9\.]+)\s*(?:-|ΓÇô|to)\s*([0-9\.]+)(?:[;\s,]+[pP]\s*([<=><]\s*[0-9\.]+))?",
         re.IGNORECASE
     )
     matches = list(pattern.finditer(text))
     
     for m in matches:
-        raw_type = m.group(1).upper()
-        metric_type = "HR" if "HAZARD" in raw_type or raw_type == "HR" else "OR" if "ODDS" in raw_type or raw_type == "OR" else "RR"
+        metric_type = m.group(1).upper()
         estimate = float(m.group(2))
         ci_lower = float(m.group(3))
         ci_upper = float(m.group(4))
         p_val_str = m.group(5)
-
 
         # Implied standard error and z-score check:
         # ln(estimate) - ln(ci_lower) ~ 1.96 * SE
@@ -351,25 +349,6 @@ def detect_study_gates(text: str) -> List[Dict[str, Any]]:
     ]
 
 
-def _check_applies(check_id: str, gates_dict: Dict[str, bool]) -> bool:
-    """Determine whether a check spec applies given the study gates."""
-    if check_id in ("species_strain", "animal_sex", "animal_age", "animal_source", "housing", "humane_endpoints", "analgesia", "euthanasia"):
-        return gates_dict.get("animals", False)
-    if check_id in ("cell_source", "cell_authentication", "mycoplasma"):
-        return gates_dict.get("cells", False)
-    if check_id in ("consent", "human_participants"):
-        return gates_dict.get("humans", False)
-    if check_id in ("trial_registration", "allocation_concealment", "adverse_events"):
-        return gates_dict.get("trial", False)
-    if check_id in ("antibody_ids",):
-        return gates_dict.get("antibodies", False)
-    if check_id in ("holdout", "leakage", "baseline", "external_validation"):
-        return gates_dict.get("ml", False)
-    if check_id in ("omics_accession", "fdr", "batch_effects"):
-        return gates_dict.get("omics", False)
-    return True
-
-
 def run_full_rigor_scan(
     text: str,
     paper_title: str = "Manuscript Analysis",
@@ -406,63 +385,52 @@ def run_full_rigor_scan(
                     "page": 1,
                 })
 
-    # Keyword matching candidate search map
-    keywords_map = {
-        "hypothesis": ["hypothes", "research question", "aim of this study", "we asked whether"],
-        "primary_outcome": ["primary outcome", "primary endpoint", "time to recurrence", "metastasis"],
-        "control_group": ["control", "vehicle", "sham", "compared with", "versus", "vs."],
-        "n_per_group": ["per condition", "per group", "mice per", "n =", "n="],
-        "sample_size_rationale": ["power calculation", "sample size was determined", "g*power", "sample size calculation", "riley"],
-        "randomization": ["randomly", "randomized", "random allocation", "random assign"],
-        "blinding": ["blinded", "blinding", "masked", "independent observer"],
-        "inclusion_exclusion": ["inclusion criteria", "exclusion criteria", "were excluded", "criteria"],
-        "data_statement": ["data availability", "data will be made available", "zenodo", "repository", "deposited"],
-        "data_repository": ["zenodo", "figshare", "dryad", "osf.io", "github.com"],
-        "ethics_approval": ["ethics committee", "institutional animal care", "iacuc", "institutional review board", "irb", "approved by"],
-        "competing_interests": ["competing interest", "conflict of interest", "declare no", "financial interest"],
-        "limitations": ["limitation", "limitations of our study", "caution", "caveat"],
-        "causal_overreach": ["proves that", "undeniably caused", "unequivocally proves", "direct proof"],
-        "overgeneralization": ["in all cancer", "in humans", "universally", "cure for cancer"],
-    }
+    all_checks: List[Dict[str, Any]] = []
 
-    # Pre-collect questions for batched Laya System-1 evaluation (sub-second response)
-    laya_answers = {}
-    try:
-        from services import laya_client
-        candidate_q = {}
-        for spec in specs[:30]:
-            cid = spec.get("id")
-            if cid and _check_applies(cid, gates_dict):
-                candidate_q[cid] = {
-                    "type": "choice",
-                    "criteria": {
-                        "reported": f"criterion {spec.get('label', cid)} is explicitly described and reported",
-                        "missing": f"criterion {spec.get('label', cid)} is missing or absent"
-                    },
-                    "instructions": spec.get("question", f"Is {spec.get('label', cid)} reported?")
-                }
-        if candidate_q:
-            laya_state = {
-                "paper": {
-                    "title": paper_title,
-                    "abstract": text[:3500],
-                }
-            }
-            laya_answers, eng = laya_client.ask_with_engine(laya_state, candidate_q)
-            engine_used = eng
-    except Exception as e:
-        logger.debug("Batched Laya inference fallback to grounded sentences: %s", e)
-
-    all_checks = []
+    # Map applicable checks based on gates
     for spec in specs:
         check_id = spec["id"]
-        label = spec.get("label", check_id)
-        question = spec.get("question", label)
-        domain = spec.get("domain", "design")
-        guideline = spec.get("guideline", "")
+        domain = spec["domain"]
+        label = spec["label"]
+        question = spec["question"]
+        guideline = spec.get("guideline")
         polarity = spec.get("polarity", "good")
 
-        applies = _check_applies(check_id, gates_dict)
+        # Determine if check applies to this study type
+        applies = True
+        if check_id in ("species_strain", "animal_sex", "animal_age", "animal_source", "housing", "humane_endpoints", "analgesia", "euthanasia"):
+            applies = gates_dict.get("animals", False)
+        elif check_id in ("cell_source", "cell_authentication", "mycoplasma"):
+            applies = gates_dict.get("cells", False)
+        elif check_id in ("consent", "human_participants"):
+            applies = gates_dict.get("humans", False)
+        elif check_id in ("trial_registration", "allocation_concealment", "adverse_events"):
+            applies = gates_dict.get("trial", False)
+        elif check_id in ("antibody_ids",):
+            applies = gates_dict.get("antibodies", False)
+        elif check_id in ("holdout", "leakage", "baseline", "external_validation"):
+            applies = gates_dict.get("ml", False)
+        elif check_id in ("omics_accession", "fdr", "batch_effects"):
+            applies = gates_dict.get("omics", False)
+
+        # Keyword matching candidate search
+        keywords_map = {
+            "hypothesis": ["hypothes", "research question", "aim of this study", "we asked whether"],
+            "primary_outcome": ["primary outcome", "primary endpoint", "time to recurrence", "metastasis"],
+            "control_group": ["control", "vehicle", "sham", "compared with", "versus", "vs."],
+            "n_per_group": ["per condition", "per group", "mice per", "n =", "n="],
+            "sample_size_rationale": ["power calculation", "sample size was determined", "g*power", "sample size calculation", "riley"],
+            "randomization": ["randomly", "randomized", "random allocation", "random assign"],
+            "blinding": ["blinded", "blinding", "masked", "independent observer"],
+            "inclusion_exclusion": ["inclusion criteria", "exclusion criteria", "were excluded", "criteria"],
+            "data_statement": ["data availability", "data will be made available", "zenodo", "repository", "deposited"],
+            "data_repository": ["zenodo", "figshare", "dryad", "osf.io", "github.com"],
+            "ethics_approval": ["ethics committee", "institutional animal care", "iacuc", "institutional review board", "irb", "approved by"],
+            "competing_interests": ["competing interest", "conflict of interest", "declare no", "financial interest"],
+            "limitations": ["limitation", "limitations of our study", "caution", "caveat"],
+            "causal_overreach": ["proves that", "undeniably caused", "unequivocally proves", "direct proof"],
+            "overgeneralization": ["in all cancer", "in humans", "universally", "cure for cancer"],
+        }
 
         # Check evidence search
         ev_sentence = None
@@ -505,21 +473,45 @@ def run_full_rigor_scan(
                 status = "Not seen"
                 ev_p = 0.95
 
-        # Refine with batched Laya result if evaluated
-        if check_id in laya_answers:
-            rep_p = laya_answers[check_id]["probabilities"].get("reported", 0.5)
-            ev_p = round(rep_p, 2)
-            if ev_p >= 0.70:
-                outcome = "good"
-                status = "Reported"
-            elif ev_p >= 0.40:
-                outcome = "mid"
-                status = "Unclear"
-            else:
-                outcome = "bad"
-                status = "Missing"
+        # Check with TypeSafe Jev API (primary) or Local Laya System-1 (backup)
+        if matching_sents and applies:
+            try:
+                from services import jev_client
+                candidate_text = matching_sents[0]["text"]
+                laya_state = {
+                    "claim": f"{label}: {question}",
+                    "paper": {
+                        "title": paper_title,
+                        "abstract": candidate_text,
+                    }
+                }
+                laya_q = {
+                    check_id: {
+                        "type": "choice",
+                        "criteria": {
+                            "reported": f"criterion {label} is explicitly described and reported",
+                            "missing": f"criterion {label} is missing or absent"
+                        },
+                        "instructions": question
+                    }
+                }
+                ans, eng = jev_client.ask_with_engine(laya_state, laya_q)
+                engine_used = eng
+                if check_id in ans:
+                    rep_p = ans[check_id]["probabilities"].get("reported", 0.5)
+                    ev_p = round(rep_p, 2)
+                    if ev_p >= 0.70:
+                        outcome = "good"
+                        status = "Reported"
+                    elif ev_p >= 0.40:
+                        outcome = "mid"
+                        status = "Unclear"
+                    else:
+                        outcome = "bad"
+                        status = "Missing"
+            except Exception as e:
+                logger.debug("Jev/Laya check on %s skipped: %s", check_id, e)
 
-        ev_pct = int(round(ev_p * 100)) if ev_p <= 1.0 else int(round(ev_p))
 
         all_checks.append({
             "id": check_id,
@@ -529,24 +521,12 @@ def run_full_rigor_scan(
             "guideline": guideline,
             "polarity": polarity,
             "applies": applies,
-            "p": round(ev_p if ev_p <= 1.0 else ev_p / 100.0, 3),
-            "evidence": ev_pct,
+            "p": ev_p,
+            "evidence": ev_p,
             "outcome": outcome,
             "status": status,
             "ev": ev_sentence,
-            "quote": ev_sentence["text"] if ev_sentence else "",
-            "location": f"{ev_sentence['section']} · page {ev_sentence['page']}" if ev_sentence else "Page 1",
-            "page": ev_sentence["page"] if ev_sentence else 1,
-            "highlights": [
-                {
-                    "left": 10.0,
-                    "top": 35.0,
-                    "width": 80.0,
-                    "height": 5.0
-                }
-            ] if ev_sentence else []
         })
-
 
     # Domain score calculation (average across applicable checks)
     domain_labels = {
@@ -651,7 +631,6 @@ def run_full_rigor_scan(
                 "title": paper_title,
                 "doi": doi,
                 "pages": page_count,
-                "pages_text": page_texts,
             },
             "checks": all_checks,
             "index": overall_index,

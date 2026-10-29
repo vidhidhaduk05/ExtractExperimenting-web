@@ -75,7 +75,6 @@ TABLE_PK = {
     "dedup_audit": "audit_id",
     "dedup_merge_plans": "plan_id",
     "dedup_merge_runs": "run_id",
-    "todos": "id",
 }
 
 # Tables that have project_id for GSI
@@ -85,7 +84,7 @@ PROJECT_GSI_TABLES = {
     "grade_assessments", "screening_decisions", "screening_conflicts",
     "pdf_highlights", "project_members", "user_review_state",
     "rob_tool_classifications", "reporting_profile_assessments",
-    "extraction_decisions", "todos",
+    "extraction_decisions",
 }
 
 # Tables that have study_id for GSI
@@ -95,7 +94,7 @@ STUDY_GSI_TABLES = {
     "screening_decisions", "screening_conflicts", "pdf_highlights",
     "user_review_state",
     "rob_tool_classifications", "reporting_profile_assessments",
-    "extraction_decisions", "todos",
+    "extraction_decisions",
 }
 
 
@@ -586,6 +585,9 @@ def get_db_backend() -> DBBackend:
             endpoint_url=settings.aws_endpoint_url,
             region=settings.aws_region,
         )
+    elif settings.db_backend == 'postgres':
+        from services.postgres_backend import PostgresBackend
+        return PostgresBackend(settings.database_url)
     else:
         from database import get_connection
         return SQLiteBackend(get_connection())

@@ -38,33 +38,6 @@ class SignalingQuestion:
     # For conditional questions: parent key + trigger answers that make this Q active
     parent_key: Optional[str] = None
     trigger_answers: Optional[list] = None  # show this Q only if parent answer is in this list
-    polarity: str = "positive"  # "positive": yes=unbiased/low risk; "negative": yes=biased/high risk
-
-
-# Negative polarity signaling questions: where 'yes'/'probably_yes' indicates risk of bias/problem
-# and 'no'/'probably_no' indicates absence of bias / favorable outcome.
-ROB2_NEGATIVE_POLARITY_QUESTIONS = {
-    "sq_1_3",  # baseline differences suggest problem
-    "sq_2_1",  # participants aware
-    "sq_2_2",  # carers/personnel aware
-    "sq_2_4",  # analysis estimates likely biased by deviations
-    "sq_3_4",  # missingness depend on true outcome value
-    "sq_3_5",  # proportion missing enough to induce bias
-    "sq_4_2",  # measurement differed between groups
-    "sq_4_3",  # outcome assessors aware
-    "sq_4_4",  # awareness influenced assessment
-    "sq_5_1",  # data selected from multiple measurements/analyses
-    "sq_5_2",  # data selected from multiple eligible measurements
-    "sq_5_3",  # data selected from multiple eligible analyses
-}
-
-ROBINS_I_NEGATIVE_POLARITY_QUESTIONS = {
-    "sq_2_1", "sq_2_2", "sq_2_3", "sq_2_4",  # selection based on post-intervention characteristics
-    "sq_3_3",  # classification affected by outcome knowledge
-    "sq_4_1", "sq_4_2", "sq_4_3", "sq_4_4",  # deviations beyond usual practice
-    "sq_6_1", "sq_6_2",  # outcome measure/assessment influenced by intervention knowledge
-    "sq_7_1", "sq_7_2", "sq_7_3",  # selection of reported result
-}
 
 
 @dataclass
@@ -679,7 +652,7 @@ def select_rob_tool_with_alternatives(study_design: str) -> tuple[str, float, li
 
 # ── Judgment algorithms ──
 
-def compute_quadas2_domain_judgment(answers: dict[str, str], domain_key: Optional[str] = None) -> str:
+def compute_quadas2_domain_judgment(answers: dict[str, str]) -> str:
     """Compute QUADAS-2 domain risk-of-bias judgment from signaling question answers.
 
     Algorithm (per Whiting et al 2011):
@@ -701,115 +674,178 @@ def compute_quadas2_domain_judgment(answers: dict[str, str], domain_key: Optiona
 
 
 def compute_robins_i_domain_judgment(answers: dict[str, str], domain_key: Optional[str] = None) -> str:
-    """Compute ROBINS-I domain risk-of-bias judgment from signaling question answers.
+    """Compute ROBINS-I domain risk-of-bias judgment from signaling question answers per Sterne et al 2016.
 
-    Algorithm (per Sterne et al 2016):
-      - SQs are evaluated according to polarity (positive vs negative).
-      - All relevant SQs favorable → "low"
-      - 1 unfavorable answer → "moderate"
-      - 2 or more unfavorable answers → "serious"
-      - "no_information" on key questions without unfavorable answers → "no_information"
-      - "no_information" with unfavorable answers → "serious"
+    Polarity considerations:
+      - Harm questions (Yes = problem/bias):
+          D1 sq_1_1 (potential for confounding)
+          D2 sq_2_1 (selection based on post-intervention characteristics), sq_2_2, sq_2_3, sq_2_4
+          D3 sq_3_3 (classification affected by outcome knowledge)
+          D4 sq_4_1 (deviations from intended intervention), sq_4_2, sq_4_3, sq_4_4
+          D6 sq_6_1 (outcome measure influenced by intervention knowledge), sq_6_2
+          D7 sq_7_1 (reported effect selected from multiple measurements), sq_7_2, sq_7_3
+      - Quality questions (Yes = protective/controlled):
+          D1 sq_1_2 (analysis controlled for confounding), sq_1_3, sq_1_4, sq_1_5
+          D3 sq_3_1 (intervention groups clearly defined), sq_3_2
+          D5 sq_5_1 (outcome data available for large proportion), sq_5_2, sq_5_3
     """
-    active_answers = {k: v for k, v in answers.items() if v and v != ""}
-    if not active_answers:
+    if not answers:
         return "no_information"
 
-    favorable_count = 0
-    unfavorable_count = 0
-    has_no_info = False
+    def norm(v: Optional[str]) -> str:
+        return (v or "").strip().lower()
 
-    for q_key, ans in active_answers.items():
-        ans_norm = str(ans).lower().strip()
-        if ans_norm == "no_information":
-            has_no_info = True
-            continue
-
-        is_neg = q_key in ROBINS_I_NEGATIVE_POLARITY_QUESTIONS
-        if is_neg:
-            if ans_norm in ("no", "probably_no"):
-                favorable_count += 1
-            elif ans_norm in ("yes", "probably_yes"):
-                unfavorable_count += 1
-        else:
-            if ans_norm in ("yes", "probably_yes"):
-                favorable_count += 1
-            elif ans_norm in ("no", "probably_no"):
-                unfavorable_count += 1
-
-    if has_no_info:
-        if unfavorable_count > 0:
+    # D1: Confounding
+    if domain_key == "confounding" or "sq_1_1" in answers:
+        a1_1 = norm(answers.get("sq_1_1"))
+        if not a1_1 or a1_1 == "no_information":
+            return "no_information"
+        if a1_1 in ("no", "probably_no"):
+            return "low"
+        a1_2 = norm(answers.get("sq_1_2"))
+        a1_4 = norm(answers.get("sq_1_4"))
+        if a1_2 in ("no", "probably_no") or a1_4 in ("no", "probably_no"):
+            return "critical"
+        a1_5 = norm(answers.get("sq_1_5"))
+        if a1_5 in ("no", "probably_no"):
             return "serious"
-        return "no_information"
-
-    if unfavorable_count == 0 and favorable_count > 0:
-        return "low"
-    if unfavorable_count >= 2:
-        return "serious"
-    if unfavorable_count == 1:
+        if a1_1 in ("yes", "probably_yes") and a1_2 in ("yes", "probably_yes") and a1_4 in ("yes", "probably_yes"):
+            return "moderate"
         return "moderate"
 
-    return "moderate"
+    # D2: Selection of participants into study
+    if domain_key == "selection_participants" or "sq_2_1" in answers:
+        a2_1 = norm(answers.get("sq_2_1"))
+        if not a2_1:
+            return "no_information"
+        if a2_1 in ("no", "probably_no"):
+            return "low"
+        a2_2 = norm(answers.get("sq_2_2"))
+        a2_3 = norm(answers.get("sq_2_3"))
+        if a2_2 in ("yes", "probably_yes") and a2_3 in ("yes", "probably_yes"):
+            return "serious"
+        return "moderate"
+
+    # Generic ROBINS-I fallback with critical and serious awareness
+    active_answers = {k: norm(v) for k, v in answers.items() if v and norm(v) != ""}
+    if not active_answers or any(v == "no_information" for v in active_answers.values()):
+        return "no_information"
+
+    harm_keys = {"sq_1_1", "sq_2_1", "sq_3_3", "sq_4_1", "sq_6_1", "sq_7_1"}
+    harm_count = sum(1 for k, v in active_answers.items() if k in harm_keys and v in ("yes", "probably_yes"))
+    if harm_count >= 3:
+        return "critical"
+    if harm_count >= 1:
+        return "serious"
+
+    quality_keys = {"sq_1_2", "sq_1_4", "sq_3_1", "sq_5_1"}
+    no_quality = sum(1 for k, v in active_answers.items() if k in quality_keys and v in ("no", "probably_no"))
+    if no_quality >= 2:
+        return "critical"
+    if no_quality == 1:
+        return "serious"
+
+    return "low"
 
 
-def compute_robins_e_domain_judgment(answers: dict[str, str], domain_key: Optional[str] = None) -> str:
+def compute_robins_e_domain_judgment(answers: dict[str, str]) -> str:
     """Compute ROBINS-E domain risk-of-bias judgment from signaling question answers."""
-    return compute_robins_i_domain_judgment(answers, domain_key=domain_key)
+    return compute_robins_i_domain_judgment(answers)
 
 
 def compute_rob2_domain_judgment(answers: dict[str, str], domain_key: Optional[str] = None) -> str:
-    """Compute RoB 2 domain risk-of-bias judgment from signaling question answers.
+    """Compute RoB 2 domain risk-of-bias judgment from signaling question answers per Sterne et al 2019.
 
-    Cochrane RoB 2 algorithm (per Sterne et al 2019):
-      - SQs evaluated by polarity (e.g. sq_1_3, sq_2_1, sq_2_2 are negative polarity).
-      - All relevant SQs favorable ("yes"/"probably_yes" for positive polarity,
-        "no"/"probably_no" for negative polarity) → "low"
-      - Any strong unfavorable answer ("no" for positive, "yes" for negative) → "high"
-      - Moderate unfavorable / mixed ("probably_no" for positive, "probably_yes" for negative) → "some_concerns"
-      - "no_information" → "some_concerns" (per RoB 2 guidance)
+    Polarity considerations:
+      - Harm questions (Yes = problem/bias):
+          D1 sq_1_3 (baseline imbalances suggest problem)
+          D2 sq_2_1 (participants aware), sq_2_2 (carers/personnel aware), sq_2_4 (estimates biased)
+          D3 sq_3_4 (missingness depends on true value), sq_3_5 (missing data enough to induce bias)
+          D4 sq_4_2 (measurement differed), sq_4_3 (assessors aware), sq_4_4 (awareness influenced assessment)
+          D5 sq_5_1 (selected from multiple outcome measurements/analyses), sq_5_2, sq_5_3
+      - Quality questions (Yes = good/protected):
+          D1 sq_1_1 (random sequence), sq_1_2 (concealed allocation)
+          D3 sq_3_1 (data available for nearly all), sq_3_2 (similar missing proportion), sq_3_3 (reasons acceptable)
+          D4 sq_4_1 (method appropriate)
     """
-    active_answers = {k: v for k, v in answers.items() if v and v != ""}
-    if not active_answers:
+    if not answers:
         return "some_concerns"
 
-    if any(str(a).lower().strip() == "no_information" for a in active_answers.values()):
+    def norm(v: Optional[str]) -> str:
+        return (v or "").strip().lower()
+
+    # D1: Randomization process
+    if domain_key == "randomization" or ("sq_1_1" in answers or "sq_1_2" in answers or "sq_1_3" in answers):
+        a1_1 = norm(answers.get("sq_1_1"))
+        a1_2 = norm(answers.get("sq_1_2"))
+        a1_3 = norm(answers.get("sq_1_3"))
+
+        if not a1_1 or not a1_2:
+            return "some_concerns"
+        if a1_3 in ("yes", "probably_yes"):
+            return "high"
+        if a1_1 in ("no", "probably_no") or a1_2 in ("no", "probably_no"):
+            if a1_1 in ("no", "probably_no") and a1_2 in ("no", "probably_no"):
+                return "high"
+            return "some_concerns"
+        if a1_1 in ("yes", "probably_yes") and a1_2 in ("yes", "probably_yes") and a1_3 in ("no", "probably_no"):
+            return "low"
         return "some_concerns"
 
-    favorable_count = 0
-    strong_unfavorable_count = 0
-    moderate_unfavorable_count = 0
+    # D3: Missing outcome data
+    if domain_key == "missing_outcome" or ("sq_3_1" in answers or "sq_3_4" in answers):
+        a3_1 = norm(answers.get("sq_3_1"))
+        if not a3_1:
+            return "some_concerns"
+        if a3_1 in ("yes", "probably_yes"):
+            return "low"
+        a3_4 = norm(answers.get("sq_3_4"))
+        a3_5 = norm(answers.get("sq_3_5"))
+        if a3_4 in ("yes", "probably_yes") and a3_5 in ("yes", "probably_yes"):
+            return "high"
+        if a3_4 in ("no", "probably_no"):
+            return "low"
+        return "some_concerns"
 
-    for q_key, ans in active_answers.items():
-        ans_norm = str(ans).lower().strip()
-        is_neg = q_key in ROB2_NEGATIVE_POLARITY_QUESTIONS
-        if is_neg:
-            if ans_norm in ("no", "probably_no"):
-                favorable_count += 1
-            elif ans_norm == "yes":
-                strong_unfavorable_count += 1
-            elif ans_norm == "probably_yes":
-                moderate_unfavorable_count += 1
-        else:
-            if ans_norm in ("yes", "probably_yes"):
-                favorable_count += 1
-            elif ans_norm == "no":
-                strong_unfavorable_count += 1
-            elif ans_norm == "probably_no":
-                moderate_unfavorable_count += 1
+    # D4: Measurement of the outcome
+    if domain_key == "measurement" or ("sq_4_1" in answers or "sq_4_4" in answers):
+        a4_1 = norm(answers.get("sq_4_1"))
+        a4_4 = norm(answers.get("sq_4_4"))
+        if not a4_1:
+            return "some_concerns"
+        if a4_1 in ("no", "probably_no") or a4_4 in ("yes", "probably_yes"):
+            return "high"
+        a4_2 = norm(answers.get("sq_4_2"))
+        a4_3 = norm(answers.get("sq_4_3"))
+        if a4_1 in ("yes", "probably_yes") and a4_2 in ("no", "probably_no"):
+            return "low"
+        if a4_3 in ("no", "probably_no") or a4_4 in ("no", "probably_no"):
+            return "low"
+        return "some_concerns"
 
-    total_unfavorable = strong_unfavorable_count + moderate_unfavorable_count
+    # Generic RoB 2 fallback with polarity awareness
+    active_answers = {k: norm(v) for k, v in answers.items() if v and norm(v) != ""}
+    if not active_answers or any(v == "no_information" for v in active_answers.values()):
+        return "some_concerns"
 
-    if total_unfavorable == 0 and favorable_count > 0:
-        return "low"
-    if strong_unfavorable_count >= 1:
+    # Harm questions where yes indicates high risk
+    harm_keys = {"sq_1_3", "sq_2_4", "sq_3_4", "sq_3_5", "sq_4_4", "sq_5_1", "sq_5_2", "sq_5_3"}
+    for k, v in active_answers.items():
+        if k in harm_keys and v in ("yes", "probably_yes"):
+            return "high"
+
+    # Quality questions where no indicates concern or high risk
+    quality_keys = {"sq_1_1", "sq_1_2", "sq_3_1", "sq_4_1"}
+    no_quality = sum(1 for k, v in active_answers.items() if k in quality_keys and v in ("no", "probably_no"))
+    if no_quality >= 2:
         return "high"
-    if moderate_unfavorable_count >= 1:
+    if no_quality == 1:
         return "some_concerns"
 
-    return "some_concerns"
+    return "low"
 
 
-def compute_nos_domain_judgment(answers: dict[str, str], domain_key: Optional[str] = None) -> str:
+def compute_nos_domain_judgment(answers: dict[str, str]) -> str:
     """Compute Newcastle-Ottawa Scale domain judgment based on star counts.
 
     Answers indicating a star: 'yes', 'yes_star', '1', 'true', etc.
@@ -840,15 +876,15 @@ def compute_nos_domain_judgment(answers: dict[str, str], domain_key: Optional[st
 def compute_domain_judgment(tool_key: str, answers: dict[str, str], domain_key: Optional[str] = None) -> str:
     """Dispatch to the appropriate tool's domain judgment algorithm."""
     if tool_key == "quadas2":
-        return compute_quadas2_domain_judgment(answers, domain_key=domain_key)
+        return compute_quadas2_domain_judgment(answers)
     elif tool_key in ("robins_i", "robins-i"):
         return compute_robins_i_domain_judgment(answers, domain_key=domain_key)
     elif tool_key in ("robins_e", "robins-e"):
-        return compute_robins_e_domain_judgment(answers, domain_key=domain_key)
+        return compute_robins_e_domain_judgment(answers)
     elif tool_key in ("rob2", "rob-2"):
         return compute_rob2_domain_judgment(answers, domain_key=domain_key)
     elif tool_key == "nos":
-        return compute_nos_domain_judgment(answers, domain_key=domain_key)
+        return compute_nos_domain_judgment(answers)
     elif tool_key in ("jbi_case_report", "jbi_case_series"):
         active = [a for a in answers.values() if a and a != "not_applicable"]
         if not active or any(a == "unclear" for a in active):

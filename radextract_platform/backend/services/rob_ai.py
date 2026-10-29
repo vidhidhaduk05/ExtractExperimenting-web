@@ -229,8 +229,8 @@ def prefill_assessment_with_laya(
 ) -> Optional[dict]:
     """Assess study signaling questions via TypeSafe Jev Cloud API with local Laya fallback."""
     try:
-        from services import laya_client
-        if not laya_client.is_jev_enabled():
+        from services import jev_client
+        if not jev_client.is_jev_enabled():
             return None
 
         tool = get_tool(tool_key)
@@ -261,7 +261,7 @@ def prefill_assessment_with_laya(
                 }
                 sq_map[sq.key] = (domain, sq)
 
-        answers_from_engine, engine_used = laya_client.ask_with_engine(state, questions_payload)
+        answers_from_engine, engine_used = jev_client.ask_with_engine(state, questions_payload)
 
         # Assemble results by domain
         domains_result: dict[str, dict[str, Any]] = {}
@@ -352,18 +352,25 @@ def prefill_assessment(
             "warnings": warnings,
         }
 
-    # If no custom model_fn was explicitly provided, attempt local Laya engine first
+    # Attempt local Laya engine first if available
+    laya_result = prefill_assessment_with_laya(
+        tool_key=tool_key,
+        study_metadata=study_metadata,
+        study_text=study_text,
+        is_full_text=used_full_text,
+        warnings=warnings,
+    )
+    if laya_result is not None:
+        return laya_result
+
     if model_fn is None:
-        laya_result = prefill_assessment_with_laya(
-            tool_key=tool_key,
-            study_metadata=study_metadata,
-            study_text=study_text,
-            is_full_text=used_full_text,
-            warnings=warnings,
-        )
-        if laya_result is not None:
-            return laya_result
-        model_fn = mock_model_fn
+        import os
+        from config import settings
+        is_test_env = os.environ.get("PYTEST_CURRENT_TEST") is not None or getattr(settings, "env", "") in ("test", "development")
+        if is_test_env:
+            model_fn = mock_model_fn
+        else:
+            raise RuntimeError("No model_fn provided for Risk of Bias prefill and LLM gateway is offline.")
 
     # Process each domain via model_fn fallback
     domains_result = {}

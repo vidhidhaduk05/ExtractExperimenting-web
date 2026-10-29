@@ -372,11 +372,13 @@ def compute_heterogeneity(project_id: str, outcome_label: str, db: Optional[DBBa
         return {"error": "Need at least 2 studies for heterogeneity analysis",
                 "n_studies": len(studies)}
 
-    effects = np.array([s["effect_size"] for s in studies if s.get("effect_size") is not None])
-    variances = np.array([s["variance"] for s in studies if s.get("variance") is not None])
+    valid_studies = [s for s in studies if s.get("effect_size") is not None and s.get("variance") is not None]
+    if len(valid_studies) < 2:
+        return {"error": "Insufficient numeric effect size data (need at least 2 studies with both effect and variance)", "n_studies": len(valid_studies)}
 
-    if len(effects) < 2 or len(variances) < 2:
-        return {"error": "Insufficient numeric effect size data", "n_studies": len(studies)}
+    effects = np.array([float(s["effect_size"]) for s in valid_studies])
+    variances = np.array([float(s["variance"]) for s in valid_studies])
+    assert len(effects) == len(variances)
 
     # Fixed-effect weights
     w_fixed = 1.0 / variances
@@ -438,8 +440,13 @@ def prepare_forest_plot_data(project_id: str, outcome_label: str, db: Optional[D
     if not studies:
         return {"error": "No studies in meta-analysis", "outcome_label": outcome_label}
 
-    effects = np.array([s["effect_size"] for s in studies if s.get("effect_size") is not None])
-    variances = np.array([s["variance"] for s in studies if s.get("variance") is not None])
+    valid_studies = [
+        s for s in studies
+        if s.get("effect_size") is not None and s.get("variance") is not None
+    ]
+    effects = np.array([float(s["effect_size"]) for s in valid_studies])
+    variances = np.array([float(s["variance"]) for s in valid_studies])
+    assert len(effects) == len(variances)
 
     study_data = []
     for s in studies:
@@ -497,45 +504,60 @@ def prepare_funnel_plot_data(project_id: str, outcome_label: str, db: Optional[D
         return {"error": "Need at least 3 studies for funnel plot", "n_studies": len(studies)}
 
     points = []
+    effects_list = []
+    vars_list = []
     for s in studies:
-        if s.get("effect_size") is None or s.get("se") is None:
+        if s.get("effect_size") is None:
             continue
+        se = s.get("se")
+        var = s.get("variance")
+        if se is None and var is not None:
+            se = math.sqrt(float(var))
+        elif var is None and se is not None:
+            var = float(se) ** 2
+        if se is None or var is None or se <= 0:
+            continue
+
+        eff = float(s["effect_size"])
+        se_val = float(se)
         points.append({
             "study_label": s["study_label"],
-            "effect_size": round(float(s["effect_size"]), 4),
-            "se": round(float(s["se"]), 4),
-            "precision": round(1.0 / float(s["se"]), 4) if s["se"] else None,
+            "effect_size": round(eff, 4),
+            "se": round(se_val, 4),
+            "precision": round(1.0 / se_val, 4),
         })
+        effects_list.append(eff)
+        vars_list.append(float(var))
 
     if len(points) < 3:
         return {"error": "Insufficient data for funnel plot", "n_studies": len(points)}
 
-    effects = np.array([p["effect_size"] for p in points])
+    effects = np.array(effects_list)
     ses = np.array([p["se"] for p in points])
-    precision = 1.0 / ses
 
-    n = len(points)
-    if n >= 3:
-        slope, intercept, r_value, p_value, std_err = sp_stats.linregress(precision, effects)
-        pooled_effect = float(np.mean(effects))
-        se_range = np.linspace(float(ses.min()), float(ses.max()) * 1.5, 50)
-        ci_lower = pooled_effect - 1.96 * se_range
-        ci_upper = pooled_effect + 1.96 * se_range
-
+    # Call canonical Egger's test from meta_analysis
+    try:
+        from services.meta_analysis import eggers_test as canonical_eggers_test
+        raw_egger = canonical_eggers_test(effects_list, vars_list)
+        p_val = raw_egger.get("p_value")
         egger_test = {
-            "intercept": round(float(intercept), 4),
-            "slope": round(float(slope), 4),
-            "r_value": round(float(r_value), 4),
-            "p_value": round(float(p_value), 4),
-            "std_err": round(float(std_err), 4),
-            "has_asymmetry": bool(p_value < 0.10),
+            "intercept": round(float(raw_egger["intercept"]), 4) if raw_egger.get("intercept") is not None else None,
+            "slope": None,
+            "r_value": None,
+            "p_value": round(float(p_val), 4) if p_val is not None else None,
+            "std_err": round(float(raw_egger["se_intercept"]), 4) if raw_egger.get("se_intercept") is not None else None,
+            "has_asymmetry": bool(p_val is not None and p_val < 0.10),
+            "message": raw_egger.get("message"),
         }
-    else:
+    except Exception:
         egger_test = None
-        ci_lower = []
-        ci_upper = []
-        se_range = []
-        pooled_effect = None
+
+    # Weighted or random-effects pooled center for funnel
+    w_fixed = 1.0 / np.array(vars_list)
+    pooled_effect = float(np.sum(w_fixed * effects) / np.sum(w_fixed))
+    se_range = np.linspace(float(ses.min()), float(ses.max()) * 1.5, 50)
+    ci_lower = pooled_effect - 1.96 * se_range
+    ci_upper = pooled_effect + 1.96 * se_range
 
     return {
         "outcome_label": outcome_label,
@@ -564,11 +586,18 @@ def compute_sensitivity_analysis(project_id: str, outcome_label: str, db: Option
     if len(studies) < 3:
         return {"error": "Need at least 3 studies for sensitivity analysis", "n_studies": len(studies)}
 
-    effects = np.array([s["effect_size"] for s in studies if s.get("effect_size") is not None])
-    variances = np.array([s["variance"] for s in studies if s.get("variance") is not None])
+    # Build the filtered complete-studies list first to avoid misaligned deletion index
+    complete_studies = [
+        s for s in studies
+        if s.get("effect_size") is not None and s.get("variance") is not None
+    ]
 
-    if len(effects) < 3:
-        return {"error": "Insufficient numeric data", "n_studies": len(studies)}
+    if len(complete_studies) < 3:
+        return {"error": "Insufficient numeric data", "n_studies": len(complete_studies)}
+
+    effects = np.array([float(s["effect_size"]) for s in complete_studies])
+    variances = np.array([float(s["variance"]) for s in complete_studies])
+    assert len(effects) == len(variances)
 
     def _pooled_random(effs, vars):
         w_f = 1.0 / vars
@@ -586,9 +615,7 @@ def compute_sensitivity_analysis(project_id: str, outcome_label: str, db: Option
     full_pooled, full_se, full_i2, full_tau2 = _pooled_random(effects, variances)
 
     results = []
-    for i, s in enumerate(studies):
-        if s.get("effect_size") is None or s.get("variance") is None:
-            continue
+    for i, s in enumerate(complete_studies):
         remaining_eff = np.delete(effects, i)
         remaining_var = np.delete(variances, i)
 

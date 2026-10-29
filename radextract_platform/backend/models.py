@@ -26,6 +26,7 @@ class ProjectCreate(BaseModel):
     hypothesis: str = ""
     research_question: str = ""
     pico_json: str = ""
+    review_type: str = "systematic"  # scoping | systematic | both
 
 
 class ProjectUpdate(BaseModel):
@@ -35,6 +36,7 @@ class ProjectUpdate(BaseModel):
     research_question: Optional[str] = None
     pico_json: Optional[str] = None
     status: Optional[str] = None
+    review_type: Optional[str] = None
 
 
 class ProjectResponse(ORMBase):
@@ -50,18 +52,14 @@ class ProjectResponse(ORMBase):
     exclusion_criteria_json: str = "[]"
     search_strings_json: str = "{}"
     config_path: str = ""
+    storage_path: str = ""
     created_at: str = ""
     created_by: str = ""
     status: str = "active"
-    storage_folder: str = ""
+    review_type: str = "systematic"
 
 
 # ── PICO ──
-
-class CriteriaLists(BaseModel):
-    inclusion: list[str] = Field(default_factory=list)
-    exclusion: list[str] = Field(default_factory=list)
-
 
 class PICOUpdate(BaseModel):
     population: str = ""
@@ -69,8 +67,6 @@ class PICOUpdate(BaseModel):
     comparator: str = ""
     outcome: str = ""
     study_design: str = ""
-    # None = leave the saved criteria untouched; a value overwrites them.
-    criteria: Optional[CriteriaLists] = None
 
 
 class PICOResponse(BaseModel):
@@ -80,7 +76,6 @@ class PICOResponse(BaseModel):
     comparator: str = ""
     outcome: str = ""
     study_design: str = ""
-    criteria: CriteriaLists = Field(default_factory=CriteriaLists)
     is_defined: bool = False
 
 
@@ -103,6 +98,8 @@ class HypothesisResponse(BaseModel):
     hypothesis: str = ""
     research_question: str = ""
     secondary_hypotheses: list[SecondaryHypothesis] = Field(default_factory=list)
+    generation_source: str = "template"   # "llm" | "template" | "failed"
+    generation_error: str = ""
 
 
 # ── PubMed API Key ──
@@ -116,13 +113,6 @@ class PubMedKeyUpdate(BaseModel):
 class Criterion(BaseModel):
     id: str
     text: str
-    direction: str = "inclusion"  # "inclusion" | "exclusion"
-    rule_mode: str = "required"   # "required" (strict eligibility rule) | "weighted" (signal)
-    weight: float = Field(default=0.50, ge=0.0, le=1.0)  # relative influence for weighted signals
-    threshold: float = 0.90       # model-score threshold (threshold-based evaluator path)
-    score_source: str = "model"   # "keyword" | "model" | "hybrid"
-    enabled: bool = True
-    version: int = 1
 
 
 class CriteriaUpdate(BaseModel):
@@ -343,8 +333,8 @@ class StudyCreate(BaseModel):
     abstract: str = ""
     source: str = ""
     study_design: str = ""
+    study_label: str = ""
     metadata_json: str = ""
-    screening_status: str = "pending"
 
 
 class StudyUpdate(BaseModel):
@@ -356,6 +346,7 @@ class StudyUpdate(BaseModel):
     pmid: Optional[str] = None
     abstract: Optional[str] = None
     study_design: Optional[str] = None
+    study_label: Optional[str] = None
     screening_status: Optional[str] = None
     screening_reason: Optional[str] = None
     screening_stage: Optional[str] = None
@@ -382,6 +373,7 @@ class StudyResponse(ORMBase):
     abstract: str = ""
     source: str = ""
     study_design: str = ""
+    study_label: str = ""
     pdf_path: str = ""
     pdf_status: str = "none"
     screening_status: str = "pending"
@@ -426,6 +418,10 @@ class VariableUpdate(BaseModel):
     order_index: Optional[int] = None
 
 
+class VariableReorder(BaseModel):
+    variable_ids: list[str]
+
+
 class VariableResponse(ORMBase):
     variable_id: str
     project_id: str
@@ -444,6 +440,22 @@ class VariableResponse(ORMBase):
 # ═══════════════════════════════════════════════════════════════════════
 #  Extractions
 # ═══════════════════════════════════════════════════════════════════════
+
+class ExtractionBatchCell(BaseModel):
+    study_id: str
+    variable_id: str
+    value: str = ""
+    confidence: Optional[float] = None
+    confidence_tag: Optional[str] = None
+    source_page: Optional[int] = None
+    source_text: Optional[str] = None
+    verification_status: Optional[str] = None
+    missing_code: Optional[str] = None
+
+
+class ExtractionBatchUpsert(BaseModel):
+    cells: list[ExtractionBatchCell]
+
 
 class ExtractionCreate(BaseModel):
     study_id: str
@@ -650,7 +662,7 @@ class RobAIPrefillRequest(BaseModel):
     """Request AI pre-fill for an assessment."""
     full_text: Optional[str] = None  # full text of the study (from PDF processing)
     abstract: Optional[str] = None   # fallback if no full text
-    model_fn_name: str = "llm"      # which model_fn to use (llm gateway)
+    model_fn_name: str = "mock"      # which model_fn to use
 
 
 class RobAIPrefillResult(BaseModel):
@@ -719,8 +731,9 @@ class DuplicateMatch(BaseModel):
     abstract: str = ""
     is_duplicate: int = 0
     screening_status: str = "pending"
-    match_reason: str  # "doi" | "pmid" | "title_similarity" | "author_year"
+    match_reason: str  # "doi" | "pmid" | "nct" | "exact_title_author_year" | "fuzzy_title_corroborated" | ...
     similarity_score: float = 0.0
+    tier: str = ""  # "T0" | "T1" | "T2" | "T3" | "T4" | "conflict" | "human_review"
 
 
 class DuplicateGroup(BaseModel):
@@ -744,7 +757,8 @@ class DeduplicationResult(BaseModel):
     duplicate_groups: list[DuplicateGroup] = Field(default_factory=list)
     total_duplicates: int
     duplicates_marked: int
-    skipped_human_decided: int = 0
+    tier_breakdown: dict = Field(default_factory=dict)   # tier -> merged count
+    review_queue_size: int = 0
 
 
 class DuplicateResolveRequest(BaseModel):
@@ -780,9 +794,9 @@ class ExclusionReasonsResponse(BaseModel):
 # ═══════════════════════════════════════════════════════════════════════
 
 class ScreeningConfig(BaseModel):
-    blind_mode: bool = False
-    n_reviewers: int = 1
-    conflict_mode: str = "single"  # "single" | "manual" | "auto_majority"
+    blind_mode: bool = True
+    n_reviewers: int = 2
+    conflict_mode: str = "manual"  # "manual" | "auto_majority"
 
 
 class ScreeningConfigUpdate(BaseModel):
@@ -793,41 +807,49 @@ class ScreeningConfigUpdate(BaseModel):
 
 class ScreeningConfigResponse(BaseModel):
     project_id: str
-    blind_mode: bool = False
-    n_reviewers: int = 1
-    conflict_mode: str = "single"
+    blind_mode: bool = True
+    n_reviewers: int = 2
+    conflict_mode: str = "manual"
 
 
-class CriterionItem(BaseModel):
-    id: str
-    text: str
-    direction: str = "inclusion"  # "inclusion" | "exclusion"
-    rule_mode: str = "weighted"   # "strict" | "weighted"
-    threshold: float = 0.90
-    score_source: str = "model"   # "keyword" | "model" | "hybrid"
-    enabled: bool = True
-    version: int = 1
+# ── Weighted scoring engine (blueprint §4E) ──
+
+class WeightedEvidenceItem(BaseModel):
+    criterion_id: str
+    score: Optional[float] = None      # 0..1 evidence strength; None = missing
+    quote: str = ""
+    source_locator: str = ""           # page/offset anchor when available
+    engine: str = ""                   # laya | biomni-r0 | keyword | human
+    applicability: str = "applicable"  # applicable | not_applicable | unknown
 
 
-class CriteriaListResponse(BaseModel):
-    project_id: str
-    criteria: list[CriterionItem]
+class WeightedPolicyItem(BaseModel):
+    include_band: float = 0.65
+    exclude_band: float = 0.35
+    policy_version: str = "policy-v1"
 
 
-class CriteriaUpdateRequest(BaseModel):
-    criteria: list[CriterionItem]
-
-
-class StudyEvaluateRequest(BaseModel):
+class WeightedEvaluateRequest(BaseModel):
     study_id: str
-    scores: dict[str, Optional[float]]
+    stage: str = "ta"                  # ta | ft
+    evidence: list[WeightedEvidenceItem]
+    input_text: str = ""               # hashed into the trace for replay
+    policy: Optional[WeightedPolicyItem] = None
+    persist: bool = True
 
 
-class StudyEvaluateResponse(BaseModel):
+class WeightedEvaluateResponse(BaseModel):
     study_id: str
-    decision: str
-    fired: list[dict[str, Any]]
-    flagged_unscored: list[str]
+    recommendation: str
+    rec_score: float
+    hard_flags: list[str]
+    contributions: list[dict[str, Any]]
+    missing: list[str]
+    not_applicable: list[str]
+    formula_version: str
+    policy_version: str
+    trace_id: Optional[str] = None
+    note: str = ""
 
 
 class ScreeningUpdate(BaseModel):
@@ -1026,7 +1048,6 @@ class ClarificationQuestionResponse(BaseModel):
     final_confidence: float = 0.0
     final_reason_text: str = ""
     created_at: str = ""
-    is_tracked: bool = False
     # Joined study fields
     study_title: str = ""
     study_authors: str = ""
@@ -1128,37 +1149,5 @@ class ScreeningKeywordResponse(BaseModel):
     keyword: str
     keyword_type: str
     color: str
-
-
-# ── Todos Models ──
-
-class TodoCreate(BaseModel):
-    text: str
-    source: Optional[str] = "manual"
-    study_id: Optional[str] = None
-
-
-class TodoUpdate(BaseModel):
-    text: Optional[str] = None
-    done: Optional[bool] = None
-
-
-class TodoFromNotification(BaseModel):
-    notification_id: str
-    text: Optional[str] = None
-
-
-class TodoResponse(BaseModel):
-    id: str
-    project_id: str
-    text: str
-    done: bool = False
-    source: str = "manual"
-    study_id: Optional[str] = None
-    notification_id: Optional[str] = None
-    created_at: str
-    study_title: Optional[str] = None
-    study_pmid: Optional[str] = None
-
 
 

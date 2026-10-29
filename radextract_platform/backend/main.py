@@ -42,9 +42,7 @@ from routers import (
     claimscape,
     citation_telephone,
     rigor_scan,
-    storm_router,
     settings as system_settings,
-    todos,
 )
 
 logger = logging.getLogger("radextract")
@@ -54,35 +52,15 @@ rate_limiter = RateLimiter(max_requests=300, window_seconds=60.0)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize database and storage on startup."""
-    import os
     setup_logging(
         level="INFO",
         json_format=(settings.env == "production"),
     )
     logger.info(f"Starting RadExtract API (env={settings.env}, db={settings.db_backend}, storage={settings.storage_backend})")
-
-    # Stage radextract.db onto node-local scratch only if explicitly opted-in via STAGE_DB_SCRATCH=1
-    if os.environ.get("STAGE_DB_SCRATCH", "0") == "1" and settings.db_backend == "sqlite":
-        from database import stage_db_to_scratch, sync_scratch_to_persistent
-        stage_db_to_scratch()
-
-    # Apply the user's saved data directory (Zotero-style single folder) before
-    # the database initializes, so the DB inside it is the one that opens.
-    from services.storage_settings_service import apply_persisted_storage
-    apply_persisted_storage()
-
     ensure_dirs()
     init_db()
     init_s3_buckets()
-
-    # Run boot self-check, reconciliation, and cleanup on startup
-    from services.boot_check import run_boot_self_check
-    run_boot_self_check()
     yield
-    # On graceful exit, flush WAL and sync scratch DB back to persistent NFS storage
-    if settings.db_backend == "sqlite":
-        from database import sync_scratch_to_persistent
-        sync_scratch_to_persistent()
 
 
 def create_app() -> FastAPI:
@@ -94,15 +72,10 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS - Explicit origins plus regex for GitHub Pages and Cloudflare Tunnels
-    origins = list(settings.cors_origins) if isinstance(settings.cors_origins, (list, tuple)) else ["*"]
-    if "https://vidhidhaduk05.github.io" not in origins:
-        origins.append("https://vidhidhaduk05.github.io")
-
+    # CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
-        allow_origin_regex=r"^https://.*\.github\.io/?.*|^https://.*\.trycloudflare\.com/?.*|^http://(localhost|127\.0\.0\.1)(:\d+)?/?.*",
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -180,10 +153,7 @@ def create_app() -> FastAPI:
     app.include_router(claimscape.router)
     app.include_router(citation_telephone.router)
     app.include_router(rigor_scan.router)
-    app.include_router(storm_router.router, prefix="/api")
-    app.include_router(storm_router.router)
     app.include_router(system_settings.router)
-    app.include_router(todos.router)
 
     # Health check
     @app.get("/health")
@@ -198,14 +168,6 @@ def create_app() -> FastAPI:
             "metrics": metrics_collector.get_stats(),
         }
 
-    @app.get("/health/full")
-    @app.get("/api/health/full")
-    async def health_full():
-        from services.boot_check import get_boot_report
-        report = get_boot_report()
-        status_code = 200 if report.get("overall_ok") else 503
-        return JSONResponse(status_code=status_code, content=report)
-
     # Mount built frontend dist files if present
     import os
     frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
@@ -217,11 +179,18 @@ def create_app() -> FastAPI:
         if os.path.isdir(assets_dir):
             app.mount("/assets", StaticFiles(directory=assets_dir), name="static-assets")
 
-        @app.get("/{full_path:path}")
-        async def serve_spa(full_path: str):
+        @app.api_route("/{full_path:path}", methods=["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+        async def serve_spa(request: Request, full_path: str):
             if full_path.startswith("api/") or full_path.startswith("health") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
                 from fastapi import HTTPException
                 raise HTTPException(status_code=404, detail="Not found")
+
+            if request.method not in ("GET", "HEAD"):
+                return JSONResponse(
+                    status_code=404,
+                    content={"detail": f"API endpoint not found: {request.method} /{full_path}. Did you mean /api/{full_path}?"},
+                )
+
             file_path = os.path.join(frontend_dist, full_path)
             if os.path.isfile(file_path):
                 return FileResponse(file_path)

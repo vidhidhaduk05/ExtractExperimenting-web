@@ -343,46 +343,6 @@ TOOL_DEFINITIONS["generate_search_strings"] = {
     },
 }
 
-TOOL_DEFINITIONS["extract_pico"] = {
-    "type": "function",
-    "function": {
-        "name": "extract_pico",
-        "description": "Extract structured PICO elements and study design from a research question or study protocol.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "population": {"type": "string", "description": "Description of target patients, participants, or sample population"},
-                "index_test": {"type": "string", "description": "Intervention, index test, or exposure under evaluation"},
-                "comparator": {"type": "string", "description": "Control, comparator, or reference standard"},
-                "outcome": {"type": "string", "description": "Primary and secondary outcomes assessed"},
-                "study_design": {"type": "string", "description": "Study design (e.g. RCT, diagnostic accuracy study, cohort study)"},
-            },
-            "required": ["population", "index_test", "outcome"],
-        },
-    },
-}
-
-TOOL_DEFINITIONS["generate_hypothesis"] = {
-    "type": "function",
-    "function": {
-        "name": "generate_hypothesis",
-        "description": "Generate falsifiable directional primary and null hypotheses, along with secondary hypotheses, from PICO elements.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "primary_hypothesis": {"type": "string", "description": "Falsifiable primary alternative hypothesis (H1) specifying effect direction"},
-                "null_hypothesis": {"type": "string", "description": "Formal null hypothesis (H0)"},
-                "secondary_hypotheses": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Secondary, subgroup, or safety hypotheses",
-                },
-            },
-            "required": ["primary_hypothesis", "null_hypothesis"],
-        },
-    },
-}
-
 # Validation schemas used internally
 RESPONSE_SCHEMAS: Dict[str, Dict[str, Any]] = {
     name: definition["function"]["parameters"]

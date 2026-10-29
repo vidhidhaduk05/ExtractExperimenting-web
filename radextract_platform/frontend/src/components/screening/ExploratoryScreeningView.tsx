@@ -128,7 +128,7 @@ export function ExploratoryScreeningView({
 }: ExploratoryScreeningViewProps) {
   // ── 5 MAIN TOGGLES FOR SENIOR DOCTORS + SPEED ──
   // 1. LIVE STREAM: Pauses the live feed so senior doctors can read without it shifting
-  const [liveStream, setLiveStream] = useState(true);
+  const [liveStream, setLiveStream] = useState(false);
 
   // 2. SHOW PROCESS (Rose Section 2): Shows step-by-step trace (Reading -> Extracting PICO -> P matched 78% -> Decision: KEEP ✓)
   const [showProcess, setShowProcess] = useState(false);
@@ -186,10 +186,10 @@ export function ExploratoryScreeningView({
           author: s.authors || "Dhaduk et al.",
           isNew: false,
           pico: {
-            P: 72 + ((idx * 7) % 22),
-            I: 68 + ((idx * 5) % 25),
-            C: 55 + ((idx * 9) % 35),
-            O: 70 + ((idx * 4) % 24),
+            P: typeof (s as any).pico_p_score === "number" ? (s as any).pico_p_score : 0,
+            I: typeof (s as any).pico_i_score === "number" ? (s as any).pico_i_score : 0,
+            C: typeof (s as any).pico_c_score === "number" ? (s as any).pico_c_score : 0,
+            O: typeof (s as any).pico_o_score === "number" ? (s as any).pico_o_score : 0,
             bias: conf > 80 ? "Low" : "Med",
           },
         };
@@ -329,6 +329,10 @@ export function ExploratoryScreeningView({
   useEffect(() => {
     if (!liveStream) return;
 
+    if (projectStudies.length > 0) {
+      return;
+    }
+
     const interval = setInterval(() => {
       const nextPaper = generateNextPaper();
       setTurn(turnRef.current);
@@ -429,19 +433,22 @@ export function ExploratoryScreeningView({
         ? summary.ta_excluded + (summary.ft_excluded || 0)
         : papers.filter((p) => p.type === "remove").length;
 
-    const sumObj = summary as any;
     const total =
-      sumObj?.total_studies !== undefined && sumObj.total_studies > 0
-        ? sumObj.total_studies
+      summary?.total !== undefined && summary.total > 0
+        ? summary.total
+        : projectStudies.length > 0
+        ? projectStudies.length
         : papers.length;
 
     const judgments =
-      sumObj?.screened_count !== undefined
-        ? sumObj.screened_count
+      summary?.total !== undefined && summary?.pending !== undefined
+        ? Math.max(0, summary.total - summary.pending)
+        : summary?.ai_screened !== undefined || summary?.human_screened !== undefined
+        ? (summary.ai_screened || 0) + (summary.human_screened || 0)
         : papers.filter((p) => p.status !== "pending" && p.status !== "unscreened").length;
 
     return { total, judgments, keep, unsure, remove };
-  }, [papers, summary]);
+  }, [papers, summary, projectStudies]);
 
   // Render text with PICO highlights
   const renderHighlightedAbstract = (rawText: string, paper: StreamPaper) => {
@@ -694,13 +701,13 @@ export function ExploratoryScreeningView({
         {/* KPI 1 */}
         <div className="bg-[#2E1231] text-white p-2.5 sm:p-3 flex flex-col justify-between">
           <div className="font-mono text-[7.5px] uppercase tracking-widest text-[#E8C5E0]">
-            TURN / PAPERS
+            TOTAL PAPERS
           </div>
           <div
             className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1"
             style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
           >
-            {turn}
+            {counts.total}
           </div>
         </div>
 
@@ -713,7 +720,7 @@ export function ExploratoryScreeningView({
             className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1"
             style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
           >
-            {counts.judgments > 0 ? counts.judgments : turn * 8}
+            {counts.judgments}
           </div>
         </div>
 
@@ -1292,72 +1299,83 @@ export function ExploratoryScreeningView({
                   </div>
                 </div>
 
-                {/* PICO Match Bars & Confidence Breakdown */}
-                <div className="p-4 space-y-4">
-                  {/* PICO MATCH BARS */}
-                  <div>
-                    <div className="font-mono text-[8.5px] font-bold uppercase tracking-wider pb-1.5 mb-2.5 border-b border-[#111111] text-[#111111]">
-                      PICO Match Scores for {selectedPaper.studyId}
-                    </div>
-                    {[
-                      { l: "P — Population", v: selectedPaper.pico.P },
-                      { l: "I — Intervention", v: selectedPaper.pico.I },
-                      { l: "C — Comparator", v: selectedPaper.pico.C },
-                      { l: "O — Outcome", v: selectedPaper.pico.O },
-                    ].map(({ l, v }) => (
-                      <div
-                        key={l}
-                        className="grid grid-cols-[100px_1fr_42px] gap-2 items-center mb-1.5"
-                      >
-                        <span className="font-mono text-[8.5px] font-bold uppercase text-[#555555]">
-                          {l}
-                        </span>
-                        <div className="h-2 bg-[#EAE5DE] rounded-xs overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-500 ${
-                              selectedPaper.type === "keep"
-                                ? "bg-[#2E1231]"
-                                : selectedPaper.type === "unsure"
-                                ? "bg-[#EAB308]"
-                                : "bg-[#111111]"
-                            }`}
-                            style={{ width: `${v}%` }}
-                          />
+                {/* PICO Match Bars & Confidence Breakdown — Only displayed if valid scores are provided */}
+                {Boolean(
+                  (selectedPaper.pico && (selectedPaper.pico.P > 0 || selectedPaper.pico.I > 0 || selectedPaper.pico.C > 0 || selectedPaper.pico.O > 0)) ||
+                  (selectedPaper.conf && selectedPaper.conf > 0)
+                ) && (
+                  <div className="p-4 space-y-4">
+                    {/* PICO MATCH BARS */}
+                    {Boolean(selectedPaper.pico && (selectedPaper.pico.P > 0 || selectedPaper.pico.I > 0 || selectedPaper.pico.C > 0 || selectedPaper.pico.O > 0)) && (
+                      <div>
+                        <div className="font-mono text-[8.5px] font-bold uppercase tracking-wider pb-1.5 mb-2.5 border-b border-[#111111] text-[#111111]">
+                          PICO Match Scores for {selectedPaper.studyId}
                         </div>
-                        <span className="font-mono text-[9px] font-bold text-right">
-                          {v}%
-                        </span>
+                        {[
+                          { l: "P — Population", v: selectedPaper.pico.P },
+                          { l: "I — Intervention", v: selectedPaper.pico.I },
+                          { l: "C — Comparator", v: selectedPaper.pico.C },
+                          { l: "O — Outcome", v: selectedPaper.pico.O },
+                        ]
+                          .filter(({ v }) => typeof v === "number" && v > 0)
+                          .map(({ l, v }) => (
+                            <div
+                              key={l}
+                              className="grid grid-cols-[100px_1fr_42px] gap-2 items-center mb-1.5"
+                            >
+                              <span className="font-mono text-[8.5px] font-bold uppercase text-[#555555]">
+                                {l}
+                              </span>
+                              <div className="h-2 bg-[#EAE5DE] rounded-xs overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-500 ${
+                                    selectedPaper.type === "keep"
+                                      ? "bg-[#2E1231]"
+                                      : selectedPaper.type === "unsure"
+                                      ? "bg-[#EAB308]"
+                                      : "bg-[#111111]"
+                                  }`}
+                                  style={{ width: `${v}%` }}
+                                />
+                              </div>
+                              <span className="font-mono text-[9px] font-bold text-right">
+                                {v}%
+                              </span>
+                            </div>
+                          ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
 
-                  {/* OVERALL CONFIDENCE */}
-                  <div>
-                    <div className="font-mono text-[8.5px] font-bold uppercase tracking-wider pb-1.5 mb-2.5 border-b border-[#111111] text-[#111111]">
-                      Overall Eligibility Confidence
-                    </div>
-                    <div className="grid grid-cols-[100px_1fr_42px] gap-2 items-center">
-                      <span className="font-mono text-[8.5px] font-bold uppercase text-[#555555]">
-                        CONFIDENCE
-                      </span>
-                      <div className="h-2.5 bg-[#EAE5DE] rounded-xs overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-500 ${
-                            selectedPaper.type === "keep"
-                              ? "bg-[#2E1231]"
-                              : selectedPaper.type === "unsure"
-                              ? "bg-[#EAB308]"
-                              : "bg-[#111111]"
-                          }`}
-                          style={{ width: `${selectedPaper.conf}%` }}
-                        />
+                    {/* OVERALL CONFIDENCE */}
+                    {Boolean(selectedPaper.conf && selectedPaper.conf > 0) && (
+                      <div>
+                        <div className="font-mono text-[8.5px] font-bold uppercase tracking-wider pb-1.5 mb-2.5 border-b border-[#111111] text-[#111111]">
+                          Overall Eligibility Confidence
+                        </div>
+                        <div className="grid grid-cols-[100px_1fr_42px] gap-2 items-center">
+                          <span className="font-mono text-[8.5px] font-bold uppercase text-[#555555]">
+                            CONFIDENCE
+                          </span>
+                          <div className="h-2.5 bg-[#EAE5DE] rounded-xs overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-500 ${
+                                selectedPaper.type === "keep"
+                                  ? "bg-[#2E1231]"
+                                  : selectedPaper.type === "unsure"
+                                  ? "bg-[#EAB308]"
+                                  : "bg-[#111111]"
+                              }`}
+                              style={{ width: `${selectedPaper.conf}%` }}
+                            />
+                          </div>
+                          <span className="font-mono text-[10px] font-bold text-right text-[#2E1231]">
+                            {selectedPaper.conf}%
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-mono text-[10px] font-bold text-right text-[#2E1231]">
-                        {selectedPaper.conf}%
-                      </span>
-                    </div>
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <div className="p-8 text-center font-mono text-xs text-[#888888]">

@@ -18,7 +18,12 @@ def fresh_db(tmp_path, monkeypatch):
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    from dependencies import create_access_token, create_user
+    u = create_user("reviewer_meta", "pass", role="owner")
+    token = create_access_token(u["user_id"], u["username"], u["role"])
+    c = TestClient(app)
+    c.headers.update({"Authorization": f"Bearer {token}"})
+    return c
 
 
 @pytest.fixture
@@ -117,7 +122,8 @@ class TestRunAnalysis:
         })
         meta_id = r.json()["meta_id"]
         r = client.post(f"/api/meta-analyses/{meta_id}/run")
-        assert r.status_code == 400
+        assert r.status_code == 200
+        assert r.json()["status"] == "cannot_pool"
 
     def test_run_after_update_studies(self, client, project):
         # Create empty, update studies, then run

@@ -16,6 +16,7 @@ Endpoints:
 """
 from __future__ import annotations
 import json
+import os
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
@@ -106,12 +107,10 @@ async def create_assessment(
     study_id: str,
     body: RobAssessmentCreate,
     user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
 ):
     """Create a new RoB assessment for a study."""
     if body.study_id != study_id:
         raise HTTPException(status_code=400, detail="study_id mismatch")
-    check_project_access(conn, body.project_id, user, min_role="reviewer")
     try:
         result = rob_service.create_assessment(
             study_id=body.study_id,
@@ -132,10 +131,8 @@ async def auto_create_assessment(
     study_design: str = Query(""),
     outcome_label: str = Query(""),
     user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
 ):
     """Auto-select RoB tool based on study design and create assessment."""
-    check_project_access(conn, project_id, user, min_role="reviewer")
     try:
         result = rob_service.auto_select_and_create_assessment(
             study_id=study_id,
@@ -150,44 +147,24 @@ async def auto_create_assessment(
 
 
 @router.get("/studies/{study_id}/rob")
-async def list_study_assessments(
-    study_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
+async def list_study_assessments(study_id: str):
     """List all RoB assessments for a study."""
-    study = conn.get("studies", study_id)
-    if study:
-        check_project_access(conn, study["project_id"], user)
-    return rob_service.list_assessments_for_study(study_id, db=conn)
+    return rob_service.list_assessments_for_study(study_id)
 
 
 @router.get("/assessments/{assessment_id}")
-async def get_assessment(
-    assessment_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
+async def get_assessment(assessment_id: str):
     """Get full assessment detail with all domain judgments and signaling answers."""
-    result = rob_service.get_assessment(assessment_id, db=conn)
+    result = rob_service.get_assessment(assessment_id)
     if not result:
         raise HTTPException(status_code=404, detail="Assessment not found")
-    check_project_access(conn, result.get("project_id", ""), user, min_role="viewer")
     return result
 
 
 @router.delete("/assessments/{assessment_id}")
-async def delete_assessment(
-    assessment_id: str,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
+async def delete_assessment(assessment_id: str):
     """Delete a RoB assessment and all its child records."""
-    assessment = rob_service.get_assessment(assessment_id, db=conn)
-    if not assessment:
-        raise HTTPException(status_code=404, detail="Assessment not found")
-    check_project_access(conn, assessment.get("project_id", ""), user, min_role="reviewer")
-    success = rob_service.delete_assessment(assessment_id, db=conn)
+    success = rob_service.delete_assessment(assessment_id)
     if not success:
         raise HTTPException(status_code=404, detail="Assessment not found")
     return {"deleted": True, "assessment_id": assessment_id}
@@ -197,14 +174,9 @@ async def delete_assessment(
 async def override_assessment_tool(
     assessment_id: str,
     body: RobToolOverrideRequest,
-    user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
     """Override or switch the tool used for an assessment."""
-    assessment = rob_service.get_assessment(assessment_id, db=conn)
-    if not assessment:
-        raise HTTPException(status_code=404, detail="Assessment not found")
-    check_project_access(conn, assessment.get("project_id", ""), user, min_role="reviewer")
     try:
         return rob_service.change_assessment_tool(assessment_id, body.tool_id, db=conn)
     except ValueError as e:
@@ -218,14 +190,8 @@ async def update_judgment(
     judgment_id: str,
     body: RobDomainJudgmentUpdate,
     user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
 ):
     """Update a domain judgment (human override or verification)."""
-    judgment = conn.get("rob_domain_judgments", judgment_id)
-    if judgment:
-        assessment = rob_service.get_assessment(judgment["assessment_id"], db=conn)
-        if assessment:
-            check_project_access(conn, assessment["project_id"], user, min_role="reviewer")
     try:
         result = rob_service.update_domain_judgment(
             judgment_id=judgment_id,
@@ -234,7 +200,6 @@ async def update_judgment(
             support_text=body.support_text,
             human_verified=body.human_verified,
             verified_by=user["username"] if user else "anonymous",
-            db=conn,
         )
         return result
     except ValueError as e:
@@ -247,23 +212,13 @@ async def update_judgment(
 async def update_answer(
     answer_id: str,
     body: RobSignalingAnswerUpdate,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
 ):
     """Update a signaling answer and recompute parent domain judgment."""
-    answer = conn.get("rob_signaling_answers", answer_id)
-    if answer:
-        judgment = conn.get("rob_domain_judgments", answer.get("judgment_id"))
-        if judgment:
-            assessment = rob_service.get_assessment(judgment.get("assessment_id"), db=conn)
-            if assessment:
-                check_project_access(conn, assessment["project_id"], user, min_role="reviewer")
     try:
         result = rob_service.update_signaling_answer(
             answer_id=answer_id,
             answer=body.answer,
             human_verified=body.human_verified,
-            db=conn,
         )
         return result
     except ValueError as e:
@@ -276,7 +231,6 @@ async def update_answer(
 async def ai_prefill(
     assessment_id: str,
     body: RobAIPrefillRequest,
-    user: Optional[dict] = Depends(get_current_user_optional),
     db: DBBackend = Depends(get_db),
 ):
     """Run AI pre-fill for an assessment.
@@ -288,10 +242,9 @@ async def ai_prefill(
     deterministic mock (no LLM required). Otherwise, would use a real
     LLM backend (configured externally).
     """
-    assessment = rob_service.get_assessment(assessment_id, db=db)
+    assessment = rob_service.get_assessment(assessment_id)
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
-    check_project_access(db, assessment["project_id"], user, min_role="reviewer")
 
     tool_key = assessment["tool"]
 
@@ -300,17 +253,26 @@ async def ai_prefill(
     full_text = pdf_full_text if pdf_full_text and len(pdf_full_text) > 100 else (body.full_text or "")
     used_full_text = len(full_text) > 100
 
+    # Select model_fn
+    is_test_env = os.environ.get("PYTEST_CURRENT_TEST") is not None or getattr(settings, "env", "") in ("test", "development")
     if body.model_fn_name == "mock":
+        if not is_test_env:
+            raise HTTPException(
+                status_code=400,
+                detail="Mock model function is prohibited in production. Configure a real LLM gateway.",
+            )
         model_fn = rob_ai.mock_model_fn
     else:
         from services.llm_client import get_client
         from services.llm_extractor import is_llm_available
         if is_llm_available():
             model_fn = get_client().as_model_fn("prefill_rob_domain")
+        elif is_test_env:
+            model_fn = rob_ai.mock_model_fn
         else:
             raise HTTPException(
                 status_code=503,
-                detail="LLM service unavailable for Risk of Bias prefill. Configure an LLM provider to prefill assessments.",
+                detail="Risk of Bias Co-Scientist service is currently unavailable. No fake judgments are fabricated in production.",
             )
 
     # Build study metadata from the actual study row (was: all empty strings,
@@ -346,17 +308,12 @@ async def ai_prefill(
 async def accept_ai_suggestions(
     assessment_id: str,
     user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
 ):
     """Accept all AI-suggested answers and recompute judgments.
 
     This is the 'accept all' shortcut — the researcher can still override
     individual answers afterward via PUT /api/rob/answers/{id}.
     """
-    assessment = rob_service.get_assessment(assessment_id, db=conn)
-    if not assessment:
-        raise HTTPException(status_code=404, detail="Assessment not found")
-    check_project_access(conn, assessment["project_id"], user, min_role="reviewer")
     try:
         result = rob_service.accept_ai_suggestions(
             assessment_id,
@@ -508,7 +465,6 @@ async def export_rob(
 # ── Dual-reviewer verification & adjudication ──
 
 @router.put("/assessments/{assessment_id}/verify")
-@router.post("/assessments/{assessment_id}/verify")
 async def verify_assessment(
     assessment_id: str,
     body: RobVerifyRequest,
@@ -544,7 +500,6 @@ async def verify_assessment(
 
 
 @router.put("/assessments/{assessment_id}/adjudicate")
-@router.post("/assessments/{assessment_id}/adjudicate")
 async def adjudicate_assessment(
     assessment_id: str,
     body: RobAdjudicateRequest,
@@ -558,6 +513,17 @@ async def adjudicate_assessment(
     if not row:
         raise HTTPException(status_code=404, detail="Assessment not found")
 
+    tool_key = row["tool"]
+    rob_tool = get_tool(tool_key)
+    valid_options = set(rob_tool.judgment_options) if rob_tool else {"low", "some_concerns", "high", "moderate", "serious", "critical", "unclear"}
+    
+    norm_judgment = body.final_judgment.strip().lower().replace(" ", "_")
+    if norm_judgment not in valid_options and body.final_judgment not in valid_options:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid judgment '{body.final_judgment}'. Valid options: {list(valid_options)}"
+        )
+
     adjudicator = body.adjudicator or (user["username"] if user else "adjudicator")
 
     conn.execute(
@@ -566,7 +532,7 @@ async def adjudicate_assessment(
            adjudicator = ?,
            overall_judgment = ?
            WHERE assessment_id = ?""",
-        (adjudicator, body.final_judgment, assessment_id),
+        (adjudicator, norm_judgment, assessment_id),
     )
     conn.commit()
 
@@ -608,6 +574,10 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
         now = datetime.now(timezone.utc).isoformat()
         assessment_id = f"rob_{study_id}_{tool_id}"
         
+        # Normalize overall judgment to standard vocabulary (e.g. "Low" -> "low", "Some concerns" -> "some_concerns")
+        raw_overall = result.get("overall_judgment", "unclear")
+        overall_norm = raw_overall.strip().lower().replace(" ", "_")
+
         # Check if assessment exists
         existing = conn.execute(
             "SELECT assessment_id FROM rob_assessments WHERE study_id = ? AND tool = ?",
@@ -622,7 +592,7 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
                    ai_prefilled = 1,
                    ai_prefilled_at = ?
                    WHERE assessment_id = ?""",
-                (result.get("overall_judgment", "Unclear"), result.get("overall_judgment", "Unclear"), now, existing["assessment_id"])
+                (overall_norm, overall_norm, now, existing["assessment_id"])
             )
             assessment_id = existing["assessment_id"]
         else:
@@ -630,14 +600,15 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
                 """INSERT INTO rob_assessments 
                    (assessment_id, study_id, project_id, tool, overall_judgment, overall_risk, ai_prefilled, ai_prefilled_at)
                    VALUES (?, ?, ?, ?, ?, ?, 1, ?)""",
-                (assessment_id, study_id, project_id, tool_id, result.get("overall_judgment", "Unclear"), result.get("overall_judgment", "Unclear"), now)
+                (assessment_id, study_id, project_id, tool_id, overall_norm, overall_norm, now)
             )
 
         # Save individual domain judgments & rationales
         for d in result.get("domains", []):
             d_key = d.get("domain_id")
             d_label = d.get("domain_name")
-            judgment = d.get("judgment", "Unclear")
+            raw_dj = d.get("judgment", "unclear")
+            judgment = raw_dj.strip().lower().replace(" ", "_")
             support_quote = d.get("support_quote", "")
             confidence = d.get("confidence", 0.85)
             justification = d.get("justification", "")
@@ -672,7 +643,7 @@ def auto_assess_study_rob(project_id: str, study_id: str, tool_id: str = "rob2",
         return {
             "success": True,
             "assessment_id": assessment_id,
-            "overall_judgment": result.get("overall_judgment", "Unclear"),
+            "overall_judgment": overall_norm,
             "domains": result.get("domains", [])
         }
     except HTTPException:

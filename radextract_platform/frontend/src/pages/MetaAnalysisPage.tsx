@@ -4,6 +4,8 @@ import { Play, RotateCcw, AlertTriangle, Info, BarChart3, TrendingUp, CheckCircl
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { renderRMetaforForestPlotSVG, renderRMetaforFunnelPlotSVG, svgToPngDataUrl } from '../lib/rmetafor';
+import { EvidenceMapDashboard } from '../components/analysis/EvidenceMapDashboard';
+import type { Project } from '../lib/api';
 
 interface StudyData {
   name: string;
@@ -31,6 +33,18 @@ export function MetaAnalysisPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [modelType, setModelType] = useState<'random' | 'fixed'>('random');
   const [measureType, setMeasureType] = useState<string>('OR');
+
+  // Query project details for review_type mode switching
+  const { data: project } = useQuery<Project>({
+    queryKey: ['project', projectId],
+    queryFn: () => (projectId ? api.getProject(projectId) : Promise.reject('No project id')),
+    enabled: !!projectId,
+  });
+
+  const reviewType = project?.review_type || 'systematic';
+  const [activeTab, setActiveTab] = useState<'evidence_map' | 'meta_analysis'>(
+    reviewType === 'scoping' ? 'evidence_map' : 'meta_analysis'
+  );
 
   // Scientific Agent State (Charts & Stats)
   const [chartModalOpen, setChartModalOpen] = useState(false);
@@ -236,25 +250,76 @@ export function MetaAnalysisPage() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-8 max-w-7xl mx-auto space-y-6 font-['Work_Sans']">
+      {/* ── STAGE HEADER & MODE INDICATOR ── */}
+      <div className="flex justify-between items-center pb-2 border-b border-[#d2c2cb]">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 font-serif">Quantitative Synthesis & Meta-Analysis</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            DerSimonian-Laird random effects pooling, statistical heterogeneity, and forest plots
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-[#eee7ec] text-[#814d75] font-bold border border-[#d2c2cb]">
+              Review Type: {reviewType}
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold text-[#3a0f34] font-['Serifon_Editorial']">
+            {reviewType === 'scoping'
+              ? 'Evidence Synthesis & Scoping Evidence Map'
+              : reviewType === 'both'
+              ? 'Evidence Synthesis: Scoping Map & Meta-Analysis'
+              : 'Quantitative Synthesis & Meta-Analysis'}
+          </h1>
+          <p className="text-sm text-[#62535d] mt-1">
+            {reviewType === 'scoping'
+              ? 'Descriptive aggregation, study design distributions, Wilson proportions, and cross-tabulations'
+              : reviewType === 'both'
+              ? 'Comprehensive evidence mapping combined with DerSimonian-Laird quantitative pooling'
+              : 'DerSimonian-Laird random effects pooling, statistical heterogeneity, and publication forest plots'}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => refetch()}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
-          >
-            <RotateCcw className="w-4 h-4" /> Recalculate
-          </button>
-        </div>
+
+        {/* Tab switch when review_type is 'both' */}
+        {reviewType === 'both' && (
+          <div className="flex items-center bg-[#fbf9f4] p-1 rounded-xl border border-[#d2c2cb] shadow-2xs">
+            <button
+              onClick={() => setActiveTab('evidence_map')}
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                activeTab === 'evidence_map'
+                  ? 'bg-[#3a0f34] text-[#fbf9f4] shadow-xs'
+                  : 'text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]'
+              }`}
+            >
+              Evidence Map
+            </button>
+            <button
+              onClick={() => setActiveTab('meta_analysis')}
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                activeTab === 'meta_analysis'
+                  ? 'bg-[#3a0f34] text-[#fbf9f4] shadow-xs'
+                  : 'text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]'
+              }`}
+            >
+              Meta-Analysis
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Control Bar */}
+      {/* Render Scoping Evidence Map Dashboard when in scoping mode or evidence_map tab */}
+      {(reviewType === 'scoping' || (reviewType === 'both' && activeTab === 'evidence_map')) && (
+        <EvidenceMapDashboard projectId={projectId || ''} />
+      )}
+
+      {/* Render Quantitative Pooling when in systematic mode or meta_analysis tab */}
+      {(reviewType === 'systematic' || (reviewType === 'both' && activeTab === 'meta_analysis')) && (
+        <div className="space-y-6">
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
+            >
+              <RotateCcw className="w-4 h-4" /> Recalculate
+            </button>
+          </div>
+
+          {/* Control Bar */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Model Type</label>
@@ -410,6 +475,8 @@ export function MetaAnalysisPage() {
             </div>
           </div>
         </>
+      )}
+        </div>
       )}
 
       {/* Chart Preview Modal */}

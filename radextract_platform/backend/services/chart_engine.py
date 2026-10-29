@@ -364,35 +364,35 @@ def generate_prisma_flow(
     ax.set_ylim(0, 12)
     ax.axis("off")
 
-    # Colors
-    box_color = PHYLO_COLORS["cream"]
-    box_edge = JOURNAL_COLORS["primary"]
-    arrow_color = JOURNAL_COLORS["neutral_dark"]
-    side_box_color = PHYLO_COLORS["paper"]
+    # Colors (Publication Black & White PRISMA style)
+    box_color = "#FFFFFF"
+    box_edge = "#000000"
+    arrow_color = "#000000"
+    side_box_color = "#FFFFFF"
 
     def draw_box(x, y, w, h, text, fc=box_color, ec=box_edge, fontsize=9):
-        """Draw a rounded rectangle with centered text."""
-        rect = patches.FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.15",
-                                       facecolor=fc, edgecolor=ec, linewidth=1.5)
+        """Draw a rectangular square box with centered text."""
+        rect = patches.FancyBboxPatch((x, y), w, h, boxstyle="square,pad=0.15",
+                                       facecolor=fc, edgecolor=ec, linewidth=1.2)
         ax.add_patch(rect)
         ax.text(x + w/2, y + h/2, text, ha="center", va="center",
-                fontsize=fontsize, color=JOURNAL_COLORS["neutral_dark"],
+                fontsize=fontsize, color="#000000",
                 wrap=True, multialignment="center")
 
     def draw_arrow(x1, y1, x2, y2):
         """Draw an arrow from (x1,y1) to (x2,y2)."""
         ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
-                    arrowprops=dict(arrowstyle="->", color=arrow_color, lw=1.5))
+                    arrowprops=dict(arrowstyle="->", color=arrow_color, lw=1.2))
 
     # ── Phase labels (left side) ──
     phase_y = [10.5, 7.5, 4.5, 1.5]
     phase_labels = ["Identification", "Screening", "Eligibility", "Included"]
     for y, label in zip(phase_y, phase_labels):
         ax.text(0.3, y, label, fontsize=10, fontweight="bold",
-                color=JOURNAL_COLORS["primary"], rotation=90,
+                color="#000000", rotation=90,
                 va="center", ha="center")
         # Phase separator lines
-        ax.plot([0.7, 9.7], [y - 1.2, y - 1.2], color=JOURNAL_COLORS["neutral_light"],
+        ax.plot([0.7, 9.7], [y - 1.2, y - 1.2], color="#CCCCCC",
                 linewidth=0.5, linestyle="-")
 
     # ── Identification phase ──
@@ -458,11 +458,11 @@ def generate_prisma_flow(
 
     draw_box(1.5, 1.5, 4.0, 1.2,
              f"Studies included in review\n(n = {included})",
-             fc=PHYLO_COLORS["yellow"])
+             fc="#FFFFFF")
 
     # Title
     ax.text(5, 11.7, title, fontsize=13, fontweight="bold",
-            ha="center", va="center", color=JOURNAL_COLORS["primary"])
+            ha="center", va="center", color="#000000")
 
     plt.tight_layout()
     return save_figure(fig)

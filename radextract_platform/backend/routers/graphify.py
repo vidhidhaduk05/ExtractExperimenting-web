@@ -111,49 +111,49 @@ WORKFLOW_NODE_TARGETS: Dict[str, Dict[str, Any]] = {
     "S": {
         "title": "Multi-stage screening service",
         "status": "implemented",
-        "candidate_terms": ["AIScreeningPipeline", "laya_screener", "screening"],
+        "candidate_terms": ["AIScreeningPipeline", "jev_screener", "screening"],
         "description": "Coordinates multi-stage title, abstract, and full-text screening.",
     },
     "T": {
         "title": "Title screening",
         "status": "implemented",
-        "candidate_terms": ["AIScreeningPipeline", "laya_screener", "screen_title"],
+        "candidate_terms": ["AIScreeningPipeline", "jev_screener", "screen_title"],
         "description": "First-stage title eligibility evaluation.",
     },
     "A": {
         "title": "Abstract screening",
         "status": "implemented",
-        "candidate_terms": ["AIScreeningPipeline", "laya_screener", "screen_abstract"],
+        "candidate_terms": ["AIScreeningPipeline", "jev_screener", "screen_abstract"],
         "description": "Second-stage abstract eligibility evaluation for pending/uncertain records.",
     },
     "F": {
         "title": "Full-text screening",
         "status": "implemented",
-        "candidate_terms": ["AIScreeningPipeline", "laya_screener", "full_text"],
+        "candidate_terms": ["AIScreeningPipeline", "jev_screener", "full_text"],
         "description": "Eligible stage and full-text document eligibility verification.",
     },
     "E": {
         "title": "Screening engine routing",
         "status": "implemented",
-        "candidate_terms": ["laya_screener", "laya_client", "AIScreeningPipeline"],
+        "candidate_terms": ["jev_screener", "jev_client", "AIScreeningPipeline"],
         "description": "Routes screening requests to local Laya ONNX or configured provider fallback.",
     },
     "L": {
         "title": "Local Laya ONNX",
         "status": "implemented",
-        "candidate_terms": ["LayaModel", "laya_client", "laya_screener"],
+        "candidate_terms": ["LayaModel", "jev_client", "jev_screener"],
         "description": "Intended primary local ONNX screening model when configured.",
     },
     "O": {
         "title": "Other configured provider or LLM fallback",
         "status": "implemented",
-        "candidate_terms": ["laya_client", "llm", "provider"],
+        "candidate_terms": ["jev_client", "llm", "provider"],
         "description": "Configured secondary provider or LLM fallback path.",
     },
     "J": {
         "title": "Composed recommendation (Include, exclude or uncertain)",
         "status": "implemented",
-        "candidate_terms": ["laya_screener", "AIScreeningPipeline", "recommendation"],
+        "candidate_terms": ["jev_screener", "AIScreeningPipeline", "recommendation"],
         "description": "Aggregates criterion-level judgments into an overall screening recommendation.",
     },
     "H": {
@@ -1287,7 +1287,7 @@ async def get_review_graph(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    check_project_access(conn, project_id, user)
+    check_project_access(project_id, user, conn)
     return _build_review_graph(project_id, conn)
 
 
@@ -1297,7 +1297,7 @@ async def get_review_graph_stats(
     user: Optional[dict] = Depends(get_current_user_optional),
     conn: DBBackend = Depends(get_db),
 ):
-    check_project_access(conn, project_id, user)
+    check_project_access(project_id, user, conn)
     graph = _build_review_graph(project_id, conn)
     from collections import Counter
 

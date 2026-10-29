@@ -9,7 +9,6 @@ from services.mermaid_generator import generate_prisma_flow_mermaid, generate_ro
 from services.citation_service import study_to_bibtex, study_to_ris, generate_formatted_bibliography
 from services.manuscript_drafter import draft_methods_section, draft_results_section
 from database import get_db
-from dependencies import check_project_access, get_current_user_optional
 from services.db_backend import DBBackend
 import sqlite3
 
@@ -34,12 +33,12 @@ class BibliographyRequest(BaseModel):
 class ManuscriptDraftRequest(BaseModel):
     project_id: str
     section: str = "all" # "methods", "results", "all"
-    pooled_effect: Optional[float] = 1.48
-    ci_lower: Optional[float] = 1.22
-    ci_upper: Optional[float] = 1.79
+    pooled_effect: Optional[float] = None
+    ci_lower: Optional[float] = None
+    ci_upper: Optional[float] = None
     measure: Optional[str] = "Odds Ratio (OR)"
-    i2: Optional[float] = 42.5
-    p_val: Optional[float] = 0.001
+    i2: Optional[float] = None
+    p_val: Optional[float] = None
 
 @router.post("/prisma-mermaid")
 def export_prisma_mermaid(req: PrismaMermaidRequest):
@@ -59,13 +58,8 @@ def export_prisma_mermaid(req: PrismaMermaidRequest):
     return {"success": True, "mermaid": mermaid_code}
 
 @router.post("/bibliography")
-def export_project_bibliography(
-    req: BibliographyRequest,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
+def export_project_bibliography(req: BibliographyRequest, conn: DBBackend = Depends(get_db)):
     """Export project studies into BibTeX, RIS, or formatted APA/Vancouver/Nature reference list."""
-    check_project_access(conn, req.project_id, user)
     rows = conn.execute(
         "SELECT study_id, title, authors, publication_year, journal, doi, pmid FROM studies WHERE project_id = ?",
         (req.project_id,)
@@ -96,13 +90,8 @@ def export_project_bibliography(
     }
 
 @router.post("/draft-manuscript")
-def draft_manuscript_sections(
-    req: ManuscriptDraftRequest,
-    user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db),
-):
+def draft_manuscript_sections(req: ManuscriptDraftRequest, conn: DBBackend = Depends(get_db)):
     """Draft evidence-bound Methods and Results manuscript sections."""
-    check_project_access(conn, req.project_id, user)
     proj = conn.execute("SELECT name, description FROM projects WHERE project_id = ?", (req.project_id,)).fetchone()
     proj_title = proj["name"] if proj else "Systematic Review & Meta-Analysis"
         
@@ -116,16 +105,43 @@ def draft_manuscript_sections(
         databases_searched=["PubMed/MEDLINE", "OpenAlex", "Cochrane Central (CENTRAL)"]
     )
         
-    results_text = draft_results_section(
-        total_screened=max(100, total_studies * 8),
-        total_included=max(1, total_studies),
-        pooled_effect=req.pooled_effect or 1.48,
-        ci_lower=req.ci_lower or 1.22,
-        ci_upper=req.ci_upper or 1.79,
-        measure=req.measure or "Odds Ratio (OR)",
-        i2=req.i2 or 42.5,
-        p_val=req.p_val or 0.001
-    )
+    pooled = req.pooled_effect
+    ci_l = req.ci_lower
+    ci_u = req.ci_upper
+    meas = req.measure or "Odds Ratio (OR)"
+    het_i2 = req.i2
+    p_v = req.p_val
+
+    if pooled is None:
+        ma_row = conn.execute("SELECT pooled_effect, ci_lower, ci_upper, effect_measure, i2, p_value FROM meta_analyses WHERE project_id = ? ORDER BY created_at DESC LIMIT 1", (req.project_id,)).fetchone()
+        if ma_row and ma_row["pooled_effect"] is not None:
+            pooled = float(ma_row["pooled_effect"])
+            ci_l = float(ma_row["ci_lower"]) if ma_row["ci_lower"] is not None else pooled
+            ci_u = float(ma_row["ci_upper"]) if ma_row["ci_upper"] is not None else pooled
+            meas = ma_row["effect_measure"] or meas
+            het_i2 = float(ma_row["i2"]) if ma_row["i2"] is not None else 0.0
+            p_v = float(ma_row["p_value"]) if ma_row["p_value"] is not None else 0.05
+
+    if pooled is not None:
+        results_text = draft_results_section(
+            total_screened=max(1, total_studies),
+            total_included=max(1, total_studies),
+            pooled_effect=pooled,
+            ci_lower=ci_l if ci_l is not None else pooled,
+            ci_upper=ci_u if ci_u is not None else pooled,
+            measure=meas,
+            i2=het_i2 if het_i2 is not None else 0.0,
+            p_val=p_v if p_v is not None else 0.05
+        )
+    else:
+        results_text = f"""## Results
+
+### Study Selection and Characteristics
+A total of {total_studies} studies were identified for this project.
+
+### Synthesis of Findings
+Quantitative meta-analytic pooling was not performed due to insufficient homogeneous quantitative effect size data (minimum 2 studies with extractable effect sizes required). Findings are synthesized narratively.
+"""
         
     if req.section.lower() == "methods":
         out_md = methods_text

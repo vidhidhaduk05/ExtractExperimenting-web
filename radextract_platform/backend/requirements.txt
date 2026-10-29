@@ -10,7 +10,6 @@ jsonschema>=4.0.0
 
 # HTTP client
 httpx>=0.24.0
-requests>=2.31.0
 
 # Authentication & cryptography
 python-jose[cryptography]>=3.3.0

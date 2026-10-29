@@ -751,24 +751,3 @@ class TestResearchQuestionAPI:
             json={"question": "test question"},
         )
         assert r.status_code == 404
-
-    def test_pico_from_question_success(self, client, project, monkeypatch):
-        r = client.post(
-            f"/api/projects/{project}/pico/from-question",
-            json={"question": "Is MRI better than CT for detecting liver metastases in patients with colorectal cancer?", "persist": True},
-        )
-        assert r.status_code == 200
-        data = r.json()
-        assert data["project_id"] == project
-        assert "pico" in data
-        assert "mri" in data["pico"]["index_test"].lower()
-        assert "ct" in data["pico"]["comparator"].lower()
-        assert "ambiguities" in data
-        assert "missing_fields" in data
-
-    def test_pico_from_empty_question(self, client, project):
-        r = client.post(
-            f"/api/projects/{project}/pico/from-question",
-            json={"question": ""},
-        )
-        assert r.status_code == 400

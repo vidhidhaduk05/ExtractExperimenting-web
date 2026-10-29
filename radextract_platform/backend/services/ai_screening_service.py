@@ -12,6 +12,8 @@ The classifier is upgradeable to SVM or transformer-based models later.
 from __future__ import annotations
 
 import json
+import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 from database import get_db_backend
@@ -223,7 +225,41 @@ def submit_active_learning_feedback(project_id: str, study_id: str, corrected_de
         Dict with status and updated prioritization results
     """
     db = db or get_db_backend()
-    db.update("studies", study_id, {"screening_status": corrected_decision})
+    norm_dec = corrected_decision.strip().lower()
+    if norm_dec not in ("included", "excluded", "maybe"):
+        raise ValueError(f"Invalid corrected_decision '{corrected_decision}'. Must be 'included', 'excluded', or 'maybe'.")
+
+    study = db.get("studies", study_id)
+    if not study:
+        raise ValueError(f"Study '{study_id}' not found.")
+    if study.get("project_id") != project_id:
+        raise ValueError(f"Study '{study_id}' does not belong to project '{project_id}'.")
+
+    stage = study.get("screening_stage") or "ta"
+    dec_id = str(uuid.uuid4())
+    now_str = datetime.now(timezone.utc).isoformat()
+    rev_id = reviewer_id or "reviewer"
+
+    # Insert decision record for audit trail
+    db.insert("screening_decisions", {
+        "decision_id": dec_id,
+        "study_id": study_id,
+        "project_id": project_id,
+        "reviewer_id": rev_id,
+        "reviewer_name": "Active Learning Reviewer",
+        "decision": norm_dec,
+        "reason_code": "active_learning_correction",
+        "reason_text": "Reviewer active learning feedback correction",
+        "stage": stage,
+        "is_blinded": 0,
+        "created_at": now_str,
+    })
+
+    db.update("studies", study_id, {
+        "screening_status": norm_dec,
+        "screening_stage": stage,
+        "screening_reason": "Active learning correction",
+    })
     db.commit()
 
     # Trigger re-prioritization

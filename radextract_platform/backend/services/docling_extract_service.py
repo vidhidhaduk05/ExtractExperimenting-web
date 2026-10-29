@@ -350,11 +350,12 @@ def auto_extract_with_docling(study_id: str, project_id: str, reviewer: str = "a
         if llm_results and var_name in llm_results:
             llm_val = llm_results[var_name]
             if isinstance(llm_val, dict) and llm_val.get("value") and llm_val.get("value").lower() not in ("not reported", "n/a", "none", "unknown"):
+                raw_sp = llm_val.get("source_page")
                 match = {
                     "value": str(llm_val["value"]),
                     "confidence": float(llm_val.get("confidence", 0.90)),
                     "source_text": str(llm_val.get("source_text", llm_val.get("quote", ""))),
-                    "source_page": int(llm_val.get("source_page", 1)),
+                    "source_page": int(raw_sp) if raw_sp is not None and str(raw_sp).isdigit() else None,
                 }
                 extraction_method = "gemini_llm"
 
@@ -373,14 +374,8 @@ def auto_extract_with_docling(study_id: str, project_id: str, reviewer: str = "a
                 match = _extract_numeric_from_text(full_text, pattern_key)
                 if match:
                     extraction_method = "numeric_regex"
-                    # Estimate page from character position
                     if not match.get("source_page"):
-                        # Find the keyword position in full text
-                        for kw in NUMERIC_PATTERNS.get(pattern_key, []):
-                            m = kw.search(full_text)
-                            if m:
-                                match["source_page"] = max(1, m.start() // 3000 + 1)
-                                break
+                        match["source_page"] = None
 
         # Step 3: Fall back to legacy keyword-based extraction
         if not match:

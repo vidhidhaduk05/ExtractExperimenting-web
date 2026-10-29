@@ -73,7 +73,7 @@ class LocalStorage(StorageBackend):
 
     def _full_path(self, key: str) -> Path:
         resolved_root = self.root.resolve()
-        key_norm = key.replace("\\", "/").lstrip("/")
+        key_norm = key.replace("\\", "/")
         resolved_path = (self.root / key_norm).resolve()
         if not resolved_path.is_relative_to(resolved_root):
             raise ValueError(f"Access denied: path traversal attempt in key '{key}'")
@@ -86,34 +86,19 @@ class LocalStorage(StorageBackend):
         return str(path)
 
     def get_bytes(self, key: str) -> Optional[bytes]:
-        if os.path.isabs(key) and os.path.exists(key):
-            return Path(key).read_bytes()
-        try:
-            path = self._full_path(key)
-            if not path.exists():
-                return None
-            return path.read_bytes()
-        except Exception:
+        path = self._full_path(key)
+        if not path.exists():
             return None
+        return path.read_bytes()
 
     def get_file_path(self, key: str) -> Optional[str]:
-        if os.path.isabs(key) and os.path.exists(key):
-            return key
-        try:
-            path = self._full_path(key)
-            if not path.exists():
-                return None
-            return str(path)
-        except Exception:
+        path = self._full_path(key)
+        if not path.exists():
             return None
+        return str(path)
 
     def file_exists(self, key: str) -> bool:
-        if os.path.isabs(key) and os.path.exists(key):
-            return True
-        try:
-            return self._full_path(key).exists()
-        except Exception:
-            return False
+        return self._full_path(key).exists()
 
     def delete_file(self, key: str) -> bool:
         path = self._full_path(key)
@@ -214,7 +199,7 @@ def get_storage(bucket_type: str = "upload") -> StorageBackend:
             region=settings.aws_region,
         )
     else:
-        root = settings.storage_root
+        root = settings.effective_upload_root if bucket_type == "upload" else settings.effective_export_root
         backend = LocalStorage(root=root)
 
     _storage_instances[cache_key] = backend
@@ -246,19 +231,20 @@ def init_s3_buckets():
 def resolve_pdf_path(stored_path: str) -> Optional[str]:
     """Resolve a stored pdf_path from the database to a local file path.
 
-    Resolves paths stored relative to settings.storage_root (e.g. "{project}/01_SOURCE/{file}.pdf"),
-    as well as old legacy absolute or uploads-relative paths for backward compatibility.
+    Handles three cases:
+    1. New-style storage key (e.g. "proj123/study456.pdf") — uses storage backend
+    2. Old-style absolute path that still exists on disk — returns it directly
+    3. Old-style absolute path that no longer exists — tries as a storage key
+
+    Returns None if the file cannot be located.
     """
     if not stored_path:
         return None
 
-    from services.storage_manager import resolve_storage_path
-    resolved = resolve_storage_path(stored_path)
-    if resolved and resolved.exists():
-        return str(resolved)
+    # Case 2: old-style absolute path that still exists
+    if os.path.isabs(stored_path) and os.path.exists(stored_path):
+        return stored_path
 
-    if settings.storage_backend == "s3":
-        storage = get_storage("upload")
-        return storage.get_file_path(stored_path)
-
-    return None
+    # Case 1 & 3: treat as a storage key
+    storage = get_storage("upload")
+    return storage.get_file_path(stored_path)

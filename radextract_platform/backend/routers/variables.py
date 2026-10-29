@@ -6,10 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 import sqlite3
 
-from models import VariableCreate, VariableUpdate, VariableResponse
+from models import VariableCreate, VariableUpdate, VariableResponse, VariableReorder
 from database import get_db
 from services.db_backend import DBBackend
 from dependencies import get_current_user_optional, check_project_access
+from fastapi import Query
 
 router = APIRouter(prefix="/api", tags=["variables"])
 
@@ -19,7 +20,29 @@ async def list_variables(project_id: str, user: Optional[dict] = Depends(get_cur
     conn: DBBackend = Depends(get_db)):
     check_project_access(conn, project_id, user)
     rows = conn.execute(
-        "SELECT * FROM variables WHERE project_id = ? ORDER BY section, order_index",
+        "SELECT * FROM variables WHERE project_id = ? ORDER BY order_index ASC, name ASC",
+        (project_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+@router.put("/projects/{project_id}/variables/reorder")
+async def reorder_variables(
+    project_id: str,
+    body: VariableReorder,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Update global ordering of variables in a single authoritative transaction."""
+    check_project_access(conn, project_id, user, min_role="editor")
+    for idx, var_id in enumerate(body.variable_ids):
+        conn.execute(
+            "UPDATE variables SET order_index = ? WHERE variable_id = ? AND project_id = ?",
+            (idx, var_id, project_id),
+        )
+    conn.commit()
+    rows = conn.execute(
+        "SELECT * FROM variables WHERE project_id = ? ORDER BY order_index ASC, name ASC",
         (project_id,),
     ).fetchall()
     return [dict(r) for r in rows]
@@ -33,12 +56,14 @@ async def create_variable(project_id: str, body: VariableCreate, user: Optional[
     if body.project_id and body.project_id != project_id:
         raise HTTPException(status_code=400, detail="project_id mismatch")
     variable_id = str(uuid.uuid4())
-    # Determine next order index if not provided
-    max_order = conn.execute(
-        "SELECT MAX(order_index) as max_idx FROM variables WHERE project_id = ? AND section = ?",
-        (project_id, body.section),
-    ).fetchone()
-    order_idx = body.order_index if body.order_index > 0 else ((max_order["max_idx"] or 0) + 1)
+    if body.order_index is not None:
+        order_idx = body.order_index
+    else:
+        max_order = conn.execute(
+            "SELECT MAX(order_index) as max_idx FROM variables WHERE project_id = ?",
+            (project_id,),
+        ).fetchone()
+        order_idx = ((max_order["max_idx"] or 0) + 1) if (max_order and max_order["max_idx"] is not None) else 0
 
     # Auto-generate the per-variable extraction prompt (column-header-as-prompt)
     from services.variable_generator import _default_extraction_prompt
@@ -108,20 +133,41 @@ async def update_variable(variable_id: str, body: VariableUpdate, user: Optional
 
 
 @router.delete("/variables/{variable_id}")
-async def delete_variable(variable_id: str, user: Optional[dict] = Depends(get_current_user_optional),
-    conn: DBBackend = Depends(get_db)):
+async def delete_variable(
+    variable_id: str,
+    force: bool = Query(False, description="Force delete even if populated extractions exist"),
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
     row = conn.execute(
-        "SELECT project_id FROM variables WHERE variable_id = ?", (variable_id,)
+        "SELECT project_id, name FROM variables WHERE variable_id = ?", (variable_id,)
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Variable not found")
     check_project_access(conn, row["project_id"], user, min_role="editor")
 
-    conn.execute(
-        "DELETE FROM variables WHERE variable_id = ?", (variable_id,)
-    )
+    # Protection against accidental deletion of populated variables
+    count_row = conn.execute(
+        "SELECT COUNT(*) as c FROM extractions WHERE variable_id = ? AND value IS NOT NULL AND value != ''",
+        (variable_id,),
+    ).fetchone()
+    populated_count = count_row["c"] if count_row else 0
+
+    if populated_count > 0 and not force:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": f"Variable '{row['name']}' has {populated_count} populated extraction value(s). Confirmation required to delete.",
+                "populated_count": populated_count,
+                "requires_confirmation": True,
+            },
+        )
+
+    # Clean up any associated extractions
+    conn.execute("DELETE FROM extractions WHERE variable_id = ?", (variable_id,))
+    conn.execute("DELETE FROM variables WHERE variable_id = ?", (variable_id,))
     conn.commit()
-    return {"deleted": True, "variable_id": variable_id}
+    return {"deleted": True, "variable_id": variable_id, "deleted_extractions_count": populated_count}
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -304,6 +350,12 @@ async def create_variables_batch(
     check_project_access(conn, project_id, user, min_role="editor")
     from services.variable_generator import _default_extraction_prompt
 
+    max_order = conn.execute(
+        "SELECT MAX(order_index) as max_idx FROM variables WHERE project_id = ?",
+        (project_id,),
+    ).fetchone()
+    next_order = (max_order["max_idx"] or 0) + 1
+
     created = []
     for v in body.variables:
         if not v.name or not v.name.strip():
@@ -311,6 +363,8 @@ async def create_variables_batch(
         vname = v.name.strip()
         variable_id = str(uuid.uuid4())
         prompt = _default_extraction_prompt(vname, v.description or "", v.field_type)
+        assigned_order = v.order_index if (v.order_index is not None and v.order_index > 0) else next_order
+        next_order = max(next_order + 1, assigned_order + 1)
         conn.execute(
             """INSERT INTO variables
                (variable_id, project_id, section, name, field_type, allowed_values,
@@ -318,7 +372,7 @@ async def create_variables_batch(
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (variable_id, project_id, v.section or "General", vname, v.field_type or "free_text",
              v.allowed_values or "", v.range_min, v.range_max,
-             v.description or "", prompt, v.order_index or 0, 1 if v.is_base else 0),
+             v.description or "", prompt, assigned_order, 1 if v.is_base else 0),
         )
         created.append({
             "variable_id": variable_id,
@@ -384,16 +438,4 @@ async def import_variables_from_excel_endpoint(
         "total_variables": len(imported_vars),
         "imported_variables": created if auto_commit else imported_vars,
     }
-
-
-@router.get("/codebook/rules")
-async def get_codebook_rules():
-    """Return configured or default codebook extraction rules."""
-    return {"rules": [], "status": "ok"}
-
-
-@router.put("/codebook/rules")
-async def update_codebook_rules(body: dict):
-    """Update codebook extraction rules."""
-    return {"rules": body.get("rules", []), "status": "ok"}
 

@@ -1,13 +1,10 @@
 #!/usr/bin/env Rscript
 # PRISMA 2020 Flow Diagram using R grid graphics
-# Replicates the official PRISMA 2020 template layout
-# Aggregates duplicate exclusion reasons and sums counts
+# Replicates the official PRISMA 2020 template layout (Haddaway et al. / estech.shinyapps.io/prisma_flowdiagram)
 # Usage: Rscript prisma_flow.R <input_json_path>
 
-suppressPackageStartupMessages({
-  library(jsonlite)
-  library(grid)
-})
+library(jsonlite)
+library(grid)
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) stop("Usage: Rscript prisma_flow.R <input_json_path>")
@@ -15,243 +12,218 @@ if (length(args) < 1) stop("Usage: Rscript prisma_flow.R <input_json_path>")
 input <- fromJSON(readLines(args[1], warn = FALSE))
 output_path <- input$output_path
 
-# Extract data
+# Extract data with safe defaults
 id <- input$identification
 scr <- input$screening
 elig <- input$eligibility
 incl <- input$included
-pending <- if (!is.null(input$pending)) as.numeric(input$pending) else 0
+pending <- if (!is.null(input$pending)) input$pending else 0
 
-# Helper to safely aggregate reasons across case/whitespace variations and sum counts
-aggregate_reasons <- function(raw) {
-  if (is.null(raw)) return(list())
-  reasons_vec <- c()
-  counts_vec <- c()
+db_records <- if (!is.null(id$database_records)) id$database_records else (if (!is.null(id$total)) id$total else 0)
+reg_records <- if (!is.null(id$registers)) id$registers else 0
+dups_rem <- if (!is.null(id$duplicates_removed)) id$duplicates_removed else 0
+auto_rem <- if (!is.null(scr$excluded_automatic)) scr$excluded_automatic else 0
 
-  if (is.data.frame(raw)) {
-    if (nrow(raw) == 0) return(list())
-    if ("reason" %in% names(raw)) {
-      reasons_vec <- as.character(raw$reason)
-      counts_vec <- if ("count" %in% names(raw)) as.numeric(raw$count) else rep(1, nrow(raw))
-    }
-  } else if (is.list(raw)) {
-    if (length(raw) == 0) return(list())
-    for (i in seq_along(raw)) {
-      item <- raw[[i]]
-      if (is.list(item) && !is.null(item$reason)) {
-        reasons_vec <- c(reasons_vec, as.character(item$reason))
-        cnt <- if (!is.null(item$count)) as.numeric(item$count) else 1
-        counts_vec <- c(counts_vec, cnt)
-      } else if (is.character(item)) {
-        reasons_vec <- c(reasons_vec, item)
-        counts_vec <- c(counts_vec, 1)
-      }
-    }
-  }
+screened <- if (!is.null(scr$records_screened)) scr$records_screened else 0
+ta_excl <- if (!is.null(scr$records_excluded)) scr$records_excluded else 0
 
-  if (length(reasons_vec) == 0) return(list())
+sought <- max(0, screened - ta_excl)
+ft_assessed <- if (!is.null(elig$full_text_assessed)) elig$full_text_assessed else sought
+not_retrieved <- max(0, sought - ft_assessed)
+ft_excl <- if (!is.null(elig$full_text_excluded)) elig$full_text_excluded else 0
 
-  # Clean strings & aggregate by normalized key
-  cleaned <- gsub("_", " ", trimws(reasons_vec))
-  cleaned <- gsub("\\s+", " ", cleaned)
-  cleaned <- sub("\\s*[\\[\\(]\\s*([pP](robability)?|conf(idence)?|score)?\\s*[:=><]\\s*[0-9]+(\\.[0-9]+)?%?\\s*[\\]\\)]\\s*$", "", cleaned, perl = TRUE)
-  cleaned <- sub("\\s*\\([pP]\\s*=\\s*[0-9\\.]+\\)\\s*$", "", cleaned, perl = TRUE)
-  cleaned <- sub("[ :;.-]+$", "", cleaned)
-  cleaned <- gsub("\\s+", " ", trimws(cleaned))
-  keys <- tolower(cleaned)
-
-  agg <- list()
-  for (k in unique(keys)) {
-    if (nchar(k) == 0) next
-    idx <- which(keys == k)
-    total_cnt <- sum(counts_vec[idx], na.rm = TRUE)
-    orig <- cleaned[idx[1]]
-    disp <- if (orig == tolower(orig)) paste0(toupper(substr(orig, 1, 1)), substr(orig, 2, nchar(orig))) else orig
-    agg[[length(agg) + 1]] <- list(reason = disp, count = total_cnt)
-  }
-
-  if (length(agg) == 0) return(list())
-  counts <- sapply(agg, function(x) x$count)
-  agg <- agg[order(counts, decreasing = TRUE)]
-  return(agg)
-}
-
-ta_reasons <- aggregate_reasons(scr$excluded_with_reasons)
-ft_reasons <- aggregate_reasons(elig$excluded_reasons)
+studies_incl <- if (!is.null(incl$studies_in_review)) incl$studies_in_review else 0
+studies_ma <- if (!is.null(incl$studies_in_meta_analysis)) incl$studies_in_meta_analysis else 0
 
 # Create output device: PNG when output_path ends in .png, SVG otherwise
 if (grepl("\\.png$", output_path, ignore.case = TRUE)) {
-  png(output_path, width = 2200, height = 1600, res = 200, bg = "white")
+  png(output_path, width = 2400, height = 1800, res = 200, bg = "white")
 } else {
-  svg(output_path, width = 11, height = 8.5, bg = "white")
+  svg(output_path, width = 12, height = 9, bg = "white")
 }
 
-# Set up grid viewport
 grid.newpage()
 pushViewport(viewport(width = 0.98, height = 0.98))
 
-# Professional styling tokens
+# Color palette (Pure Black & White publication standard)
 box_fill <- "#FFFFFF"
-box_border <- "#333333"
-phase_bg <- "#F0F4F8"
-excl_fill <- "#FFF5F5"
-excl_border <- "#E94444"
-incl_fill <- "#F0F8E8"
-incl_border <- "#75A025"
-arrow_col <- "#555555"
-text_col <- "#222222"
-count_col <- "#0279EE"
+line_col <- "#000000"
+text_col <- "#000000"
 
-# Helper function to draw a main flow box
-draw_box <- function(x, y, w, h, title, count, subtitle = "",
-                     fill = box_fill, border = box_border, count_color = count_col) {
+# Helper function to draw rectangular square boxes
+draw_rect_box <- function(x, y, w, h) {
   grid.rect(x = x, y = y, width = w, height = h,
-            gp = gpar(fill = fill, col = border, lwd = 1.2),
+            gp = gpar(fill = box_fill, col = line_col, lwd = 1.2),
             just = c("center", "center"))
-  grid.text(title, x = x, y = y + h/2 - 0.015,
-            gp = gpar(fontsize = 8.5, fontface = "bold", col = text_col),
-            just = c("center", "top"))
-  grid.text(sprintf("n = %d", count), x = x, y = y + 0.005,
-            gp = gpar(fontsize = 15, fontface = "bold", col = count_color),
-            just = c("center", "center"))
-  if (subtitle != "") {
-    grid.text(subtitle, x = x, y = y - h/2 + 0.012,
-              gp = gpar(fontsize = 7.5, col = "#777777"),
-              just = c("center", "bottom"))
-  }
-}
-
-# Helper to draw excluded box with merged reasons
-draw_excluded_box <- function(x, y, w, title, total_count, reasons) {
-  n_reasons <- min(length(reasons), 5)
-  box_h <- 0.065 + max(0, n_reasons * 0.024) + (if (n_reasons > 0) 0.016 else 0)
-  box_y <- y - (box_h - 0.07) / 2
-
-  grid.rect(x = x, y = box_y, width = w, height = box_h,
-            gp = gpar(fill = excl_fill, col = excl_border, lwd = 1.2),
-            just = c("center", "center"))
-  grid.text(title, x = x, y = box_y + box_h/2 - 0.012,
-            gp = gpar(fontsize = 8.5, fontface = "bold", col = text_col),
-            just = c("center", "top"))
-  grid.text(sprintf("n = %d", total_count), x = x, y = box_y + box_h/2 - 0.032,
-            gp = gpar(fontsize = 13, fontface = "bold", col = "#E94444"),
-            just = c("center", "top"))
-
-  if (n_reasons > 0) {
-    grid.text("Reasons:", x = x - w/2 + 0.015, y = box_y + box_h/2 - 0.052,
-              gp = gpar(fontsize = 7.5, fontface = "italic", col = "#666666"),
-              just = c("left", "top"))
-    curr_y <- box_y + box_h/2 - 0.070
-    for (i in 1:n_reasons) {
-      r <- reasons[[i]]
-      lbl <- sprintf("%s (n = %d)", r$reason, r$count)
-      if (nchar(lbl) > 36) lbl <- paste0(substr(lbl, 1, 33), "...")
-      grid.text(lbl, x = x - w/2 + 0.02, y = curr_y,
-                gp = gpar(fontsize = 7, col = "#333333"),
-                just = c("left", "top"))
-      curr_y <- curr_y - 0.022
-    }
-  }
 }
 
 # Helper to draw arrows
-draw_arrow <- function(x1, y1, x2, y2, col = arrow_col) {
+draw_arrow <- function(x1, y1, x2, y2) {
   grid.segments(x0 = x1, y0 = y1, x1 = x2, y1 = y2,
-                gp = gpar(col = col, lwd = 1.2),
-                arrow = arrow(length = unit(0.08, "inches"), type = "closed"))
+                gp = gpar(col = line_col, lwd = 1.2),
+                arrow = arrow(length = unit(0.09, "inches"), type = "closed"))
 }
 
 # Helper to draw phase label (left column)
-draw_phase <- function(y, label) {
-  grid.rect(x = 0.06, y = y, width = 0.10, height = 0.06,
-            gp = gpar(fill = phase_bg, col = "#0279EE", lwd = 0.8),
+draw_phase_banner <- function(y, h, label) {
+  grid.rect(x = 0.05, y = y, width = 0.06, height = h,
+            gp = gpar(fill = box_fill, col = line_col, lwd = 1.2),
             just = c("center", "center"))
-  grid.text(label, x = 0.06, y = y,
-            gp = gpar(fontsize = 8, fontface = "bold", col = "#0279EE"),
-            just = c("center", "center"))
-}
-
-# Layout coordinates (normalized 0-1)
-main_x <- 0.38
-right_x <- 0.74
-box_w <- 0.30
-excl_w <- 0.28
-
-# Phase labels
-draw_phase(0.88, "Identification")
-draw_phase(0.65, "Screening")
-draw_phase(0.38, "Eligibility")
-draw_phase(0.12, "Included")
-
-# ── Identification ──
-db_cnt <- if (!is.null(id$database_records)) as.numeric(id$database_records) else 0
-reg_cnt <- if (!is.null(id$registers)) as.numeric(id$registers) else 0
-oth_cnt <- if (!is.null(id$other_sources)) as.numeric(id$other_sources) else 0
-dup_cnt <- if (!is.null(id$duplicates_removed)) as.numeric(id$duplicates_removed) else 0
-
-id_sub <- sprintf("Registers: %d | Other: %d", reg_cnt, oth_cnt)
-if (dup_cnt > 0) {
-  id_sub <- sprintf("%s | Duplicates removed: %d", id_sub, dup_cnt)
-}
-
-draw_box(main_x, 0.88, box_w, 0.08,
-         "Records identified from databases",
-         db_cnt,
-         id_sub)
-
-draw_arrow(main_x, 0.84, main_x, 0.69)
-
-# ── Screening ──
-scr_screened <- if (!is.null(scr$records_screened)) as.numeric(scr$records_screened) else 0
-scr_excl <- if (!is.null(scr$records_excluded)) as.numeric(scr$records_excluded) else 0
-
-draw_box(main_x, 0.65, box_w, 0.07,
-         "Records screened (Title / Abstract)",
-         scr_screened)
-
-draw_arrow(main_x + box_w/2, 0.65, right_x - excl_w/2, 0.65)
-draw_excluded_box(right_x, 0.65, excl_w, "Records excluded", scr_excl, ta_reasons)
-
-draw_arrow(main_x, 0.61, main_x, 0.42)
-
-# ── Eligibility ──
-elig_assessed <- if (!is.null(elig$full_text_assessed)) as.numeric(elig$full_text_assessed) else 0
-elig_excl <- if (!is.null(elig$full_text_excluded)) as.numeric(elig$full_text_excluded) else 0
-
-draw_box(main_x, 0.38, box_w, 0.07,
-         "Full-text articles assessed for eligibility",
-         elig_assessed)
-
-draw_arrow(main_x + box_w/2, 0.38, right_x - excl_w/2, 0.38)
-draw_excluded_box(right_x, 0.38, excl_w, "Full-text excluded", elig_excl, ft_reasons)
-
-draw_arrow(main_x, 0.34, main_x, 0.17)
-
-# ── Included ──
-incl_rev <- if (!is.null(incl$studies_in_review)) as.numeric(incl$studies_in_review) else 0
-incl_meta <- if (!is.null(incl$studies_in_meta_analysis)) as.numeric(incl$studies_in_meta_analysis) else 0
-
-draw_box(main_x, 0.12, box_w, 0.08,
-         "Studies included in review",
-         incl_rev,
-         sprintf("In meta-analysis: %d", incl_meta),
-         fill = incl_fill, border = incl_border, count_color = "#75A025")
-
-if (pending > 0) {
-  grid.rect(x = main_x, y = 0.03, width = box_w, height = 0.04,
-            gp = gpar(fill = "#FFF8E1", col = "#FF9400", lwd = 0.8),
-            just = c("center", "center"))
-  grid.text(sprintf("%d records pending screening", pending),
-            x = main_x, y = 0.03,
-            gp = gpar(fontsize = 7.5, fontface = "bold", col = "#FF9400"),
+  grid.text(label, x = 0.05, y = y, rot = 90,
+            gp = gpar(fontsize = 8, fontface = "bold", col = text_col),
             just = c("center", "center"))
 }
 
-# Header Title
-grid.text("PRISMA 2020 Flow Diagram for Systematic Reviews",
-          x = 0.5, y = 0.97,
-          gp = gpar(fontsize = 14, fontface = "bold", col = "#222222"),
+# ── Phase labels (left column) ──
+draw_phase_banner(0.85, 0.16, "IDENTIFICATION")
+draw_phase_banner(0.53, 0.44, "SCREENING")
+draw_phase_banner(0.20, 0.16, "INCLUDED")
+
+# ── Top Header Banner ──
+grid.rect(x = 0.53, y = 0.96, width = 0.88, height = 0.04,
+          gp = gpar(fill = box_fill, col = line_col, lwd = 1.2),
           just = c("center", "center"))
+grid.text("Identification of new studies via databases and registers",
+          x = 0.53, y = 0.96,
+          gp = gpar(fontsize = 9, fontface = "bold", col = text_col),
+          just = c("center", "center"))
+
+# Layout x positions
+col1_x <- 0.31
+col2_x <- 0.75
+w_box <- 0.42
+
+# ── Row 1: Identification ──
+# Left Box: Records identified
+draw_rect_box(col1_x, 0.85, w_box, 0.14)
+grid.text("Records identified from*:", x = col1_x - w_box/2 + 0.02, y = 0.90,
+          gp = gpar(fontsize = 8, fontface = "bold", col = text_col), just = c("left", "center"))
+grid.text(sprintf("Databases (n = %d)", db_records), x = col1_x - w_box/2 + 0.03, y = 0.86,
+          gp = gpar(fontsize = 7.5, col = text_col), just = c("left", "center"))
+grid.text(sprintf("Registers (n = %d)", reg_records), x = col1_x - w_box/2 + 0.03, y = 0.82,
+          gp = gpar(fontsize = 7.5, col = text_col), just = c("left", "center"))
+
+# Arrow right
+draw_arrow(col1_x + w_box/2, 0.85, col2_x - w_box/2, 0.85)
+
+# Right Box: Records removed before screening
+draw_rect_box(col2_x, 0.85, w_box, 0.14)
+grid.text("Records removed before screening:", x = col2_x - w_box/2 + 0.02, y = 0.90,
+          gp = gpar(fontsize = 8, fontface = "bold", col = text_col), just = c("left", "center"))
+grid.text(sprintf("Duplicate records removed (n = %d)", dups_rem), x = col2_x - w_box/2 + 0.03, y = 0.865,
+          gp = gpar(fontsize = 7, col = text_col), just = c("left", "center"))
+grid.text(sprintf("Records marked ineligible by automation (n = %d)", auto_rem), x = col2_x - w_box/2 + 0.03, y = 0.835,
+          gp = gpar(fontsize = 7, col = text_col), just = c("left", "center"))
+grid.text("Records removed for other reasons (n = 0)", x = col2_x - w_box/2 + 0.03, y = 0.805,
+          gp = gpar(fontsize = 7, col = text_col), just = c("left", "center"))
+
+# Arrow down to Records screened
+draw_arrow(col1_x, 0.78, col1_x, 0.72)
+
+# ── Row 2: Records screened ──
+draw_rect_box(col1_x, 0.68, w_box, 0.07)
+grid.text("Records screened", x = col1_x, y = 0.695,
+          gp = gpar(fontsize = 8, fontface = "bold", col = text_col), just = c("center", "center"))
+grid.text(sprintf("(n = %d)", screened), x = col1_x, y = 0.665,
+          gp = gpar(fontsize = 8.5, fontface = "bold", col = text_col), just = c("center", "center"))
+
+# Arrow right to Records excluded
+draw_arrow(col1_x + w_box/2, 0.68, col2_x - w_box/2, 0.68)
+
+draw_rect_box(col2_x, 0.68, w_box, 0.07)
+grid.text("Records excluded**", x = col2_x, y = 0.695,
+          gp = gpar(fontsize = 8, fontface = "bold", col = text_col), just = c("center", "center"))
+grid.text(sprintf("(n = %d)", ta_excl), x = col2_x, y = 0.665,
+          gp = gpar(fontsize = 8.5, fontface = "bold", col = text_col), just = c("center", "center"))
+
+# Arrow down to Reports sought
+draw_arrow(col1_x, 0.645, col1_x, 0.585)
+
+# ── Row 3: Reports sought for retrieval ──
+draw_rect_box(col1_x, 0.55, w_box, 0.07)
+grid.text("Reports sought for retrieval", x = col1_x, y = 0.565,
+          gp = gpar(fontsize = 8, fontface = "bold", col = text_col), just = c("center", "center"))
+grid.text(sprintf("(n = %d)", sought), x = col1_x, y = 0.535,
+          gp = gpar(fontsize = 8.5, fontface = "bold", col = text_col), just = c("center", "center"))
+
+# Arrow right to Reports not retrieved
+draw_arrow(col1_x + w_box/2, 0.55, col2_x - w_box/2, 0.55)
+
+draw_rect_box(col2_x, 0.55, w_box, 0.07)
+grid.text("Reports not retrieved", x = col2_x, y = 0.565,
+          gp = gpar(fontsize = 8, fontface = "bold", col = text_col), just = c("center", "center"))
+grid.text(sprintf("(n = %d)", not_retrieved), x = col2_x, y = 0.535,
+          gp = gpar(fontsize = 8.5, fontface = "bold", col = text_col), just = c("center", "center"))
+
+# Arrow down to Reports assessed
+draw_arrow(col1_x, 0.515, col1_x, 0.455)
+
+# ── Row 4: Reports assessed for eligibility ──
+draw_rect_box(col1_x, 0.40, w_box, 0.09)
+grid.text("Reports assessed for eligibility", x = col1_x, y = 0.425,
+          gp = gpar(fontsize = 8, fontface = "bold", col = text_col), just = c("center", "center"))
+grid.text(sprintf("(n = %d)", ft_assessed), x = col1_x, y = 0.385,
+          gp = gpar(fontsize = 9, fontface = "bold", col = text_col), just = c("center", "center"))
+
+# Arrow right to Reports excluded
+draw_arrow(col1_x + w_box/2, 0.40, col2_x - w_box/2, 0.40)
+
+draw_rect_box(col2_x, 0.38, w_box, 0.15)
+grid.text(sprintf("Reports excluded (n = %d):", ft_excl), x = col2_x - w_box/2 + 0.02, y = 0.435,
+          gp = gpar(fontsize = 7.5, fontface = "bold", col = text_col), just = c("left", "center"))
+
+# Exclusion reasons
+reasons <- elig$excluded_reasons
+if (length(reasons) > 0) {
+  start_y <- 0.405
+  for (i in 1:min(length(reasons), 4)) {
+    r <- reasons[[i]]
+    grid.text(sprintf("• %s (n = %d)", substr(r$reason, 1, 36), r$count),
+              x = col2_x - w_box/2 + 0.03, y = start_y - (i-1) * 0.025,
+              gp = gpar(fontsize = 6.5, col = text_col), just = c("left", "center"))
+  }
+} else {
+  grid.text("• Criteria not met (n = 0)",
+            x = col2_x - w_box/2 + 0.03, y = 0.405,
+            gp = gpar(fontsize = 6.5, col = text_col), just = c("left", "center"))
+}
+
+# Arrow down to Included
+draw_arrow(col1_x, 0.355, col1_x, 0.27)
+
+# ── Row 5: Included ──
+draw_rect_box(col1_x, 0.20, w_box, 0.12)
+grid.text("New studies included in review", x = col1_x, y = 0.235,
+          gp = gpar(fontsize = 8, fontface = "bold", col = text_col), just = c("center", "center"))
+grid.text(sprintf("(n = %d)", studies_incl), x = col1_x, y = 0.205,
+          gp = gpar(fontsize = 9, fontface = "bold", col = text_col), just = c("center", "center"))
+grid.text(sprintf("Reports of new included studies (n = %d)", studies_incl), x = col1_x, y = 0.175,
+          gp = gpar(fontsize = 7, col = "#333333"), just = c("center", "center"))
+
+# Arrow right to Total studies included
+draw_arrow(col1_x + w_box/2, 0.20, col2_x - w_box/2, 0.20)
+
+draw_rect_box(col2_x, 0.20, w_box, 0.12)
+grid.text("Total studies included in review", x = col2_x, y = 0.235,
+          gp = gpar(fontsize = 8, fontface = "bold", col = text_col), just = c("center", "center"))
+grid.text(sprintf("(n = %d)", studies_incl), x = col2_x, y = 0.205,
+          gp = gpar(fontsize = 9, fontface = "bold", col = text_col), just = c("center", "center"))
+grid.text(sprintf("Reports in meta-analysis (n = %d)", studies_ma), x = col2_x, y = 0.175,
+          gp = gpar(fontsize = 7, col = "#333333"), just = c("center", "center"))
+
+# ── Footnotes at Bottom ──
+grid.text("*Consider, if feasible to do so, reporting the number of records identified from each database or register searched rather than the total number.",
+          x = 0.09, y = 0.09,
+          gp = gpar(fontsize = 6, col = "#444444"), just = c("left", "center"))
+grid.text("**If automation tools were used, indicate how many records were excluded by a human and how many were excluded by automation tools.",
+          x = 0.09, y = 0.065,
+          gp = gpar(fontsize = 6, col = "#444444"), just = c("left", "center"))
+grid.text("From: Page MJ, McKenzie JE, Bossuyt PM, et al. The PRISMA 2020 statement: an updated guideline for reporting systematic reviews. BMJ 2021;372:n71.",
+          x = 0.09, y = 0.04,
+          gp = gpar(fontsize = 6, col = "#666666"), just = c("left", "center"))
+grid.text("For more information, visit: http://www.prisma-statement.org/",
+          x = 0.09, y = 0.02,
+          gp = gpar(fontsize = 6, col = "#666666"), just = c("left", "center"))
 
 popViewport()
 dev.off()

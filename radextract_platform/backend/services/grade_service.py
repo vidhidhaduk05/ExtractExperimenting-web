@@ -167,9 +167,6 @@ def create_grade_assessment(
         "meta_analysis_id": meta_analysis_id,
         "certainty_rating": starting_level,
         "starting_level": starting_level,
-        "status": "draft",
-        "finalized_at": "",
-        "finalized_by": "",
         "n_studies": 0,
         "n_participants": 0,
         "effect_estimate": "",
@@ -220,11 +217,8 @@ def get_grade_assessment(grade_id: str, db: Optional[DBBackend] = None) -> Optio
         factor_list.append(f_dict)
 
     result = dict(row)
+    result["status"] = result.get("status") or "draft"
     result["factors"] = factor_list
-    for f_item in factor_list:
-        fk = f_item.get("factor_key")
-        if fk:
-            result[fk] = f_item
     result["certainty_label"] = CERTAINTY_LABELS.get(result["certainty_rating"], "")
     result["certainty_color"] = CERTAINTY_COLORS.get(result["certainty_rating"], "")
     return result
@@ -237,6 +231,7 @@ def list_grade_assessments(project_id: str, db: Optional[DBBackend] = None) -> l
     results = []
     for r in rows:
         r_dict = dict(r)
+        r_dict["status"] = r_dict.get("status") or "draft"
         r_dict["certainty_label"] = CERTAINTY_LABELS.get(r_dict["certainty_rating"], "")
         r_dict["certainty_color"] = CERTAINTY_COLORS.get(r_dict["certainty_rating"], "")
         results.append(r_dict)
@@ -254,15 +249,11 @@ def delete_grade_assessment(grade_id: str, db: Optional[DBBackend] = None) -> bo
     return True
 
 
-def finalize_grade_assessment(
-    grade_id: str,
-    user: Optional[dict] = None,
-    db: Optional[DBBackend] = None,
-) -> dict:
-    """Finalize a GRADE assessment (locks it as FINAL).
+def finalize_grade_assessment(grade_id: str, db: Optional[DBBackend] = None) -> dict:
+    """Finalize a GRADE assessment (transition from DRAFT to FINAL).
 
-    Strictly requires that synthesis (quantitative meta-analysis or descriptive synthesis)
-    has been completed for this outcome.
+    Enabled only after synthesis (quantitative pooling or descriptive synthesis)
+    has run for that outcome (Phase 5 requirement).
     """
     db = db or get_db_backend()
     grade = db.get("grade_assessments", grade_id)
@@ -270,54 +261,54 @@ def finalize_grade_assessment(
         raise ValueError(f"GRADE assessment not found: {grade_id}")
 
     project_id = grade["project_id"]
-    outcome_label = (grade.get("outcome_label") or "").strip()
     meta_id = grade.get("meta_analysis_id")
 
-    # Check if synthesis has run for this outcome
-    synthesis_ran = False
-
-    # 1. Linked meta_analysis
+    synthesis_ready = False
     if meta_id:
         ma = db.get("meta_analyses", meta_id)
-        if ma:
-            synthesis_ran = True
+        if ma and (ma.get("pooled_effect") is not None or (ma.get("n_studies") or 0) >= 2):
+            synthesis_ready = True
 
-    # 2. Meta-analyses matching outcome_label
-    if not synthesis_ran and outcome_label:
-        try:
-            metas = db.query("meta_analyses", {"project_id": project_id, "outcome_label": outcome_label})
-            if metas:
-                synthesis_ran = True
-        except Exception:
-            pass
+    if not synthesis_ready:
+        mas = db.query("meta_analyses", {"project_id": project_id})
+        for m in mas:
+            if m.get("outcome_label", "").lower() == grade.get("outcome_label", "").lower():
+                if m.get("pooled_effect") is not None or (m.get("n_studies") or 0) >= 2:
+                    synthesis_ready = True
+                    break
 
-    # 3. Descriptive synthesis / extraction variables matching outcome
-    if not synthesis_ran and outcome_label:
-        try:
-            v_matches = db.query("variables", {"project_id": project_id, "name": outcome_label})
-            if v_matches:
-                exts = db.query("extractions", {"variable_id": v_matches[0]["variable_id"]})
-                if exts:
-                    synthesis_ran = True
-        except Exception:
-            pass
+    # If quantitative pooling did not run or was not possible, check for descriptive synthesis for this outcome
+    if not synthesis_ready:
+        outcome_lbl = grade.get("outcome_label", "").lower().strip()
+        vars_rows = db.query("variables", {"project_id": project_id})
+        matching_vids = [
+            v["variable_id"] for v in vars_rows
+            if v.get("name", "").lower().strip() in outcome_lbl or outcome_lbl in v.get("name", "").lower().strip()
+        ]
+        for vid in matching_vids:
+            exts = db.query("extractions", {"variable_id": vid})
+            if exts:
+                synthesis_ready = True
+                break
 
-    if not synthesis_ran:
+    if not synthesis_ready:
         raise ValueError(
-            f"Cannot finalize GRADE assessment: synthesis (quantitative meta-analysis or descriptive synthesis) "
-            f"has not been completed for outcome '{outcome_label}'."
+            "Cannot finalize GRADE assessment before synthesis (pooled meta-analysis or descriptive synthesis) has run for this outcome."
         )
 
-    now = _now()
-    username = user.get("username") if user else "system"
+    compute_certainty(grade_id, db=db)
+
+    now = datetime.utcnow().isoformat()
     db.update("grade_assessments", grade_id, {
         "status": "final",
         "finalized_at": now,
-        "finalized_by": username,
     })
     db.commit()
-    return get_grade_assessment(grade_id, db=db)
 
+    res = get_grade_assessment(grade_id, db=db)
+    res["status"] = "final"
+    res["finalized_at"] = now
+    return res
 
 
 def update_factor(
@@ -367,133 +358,96 @@ def auto_populate_factors(grade_id: str, db: Optional[DBBackend] = None) -> dict
     meta_id = grade.get("meta_analysis_id")
     updates = {}
 
-    # 1. Risk of Bias — strictly from explicit outcome cohort
+    # 1. Risk of Bias — strictly from outcome-level study cohort (no silent project-wide fallback)
     try:
-        outcome_label = grade.get("outcome_label", "")
-        cohort_study_ids = set()
-
-        # Cohort source 1: Linked meta-analysis studies
+        relevant_study_ids = set()
         if meta_id:
+            ma_studies = db.query("meta_analysis_studies", {"meta_id": meta_id, "included": 1})
+            relevant_study_ids = {s["study_id"] for s in ma_studies if s.get("study_id")}
+        elif grade.get("cohort_study_ids"):
             try:
-                ma_studies = db.query("meta_analysis_studies", {"meta_id": meta_id, "included": 1})
-                for ms in ma_studies:
-                    if ms.get("study_id"):
-                        cohort_study_ids.add(ms["study_id"])
+                relevant_study_ids = set(json.loads(grade["cohort_study_ids"]))
             except Exception:
-                pass
+                relevant_study_ids = set()
 
-        # Cohort source 2: Meta-analyses matching outcome_label
-        if not cohort_study_ids and outcome_label:
-            try:
-                matching_metas = db.query("meta_analyses", {"project_id": project_id, "outcome_label": outcome_label})
-                for mm in matching_metas:
-                    ma_studies = db.query("meta_analysis_studies", {"meta_id": mm.get("meta_id"), "included": 1})
-                    for ms in ma_studies:
-                        if ms.get("study_id"):
-                            cohort_study_ids.add(ms["study_id"])
-            except Exception:
-                pass
-
-        # Cohort source 3: RoB assessments explicitly tagged with this outcome_label
-        if not cohort_study_ids and outcome_label:
-            try:
-                tagged_robs = db.query("rob_assessments", {"project_id": project_id, "outcome_label": outcome_label})
-                for tr in tagged_robs:
-                    if tr.get("study_id"):
-                        cohort_study_ids.add(tr["study_id"])
-            except Exception:
-                pass
-
-        # Backwards compatibility for single-outcome projects or single-grade test fixtures
-        if not cohort_study_ids:
-            all_grades = db.query("grade_assessments", {"project_id": project_id})
-            if len(all_grades) <= 1:
-                all_robs = db.query("rob_assessments", {"project_id": project_id})
-                for ur in all_robs:
-                    if ur.get("study_id"):
-                        cohort_study_ids.add(ur["study_id"])
-
-        if not cohort_study_ids:
+        if not relevant_study_ids:
             updates["risk_of_bias"] = {
                 "rating": "none",
-                "rationale": f"No study cohort found for outcome '{outcome_label}'. Explicit cohort required for RoB assessment.",
-                "auto_data": {"cohort_studies": 0, "resolved_count": 0, "unresolved_count": 0},
+                "rationale": f"No study cohort found for outcome '{grade.get('outcome_label', '')}'. An explicit outcome study cohort is required for GRADE assessment (no silent project-wide fallback).",
+                "auto_data": {
+                    "cohort_size": 0,
+                    "resolved_count": 0,
+                    "unresolved_count": 0,
+                    "high_count": 0,
+                    "pct_high": 0.0,
+                    "studies": [],
+                },
             }
         else:
-            # Count DISTINCT studies in THAT cohort with RESOLVED assessments
-            resolved_high = 0
-            resolved_low = 0
-            resolved_some_concerns = 0
+            resolved_studies = []
             unresolved_studies = []
-            resolved_study_ids = set()
+            study_judgments = {}
 
-            for sid in cohort_study_ids:
-                study_robs = db.query("rob_assessments", {"project_id": project_id, "study_id": sid})
-                matching_rob = None
-                for sr in study_robs:
-                    if (sr.get("outcome_label") or "").lower() == outcome_label.lower():
-                        matching_rob = sr
+            for s_id in sorted(relevant_study_ids):
+                s_assessments = db.query("rob_assessments", {"study_id": s_id})
+                resolved = None
+                for a in s_assessments:
+                    v_stat = str(a.get("verification_status") or "").lower().strip()
+                    oj = str(a.get("overall_judgment") or a.get("overall_risk") or "").strip().lower().replace(" ", "_")
+                    if v_stat in ("verified", "adjudicated") or (oj and oj != "pending" and a.get("assessed_by")):
+                        resolved = a
                         break
-                if not matching_rob and study_robs:
-                    matching_rob = study_robs[0]
 
-                if not matching_rob:
-                    unresolved_studies.append(sid)
-                    continue
-
-                j = (matching_rob.get("overall_judgment") or matching_rob.get("overall_risk") or "").lower().strip()
-                if j in ("high", "high_risk", "serious", "critical", "very_serious", "high risk"):
-                    resolved_high += 1
-                    resolved_study_ids.add(sid)
-                elif j in ("low", "low_risk", "low risk"):
-                    resolved_low += 1
-                    resolved_study_ids.add(sid)
-                elif j in ("some_concerns", "some concerns", "moderate", "moderate_risk"):
-                    resolved_some_concerns += 1
-                    resolved_study_ids.add(sid)
+                if resolved:
+                    oj = str(resolved.get("overall_judgment") or resolved.get("overall_risk") or "").strip().lower().replace(" ", "_")
+                    study_judgments[s_id] = oj
+                    resolved_studies.append({"study_id": s_id, "risk": oj, "assessment": resolved})
                 else:
-                    unresolved_studies.append(sid)
+                    study_judgments[s_id] = "unresolved"
+                    unresolved_studies.append(s_id)
 
-            resolved_count = len(resolved_study_ids)
+            cohort_size = len(relevant_study_ids)
+            resolved_count = len(resolved_studies)
             unresolved_count = len(unresolved_studies)
-            total_cohort = len(cohort_study_ids)
 
-            if resolved_count > 0:
-                pct_high = resolved_high / resolved_count * 100
-                if pct_high >= 50:
-                    rating = "very_serious"
-                elif pct_high > 0 or resolved_some_concerns > 0:
-                    rating = "serious"
-                else:
-                    rating = "none"
+            high_count = sum(1 for s in resolved_studies if s["risk"] in ("high", "serious", "critical"))
+            pct_high = (high_count / resolved_count * 100) if resolved_count > 0 else 0.0
 
-                rationale_parts = [f"{pct_high:.0f}% of resolved cohort studies have high/serious risk of bias ({resolved_high}/{resolved_count})"]
-                if unresolved_count > 0:
-                    rationale_parts.append(f"{unresolved_count} study/studies in cohort unresolved")
-                rationale = ". ".join(rationale_parts)
+            if pct_high >= 50:
+                rating = "very_serious"
+                rationale = f"{pct_high:.0f}% of resolved studies in outcome cohort have high/serious/critical risk of bias ({high_count}/{resolved_count})."
+            elif pct_high > 0:
+                rating = "serious"
+                rationale = f"{pct_high:.0f}% of resolved studies in outcome cohort have high/serious/critical risk of bias ({high_count}/{resolved_count})."
+            elif unresolved_count > 0 and resolved_count == 0:
+                rating = "serious"
+                rationale = f"All {cohort_size} studies in outcome cohort have unresolved Risk of Bias assessments (require verification or adjudication)."
+            elif unresolved_count > 0:
+                rating = "serious"
+                rationale = f"{resolved_count} studies have low/moderate risk, but {unresolved_count} of {cohort_size} studies remain unresolved."
             else:
                 rating = "none"
-                pct_high = 0.0
-                rationale = f"All {total_cohort} studies in cohort have unresolved RoB assessments"
+                rationale = f"All {resolved_count} studies in outcome cohort have verified low/moderate risk of bias."
+
+            if unresolved_count > 0 and (pct_high > 0 or resolved_count > 0) and "unresolved" not in rationale.lower():
+                rationale += f" Note: {unresolved_count} of {cohort_size} studies have unresolved assessments."
 
             updates["risk_of_bias"] = {
                 "rating": rating,
                 "rationale": rationale,
                 "auto_data": {
-                    "cohort_studies": total_cohort,
+                    "cohort_size": cohort_size,
                     "resolved_count": resolved_count,
                     "unresolved_count": unresolved_count,
-                    "high_count": resolved_high,
-                    "low_count": resolved_low,
-                    "some_concerns_count": resolved_some_concerns,
+                    "high_count": high_count,
                     "pct_high": round(pct_high, 1),
-                    "unresolved_studies": unresolved_studies,
+                    "study_judgments": study_judgments,
                 },
             }
     except Exception as e:
         updates["risk_of_bias"] = {
             "rating": "none",
-            "rationale": f"RoB auto-population failed: {e}",
+            "rationale": f"RoB auto-population error: {str(e)}",
             "auto_data": {},
         }
 
@@ -796,7 +750,6 @@ def export_grade_csv(project_id: str, db: Optional[DBBackend] = None) -> str:
 
     csv_bytes = output.getvalue().encode("utf-8")
     filename = f"grade_{project_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
-    from services.storage_manager import save_stage_file
-    rel_path, abs_path = save_stage_file(project_id, "05_GRADE", filename, csv_bytes)
-    return str(abs_path)
+    storage = get_storage("export")
+    return storage.save_bytes(filename, csv_bytes)
 
