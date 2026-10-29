@@ -4,13 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type EvidenceMapPacket } from "../lib/api";
 import {
   Download,
-  Layers,
   ArrowLeft,
   Loader2,
   AlertCircle,
   FileSpreadsheet,
-  CheckCircle2,
-  Calendar,
   BookOpen,
 } from "lucide-react";
 
@@ -74,10 +71,52 @@ export function EvidenceMapPage() {
     return [...mapData.by_design].sort((a, b) => designRank(a.label) - designRank(b.label));
   }, [mapData]);
 
-  // Year range calculation
-  const minYear = mapData?.year_span?.min ?? (mapData?.by_year?.length ? Math.min(...mapData.by_year.map((y) => Number(y.label)).filter(Boolean)) : 2000);
-  const maxYear = mapData?.year_span?.max ?? (mapData?.by_year?.length ? Math.max(...mapData.by_year.map((y) => Number(y.label)).filter(Boolean)) : 2026);
-  const yearSpan = Math.max(maxYear - minYear, 1);
+  // Memoize year range, cross-tab, and funnel metrics to avoid O(N_rows * N_cols) flatMap and array reduces on re-renders
+  const { minYear, maxYear, yearSpan, maxCellVal, totalIncluded, withYear, withDesign, withRegion } = useMemo(() => {
+    if (!mapData) {
+      return {
+        minYear: 2000,
+        maxYear: 2026,
+        yearSpan: 26,
+        maxCellVal: 1,
+        totalIncluded: 0,
+        withYear: 0,
+        withDesign: 0,
+        withRegion: 0,
+      };
+    }
+
+    const minY = mapData.year_span?.min ?? (mapData.by_year?.length ? Math.min(...mapData.by_year.map((y) => Number(y.label)).filter(Boolean)) : 2000);
+    const maxY = mapData.year_span?.max ?? (mapData.by_year?.length ? Math.max(...mapData.by_year.map((y) => Number(y.label)).filter(Boolean)) : 2026);
+    const ySpan = Math.max(maxY - minY, 1);
+
+    const xtData = mapData.design_by_region;
+    let maxCell = 1;
+    if (xtData?.row_labels && xtData?.col_labels) {
+      for (const r of xtData.row_labels) {
+        for (const c of xtData.col_labels) {
+          const val = xtData.matrix[r]?.[c] || 0;
+          if (val > maxCell) maxCell = val;
+        }
+      }
+    }
+
+    const totalInc = mapData.total_included || 0;
+    const wYear = mapData.by_year?.reduce((acc, y) => acc + y.n, 0) || 0;
+    const wDesign = mapData.by_design?.filter((d) => d.label.toLowerCase() !== "not reported").reduce((acc, d) => acc + d.n, 0) || 0;
+    const wRegion = xtData?.n_studies || 0;
+
+    return {
+      minYear: minY,
+      maxYear: maxY,
+      yearSpan: ySpan,
+      maxCellVal: maxCell,
+      totalIncluded: totalInc,
+      withYear: wYear,
+      withDesign: wDesign,
+      withRegion: wRegion,
+    };
+  }, [mapData]);
 
   // Region color mapping from cross-tab column labels
   const regionColorMap = useMemo(() => {
@@ -118,20 +157,8 @@ export function EvidenceMapPage() {
     );
   }
 
-  // Cross-tab calculations
+  // Cross-tab data reference
   const xt = mapData.design_by_region;
-  const maxCellVal = xt
-    ? Math.max(
-        ...xt.row_labels.flatMap((r) => xt.col_labels.map((c) => xt.matrix[r]?.[c] || 0)),
-        1
-      )
-    : 1;
-
-  // Funnel counts
-  const totalIncluded = mapData.total_included || 0;
-  const withYear = mapData.by_year?.reduce((acc, y) => acc + y.n, 0) || 0;
-  const withDesign = mapData.by_design?.filter((d) => d.label.toLowerCase() !== "not reported").reduce((acc, d) => acc + d.n, 0) || 0;
-  const withRegion = xt?.n_studies || 0;
 
   return (
     <div className="p-6 sm:p-10 max-w-7xl mx-auto space-y-8 font-['Work_Sans'] text-[#4f444b]">
