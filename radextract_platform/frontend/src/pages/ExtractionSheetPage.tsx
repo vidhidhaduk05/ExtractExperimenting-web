@@ -884,20 +884,8 @@ export function ExtractionSheetPage() {
     }
   };
 
-  // Load audit trail on cell selection
-  useEffect(() => {
-    if (activeSelectedCellData?.study?.study_id && projectId && projectId !== "demo") {
-      setIsLoadingAudit(true);
-      api.getStudyAuditLog(activeSelectedCellData.study.study_id)
-        .then((logs) => setAuditLogs(logs || []))
-        .catch(() => setAuditLogs([]))
-        .finally(() => setIsLoadingAudit(false));
-      setCorrectionReason("");
-      setAdjudicateValue(activeSelectedCellData.cell?.value || "");
-    }
-  }, [activeSelectedCellData?.study?.study_id, activeSelectedCellData?.variable?.variable_id, projectId]);
-
   // Active cell details for Inspector Panel
+  // (declared before the audit-trail effect below, which reads it during render)
   const activeSelectedCellData = useMemo(() => {
     if (!selectedCell) return null;
     const study = filteredStudies[selectedCell.rowIdx];
@@ -923,6 +911,19 @@ export function ExtractionSheetPage() {
       rowNumber: selectedCell.rowIdx + 1,
     };
   }, [selectedCell, filteredStudies, variables, cellsMap]);
+
+  // Load audit trail on cell selection
+  useEffect(() => {
+    if (activeSelectedCellData?.study?.study_id && projectId && projectId !== "demo") {
+      setIsLoadingAudit(true);
+      api.getStudyAuditLog(activeSelectedCellData.study.study_id)
+        .then((logs) => setAuditLogs(logs || []))
+        .catch(() => setAuditLogs([]))
+        .finally(() => setIsLoadingAudit(false));
+      setCorrectionReason("");
+      setAdjudicateValue(activeSelectedCellData.cell?.value || "");
+    }
+  }, [activeSelectedCellData?.study?.study_id, activeSelectedCellData?.variable?.variable_id, projectId]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#fbf9f4] overflow-hidden select-none font-['Work_Sans']">
