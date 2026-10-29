@@ -1,8 +1,8 @@
 {
-  "backend_url": "http://127.0.0.1:8000",
-  "api_url": "/api",
-  "health_url": "/health",
-  "updated_at": "2026-10-28T08:50:00Z",
+  "backend_url": "https://storage-citation-flowers-drew.trycloudflare.com",
+  "api_url": "https://storage-citation-flowers-drew.trycloudflare.com/api",
+  "health_url": "https://storage-citation-flowers-drew.trycloudflare.com/health",
+  "updated_at": "2026-10-29T19:16:00Z",
   "status": "online",
-  "model": "co-scientist-screening"
+  "model": "biomni-r0"
 }
