@@ -146,11 +146,25 @@ export function RobAssessmentPage() {
       questionDef?: { key: string; text: string; response_options: string[]; parent_key?: string | null; trigger_answers?: string[] | null };
       globalIndex: number;
     }> = [];
+
+    const domainDefsMap = new Map<string, any>();
+    if (assessment.tool_definition?.domains) {
+      for (const d of assessment.tool_definition.domains) {
+        domainDefsMap.set(d.key, d);
+      }
+    }
+
     let idx = 1;
     for (const dj of assessment.domain_judgments) {
-      const domainDef = assessment.tool_definition?.domains.find((d) => d.key === dj.domain_key);
+      const domainDef = domainDefsMap.get(dj.domain_key);
+      const sqMap = new Map<string, any>();
+      if (domainDef?.signaling_questions) {
+        for (const sq of domainDef.signaling_questions) {
+          sqMap.set(sq.key, sq);
+        }
+      }
       for (const sa of dj.signaling_answers) {
-        const sqDef = domainDef?.signaling_questions.find((q) => q.key === sa.question_key);
+        const sqDef = sqMap.get(sa.question_key);
         list.push({
           answer: sa,
           domain: dj,
@@ -474,20 +488,27 @@ export function RobAssessmentPage() {
 
   // Compute NOS Star scores if using NOS tool
   const isNosTool = assessment.tool === "nos";
-  const nosStars = isNosTool
-    ? assessment.domain_judgments.map((dj) => {
-        const stars = dj.signaling_answers.filter((sa) => sa.answer === "yes").length;
-        return { domain_key: dj.domain_key, label: dj.domain_label, stars };
-      })
-    : [];
-  const totalNosStars = nosStars.reduce((acc, curr) => acc + curr.stars, 0);
+  const { nosStars, totalNosStars } = useMemo(() => {
+    if (!isNosTool || !assessment?.domain_judgments) {
+      return { nosStars: [], totalNosStars: 0 };
+    }
+    const starsList = assessment.domain_judgments.map((dj) => {
+      const stars = dj.signaling_answers.filter((sa) => sa.answer === "yes").length;
+      return { domain_key: dj.domain_key, label: dj.domain_label, stars };
+    });
+    const total = starsList.reduce((acc, curr) => acc + curr.stars, 0);
+    return { nosStars: starsList, totalNosStars: total };
+  }, [isNosTool, assessment]);
 
   // Filter domain judgments when Review Mode is active
-  const displayedDomainJudgments = isReviewMode
-    ? assessment.domain_judgments.filter((dj) =>
-        dj.signaling_answers.some((sa) => sa.needs_human_review === 1)
-      )
-    : assessment.domain_judgments;
+  const displayedDomainJudgments = useMemo(() => {
+    if (!assessment?.domain_judgments) return [];
+    return isReviewMode
+      ? assessment.domain_judgments.filter((dj) =>
+          dj.signaling_answers.some((sa) => sa.needs_human_review === 1)
+        )
+      : assessment.domain_judgments;
+  }, [isReviewMode, assessment]);
 
   return (
     <div className="flex flex-col h-screen bg-[#ECE9E2] overflow-hidden font-sans">

@@ -164,59 +164,53 @@ def author_overlap(a1: str, a2: str) -> float:
     return len(s1 & s2) / min(len(s1), len(s2))
 
 
-def jaro_winkler(s1: str, s2: str, prefix_scale: float = 0.1) -> float:
-    """Pure-Python Jaro-Winkler similarity on already-normalized strings.
+try:
+    from Levenshtein import ratio as _lev_ratio
+    def _title_similarity(a: str, b: str, threshold: float = TITLE_SIMILARITY_THRESHOLD) -> float:
+        if a == b:
+            return 1.0
+        la, lb = len(a), len(b)
+        if not la or not lb:
+            return 1.0 if la == lb else 0.0
 
-    Callers pass normalized text (normalize_title keeps digits, so
-    "Drug 1" vs "Drug 2" stay distinct); no letter-only folding here.
-    """
-    j1, j2 = str(s1 or ""), str(s2 or "")
-    if j1 == j2:
-        return 1.0
-    len1, len2 = len(j1), len(j2)
-    if not len1 or not len2:
-        return 0.0
-    match_dist = max(max(len1, len2) // 2 - 1, 0)
-    j1_matches = [False] * len1
-    j2_matches = [False] * len2
-    matches = 0
-    transpositions = 0
-    for i in range(len1):
-        start = max(0, i - match_dist)
-        end = min(i + match_dist + 1, len2)
-        for j in range(start, end):
-            if j2_matches[j]:
-                continue
-            if j1[i] != j2[j]:
-                continue
-            j1_matches[i] = True
-            j2_matches[j] = True
-            matches += 1
-            break
-    if matches == 0:
-        return 0.0
-    k = 0
-    for i in range(len1):
-        if not j1_matches[i]:
-            continue
-        while not j2_matches[k]:
-            k += 1
-        if j1[i] != j2[k]:
-            transpositions += 1
-        k += 1
-    jaro = (matches / len1 + matches / len2 + (matches - transpositions / 2) / matches) / 3
-    # Winkler prefix bonus (up to 4 shared prefix chars)
-    prefix = 0
-    for a, b in zip(j1, j2):
-        if a != b or prefix == 4:
-            break
-        prefix += 1
-    return jaro + prefix * prefix_scale * (1 - jaro)
+        min_len = la if la < lb else lb
+        if (2 * min_len) / (la + lb) < threshold:
+            return 0.0
 
+        a_lower, b_lower = a.lower(), b.lower()
+        if a_lower == b_lower:
+            return 1.0
 
-def title_fuzzy_similarity(t1: str, t2: str) -> float:
-    """Fuzzy title similarity used by T2 (Jaro-Winkler on normalized titles)."""
-    return jaro_winkler(normalize_title(t1 or ""), normalize_title(t2 or ""))
+        la, lb = len(a_lower), len(b_lower)
+        if not la or not lb:
+            return 1.0 if la == lb else 0.0
+
+        min_len = la if la < lb else lb
+        if (2 * min_len) / (la + lb) < threshold:
+            return 0.0
+
+        return _lev_ratio(a_lower, b_lower)
+except ImportError:
+    import difflib
+    def _title_similarity(a: str, b: str, threshold: float = TITLE_SIMILARITY_THRESHOLD) -> float:
+        if a == b:
+            return 1.0
+        la, lb = len(a), len(b)
+        if not la or not lb:
+            return 1.0 if la == lb else 0.0
+
+        min_len = la if la < lb else lb
+        if (2 * min_len) / (la + lb) < threshold:
+            return 0.0
+
+        a_lower, b_lower = a.lower(), b.lower()
+        if a_lower == b_lower:
+            return 1.0
+
+        return difflib.SequenceMatcher(None, a_lower, b_lower).ratio()
+
+def title_fuzzy_similarity(t1: str, t2: str, threshold: float = TITLE_SIMILARITY_THRESHOLD) -> float:
+    return _title_similarity(normalize_title(t1 or ""), normalize_title(t2 or ""), threshold=threshold)
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -435,7 +429,13 @@ def find_candidate_pairs(
         key = _pair_key(ids[i], ids[j])
         if key in found or _excluded(ids[i], ids[j]):
             continue
-        sim = jaro_winkler(norm_titles[i], norm_titles[j])
+        len_i, len_j = len(norm_titles[i]), len(norm_titles[j])
+        if not len_i or not len_j:
+            continue
+        min_len = len_i if len_i < len_j else len_j
+        if (2 * min_len) / (len_i + len_j) < TITLE_SIMILARITY_THRESHOLD - 0.15:
+            continue
+        sim = title_fuzzy_similarity(norm_titles[i], norm_titles[j])
         if sim < TITLE_SIMILARITY_THRESHOLD:
             continue
         author_sim = author_overlap(studies[i].get("authors", ""), studies[j].get("authors", ""))
