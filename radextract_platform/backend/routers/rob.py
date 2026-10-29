@@ -162,9 +162,17 @@ async def get_assessment(assessment_id: str):
 
 
 @router.delete("/assessments/{assessment_id}")
-async def delete_assessment(assessment_id: str):
-    """Delete a RoB assessment and all its child records."""
-    success = rob_service.delete_assessment(assessment_id)
+async def delete_assessment(
+    assessment_id: str,
+    user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
+):
+    """Delete a RoB assessment and all its child records (requires editor role)."""
+    assessment = rob_service.get_assessment(assessment_id, db=conn)
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    check_project_access(conn, assessment["project_id"], user, min_role="editor")
+    success = rob_service.delete_assessment(assessment_id, db=conn)
     if not success:
         raise HTTPException(status_code=404, detail="Assessment not found")
     return {"deleted": True, "assessment_id": assessment_id}
