@@ -67,6 +67,17 @@ export function MetaAnalysisPage() {
     enabled: !!projectId,
   });
 
+  const studiesData = React.useMemo(() => {
+    return (results?.studies || []).map((s: any, idx: number) => ({
+      name: s.study_name || s.name || `Study ${idx + 1}`,
+      effect: Number(s.effect ?? s.effect_size ?? 1.0),
+      ci_lower: Number(s.ci_lower ?? ((s.effect || 1.0) * 0.8)),
+      ci_upper: Number(s.ci_upper ?? ((s.effect || 1.0) * 1.25)),
+      weight: Number(s.weight ?? (100 / Math.max(1, results?.studies?.length || 1))),
+      se: Number(s.se ?? ((Math.abs(Number(s.ci_upper || 1.5) - Number(s.ci_lower || 0.9)) / 3.92) || 0.25)),
+    }));
+  }, [results?.studies]);
+
   const handleGenerateChart = async (type: 'forest' | 'funnel') => {
     if (results?.status === 'cannot_pool' || results?.pooled_effect === undefined) {
       alert(results?.reason || 'Quantitative pooling is not feasible for this project. Please review the descriptive synthesis below.');
@@ -78,15 +89,6 @@ export function MetaAnalysisPage() {
     setChartModalOpen(true);
     setChartImage(null);
     setChartSvg(null);
-
-    const studiesData = (results?.studies || []).map((s: any, idx: number) => ({
-      name: s.study_name || s.name || `Study ${idx + 1}`,
-      effect: Number(s.effect ?? s.effect_size ?? 1.0),
-      ci_lower: Number(s.ci_lower ?? ((s.effect || 1.0) * 0.8)),
-      ci_upper: Number(s.ci_upper ?? ((s.effect || 1.0) * 1.25)),
-      weight: Number(s.weight ?? (100 / Math.max(1, results?.studies?.length || 1))),
-      se: Number(s.se ?? ((Math.abs(Number(s.ci_upper || 1.5) - Number(s.ci_lower || 0.9)) / 3.92) || 0.25)),
-    }));
 
     try {
       if (type === 'forest') {
@@ -210,8 +212,8 @@ export function MetaAnalysisPage() {
     setStatsLoading(true);
     setStatsModalOpen(true);
     try {
-      const g1 = (results?.studies || []).map((s: any) => Number(s.effect || s.effect_size || 1.0));
-      const g2 = (results?.studies || []).map(() => 1.0);
+      const g1 = studiesData.map((s) => s.effect);
+      const g2 = studiesData.map(() => 1.0);
 
       if (g1.length < 2) {
         alert('Insufficient study count (< 2 studies) for comparative statistical analysis.');

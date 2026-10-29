@@ -869,7 +869,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       let ind = "Diagnostic intervention";
       let comp = "Standard of care comparator";
       let out = "Diagnostic accuracy, sensitivity, and clinical outcomes";
-      let des = "Systematic review and comparative observational studies";
+      const des = "Systematic review and comparative observational studies";
 
       const popMatch = q.match(/(?:in|among|for)\s+([a-zA-Z0-9\s-]+?)(?:\s+(?:with|undergoing|treated)|[?,.]|$)/i);
       if (popMatch) pop = popMatch[1].trim();
