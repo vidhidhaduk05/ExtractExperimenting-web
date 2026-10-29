@@ -196,11 +196,17 @@ export function DuplicateReviewModal({
   if (!isOpen) return null;
 
   const totalGroups = filteredGroups.length;
-  const resolvedCount = duplicateGroups.reduce(
-    (acc, g) => acc + g.duplicates.filter((d) => d.is_duplicate === 1).length,
-    0
-  );
-  const totalDuplicates = duplicateGroups.reduce((acc, g) => acc + g.duplicates.length, 0);
+  const { resolvedCount, totalDuplicates } = useMemo(() => {
+    let resolved = 0;
+    let total = 0;
+    for (const g of duplicateGroups) {
+      for (const d of g.duplicates) {
+        total++;
+        if (d.is_duplicate === 1) resolved++;
+      }
+    }
+    return { resolvedCount: resolved, totalDuplicates: total };
+  }, [duplicateGroups]);
 
   const getReasonBadge = (reason: string, score: number) => {
     switch (reason) {
