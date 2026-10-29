@@ -17,3 +17,7 @@
 ## 2026-03-31 - Memoizing Multi-Pass Flow & Dashboard Aggregation Logic
 **Learning:** Computing live PRISMA diagram counts, dual-reviewer agreement matrices, and filtered study lists at the top-level of pages without `useMemo` causes redundant multi-pass array iterations on every polling interval or UI state change.
 **Action:** Wrapped `computeLivePrismaData` in `PrismaFlowPage`, study filtering & bookmark counts in `StudyList`, agreement/kappa metrics in `DualBlindedDashboard`, and factor classifications in `GradePage` in `useMemo`.
+
+## 2026-03-31 - Pre-Indexing Graph Edge Relationships for Shortcut Generation
+**Learning:** Performing nested array iteration (`graph.links.forEach` inside `graph.links.forEach`) to create direct edge shortcuts when filtering out intermediate graph nodes (e.g. extraction nodes in `ReviewGraphPage`) leads to quadratic $O(L^2)$ time complexity during React `useMemo` render calculations.
+**Action:** Pre-index target relationships (`value_of`) into a `Map<sourceId, targetId>` in a single linear pass $O(L)$ prior to matching parent links (`has_extraction`), reducing shortcut generation complexity from $O(L^2)$ to $O(L)$.
