@@ -1636,6 +1636,8 @@ async function authenticatedRequest<T>(path: string, options: RequestInit = {}):
 
 // ── Types ──
 
+export type ReviewType = "scoping" | "systematic" | "both";
+
 export interface Project {
   project_id: string;
   name: string;
@@ -1645,6 +1647,50 @@ export interface Project {
   research_question: string;
   created_at: string;
   status: string;
+  review_type?: ReviewType;
+}
+
+export interface CrosstabResult {
+  row_variable: string;
+  col_variable: string;
+  row_labels: string[];
+  col_labels: string[];
+  matrix: Record<string, Record<string, number>>;
+  row_totals: Record<string, number>;
+  col_totals: Record<string, number>;
+  n_studies: number;
+}
+
+export interface TrendCount {
+  label: string;
+  n: number;
+}
+
+export interface TrendsResult {
+  bucket: string;
+  n_studies: number;
+  counts: TrendCount[];
+}
+
+export interface EvidenceMapCoverage {
+  variable_id: string;
+  name: string;
+  section: string;
+  field_type: string;
+  n_reported: number;
+  n_missing: number;
+  pct_missing: number;
+}
+
+export interface EvidenceMapPacket {
+  review_type: ReviewType;
+  total_included: number;
+  year_span: { min: number | null; max: number | null };
+  by_year: TrendCount[];
+  by_design: TrendCount[];
+  top_journals: TrendCount[];
+  variable_coverage: EvidenceMapCoverage[];
+  design_by_region: CrosstabResult | null;
 }
 
 export interface Study {
@@ -3449,9 +3495,9 @@ export const api = {
     `${API_BASE}/projects/${projectId}/grade/export`,
 
   // Dual-Reviewer
-  verifyExtraction: (extractionId: string) =>
-    request<any>(`/extractions/${extractionId}/verify`, { method: "PUT" }),
-  adjudicateExtraction: (extractionId: string, data: { value: string; confidence: number }) =>
+  verifyExtraction: (extractionId: string, data?: { agree?: boolean; alternative_value?: string; reviewer?: string }) =>
+    request<any>(`/extractions/${extractionId}/verify`, { method: "PUT", body: JSON.stringify(data || { agree: true }) }),
+  adjudicateExtraction: (extractionId: string, data: { final_value: string; adjudicator?: string; notes?: string }) =>
     request<any>(`/extractions/${extractionId}/adjudicate`, { method: "PUT", body: JSON.stringify(data) }),
   verifyAssessment: (assessmentId: string) =>
     request<any>(`/assessments/${assessmentId}/verify`, { method: "PUT" }),
@@ -3878,6 +3924,8 @@ export const api = {
     `${API_BASE}/projects/${projectId}/export/template.xlsx`,
   exportProjectXlsxUrl: (projectId: string) =>
     `${API_BASE}/projects/${projectId}/export?format=xlsx`,
+  exportStudyXlsxUrl: (projectId: string, studyId: string) =>
+    `${API_BASE}/projects/${projectId}/studies/${studyId}/export.xlsx`,
   suggestVariables: (projectId: string, data?: { sections?: string[]; custom_instructions?: string }) =>
     request<{
       project_id: string;
@@ -4040,6 +4088,19 @@ export const api = {
   getAnalysisProfile: (projectId: string) =>
     request<AnalysisProfile>(`/projects/${projectId}/analysis/profile`),
 
+  getCrosstab: (projectId: string, rowVar: string, colVar: string) =>
+    request<CrosstabResult>(`/projects/${projectId}/analysis/crosstab?row_var=${encodeURIComponent(rowVar)}&col_var=${encodeURIComponent(colVar)}`),
+
+  getTrends: (projectId: string, bucket: string = "year") =>
+    request<TrendsResult>(`/projects/${projectId}/analysis/trends?bucket=${encodeURIComponent(bucket)}`),
+
+  getEvidenceMap: (projectId: string) =>
+    request<EvidenceMapPacket>(`/projects/${projectId}/analysis/evidence-map`),
+
+  exportEvidenceMapUrl: (projectId: string, format: "xlsx" | "csv" = "xlsx") =>
+    `${API_BASE}/projects/${projectId}/analysis/evidence-map/export?format=${format}`,
+
+
   /** Descriptive statistics for a single variable */
   getVariableStats: (projectId: string, variableId: string) =>
     request<VariableStats>(`/projects/${projectId}/analysis/stats/${variableId}`),
@@ -4165,6 +4226,24 @@ export const api = {
   /** Get missing data summary (-99, -77, -88) across all project variables */
   getMissingDataSummary: (projectId: string) =>
     request<MissingDataSummary>(`/projects/${projectId}/extraction/missing-data-summary`),
+
+  runAiBatchExtraction: (projectId: string, requireFulltext: boolean = false) =>
+    request<{ project_id: string; total_studies: number; processed: number; results: any[] }>(
+      `/projects/${projectId}/extractions/ai-batch?require_fulltext=${requireFulltext}`,
+      { method: "POST" }
+    ),
+
+  getStudyAuditLog: (studyId: string) =>
+    request<any[]>(`/studies/${studyId}/extractions/audit`),
+
+  getFulltextAvailability: (projectId: string) =>
+    request<any>(`/projects/${projectId}/fulltext/availability`),
+
+  startFulltextAvailability: (projectId: string, status: string = "all") =>
+    request<any>(`/projects/${projectId}/fulltext/availability?status=${status}`, { method: "POST" }),
+
+  exportSrmaWorkbookUrl: (projectId: string) =>
+    `${getApiBase()}/projects/${projectId}/extraction/srma-workbook`,
 
   // ── v2.4+: Interactive Clarification Questions ──
 

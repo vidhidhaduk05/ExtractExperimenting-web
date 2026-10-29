@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { FileText, CheckSquare, ShieldCheck, Table, Download, Plus, GitBranch, BarChart3, Award, Highlighter, FileSpreadsheet, Sparkles, ArrowRight, Layers } from "lucide-react";
+import { FileText, CheckSquare, ShieldCheck, Table, Download, Plus, GitBranch, BarChart3, Award, Highlighter, FileSpreadsheet, Sparkles, ArrowRight, Layers, Map } from "lucide-react";
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -62,9 +62,10 @@ export function ProjectDetail() {
     { label: "4. Extraction Sheet", value: "Matrix", to: `/projects/${projectId}/extraction-sheet`, icon: FileSpreadsheet },
     { label: "5. Risk of Bias", value: robCount, to: `/projects/${projectId}/rob`, icon: ShieldCheck },
     { label: "6. Evidence Synthesis", value: metaCount, to: `/projects/${projectId}/meta-analysis`, icon: BarChart3 },
-    { label: "7. GRADE Certainty", value: gradeCount, to: `/projects/${projectId}/grade`, icon: Award },
-    { label: "8. PRISMA 2020 Flow", value: "Audit", to: `/projects/${projectId}/prisma`, icon: GitBranch },
-    { label: "9. Scientific Export", value: "Ready", to: `/projects/${projectId}/export`, icon: Download },
+    { label: "7. Evidence Map", value: "Aggregation", to: `/projects/${projectId}/evidence-map`, icon: Map },
+    { label: "8. GRADE Certainty", value: gradeCount, to: `/projects/${projectId}/grade`, icon: Award },
+    { label: "9. PRISMA 2020 Flow", value: "Audit", to: `/projects/${projectId}/prisma`, icon: GitBranch },
+    { label: "10. Scientific Export", value: "Ready", to: `/projects/${projectId}/export`, icon: Download },
   ];
 
   return (

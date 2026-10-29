@@ -22,6 +22,7 @@ import { ReviewGraphPage } from "./pages/ReviewGraphPage";
 import { ClaimscapePage } from "./pages/ClaimscapePage";
 import { CitationTelephonePage } from "./pages/CitationTelephonePage";
 import { RigorScanPage } from "./pages/RigorScanPage";
+import { EvidenceMapPage } from "./pages/EvidenceMapPage";
 import { LandingPage } from "./pages/LandingPage";
 
 export default function App() {
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/projects/:projectId/rob/:assessmentId" element={<RobAssessmentPage />} />
         <Route path="/projects/:projectId/review" element={<ReviewPage />} />
         <Route path="/projects/:projectId/meta-analysis" element={<MetaAnalysisPage />} />
+        <Route path="/projects/:projectId/evidence-map" element={<EvidenceMapPage />} />
         <Route path="/projects/:projectId/analysis" element={<AnalysisPage />} />
         <Route path="/projects/:projectId/graph/code" element={<CodeGraphPage />} />
         <Route path="/projects/:projectId/graph/review" element={<ReviewGraphPage />} />

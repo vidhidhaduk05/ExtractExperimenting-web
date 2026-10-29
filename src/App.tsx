@@ -22,6 +22,7 @@ import { ReviewGraphPage } from "./pages/ReviewGraphPage";
 import { ClaimscapePage } from "./pages/ClaimscapePage";
 import { CitationTelephonePage } from "./pages/CitationTelephonePage";
 import { RigorScanPage } from "./pages/RigorScanPage";
+import { EvidenceMapPage } from "./pages/EvidenceMapPage";
 import { LandingPage } from "./pages/LandingPage";
 
 export default function App() {
@@ -49,7 +50,7 @@ export default function App() {
         <Route path="/projects/:projectId/studies/new" element={<StudyImport />} />
         <Route path="/projects/:projectId/studies/:studyId/pdf" element={<PdfViewerPage />} />
         <Route path="/projects/:projectId/studies/:studyId/sheet" element={<ExtractionSheetPage />} />
-        <Route path="/projects/:projectId/extraction" element={<PdfViewerPage />} />
+        <Route path="/projects/:projectId/extraction" element={<ExtractionSheetPage />} />
         <Route path="/projects/:projectId/extraction/:studyId" element={<PdfViewerPage />} />
         <Route path="/projects/:projectId/extraction-sheet" element={<ExtractionSheetPage />} />
         <Route path="/projects/:projectId/extraction-sheet/:studyId" element={<ExtractionSheetPage />} />
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/projects/:projectId/rob/:assessmentId" element={<RobAssessmentPage />} />
         <Route path="/projects/:projectId/review" element={<ReviewPage />} />
         <Route path="/projects/:projectId/meta-analysis" element={<MetaAnalysisPage />} />
+        <Route path="/projects/:projectId/evidence-map" element={<EvidenceMapPage />} />
         <Route path="/projects/:projectId/analysis" element={<AnalysisPage />} />
         <Route path="/projects/:projectId/graph/code" element={<CodeGraphPage />} />
         <Route path="/projects/:projectId/graph/review" element={<ReviewGraphPage />} />
