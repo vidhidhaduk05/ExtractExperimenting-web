@@ -281,3 +281,46 @@ class TestDeleteAssessment:
 
     def test_delete_nonexistent(self):
         assert rob_service.delete_assessment("nonexistent-id") is False
+
+    @pytest.mark.asyncio
+    async def test_delete_assessment_endpoint_auth(self):
+        from routers.rob import delete_assessment as delete_assessment_endpoint
+        from services.db_backend import get_db_backend
+        from fastapi import HTTPException
+
+        pid, sid = _create_project_and_study()
+        assessment = rob_service.create_assessment(sid, pid, "quadas2")
+        aid = assessment["assessment_id"]
+        db = get_db_backend()
+
+        # Create users in database to satisfy FOREIGN KEY constraint
+        db.insert("users", {"user_id": "u_owner", "username": "owner", "password_hash": "hash"})
+        db.insert("users", {"user_id": "u_viewer", "username": "viewer", "password_hash": "hash"})
+        db.insert("users", {"user_id": "u_unauth", "username": "unauth", "password_hash": "hash"})
+
+        owner_user = {"user_id": "u_owner", "username": "owner", "role": "owner"}
+        viewer_user = {"user_id": "u_viewer", "username": "viewer", "role": "viewer"}
+        unauth_user = {"user_id": "u_unauth", "username": "unauth", "role": "reviewer"}
+
+        db.insert("project_members", {"project_id": pid, "user_id": "u_owner", "role": "owner"})
+        db.insert("project_members", {"project_id": pid, "user_id": "u_viewer", "role": "viewer"})
+        db.commit()
+
+        # Unauthorized user (not in project) -> 403 Forbidden
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_assessment_endpoint(aid, user=unauth_user, conn=db)
+        assert exc_info.value.status_code == 403
+
+        # Viewer (insufficient role min_role="editor") -> 403 Forbidden
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_assessment_endpoint(aid, user=viewer_user, conn=db)
+        assert exc_info.value.status_code == 403
+
+        # Owner -> successful deletion
+        res = await delete_assessment_endpoint(aid, user=owner_user, conn=db)
+        assert res == {"deleted": True, "assessment_id": aid}
+
+        # Delete non-existent assessment -> 404 Not Found
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_assessment_endpoint(aid, user=owner_user, conn=db)
+        assert exc_info.value.status_code == 404
