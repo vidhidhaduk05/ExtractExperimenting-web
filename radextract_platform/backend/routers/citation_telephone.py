@@ -26,18 +26,20 @@ async def get_citation_paper(id: str = Query(..., description="Paper identifier 
         raise HTTPException(status_code=400, detail="Paper ID cannot be empty")
     client = httpx.AsyncClient(timeout=25.0)
     try:
+        # Pass query params securely via params dict to prevent URL parameter injection
         resp = await client.get(
-            f"https://www.k-dense.ai/api/citation-telephone/paper?id={clean_id}",
+            "https://www.k-dense.ai/api/citation-telephone/paper",
+            params={"id": clean_id},
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         )
         if resp.status_code == 200:
             return resp.json()
-        raise HTTPException(status_code=resp.status_code, detail=f"Failed to retrieve paper {clean_id}")
+        raise HTTPException(status_code=resp.status_code, detail="Failed to retrieve requested paper")
     except HTTPException:
         raise
     except Exception as e:
         logger.warning("Upstream citation paper fetch error: %s", e)
-        raise HTTPException(status_code=502, detail=f"Citation paper resolution error: {str(e)}")
+        raise HTTPException(status_code=502, detail="Citation paper resolution error")
     finally:
         await client.aclose()
 
@@ -55,7 +57,7 @@ async def trace_citation_chain(req: Dict[str, Any] = Body(...)) -> Response:
         return Response(content=resp.content, status_code=resp.status_code, media_type="text/plain")
     except Exception as e:
         logger.error("Trace error: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Citation chain tracing error")
     finally:
         await client.aclose()
 

@@ -45,7 +45,7 @@ except ImportError:  # Allows standalone router unit testing outside full backen
     def get_current_user_optional():  # type: ignore[misc]
         return None
 
-    def check_project_access(project_id: str, user: Any, conn: Any) -> None:
+    def check_project_access(conn: Any, project_id: str, user: Optional[dict] = None, min_role: str = "viewer") -> None:
         return None
 
 router = APIRouter(prefix="/api", tags=["graphify"])

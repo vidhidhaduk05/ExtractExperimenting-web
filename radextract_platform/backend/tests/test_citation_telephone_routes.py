@@ -78,3 +78,47 @@ def test_evaluation_uses_supplied_passage(client, monkeypatch):
     response = client.post("/api/citation-telephone/evaluate-claim", json={"citing_sentence": "A claim", "source_title": "Source title", "source_passage": "Actual source passage"})
     assert response.status_code == 200
     assert response.json()["verdict"] == "different"
+
+
+def test_get_citation_paper_uses_params_dict_and_sanitizes_errors(client, monkeypatch):
+    captured_calls = []
+
+    class MockResponse:
+        status_code = 200
+        def json(self):
+            return {"title": "Test Paper", "paragraphs": []}
+
+    class MockAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+        async def get(self, url, params=None, headers=None):
+            captured_calls.append({"url": url, "params": params, "headers": headers})
+            return MockResponse()
+        async def aclose(self):
+            pass
+
+    monkeypatch.setattr(routes.httpx, "AsyncClient", MockAsyncClient)
+
+    paper_id = "10.1000/182&admin=true"
+    response = client.get("/api/citation-telephone/paper", params={"id": paper_id})
+    assert response.status_code == 200
+    assert len(captured_calls) == 1
+    assert captured_calls[0]["url"] == "https://www.k-dense.ai/api/citation-telephone/paper"
+    assert captured_calls[0]["params"] == {"id": paper_id}
+
+
+def test_get_citation_paper_sanitizes_upstream_exceptions(client, monkeypatch):
+    class ErrorAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+        async def get(self, url, params=None, headers=None):
+            raise RuntimeError("Internal database credentials or stack trace")
+        async def aclose(self):
+            pass
+
+    monkeypatch.setattr(routes.httpx, "AsyncClient", ErrorAsyncClient)
+
+    response = client.get("/api/citation-telephone/paper?id=PMC12345")
+    assert response.status_code == 502
+    assert "Internal database credentials" not in response.json()["detail"]
+    assert response.json()["detail"] == "Citation paper resolution error"
