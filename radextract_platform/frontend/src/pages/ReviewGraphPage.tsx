@@ -75,26 +75,33 @@ export function ReviewGraphPage() {
       filteredLinks = filteredLinks.filter(
         (l) => !extractionIds.has(l.source) && !extractionIds.has(l.target)
       );
-      // Add direct study→variable links when extractions are hidden
+      // Performance Optimization (⚡ Bolt): Index "value_of" links into a Map to avoid O(L²) nested iteration.
+      // Pre-mapping extractionId -> varId reduces shortcut creation from O(L²) to O(L) time complexity.
+      const extractionToVarMap = new Map<string, string>();
+      graph.links.forEach((l) => {
+        if (l.relation === "value_of") {
+          extractionToVarMap.set(l.source, l.target);
+        }
+      });
+
+      // Add direct study→variable links when extractions are hidden in O(L) time
       const studyVarPairs = new Set<string>();
       graph.links.forEach((l) => {
         if (l.relation === "has_extraction") {
           // study → extraction
           const studyId = l.source;
-          graph.links.forEach((l2) => {
-            if (l2.source === l.target && l2.relation === "value_of") {
-              const varId = l2.target;
-              const key = `${studyId}->${varId}`;
-              if (!studyVarPairs.has(key)) {
-                studyVarPairs.add(key);
-                filteredLinks.push({
-                  source: studyId,
-                  target: varId,
-                  relation: "extracts",
-                });
-              }
+          const varId = extractionToVarMap.get(l.target);
+          if (varId) {
+            const key = `${studyId}->${varId}`;
+            if (!studyVarPairs.has(key)) {
+              studyVarPairs.add(key);
+              filteredLinks.push({
+                source: studyId,
+                target: varId,
+                relation: "extracts",
+              });
             }
-          });
+          }
         }
       });
     }
