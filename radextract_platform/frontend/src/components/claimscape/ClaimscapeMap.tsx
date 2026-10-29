@@ -178,9 +178,12 @@ export const ClaimscapeMap: React.FC<ClaimscapeMapProps> = ({
                     const localY = e.clientY - rect.top;
                     const match = findNearest(placed, localX, localY);
                     if (!match || !containerRef.current) {
-                      setHovered(null);
+                      if (hovered !== null) setHovered(null);
                       return;
                     }
+                    // Performance optimization: skip state update if hovering over the exact same paper
+                    if (hovered?.pmid === match.paper.paper.pmid) return;
+
                     const parentRect = containerRef.current.getBoundingClientRect();
                     setHovered({
                       pmid: match.paper.paper.pmid,
@@ -307,7 +310,8 @@ interface DotSymbolProps {
   r: number;
 }
 
-const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, r }) => {
+// Memoized to prevent re-rendering invariant SVG dots during mouse movement / hover state changes
+const DotSymbol: React.FC<DotSymbolProps> = React.memo(({ category, direct, strength, r }) => {
   const opacity =
     category === "supports" || category === "contradicts" || category === "mixed"
       ? 0.45 + 0.55 * Math.min(1, Math.max(0, (strength - 0.6) / 0.4))
@@ -390,10 +394,13 @@ const DotSymbol: React.FC<DotSymbolProps> = ({ category, direct, strength, r }) 
       strokeWidth={2}
     />
   );
-};
+});
+
+DotSymbol.displayName = "DotSymbol";
 
 // Row verdict & Wilson score interval summary
-const RowSummary: React.FC<{ summary: TierSummary }> = ({ summary }) => {
+// Memoized to prevent re-rendering heavy row statistics components on pointer movements
+const RowSummary: React.FC<{ summary: TierSummary }> = React.memo(({ summary }) => {
   const { supports, mixed, contradicts } = summary.counts;
 
   if (!summary.papers.length) {
@@ -497,7 +504,9 @@ const RowSummary: React.FC<{ summary: TierSummary }> = ({ summary }) => {
       </p>
     </>
   );
-};
+});
+
+RowSummary.displayName = "RowSummary";
 
 // Hover tooltip box
 interface TooltipProps {
