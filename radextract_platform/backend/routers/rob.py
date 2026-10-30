@@ -107,10 +107,13 @@ async def create_assessment(
     study_id: str,
     body: RobAssessmentCreate,
     user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
     """Create a new RoB assessment for a study."""
     if body.study_id != study_id:
         raise HTTPException(status_code=400, detail="study_id mismatch")
+    # Enforce project access permissions before allowing assessment creation
+    check_project_access(conn, body.project_id, user)
     try:
         result = rob_service.create_assessment(
             study_id=body.study_id,
@@ -131,8 +134,11 @@ async def auto_create_assessment(
     study_design: str = Query(""),
     outcome_label: str = Query(""),
     user: Optional[dict] = Depends(get_current_user_optional),
+    conn: DBBackend = Depends(get_db),
 ):
     """Auto-select RoB tool based on study design and create assessment."""
+    # Enforce project access permissions before allowing assessment creation
+    check_project_access(conn, project_id, user)
     try:
         result = rob_service.auto_select_and_create_assessment(
             study_id=study_id,
