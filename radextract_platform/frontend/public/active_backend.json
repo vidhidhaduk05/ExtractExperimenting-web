@@ -1,8 +1,8 @@
 {
-  "backend_url": "https://storage-citation-flowers-drew.trycloudflare.com",
-  "api_url": "https://storage-citation-flowers-drew.trycloudflare.com/api",
-  "health_url": "https://storage-citation-flowers-drew.trycloudflare.com/health",
-  "updated_at": "2026-10-29T19:16:00Z",
+  "backend_url": "https://use-msgstr-authorized-nicholas.trycloudflare.com",
+  "api_url": "https://use-msgstr-authorized-nicholas.trycloudflare.com/api",
+  "health_url": "https://use-msgstr-authorized-nicholas.trycloudflare.com/health",
+  "updated_at": "2026-10-30T03:25:00Z",
   "status": "online",
   "model": "biomni-r0"
 }
