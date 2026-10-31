@@ -1,0 +1,8 @@
+{
+  "backend_url": "https://use-msgstr-authorized-nicholas.trycloudflare.com",
+  "api_url": "https://use-msgstr-authorized-nicholas.trycloudflare.com/api",
+  "health_url": "https://use-msgstr-authorized-nicholas.trycloudflare.com/health",
+  "updated_at": "2026-10-30T03:25:00Z",
+  "status": "online",
+  "model": "biomni-r0"
+}
