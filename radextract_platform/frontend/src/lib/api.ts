@@ -4245,6 +4245,16 @@ export const api = {
   exportSrmaWorkbookUrl: (projectId: string) =>
     `${getApiBase()}/projects/${projectId}/extraction/srma-workbook`,
 
+  exportCodedXlsxUrl: (projectId: string) =>
+    `${getApiBase()}/projects/${projectId}/extraction/xlsx-coded`,
+
+  uploadStudyPdf: async (studyId: string, file: File, projectId?: string) => {
+    if (studyId === "batch" && projectId) {
+      return await api.batchUploadPdf(projectId, [file]);
+    }
+    return await api.uploadPdf(studyId, file);
+  },
+
   // ── v2.4+: Interactive Clarification Questions ──
 
   /** List clarification questions for a project */

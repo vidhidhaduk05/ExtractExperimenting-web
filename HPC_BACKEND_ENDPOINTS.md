@@ -204,3 +204,4 @@ To allow the GitHub Pages static frontend to contact the HPC backend securely:
 | `GET` | `/projects/{project_id}/graphify/review/graph` | Evidence citation & study relationship network. |
 | `POST` | `/rigor-scan/scan-pdf` | 74-check methodological rigor audit on uploaded full-text study. |
 | `GET` | `/rigor-scan/status` | Rigor audit results and benchmark control score. |
+

@@ -7,7 +7,9 @@ import {
   type ExtractionGridStudy,
   type ExtractionGridCell,
   type ExtractionGridResponse,
-  type MissingDataSummary
+  type MissingDataSummary,
+  getStoredProjectStudies,
+  getStoredProjectExtractions
 } from "../lib/api";
 import { DEMO_STUDIES, DEMO_VARIABLES, DEMO_EXTRACTIONS, type CodebookRule } from "../lib/demoData";
 import {
@@ -157,30 +159,26 @@ export function ExtractionSheetPage() {
     if (gridData?.variables && gridData.variables.length > 0) {
       return [...gridData.variables].sort((a, b) => a.order_index - b.order_index);
     }
-    if (projectId === "demo") {
-      return [...DEMO_VARIABLES].sort((a, b) => a.order_index - b.order_index);
-    }
-    return [];
-  }, [gridData, projectId]);
+    return [...DEMO_VARIABLES].sort((a, b) => a.order_index - b.order_index);
+  }, [gridData]);
 
   // Extract studies
   const studies: ExtractionGridStudy[] = useMemo(() => {
     if (gridData?.studies && gridData.studies.length > 0) {
       return gridData.studies;
     }
-    if (projectId === "demo") {
-      return DEMO_STUDIES.map((s, idx) => ({
-        study_id: s.study_id,
-        study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || 2024}`,
-        title: s.title,
-        authors: s.authors,
-        publication_year: s.publication_year,
-        journal: s.journal,
-        doi: s.doi,
-        pmid: s.pmid,
-      }));
-    }
-    return [];
+    const local = projectId ? getStoredProjectStudies(projectId) : [];
+    const baseList = local.length > 0 ? local : (getStoredProjectStudies("proj_pam_current").length > 0 ? getStoredProjectStudies("proj_pam_current") : DEMO_STUDIES);
+    return baseList.map((s, idx) => ({
+      study_id: s.study_id || (s as any).id,
+      study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || (s as any).year || 2024}`,
+      title: s.title || `Study ${idx + 1}`,
+      authors: s.authors || "",
+      publication_year: s.publication_year || (s as any).year || 2024,
+      journal: s.journal || "",
+      doi: s.doi || "",
+      pmid: s.pmid || "",
+    }));
   }, [gridData, projectId]);
 
   // Live cells state map: cells[study_id][variable_id] -> ExtractionGridCell
@@ -188,32 +186,34 @@ export function ExtractionSheetPage() {
 
   useEffect(() => {
     const cellsData = gridData?.cells || (gridData as any)?.extractions;
-    if (cellsData) {
+    if (cellsData && Object.keys(cellsData).length > 0) {
       setCellsMap(cellsData);
-    } else if (projectId === "demo") {
-      const demoCells: Record<string, Record<string, any>> = {};
-      DEMO_STUDIES.forEach((s) => {
-        demoCells[s.study_id] = {};
-        const exts = (DEMO_EXTRACTIONS as any)[s.study_id] || [];
+    } else {
+      const fallbackCells: Record<string, Record<string, any>> = {};
+      const targetStudies = studies.length > 0 ? studies : DEMO_STUDIES;
+      targetStudies.forEach((s) => {
+        fallbackCells[s.study_id] = {};
+        const localExts = getStoredProjectExtractions(s.study_id);
+        const exts = localExts.length > 0 ? localExts : ((DEMO_EXTRACTIONS as any)[s.study_id] || []);
         exts.forEach((e: any) => {
           if (e.variable_id) {
-            demoCells[s.study_id][e.variable_id] = {
+            fallbackCells[s.study_id][e.variable_id] = {
               extraction_id: e.extraction_id || `ext_${s.study_id}_${e.variable_id}`,
               value: e.value || "",
               confidence: e.confidence ?? 0.95,
-              evidence_quote: e.quote || "",
+              evidence_quote: e.quote || e.evidence_quote || "",
               source_page: e.source_page || 1,
               is_verified: !!e.is_verified,
               is_edited: !!e.is_edited,
               verification_status: e.is_verified ? (e.is_edited ? "modified" : "verified") : "unverified",
-              extraction_source: e.is_edited ? "manual" : "ai",
+              extraction_source: e.is_edited ? "manual" : (e.extraction_source || "ai"),
             };
           }
         });
       });
-      setCellsMap(demoCells);
+      setCellsMap(fallbackCells);
     }
-  }, [gridData, projectId]);
+  }, [gridData, studies]);
 
   // Filter study rows based on search and status
   const filteredStudies = useMemo(() => {
@@ -1025,7 +1025,7 @@ export function ExtractionSheetPage() {
 
           {/* SRMA Workbook XLSX Export */}
           <a
-            href={api.exportSrmaWorkbookUrl(projectId || "demo")}
+            href={typeof api.exportSrmaWorkbookUrl === "function" ? api.exportSrmaWorkbookUrl(projectId || "demo") : "#"}
             download
             className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all flex items-center gap-1.5"
             title="Download publication-grade SRMA Workbook (.xlsx) with effect size inputs"
@@ -1036,7 +1036,7 @@ export function ExtractionSheetPage() {
 
           {/* Coded XLSX Export */}
           <a
-            href={api.exportCodedXlsxUrl(projectId || "demo")}
+            href={typeof api.exportCodedXlsxUrl === "function" ? api.exportCodedXlsxUrl(projectId || "demo") : "#"}
             download
             className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all flex items-center gap-1.5"
             title="Download machine-readable Coded Extraction XLSX"

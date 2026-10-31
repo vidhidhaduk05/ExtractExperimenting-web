@@ -103,8 +103,9 @@ const SHELL_NAV_ITEMS: NavItemDef[] = [
 function getStageName(pathname: string): string {
   if (pathname.includes("/studies") || pathname.includes("/deduplicate")) return "Studies & Deduplication";
   if (pathname.includes("/screening")) return "Eligibility Screening";
-  if (pathname.includes("/extraction-sheet")) return "Extraction Sheet";
-  if (pathname.includes("/extraction")) return "PDF Extraction";
+  if (pathname.includes("/studies") && pathname.includes("/pdf")) return "PDF Extraction";
+  if (pathname.includes("/extraction") && pathname.split("/extraction/")[1]) return "PDF Extraction";
+  if (pathname.includes("/extraction-sheet") || pathname.includes("/extraction")) return "Extraction Sheet";
   if (pathname.includes("/rob")) return "Risk of Bias";
   if (pathname.includes("/grade")) return "GRADE Evidence";
   if (pathname.includes("/meta-analysis")) return "Meta-Analysis";
