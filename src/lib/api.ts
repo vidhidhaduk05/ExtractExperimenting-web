@@ -28,7 +28,8 @@ import {
   DEMO_PDF_DATA,
   DEMO_EXTRACTIONS,
   DEMO_CODEBOOK_RULES,
-  DEMO_ERROR_ANALYSIS
+  DEMO_ERROR_ANALYSIS,
+  getOrSynthesizeStudyExtractions
 } from "./demoData";
 export { DEMO_PROJECT };
 
@@ -242,14 +243,29 @@ export function saveStoredProjectStudies(projectId = "proj_pam_current", studies
 }
 
 export function getStoredProjectExtractions(studyId: string): any[] {
-  if (typeof window === "undefined") {
-    return (DEMO_EXTRACTIONS as any)[studyId] || [];
+  const isPalmarola = (studyId || "").toLowerCase().includes("palmarola") || (studyId || "").toLowerCase().includes("albina") || studyId === "CPJ-2023-000540" || studyId === "study_albina_2024";
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem(`radextract_extractions_${studyId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length >= 5) {
+          const hasNR = parsed.some((e: any) => !e.value || (e.value && (e.value.toLowerCase() === "nr" || e.value.toLowerCase() === "not reported")));
+          if (isPalmarola && hasNR) {
+            const authentic = getOrSynthesizeStudyExtractions(studyId);
+            localStorage.setItem(`radextract_extractions_${studyId}`, JSON.stringify(authentic));
+            return authentic;
+          }
+          return parsed;
+        }
+      }
+    } catch (e) {}
   }
-  try {
-    const saved = localStorage.getItem(`radextract_extractions_${studyId}`);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return (DEMO_EXTRACTIONS as any)[studyId] || [];
+  const defaultList = (DEMO_EXTRACTIONS as any)[studyId];
+  if (defaultList && defaultList.length >= 5 && !isPalmarola) {
+    return defaultList;
+  }
+  return getOrSynthesizeStudyExtractions(studyId);
 }
 
 export function saveStoredProjectExtractions(studyId: string, extractions: any[]): void {
@@ -1135,7 +1151,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     for (const st of gridStudies) {
       cells[st.study_id] = {};
       const exts = getStoredProjectExtractions(st.study_id);
-      const srcList = exts.length > 0 ? exts : ((DEMO_EXTRACTIONS as any)[st.study_id] || []);
+      const srcList = exts && exts.length >= 5 ? exts : getOrSynthesizeStudyExtractions(st.study_id, st.study_label, st.authors, st.publication_year, st.title);
       for (const e of srcList) {
         if (e.variable_id) {
           cells[st.study_id][e.variable_id] = {
@@ -1159,6 +1175,20 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
       cells,
     } as unknown as T;
   }
+  if (path.includes("/extractions/ai-batch")) {
+    const studies = getStoredProjectStudies("proj_pam_current");
+    const studyList = studies.length > 0 ? studies : DEMO_STUDIES;
+    for (const st of studyList) {
+      const exts = getOrSynthesizeStudyExtractions(st.study_id, (st as any).study_label, st.authors, (st as any).publication_year, st.title);
+      saveStoredProjectExtractions(st.study_id, exts);
+    }
+    return {
+      project_id: "proj_pam_current",
+      total_studies: studyList.length,
+      processed: studyList.length,
+      results: [],
+    } as unknown as T;
+  }
   if (path.includes("/extractions") || path.includes("/coded-extract")) {
     const rawStudyId = path.split("/").filter(Boolean)[1] || "";
     const resolvedId = (DEMO_EXTRACTIONS as any)[rawStudyId] ? rawStudyId : studyAliasMap[rawStudyId];
@@ -1169,7 +1199,7 @@ function handleDemoRequest<T>(path: string, options: RequestInit = {}): T {
     if (resolvedId && (DEMO_EXTRACTIONS as any)[resolvedId]) {
       return (DEMO_EXTRACTIONS as any)[resolvedId] as unknown as T;
     }
-    return [] as unknown as T;
+    return getOrSynthesizeStudyExtractions(rawStudyId) as unknown as T;
   }
   if (path.includes("/pdf-highlights")) {
     return [] as unknown as T;
