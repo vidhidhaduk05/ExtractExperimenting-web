@@ -13,7 +13,7 @@ import {
 } from "../lib/api";
 import { DEMO_STUDIES, DEMO_VARIABLES, DEMO_EXTRACTIONS, type CodebookRule } from "../lib/demoData";
 import {
-  FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
+  FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
   Sparkles, ExternalLink, RefreshCw, CheckCheck, ChevronRight,
   TrendingUp, Award, Layers, ShieldCheck, Tag, FolderPlus, Upload,

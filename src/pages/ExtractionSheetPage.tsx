@@ -6,16 +6,20 @@ import {
   type ReviewVariable,
   type ExtractionGridStudy,
   type ExtractionGridCell,
-  type ExtractionGridResponse
+  type ExtractionGridResponse,
+  type MissingDataSummary,
+  getStoredProjectStudies,
+  getStoredProjectExtractions
 } from "../lib/api";
 import { DEMO_STUDIES, DEMO_VARIABLES, DEMO_EXTRACTIONS, type CodebookRule } from "../lib/demoData";
 import {
-  FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft,
+  FileSpreadsheet, FileText, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight,
   Download, Eye, Check, X, Edit3, Sliders, Search, Filter,
   Sparkles, ExternalLink, RefreshCw, CheckCheck, ChevronRight,
   TrendingUp, Award, Layers, ShieldCheck, Tag, FolderPlus, Upload,
   Lock, Unlock, Plus, ChevronDown, ChevronUp, FileUp, Database, Save, Loader2, Table,
-  ChevronLeft, Trash2, ArrowUpDown, Undo2, Redo2, Copy, FileCheck, HelpCircle
+  ChevronLeft, Trash2, ArrowUpDown, Undo2, Redo2, Copy, FileCheck, HelpCircle,
+  AlertTriangle, FileCode
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
@@ -34,6 +38,31 @@ export function ExtractionSheetPage() {
   // Designer and Bulk Modals
   const [showCodebookDesigner, setShowCodebookDesigner] = useState<boolean>(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState<boolean>(false);
+  const [showBatchConfirm, setShowBatchConfirm] = useState<boolean>(false);
+  const [isBatchRunning, setIsBatchRunning] = useState<boolean>(false);
+  const [batchProgress, setBatchProgress] = useState<{ total: number; done: number } | null>(null);
+  const [showPdfSection, setShowPdfSection] = useState<boolean>(false);
+  const [correctionReason, setCorrectionReason] = useState<string>("");
+  const [adjudicateValue, setAdjudicateValue] = useState<string>("");
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [isLoadingAudit, setIsLoadingAudit] = useState<boolean>(false);
+  const [pdfUploadFilter, setPdfUploadFilter] = useState<string>("all");
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState<boolean>(false);
+
+  // Missing Data Summary Query
+  const { data: missingDataSummary, refetch: refetchMissingData } = useQuery<MissingDataSummary>({
+    queryKey: ["missing-data-summary", projectId],
+    queryFn: () => (projectId && projectId !== "demo" ? api.getMissingDataSummary(projectId) : Promise.reject("demo")),
+    enabled: !!projectId && projectId !== "demo",
+  });
+
+  // FullText Availability Query
+  const { data: fulltextAvailability, refetch: refetchFulltext } = useQuery({
+    queryKey: ["fulltext-availability", projectId],
+    queryFn: () => (projectId && projectId !== "demo" ? api.getFulltextAvailability(projectId) : Promise.resolve(null)),
+    enabled: !!projectId && projectId !== "demo",
+    refetchInterval: isCheckingAvailability ? 3000 : false,
+  });
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -130,30 +159,26 @@ export function ExtractionSheetPage() {
     if (gridData?.variables && gridData.variables.length > 0) {
       return [...gridData.variables].sort((a, b) => a.order_index - b.order_index);
     }
-    if (projectId === "demo") {
-      return [...DEMO_VARIABLES].sort((a, b) => a.order_index - b.order_index);
-    }
-    return [];
-  }, [gridData, projectId]);
+    return [...DEMO_VARIABLES].sort((a, b) => a.order_index - b.order_index);
+  }, [gridData]);
 
   // Extract studies
   const studies: ExtractionGridStudy[] = useMemo(() => {
     if (gridData?.studies && gridData.studies.length > 0) {
       return gridData.studies;
     }
-    if (projectId === "demo") {
-      return DEMO_STUDIES.map((s, idx) => ({
-        study_id: s.study_id,
-        study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || 2024}`,
-        title: s.title,
-        authors: s.authors,
-        publication_year: s.publication_year,
-        journal: s.journal,
-        doi: s.doi,
-        pmid: s.pmid,
-      }));
-    }
-    return [];
+    const local = projectId ? getStoredProjectStudies(projectId) : [];
+    const baseList = local.length > 0 ? local : (getStoredProjectStudies("proj_pam_current").length > 0 ? getStoredProjectStudies("proj_pam_current") : DEMO_STUDIES);
+    return baseList.map((s, idx) => ({
+      study_id: s.study_id || (s as any).id,
+      study_label: (s as any).study_label || `${(s.authors || "Study").split(" ")[0]} ${(s as any).publication_year || (s as any).year || 2024}`,
+      title: s.title || `Study ${idx + 1}`,
+      authors: s.authors || "",
+      publication_year: s.publication_year || (s as any).year || 2024,
+      journal: s.journal || "",
+      doi: s.doi || "",
+      pmid: s.pmid || "",
+    }));
   }, [gridData, projectId]);
 
   // Live cells state map: cells[study_id][variable_id] -> ExtractionGridCell
@@ -161,32 +186,34 @@ export function ExtractionSheetPage() {
 
   useEffect(() => {
     const cellsData = gridData?.cells || (gridData as any)?.extractions;
-    if (cellsData) {
+    if (cellsData && Object.keys(cellsData).length > 0) {
       setCellsMap(cellsData);
-    } else if (projectId === "demo") {
-      const demoCells: Record<string, Record<string, any>> = {};
-      DEMO_STUDIES.forEach((s) => {
-        demoCells[s.study_id] = {};
-        const exts = (DEMO_EXTRACTIONS as any)[s.study_id] || [];
+    } else {
+      const fallbackCells: Record<string, Record<string, any>> = {};
+      const targetStudies = studies.length > 0 ? studies : DEMO_STUDIES;
+      targetStudies.forEach((s) => {
+        fallbackCells[s.study_id] = {};
+        const localExts = getStoredProjectExtractions(s.study_id);
+        const exts = localExts.length > 0 ? localExts : ((DEMO_EXTRACTIONS as any)[s.study_id] || []);
         exts.forEach((e: any) => {
           if (e.variable_id) {
-            demoCells[s.study_id][e.variable_id] = {
+            fallbackCells[s.study_id][e.variable_id] = {
               extraction_id: e.extraction_id || `ext_${s.study_id}_${e.variable_id}`,
               value: e.value || "",
               confidence: e.confidence ?? 0.95,
-              evidence_quote: e.quote || "",
+              evidence_quote: e.quote || e.evidence_quote || "",
               source_page: e.source_page || 1,
               is_verified: !!e.is_verified,
               is_edited: !!e.is_edited,
               verification_status: e.is_verified ? (e.is_edited ? "modified" : "verified") : "unverified",
-              extraction_source: e.is_edited ? "manual" : "ai",
+              extraction_source: e.is_edited ? "manual" : (e.extraction_source || "ai"),
             };
           }
         });
       });
-      setCellsMap(demoCells);
+      setCellsMap(fallbackCells);
     }
-  }, [gridData, projectId]);
+  }, [gridData, studies]);
 
   // Filter study rows based on search and status
   const filteredStudies = useMemo(() => {
@@ -221,6 +248,29 @@ export function ExtractionSheetPage() {
     });
   }, [studies, searchQuery, statusFilter, cellsMap, variables]);
 
+  // Aggregate extraction grid cell counts: verified, unverified, missing
+  const cellCounts = useMemo(() => {
+    let verified = 0;
+    let unverified = 0;
+    let missing = 0;
+
+    for (const study of studies) {
+      const studyCells = cellsMap[study.study_id] || {};
+      for (const v of variables) {
+        const cell = studyCells[v.variable_id];
+        const val = cell?.value?.trim() || "";
+        if (!val || val === "NR" || val === "-99" || val === "N/A" || val === "-77" || val === "not reported" || val === "not stated") {
+          missing++;
+        } else if (cell?.is_verified) {
+          verified++;
+        } else {
+          unverified++;
+        }
+      }
+    }
+    return { verified, unverified, missing, total: studies.length * (variables.length || 1) };
+  }, [studies, variables, cellsMap]);
+
   // Helper to get Excel column letters (A, B, C... Z, AA, AB...)
   const getColumnLetter = (colIndex: number): string => {
     let letter = "";
@@ -246,6 +296,28 @@ export function ExtractionSheetPage() {
       }
     }
   }, [queryStudyId, queryVarId, filteredStudies, variables]);
+
+  // Trigger AI Batch Extraction (Laya/Biomni-R0 tier)
+  const handleRunAiBatchExtraction = async (requireFulltext = false) => {
+    if (!projectId || projectId === "demo") return;
+    setIsBatchRunning(true);
+    setShowBatchConfirm(false);
+    setSaveStatus("saving");
+    setFeedbackToast("AI Batch Extraction initiated...");
+    try {
+      const res = await api.runAiBatchExtraction(projectId, requireFulltext);
+      await queryClient.invalidateQueries({ queryKey: ["extraction-grid", projectId] });
+      await refetchMissingData();
+      setSaveStatus("saved");
+      setFeedbackToast(`Batch Extraction finished: ${res.processed} studies processed successfully!`);
+      setTimeout(() => setSaveStatus("idle"), 3500);
+    } catch (err: any) {
+      setSaveStatus("error");
+      setSaveError(`Batch extraction failed: ${err?.message || "Server error"}`);
+    } finally {
+      setIsBatchRunning(false);
+    }
+  };
 
   // ── Cell Value Upsert Handler ──
   const handleCommitCellValue = async (
@@ -317,6 +389,106 @@ export function ExtractionSheetPage() {
       setSaveError(err?.message || "Failed to save cell to project database");
     } finally {
       setEditingCell(null);
+    }
+  };
+
+  // ── Fulltext PDF Upload Dropzone Handler ──
+  const [isUploadingPdfs, setIsUploadingPdfs] = useState<boolean>(false);
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handlePdfDropzoneUpload = async (files: FileList | File[]) => {
+    if (!projectId || projectId === "demo") return;
+    const fileList = Array.from(files);
+    if (fileList.length === 0) return;
+
+    setIsUploadingPdfs(true);
+    setSaveStatus("saving");
+    try {
+      for (const file of fileList) {
+        // Upload to studies if matched or create/process
+        await api.uploadStudyPdf("batch", file, projectId);
+      }
+      setFeedbackToast(`Uploaded ${fileList.length} PDF(s) to processing queue.`);
+      await refetchFulltext();
+      setTimeout(() => setFeedbackToast(null), 3500);
+    } catch (err: any) {
+      setSaveStatus("error");
+      setSaveError(`PDF upload error: ${err?.message || "Failed to upload"}`);
+    } finally {
+      setIsUploadingPdfs(false);
+      setSaveStatus("idle");
+    }
+  };
+
+  // ── Batch AI Extraction Run Handler ──
+  const handleTriggerBatchExtraction = async (requireFulltext: boolean) => {
+    if (!projectId || projectId === "demo") return;
+    setIsBatchRunning(true);
+    setShowBatchConfirm(false);
+    setSaveStatus("saving");
+    setFeedbackToast("Co-Scientist Batch Extraction running in background...");
+
+    try {
+      await api.runAiBatchExtraction(projectId, requireFulltext);
+      await refetchGrid();
+      await refetchMissingData();
+      setSaveStatus("saved");
+      setFeedbackToast("Co-Scientist Batch Extraction complete! Spreadsheet refreshed.");
+      setTimeout(() => {
+        setSaveStatus("idle");
+        setFeedbackToast(null);
+      }, 4000);
+    } catch (err: any) {
+      setSaveStatus("error");
+      setSaveError(`Batch Extraction failed: ${err?.message || "Server error"}`);
+    } finally {
+      setIsBatchRunning(false);
+    }
+  };
+
+  // ── Verify & Adjudicate API Actions ──
+  const handleVerifyCurrentCell = async () => {
+    if (!activeSelectedCellData) return;
+    const { study, variable, cell } = activeSelectedCellData;
+    setSaveStatus("saving");
+    try {
+      if (projectId && projectId !== "demo" && cell.extraction_id && !cell.extraction_id.startsWith("ext_")) {
+        await api.verifyExtraction(cell.extraction_id, { agree: true });
+      }
+      // Update locally
+      await handleCommitCellValue(study.study_id, variable.variable_id, cell.value, {
+        is_verified: true,
+        verification_status: "verified"
+      });
+      setFeedbackToast(`Verified "${variable.name}" for ${study.study_label || "study"}`);
+      setTimeout(() => setFeedbackToast(null), 2500);
+    } catch (err: any) {
+      setSaveStatus("error");
+      setSaveError(`Verification failed: ${err?.message || "Error"}`);
+    }
+  };
+
+  const handleAdjudicateCurrentCell = async () => {
+    if (!activeSelectedCellData || !adjudicateValue.trim()) return;
+    const { study, variable, cell } = activeSelectedCellData;
+    setSaveStatus("saving");
+    try {
+      if (projectId && projectId !== "demo" && cell.extraction_id && !cell.extraction_id.startsWith("ext_")) {
+        await api.adjudicateExtraction(cell.extraction_id, {
+          final_value: adjudicateValue.trim(),
+          notes: correctionReason.trim() || "Adjudicated consensus value",
+        });
+      }
+      await handleCommitCellValue(study.study_id, variable.variable_id, adjudicateValue.trim(), {
+        is_verified: true,
+        verification_status: "adjudicated",
+        is_edited: true,
+      });
+      setFeedbackToast(`Adjudicated "${variable.name}" to "${adjudicateValue.trim()}"`);
+      setTimeout(() => setFeedbackToast(null), 3000);
+    } catch (err: any) {
+      setSaveStatus("error");
+      setSaveError(`Adjudication failed: ${err?.message || "Error"}`);
     }
   };
 
@@ -713,6 +885,7 @@ export function ExtractionSheetPage() {
   };
 
   // Active cell details for Inspector Panel
+  // (declared before the audit-trail effect below, which reads it during render)
   const activeSelectedCellData = useMemo(() => {
     if (!selectedCell) return null;
     const study = filteredStudies[selectedCell.rowIdx];
@@ -739,16 +912,30 @@ export function ExtractionSheetPage() {
     };
   }, [selectedCell, filteredStudies, variables, cellsMap]);
 
+  // Load audit trail on cell selection
+  useEffect(() => {
+    if (activeSelectedCellData?.study?.study_id && projectId && projectId !== "demo") {
+      setIsLoadingAudit(true);
+      api.getStudyAuditLog(activeSelectedCellData.study.study_id)
+        .then((logs) => setAuditLogs(logs || []))
+        .catch(() => setAuditLogs([]))
+        .finally(() => setIsLoadingAudit(false));
+      setCorrectionReason("");
+      setAdjudicateValue(activeSelectedCellData.cell?.value || "");
+    }
+  }, [activeSelectedCellData?.study?.study_id, activeSelectedCellData?.variable?.variable_id, projectId]);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#fbf9f4] overflow-hidden select-none font-['Work_Sans']">
       {/* ── TOP SECTION HEADER (Paper with Hairline #d2c2cb) ── */}
       <header className="bg-[#fbf9f4] text-[#4f444b] px-5 py-2.5 shrink-0 flex items-center justify-between border-b border-[#d2c2cb] z-30">
         <div className="flex items-center gap-3">
           <Link
-            to={`/projects/${projectId}/studies`}
+            to={`/projects/${projectId}/extraction-pdf`}
             className="text-xs font-semibold text-[#3a0f34] hover:text-[#1a0017] flex items-center gap-1.5 bg-[#ffffff] hover:bg-[#eee7ec] px-3 py-1.5 rounded border border-[#d2c2cb] transition-colors"
+            title="Return to PDF Extraction Workspace"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to Studies
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to PDF Workspace
           </Link>
 
           <div className="h-4 w-px bg-[#d2c2cb]" />
@@ -805,67 +992,84 @@ export function ExtractionSheetPage() {
             </button>
           </div>
 
-          {/* Bibliographic Prefill */}
+          {/* Toggle PDF Upload / Availability Queue */}
           <button
-            onClick={handlePrefillBibliographic}
-            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all flex items-center gap-1.5"
-            title="Auto-prefill Year, Author, DOI, and Study ID from imported reference metadata"
+            onClick={() => setShowPdfSection(!showPdfSection)}
+            className={`px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded border transition-all flex items-center gap-1.5 ${
+              showPdfSection
+                ? "bg-[#814d75]/15 text-[#814d75] border-[#814d75]/40"
+                : "bg-[#ffffff] text-[#3a0f34] border-[#d2c2cb] hover:bg-[#eee7ec]"
+            }`}
+            title="Toggle PDF Full-Text Upload and Availability Queue"
           >
-            <Sparkles className="h-3.5 w-3.5 text-[#814d75]" /> Prefill Metadata
+            <FileText className="h-3.5 w-3.5 text-[#814d75]" />
+            <span>PDF Queue</span>
+            {fulltextAvailability?.total_studies ? (
+              <span className="font-mono text-[10px] bg-[#eee7ec] px-1 rounded text-[#4f444b]">
+                {fulltextAvailability.uploaded_count || 0}/{fulltextAvailability.total_studies}
+              </span>
+            ) : null}
           </button>
 
-          {/* Hidden File Input for Extraction Sheet */}
-          <input
-            ref={excelUploadInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
-            onChange={handleUploadExtractionSheet}
-          />
-
-          {/* Upload Extraction Sheet / Variables Button */}
-          <button
-            type="button"
-            onClick={() => excelUploadInputRef.current?.click()}
-            disabled={isImportingSheet}
-            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all flex items-center gap-1.5 disabled:opacity-50"
-            title="Upload an Excel sheet (.xlsx) or CSV containing custom variables to act as extraction questions"
-          >
-            {isImportingSheet ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#814d75]" />
-            ) : (
-              <Upload className="h-3.5 w-3.5 text-[#814d75]" />
-            )}
-            <span>Upload Variables (.xlsx)</span>
-          </button>
-
-          {/* Variable Designer Button */}
+          {/* Variables Count Chip / Designer */}
           <button
             onClick={() => setShowCodebookDesigner(true)}
-            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-bold rounded bg-[#ffdea6] text-[#3a0f34] hover:bg-[#ffdea6]/80 border border-[#d2c2cb] transition-all flex items-center gap-1.5"
-            title="Open Variable Designer to configure, paste, or reorder project variables"
+            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-bold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all flex items-center gap-1.5"
+            title="Configure or reorder extraction variables"
           >
-            <Sliders className="h-3.5 w-3.5" /> Variable Designer
+            <Sliders className="h-3.5 w-3.5 text-[#814d75]" />
+            <span>Variables</span>
+            <span className="font-mono text-[11px] bg-[#ffdea6] text-[#7c5800] px-1.5 py-0.2 rounded-full font-bold">
+              {variables.length}
+            </span>
           </button>
 
-          {/* Excel Exports Dropdown / Actions */}
+          {/* SRMA Workbook XLSX Export */}
           <a
-            href={api.exportTemplateUrl(projectId || "demo")}
+            href={typeof api.exportSrmaWorkbookUrl === "function" ? api.exportSrmaWorkbookUrl(projectId || "demo") : "#"}
             download
             className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all flex items-center gap-1.5"
-            title="Download blank extraction template (.xlsx) with exact saved column sequence"
+            title="Download publication-grade SRMA Workbook (.xlsx) with effect size inputs"
           >
-            <Download className="h-3.5 w-3.5 text-[#814d75]" /> Blank Template (.xlsx)
+            <Download className="h-3.5 w-3.5 text-[#814d75]" />
+            <span>SRMA Workbook</span>
           </a>
 
+          {/* Coded XLSX Export */}
           <a
-            href={api.exportProjectXlsxUrl(projectId || "demo")}
+            href={typeof api.exportCodedXlsxUrl === "function" ? api.exportCodedXlsxUrl(projectId || "demo") : "#"}
             download
-            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-bold rounded bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] transition-all flex items-center gap-1.5"
-            title="Download completed extraction results workbook (.xlsx) with linked Evidence sheet"
+            className="px-3 py-1.5 text-xs font-['Work_Sans'] font-semibold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all flex items-center gap-1.5"
+            title="Download machine-readable Coded Extraction XLSX"
           >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-[#ffdea6]" /> Completed Results (.xlsx)
+            <FileSpreadsheet className="h-3.5 w-3.5 text-[#814d75]" />
+            <span>Coded XLSX</span>
           </a>
+
+          {/* Primary Action: Run AI Batch Extraction */}
+          <button
+            onClick={() => setShowBatchConfirm(true)}
+            disabled={isBatchRunning || filteredStudies.length === 0}
+            className="px-3.5 py-1.5 text-xs font-['Work_Sans'] font-bold rounded bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] border border-[#3a0f34] transition-all flex items-center gap-2 shadow-xs disabled:opacity-40"
+            title="Run Co-Scientist AI Batch Extraction across included studies"
+          >
+            {isBatchRunning ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#ffdea6]" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5 text-[#ffdea6]" />
+            )}
+            <span>Run AI Batch Extraction</span>
+          </button>
+
+          {/* Advance to Risk of Bias */}
+          <Link
+            to={`/projects/${projectId}/rob`}
+            className="px-3.5 py-1.5 text-xs font-['Work_Sans'] font-bold rounded bg-[#814d75] hover:bg-[#66365c] text-[#fbf9f4] transition-all flex items-center gap-1.5 shadow-xs"
+            title="Advance to Risk of Bias assessment stage"
+          >
+            <span>Advance to Risk of Bias</span>
+            <ArrowRight className="h-3.5 w-3.5 text-[#ffdea6]" />
+          </Link>
         </div>
       </header>
 
@@ -890,7 +1094,7 @@ export function ExtractionSheetPage() {
           </div>
         </div>
 
-        {/* Search & Filters */}
+        {/* Search & Filters Toolbar */}
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#62535d]" />
@@ -898,21 +1102,59 @@ export function ExtractionSheetPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search studies..."
+              placeholder="Search studies, authors..."
               className="pl-8 pr-3 py-1 text-xs border border-[#d2c2cb] rounded-md bg-[#ffffff] text-[#3a0f34] focus:outline-none focus:ring-1 focus:ring-[#814d75] w-48 shadow-2xs"
             />
           </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="text-xs border border-[#d2c2cb] rounded-md bg-[#ffffff] px-2.5 py-1 text-[#3a0f34] focus:outline-none focus:ring-1 focus:ring-[#814d75] shadow-2xs"
-          >
-            <option value="all">All Statuses</option>
-            <option value="verified">Verified Studies</option>
-            <option value="pending">Pending Review</option>
-            <option value="missing">Studies with Missing (NR)</option>
-          </select>
+          {/* Quick Filter Toggles: Verified only / Missing only */}
+          <div className="flex items-center bg-[#ffffff] rounded-md border border-[#d2c2cb] p-0.5 text-xs">
+            <button
+              onClick={() => setStatusFilter(statusFilter === "all" ? "verified" : "all")}
+              className={`px-2.5 py-1 rounded transition-colors font-medium flex items-center gap-1 ${
+                statusFilter === "verified"
+                  ? "bg-[#3a0f34] text-[#fbf9f4] font-semibold"
+                  : "text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]"
+              }`}
+              title="Filter to studies where all values are verified"
+            >
+              <Check className="h-3 w-3 text-emerald-500" />
+              <span>Verified only</span>
+            </button>
+            <button
+              onClick={() => setStatusFilter(statusFilter === "missing" ? "all" : "missing")}
+              className={`px-2.5 py-1 rounded transition-colors font-medium flex items-center gap-1 ${
+                statusFilter === "missing"
+                  ? "bg-[#3a0f34] text-[#fbf9f4] font-semibold"
+                  : "text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]"
+              }`}
+              title="Filter to studies with missing or unrecorded values"
+            >
+              <span className="font-mono text-[#81737b] font-bold">—</span>
+              <span>Missing only</span>
+            </button>
+          </div>
+
+          {/* Summary Chip: ✓ N verified · ⚠ N unverified · — N missing */}
+          <div className="flex items-center gap-2 bg-[#ffffff] border border-[#d2c2cb] rounded-md px-3 py-1 text-xs font-mono shadow-2xs select-none">
+            <span className="text-emerald-700 font-semibold flex items-center gap-1">
+              <Check className="h-3 w-3 text-emerald-600" />
+              <span>{cellCounts.verified}</span>
+              <span className="text-[10px] font-normal text-[#62535d]">verified</span>
+            </span>
+            <span className="text-[#d2c2cb]">·</span>
+            <span className="text-amber-800 font-semibold flex items-center gap-1">
+              <AlertCircle className="h-3 w-3 text-amber-600" />
+              <span>{cellCounts.unverified}</span>
+              <span className="text-[10px] font-normal text-[#62535d]">unverified</span>
+            </span>
+            <span className="text-[#d2c2cb]">·</span>
+            <span className="text-[#81737b] font-semibold flex items-center gap-1">
+              <span className="font-bold">—</span>
+              <span>{cellCounts.missing}</span>
+              <span className="text-[10px] font-normal text-[#62535d]">missing</span>
+            </span>
+          </div>
 
           <button
             onClick={() => setShowInspectorPanel(!showInspectorPanel)}
@@ -928,6 +1170,116 @@ export function ExtractionSheetPage() {
           </button>
         </div>
       </div>
+
+      {/* ── UPLOAD ROW (2-UP): PDF DROPZONE + FULLTEXT AVAILABILITY QUEUE ── */}
+      {showPdfSection && (
+        <div className="bg-[#ffffff] border-b border-[#d2c2cb] px-5 py-3 shrink-0 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-150">
+          {/* Left: Drag-and-Drop PDF Dropzone */}
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (e.dataTransfer.files) {
+                handlePdfDropzoneUpload(e.dataTransfer.files);
+              }
+            }}
+            className="border-2 border-dashed border-[#d2c2cb] hover:border-[#814d75] rounded-xl p-4 bg-[#fbf9f4] flex flex-col items-center justify-center text-center cursor-pointer transition-colors group"
+            onClick={() => pdfInputRef.current?.click()}
+          >
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept=".pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) {
+                  handlePdfDropzoneUpload(e.target.files);
+                }
+              }}
+            />
+            <div className="w-10 h-10 rounded-full bg-[#eee7ec] group-hover:bg-[#ffdea6]/50 flex items-center justify-center mb-2 transition-colors">
+              {isUploadingPdfs ? (
+                <Loader2 className="h-5 w-5 animate-spin text-[#814d75]" />
+              ) : (
+                <Upload className="h-5 w-5 text-[#814d75]" />
+              )}
+            </div>
+            <h4 className="text-xs font-bold text-[#3a0f34]">
+              {isUploadingPdfs ? "Uploading PDFs to Workspace..." : "Drop study PDFs here, or browse files"}
+            </h4>
+            <p className="text-[11px] text-[#62535d] mt-0.5">
+              Multi-PDF drag & drop. Auto-matches to studies and triggers OCR/text layer ingestion.
+            </p>
+          </div>
+
+          {/* Right: PDF Availability Queue */}
+          <div className="border border-[#d2c2cb] rounded-xl p-3 bg-[#ffffff] flex flex-col justify-between">
+            <div className="flex items-center justify-between pb-2 border-b border-[#d2c2cb]/60">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-[#814d75]" />
+                <span className="text-xs font-bold text-[#3a0f34]">Fulltext Availability Queue</span>
+              </div>
+              <button
+                onClick={() => {
+                  setIsCheckingAvailability(true);
+                  refetchFulltext().finally(() => setIsCheckingAvailability(false));
+                }}
+                disabled={isCheckingAvailability}
+                className="text-[11px] font-semibold text-[#814d75] hover:text-[#3a0f34] flex items-center gap-1 bg-[#eee7ec] px-2 py-0.5 rounded transition-colors"
+                title="Refresh PDF status"
+              >
+                <RefreshCw className={`h-3 w-3 ${isCheckingAvailability ? "animate-spin" : ""}`} />
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            {/* Queue Summary / List */}
+            <div className="py-2 overflow-y-auto max-h-24 space-y-1.5 text-xs">
+              {fulltextAvailability?.studies && fulltextAvailability.studies.length > 0 ? (
+                fulltextAvailability.studies.slice(0, 5).map((s: any) => {
+                  const status = s.status || "queued";
+                  return (
+                    <div key={s.study_id} className="flex items-center justify-between py-0.5">
+                      <span className="truncate max-w-[220px] text-[#4f444b] font-medium">
+                        {s.title || s.study_label || s.study_id}
+                      </span>
+                      <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full font-bold border ${
+                        status === "processed"
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          : status === "awaiting_text" || status === "text_only"
+                          ? "bg-blue-50 text-blue-800 border-blue-200"
+                          : status === "no_text" || status === "error"
+                          ? "bg-rose-50 text-rose-800 border-rose-200"
+                          : "bg-[#eee7ec] text-[#62535d] border-[#d2c2cb]"
+                      }`}>
+                        {status === "processed" && "processed"}
+                        {status === "text_only" && "awaiting text"}
+                        {status === "awaiting_text" && "awaiting text"}
+                        {status === "queued" && "queued"}
+                        {(status === "no_text" || status === "error") && "no text layer — needs OCR"}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-[11px] text-[#62535d] italic py-2 text-center">
+                  {fulltextAvailability?.total_studies
+                    ? `${fulltextAvailability.uploaded_count || 0} of ${fulltextAvailability.total_studies} studies have PDFs processed.`
+                    : "No fulltext PDFs in queue yet."}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-[#d2c2cb]/60 flex items-center justify-between text-[11px] text-[#62535d]">
+              <span>
+                Processed: <strong className="text-[#3a0f34]">{fulltextAvailability?.uploaded_count || 0}</strong> / {filteredStudies.length}
+              </span>
+              <span className="text-[#81737b]">Zero silent skips: PDFs missing text receive OCR flags</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feedback Toast Notification */}
       {feedbackToast && (
@@ -1105,8 +1457,11 @@ export function ExtractionSheetPage() {
                         const isEditing = editingCell?.rowIdx === rowIdx && editingCell?.colIdx === colIdx;
                         const isVerified = cell?.is_verified;
 
-                        // Missing codes conventions: -99 Not Reported, -77 N/A, -88 Contradictory
-                        const isMissing = cellVal === "-99" || cellVal === "NR" || cellVal === "-77" || cellVal === "-88";
+                        // Missing states: preserve distinct text per plan rules
+                        const lowerVal = (cellVal || "").toLowerCase().trim();
+                        const isMissing = !cellVal || lowerVal === "nr" || lowerVal === "-99" || lowerVal === "n/a" || lowerVal === "-77" || lowerVal === "not reported" || lowerVal === "not stated";
+                        const missingLabel = lowerVal === "n/a" || lowerVal === "-77" ? "n/a" : lowerVal === "not stated" ? "not stated" : "not reported";
+                        const confScore = cell?.confidence ?? 0;
 
                         return (
                           <td
@@ -1118,9 +1473,13 @@ export function ExtractionSheetPage() {
                             }}
                             className={`p-2 border-r border-[#d2c2cb] relative font-['Work_Sans'] text-xs transition-colors cursor-cell ${
                               isSelected
-                                ? "outline-2 outline-[#814d75] outline-offset-[-2px] z-10 bg-[#ffdea6]/20"
+                                ? "outline-2 outline-[#814d75] outline-offset-[-2px] z-10 bg-[#ffdea6]/25"
                                 : "hover:bg-[#fbf9f4]"
-                            } ${isMissing ? "bg-[#eee7ec]/60" : ""}`}
+                            } ${
+                              isMissing
+                                ? "bg-[repeating-linear-gradient(45deg,#fbf9f4,#fbf9f4_6px,#eee7ec_6px,#eee7ec_12px)]"
+                                : ""
+                            }`}
                             style={{ width: columnWidths[v.variable_id] || 180 }}
                           >
                             {isEditing ? (
@@ -1138,8 +1497,9 @@ export function ExtractionSheetPage() {
                                       {opt.trim()}
                                     </option>
                                   ))}
-                                  <option value="NR">-99 (Not Reported)</option>
-                                  <option value="NA">-77 (Not Applicable)</option>
+                                  <option value="not reported">not reported</option>
+                                  <option value="not stated">not stated</option>
+                                  <option value="n/a">n/a</option>
                                 </select>
                               ) : (
                                 <input
@@ -1152,17 +1512,33 @@ export function ExtractionSheetPage() {
                                 />
                               )
                             ) : (
-                              <div className="flex items-center justify-between gap-1">
-                                <span className={`truncate font-['Work_Sans'] ${
-                                  !cellVal ? "text-transparent" : (isMissing ? "text-[#81737b] italic font-mono" : "text-[#3a0f34]")
-                                }`}>
-                                  {cellVal || "."}
-                                </span>
+                              <div className="flex items-center justify-between gap-1.5">
+                                {isMissing ? (
+                                  <span className="text-[#81737b] italic font-['QuadraatSmallCaps'] text-[11px] truncate">
+                                    {missingLabel}
+                                  </span>
+                                ) : (
+                                  <span className="truncate font-['Work_Sans'] font-medium text-[#3a0f34]">
+                                    {cellVal}
+                                    {isVerified && <span className="text-emerald-700 font-bold ml-1">✓</span>}
+                                  </span>
+                                )}
 
-                                {/* Verification Status Indicator */}
-                                {isVerified && (
-                                  <span title="Verified accurate">
-                                    <Check className="h-3 w-3 text-emerald-600 shrink-0" />
+                                {/* Confidence Chip: verified green, or score tier: >=0.85 green, 0.5-0.85 amber, <0.5 red */}
+                                {!isMissing && (
+                                  <span
+                                    title={isVerified ? "Verified value" : `Confidence: ${Math.round(confScore * 100)}%`}
+                                    className={`text-[9px] font-mono px-1 py-0.1 rounded font-bold shrink-0 ${
+                                      isVerified
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : confScore >= 0.85
+                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                        : confScore >= 0.5
+                                        ? "bg-amber-50 text-amber-800 border border-amber-200"
+                                        : "bg-rose-50 text-rose-700 border border-rose-200"
+                                    }`}
+                                  >
+                                    {isVerified ? "✓" : `${Math.round(confScore * 100)}%`}
                                   </span>
                                 )}
                               </div>
@@ -1178,22 +1554,29 @@ export function ExtractionSheetPage() {
           )}
         </div>
 
-        {/* ── RIGHT CELL DETAILS & EVIDENCE INSPECTOR PANEL ── */}
+        {/* ── RIGHT CELL DETAILS & EVIDENCE INSPECTOR PANEL (380px) ── */}
         {showInspectorPanel && activeSelectedCellData && (
-          <div className="w-80 border-l border-[#d2c2cb] bg-[#fbf9f4] flex flex-col shrink-0 shadow-lg z-20">
+          <div className="w-[380px] min-w-[380px] max-w-[380px] border-l border-[#d2c2cb] bg-[#fbf9f4] flex flex-col shrink-0 shadow-lg z-20">
             {/* Inspector Header */}
             <div className="p-3.5 bg-[#ffffff] border-b border-[#d2c2cb] flex items-center justify-between">
               <div>
                 <span className="font-mono text-xs font-bold text-[#814d75]">
                   Cell {activeSelectedCellData.colLetter}{activeSelectedCellData.rowNumber} Details
                 </span>
-                <h4 className="font-['Serifon_Editorial'] text-sm font-bold text-[#3a0f34] truncate max-w-[200px]">
+                <h4 className="font-['Serifon_Editorial'] text-sm font-bold text-[#3a0f34] truncate max-w-[260px]">
                   {activeSelectedCellData.variable.name}
                 </h4>
+                <div className="text-[11px] font-mono text-[#62535d] flex items-center gap-1.5 mt-0.5">
+                  <span className="bg-[#eee7ec] px-1.5 py-0.2 rounded font-bold text-[#814d75]">
+                    {activeSelectedCellData.variable.section || "General"}
+                  </span>
+                  <span>·</span>
+                  <span className="font-semibold text-[#4f444b]">{activeSelectedCellData.variable.field_type || "text"}</span>
+                </div>
               </div>
               <button
                 onClick={() => setShowInspectorPanel(false)}
-                className="text-[#62535d] hover:text-[#3a0f34] p-1 rounded"
+                className="text-[#62535d] hover:text-[#3a0f34] p-1 rounded hover:bg-[#eee7ec]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1210,20 +1593,16 @@ export function ExtractionSheetPage() {
                   {activeSelectedCellData.study.study_label || activeSelectedCellData.study.title}
                 </div>
                 <div className="text-[11px] text-[#62535d] truncate">
-                  {activeSelectedCellData.study.authors} · {activeSelectedCellData.study.publication_year}
+                  {activeSelectedCellData.study.authors || "Authors not specified"} · {activeSelectedCellData.study.publication_year || "Year N/A"}
                 </div>
               </div>
 
-              {/* Extracted Value & Edit Box */}
-              <div className="bg-[#ffffff] p-3 rounded-lg border border-[#d2c2cb] shadow-2xs space-y-2">
-                <span className="text-[10px] font-mono text-[#62535d] uppercase tracking-wider block">
-                  Extracted Value
-                </span>
-                <div className="text-sm font-bold font-['Work_Sans'] text-[#3a0f34]">
-                  {activeSelectedCellData.cell.value || <span className="text-[#81737b] italic font-normal">No value recorded</span>}
-                </div>
-
-                <div className="flex items-center gap-1.5 pt-1">
+              {/* Editable Value & Confidence Selector */}
+              <div className="bg-[#ffffff] p-3 rounded-lg border border-[#d2c2cb] shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-[#62535d] uppercase tracking-wider">
+                    Extracted Value
+                  </span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                     activeSelectedCellData.cell.is_verified
                       ? "bg-emerald-50 text-emerald-800 border-emerald-200"
@@ -1231,18 +1610,81 @@ export function ExtractionSheetPage() {
                   }`}>
                     {activeSelectedCellData.cell.is_verified ? "Verified Accurate" : "Pending Verification"}
                   </span>
+                </div>
 
-                  <span className="text-[10px] text-[#62535d] font-mono bg-[#eee7ec] px-1.5 py-0.5 rounded">
-                    Source: {activeSelectedCellData.cell.extraction_source || "manual"}
-                  </span>
+                {/* Value Input */}
+                <div>
+                  <input
+                    type="text"
+                    value={activeSelectedCellData.cell.value || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCellsMap((prev) => ({
+                        ...prev,
+                        [activeSelectedCellData.study.study_id]: {
+                          ...(prev[activeSelectedCellData.study.study_id] || {}),
+                          [activeSelectedCellData.variable.variable_id]: {
+                            ...activeSelectedCellData.cell,
+                            value: val,
+                            is_edited: true,
+                          },
+                        },
+                      }));
+                    }}
+                    placeholder="Enter value..."
+                    className="w-full text-xs font-['Work_Sans'] font-semibold border border-[#d2c2cb] rounded p-2 focus:border-[#814d75] focus:outline-none bg-[#fbf9f4]"
+                  />
+                </div>
+
+                {/* Confidence Selector */}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-[#62535d] font-medium">Confidence Tier:</span>
+                  <select
+                    value={
+                      (activeSelectedCellData.cell.confidence ?? 1.0) >= 0.85
+                        ? "high"
+                        : (activeSelectedCellData.cell.confidence ?? 1.0) >= 0.5
+                        ? "medium"
+                        : "low"
+                    }
+                    onChange={(e) => {
+                      const tier = e.target.value;
+                      const conf = tier === "high" ? 0.95 : tier === "medium" ? 0.70 : 0.40;
+                      handleCommitCellValue(
+                        activeSelectedCellData.study.study_id,
+                        activeSelectedCellData.variable.variable_id,
+                        activeSelectedCellData.cell.value,
+                        { confidence: conf }
+                      );
+                    }}
+                    className="text-xs border border-[#d2c2cb] rounded bg-[#ffffff] px-2 py-1 text-[#3a0f34]"
+                  >
+                    <option value="high">High (≥85%)</option>
+                    <option value="medium">Medium (50–85%)</option>
+                    <option value="low">Low (&lt;50%)</option>
+                  </select>
+                </div>
+
+                {/* Required Correction Reason (when editing AI value) */}
+                <div className="pt-2 border-t border-[#d2c2cb]/60">
+                  <label className="text-[10px] font-mono text-[#62535d] uppercase tracking-wider block mb-1">
+                    Correction Note / Reason <span className="text-amber-800 font-bold">*</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={correctionReason}
+                    onChange={(e) => setCorrectionReason(e.target.value)}
+                    placeholder="Required note when modifying an extracted value (e.g. corrected from Table 2)..."
+                    className="w-full text-xs border border-[#d2c2cb] rounded p-2 focus:border-[#814d75] focus:outline-none bg-[#fbf9f4] text-[#3a0f34]"
+                  />
                 </div>
               </div>
 
-              {/* Evidence Quote Card */}
+              {/* Evidence Quote Citation */}
               <div className="bg-[#ffffff] p-3 rounded-lg border border-[#d2c2cb] shadow-2xs space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono text-[#62535d] uppercase tracking-wider">
-                    Evidence Passage
+                    Verbatim Quote Citation
                   </span>
                   {activeSelectedCellData.cell.source_page && (
                     <span className="text-[10px] font-mono text-[#814d75] bg-[#814d75]/10 px-1.5 py-0.2 rounded font-bold">
@@ -1257,41 +1699,40 @@ export function ExtractionSheetPage() {
                     : "No verbatim quote associated with this cell value."}
                 </p>
 
-                {activeSelectedCellData.cell.confidence !== undefined && (
-                  <div className="text-[11px] text-[#62535d] flex items-center justify-between">
-                    <span>Confidence Score:</span>
-                    <span className="font-mono font-bold text-[#3a0f34]">
-                      {Math.round((activeSelectedCellData.cell.confidence || 0) * 100)}%
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Quick Actions */}
-              <div className="space-y-2 pt-2">
-                <button
-                  onClick={() => {
-                    handleCommitCellValue(
-                      activeSelectedCellData.study.study_id,
-                      activeSelectedCellData.variable.variable_id,
-                      activeSelectedCellData.cell.value,
-                      { verification_status: "verified", is_verified: true }
-                    );
-                  }}
-                  className="w-full py-2 bg-[#3a0f34] text-[#fbf9f4] text-xs font-bold rounded-lg hover:bg-[#1a0017] transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
-                >
-                  <FileCheck className="h-3.5 w-3.5 text-[#ffdea6]" /> Verify & Lock Value
-                </button>
-
                 <Link
                   to={`/projects/${projectId}/studies/${activeSelectedCellData.study.study_id}/pdf?var=${activeSelectedCellData.variable.variable_id}`}
-                  className="w-full py-2 bg-[#ffffff] border border-[#d2c2cb] text-[#3a0f34] text-xs font-bold rounded-lg hover:bg-[#eee7ec] transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                  className="w-full py-1.5 bg-[#ffffff] border border-[#d2c2cb] text-[#3a0f34] text-xs font-bold rounded hover:bg-[#eee7ec] transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <ExternalLink className="h-3.5 w-3.5 text-[#814d75]" /> Inspect in PDF Workspace
+                  <ExternalLink className="h-3 w-3 text-[#814d75]" /> Inspect in PDF Workspace
                 </Link>
+              </div>
 
-                {/* Mark as Missing Dropdown/Buttons */}
-                <div className="grid grid-cols-2 gap-1.5 pt-1">
+              {/* Verification & Adjudication Buttons */}
+              <div className="bg-[#ffffff] p-3 rounded-lg border border-[#d2c2cb] shadow-2xs space-y-2">
+                <span className="text-[10px] font-mono text-[#62535d] uppercase tracking-wider block">
+                  Review & Adjudication
+                </span>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleVerifyCurrentCell}
+                    className="py-2 bg-[#3a0f34] text-[#fbf9f4] text-xs font-bold rounded-lg hover:bg-[#1a0017] transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                    title="Mark cell verified"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5 text-[#ffdea6]" /> Verify
+                  </button>
+
+                  <button
+                    onClick={handleAdjudicateCurrentCell}
+                    className="py-2 bg-[#ffffff] border border-[#3a0f34] text-[#3a0f34] text-xs font-bold rounded-lg hover:bg-[#eee7ec] transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                    title="Adjudicate consensus value"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5 text-[#814d75]" /> Adjudicate
+                  </button>
+                </div>
+
+                {/* Quick Missing Buttons */}
+                <div className="grid grid-cols-3 gap-1.5 pt-1 text-[10px]">
                   <button
                     onClick={() => {
                       handleCommitCellValue(
@@ -1301,10 +1742,10 @@ export function ExtractionSheetPage() {
                         { verification_status: "verified", is_verified: true }
                       );
                     }}
-                    className="py-1 text-[11px] font-semibold bg-[#eee7ec] hover:bg-[#d2c2cb] text-[#4f444b] rounded"
+                    className="py-1 font-semibold bg-[#eee7ec] hover:bg-[#d2c2cb] text-[#4f444b] rounded text-center"
                     title="Mark Not Reported (-99)"
                   >
-                    Set "NR" (-99)
+                    NR (-99)
                   </button>
                   <button
                     onClick={() => {
@@ -1315,17 +1756,139 @@ export function ExtractionSheetPage() {
                         { verification_status: "verified", is_verified: true }
                       );
                     }}
-                    className="py-1 text-[11px] font-semibold bg-[#eee7ec] hover:bg-[#d2c2cb] text-[#4f444b] rounded"
+                    className="py-1 font-semibold bg-[#eee7ec] hover:bg-[#d2c2cb] text-[#4f444b] rounded text-center"
                     title="Mark Not Applicable (-77)"
                   >
-                    Set "N/A" (-77)
+                    N/A (-77)
                   </button>
+                  <button
+                    onClick={() => {
+                      handleCommitCellValue(
+                        activeSelectedCellData.study.study_id,
+                        activeSelectedCellData.variable.variable_id,
+                        "not stated",
+                        { verification_status: "verified", is_verified: true }
+                      );
+                    }}
+                    className="py-1 font-semibold bg-[#eee7ec] hover:bg-[#d2c2cb] text-[#4f444b] rounded text-center"
+                    title="Mark Not Stated"
+                  >
+                    Not Stated
+                  </button>
+                </div>
+              </div>
+
+              {/* Audit Trail Timeline */}
+              <div className="bg-[#ffffff] p-3 rounded-lg border border-[#d2c2cb] shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-[#62535d] uppercase tracking-wider">
+                    Audit Trail
+                  </span>
+                  {isLoadingAudit && <Loader2 className="h-3 w-3 animate-spin text-[#814d75]" />}
+                </div>
+
+                <div className="space-y-1.5 max-h-32 overflow-y-auto text-[11px]">
+                  {auditLogs.length > 0 ? (
+                    auditLogs.map((log: any, idx: number) => (
+                      <div key={idx} className="border-l-2 border-[#814d75] pl-2 py-0.5 text-[#4f444b]">
+                        <div className="flex items-center justify-between text-[10px] text-[#62535d]">
+                          <span className="font-semibold text-[#3a0f34]">{log.action || log.event || "Update"}</span>
+                          <span>{log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "Recent"}</span>
+                        </div>
+                        <div className="text-[11px] font-mono truncate">{log.details || log.reason || log.user || "Cell mutated"}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-[11px] text-[#81737b] italic">
+                      {activeSelectedCellData.cell.is_verified ? "Verified and recorded in study audit log." : "No mutation entries logged for this study yet."}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* ── RUN AI BATCH EXTRACTION CONFIRMATION MODAL ── */}
+      {showBatchConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl max-w-md w-full shadow-2xl overflow-hidden font-['Work_Sans']">
+            {/* Modal Header */}
+            <div className="bg-[#3a0f34] text-[#fbf9f4] p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[#ffdea6]" />
+                <h3 className="font-['Serifon_Editorial'] text-base font-bold">Run Co-Scientist Batch Extraction</h3>
+              </div>
+              <button
+                onClick={() => setShowBatchConfirm(false)}
+                className="text-[#fbf9f4]/70 hover:text-[#fbf9f4] p-1 rounded"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 text-xs text-[#4f444b]">
+              <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded-xl p-3.5 space-y-2">
+                <div className="text-[11px] font-mono uppercase text-[#814d75] font-bold">Extraction Scope</div>
+                <div className="flex items-center justify-between text-sm font-semibold text-[#3a0f34]">
+                  <span>Target Studies:</span>
+                  <span className="font-mono">{filteredStudies.length} studies</span>
+                </div>
+                <div className="flex items-center justify-between text-sm font-semibold text-[#3a0f34]">
+                  <span>Target Variables:</span>
+                  <span className="font-mono">{variables.length} variables</span>
+                </div>
+                <div className="border-t border-[#d2c2cb]/60 pt-2 flex items-center justify-between text-xs text-[#62535d]">
+                  <span>Total Extraction Matrix:</span>
+                  <span className="font-mono font-bold text-[#3a0f34]">{filteredStudies.length * variables.length} data cells</span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-[#62535d] leading-relaxed">
+                Co-Scientist will analyze available full-text PDF documents, locate evidence passages, and extract values with page citations and confidence ratings. Existing verified values will remain locked and preserved.
+              </p>
+
+              {/* Checkbox for fulltext requirement */}
+              <label className="flex items-start gap-2.5 p-2.5 rounded-lg border border-[#d2c2cb] bg-[#fbf9f4] cursor-pointer hover:bg-[#eee7ec]/40 transition-colors">
+                <input
+                  type="checkbox"
+                  id="require-fulltext"
+                  defaultChecked={false}
+                  className="mt-0.5 rounded text-[#3a0f34] focus:ring-[#814d75]"
+                />
+                <div className="text-[11px]">
+                  <strong className="text-[#3a0f34] block">Require Full-Text PDF</strong>
+                  <span className="text-[#62535d]">Only extract from studies that have a processed PDF (skip abstract-only studies).</span>
+                </div>
+              </label>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="bg-[#fbf9f4] border-t border-[#d2c2cb] p-4 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowBatchConfirm(false)}
+                className="px-3.5 py-1.5 rounded-lg border border-[#d2c2cb] bg-[#ffffff] hover:bg-[#eee7ec] text-xs font-semibold text-[#4f444b] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById("require-fulltext") as HTMLInputElement | null;
+                  handleTriggerBatchExtraction(el ? el.checked : false);
+                }}
+                className="px-4 py-1.5 rounded-lg bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-[#ffdea6]" />
+                <span>Confirm & Run Batch Extraction</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── CODEBOOK DESIGNER MODAL ── */}
       <CodebookDesignerModal
