@@ -575,24 +575,25 @@ export function AppShell() {
         aria-label="Navigation rail"
       >
         <div className="flex flex-col items-center gap-4">
-          {/* Top Brand Monogram */}
+          {/* Top Brand Monogram - Navigates to Landing Page */}
           <Link
-            to={projectId ? `/projects/${projectId}` : "/projects"}
+            to="/"
             className="w-9 h-9 rounded flex items-center justify-center font-serif text-lg font-bold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
-            title="RadExtract Home"
+            title="RadExtract Landing Page"
+            aria-label="RadExtract Landing Page"
           >
             R
           </Link>
 
           {/* Navigation Items (Projects/Folder with Workspaces Popover, Study List, Evidence Map) */}
           <nav className="flex flex-col items-center gap-1 w-full relative">
-            {/* The Folder Hub Button with Workspaces Popover */}
+            {/* The Folder Hub Button with All Projects Popover */}
             <div className="w-full relative" ref={folderMenuRef}>
               <button
                 type="button"
                 onClick={() => setIsFolderMenuOpen(!isFolderMenuOpen)}
-                title="Workspaces: Study List, Evidence Map, Projects"
-                aria-label="Workspaces Menu"
+                title="All Projects"
+                aria-label="All Projects Menu"
                 aria-expanded={isFolderMenuOpen}
                 className={cn(
                   "w-full h-11 flex items-center justify-center transition-colors relative group",
@@ -605,23 +606,23 @@ export function AppShell() {
                 {/* Tooltip */}
                 {!isFolderMenuOpen && (
                   <span className="absolute left-[58px] px-2.5 py-1 bg-[#3a0f34] text-[#fbf9f4] text-[11px] font-medium rounded shadow-md whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
-                    Workspaces (Study List & Evidence Map)
+                    All Projects
                   </span>
                 )}
               </button>
 
-              {/* Workspaces Popover Menu */}
+              {/* All Projects Popover Menu */}
               {isFolderMenuOpen && (
                 <div
-                  className="absolute left-[58px] top-0 w-72 bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-2xl py-2 px-2 z-50 animate-in fade-in slide-in-from-left-2 duration-150"
+                  className="absolute left-[58px] top-0 w-64 bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-2xl py-2 px-2 z-50 animate-in fade-in slide-in-from-left-2 duration-150"
                   role="dialog"
-                  aria-label="Workspaces"
+                  aria-label="All Projects Menu"
                 >
                   <div className="flex items-center justify-between pb-2 mb-1 px-2 border-b border-[#eee7ec]">
                     <div className="flex items-center gap-1.5">
                       <Folder className="w-3.5 h-3.5 text-[#3a0f34]" />
                       <span className="font-serif font-bold text-xs text-[#3a0f34]">
-                        Navigation & Workspaces
+                        Projects
                       </span>
                     </div>
                     <button
@@ -636,83 +637,6 @@ export function AppShell() {
                   </div>
 
                   <div className="flex flex-col gap-0.5">
-                    {/* Study List */}
-                    <Link
-                      to={projectId ? `/projects/${projectId}/studies` : "/projects"}
-                      onClick={() => setIsFolderMenuOpen(false)}
-                      className={cn(
-                        "flex items-start gap-2.5 p-2 rounded-lg transition-colors group text-left",
-                        location.pathname.includes("/studies")
-                          ? "bg-[#eee7ec] text-[#3a0f34] font-medium"
-                          : "hover:bg-[#fbf9f4] text-[#4f444b]"
-                      )}
-                    >
-                      <div className="p-1.5 rounded-md bg-[#eee7ec] group-hover:bg-[#d2c2cb]/40 transition-colors shrink-0 mt-0.5">
-                        <Table className="w-4 h-4 text-[#3a0f34]" />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-semibold text-[#3a0f34] text-xs">Study List</span>
-                        <span className="text-[11px] text-[#62535d] leading-snug">
-                          All imported & deduplicated studies
-                        </span>
-                      </div>
-                    </Link>
-
-                    {/* Evidence Map */}
-                    <Link
-                      to={projectId ? `/claimscape?project=${projectId}` : "/claimscape"}
-                      onClick={() => setIsFolderMenuOpen(false)}
-                      className={cn(
-                        "flex items-start gap-2.5 p-2 rounded-lg transition-colors group text-left",
-                        location.pathname.includes("/claimscape")
-                          ? "bg-[#eee7ec] text-[#3a0f34] font-medium"
-                          : "hover:bg-[#fbf9f4] text-[#4f444b]"
-                      )}
-                    >
-                      <div className="p-1.5 rounded-md bg-[#eee7ec] group-hover:bg-[#d2c2cb]/40 transition-colors shrink-0 mt-0.5">
-                        <Compass className="w-4 h-4 text-[#814d75]" />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-semibold text-[#3a0f34] text-xs flex items-center gap-1.5">
-                          <span>Evidence Map</span>
-                          <span className="text-[9px] uppercase px-1 rounded bg-[#ffdea6] text-[#7c5800] font-normal">
-                            ClaimScape
-                          </span>
-                        </span>
-                        <span className="text-[11px] text-[#62535d] leading-snug">
-                          Visual synthesis landscape & claims
-                        </span>
-                      </div>
-                    </Link>
-
-                    {/* Project Overview */}
-                    {projectId && (
-                      <Link
-                        to={`/projects/${projectId}`}
-                        onClick={() => setIsFolderMenuOpen(false)}
-                        className={cn(
-                          "flex items-start gap-2.5 p-2 rounded-lg transition-colors group text-left",
-                          location.pathname === `/projects/${projectId}`
-                            ? "bg-[#eee7ec] text-[#3a0f34] font-medium"
-                            : "hover:bg-[#fbf9f4] text-[#4f444b]"
-                        )}
-                      >
-                        <div className="p-1.5 rounded-md bg-[#eee7ec] group-hover:bg-[#d2c2cb]/40 transition-colors shrink-0 mt-0.5">
-                          <FileText className="w-4 h-4 text-[#62535d]" />
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-[#3a0f34] text-xs truncate">
-                            {project?.name || "Project Overview"}
-                          </span>
-                          <span className="text-[11px] text-[#62535d] leading-snug">
-                            Protocol, PICO & review parameters
-                          </span>
-                        </div>
-                      </Link>
-                    )}
-
-                    <div className="my-1 border-t border-[#eee7ec]" />
-
                     {/* All Projects */}
                     <Link
                       to="/projects"
@@ -725,7 +649,7 @@ export function AppShell() {
                       )}
                     >
                       <div className="p-1.5 rounded-md bg-[#eee7ec] group-hover:bg-[#d2c2cb]/40 transition-colors shrink-0 mt-0.5">
-                        <Folder className="w-4 h-4 text-[#62535d]" />
+                        <Folder className="w-4 h-4 text-[#3a0f34]" />
                       </div>
                       <div className="flex flex-col min-w-0">
                         <span className="font-semibold text-[#3a0f34] text-xs">All Projects</span>

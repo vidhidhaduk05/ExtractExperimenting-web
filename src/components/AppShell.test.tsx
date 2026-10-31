@@ -45,8 +45,8 @@ describe("AppShell Component", () => {
     const stageTabs = screen.getByLabelText("Stage Navigation Tabs");
     expect(within(stageTabs).getByText("All Projects")).toBeDefined();
 
-    // Left Rail navigation items: Folder Workspaces Hub, Study List, Evidence Map
-    expect(screen.getByLabelText("Workspaces Menu")).toBeDefined();
+    // Left Rail navigation items: Folder Hub, Study List, Evidence Map
+    expect(screen.getByLabelText("All Projects Menu")).toBeDefined();
     expect(screen.getByTitle("Study List")).toBeDefined();
     expect(screen.getByTitle("Evidence Map")).toBeDefined();
 
@@ -55,18 +55,25 @@ describe("AppShell Component", () => {
     expect(screen.getByText("Results")).toBeDefined();
   });
 
-  it("opens the Folder Workspaces popover with Study List and Evidence Map on click", () => {
+  it("opens the Folder popover with only All Projects on click", () => {
     renderWithProviders(["/projects/test-proj-456/studies"]);
 
-    const folderButton = screen.getByLabelText("Workspaces Menu");
+    const folderButton = screen.getByLabelText("All Projects Menu");
     fireEvent.click(folderButton);
 
-    // Popover dialog opened
-    const popover = screen.getByRole("dialog", { name: "Workspaces" });
+    // Popover dialog opened with only All Projects
+    const popover = screen.getByRole("dialog", { name: "All Projects Menu" });
     expect(popover).toBeDefined();
-    expect(within(popover).getByText("Study List")).toBeDefined();
-    expect(within(popover).getByText("Evidence Map")).toBeDefined();
     expect(within(popover).getByText("All Projects")).toBeDefined();
+    expect(within(popover).queryByText("Study List")).toBeNull();
+    expect(within(popover).queryByText("Evidence Map")).toBeNull();
+  });
+
+  it("navigates to landing page when clicking the R monogram logo", () => {
+    renderWithProviders(["/projects/test-proj-456/studies"]);
+
+    const brandLink = screen.getByLabelText("RadExtract Landing Page");
+    expect(brandLink.getAttribute("href")).toBe("/");
   });
 
   it("renders all Chrome stage navigation tabs when in a project", () => {
