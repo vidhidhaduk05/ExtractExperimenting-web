@@ -26,7 +26,8 @@
         "39992650"
       ],
       "warnings": {}
-    }
+    },
+    "claim": "AI improves detection of subtle seizure-causing brain lesions on MRI"
   },
   {
     "id": "breast-imaging",
@@ -64,7 +65,8 @@
         "12449356"
       ],
       "warnings": {}
-    }
+    },
+    "claim": "AI-assisted mammography improves breast cancer detection sensitivity compared to standard screening"
   },
   {
     "id": "stroke-imaging",
@@ -102,7 +104,8 @@
         "31067369"
       ],
       "warnings": {}
-    }
+    },
+    "claim": "CT perfusion is comparable to MRI for ischemic penumbra assessment in acute stroke"
   },
   {
     "id": "chest-imaging",
@@ -142,7 +145,8 @@
         "37061539"
       ],
       "warnings": {}
-    }
+    },
+    "claim": "Specific radiological features predict malignancy in incidental pulmonary nodules"
   },
   {
     "id": "sleep-memory",
@@ -178,7 +182,8 @@
         "213132"
       ],
       "warnings": {}
-    }
+    },
+    "claim": "Sleep deprivation impairs long-term memory consolidation"
   },
   {
     "id": "cardiovascular",
@@ -214,7 +219,8 @@
         "42567819"
       ],
       "warnings": {}
-    }
+    },
+    "claim": "GLP-1 receptor agonists reduce major adverse cardiovascular events"
   },
   {
     "id": "mental-health",
@@ -250,7 +256,8 @@
         "40890784"
       ],
       "warnings": {}
-    }
+    },
+    "claim": "Targeted interventions provide significant clinical response in treatment-resistant depression"
   },
   {
     "id": "cancer-vaccines",
@@ -286,6 +293,7 @@
         "24907636"
       ],
       "warnings": {}
-    }
+    },
+    "claim": "Therapeutic cancer vaccines improve progression-free survival in advanced cancer"
   }
 ]

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, within, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, afterEach } from "vitest";
@@ -35,33 +35,58 @@ describe("AppShell Component", () => {
     );
   };
 
-  it("renders the 4 shell regions: rail, wine top bar, center work area, and dock", () => {
+  it("renders the shell regions: rail, top chrome bar, center work area, and dock", () => {
     renderWithProviders(["/projects"]);
 
     // Center work area rendered
-    expect(screen.getByText("Projects Work Area")).toBeInTheDocument();
+    expect(screen.getByText("Projects Work Area")).toBeDefined();
 
-    // Top bar elements
-    expect(screen.getByText("Export")).toBeInTheDocument();
-    expect(screen.getByText("Share")).toBeInTheDocument();
+    // Chrome tab for All Projects
+    const stageTabs = screen.getByLabelText("Stage Navigation Tabs");
+    expect(within(stageTabs).getByText("All Projects")).toBeDefined();
 
-    // Left Rail navigation items
-    expect(screen.getByTitle("Projects")).toBeInTheDocument();
-    expect(screen.getByTitle("Screening")).toBeInTheDocument();
-    expect(screen.getByTitle("Extraction")).toBeInTheDocument();
-    expect(screen.getByTitle("Risk of Bias")).toBeInTheDocument();
-    expect(screen.getByTitle("GRADE")).toBeInTheDocument();
-    expect(screen.getByTitle("Meta-analysis")).toBeInTheDocument();
-    expect(screen.getByTitle("PRISMA")).toBeInTheDocument();
+    // Left Rail navigation items: Folder Workspaces Hub, Study List, Evidence Map
+    expect(screen.getByLabelText("Workspaces Menu")).toBeDefined();
+    expect(screen.getByTitle("Study List")).toBeDefined();
+    expect(screen.getByTitle("Evidence Map")).toBeDefined();
 
     // Right Dock tabs
-    expect(screen.getByText("To-dos")).toBeInTheDocument();
-    expect(screen.getByText("Results")).toBeInTheDocument();
-    expect(screen.getByText("PRISMA")).toBeInTheDocument();
+    expect(screen.getByText("Checklist")).toBeDefined();
+    expect(screen.getByText("Results")).toBeDefined();
   });
 
-  it("displays project breadcrumb when projectId is present in route", () => {
-    renderWithProviders(["/projects/test-proj-456/screening"]);
-    expect(screen.getByText(/test-proj-456/i)).toBeInTheDocument();
+  it("opens the Folder Workspaces popover with Study List and Evidence Map on click", () => {
+    renderWithProviders(["/projects/test-proj-456/studies"]);
+
+    const folderButton = screen.getByLabelText("Workspaces Menu");
+    fireEvent.click(folderButton);
+
+    // Popover dialog opened
+    const popover = screen.getByRole("dialog", { name: "Workspaces" });
+    expect(popover).toBeDefined();
+    expect(within(popover).getByText("Study List")).toBeDefined();
+    expect(within(popover).getByText("Evidence Map")).toBeDefined();
+    expect(within(popover).getByText("All Projects")).toBeDefined();
+  });
+
+  it("renders all Chrome stage navigation tabs when in a project", () => {
+    renderWithProviders(["/projects/test-proj-456/extraction-sheet"]);
+
+    // Chrome stage tabs rendered inside Stage Navigation Tabs container
+    const stageTabs = screen.getByLabelText("Stage Navigation Tabs");
+    expect(within(stageTabs).getByText("Overview")).toBeDefined();
+    expect(within(stageTabs).getByText("Deduplication")).toBeDefined();
+    expect(within(stageTabs).getByText("Abstract Screening")).toBeDefined();
+    expect(within(stageTabs).getByText("Full-Text Screening")).toBeDefined();
+    expect(within(stageTabs).getByText("PDF Extraction")).toBeDefined();
+    expect(within(stageTabs).getByText("Extraction Sheet")).toBeDefined();
+    expect(within(stageTabs).getByText("Risk of Bias")).toBeDefined();
+    expect(within(stageTabs).getByText("Synthesis")).toBeDefined();
+    expect(within(stageTabs).getByText("GRADE")).toBeDefined();
+    expect(within(stageTabs).getByText("PRISMA")).toBeDefined();
+    expect(within(stageTabs).getByText("Export")).toBeDefined();
+
+    // Breadcrumb / Omnibox contains project title and stage name
+    expect(screen.getByText(/Project test-pro/i)).toBeDefined();
   });
 });

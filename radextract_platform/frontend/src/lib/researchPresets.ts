@@ -4,6 +4,7 @@ export interface ResearchPreset {
   id: string;
   label: string;
   question: string;
+  claim: string;
   query: string;
   sources: readonly string[];
   verification: {
@@ -19,8 +20,8 @@ export interface ResearchPreset {
 /** Verified PubMed search scopes, not clinical findings or preassigned verdicts. */
 export const RESEARCH_PRESETS: readonly ResearchPreset[] = presets;
 
-export function findResearchPreset(question: string): ResearchPreset | undefined {
+export function findResearchPreset(text: string): ResearchPreset | undefined {
   const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
-  const normalized = normalize(question);
-  return RESEARCH_PRESETS.find(preset => normalize(preset.question) === normalized);
+  const normalized = normalize(text);
+  return RESEARCH_PRESETS.find(preset => normalize(preset.question) === normalized || normalize(preset.claim) === normalized || normalize(preset.id) === normalized);
 }

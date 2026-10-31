@@ -343,10 +343,10 @@ export const ClaimscapePage: React.FC = () => {
         const isFallback = res.engine === "heuristic_fallback" || res.engine === "mixed_laya_heuristic";
         if (isFallback) {
           setLayaStatus("offline");
-          setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: Keyword Fallback (Laya Offline)`);
+          setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: Keyword Fallback (Co-Scientist Offline)`);
         } else {
           setLayaStatus("ready");
-          setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: Local Laya ONNX`);
+          setResultSource(`Live Backend Search · ${res.papers.length} publications indexed from PubMed · Engine: Co-Scientist Rapid Inference`);
         }
         finishScan();
         return;
@@ -464,68 +464,13 @@ export const ClaimscapePage: React.FC = () => {
       {/* Main Container */}
       <main className="claimscape-theme mx-auto grid w-full max-w-[1340px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-12 pt-2 sm:px-6 lg:px-8">
         
-        {/* Section 1: Hero & Question Card - Compact 2-Column Editorial Velvet Layout */}
-        <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:gap-10 pt-1 pb-2">
-          {/* Left Column: Headline, Restored Description & Legend Bullets */}
-          <div className="max-w-[580px] xl:pt-1">
-            <p className="text-[11px] font-['Work_Sans'] font-bold uppercase tracking-[0.12em] text-[#7c5800] mb-2 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
-              Evidence map for any research claim
-            </p>
-
-            {/* Restored Description Paragraph */}
-            <p className="mt-3 text-[15px] sm:text-[15.5px] text-[#4f444b] font-['Newsreader'] leading-[1.58]">
-              Type a claim and see where the literature stands on it. Up to 300 of the most relevant PubMed abstracts are read, sorted by study design and plotted by year, so you can see which kinds of evidence agree and how consensus shifted over time.
-            </p>
-
-            {/* Restored 3 Bullets with Legend Markers */}
-            <ul className="mt-4 grid gap-2.5 text-[13px] text-[#4f444b] font-['Work_Sans']">
-              <li className="flex items-center gap-2.5">
-                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
-                  <circle r="6" fill="var(--cs-for)" stroke="var(--cs-surface)" strokeWidth="1.5" />
-                </svg>
-                <span>Each dot is a paper, colored by what its abstract reports</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
-                  <circle r="7.5" fill="var(--cs-surface)" />
-                  <path d="M0 -6 A 6 6 0 0 0 0 6 Z" fill="var(--cs-for)" />
-                  <path d="M0 -6 A 6 6 0 0 1 0 6 Z" fill="var(--cs-against)" />
-                </svg>
-                <span>Rows are study designs, each with a verdict and a 95% Wilson interval</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none">
-                  <circle r="6" fill="var(--cs-against)" stroke="var(--cs-surface)" strokeWidth="1.5" />
-                </svg>
-                <span>Every dot opens the sentence its verdict rests on</span>
-              </li>
-            </ul>
-
-            {/* Compact Technical Pillars Strip */}
-            <div className="mt-5 pt-3 border-t border-[#e4e2dd] flex flex-wrap items-center gap-3 text-[11px] font-['Work_Sans'] text-[#72636d]">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-none bg-[#3a0f34]"></span>
-                PubMed Live Retrieval
-              </span>
-              <span className="w-px h-3 bg-[#d2c2cb]"></span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
-                Co-Scientist Rapid Screening
-              </span>
-              <span className="w-px h-3 bg-[#d2c2cb]"></span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
-                Wilson 95% Confidence
-              </span>
-            </div>
-          </div>
-
-          {/* Right Column: Search Card & Progress */}
+        {/* Section 1: Question Dialog Box (Centered) & Instructions (Beneath) */}
+        <section className="flex flex-col items-center w-full max-w-[940px] mx-auto pt-1 pb-4 gap-6">
+          {/* Centered Question Dialog Box */}
           <div className="w-full">
             <form
               onSubmit={handleMapEvidence}
-              className="rq-card claim-question-card"
+              className="rq-card claim-question-card rounded-xl shadow-xs"
             >
               {/* Claim statement label and helper */}
               <div className="grid gap-1">
@@ -543,7 +488,7 @@ export const ClaimscapePage: React.FC = () => {
                   value={claim}
                   onChange={(e) => handleClaimChange(e.target.value)}
                   onKeyDown={handleClaimKeyDown}
-                  className="w-full resize-none border border-[#d2c2cb] bg-[#fbf9f4] px-3.5 py-2.5 text-[#3a0f34] font-['Newsreader'] text-[16.5px] sm:text-[18px] font-medium leading-[1.35] focus:outline-none focus:border-[#3a0f34] placeholder:text-[#72636d]/65"
+                  className="w-full resize-none border border-[#d2c2cb] bg-[#fbf9f4] px-3.5 py-2.5 text-[#3a0f34] font-['Newsreader'] text-[16.5px] sm:text-[18px] font-medium leading-[1.35] focus:outline-none focus:border-[#3a0f34] placeholder:text-[#72636d]/65 rounded-md"
                   rows={2}
                   maxLength={300}
                   placeholder={currentPlaceholder}
@@ -553,12 +498,70 @@ export const ClaimscapePage: React.FC = () => {
                 </span>
               </div>
 
-              <div className="rq-search-options"><div className="rq-options-grid">
-                <div className="rq-query-field"><label htmlFor="claim-pubmed-query">PubMed search query <span>{userEditedQuery ? "Custom query" : findResearchPreset(claim) ? "Preset query · edit to refine" : "Auto-built · edit to refine"}</span></label><input id="claim-pubmed-query" type="text" value={query} onChange={e=>{setQuery(e.target.value);setUserEditedQuery(true);}} onKeyDown={handleQueryKeyDown} placeholder="Search terms appear as you type"/><button type="button" onClick={()=>{setUserEditedQuery(false);setQuery(buildPubMedQuery(claim));}}>Reset to auto-built query</button></div>
-                <fieldset className="rq-paper-count"><legend>Papers to read</legend><div>{[100,200,300].map(count=><label key={count}><input type="radio" name="paper-count" value={count} checked={paperCount===count} onChange={()=>setPaperCount(count)}/><span>{count}</span></label>)}</div></fieldset>
-                <label className="rq-commentary"><input type="checkbox" checked={includeCommentary} onChange={e=>setIncludeCommentary(e.target.checked)}/>Include narrative reviews &amp; commentary</label>
-              </div></div>
-              <div className="rq-toolbar"><span className="rq-source">PubMed</span>
+              <div className="rq-search-options">
+                <div className="rq-options-grid">
+                  <div className="rq-query-field">
+                    <label htmlFor="claim-pubmed-query">
+                      PubMed search query{" "}
+                      <span>
+                        {userEditedQuery
+                          ? "Custom query"
+                          : findResearchPreset(claim)
+                          ? "Preset query · edit to refine"
+                          : "Auto-built · edit to refine"}
+                      </span>
+                    </label>
+                    <input
+                      id="claim-pubmed-query"
+                      type="text"
+                      value={query}
+                      onChange={(e) => {
+                        setQuery(e.target.value);
+                        setUserEditedQuery(true);
+                      }}
+                      onKeyDown={handleQueryKeyDown}
+                      placeholder="Search terms appear as you type"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserEditedQuery(false);
+                        setQuery(buildPubMedQuery(claim));
+                      }}
+                    >
+                      Reset to auto-built query
+                    </button>
+                  </div>
+                  <fieldset className="rq-paper-count">
+                    <legend>Papers to read</legend>
+                    <div>
+                      {[100, 200, 300].map((count) => (
+                        <label key={count}>
+                          <input
+                            type="radio"
+                            name="paper-count"
+                            value={count}
+                            checked={paperCount === count}
+                            onChange={() => setPaperCount(count)}
+                          />
+                          <span>{count}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <label className="rq-commentary">
+                    <input
+                      type="checkbox"
+                      checked={includeCommentary}
+                      onChange={(e) => setIncludeCommentary(e.target.checked)}
+                    />
+                    Include narrative reviews &amp; commentary
+                  </label>
+                </div>
+              </div>
+
+              <div className="rq-toolbar">
+                <span className="rq-source">PubMed</span>
                 <button
                   type="submit"
                   disabled={isScanning}
@@ -575,15 +578,35 @@ export const ClaimscapePage: React.FC = () => {
                       <span>Map the evidence</span>
                     </>
                   )}
-                </button></div>
+                </button>
+              </div>
               <p className="rq-status">Your question is explored in ClaimScape, where the evidence search begins.</p>
             </form>
-            <div className="rq-topics" aria-label="Suggested research questions"><span>Try a topic:</span>{RESEARCH_PRESETS.map(ex=><button key={ex.id} title="Literature-backed example with a dedicated PubMed query" type="button" disabled={isScanning} onClick={()=>{setClaim(ex.question);setQuery(ex.query);setUserEditedQuery(false);document.getElementById('claim-textarea')?.focus();}}>{ex.label} ↗</button>)}</div>
 
+            <div className="rq-topics" aria-label="Suggested research questions">
+              <span>Try a topic:</span>
+              {RESEARCH_PRESETS.map((ex) => (
+                <button
+                  key={ex.id}
+                  title="Literature-backed example with a dedicated PubMed query"
+                  type="button"
+                  disabled={isScanning}
+                  onClick={() => {
+                    const chosenClaim = ex.claim || ex.question;
+                    setClaim(chosenClaim);
+                    setQuery(ex.query);
+                    setUserEditedQuery(false);
+                    void runEvidenceSearch(chosenClaim, ex.query);
+                  }}
+                >
+                  {ex.label} ↗
+                </button>
+              ))}
+            </div>
 
             {/* Progress Bar under the Question Card */}
             {(isScanning || scanProgress > 0) && (
-              <div className="w-full mt-3 border border-[#d2c2cb] bg-white p-3 shadow-xs transition-all duration-300 animate-in fade-in text-left">
+              <div className="w-full mt-3 border border-[#d2c2cb] bg-white p-3 shadow-xs transition-all duration-300 animate-in fade-in text-left rounded-lg">
                 <div className="flex items-center justify-between gap-3 text-xs font-semibold mb-1.5 font-['Work_Sans']">
                   <div className="flex items-center gap-2">
                     {isScanning ? (
@@ -602,7 +625,7 @@ export const ClaimscapePage: React.FC = () => {
                     {Math.round(scanProgress)}%
                   </span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden bg-[#e4e2dd]">
+                <div className="h-1.5 w-full overflow-hidden bg-[#e4e2dd] rounded-full">
                   <div
                     className="h-full bg-gradient-to-r from-[#3a0f34] via-[#814d75] to-[#7c5800] transition-all duration-300 ease-out"
                     style={{ width: `${scanProgress}%` }}
@@ -610,6 +633,60 @@ export const ClaimscapePage: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Instructions Box (Beneath the Question Dialog Box) */}
+          <div className="w-full rounded-xl border border-[#d2c2cb] bg-[#ffffff] p-5 sm:p-6 shadow-xs text-left">
+            <p className="text-[11px] font-['Work_Sans'] font-bold uppercase tracking-[0.12em] text-[#7c5800] mb-2 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
+              Evidence map for any research claim
+            </p>
+
+            <p className="text-[14.5px] sm:text-[15px] text-[#4f444b] font-['Newsreader'] leading-[1.58]">
+              Type a claim and see where the literature stands on it. Up to 300 of the most relevant PubMed abstracts are read, sorted by study design and plotted by year, so you can see which kinds of evidence agree and how consensus shifted over time.
+            </p>
+
+            {/* 3 Bullets with Legend Markers in a 3-column responsive grid */}
+            <ul className="mt-4 pt-3.5 border-t border-[#eee7ec] grid grid-cols-1 md:grid-cols-3 gap-3 text-[12.5px] sm:text-[13px] text-[#4f444b] font-['Work_Sans']">
+              <li className="flex items-start gap-2.5 bg-[#fbf9f4] p-2.5 rounded-lg border border-[#e4dce1]/60">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none mt-0.5">
+                  <circle r="6" fill="var(--cs-for)" stroke="var(--cs-surface)" strokeWidth="1.5" />
+                </svg>
+                <span className="leading-snug">Each dot is a paper, colored by what its abstract reports</span>
+              </li>
+              <li className="flex items-start gap-2.5 bg-[#fbf9f4] p-2.5 rounded-lg border border-[#e4dce1]/60">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none mt-0.5">
+                  <circle r="7.5" fill="var(--cs-surface)" />
+                  <path d="M0 -6 A 6 6 0 0 0 0 6 Z" fill="var(--cs-for)" />
+                  <path d="M0 -6 A 6 6 0 0 1 0 6 Z" fill="var(--cs-against)" />
+                </svg>
+                <span className="leading-snug">Rows are study designs, each with a verdict and a 95% Wilson interval</span>
+              </li>
+              <li className="flex items-start gap-2.5 bg-[#fbf9f4] p-2.5 rounded-lg border border-[#e4dce1]/60">
+                <svg width="15" height="15" viewBox="-7.5 -7.5 15 15" aria-hidden="true" className="flex-none mt-0.5">
+                  <circle r="6" fill="var(--cs-against)" stroke="var(--cs-surface)" strokeWidth="1.5" />
+                </svg>
+                <span className="leading-snug">Every dot opens the sentence its verdict rests on</span>
+              </li>
+            </ul>
+
+            {/* Technical Pillars Strip */}
+            <div className="mt-4 pt-3 border-t border-[#e4e2dd] flex flex-wrap items-center justify-between gap-3 text-[11px] font-['Work_Sans'] text-[#72636d]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#3a0f34]"></span>
+                PubMed Live Retrieval
+              </span>
+              <span className="hidden sm:inline w-px h-3 bg-[#d2c2cb]"></span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#814d75]"></span>
+                Co-Scientist Rapid Screening
+              </span>
+              <span className="hidden sm:inline w-px h-3 bg-[#d2c2cb]"></span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-none bg-[#7c5800]"></span>
+                Wilson 95% Confidence
+              </span>
+            </div>
           </div>
         </section>
 
@@ -635,7 +712,7 @@ export const ClaimscapePage: React.FC = () => {
                 </p>
               )}
               <p className="text-[13.5px] text-[#72636d]">
-                Evaluated claim: “<strong className="text-[#3a0f34]">{claim}</strong>”
+                Evaluated claim: “<strong className="text-[#3a0f34]">{dataset.claim}</strong>”
               </p>
             </div>
 
