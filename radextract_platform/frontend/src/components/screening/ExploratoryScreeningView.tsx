@@ -62,22 +62,50 @@ interface StreamPaper {
   };
 }
 
+export function isGiven(val: unknown): boolean {
+  if (val === null || val === undefined) return false;
+  if (typeof val === "number") return val > 0 && !isNaN(val);
+  if (typeof val === "string") {
+    const trimmed = val.trim().toLowerCase();
+    if (!trimmed) return false;
+    if ([
+      "none",
+      "n/a",
+      "na",
+      "not given",
+      "not specified",
+      "not applicable",
+      "null",
+      "undefined",
+      "-",
+      "no comparator",
+      "no control",
+      "single-arm",
+      "single arm",
+    ].includes(trimmed)) {
+      return false;
+    }
+    return true;
+  }
+  return Boolean(val);
+}
+
 const BASE_BIOMEDICAL_DATA = [
   {
     studyId: "PAM-2024-01",
     P: "pure arterial malformation patients",
     I: "endovascular coiling & flow diversion",
-    C: "conservative surveillance",
+    C: "",
     O: "angiographic obliteration & stroke prevention",
-    abs: "In pure arterial malformation patients, endovascular coiling & flow diversion compared to conservative surveillance achieved superior angiographic obliteration & stroke prevention without secondary ischemic deficit.",
+    abs: "In pure arterial malformation patients, endovascular coiling & flow diversion achieved angiographic obliteration & stroke prevention without secondary ischemic deficit across 5-year surveillance.",
   },
   {
     studyId: "PAM-2024-02",
     P: "type 2 diabetes patients",
     I: "SGLT2 inhibitors",
-    C: "placebo",
+    C: "",
     O: "kidney outcomes & albuminuria reduction",
-    abs: "In type 2 diabetes patients, SGLT2 inhibitors compared to placebo improved kidney outcomes & albuminuria reduction significantly over 36 months.",
+    abs: "In type 2 diabetes patients, SGLT2 inhibitors improved kidney outcomes & albuminuria reduction significantly over 36 months.",
   },
   {
     studyId: "PAM-2024-03",
@@ -107,9 +135,9 @@ const BASE_BIOMEDICAL_DATA = [
     studyId: "PAM-2024-06",
     P: "cerebral cavernous malformation cases",
     I: "propranolol pharmacotherapy",
-    C: "clinical observation",
+    C: "",
     O: "recurrent microhemorrhage rate",
-    abs: "In cerebral cavernous malformation cases, propranolol pharmacotherapy compared to clinical observation reduced recurrent microhemorrhage rate across long-term MRI gradient echo follow-up.",
+    abs: "In cerebral cavernous malformation cases, propranolol pharmacotherapy reduced recurrent microhemorrhage rate across long-term MRI gradient echo follow-up.",
   },
 ];
 
@@ -154,7 +182,7 @@ export function ExploratoryScreeningView({
       return projectStudies.map((s, idx) => {
         const studyId = s.study_id || (s as any).id || `study-${idx + 1}`;
         const rawStatus = (s.screening_status || "pending").toLowerCase();
-        let conf = 75;
+        let conf = 0;
         if (typeof s.ai_confidence === "number") {
           conf = s.ai_confidence > 1 ? Math.round(s.ai_confidence) : Math.round(s.ai_confidence * 100);
         } else if (s.ai_decision === "include") conf = 88;
@@ -168,28 +196,38 @@ export function ExploratoryScreeningView({
             ? "unsure"
             : "remove";
 
+        const pText = (s as any).pico_population || "";
+        const iText = (s as any).pico_intervention || (s as any).index_test || "";
+        const cText = (s as any).pico_comparator || "";
+        const oText = (s as any).pico_outcome || "";
+
+        const pScore = typeof (s as any).pico_p_score === "number" ? (s as any).pico_p_score : 0;
+        const iScore = typeof (s as any).pico_i_score === "number" ? (s as any).pico_i_score : 0;
+        const cScore = isGiven(cText) && typeof (s as any).pico_c_score === "number" ? (s as any).pico_c_score : 0;
+        const oScore = typeof (s as any).pico_o_score === "number" ? (s as any).pico_o_score : 0;
+
         return {
           id: studyId,
           turn: idx + 1,
           studyId,
-          title: s.title || `Pure Arterial Malformation Cohort (${studyId})`,
-          rawAbs: s.abstract || "Clinical systematic review evaluating pure arterial malformations (PAM) managed with coiling vs conservative observation across 5-year angiographic follow-up.",
-          P: (s as any).pico_population || "pure arterial malformations",
-          I: (s as any).pico_intervention || "endovascular intervention",
-          C: (s as any).pico_comparator || "conservative observation",
-          O: (s as any).pico_outcome || "stroke prevention & mRS",
+          title: s.title || `Study ${idx + 1}`,
+          rawAbs: s.abstract || "",
+          P: pText,
+          I: iText,
+          C: cText,
+          O: oText,
           conf,
           type,
           status: rawStatus as any,
-          year: s.publication_year || 2023,
-          journal: s.journal || "Journal of Neurosurgery",
-          author: s.authors || "Dhaduk et al.",
+          year: s.publication_year || 2024,
+          journal: s.journal || "Medical Journal",
+          author: s.authors || "Reviewer Cohort",
           isNew: false,
           pico: {
-            P: typeof (s as any).pico_p_score === "number" ? (s as any).pico_p_score : 0,
-            I: typeof (s as any).pico_i_score === "number" ? (s as any).pico_i_score : 0,
-            C: typeof (s as any).pico_c_score === "number" ? (s as any).pico_c_score : 0,
-            O: typeof (s as any).pico_o_score === "number" ? (s as any).pico_o_score : 0,
+            P: pScore,
+            I: iScore,
+            C: cScore,
+            O: oScore,
             bias: conf > 80 ? "Low" : "Med",
           },
         };
@@ -216,7 +254,7 @@ export function ExploratoryScreeningView({
       pico: {
         P: 75 + (idx * 4) % 20,
         I: 70 + (idx * 3) % 25,
-        C: 55 + (idx * 5) % 35,
+        C: isGiven(b.C) ? 55 + (idx * 5) % 35 : 0,
         O: 72 + (idx * 2) % 22,
         bias: idx % 2 === 0 ? "Low" : "Med",
       },
@@ -226,6 +264,72 @@ export function ExploratoryScreeningView({
   const [selectedPaper, setSelectedPaper] = useState<StreamPaper | null>(() => papers[0] || null);
   const [turn, setTurn] = useState(() => (papers.length > 0 ? papers.length : 1));
   const turnRef = useRef(papers.length > 0 ? papers.length : 1);
+
+  // Synchronize papers whenever real projectStudies are loaded or updated
+  useEffect(() => {
+    if (projectStudies && projectStudies.length > 0) {
+      const mapped: StreamPaper[] = projectStudies.map((s, idx) => {
+        const studyId = s.study_id || (s as any).id || `study-${idx + 1}`;
+        const rawStatus = (s.screening_status || "pending").toLowerCase();
+        let conf = 0;
+        if (typeof s.ai_confidence === "number") {
+          conf = s.ai_confidence > 1 ? Math.round(s.ai_confidence) : Math.round(s.ai_confidence * 100);
+        } else if (s.ai_decision === "include") conf = 88;
+        else if (s.ai_decision === "maybe") conf = 65;
+        else if (s.ai_decision === "exclude") conf = 35;
+
+        const type: "keep" | "unsure" | "remove" =
+          rawStatus === "included" || s.ai_decision === "include"
+            ? "keep"
+            : rawStatus === "maybe" || rawStatus === "uncertain" || rawStatus === "awaiting_clarification" || s.ai_decision === "maybe"
+            ? "unsure"
+            : "remove";
+
+        const pText = (s as any).pico_population || "";
+        const iText = (s as any).pico_intervention || (s as any).index_test || "";
+        const cText = (s as any).pico_comparator || "";
+        const oText = (s as any).pico_outcome || "";
+
+        const pScore = typeof (s as any).pico_p_score === "number" ? (s as any).pico_p_score : 0;
+        const iScore = typeof (s as any).pico_i_score === "number" ? (s as any).pico_i_score : 0;
+        const cScore = isGiven(cText) && typeof (s as any).pico_c_score === "number" ? (s as any).pico_c_score : 0;
+        const oScore = typeof (s as any).pico_o_score === "number" ? (s as any).pico_o_score : 0;
+
+        return {
+          id: studyId,
+          turn: idx + 1,
+          studyId,
+          title: s.title || `Study ${idx + 1}`,
+          rawAbs: s.abstract || "",
+          P: pText,
+          I: iText,
+          C: cText,
+          O: oText,
+          conf,
+          type,
+          status: rawStatus as any,
+          year: s.publication_year || 2024,
+          journal: s.journal || "Medical Journal",
+          author: s.authors || "Reviewer Cohort",
+          isNew: false,
+          pico: {
+            P: pScore,
+            I: iScore,
+            C: cScore,
+            O: oScore,
+            bias: conf > 80 ? "Low" : "Med",
+          },
+        };
+      });
+
+      setPapers(mapped);
+      setSelectedPaper((prev) => {
+        if (!prev) return mapped[0] || null;
+        const match = mapped.find((m) => m.studyId === prev.studyId || m.id === prev.id);
+        return match || mapped[0] || null;
+      });
+    }
+  }, [projectStudies]);
 
   // Decision & exclusion state
   const [selectedExcludeReason, setSelectedExcludeReason] = useState<string>("EXC_POPULATION");
@@ -265,6 +369,11 @@ export function ExploratoryScreeningView({
           ? "unsure"
           : "remove";
 
+      const pText = (study as any).pico_population || "";
+      const iText = (study as any).pico_intervention || (study as any).index_test || "";
+      const cText = (study as any).pico_comparator || "";
+      const oText = (study as any).pico_outcome || "";
+
       return {
         id: currentTurn,
         turn: currentTurn,
@@ -273,10 +382,10 @@ export function ExploratoryScreeningView({
         rawAbs:
           study.abstract ||
           "Retrospective multicenter review evaluating pure arterial malformations (PAM) managed with coiling vs conservative observation across 5-year angiographic follow-up.",
-        P: (study as any).pico_population || "pure arterial malformations",
-        I: (study as any).pico_intervention || "endovascular intervention",
-        C: (study as any).pico_comparator || "conservative observation",
-        O: (study as any).pico_outcome || "stroke prevention & mRS",
+        P: pText,
+        I: iText,
+        C: cText,
+        O: oText,
         conf,
         type,
         status: (study.screening_status as any) || "pending",
@@ -285,10 +394,10 @@ export function ExploratoryScreeningView({
         author: study.authors || "Dhaduk et al.",
         isNew: true,
         pico: {
-          P: 72 + Math.floor(Math.random() * 24),
-          I: 68 + Math.floor(Math.random() * 28),
-          C: 55 + Math.floor(Math.random() * 38),
-          O: 70 + Math.floor(Math.random() * 26),
+          P: isGiven(pText) ? 72 + Math.floor(Math.random() * 24) : 0,
+          I: isGiven(iText) ? 68 + Math.floor(Math.random() * 28) : 0,
+          C: isGiven(cText) ? 55 + Math.floor(Math.random() * 38) : 0,
+          O: isGiven(oText) ? 70 + Math.floor(Math.random() * 26) : 0,
           bias: rnd(["Low", "Med", "High"]),
         },
       };
@@ -318,7 +427,7 @@ export function ExploratoryScreeningView({
       pico: {
         P: 70 + Math.floor(Math.random() * 25),
         I: 60 + Math.floor(Math.random() * 30),
-        C: 45 + Math.floor(Math.random() * 40),
+        C: isGiven(b.C) ? 45 + Math.floor(Math.random() * 40) : 0,
         O: 65 + Math.floor(Math.random() * 30),
         bias: rnd(["Low", "Med", "High"]),
       },
@@ -418,34 +527,42 @@ export function ExploratoryScreeningView({
 
   // Counts (connected to real summary when available)
   const counts = useMemo(() => {
-    const keep =
-      summary?.ta_included !== undefined
-        ? summary.ta_included + (summary.ft_included || 0)
-        : papers.filter((p) => p.type === "keep").length;
-
-    const unsure =
-      summary?.uncertain !== undefined
-        ? summary.uncertain
-        : papers.filter((p) => p.type === "unsure").length;
-
-    const remove =
-      summary?.ta_excluded !== undefined
-        ? summary.ta_excluded + (summary.ft_excluded || 0)
-        : papers.filter((p) => p.type === "remove").length;
-
     const total =
-      summary?.total !== undefined && summary.total > 0
+      typeof summary?.total === "number" && summary.total > 0
         ? summary.total
         : projectStudies.length > 0
         ? projectStudies.length
         : papers.length;
 
+    const keep =
+      typeof summary?.ta_included === "number"
+        ? summary.ta_included + (summary.ft_included || 0)
+        : projectStudies.length > 0
+        ? projectStudies.filter((s) => s.screening_status === "included" || s.ai_decision === "include").length
+        : papers.filter((p) => p.type === "keep").length;
+
+    const unsure =
+      typeof summary?.uncertain === "number"
+        ? summary.uncertain
+        : typeof summary?.awaiting_clarification === "number"
+        ? summary.awaiting_clarification
+        : projectStudies.length > 0
+        ? projectStudies.filter((s) => s.screening_status === "maybe" || s.screening_status === "uncertain" || s.screening_status === "awaiting_clarification").length
+        : papers.filter((p) => p.type === "unsure").length;
+
+    const remove =
+      typeof summary?.ta_excluded === "number"
+        ? summary.ta_excluded + (summary.ft_excluded || 0)
+        : projectStudies.length > 0
+        ? projectStudies.filter((s) => s.screening_status === "excluded" || s.ai_decision === "exclude").length
+        : papers.filter((p) => p.type === "remove").length;
+
     const judgments =
-      summary?.total !== undefined && summary?.pending !== undefined
+      typeof summary?.total === "number" && typeof summary?.pending === "number"
         ? Math.max(0, summary.total - summary.pending)
-        : summary?.ai_screened !== undefined || summary?.human_screened !== undefined
+        : typeof summary?.ai_screened === "number" || typeof summary?.human_screened === "number"
         ? (summary.ai_screened || 0) + (summary.human_screened || 0)
-        : papers.filter((p) => p.status !== "pending" && p.status !== "unscreened").length;
+        : keep + unsure + remove;
 
     return { total, judgments, keep, unsure, remove };
   }, [papers, summary, projectStudies]);
@@ -566,7 +683,7 @@ export function ExploratoryScreeningView({
                 liveStream ? "bg-emerald-400 animate-ping" : "bg-amber-400"
               }`}
             />
-            <span>TURN {turn} — {liveStream ? "STREAMING LIVE" : "STREAM PAUSED"}</span>
+            <span>{counts.judgments} / {counts.total} DECIDED — {liveStream ? "STREAMING LIVE" : "STREAM PAUSED"}</span>
           </div>
           {onSwitchToStandard && (
             <button
@@ -763,16 +880,16 @@ export function ExploratoryScreeningView({
           </div>
         </div>
 
-        {/* KPI 6 (JUDG/SEC) */}
+        {/* KPI 6 (DECISION RATE) */}
         <div className="bg-[#2E1231] text-white p-2.5 sm:p-3 flex flex-col justify-between">
           <div className="font-mono text-[7.5px] uppercase tracking-widest text-[#E8C5E0]">
-            JUDG / SEC
+            DECISION RATE
           </div>
           <div
             className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1"
             style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
           >
-            {seniorMode ? "8" : fastMode ? "21" : "12"}
+            {counts.total > 0 ? `${Math.round((counts.judgments / counts.total) * 100)}%` : "0%"}
           </div>
         </div>
       </div>
@@ -1279,46 +1396,64 @@ export function ExploratoryScreeningView({
                     {renderHighlightedAbstract(selectedPaper.rawAbs, selectedPaper)}
                   </p>
 
-                  {/* PICO Equation Formula */}
-                  <div className="mt-3 pt-2.5 border-t border-[#EAE5DE] font-mono text-[9px] flex flex-wrap items-center gap-1.5">
-                    <span className="bg-[#E8C5E0] text-[#2E1231] px-1.5 py-0.5 font-bold rounded-xs">
-                      P: {selectedPaper.P}
-                    </span>
-                    <span>+</span>
-                    <span className="bg-[#E8E8E8] text-[#111111] px-1.5 py-0.5 font-bold rounded-xs">
-                      I: {selectedPaper.I}
-                    </span>
-                    <span>vs</span>
-                    <span className="bg-[#FEF3C7] text-[#9A6B00] px-1.5 py-0.5 font-bold rounded-xs">
-                      C: {selectedPaper.C}
-                    </span>
-                    <span>→</span>
-                    <span className="bg-[#D6E0E3] text-[#333333] px-1.5 py-0.5 font-bold rounded-xs">
-                      O: {selectedPaper.O}
-                    </span>
-                  </div>
+                  {/* PICO Equation Formula — Only show elements that are actually given */}
+                  {(isGiven(selectedPaper.P) || isGiven(selectedPaper.I) || isGiven(selectedPaper.C) || isGiven(selectedPaper.O)) && (
+                    <div className="mt-3 pt-2.5 border-t border-[#EAE5DE] font-mono text-[9px] flex flex-wrap items-center gap-1.5">
+                      {isGiven(selectedPaper.P) && (
+                        <span className="bg-[#E8C5E0] text-[#2E1231] px-1.5 py-0.5 font-bold rounded-xs">
+                          P: {selectedPaper.P}
+                        </span>
+                      )}
+                      {isGiven(selectedPaper.P) && isGiven(selectedPaper.I) && <span>+</span>}
+                      {isGiven(selectedPaper.I) && (
+                        <span className="bg-[#E8E8E8] text-[#111111] px-1.5 py-0.5 font-bold rounded-xs">
+                          I: {selectedPaper.I}
+                        </span>
+                      )}
+                      {isGiven(selectedPaper.C) && (
+                        <>
+                          <span>vs</span>
+                          <span className="bg-[#FEF3C7] text-[#9A6B00] px-1.5 py-0.5 font-bold rounded-xs">
+                            C: {selectedPaper.C}
+                          </span>
+                        </>
+                      )}
+                      {isGiven(selectedPaper.O) && (
+                        <>
+                          <span>→</span>
+                          <span className="bg-[#D6E0E3] text-[#333333] px-1.5 py-0.5 font-bold rounded-xs">
+                            O: {selectedPaper.O}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* PICO Match Bars & Confidence Breakdown — Only displayed if valid scores are provided */}
-                {Boolean(
-                  (selectedPaper.pico && (selectedPaper.pico.P > 0 || selectedPaper.pico.I > 0 || selectedPaper.pico.C > 0 || selectedPaper.pico.O > 0)) ||
-                  (selectedPaper.conf && selectedPaper.conf > 0)
-                ) && (
-                  <div className="p-4 space-y-4">
-                    {/* PICO MATCH BARS */}
-                    {Boolean(selectedPaper.pico && (selectedPaper.pico.P > 0 || selectedPaper.pico.I > 0 || selectedPaper.pico.C > 0 || selectedPaper.pico.O > 0)) && (
-                      <div>
-                        <div className="font-mono text-[8.5px] font-bold uppercase tracking-wider pb-1.5 mb-2.5 border-b border-[#111111] text-[#111111]">
-                          PICO Match Scores for {selectedPaper.studyId}
-                        </div>
-                        {[
-                          { l: "P — Population", v: selectedPaper.pico.P },
-                          { l: "I — Intervention", v: selectedPaper.pico.I },
-                          { l: "C — Comparator", v: selectedPaper.pico.C },
-                          { l: "O — Outcome", v: selectedPaper.pico.O },
-                        ]
-                          .filter(({ v }) => typeof v === "number" && v > 0)
-                          .map(({ l, v }) => (
+                {/* PICO Match Bars & Confidence Breakdown — If something is not given, remove that bar */}
+                {(() => {
+                  const visiblePicoBars = [
+                    { l: "P — Population", v: selectedPaper.pico?.P, text: selectedPaper.P },
+                    { l: "I — Intervention", v: selectedPaper.pico?.I, text: selectedPaper.I },
+                    { l: "C — Comparator", v: selectedPaper.pico?.C, text: selectedPaper.C },
+                    { l: "O — Outcome", v: selectedPaper.pico?.O, text: selectedPaper.O },
+                  ].filter((item) => isGiven(item.text) && isGiven(item.v));
+
+                  const hasConfidence = isGiven(selectedPaper.conf);
+
+                  if (visiblePicoBars.length === 0 && !hasConfidence) {
+                    return null;
+                  }
+
+                  return (
+                    <div className="p-4 space-y-4">
+                      {/* PICO MATCH BARS — ONLY BARS FOR ELEMENTS THAT ARE GIVEN */}
+                      {visiblePicoBars.length > 0 && (
+                        <div>
+                          <div className="font-mono text-[8.5px] font-bold uppercase tracking-wider pb-1.5 mb-2.5 border-b border-[#111111] text-[#111111]">
+                            PICO Match Scores for {selectedPaper.studyId}
+                          </div>
+                          {visiblePicoBars.map(({ l, v }) => (
                             <div
                               key={l}
                               className="grid grid-cols-[100px_1fr_42px] gap-2 items-center mb-1.5"
@@ -1343,39 +1478,40 @@ export function ExploratoryScreeningView({
                               </span>
                             </div>
                           ))}
-                      </div>
-                    )}
+                        </div>
+                      )}
 
-                    {/* OVERALL CONFIDENCE */}
-                    {Boolean(selectedPaper.conf && selectedPaper.conf > 0) && (
-                      <div>
-                        <div className="font-mono text-[8.5px] font-bold uppercase tracking-wider pb-1.5 mb-2.5 border-b border-[#111111] text-[#111111]">
-                          Overall Eligibility Confidence
-                        </div>
-                        <div className="grid grid-cols-[100px_1fr_42px] gap-2 items-center">
-                          <span className="font-mono text-[8.5px] font-bold uppercase text-[#555555]">
-                            CONFIDENCE
-                          </span>
-                          <div className="h-2.5 bg-[#EAE5DE] rounded-xs overflow-hidden">
-                            <div
-                              className={`h-full transition-all duration-500 ${
-                                selectedPaper.type === "keep"
-                                  ? "bg-[#2E1231]"
-                                  : selectedPaper.type === "unsure"
-                                  ? "bg-[#EAB308]"
-                                  : "bg-[#111111]"
-                              }`}
-                              style={{ width: `${selectedPaper.conf}%` }}
-                            />
+                      {/* OVERALL CONFIDENCE — ONLY IF GIVEN */}
+                      {hasConfidence && (
+                        <div>
+                          <div className="font-mono text-[8.5px] font-bold uppercase tracking-wider pb-1.5 mb-2.5 border-b border-[#111111] text-[#111111]">
+                            Overall Eligibility Confidence
                           </div>
-                          <span className="font-mono text-[10px] font-bold text-right text-[#2E1231]">
-                            {selectedPaper.conf}%
-                          </span>
+                          <div className="grid grid-cols-[100px_1fr_42px] gap-2 items-center">
+                            <span className="font-mono text-[8.5px] font-bold uppercase text-[#555555]">
+                              CONFIDENCE
+                            </span>
+                            <div className="h-2.5 bg-[#EAE5DE] rounded-xs overflow-hidden">
+                              <div
+                                className={`h-full transition-all duration-500 ${
+                                  selectedPaper.type === "keep"
+                                    ? "bg-[#2E1231]"
+                                    : selectedPaper.type === "unsure"
+                                    ? "bg-[#EAB308]"
+                                    : "bg-[#111111]"
+                                }`}
+                                style={{ width: `${selectedPaper.conf}%` }}
+                              />
+                            </div>
+                            <span className="font-mono text-[10px] font-bold text-right text-[#2E1231]">
+                              {selectedPaper.conf}%
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <div className="p-8 text-center font-mono text-xs text-[#888888]">
@@ -1392,14 +1528,16 @@ export function ExploratoryScreeningView({
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-xs bg-[#111111]" /> I Intervention
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-xs bg-[#EAB308]" /> C Comparator
-            </span>
+            {isGiven(selectedPaper?.C) && (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-xs bg-[#EAB308]" /> C Comparator
+              </span>
+            )}
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-xs bg-[#999999]" /> O Outcome
             </span>
             <span className="ml-auto text-[#777777] hidden sm:inline">
-              Velvet Editorial Theme • Academic Precision
+              Co-Scientist Systematic Screening • ClaimScape Velvet Theme
             </span>
           </div>
         </div>
