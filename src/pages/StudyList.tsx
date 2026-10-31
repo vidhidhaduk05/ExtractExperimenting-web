@@ -39,14 +39,26 @@ const getInitialBatches = (pid: string): ImportBatch[] => {
   return [];
 };
 
+export const EXCEL_STUDY_COLUMNS = [
+  { key: "title", letter: "A", label: "Title", width: "w-[340px]" },
+  { key: "authors", letter: "B", label: "Creator (Authors)", width: "w-[200px]" },
+  { key: "year", letter: "C", label: "Date / Year", width: "w-[100px]" },
+  { key: "journal", letter: "D", label: "Publisher / Journal", width: "w-[190px]" },
+  { key: "status", letter: "E", label: "Screening Status", width: "w-[170px]" },
+  { key: "rob", letter: "F", label: "RoB Judgment", width: "w-[150px]" },
+  { key: "workflows", letter: "G", label: "Workflows & Published Site", width: "w-[280px]" },
+] as const;
+
 export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean }) {
   const { projectId } = useParams<{ projectId: string }>();
   const bookmarks = useBookmarks(projectId);
   const tagIndex = useProjectTags(projectId);
   const [tagFilter, setTagFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | "included" | "uncertain" | "excluded" | "pending">("all");
+  const [sortBy, setSortBy] = useState<"status" | "year" | "title">("status");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [selectedCell, setSelectedCell] = useState<{ rowIdx: number; colKey: string } | null>(null);
   const [collaborationStudy, setCollaborationStudy] = useState<Study | null>(null);
   const [savedFilter, setSavedOnly] = useState(false);
   const savedOnly = bookmarkedOnly || savedFilter;
@@ -115,10 +127,24 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
     return map;
   }, [robSummary]);
 
-
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteStudy(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["studies", projectId] }),
+  });
+
+  // Live screening status update mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ studyId, newStatus }: { studyId: string; newStatus: string }) =>
+      api.screeningDecision(projectId!, {
+        study_id: studyId,
+        decision: newStatus as any,
+        reason: `Status updated via Excel Study Sheet: ${newStatus}`,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
+    },
   });
 
   const refUploadMutation = useMutation({
@@ -179,23 +205,34 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         }
       }
 
-      // PDF files
+      // PDF files (direct auto-identification)
       if (pdfFiles.length > 0) {
-        setDirectProcessMsg(`Extracting clinical metadata from ${pdfFiles.length} PDF(s)...`);
-        const created: Study[] = [];
-        for (const pdf of pdfFiles) {
+        setDirectProcessMsg(`Extracting text and identifying ${pdfFiles.length} PDF paper(s)...`);
+        for (let i = 0; i < pdfFiles.length; i++) {
+          const file = pdfFiles[i];
+          setDirectProcessMsg(`Reading PDF ${i + 1}/${pdfFiles.length}: "${file.name}"...`);
           try {
-            const identified = await autoIdentifyPdf(pdf, projectId);
-            created.push(identified as any);
-            batchStudyIds.push(identified.study_id);
-          } catch (e) {
-            console.error(e);
+            const identified = await autoIdentifyPdf(file, projectId);
+            const studyPayload: Partial<Study> = {
+              title: identified.title || file.name.replace(/\.[^/.]+$/, ""),
+              authors: identified.authors || "Unknown Authors",
+              journal: identified.journal || "Imported Clinical Document",
+              publication_year: identified.year || new Date().getFullYear(),
+              doi: identified.doi,
+              pmid: identified.pmid,
+              abstract: identified.abstract,
+              screening_status: "pending",
+              pdf_filename: file.name,
+            };
+            const created = await api.createStudy(projectId!, studyPayload);
+            totalAdded += 1;
+            totalRefs += 1;
+            if (created && created.study_id) {
+              batchStudyIds.push(created.study_id);
+            }
+          } catch (e: any) {
+            console.error(`Failed to ingest direct PDF ${file.name}:`, e);
           }
-        }
-        if (created.length > 0) {
-          await api.bulkAddStudies(projectId!, created);
-          totalAdded += created.length;
-          totalRefs += created.length;
         }
       }
 
@@ -216,9 +253,6 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
       queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
       queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
       setUploadMsg(`Import successful: ${totalAdded} studies added to screening from ${mainName}.`);
     } catch (err: any) {
       setUploadMsg(`Import error: ${err.message || "Failed to process files"}`);
@@ -242,20 +276,16 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
       queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
       queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
       queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
       setUploadMsg(res.message || `Import of ${batch.filename} successfully undone.`);
     } catch (err: any) {
       if (err.message && err.message.includes("409")) {
         if (window.confirm(`Studies in this batch have downstream work (screening decisions or extractions). Force undo and remove downstream data?`)) {
           const forceRes = await api.undoImportBatch(projectId!, batchId, true);
           queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
           queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
           queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
           setUploadMsg(forceRes.message || `Import of ${batch.filename} forcibly undone.`);
           return;
@@ -279,15 +309,15 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   const handleRestoreBenchmark = async () => {
     await api.resetStudies(projectId!, false);
     queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
     setUploadMsg("Benchmark clinical studies restored (6 verified intracranial PAM literature datasets).");
   };
 
   const isBlank = studies && studies.length === 0;
 
-  // Performance optimization: O(1) Set lookup for bookmarks instead of O(N*B) array searches
+  // Performance optimization: O(1) Set lookup for bookmarks
   const bookmarkSet = useMemo(() => new Set(bookmarks.ids), [bookmarks.ids]);
 
   // Memoized count of bookmarked studies
@@ -300,46 +330,29 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
     return count;
   }, [studies, bookmarkSet]);
 
-  // Sort rank helper: Included (1) -> Uncertain (2) -> Excluded (3) -> Pending (4)
+  // Rank order helper: Included (1) -> Uncertain (2) -> Excluded (3) -> Pending (4)
   const getStatusRank = (status?: string | null): number => {
-    const s = (status || "").toLowerCase().trim();
+    if (!status) return 4;
+    const s = status.toLowerCase();
     if (s === "included" || s === "ta_included" || s === "ft_included") return 1;
     if (s === "uncertain") return 2;
     if (s === "excluded" || s === "ta_excluded" || s === "ft_excluded") return 3;
     return 4; // pending or other
   };
 
-  const [sortBy, setSortBy] = useState<"status" | "year" | "title">("status");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  // Summary counts for quick status filter pills
+  // Counts for status pills
   const statusCounts = useMemo(() => {
-    if (!studies) return { included: 0, uncertain: 0, excluded: 0, pending: 0 };
-    let inc = 0, unc = 0, exc = 0, pend = 0;
+    const counts = { included: 0, uncertain: 0, excluded: 0, pending: 0 };
+    if (!studies) return counts;
     for (const s of studies) {
       const rank = getStatusRank(s.screening_status);
-      if (rank === 1) inc++;
-      else if (rank === 2) unc++;
-      else if (rank === 3) exc++;
-      else pend++;
+      if (rank === 1) counts.included++;
+      else if (rank === 2) counts.uncertain++;
+      else if (rank === 3) counts.excluded++;
+      else counts.pending++;
     }
-    return { included: inc, uncertain: unc, excluded: exc, pending: pend };
+    return counts;
   }, [studies]);
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ studyId, newStatus }: { studyId: string; newStatus: string }) => {
-      return api.screeningDecision(studyId, {
-        project_id: projectId!,
-        decision: newStatus,
-        stage: "ta",
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["screening-decisions", projectId] });
-    },
-  });
 
   const visibleStudies = useMemo(() => {
     if (!studies) return [];
@@ -347,10 +360,11 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       if (savedOnly && !bookmarkSet.has(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
       if (statusFilter !== "all") {
-        if (statusFilter === "included" && s.screening_status !== "included" && s.screening_status !== "ta_included") return false;
-        if (statusFilter === "excluded" && s.screening_status !== "excluded") return false;
-        if (statusFilter === "uncertain" && s.screening_status !== "uncertain") return false;
-        if (statusFilter === "pending" && s.screening_status && s.screening_status !== "pending") return false;
+        const rank = getStatusRank(s.screening_status);
+        if (statusFilter === "included" && rank !== 1) return false;
+        if (statusFilter === "uncertain" && rank !== 2) return false;
+        if (statusFilter === "excluded" && rank !== 3) return false;
+        if (statusFilter === "pending" && rank !== 4) return false;
       }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -386,162 +400,296 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
     });
   }, [studies, savedOnly, bookmarkSet, tagIndex.data, tagFilter, statusFilter, searchQuery, sortBy, sortDirection]);
 
-  return (
-    <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
-      {/* Breadcrumb Navigation */}
-      <div>
-        <Link
-          to={`/projects/${projectId}`}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans text-[#6B665E] hover:text-[#141413] bg-black/[0.03] hover:bg-black/[0.06] transition-colors"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          <span>Back to Project Dashboard</span>
-        </Link>
-      </div>
+  // Active cell coordinate & formula value calculation (Excel native simulation)
+  const activeCol = EXCEL_STUDY_COLUMNS.find((c) => c.key === selectedCell?.colKey) || EXCEL_STUDY_COLUMNS[0];
+  const activeCellCoord = selectedCell ? `${activeCol.letter}${selectedCell.rowIdx + 1}` : "A1";
+  const activeStudy = selectedCell ? visibleStudies[selectedCell.rowIdx] : visibleStudies[0];
 
-      {/* Page Title & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-black/[0.08] pb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="tag-phylo-yellow text-[10px] px-2 py-0.5">LITERATURE REPOSITORY</span>
-            <span className="text-xs font-mono text-[#8A817A]">{studies?.length || 0} Studies Indexed</span>
+  const getPublishedUrl = (s: Study): string => {
+    if (s.doi) {
+      const cleanDoi = s.doi.trim().replace(/^doi:\s*/i, "");
+      if (cleanDoi.startsWith("http")) return cleanDoi;
+      return `https://doi.org/${cleanDoi}`;
+    }
+    if (s.pmid) {
+      const cleanPmid = s.pmid.trim().replace(/^pmid:\s*/i, "");
+      return `https://pubmed.ncbi.nlm.nih.gov/${cleanPmid}/`;
+    }
+    return `https://scholar.google.com/scholar?q=${encodeURIComponent(s.title)}`;
+  };
+
+  const activeCellValue = useMemo(() => {
+    if (!activeStudy) return "";
+    switch (selectedCell?.colKey) {
+      case "title":
+        return activeStudy.title || "";
+      case "authors":
+        return activeStudy.authors || "Unknown Authors";
+      case "year":
+        return activeStudy.publication_year ? String(activeStudy.publication_year) : "";
+      case "journal":
+        return activeStudy.journal || "";
+      case "status":
+        return activeStudy.screening_status || "pending";
+      case "rob": {
+        const ass = robMap.get(activeStudy.study_id);
+        return ass ? judgmentLabel(ass.overall_judgment) : "unassessed";
+      }
+      case "workflows":
+        return getPublishedUrl(activeStudy);
+      default:
+        return activeStudy.title || "";
+    }
+  }, [selectedCell, activeStudy, robMap]);
+
+  // Keyboard navigation across Excel Grid
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (["INPUT", "SELECT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+      if (!selectedCell && visibleStudies.length > 0) {
+        if (["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+          setSelectedCell({ rowIdx: 0, colKey: "title" });
+          return;
+        }
+      }
+      if (!selectedCell) return;
+
+      const colIndex = EXCEL_STUDY_COLUMNS.findIndex((c) => c.key === selectedCell.colKey);
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (selectedCell.rowIdx < visibleStudies.length - 1) {
+          setSelectedCell({ rowIdx: selectedCell.rowIdx + 1, colKey: selectedCell.colKey });
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (selectedCell.rowIdx > 0) {
+          setSelectedCell({ rowIdx: selectedCell.rowIdx - 1, colKey: selectedCell.colKey });
+        }
+      } else if (e.key === "ArrowRight" || e.key === "Tab") {
+        e.preventDefault();
+        if (colIndex < EXCEL_STUDY_COLUMNS.length - 1) {
+          setSelectedCell({ rowIdx: selectedCell.rowIdx, colKey: EXCEL_STUDY_COLUMNS[colIndex + 1].key });
+        } else if (selectedCell.rowIdx < visibleStudies.length - 1) {
+          setSelectedCell({ rowIdx: selectedCell.rowIdx + 1, colKey: EXCEL_STUDY_COLUMNS[0].key });
+        }
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (colIndex > 0) {
+          setSelectedCell({ rowIdx: selectedCell.rowIdx, colKey: EXCEL_STUDY_COLUMNS[colIndex - 1].key });
+        } else if (selectedCell.rowIdx > 0) {
+          setSelectedCell({ rowIdx: selectedCell.rowIdx - 1, colKey: EXCEL_STUDY_COLUMNS[EXCEL_STUDY_COLUMNS.length - 1].key });
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCell, visibleStudies.length]);
+
+  return (
+    <div className="p-4 sm:p-6 w-full max-w-[1600px] mx-auto space-y-5 font-['Work_Sans']">
+      {/* "?"? TOP SECTION: TITLE & ACTIONS ON LEFT, SHIFTED DUPLICATE + DROPZONE ON RIGHT (Image 1) "?"? */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start border-b border-[#d2c2cb] pb-5">
+        {/* Left Column (col-span-7): Breadcrumbs, Title, Description & Action Buttons */}
+        <div className="lg:col-span-7 space-y-3">
+          <div>
+            <Link
+              to={`/projects/${projectId}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-['Work_Sans'] text-[#62535d] hover:text-[#3a0f34] bg-black/[0.03] hover:bg-black/[0.06] transition-colors mb-2"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              <span>Back to Project Dashboard</span>
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="tag-phylo-yellow text-[10px] px-2 py-0.5 font-bold">LITERATURE REPOSITORY</span>
+            <span className="text-xs font-mono text-[#81737b]">{studies?.length || 0} Studies Indexed</span>
             {isBlank && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-100 text-amber-800 border border-amber-200">
                 BLANK WORKSPACE
               </span>
             )}
           </div>
+
           <h1 className="font-['Serifon_Editorial'] text-3xl sm:text-4xl font-bold text-[#3a0f34] tracking-tight">
             {bookmarkedOnly ? "Bookmarked studies" : "Studies & Clinical Benchmarks"}
           </h1>
-          <p className="font-['Newsreader'] italic text-sm text-[#62535d] mt-1">
-            {bookmarkedOnly ? "Your saved studies for reviewing later. Remove a bookmark when you no longer need it." : "Verified study extraction records, bounding box quote locators, and evidence quality reviews."}
+          <p className="font-['QuadraatSmallCaps'] italic text-sm text-[#62535d]">
+            {bookmarkedOnly
+              ? "Your saved studies for reviewing later. Remove a bookmark when you no longer need it."
+              : "Verified study extraction records, bounding box quote locators, and evidence quality reviews."}
           </p>
+
+          {/* Action Buttons Toolbar */}
+          <div className="flex items-center flex-wrap gap-2 pt-1">
+            <Link
+              to={`/projects/${projectId}/${bookmarkedOnly ? "studies" : "bookmarks"}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] text-xs font-semibold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors shadow-2xs"
+            >
+              {bookmarkedOnly ? "View all studies" : "View bookmarked studies"}
+            </Link>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".ris,.bib,.bibtex,.csv,.xml,.nbib,.txt"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) handleRefUpload(e.target.files);
+                e.target.value = "";
+              }}
+            />
+
+            {isBlank ? (
+              <button
+                type="button"
+                onClick={handleRestoreBenchmark}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] text-xs font-semibold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors shadow-2xs"
+                title="Restore standard 6 benchmark demo studies"
+              >
+                <RefreshCw className="h-3.5 w-3.5 text-[#814d75]" />
+                <span>Load Benchmark Studies</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleStartBlank}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] text-xs font-semibold text-[#62535d] hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50 transition-colors shadow-2xs"
+                title="Clear benchmark demo studies and start fresh with 0 studies"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Start Blank Workspace</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] px-3.5 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+              onClick={() => setIsBulkModalOpen(true)}
+            >
+              <FolderPlus className="h-3.5 w-3.5 text-[#ffdea6]" />
+              <span>Bulk Upload PDFs</span>
+            </button>
+
+            <a
+              href={api.exportProjectXlsxUrl(projectId || "demo")}
+              download
+              className="bg-[#ffffff] text-[#3a0f34] border border-[#d2c2cb] hover:bg-[#eee7ec] px-3.5 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+              title="Export all studies with extraction values to formatted Excel (.xlsx)"
+            >
+              <Download className="h-3.5 w-3.5 text-[#814d75]" />
+              <span>Export Excel (.xlsx)</span>
+            </a>
+
+            <Link
+              to={`/projects/${projectId}/studies/new`}
+              className="bg-[#ffffff] text-[#3a0f34] border border-[#d2c2cb] hover:bg-[#eee7ec] px-3.5 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Import Study</span>
+            </Link>
+          </div>
         </div>
 
-        <div className="flex items-center flex-wrap gap-2.5 shrink-0">
-          <Link to={`/projects/${projectId}/${bookmarkedOnly ? "studies" : "bookmarks"}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] text-xs font-semibold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors">
-            {bookmarkedOnly ? "View all studies" : "View bookmarked studies"}
-          </Link>
-          {/* Hidden reference file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".ris,.bib,.bibtex,.csv,.xml,.nbib,.txt"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files) handleRefUpload(e.target.files);
-              e.target.value = "";
-            }}
-          />
-
-          {/* Blank / Benchmark Toggle */}
-          {isBlank ? (
-            <button
-              type="button"
-              onClick={handleRestoreBenchmark}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] text-xs font-semibold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
-              title="Restore standard 6 benchmark demo studies"
-            >
-              <RefreshCw className="h-3.5 w-3.5 text-[#814d75]" />
-              <span>Load Benchmark Studies</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleStartBlank}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] text-xs font-semibold text-[#62535d] hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50 transition-colors"
-              title="Clear benchmark demo studies and start fresh with 0 studies"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              <span>Start Blank Workspace</span>
-            </button>
+        {/* Right Column (col-span-5): SHIFTED HERE (Image 1) - Duplicate Notice + Compact Drag & Drop Zone */}
+        <div className="lg:col-span-5 space-y-3">
+          {/* Shifted Duplicate Alert Banner */}
+          {dedupData && dedupData.total_duplicates > 0 && (
+            <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-3 flex items-center justify-between gap-3 shadow-2xs animate-in fade-in duration-200">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800 shrink-0">
+                  <ArrowLeftRight className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-[#3a0f34] truncate">
+                      {dedupData.total_duplicates} Duplicates Found
+                    </span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 border border-amber-300">
+                      {dedupData.duplicate_groups.length} group{dedupData.duplicate_groups.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#62535d] truncate">
+                    Side-by-side match comparison &amp; merging.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDuplicateModalOpen(true)}
+                className="bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] text-xs font-semibold px-3 py-1.5 rounded-lg shrink-0 flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+              >
+                <span>Review Duplicates</span>
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
           )}
 
-          {/* Duplicate Review Button */}
-          <button
-            type="button"
-            onClick={() => setIsDuplicateModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#d2c2cb] bg-white text-xs font-semibold text-[#3a0f34] hover:bg-[#eee7ec] transition-colors"
-            title="Open side-by-side duplicate review workspace (Keep primary, Keep both, Merge metadata)"
+          {/* Shifted Compact Direct Drag & Drop Zone */}
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              handleDirectFiles(e.dataTransfer.files);
+            }}
+            onClick={() => directFileInputRef.current?.click()}
+            className={cn(
+              "border-2 border-dashed rounded-xl p-3 text-center cursor-pointer transition-all flex items-center justify-center gap-3",
+              isDragging
+                ? "border-emerald-600 bg-emerald-50/80 shadow-md scale-[1.01]"
+                : "border-[#d2c2cb] hover:border-[#814d75] bg-[#FAF9F3]/90 hover:bg-[#ffffff] shadow-2xs"
+            )}
           >
-            <ArrowLeftRight className="h-3.5 w-3.5 text-[#814d75]" />
-            <span>Duplicate Review</span>
-            {dedupData && dedupData.total_duplicates > 0 ? (
-              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#ffdea6]/50 text-[#7c5800] border border-[#d2c2cb]">
-                {dedupData.total_duplicates}
-              </span>
-            ) : null}
-          </button>
+            <input
+              ref={directFileInputRef}
+              type="file"
+              accept=".pdf,.ris,.bib,.bibtex,.csv,.xml,.nbib,.txt,application/pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) handleDirectFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
 
-          {/* Bulk Upload PDFs Button */}
-          <button
-            type="button"
-            className="bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] px-3.5 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            onClick={() => setIsBulkModalOpen(true)}
-          >
-            <FolderPlus className="h-3.5 w-3.5 text-[#ffdea6]" />
-            <span>Bulk Upload PDFs</span>
-          </button>
-
-          {/* Export All Studies to Excel */}
-          <a
-            href={api.exportProjectXlsxUrl(projectId || "demo")}
-            download
-            className="bg-[#ffffff] text-[#3a0f34] border border-[#d2c2cb] hover:bg-[#eee7ec] px-3.5 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            title="Export all studies with extraction values and evidence to formatted Excel (.xlsx)"
-          >
-            <Download className="h-3.5 w-3.5 text-[#814d75]" />
-            <span>Export Excel (.xlsx)</span>
-          </a>
-
-          {/* Import Single Study */}
-          <Link
-            to={`/projects/${projectId}/studies/new`}
-            className="bg-[#ffffff] text-[#3a0f34] border border-[#d2c2cb] hover:bg-[#eee7ec] px-3.5 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Import Study</span>
-          </Link>
+            {isProcessingDirect ? (
+              <div className="flex items-center gap-2 py-1">
+                <Loader2 className="h-5 w-5 text-emerald-600 animate-spin shrink-0" />
+                <span className="font-['Work_Sans'] text-xs font-bold text-[#3a0f34]">
+                  {directProcessMsg || "Importing studies..."}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-8 h-8 rounded-lg bg-[#eee7ec] flex items-center justify-center text-[#814d75] shrink-0">
+                  <Upload className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="font-['Work_Sans'] text-xs font-bold text-[#3a0f34] flex items-center gap-1.5">
+                    <span>Drag &amp; drop studies here</span>
+                    <span className="text-[10px] text-[#81737b] font-normal">(.ris, .bib, .pdf, .csv)</span>
+                  </div>
+                  <div className="text-[11px] text-[#62535d]">
+                    Drop directly or <span className="text-[#814d75] font-semibold underline">browse from computer</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-
-      {/* Duplicate Detection Alert Banner */}
-      {dedupData && dedupData.total_duplicates > 0 && (
-        <div className="bg-amber-50/80 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 shrink-0">
-              <ArrowLeftRight className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-serif text-sm font-medium text-[#141413]">
-                  Duplicate Bibliographic Records Identified ({dedupData.total_duplicates} candidate duplicates in {dedupData.duplicate_groups.length} group{dedupData.duplicate_groups.length > 1 ? "s" : ""})
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 border border-amber-300">
-                  DEDUPLICATION STEP
-                </span>
-              </div>
-              <p className="font-sans text-xs text-[#6B665E] mt-0.5 max-w-2xl leading-relaxed">
-                Side-by-side comparison of title, abstract, DOI, PMID, year, and authors with match reasons. Keep this record, Keep both, or Merge metadata where appropriate with reversible duplicate marking.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsDuplicateModalOpen(true)}
-            className="btn-phylo-primary text-xs px-4 py-2 shrink-0 flex items-center gap-1.5 shadow-xs"
-          >
-            <span>Review Duplicates</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
-
       {uploadMsg && (
-
         <div
           className={`rounded-xl px-4 py-3 text-xs font-sans flex items-center justify-between ${
             uploadMsg.startsWith("Error")
@@ -556,301 +704,41 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         </div>
       )}
 
-      {isLoading && (
-        <div className="p-12 text-center text-[#8A817A] font-serif italic text-sm">
-          Loading clinical study records...
-        </div>
-      )}
-
-      {/* ── Direct Inline Drag & Drop Zone (No Dialog!) ── */}
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragging(true);
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setIsDragging(false);
-          handleDirectFiles(e.dataTransfer.files);
-        }}
-        onClick={() => directFileInputRef.current?.click()}
-        className={cn(
-          "border-2 border-dashed rounded-2xl p-7 sm:p-9 text-center cursor-pointer transition-all",
-          isDragging
-            ? "border-emerald-600 bg-emerald-50/60 shadow-lg scale-[1.005]"
-            : "border-black/20 hover:border-black/50 bg-[#FAF9F3]/80 hover:bg-[#FAF9F3] shadow-xs"
-        )}
-      >
-        <input
-          ref={directFileInputRef}
-          type="file"
-          accept=".pdf,.ris,.bib,.bibtex,.csv,.xml,.nbib,.txt,application/pdf"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files) handleDirectFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-
-        {isProcessingDirect ? (
-          <div className="flex flex-col items-center justify-center py-4 space-y-3">
-            <Loader2 className="h-9 w-9 text-emerald-600 animate-spin" />
-            <div className="font-serif text-lg font-medium text-[#141413]">
-              {directProcessMsg || "Importing studies..."}
-            </div>
-            <p className="font-sans text-xs text-[#6B665E]">
-              Parsing citations, extracting study metadata, and screening eligibility...
-            </p>
-          </div>
-        ) : (
-          <div className="max-w-xl mx-auto space-y-2">
-            <div className={cn(
-              "h-12 w-12 rounded-2xl flex items-center justify-center mx-auto transition-transform",
-              isDragging ? "bg-emerald-600 text-white scale-110" : "bg-[#141413] text-[#FAF9F3]"
-            )}>
-              <Upload className="h-6 w-6" />
-            </div>
-            <h3 className="font-serif text-xl font-normal text-[#141413] tracking-tight">
-              Drag & drop studies here
-            </h3>
-            <p className="font-sans text-xs text-[#6B665E] leading-relaxed">
-              Drop study files directly onto this area (<span className="font-mono font-medium text-[#141413]">.ris, .bib, .pdf, .csv, .xml, .nbib</span>).
-              Files process instantly without opening another dialog box.
-            </p>
-            <div className="pt-1.5 flex items-center justify-center gap-3 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white border border-black/15 text-[#141413] shadow-2xs hover:bg-black/5">
-                <FolderPlus className="h-3.5 w-3.5 text-[#6B665E]" />
-                <span>Or browse files from your computer</span>
-              </span>
-              {isBlank && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRestoreBenchmark();
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200 shadow-2xs hover:bg-amber-100"
-                >
-                  <RefreshCw className="h-3.5 w-3.5 text-amber-700" />
-                  <span>Restore Benchmark PAM Studies</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Import Batches History (Real Server Persistent Batches with Atomic Undo) ── */}
-      {serverBatches.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-[#d2c2cb] pb-2">
-            <div className="flex items-center gap-2">
-              <h3 className="font-serif text-lg font-bold text-[#3a0f34]">
-                Import Batches & Screening History
-              </h3>
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb]">
-                {serverBatches.length} Batches Recorded
-              </span>
-            </div>
-            <span className="text-xs text-[#62535d] italic font-serif hidden sm:inline">
-              Click "Undo import" on any batch to revert study inclusions and remove from review
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            {serverBatches.map((batch) => (
-              <div
-                key={batch.batch_id}
-                className="bg-white border border-[#d2c2cb] rounded p-5 sm:p-6 shadow-xs space-y-4 transition-all hover:border-[#814d75]"
-              >
-                {/* Header: Date + Filename on Left, Status / Undo Import on Right */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#d2c2cb]/40 pb-3">
-                  <div>
-                    <div className="text-xs text-[#62535d] font-sans font-medium">{batch.created_at} &middot; format: <span className="uppercase font-mono">{batch.format}</span></div>
-                    <div className="text-sm font-semibold font-mono text-[#3a0f34] mt-0.5 break-all">
-                      {batch.filename}
-                    </div>
-                  </div>
-
-                  <div className="shrink-0">
-                    {batch.status === "undone" ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-sans text-[#62535d] bg-[#eee7ec] border border-[#d2c2cb]">
-                        <Check className="h-3.5 w-3.5 text-[#7c5800]" />
-                        <span>Undone {batch.undone_at ? `on ${batch.undone_at}` : ""}</span>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleUndoImport(batch.batch_id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold text-[#3a0f34] hover:text-rose-700 bg-white hover:bg-rose-50 border border-[#d2c2cb] hover:border-rose-300 transition-colors cursor-pointer"
-                        title="Revert this batch and remove its studies from review"
-                      >
-                        <Undo2 className="h-3.5 w-3.5 text-[#814d75] hover:text-rose-600" />
-                        <span>Undo import</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* 5 Metric Cards in a Row */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {/* Card 1: Added to title and abstract screening */}
-                  <div className="bg-[#fbf9f4] border border-[#d2c2cb] rounded p-3.5 flex flex-col justify-between">
-                    <span className="text-[11px] text-[#62535d] font-sans leading-tight">
-                      Added to Screening
-                    </span>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#3a0f34] mt-2">
-                      {batch.imported_count}
-                    </span>
-                  </div>
-
-                  {/* Card 2: References */}
-                  <div className="bg-white border border-[#d2c2cb] rounded p-3.5 flex flex-col justify-between">
-                    <span className="text-[11px] text-[#62535d] font-sans leading-tight">
-                      Total Records
-                    </span>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#4f444b] mt-2">
-                      {batch.total_records || batch.imported_count}
-                    </span>
-                  </div>
-
-                  {/* Card 3: Duplicates */}
-                  <div className="bg-white border border-[#d2c2cb] rounded p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-[#62535d] font-sans leading-tight">
-                      <span>Duplicates</span>
-                      <ExternalLink className="h-3 w-3 text-[#81737b]" />
-                    </div>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#4f444b] mt-2">
-                      {batch.duplicate_count}
-                    </span>
-                  </div>
-
-                  {/* Card 4: Retained Active */}
-                  <div className="bg-white border border-[#d2c2cb] rounded p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-[#62535d] font-sans leading-tight">
-                      <span>Retained Active</span>
-                      <HelpCircle className="h-3 w-3 text-[#81737b]" />
-                    </div>
-                    <span className="text-2xl sm:text-3xl font-bold font-sans text-[#4f444b] mt-2">
-                      {batch.retained_studies_count ?? batch.imported_count}
-                    </span>
-                  </div>
-
-                  {/* Card 5: Source */}
-                  <div className="bg-white border border-[#d2c2cb] rounded p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center gap-1 text-[11px] text-[#62535d] font-sans leading-tight">
-                      <span>Source Database</span>
-                      <Edit3 className="h-3 w-3 text-[#81737b]" />
-                    </div>
-                    <span className="text-sm sm:text-base font-semibold font-sans text-[#3a0f34] mt-2 truncate" title={batch.source}>
-                      {batch.source}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── EXCEL SPREADSHEET FORMULA BAR & CONTROLS RIBBON ── */}
-      <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-xl p-3 shadow-xs space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d2c2cb]/40 pb-2.5">
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Active Cell Formula / Name Box */}
-            <div className="flex items-center gap-2 bg-[#fbf9f4] border border-[#d2c2cb] rounded px-3 py-1 shadow-2xs font-mono text-xs">
-              <span className="font-bold text-[#814d75]">
-                {selectedRowId ? `ROW ${visibleStudies.findIndex((s) => s.study_id === selectedRowId) + 1}` : "A1"}
-              </span>
-              <div className="h-3.5 w-px bg-[#d2c2cb]" />
-              <span className="font-serif italic text-[#81737b] font-bold">fx</span>
-              <span className="text-[#4f444b] font-sans truncate max-w-xs sm:max-w-md">
-                {selectedRowId
-                  ? visibleStudies.find((s) => s.study_id === selectedRowId)?.title
-                  : visibleStudies[0]?.title || "Select a study row to view formula details"}
+      {/* "?"? EXCEL WORKSPACE CONTAINER (Image 2) "?"? */}
+      <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-xs overflow-hidden space-y-0">
+        {/* "?"? SUB-HEADER TOOLBAR (Cell Coordinate Box, Formula Bar fx, Filters) "?"? */}
+        <div className="bg-[#fbf9f4] border-b border-[#d2c2cb] px-4 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 flex-1 min-w-[300px]">
+            {/* Active Cell Coordinates Display (e.g. A1, B2) */}
+            <div className="flex items-center bg-[#ffffff] border border-[#d2c2cb] rounded px-2.5 py-1 shadow-2xs min-w-[64px] justify-center shrink-0">
+              <span className="font-mono text-xs font-bold text-[#3a0f34]">
+                {activeCellCoord}
               </span>
             </div>
 
+            <div className="h-4 w-px bg-[#d2c2cb] shrink-0" />
+
+            {/* Active Cell Formula / Content Input Bar (Excel fx) */}
+            <div className="flex items-center gap-2 bg-[#ffffff] border border-[#d2c2cb] rounded px-3 py-1 flex-1 shadow-2xs overflow-hidden">
+              <span className="font-serif italic text-xs text-[#814d75] font-bold shrink-0">fx</span>
+              <input
+                type="text"
+                readOnly
+                aria-label="Formula Bar"
+                value={activeCellValue}
+                placeholder="Click any cell or row to view formula details"
+                className="w-full bg-transparent text-xs font-mono text-[#4f444b] focus:outline-none truncate"
+              />
+            </div>
+          </div>
+
+          {/* Quick Filters Toolbar */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Live matching count */}
             <span className="text-xs font-mono text-[#81737b] hidden md:inline">
-              {visibleStudies.length} of {studies?.length || 0} studies
+              {visibleStudies.length} matching studies
             </span>
-          </div>
 
-          {/* Quick Status Filter Chips: Included, Uncertain, Excluded, Pending */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setStatusFilter("all")}
-              className={cn(
-                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans']",
-                statusFilter === "all"
-                  ? "bg-[#3a0f34] text-[#fbf9f4] border-[#3a0f34] shadow-xs"
-                  : "bg-[#ffffff] text-[#4f444b] border-[#d2c2cb] hover:bg-[#eee7ec]"
-              )}
-            >
-              All ({studies?.length || 0})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter("included")}
-              className={cn(
-                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
-                statusFilter === "included"
-                  ? "bg-emerald-700 text-white border-emerald-800 shadow-xs"
-                  : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/70"
-              )}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Included</span>
-              <span className="font-mono text-[10px] font-bold">({statusCounts.included})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter("uncertain")}
-              className={cn(
-                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
-                statusFilter === "uncertain"
-                  ? "bg-purple-700 text-white border-purple-800 shadow-xs"
-                  : "bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100/70"
-              )}
-            >
-              <span className="w-2 h-2 rounded-full bg-purple-500" />
-              <span>Uncertain</span>
-              <span className="font-mono text-[10px] font-bold">({statusCounts.uncertain})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter("excluded")}
-              className={cn(
-                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
-                statusFilter === "excluded"
-                  ? "bg-rose-700 text-white border-rose-800 shadow-xs"
-                  : "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100/70"
-              )}
-            >
-              <span className="w-2 h-2 rounded-full bg-rose-500" />
-              <span>Excluded</span>
-              <span className="font-mono text-[10px] font-bold">({statusCounts.excluded})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter("pending")}
-              className={cn(
-                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
-                statusFilter === "pending"
-                  ? "bg-[#7c5800] text-white border-[#7c5800] shadow-xs"
-                  : "bg-[#ffdea6]/40 text-[#7c5800] border-[#d2c2cb] hover:bg-[#ffdea6]/70"
-              )}
-            >
-              <span className="w-2 h-2 rounded-full bg-[#7c5800]" />
-              <span>Pending</span>
-              <span className="font-mono text-[10px] font-bold">({statusCounts.pending})</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
             {/* Search studies */}
             <div className="relative">
               <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#62535d]" />
@@ -859,14 +747,14 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search title, author, DOI..."
-                className="pl-8 pr-3 py-1 text-xs border border-[#d2c2cb] rounded bg-[#ffffff] text-[#3a0f34] focus:outline-none focus:ring-1 focus:ring-[#814d75] w-48 sm:w-56 shadow-2xs font-['Work_Sans']"
+                className="pl-8 pr-3 py-1 text-xs border border-[#d2c2cb] rounded bg-[#ffffff] text-[#3a0f34] focus:outline-none focus:ring-1 focus:ring-[#814d75] w-44 sm:w-52 shadow-2xs font-['Work_Sans']"
               />
             </div>
 
             {/* Status filter dropdown */}
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
               className="text-xs border border-[#d2c2cb] rounded bg-[#ffffff] px-2.5 py-1 text-[#3a0f34] focus:outline-none focus:ring-1 focus:ring-[#814d75] shadow-2xs font-medium"
             >
               <option value="all">All Statuses</option>
@@ -892,131 +780,222 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
           </div>
         </div>
 
-        {/* ── EXCEL-STYLE GRID TABLE WITH COLUMN LETTERS & ROW NUMBERS ── */}
-        <div className="border border-[#d2c2cb] rounded overflow-hidden shadow-xs">
-          <div className="overflow-x-auto max-h-[640px] overflow-y-auto">
-            <table className="border-collapse table-fixed w-full text-left text-xs font-['Work_Sans'] min-w-[900px]">
-              {/* Row 1: Column Letters (A, B, C, D, E, F, G) */}
-              <thead className="sticky top-0 z-20 bg-[#fbf9f4] shadow-xs">
-                <tr className="border-b border-[#d2c2cb] bg-[#eee7ec]/60 text-[10px] font-mono text-[#62535d]">
-                  <th className="sticky left-0 z-30 bg-[#eee7ec] w-12 text-center p-1.5 border-r border-[#d2c2cb] select-none font-bold">
-                    #
-                  </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-[320px]">
-                    A
-                  </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-44">
-                    B
-                  </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-24">
-                    C
-                  </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-44">
-                    D
-                  </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-36">
-                    E
-                  </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-28">
-                    F
-                  </th>
-                  <th className="text-center p-1.5 font-bold select-none w-[300px]">
-                    G
-                  </th>
-                </tr>
+        {/* "?"? EXCEL-STYLE GRID TABLE (Columns A-G with Row Numbers) "?"? */}
+        <div className="overflow-x-auto max-h-[680px] overflow-y-auto">
+          <table className="border-collapse table-fixed w-full text-left text-xs font-['Work_Sans'] min-w-[1050px]">
+            {/* Frozen Table Header (Excel Columns A-G + Row 2 Labels) */}
+            <thead className="sticky top-0 z-20 bg-[#fbf9f4] shadow-xs select-none">
+              {/* Row 1: Excel Column Letters */}
+              <tr className="border-b border-[#d2c2cb] bg-[#eee7ec]/70 text-[10px] font-mono text-[#62535d]">
+                <th className="sticky left-0 z-30 bg-[#eee7ec] w-12 text-center p-1.5 border-r border-[#d2c2cb] select-none font-bold">
+                  #
+                </th>
+                <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold w-[340px]">
+                  A
+                </th>
+                <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold w-[200px]">
+                  B
+                </th>
+                <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold w-[100px]">
+                  C
+                </th>
+                <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold w-[190px]">
+                  D
+                </th>
+                <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold w-[170px]">
+                  E
+                </th>
+                <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold w-[150px]">
+                  F
+                </th>
+                <th className="text-center p-1.5 font-bold w-[280px]">
+                  G
+                </th>
+              </tr>
 
-                {/* Row 2: Header Field Labels Matching Zotero / Excel Layout */}
-                <tr className="border-b border-[#d2c2cb] text-[11px] text-[#3a0f34] bg-[#fbf9f4]">
-                  <th className="sticky left-0 z-30 bg-[#fbf9f4] w-12 text-center p-2.5 border-r border-[#d2c2cb] font-mono font-bold text-[#62535d] select-none">
-                    Row
-                  </th>
-                  <th className="px-4 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <FileText className="w-3.5 h-3.5 text-[#814d75]" />
-                        <span>Title</span>
-                      </span>
-                      <Lock className="h-3 w-3 text-[#814d75]" title="Primary Identifier" />
-                    </div>
-                  </th>
-                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
-                    Creator (Authors)
-                  </th>
-                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none text-center">
-                    Date / Year
-                  </th>
-                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
-                    Publisher / Journal
-                  </th>
-                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSortBy("status");
-                        setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-                      }}
-                      className="flex items-center gap-1 hover:text-[#814d75] transition-colors cursor-pointer"
-                      title="Sort: Included -> Uncertain -> Excluded"
-                    >
-                      <span>Screening Status</span>
-                      <ArrowUpDown className="w-3 h-3 text-[#814d75]" />
-                    </button>
-                  </th>
-                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
-                    RoB Judgment
-                  </th>
-                  <th className="px-4 py-2.5 font-bold font-['Serifon_Editorial'] text-right select-none">
-                    Workflows &amp; Published Site
-                  </th>
-                </tr>
-              </thead>
+              {/* Row 2: Header Field Labels */}
+              <tr className="border-b border-[#d2c2cb] text-[11px] text-[#3a0f34] bg-[#fbf9f4]">
+                <th className="sticky left-0 z-30 bg-[#fbf9f4] w-12 text-center p-2.5 border-r border-[#d2c2cb] font-mono font-bold text-[#62535d]">
+                  Row
+                </th>
+                <th className="px-3.5 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial']">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-[#814d75]" />
+                      <span>Title (Citation)</span>
+                    </span>
+                    <Lock className="h-3 w-3 text-[#814d75]" title="Primary Identifier" />
+                  </div>
+                </th>
+                <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial']">
+                  Creator (Authors)
+                </th>
+                <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] text-center">
+                  Date / Year
+                </th>
+                <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial']">
+                  Publisher / Journal
+                </th>
+                <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSortBy("status");
+                      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+                    }}
+                    className="inline-flex items-center gap-1 hover:text-[#814d75] transition-colors cursor-pointer"
+                    title="Sort: Included -> Uncertain -> Excluded"
+                  >
+                    <span>Screening Status</span>
+                    <ArrowUpDown className="w-3 h-3 text-[#814d75]" />
+                  </button>
+                </th>
+                <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] text-center">
+                  RoB Judgment
+                </th>
+                <th className="px-3.5 py-2.5 font-bold font-['Serifon_Editorial'] text-right">
+                  Workflows &amp; Published Site
+                </th>
+              </tr>
+            </thead>
 
-              {/* Table Data Rows */}
-              <tbody className="divide-y divide-[#d2c2cb]">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-[#81737b] text-xs">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-[#814d75]" />
-                      <span>Loading clinical study records into spreadsheet...</span>
-                    </td>
-                  </tr>
-                ) : visibleStudies.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-[#81737b] text-xs">
-                      No studies match the selected filters.
-                    </td>
-                  </tr>
-                ) : (
-                  visibleStudies.map((s, idx) => {
-                    const isSelected = selectedRowId === s.study_id;
-                    return (
-                      <StudyRow
-                        key={s.study_id}
-                        rowNumber={idx + 1}
-                        isSelected={isSelected}
-                        onSelectRow={() => setSelectedRowId(s.study_id)}
-                        study={s}
-                        assessment={robMap.get(s.study_id)}
-                        tags={tagIndex.data}
-                        onComments={() => setCollaborationStudy(s)}
-                        onStatusChange={(studyId, newStatus) => updateStatusMutation.mutate({ studyId, newStatus })}
-                        bookmark={<BookmarkButton saved={bookmarkSet.has(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
-                        projectId={projectId!}
-                        onDelete={() => deleteMutation.mutate(s.study_id)}
-                      />
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+            {/* Table Body: Excel Rows */}
+            <tbody className="divide-y divide-[#d2c2cb]">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-[#81737b] text-xs">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-[#814d75]" />
+                    <span>Loading clinical study records into spreadsheet...</span>
+                  </td>
+                </tr>
+              ) : visibleStudies.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-[#81737b] text-xs">
+                    No studies match the selected filters.
+                  </td>
+                </tr>
+              ) : (
+                visibleStudies.map((s, idx) => (
+                  <StudyRow
+                    key={s.study_id}
+                    rowNumber={idx + 1}
+                    rowIdx={idx}
+                    selectedCell={selectedCell}
+                    onSelectCell={(colKey) => setSelectedCell({ rowIdx: idx, colKey })}
+                    study={s}
+                    assessment={robMap.get(s.study_id)}
+                    tags={tagIndex.data}
+                    onComments={() => setCollaborationStudy(s)}
+                    onStatusChange={(studyId, newStatus) => updateStatusMutation.mutate({ studyId, newStatus })}
+                    bookmark={<BookmarkButton saved={bookmarkSet.has(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
+                    projectId={projectId!}
+                    onDelete={() => deleteMutation.mutate(s.study_id)}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* "?"? EXCEL WORKSHEET TABS & STATUS BAR (Matching Image 2) "?"? */}
+        <div className="bg-[#fbf9f4] border-t border-[#d2c2cb] px-3 py-1 flex items-center justify-between text-xs select-none">
+          {/* Worksheet Tabs */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className={cn(
+                "px-3 py-1 rounded-t border-t border-x font-medium transition-colors flex items-center gap-1.5 cursor-pointer text-xs",
+                statusFilter === "all"
+                  ? "bg-[#ffffff] text-[#3a0f34] border-[#d2c2cb] font-bold shadow-2xs border-b-white -mb-px z-10"
+                  : "bg-[#eee7ec] text-[#62535d] border-transparent hover:bg-[#e4dde2]"
+              )}
+            >
+              <FileSpreadsheet className="h-3 w-3 text-[#814d75]" />
+              <span>Sheet1: All Studies ({studies?.length || 0})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter("included")}
+              className={cn(
+                "px-3 py-1 rounded-t border-t border-x font-medium transition-colors flex items-center gap-1.5 cursor-pointer text-xs",
+                statusFilter === "included"
+                  ? "bg-[#ffffff] text-emerald-800 border-[#d2c2cb] font-bold shadow-2xs border-b-white -mb-px z-10"
+                  : "bg-[#eee7ec] text-[#62535d] border-transparent hover:bg-[#e4dde2]"
+              )}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Included ({statusCounts.included})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter("uncertain")}
+              className={cn(
+                "px-3 py-1 rounded-t border-t border-x font-medium transition-colors flex items-center gap-1.5 cursor-pointer text-xs",
+                statusFilter === "uncertain"
+                  ? "bg-[#ffffff] text-purple-800 border-[#d2c2cb] font-bold shadow-2xs border-b-white -mb-px z-10"
+                  : "bg-[#eee7ec] text-[#62535d] border-transparent hover:bg-[#e4dde2]"
+              )}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+              <span>Uncertain ({statusCounts.uncertain})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter("excluded")}
+              className={cn(
+                "px-3 py-1 rounded-t border-t border-x font-medium transition-colors flex items-center gap-1.5 cursor-pointer text-xs",
+                statusFilter === "excluded"
+                  ? "bg-[#ffffff] text-rose-800 border-[#d2c2cb] font-bold shadow-2xs border-b-white -mb-px z-10"
+                  : "bg-[#eee7ec] text-[#62535d] border-transparent hover:bg-[#e4dde2]"
+              )}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              <span>Excluded ({statusCounts.excluded})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter("pending")}
+              className={cn(
+                "px-3 py-1 rounded-t border-t border-x font-medium transition-colors flex items-center gap-1.5 cursor-pointer text-xs",
+                statusFilter === "pending"
+                  ? "bg-[#ffffff] text-[#7c5800] border-[#d2c2cb] font-bold shadow-2xs border-b-white -mb-px z-10"
+                  : "bg-[#eee7ec] text-[#62535d] border-transparent hover:bg-[#e4dde2]"
+              )}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#7c5800]" />
+              <span>Pending ({statusCounts.pending})</span>
+            </button>
+          </div>
+
+          {/* Bottom Status Bar */}
+          <div className="flex items-center gap-3 text-[11px] font-mono text-[#81737b]">
+            <span className="flex items-center gap-1 text-emerald-700 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Ready
+            </span>
+            <span>|</span>
+            <span>{visibleStudies.length} rows</span>
+            <span>|</span>
+            <span>Cell: {activeCellCoord}</span>
+            <span>|</span>
+            <span>100% Zoom</span>
           </div>
         </div>
       </div>
 
+      {/* Collaboration Dialog */}
+      {collaborationStudy && (
+        <CollaborationDialog title={collaborationStudy.title} onClose={() => setCollaborationStudy(null)}>
+          <RecordCollaborationPanel key={collaborationStudy.study_id} projectId={projectId!} studyId={collaborationStudy.study_id} />
+        </CollaborationDialog>
+      )}
+
       {/* Bulk Upload Modal */}
-      {collaborationStudy && <CollaborationDialog title={collaborationStudy.title} onClose={() => setCollaborationStudy(null)}>
-        <RecordCollaborationPanel key={collaborationStudy.study_id} projectId={projectId!} studyId={collaborationStudy.study_id} />
-      </CollaborationDialog>}
       {isBulkModalOpen && (
         <BulkUploadModal
           projectId={projectId!}
@@ -1024,9 +1003,9 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
           onSuccess={(count, fastTrack) => {
             setIsBulkModalOpen(false);
             queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
             setUploadMsg(`Successfully processed and converted ${count} PDF(s) to JSON!`);
             if (fastTrack) {
               navigate(`/projects/${projectId}/extraction-sheet`);
@@ -1042,16 +1021,15 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         onClose={() => setIsDuplicateModalOpen(false)}
         onResolved={() => {
           queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["import-batches", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["prisma-flow", projectId] });
           queryClient.invalidateQueries({ queryKey: ["duplicate_groups", projectId] });
         }}
       />
     </div>
   );
 }
-
 
 function StudyRow({
   study,
@@ -1063,8 +1041,9 @@ function StudyRow({
   onStatusChange,
   assessment,
   rowNumber,
-  isSelected,
-  onSelectRow,
+  rowIdx,
+  selectedCell,
+  onSelectCell,
 }: {
   study: Study;
   projectId: string;
@@ -1075,10 +1054,10 @@ function StudyRow({
   onStatusChange: (studyId: string, newStatus: string) => void;
   assessment?: { assessment_id: string; overall_judgment: string };
   rowNumber: number;
-  isSelected: boolean;
-  onSelectRow: () => void;
+  rowIdx: number;
+  selectedCell: { rowIdx: number; colKey: string } | null;
+  onSelectCell: (colKey: string) => void;
 }) {
-  // Batch optimization: Only query per-study if bulk assessment was not supplied
   const { data: studyAssessments } = useQuery({
     queryKey: ["study-rob", study.study_id],
     queryFn: () => api.listStudyAssessments(study.study_id),
@@ -1100,25 +1079,34 @@ function StudyRow({
     return `https://scholar.google.com/scholar?q=${encodeURIComponent(s.title)}`;
   };
 
+  const isSelectedRow = selectedCell?.rowIdx === rowIdx;
+  const isCellSelected = (colKey: string) => isSelectedRow && selectedCell?.colKey === colKey;
+
   return (
     <tr
-      onClick={onSelectRow}
-      className={`transition-colors cursor-pointer ${
-        isSelected
-          ? "bg-[#ffdea6]/20 outline-2 outline-[#814d75] outline-offset-[-2px] z-10"
-          : "hover:bg-[#fbf9f4]/80"
+      className={`transition-colors ${
+        isSelectedRow ? "bg-[#ffdea6]/10" : "hover:bg-[#fbf9f4]/80"
       }`}
     >
       {/* Frozen Row Number */}
-      <td className="sticky left-0 z-10 bg-[#fbf9f4] text-center p-2 border-r border-[#d2c2cb] font-mono text-[11px] text-[#62535d] select-none font-bold">
+      <td
+        onClick={() => onSelectCell("title")}
+        className="sticky left-0 z-10 bg-[#fbf9f4] text-center p-2 border-r border-[#d2c2cb] font-mono text-[11px] text-[#62535d] select-none font-bold cursor-pointer"
+      >
         {rowNumber}
       </td>
 
-      {/* Column A: Title with Document icon & link & external published site icon */}
-      <td className="px-4 py-2.5 border-r border-[#d2c2cb] max-w-[320px]">
+      {/* Column A: Title */}
+      <td
+        onClick={() => onSelectCell("title")}
+        className={cn(
+          "px-3 py-2 border-r border-[#d2c2cb] max-w-[340px] cursor-pointer relative",
+          isCellSelected("title") && "outline-2 outline-[#3a0f34] outline-offset-[-2px] bg-white z-10"
+        )}
+      >
         <div className="flex items-start gap-2">
           {bookmark}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-[#814d75] shrink-0 mt-0.5" />
               <Link
@@ -1142,26 +1130,64 @@ function StudyRow({
             <TagBadges index={tags} studyId={study.study_id} />
           </div>
         </div>
+        {isCellSelected("title") && (
+          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#3a0f34] pointer-events-none" />
+        )}
       </td>
 
       {/* Column B: Creator (Authors) */}
-      <td className="px-3 py-2.5 border-r border-[#d2c2cb] text-xs font-['Work_Sans'] text-[#4f444b] truncate max-w-[180px]" title={study.authors || "Unknown"}>
+      <td
+        onClick={() => onSelectCell("authors")}
+        className={cn(
+          "px-3 py-2 border-r border-[#d2c2cb] text-xs font-['Work_Sans'] text-[#4f444b] truncate max-w-[200px] cursor-pointer relative",
+          isCellSelected("authors") && "outline-2 outline-[#3a0f34] outline-offset-[-2px] bg-white z-10"
+        )}
+        title={study.authors || "Unknown"}
+      >
         {study.authors || "Unknown Authors"}
+        {isCellSelected("authors") && (
+          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#3a0f34] pointer-events-none" />
+        )}
       </td>
 
       {/* Column C: Date / Year */}
-      <td className="px-3 py-2.5 border-r border-[#d2c2cb] font-mono text-xs text-[#62535d] select-none text-center">
+      <td
+        onClick={() => onSelectCell("year")}
+        className={cn(
+          "px-3 py-2 border-r border-[#d2c2cb] font-mono text-xs text-[#62535d] select-none text-center cursor-pointer relative",
+          isCellSelected("year") && "outline-2 outline-[#3a0f34] outline-offset-[-2px] bg-white z-10"
+        )}
+      >
         {study.publication_year || "—"}
+        {isCellSelected("year") && (
+          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#3a0f34] pointer-events-none" />
+        )}
       </td>
 
       {/* Column D: Publisher / Journal */}
-      <td className="px-3 py-2.5 border-r border-[#d2c2cb] text-xs font-['Work_Sans'] text-[#62535d] truncate max-w-[180px]" title={study.journal || "—"}>
+      <td
+        onClick={() => onSelectCell("journal")}
+        className={cn(
+          "px-3 py-2 border-r border-[#d2c2cb] text-xs font-['Work_Sans'] text-[#62535d] truncate max-w-[190px] cursor-pointer relative",
+          isCellSelected("journal") && "outline-2 outline-[#3a0f34] outline-offset-[-2px] bg-white z-10"
+        )}
+        title={study.journal || "—"}
+      >
         {study.journal || "—"}
+        {isCellSelected("journal") && (
+          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#3a0f34] pointer-events-none" />
+        )}
       </td>
 
-      {/* Column E: Screening Status with live interactive dropdown updating */}
-      <td className="px-3 py-2.5 border-r border-[#d2c2cb]">
-        <div className="flex items-center gap-1.5">
+      {/* Column E: Screening Status */}
+      <td
+        onClick={() => onSelectCell("status")}
+        className={cn(
+          "px-3 py-2 border-r border-[#d2c2cb] text-center cursor-pointer relative",
+          isCellSelected("status") && "outline-2 outline-[#3a0f34] outline-offset-[-2px] bg-white z-10"
+        )}
+      >
+        <div className="flex items-center justify-center gap-1.5">
           <select
             value={
               study.screening_status === "ta_included" || study.screening_status === "ft_included"
@@ -1199,13 +1225,23 @@ function StudyRow({
             </span>
           )}
         </div>
+        {isCellSelected("status") && (
+          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#3a0f34] pointer-events-none" />
+        )}
       </td>
 
       {/* Column F: RoB Status */}
-      <td className="px-3 py-2.5 border-r border-[#d2c2cb]">
+      <td
+        onClick={() => onSelectCell("rob")}
+        className={cn(
+          "px-3 py-2 border-r border-[#d2c2cb] text-center cursor-pointer relative",
+          isCellSelected("rob") && "outline-2 outline-[#3a0f34] outline-offset-[-2px] bg-white z-10"
+        )}
+      >
         {activeAssessment ? (
           <Link
             to={`/projects/${projectId}/rob/${activeAssessment.assessment_id}`}
+            onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 text-xs text-[#3a0f34] hover:underline"
           >
             <ShieldCheck className="h-3 w-3 text-emerald-700" />
@@ -1220,11 +1256,20 @@ function StudyRow({
         ) : (
           <span className="text-[#81737b] text-xs font-['Newsreader'] italic select-none">unassessed</span>
         )}
+        {isCellSelected("rob") && (
+          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#3a0f34] pointer-events-none" />
+        )}
       </td>
 
       {/* Column G: Workflows & Published Site Link */}
-      <td className="px-4 py-2.5 text-right">
-        <div className="flex items-center justify-end gap-1.5">
+      <td
+        onClick={() => onSelectCell("workflows")}
+        className={cn(
+          "px-3 py-2 text-right relative",
+          isCellSelected("workflows") && "outline-2 outline-[#3a0f34] outline-offset-[-2px] bg-white z-10"
+        )}
+      >
+        <div className="flex items-center justify-end gap-1.5 flex-wrap">
           {/* View on Published Site Button */}
           <a
             href={getPublishedUrl(study)}
@@ -1235,45 +1280,54 @@ function StudyRow({
             title="View study on original published site (DOI / PubMed / Publisher)"
           >
             <ExternalLink className="h-3 w-3 text-[#814d75]" />
-            <span className="hidden sm:inline">Published Site</span>
+            <span>Published Site</span>
           </a>
 
+          {/* Comments and tags button with exact accessible label for tests */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onComments();
             }}
+            aria-label={`Comments and tags for ${study.title}`}
             className="rounded border border-[#d2c2cb] bg-white px-2 py-0.5 text-[11px] text-[#4f444b] hover:bg-[#eee7ec] transition-colors"
             title="Comments & tags"
           >
             Tags
           </button>
+
           <Link
             to={`/projects/${projectId}/studies/${study.study_id}/pdf`}
+            onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all shadow-2xs"
             title="Review Co-Scientist Extractions in PDF with Track Changes"
           >
             <Highlighter className="h-2.5 w-2.5 text-[#ffdea6]" />
             <span>PDF</span>
           </Link>
+
           <Link
             to={`/projects/${projectId}/extraction-sheet?study=${study.study_id}`}
+            onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all shadow-2xs"
             title="View Extraction Data Sheet"
           >
             <FileSpreadsheet className="h-2.5 w-2.5 text-[#814d75]" />
             <span>Sheet</span>
           </Link>
+
           <a
             href={api.exportStudyXlsxUrl(projectId || "demo", study.study_id)}
             download
+            onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all shadow-2xs"
             title="Download extraction data Excel (.xlsx) for this study"
           >
             <Download className="h-2.5 w-2.5 text-[#7c5800]" />
             <span>Excel</span>
           </a>
+
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -1285,6 +1339,9 @@ function StudyRow({
             <Trash2 className="h-3 w-3" />
           </button>
         </div>
+        {isCellSelected("workflows") && (
+          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#3a0f34] pointer-events-none" />
+        )}
       </td>
     </tr>
   );
