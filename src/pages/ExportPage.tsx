@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Download, FileSpreadsheet, FileText, Table, Check, ExternalLink } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, Table, Check, ExternalLink, BookOpen, Copy, Sparkles, CheckCheck } from 'lucide-react';
 import { api } from '../lib/api';
 
 export function ExportPage() {
@@ -14,11 +14,13 @@ export function ExportPage() {
   const [manuscriptOpen, setManuscriptOpen] = useState(false);
   const [manuscriptText, setManuscriptText] = useState<string>('');
   const [draftLoading, setDraftLoading] = useState(false);
+  const [copiedDraft, setCopiedDraft] = useState(false);
 
   const [bibModalOpen, setBibModalOpen] = useState(false);
   const [bibText, setBibText] = useState<string>('');
   const [bibLoading, setBibLoading] = useState(false);
   const [bibFormat, setBibFormat] = useState('bibtex');
+  const [copiedBib, setCopiedBib] = useState(false);
 
   const handleDownload = async (format: string, endpoint: string) => {
     if (!projectId) return;
@@ -46,6 +48,7 @@ export function ExportPage() {
     if (!projectId) return;
     setDraftLoading(true);
     setManuscriptOpen(true);
+    setCopiedDraft(false);
     try {
       let synthesisData: any = null;
       try {
@@ -102,6 +105,7 @@ export function ExportPage() {
     setBibFormat(fmt);
     setBibLoading(true);
     setBibModalOpen(true);
+    setCopiedBib(false);
     try {
       const data = await api.exportBibliography({
         project_id: projectId,
@@ -116,23 +120,31 @@ export function ExportPage() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-6xl mx-auto font-['Work_Sans']">
+      {/* Header Section */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Export Project Data</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Export extracted data, verified extractions, analysis results, and research manuscripts
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#eee7ec] text-[#814d75] border border-[#d2c2cb] mb-3">
+          <FileSpreadsheet className="w-3.5 h-3.5" />
+          <span>DISSEMINATION & REPORTING</span>
+        </div>
+        <h1 className="font-['Serifon_Editorial'] text-3xl font-bold text-[#3a0f34] tracking-tight">
+          Export Project Data
+        </h1>
+        <p className="font-['QuadraatSmallCaps'] text-sm text-[#62535d] mt-1.5 leading-relaxed max-w-2xl">
+          Export extracted clinical datasets, verified PICO variables, pooled meta-analysis metrics, and publication-ready PRISMA manuscripts.
         </p>
       </div>
 
+      {/* Primary Data Exports Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* CSV Export */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+        <div className="bg-[#ffffff] p-6 rounded-2xl border border-[#d2c2cb] shadow-xs flex flex-col justify-between hover:border-[#814d75]/50 transition-all">
           <div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 mb-4">
-              <Table className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-xl bg-[#eee7ec] border border-[#d2c2cb] flex items-center justify-center text-[#814d75] mb-4">
+              <Table className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900">CSV Export</h3>
-            <p className="text-xs text-slate-500 mt-2">
+            <h3 className="font-['Serifon_Editorial'] text-lg font-bold text-[#3a0f34]">CSV Export</h3>
+            <p className="font-['Work_Sans'] text-xs text-[#62535d] mt-2 leading-relaxed">
               Standard comma-separated format for statistical analysis in R, Python, Stata, or SPSS.
             </p>
           </div>
@@ -140,21 +152,27 @@ export function ExportPage() {
             <button
               onClick={() => handleDownload('csv', 'csv')}
               disabled={downloading === 'csv'}
-              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center justify-center gap-2 transition"
+              className="w-full py-2.5 px-4 rounded-xl bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              {downloading === 'csv' ? 'Exporting...' : <><Download className="w-4 h-4" /> Export Raw CSV</>}
+              {downloading === 'csv' ? (
+                'Exporting...'
+              ) : (
+                <>
+                  <Download className="w-4 h-4 text-[#ffdea6]" /> Export Raw CSV
+                </>
+              )}
             </button>
           </div>
         </div>
 
         {/* Excel Export */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+        <div className="bg-[#ffffff] p-6 rounded-2xl border border-[#d2c2cb] shadow-xs flex flex-col justify-between hover:border-[#814d75]/50 transition-all">
           <div>
-            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
-              <FileSpreadsheet className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-xl bg-[#eee7ec] border border-[#d2c2cb] flex items-center justify-center text-[#814d75] mb-4">
+              <FileSpreadsheet className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900">Excel Workbook</h3>
-            <p className="text-xs text-slate-500 mt-2">
+            <h3 className="font-['Serifon_Editorial'] text-lg font-bold text-[#3a0f34]">Excel Workbook</h3>
+            <p className="font-['Work_Sans'] text-xs text-[#62535d] mt-2 leading-relaxed">
               Formatted XLSX workbook containing studies, verified variables, and risk of bias scores.
             </p>
           </div>
@@ -162,21 +180,27 @@ export function ExportPage() {
             <button
               onClick={() => handleDownload('excel', 'excel')}
               disabled={downloading === 'excel'}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs flex items-center justify-center gap-2 transition"
+              className="w-full py-2.5 px-4 rounded-xl bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              {downloading === 'excel' ? 'Exporting...' : <><Download className="w-4 h-4" /> Export XLSX</>}
+              {downloading === 'excel' ? (
+                'Exporting...'
+              ) : (
+                <>
+                  <Download className="w-4 h-4 text-[#ffdea6]" /> Export XLSX
+                </>
+              )}
             </button>
           </div>
         </div>
 
         {/* JSON Export */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+        <div className="bg-[#ffffff] p-6 rounded-2xl border border-[#d2c2cb] shadow-xs flex flex-col justify-between hover:border-[#814d75]/50 transition-all">
           <div>
-            <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 mb-4">
-              <FileText className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-xl bg-[#eee7ec] border border-[#d2c2cb] flex items-center justify-center text-[#814d75] mb-4">
+              <FileText className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900">Structured JSON</h3>
-            <p className="text-xs text-slate-500 mt-2">
+            <h3 className="font-['Serifon_Editorial'] text-lg font-bold text-[#3a0f34]">Structured JSON</h3>
+            <p className="font-['Work_Sans'] text-xs text-[#62535d] mt-2 leading-relaxed">
               Complete data payload with schema metadata, character-level PDF bounding coordinates, and confidence.
             </p>
           </div>
@@ -184,77 +208,108 @@ export function ExportPage() {
             <button
               onClick={() => handleDownload('json', 'json')}
               disabled={downloading === 'json'}
-              className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center justify-center gap-2 transition"
+              className="w-full py-2.5 px-4 rounded-xl bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              {downloading === 'json' ? 'Exporting...' : <><Download className="w-4 h-4" /> Export JSON</>}
+              {downloading === 'json' ? (
+                'Exporting...'
+              ) : (
+                <>
+                  <Download className="w-4 h-4 text-[#ffdea6]" /> Export JSON
+                </>
+              )}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Scientific Agent Exports */}
+      {/* Scientific Agent & Synthesis Exports */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 font-bold">
-              ✍️
+        {/* Manuscript Drafter Card */}
+        <div className="bg-[#ffffff] p-6 rounded-2xl border border-[#d2c2cb] shadow-xs hover:border-[#814d75]/50 transition-all flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-[#eee7ec] border border-[#d2c2cb] flex items-center justify-center text-[#814d75]">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-['Serifon_Editorial'] text-base font-bold text-[#3a0f34]">
+                  Manuscript Drafter (PRISMA Evidence-Bound)
+                </h3>
+                <p className="font-['Work_Sans'] text-xs text-[#62535d]">
+                  Auto-generate Methods and Results manuscript sections
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-slate-900">Manuscript Drafter (PRISMA Evidence-Bound)</h3>
-              <p className="text-xs text-slate-500">Auto-generate Methods and Results manuscript sections</p>
-            </div>
+            <p className="font-['QuadraatSmallCaps'] text-xs text-[#62535d] mt-2 leading-relaxed">
+              Synthesizes pooled effect estimates, heterogeneity indices, and risk of bias judgments directly into publication-ready prose.
+            </p>
           </div>
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-5">
             <button
               onClick={() => handleDraftManuscript('methods')}
-              className="flex-1 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition"
+              className="flex-1 py-2 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#ffffff] border border-[#d2c2cb] text-[#3a0f34] hover:bg-[#eee7ec] transition-all cursor-pointer"
             >
               Draft Methods
             </button>
             <button
               onClick={() => handleDraftManuscript('results')}
-              className="flex-1 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition"
+              className="flex-1 py-2 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#ffffff] border border-[#d2c2cb] text-[#3a0f34] hover:bg-[#eee7ec] transition-all cursor-pointer"
             >
               Draft Results
             </button>
             <button
               onClick={() => handleDraftManuscript('all')}
-              className="flex-1 py-2 text-xs font-semibold rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition"
+              className="flex-1 py-2 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              Draft All
+              <Sparkles className="w-3 h-3 text-[#ffdea6]" />
+              <span>Draft All</span>
             </button>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-              📚
+        {/* Bibliography & Reference Export Card */}
+        <div className="bg-[#ffffff] p-6 rounded-2xl border border-[#d2c2cb] shadow-xs hover:border-[#814d75]/50 transition-all flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-[#eee7ec] border border-[#d2c2cb] flex items-center justify-center text-[#814d75]">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-['Serifon_Editorial'] text-base font-bold text-[#3a0f34]">
+                  Bibliography & Reference Export
+                </h3>
+                <p className="font-['Work_Sans'] text-xs text-[#62535d]">
+                  Export verified BibTeX, RIS, or APA formatted citations
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-slate-900">Bibliography & Reference Export</h3>
-              <p className="text-xs text-slate-500">Export verified BibTeX, RIS, or APA formatted citations</p>
-            </div>
+            <p className="font-['QuadraatSmallCaps'] text-xs text-[#62535d] mt-2 leading-relaxed">
+              BibTeX downloads only studies currently marked Included. Abstract-only inclusions, pending, and excluded studies are omitted.
+            </p>
+            {referenceError && (
+              <p role="alert" className="mt-2 text-xs font-medium text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                {referenceError} Please retry the download after resolving the issue.
+              </p>
+            )}
           </div>
-          <p className="text-xs text-slate-500 mt-2">BibTeX downloads only studies currently marked Included. Abstract-only inclusions, pending and excluded studies are omitted.</p>
-          {referenceError && <p role="alert" className="mt-2 text-sm text-red-600">{referenceError} Please retry the download after resolving the issue.</p>}
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-5">
             <button
               onClick={handleIncludedBibtex}
               disabled={downloading === 'bibtex'}
-              className="flex-1 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+              className="flex-1 py-2 px-3 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              {downloading === 'bibtex' ? 'Exporting…' : 'Download included studies (.bib)'}
+              <Download className="w-3.5 h-3.5 text-[#ffdea6]" />
+              <span>{downloading === 'bibtex' ? 'Exporting…' : 'Download included studies (.bib)'}</span>
             </button>
             <button
               onClick={() => handleExportBibliography('ris')}
-              className="flex-1 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+              className="flex-1 py-2 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#ffffff] border border-[#d2c2cb] text-[#3a0f34] hover:bg-[#eee7ec] transition-all cursor-pointer"
             >
               EndNote (RIS)
             </button>
             <button
               onClick={() => handleExportBibliography('apa')}
-              className="flex-1 py-2 text-xs font-semibold rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition"
+              className="flex-1 py-2 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#814d75] text-[#fbf9f4] hover:bg-[#66365c] transition-all shadow-xs cursor-pointer"
             >
               APA Reference List
             </button>
@@ -264,27 +319,43 @@ export function ExportPage() {
 
       {/* Manuscript Draft Modal */}
       {manuscriptOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 relative flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between border-b pb-4 mb-4">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                ✍️ Evidence-Bound Manuscript Draft
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl shadow-2xl max-w-4xl w-full p-6 relative flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between border-b border-[#d2c2cb] pb-4 mb-4">
+              <h3 className="font-['Serifon_Editorial'] text-lg font-bold text-[#3a0f34] flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[#814d75]" />
+                <span>Evidence-Bound Manuscript Draft</span>
               </h3>
-              <button onClick={() => setManuscriptOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">✕</button>
-            </div>
-
-            <div className="flex-1 overflow-auto bg-slate-50 p-4 rounded-xl border font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed">
-              {draftLoading ? "Drafting rigorous PRISMA 2020 compliant manuscript sections..." : manuscriptText}
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t mt-4">
               <button
-                onClick={() => navigator.clipboard.writeText(manuscriptText)}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700"
+                onClick={() => setManuscriptOpen(false)}
+                className="text-[#81737b] hover:text-[#3a0f34] p-1 rounded-md text-lg font-bold transition-colors cursor-pointer"
               >
-                Copy Markdown
+                ✕
               </button>
-              <button onClick={() => setManuscriptOpen(false)} className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Close</button>
+            </div>
+
+            <div className="flex-1 overflow-auto bg-[#fbf9f4] p-4 rounded-xl border border-[#d2c2cb] font-mono text-xs text-[#4f444b] whitespace-pre-wrap leading-relaxed shadow-inner">
+              {draftLoading ? "Drafting rigorous PRISMA 2020 compliant manuscript sections with Co-Scientist..." : manuscriptText}
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-[#d2c2cb] mt-4">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(manuscriptText);
+                  setCopiedDraft(true);
+                  setTimeout(() => setCopiedDraft(false), 2500);
+                }}
+                className="px-4 py-2 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                {copiedDraft ? <CheckCheck className="w-3.5 h-3.5 text-[#ffdea6]" /> : <Copy className="w-3.5 h-3.5 text-[#ffdea6]" />}
+                <span>{copiedDraft ? "Copied!" : "Copy Markdown"}</span>
+              </button>
+              <button
+                onClick={() => setManuscriptOpen(false)}
+                className="px-4 py-2 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#ffffff] border border-[#d2c2cb] text-[#3a0f34] hover:bg-[#eee7ec] transition-all cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -292,27 +363,43 @@ export function ExportPage() {
 
       {/* Bibliography Modal */}
       {bibModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 relative flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between border-b pb-4 mb-4">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                📚 Formatted Bibliography ({bibFormat.toUpperCase()})
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-2xl shadow-2xl max-w-4xl w-full p-6 relative flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between border-b border-[#d2c2cb] pb-4 mb-4">
+              <h3 className="font-['Serifon_Editorial'] text-lg font-bold text-[#3a0f34] flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-[#814d75]" />
+                <span>Formatted Bibliography ({bibFormat.toUpperCase()})</span>
               </h3>
-              <button onClick={() => setBibModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">✕</button>
+              <button
+                onClick={() => setBibModalOpen(false)}
+                className="text-[#81737b] hover:text-[#3a0f34] p-1 rounded-md text-lg font-bold transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="flex-1 overflow-auto bg-slate-50 p-4 rounded-xl border font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed">
+            <div className="flex-1 overflow-auto bg-[#fbf9f4] p-4 rounded-xl border border-[#d2c2cb] font-mono text-xs text-[#4f444b] whitespace-pre-wrap leading-relaxed shadow-inner">
               {bibLoading ? "Compiling verified study citations..." : bibText}
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t mt-4">
+            <div className="flex items-center justify-between pt-4 border-t border-[#d2c2cb] mt-4">
               <button
-                onClick={() => navigator.clipboard.writeText(bibText)}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+                onClick={() => {
+                  navigator.clipboard.writeText(bibText);
+                  setCopiedBib(true);
+                  setTimeout(() => setCopiedBib(false), 2500);
+                }}
+                className="px-4 py-2 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                Copy Citations
+                {copiedBib ? <CheckCheck className="w-3.5 h-3.5 text-[#ffdea6]" /> : <Copy className="w-3.5 h-3.5 text-[#ffdea6]" />}
+                <span>{copiedBib ? "Copied!" : "Copy Citations"}</span>
               </button>
-              <button onClick={() => setBibModalOpen(false)} className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Close</button>
+              <button
+                onClick={() => setBibModalOpen(false)}
+                className="px-4 py-2 text-xs font-['Work_Sans'] font-semibold rounded-lg bg-[#ffffff] border border-[#d2c2cb] text-[#3a0f34] hover:bg-[#eee7ec] transition-all cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
