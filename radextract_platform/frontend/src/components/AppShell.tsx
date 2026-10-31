@@ -6,6 +6,7 @@ import {
   Folder,
   CheckSquare,
   FileSpreadsheet,
+  FileCheck,
   ShieldCheck,
   Award,
   BarChart3,
@@ -18,6 +19,7 @@ import {
   CheckCircle2,
   Circle,
   FileText,
+  Highlighter,
   LineChart,
   ArrowRight,
   ArrowLeft,
@@ -64,14 +66,26 @@ const SHELL_NAV_ITEMS: NavItemDef[] = [
   },
   {
     to: (pid) => (pid ? `/projects/${pid}/screening` : "/projects"),
-    matchPattern: /\/screening/,
-    label: "Screening",
+    matchPattern: /\/screening(\/abstract)?$/,
+    label: "Abstract Screening",
     icon: CheckSquare,
+  },
+  {
+    to: (pid) => (pid ? `/projects/${pid}/full-text-screening` : "/projects"),
+    matchPattern: /\/(full-text-screening|fulltext-screening|screening\/fulltext)/,
+    label: "Full-Text Screening",
+    icon: FileCheck,
+  },
+  {
+    to: (pid) => (pid ? `/projects/${pid}/extraction-pdf` : "/projects"),
+    matchPattern: /\/(extraction-pdf|pdf-workspace|studies\/[^/]+\/pdf)/,
+    label: "PDF Extraction",
+    icon: Highlighter,
   },
   {
     to: (pid) => (pid ? `/projects/${pid}/extraction-sheet` : "/projects"),
     matchPattern: /\/extraction(-sheet)?/,
-    label: "Extraction",
+    label: "Extraction Sheet",
     icon: FileSpreadsheet,
   },
   {
@@ -102,9 +116,10 @@ const SHELL_NAV_ITEMS: NavItemDef[] = [
 
 function getStageName(pathname: string): string {
   if (pathname.includes("/studies") || pathname.includes("/deduplicate")) return "Studies & Deduplication";
-  if (pathname.includes("/screening")) return "Eligibility Screening";
-  if (pathname.includes("/studies") && pathname.includes("/pdf")) return "PDF Extraction";
-  if (pathname.includes("/extraction") && pathname.split("/extraction/")[1]) return "PDF Extraction";
+  if (pathname.includes("/full-text-screening") || pathname.includes("/fulltext-screening") || pathname.includes("/screening/fulltext")) return "Full-Text Screening";
+  if (pathname.includes("/screening")) return "Abstract Screening";
+  if (pathname.includes("/studies") && pathname.includes("/pdf")) return "PDF Extraction Workspace";
+  if (pathname.includes("/extraction-pdf") || pathname.includes("/pdf-workspace")) return "PDF Extraction Workspace";
   if (pathname.includes("/extraction-sheet") || pathname.includes("/extraction")) return "Extraction Sheet";
   if (pathname.includes("/rob")) return "Risk of Bias";
   if (pathname.includes("/grade")) return "GRADE Evidence";
@@ -390,8 +405,10 @@ export function AppShell() {
   const stageOrder = [
     { label: "Overview", path: projectId ? `/projects/${projectId}` : "/projects" },
     { label: "Deduplication", path: projectId ? `/projects/${projectId}/studies` : "/projects" },
-    { label: "Screening", path: projectId ? `/projects/${projectId}/screening` : "/projects" },
-    { label: "Extraction", path: projectId ? `/projects/${projectId}/extraction-sheet` : "/projects" },
+    { label: "Abstract Screening", path: projectId ? `/projects/${projectId}/screening` : "/projects" },
+    { label: "Full-Text Screening", path: projectId ? `/projects/${projectId}/full-text-screening` : "/projects" },
+    { label: "PDF Extraction", path: projectId ? `/projects/${projectId}/extraction-pdf` : "/projects" },
+    { label: "Extraction Sheet", path: projectId ? `/projects/${projectId}/extraction-sheet` : "/projects" },
     { label: "Risk of Bias", path: projectId ? `/projects/${projectId}/rob` : "/projects" },
     { label: "Synthesis", path: projectId ? `/projects/${projectId}/meta-analysis` : "/projects" },
     { label: "GRADE", path: projectId ? `/projects/${projectId}/grade` : "/projects" },
@@ -400,9 +417,11 @@ export function AppShell() {
 
   const currentStageIndex = stageOrder.findIndex((s) => {
     if (s.path === location.pathname) return true;
-    if (location.pathname.includes("/studies") && s.path.includes("/studies")) return true;
-    if (location.pathname.includes("/screening") && s.path.includes("/screening")) return true;
-    if (location.pathname.includes("/extraction") && s.path.includes("/extraction")) return true;
+    if (location.pathname.includes("/studies") && !location.pathname.includes("/pdf") && s.path.includes("/studies")) return true;
+    if ((location.pathname.includes("/full-text-screening") || location.pathname.includes("/fulltext-screening") || location.pathname.includes("/screening/fulltext")) && s.path.includes("/full-text-screening")) return true;
+    if (location.pathname.includes("/screening") && s.path.includes("/screening") && !location.pathname.includes("fulltext") && !location.pathname.includes("full-text")) return true;
+    if ((location.pathname.includes("/extraction-pdf") || location.pathname.includes("/pdf-workspace") || (location.pathname.includes("/studies") && location.pathname.includes("/pdf"))) && s.path.includes("/extraction-pdf")) return true;
+    if ((location.pathname.includes("/extraction-sheet") || location.pathname.includes("/extraction")) && s.path.includes("/extraction-sheet")) return true;
     if (location.pathname.includes("/rob") && s.path.includes("/rob")) return true;
     if ((location.pathname.includes("/meta-analysis") || location.pathname.includes("/analysis")) && s.path.includes("/meta-analysis")) return true;
     if (location.pathname.includes("/grade") && s.path.includes("/grade")) return true;
@@ -957,7 +976,7 @@ export function AppShell() {
 
                   {/* Step 3: Full-Text Eligibility */}
                   <div
-                    onClick={() => projectId && navigate(`/projects/${projectId}/screening?stage=ft`)}
+                    onClick={() => projectId && navigate(`/projects/${projectId}/full-text-screening`)}
                     className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -967,7 +986,7 @@ export function AppShell() {
                         <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
                       )}
                       <div className="truncate">
-                        <div className="font-semibold text-[#4f444b] truncate">Full-Text Assessment</div>
+                        <div className="font-semibold text-[#4f444b] truncate">Full-Text Screening</div>
                         <div className="text-[11px] text-[#62535d]">
                           {`${includedCount} studies included`}
                         </div>
@@ -990,14 +1009,35 @@ export function AppShell() {
                           ) : (
                             <Play className="w-2.5 h-2.5 fill-[#3a0f34] text-[#3a0f34]" />
                           )}
-                          <span>Advance Full-Text &rarr;</span>
+                          <span>Run Full-Text &rarr;</span>
                         </button>
                       )}
                       <ArrowRight className="h-3.5 w-3.5 text-[#81737b]" />
                     </div>
                   </div>
 
-                  {/* Step 4: Data Extraction */}
+                  {/* Step 4: PDF Workspace for Data Extraction */}
+                  <div
+                    onClick={() => projectId && navigate(`/projects/${projectId}/extraction-pdf`)}
+                    className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {extractedCount > 0 ? (
+                        <CheckCircle2 className="h-4 w-4 text-[#7c5800] shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <div className="font-semibold text-[#4f444b] truncate">PDF Extraction Workspace</div>
+                        <div className="text-[11px] text-[#62535d]">
+                          Line-by-line quote and PDF bbox extraction
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-3.5 w-3.5 text-[#81737b]" />
+                  </div>
+
+                  {/* Step 5: Extracted Data Matrix (Excel Workspace) */}
                   <div
                     onClick={() => projectId && navigate(`/projects/${projectId}/extraction-sheet`)}
                     className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
@@ -1009,7 +1049,7 @@ export function AppShell() {
                         <Circle className="h-4 w-4 text-[#81737b] shrink-0" />
                       )}
                       <div className="truncate">
-                        <div className="font-semibold text-[#4f444b] truncate">Extraction Sheet</div>
+                        <div className="font-semibold text-[#4f444b] truncate">Extraction Sheet (Excel)</div>
                         <div className="text-[11px] text-[#62535d]">
                           {extractedCount} studies with verified values
                         </div>

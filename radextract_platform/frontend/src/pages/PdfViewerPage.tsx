@@ -952,10 +952,11 @@ export function PdfViewerPage() {
       <header className="bg-[#fbf9f4] border-b border-[#d2c2cb] px-5 py-2.5 shrink-0 flex items-center justify-between z-30">
         <div className="flex items-center gap-3">
           <Link
-            to={`/projects/${projectId}/studies`}
+            to={`/projects/${projectId}/full-text-screening`}
             className="text-xs font-semibold text-[#3a0f34] hover:text-[#1a0017] flex items-center gap-1.5 bg-[#ffffff] hover:bg-[#eee7ec] px-3 py-1.5 rounded border border-[#d2c2cb] transition-colors"
+            title="Return to Full-Text Screening"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to Studies
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to Full-Text Screening
           </Link>
           <div className="h-4 w-px bg-[#d2c2cb]" />
 
@@ -1042,11 +1043,12 @@ export function PdfViewerPage() {
 
           <Link
             to={`/projects/${projectId}/extraction-sheet?study=${selectedPaperId}`}
-            className="px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-1.5 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] transition-colors"
-            title="Open full dedicated Extraction Sheet page with multi-study matrix"
+            className="px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] transition-colors shadow-xs"
+            title="Open full dedicated Extracted Data Matrix (Excel Workspace)"
           >
-            <ExternalLink className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Full-Page Matrix</span>
+            <FileSpreadsheet className="h-3.5 w-3.5 text-[#ffdea6]" />
+            <span className="hidden sm:inline">Extraction Matrix (Excel)</span>
+            <ArrowRight className="h-3 w-3" />
           </Link>
 
           {/* Toggle Protocol Rules Panel Button */}

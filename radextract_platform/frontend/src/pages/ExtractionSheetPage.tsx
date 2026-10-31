@@ -931,10 +931,11 @@ export function ExtractionSheetPage() {
       <header className="bg-[#fbf9f4] text-[#4f444b] px-5 py-2.5 shrink-0 flex items-center justify-between border-b border-[#d2c2cb] z-30">
         <div className="flex items-center gap-3">
           <Link
-            to={`/projects/${projectId}/studies`}
+            to={`/projects/${projectId}/extraction-pdf`}
             className="text-xs font-semibold text-[#3a0f34] hover:text-[#1a0017] flex items-center gap-1.5 bg-[#ffffff] hover:bg-[#eee7ec] px-3 py-1.5 rounded border border-[#d2c2cb] transition-colors"
+            title="Return to PDF Extraction Workspace"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to Studies
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to PDF Workspace
           </Link>
 
           <div className="h-4 w-px bg-[#d2c2cb]" />
@@ -1059,6 +1060,16 @@ export function ExtractionSheetPage() {
             )}
             <span>Run AI Batch Extraction</span>
           </button>
+
+          {/* Advance to Risk of Bias */}
+          <Link
+            to={`/projects/${projectId}/rob`}
+            className="px-3.5 py-1.5 text-xs font-['Work_Sans'] font-bold rounded bg-[#814d75] hover:bg-[#66365c] text-[#fbf9f4] transition-all flex items-center gap-1.5 shadow-xs"
+            title="Advance to Risk of Bias assessment stage"
+          >
+            <span>Advance to Risk of Bias</span>
+            <ArrowRight className="h-3.5 w-3.5 text-[#ffdea6]" />
+          </Link>
         </div>
       </header>
 

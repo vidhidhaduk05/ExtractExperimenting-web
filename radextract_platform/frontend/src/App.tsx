@@ -13,6 +13,7 @@ import { ExportPage } from "./pages/ExportPage";
 import { PrismaFlowPage } from "./pages/PrismaFlowPage";
 import { PdfViewerPage } from "./pages/PdfViewerPage";
 import { ExtractionSheetPage } from "./pages/ExtractionSheetPage";
+import { FullTextScreeningPage } from "./pages/FullTextScreeningPage";
 import { MetaAnalysisPage } from "./pages/MetaAnalysisPage";
 import { GradePage } from "./pages/GradePage";
 import { PicoHypothesisPage } from "./pages/PicoHypothesisPage";
@@ -22,7 +23,6 @@ import { ReviewGraphPage } from "./pages/ReviewGraphPage";
 import { ClaimscapePage } from "./pages/ClaimscapePage";
 import { CitationTelephonePage } from "./pages/CitationTelephonePage";
 import { RigorScanPage } from "./pages/RigorScanPage";
-import { EvidenceMapPage } from "./pages/EvidenceMapPage";
 import { LandingPage } from "./pages/LandingPage";
 
 export default function App() {
@@ -48,19 +48,24 @@ export default function App() {
         <Route path="/projects/:projectId/dedup" element={<StudyList />} />
         <Route path="/projects/:projectId/bookmarks" element={<StudyList bookmarkedOnly />} />
         <Route path="/projects/:projectId/studies/new" element={<StudyImport />} />
+        <Route path="/projects/:projectId/screening" element={<ScreeningPage />} />
+        <Route path="/projects/:projectId/screening/abstract" element={<ScreeningPage />} />
+        <Route path="/projects/:projectId/screening/fulltext" element={<FullTextScreeningPage />} />
+        <Route path="/projects/:projectId/full-text-screening" element={<FullTextScreeningPage />} />
+        <Route path="/projects/:projectId/fulltext-screening" element={<FullTextScreeningPage />} />
+        <Route path="/projects/:projectId/extraction-pdf" element={<PdfViewerPage />} />
+        <Route path="/projects/:projectId/pdf-workspace" element={<PdfViewerPage />} />
         <Route path="/projects/:projectId/studies/:studyId/pdf" element={<PdfViewerPage />} />
         <Route path="/projects/:projectId/studies/:studyId/sheet" element={<ExtractionSheetPage />} />
         <Route path="/projects/:projectId/extraction" element={<ExtractionSheetPage />} />
         <Route path="/projects/:projectId/extraction/:studyId" element={<PdfViewerPage />} />
         <Route path="/projects/:projectId/extraction-sheet" element={<ExtractionSheetPage />} />
         <Route path="/projects/:projectId/extraction-sheet/:studyId" element={<ExtractionSheetPage />} />
-        <Route path="/projects/:projectId/screening" element={<ScreeningPage />} />
         <Route path="/projects/:projectId/prisma" element={<PrismaFlowPage />} />
         <Route path="/projects/:projectId/rob" element={<RobSummaryPage />} />
         <Route path="/projects/:projectId/rob/:assessmentId" element={<RobAssessmentPage />} />
         <Route path="/projects/:projectId/review" element={<ReviewPage />} />
         <Route path="/projects/:projectId/meta-analysis" element={<MetaAnalysisPage />} />
-        <Route path="/projects/:projectId/evidence-map" element={<EvidenceMapPage />} />
         <Route path="/projects/:projectId/analysis" element={<AnalysisPage />} />
         <Route path="/projects/:projectId/graph/code" element={<CodeGraphPage />} />
         <Route path="/projects/:projectId/graph/review" element={<ReviewGraphPage />} />
