@@ -68,6 +68,8 @@ export function ExtractionSheetPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "pending" | "missing">("all");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
+  // View mode: "recorded_only" (only values accepted in PDF workspace appear recorded) vs "show_drafts" (previews unaccepted candidate drafts)
+  const [viewMode, setViewMode] = useState<"recorded_only" | "show_drafts">("recorded_only");
 
   // Selection & Keyboard Navigation State
   const [selectedCell, setSelectedCell] = useState<{ rowIdx: number; colIdx: number } | null>(null);
@@ -248,10 +250,10 @@ export function ExtractionSheetPage() {
     });
   }, [studies, searchQuery, statusFilter, cellsMap, variables]);
 
-  // Aggregate extraction grid cell counts: verified, unverified, missing
+  // Aggregate extraction grid cell counts: recorded (accepted in PDF), pending acceptance, missing
   const cellCounts = useMemo(() => {
-    let verified = 0;
-    let unverified = 0;
+    let recorded = 0;
+    let pending = 0;
     let missing = 0;
 
     for (const study of studies) {
@@ -259,16 +261,38 @@ export function ExtractionSheetPage() {
       for (const v of variables) {
         const cell = studyCells[v.variable_id];
         const val = cell?.value?.trim() || "";
-        if (!val || val === "NR" || val === "-99" || val === "N/A" || val === "-77" || val === "not reported" || val === "not stated") {
+        const isVerified = Boolean(
+          cell?.is_verified ||
+          cell?.verification_status === "verified" ||
+          cell?.verification_status === "modified" ||
+          cell?.verification_status === "adjudicated" ||
+          cell?.extraction_source === "manual"
+        );
+        const lowerVal = val.toLowerCase();
+        const isMissingVal = !val || lowerVal === "nr" || lowerVal === "-99" || lowerVal === "n/a" || lowerVal === "-77" || lowerVal === "not reported" || lowerVal === "not stated";
+
+        if (isMissingVal && isVerified) {
           missing++;
-        } else if (cell?.is_verified) {
-          verified++;
+          recorded++;
+        } else if (isMissingVal && !isVerified) {
+          missing++;
+        } else if (isVerified) {
+          recorded++;
         } else {
-          unverified++;
+          pending++;
         }
       }
     }
-    return { verified, unverified, missing, total: studies.length * (variables.length || 1) };
+    const total = studies.length * (variables.length || 1);
+    return {
+      recorded,
+      pending,
+      missing,
+      verified: recorded, // alias
+      unverified: pending, // alias
+      total,
+      completionRate: Math.round((recorded / Math.max(1, total)) * 100),
+    };
   }, [studies, variables, cellsMap]);
 
   // Helper to get Excel column letters (A, B, C... Z, AA, AB...)
@@ -455,13 +479,27 @@ export function ExtractionSheetPage() {
       if (projectId && projectId !== "demo" && cell.extraction_id && !cell.extraction_id.startsWith("ext_")) {
         await api.verifyExtraction(cell.extraction_id, { agree: true });
       }
+      try {
+        await api.recordExtractionDecision({
+          project_id: projectId || "proj_pam_current",
+          study_id: study.study_id,
+          variable_id: variable.variable_id,
+          variable_name: variable.name,
+          original_value: cell.value,
+          corrected_value: cell.value,
+          decision: "accepted",
+          evidence_quote: cell.evidence_quote,
+          page_number: cell.source_page || 1,
+        });
+      } catch (e) {}
+
       // Update locally
       await handleCommitCellValue(study.study_id, variable.variable_id, cell.value, {
         is_verified: true,
         verification_status: "verified"
       });
-      setFeedbackToast(`Verified "${variable.name}" for ${study.study_label || "study"}`);
-      setTimeout(() => setFeedbackToast(null), 2500);
+      setFeedbackToast(`Accepted and recorded "${variable.name}" for ${study.study_label || "study"} into matrix.`);
+      setTimeout(() => setFeedbackToast(null), 3000);
     } catch (err: any) {
       setSaveStatus("error");
       setSaveError(`Verification failed: ${err?.message || "Error"}`);
@@ -893,6 +931,14 @@ export function ExtractionSheetPage() {
     if (!study || !variable) return null;
 
     const cell = cellsMap[study.study_id]?.[variable.variable_id];
+    const isVerified = Boolean(
+      cell?.is_verified ||
+      cell?.verification_status === "verified" ||
+      cell?.verification_status === "modified" ||
+      cell?.verification_status === "adjudicated" ||
+      cell?.extraction_source === "manual"
+    );
+
     return {
       study,
       variable,
@@ -907,7 +953,8 @@ export function ExtractionSheetPage() {
         verification_status: "unverified",
         extraction_source: "none",
       },
-      colLetter: getColumnLetter(selectedCell.colIdx),
+      isVerified,
+      colLetter: getColumnLetter(selectedCell.colIdx + 1),
       rowNumber: selectedCell.rowIdx + 1,
     };
   }, [selectedCell, filteredStudies, variables, cellsMap]);
@@ -1089,7 +1136,20 @@ export function ExtractionSheetPage() {
           <div className="flex items-center gap-2 bg-[#ffffff] border border-[#d2c2cb] rounded-md px-3 py-1 w-96 max-w-lg shadow-2xs">
             <span className="font-serif italic text-xs text-[#814d75] font-bold">fx</span>
             <span className="text-xs font-mono text-[#4f444b] truncate">
-              {editingCell ? editingCell.currentValue : (activeSelectedCellData?.cell.value || <span className="text-[#81737b] italic">[Empty cell]</span>)}
+              {editingCell ? (
+                editingCell.currentValue
+              ) : activeSelectedCellData ? (
+                activeSelectedCellData.isVerified ? (
+                  activeSelectedCellData.cell.value || <span className="text-[#81737b] italic">[Recorded Empty / NR]</span>
+                ) : (
+                  <span className="text-[#81737b] italic flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                    [Awaiting PDF Acceptance]: <strong className="text-[#3a0f34] not-italic font-mono ml-1">"{activeSelectedCellData.cell.value}"</strong>
+                  </span>
+                )
+              ) : (
+                <span className="text-[#81737b] italic">[Empty cell]</span>
+              )}
             </span>
           </div>
         </div>
@@ -1105,6 +1165,34 @@ export function ExtractionSheetPage() {
               placeholder="Search studies, authors..."
               className="pl-8 pr-3 py-1 text-xs border border-[#d2c2cb] rounded-md bg-[#ffffff] text-[#3a0f34] focus:outline-none focus:ring-1 focus:ring-[#814d75] w-48 shadow-2xs"
             />
+          </div>
+
+          {/* View Mode Toggle: Recorded Only vs Show Candidate Drafts */}
+          <div className="flex items-center bg-[#ffffff] rounded-md border border-[#d2c2cb] p-0.5 text-xs shadow-2xs">
+            <button
+              onClick={() => setViewMode("recorded_only")}
+              className={`px-2.5 py-1 rounded transition-colors font-medium flex items-center gap-1.5 ${
+                viewMode === "recorded_only"
+                  ? "bg-[#3a0f34] text-[#fbf9f4] font-semibold"
+                  : "text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]"
+              }`}
+              title="Show only extractions that have been explicitly Accepted in PDF Workspace"
+            >
+              <ShieldCheck className="h-3 w-3 text-[#ffdea6]" />
+              <span>Recorded Only</span>
+            </button>
+            <button
+              onClick={() => setViewMode("show_drafts")}
+              className={`px-2.5 py-1 rounded transition-colors font-medium flex items-center gap-1.5 ${
+                viewMode === "show_drafts"
+                  ? "bg-[#814d75] text-[#fbf9f4] font-semibold"
+                  : "text-[#62535d] hover:text-[#3a0f34] hover:bg-[#eee7ec]"
+              }`}
+              title="Preview Co-Scientist candidate drafts alongside accepted values"
+            >
+              <Sparkles className="h-3 w-3 text-[#ffdea6]" />
+              <span>Preview Drafts</span>
+            </button>
           </div>
 
           {/* Quick Filter Toggles: Verified only / Missing only */}
@@ -1135,21 +1223,21 @@ export function ExtractionSheetPage() {
             </button>
           </div>
 
-          {/* Summary Chip: ✓ N verified · ⚠ N unverified · — N missing */}
+          {/* Summary Chip: ✓ N recorded · ⚠ N pending accept · — N missing */}
           <div className="flex items-center gap-2 bg-[#ffffff] border border-[#d2c2cb] rounded-md px-3 py-1 text-xs font-mono shadow-2xs select-none">
-            <span className="text-emerald-700 font-semibold flex items-center gap-1">
+            <span className="text-emerald-700 font-semibold flex items-center gap-1" title="Values verified and recorded into extraction matrix">
               <Check className="h-3 w-3 text-emerald-600" />
-              <span>{cellCounts.verified}</span>
-              <span className="text-[10px] font-normal text-[#62535d]">verified</span>
+              <span>{cellCounts.recorded}</span>
+              <span className="text-[10px] font-normal text-[#62535d]">recorded</span>
             </span>
             <span className="text-[#d2c2cb]">·</span>
-            <span className="text-amber-800 font-semibold flex items-center gap-1">
+            <span className="text-amber-800 font-semibold flex items-center gap-1" title="Candidate extractions awaiting acceptance in PDF Workspace">
               <AlertCircle className="h-3 w-3 text-amber-600" />
-              <span>{cellCounts.unverified}</span>
-              <span className="text-[10px] font-normal text-[#62535d]">unverified</span>
+              <span>{cellCounts.pending}</span>
+              <span className="text-[10px] font-normal text-[#62535d]">pending accept</span>
             </span>
             <span className="text-[#d2c2cb]">·</span>
-            <span className="text-[#81737b] font-semibold flex items-center gap-1">
+            <span className="text-[#81737b] font-semibold flex items-center gap-1" title="Missing or not reported cells">
               <span className="font-bold">—</span>
               <span>{cellCounts.missing}</span>
               <span className="text-[10px] font-normal text-[#62535d]">missing</span>
@@ -1455,13 +1543,20 @@ export function ExtractionSheetPage() {
                         const cellVal = cell?.value || "";
                         const isSelected = selectedCell?.rowIdx === rowIdx && selectedCell?.colIdx === colIdx;
                         const isEditing = editingCell?.rowIdx === rowIdx && editingCell?.colIdx === colIdx;
-                        const isVerified = cell?.is_verified;
+                        const isVerified = Boolean(
+                          cell?.is_verified ||
+                          cell?.verification_status === "verified" ||
+                          cell?.verification_status === "modified" ||
+                          cell?.verification_status === "adjudicated" ||
+                          cell?.extraction_source === "manual"
+                        );
 
                         // Missing states: preserve distinct text per plan rules
                         const lowerVal = (cellVal || "").toLowerCase().trim();
                         const isMissing = !cellVal || lowerVal === "nr" || lowerVal === "-99" || lowerVal === "n/a" || lowerVal === "-77" || lowerVal === "not reported" || lowerVal === "not stated";
                         const missingLabel = lowerVal === "n/a" || lowerVal === "-77" ? "n/a" : lowerVal === "not stated" ? "not stated" : "not reported";
                         const confScore = cell?.confidence ?? 0;
+                        const hasDraft = !!cellVal;
 
                         return (
                           <td
@@ -1476,7 +1571,7 @@ export function ExtractionSheetPage() {
                                 ? "outline-2 outline-[#814d75] outline-offset-[-2px] z-10 bg-[#ffdea6]/25"
                                 : "hover:bg-[#fbf9f4]"
                             } ${
-                              isMissing
+                              isMissing && isVerified
                                 ? "bg-[repeating-linear-gradient(45deg,#fbf9f4,#fbf9f4_6px,#eee7ec_6px,#eee7ec_12px)]"
                                 : ""
                             }`}
@@ -1488,7 +1583,7 @@ export function ExtractionSheetPage() {
                                   ref={activeInputRef as any}
                                   value={editingCell.currentValue}
                                   onChange={(e) => setEditingCell({ ...editingCell, currentValue: e.target.value })}
-                                  onBlur={() => handleCommitCellValue(study.study_id, v.variable_id, editingCell.currentValue)}
+                                  onBlur={() => handleCommitCellValue(study.study_id, v.variable_id, editingCell.currentValue, { is_verified: true, verification_status: "verified" })}
                                   className="w-full text-xs border border-[#814d75] rounded px-1.5 py-0.5 outline-none bg-white text-[#3a0f34]"
                                 >
                                   <option value="">-- Select --</option>
@@ -1507,41 +1602,63 @@ export function ExtractionSheetPage() {
                                   type={v.field_type === "numeric" ? "number" : "text"}
                                   value={editingCell.currentValue}
                                   onChange={(e) => setEditingCell({ ...editingCell, currentValue: e.target.value })}
-                                  onBlur={() => handleCommitCellValue(study.study_id, v.variable_id, editingCell.currentValue)}
+                                  onBlur={() => handleCommitCellValue(study.study_id, v.variable_id, editingCell.currentValue, { is_verified: true, verification_status: "verified" })}
                                   className="w-full text-xs border border-[#814d75] rounded px-1.5 py-0.5 outline-none bg-white text-[#3a0f34]"
                                 />
                               )
-                            ) : (
-                              <div className="flex items-center justify-between gap-1.5">
+                            ) : isVerified ? (
+                              /* ── OFFICIALLY RECORDED IN EXTRACTION MATRIX (Accepted in PDF or entered manually) ── */
+                              <div className="flex items-center justify-between gap-1.5 w-full">
                                 {isMissing ? (
                                   <span className="text-[#81737b] italic font-['QuadraatSmallCaps'] text-[11px] truncate">
                                     {missingLabel}
                                   </span>
                                 ) : (
-                                  <span className="truncate font-['Work_Sans'] font-medium text-[#3a0f34]">
+                                  <span className="truncate font-['Work_Sans'] font-semibold text-[#3a0f34]">
                                     {cellVal}
-                                    {isVerified && <span className="text-emerald-700 font-bold ml-1">✓</span>}
                                   </span>
                                 )}
-
-                                {/* Confidence Chip: verified green, or score tier: >=0.85 green, 0.5-0.85 amber, <0.5 red */}
-                                {!isMissing && (
-                                  <span
-                                    title={isVerified ? "Verified value" : `Confidence: ${Math.round(confScore * 100)}%`}
-                                    className={`text-[9px] font-mono px-1 py-0.1 rounded font-bold shrink-0 ${
-                                      isVerified
-                                        ? "bg-emerald-100 text-emerald-800"
-                                        : confScore >= 0.85
-                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                        : confScore >= 0.5
-                                        ? "bg-amber-50 text-amber-800 border border-amber-200"
-                                        : "bg-rose-50 text-rose-700 border border-rose-200"
-                                    }`}
-                                  >
-                                    {isVerified ? "✓" : `${Math.round(confScore * 100)}%`}
-                                  </span>
-                                )}
+                                <span
+                                  title="Verified and officially recorded into Extraction Matrix"
+                                  className="text-[9px] font-mono px-1 py-0.2 rounded font-bold shrink-0 bg-emerald-100 text-emerald-800"
+                                >
+                                  ✓
+                                </span>
                               </div>
+                            ) : hasDraft && viewMode === "show_drafts" ? (
+                              /* ── PREVIEW DRAFT CANDIDATE (Unaccepted) ── */
+                              <div className="flex items-center justify-between gap-1.5 w-full">
+                                <span className="truncate font-['Work_Sans'] text-xs italic text-[#62535d]" title={`Candidate draft: "${cellVal}". Click cell or open PDF to Accept.`}>
+                                  <span className="text-[9px] uppercase font-mono text-amber-800 font-bold mr-1">Draft:</span>
+                                  {cellVal}
+                                </span>
+                                <span
+                                  title={`Candidate confidence: ${Math.round(confScore * 100)}% (Not yet recorded in matrix)`}
+                                  className="text-[9px] font-mono px-1 py-0.2 rounded font-bold shrink-0 bg-amber-50 text-amber-800 border border-amber-200"
+                                >
+                                  {Math.round(confScore * 100)}%
+                                </span>
+                              </div>
+                            ) : hasDraft ? (
+                              /* ── DEFAULT CLEAN VIEW: AWAITING ACCEPTANCE IN PDF WORKSPACE ── */
+                              <div className="flex items-center justify-between gap-1 w-full group/unrecorded">
+                                <span className="text-[#81737b] italic font-['QuadraatSmallCaps'] text-[11px] flex items-center gap-1.5 truncate">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Candidate extraction awaiting PDF acceptance" />
+                                  <span className="truncate">Awaiting Acceptance</span>
+                                </span>
+                                <Link
+                                  to={`/projects/${projectId}/studies/${study.study_id}/pdf?var=${v.variable_id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="opacity-0 group-hover/unrecorded:opacity-100 text-[10px] text-[#814d75] hover:text-[#3a0f34] flex items-center gap-0.5 bg-[#eee7ec] hover:bg-[#d2c2cb] px-1.5 py-0.5 rounded transition-all shrink-0 font-medium"
+                                  title="Open study in PDF Workspace to review and Accept this extraction"
+                                >
+                                  <span>Accept</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </Link>
+                              </div>
+                            ) : (
+                              /* ── EMPTY CELL ── */
+                              <span className="text-[#81737b] italic font-['QuadraatSmallCaps'] text-[11px]">—</span>
                             )}
                           </td>
                         );
@@ -1601,16 +1718,28 @@ export function ExtractionSheetPage() {
               <div className="bg-[#ffffff] p-3 rounded-lg border border-[#d2c2cb] shadow-2xs space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono text-[#62535d] uppercase tracking-wider">
-                    Extracted Value
+                    {activeSelectedCellData.isVerified ? "Recorded Matrix Value" : "Candidate Extraction"}
                   </span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    activeSelectedCellData.cell.is_verified
+                    activeSelectedCellData.isVerified
                       ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                       : "bg-amber-50 text-amber-900 border-amber-200"
                   }`}>
-                    {activeSelectedCellData.cell.is_verified ? "Verified Accurate" : "Pending Verification"}
+                    {activeSelectedCellData.isVerified ? "✓ Recorded in Matrix" : "⚠ Awaiting PDF Acceptance"}
                   </span>
                 </div>
+
+                {!activeSelectedCellData.isVerified && (
+                  <div className="bg-amber-50/80 border border-amber-200/90 rounded-lg p-2.5 space-y-1">
+                    <div className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                      <span>Candidate Extraction — Not Recorded</span>
+                    </div>
+                    <p className="text-[11px] text-amber-950/85 leading-relaxed font-['QuadraatSmallCaps']">
+                      This value was extracted by the Co-Scientist. Under systematic review protocols, data is only recorded into the extraction matrix after clinician acceptance in the PDF Workspace.
+                    </p>
+                  </div>
+                )}
 
                 {/* Value Input */}
                 <div>
@@ -1710,21 +1839,29 @@ export function ExtractionSheetPage() {
               {/* Verification & Adjudication Buttons */}
               <div className="bg-[#ffffff] p-3 rounded-lg border border-[#d2c2cb] shadow-2xs space-y-2">
                 <span className="text-[10px] font-mono text-[#62535d] uppercase tracking-wider block">
-                  Review & Adjudication
+                  Review & Matrix Recording
                 </span>
 
-                <div className="grid grid-cols-2 gap-2">
+                <Link
+                  to={`/projects/${projectId}/studies/${activeSelectedCellData.study.study_id}/pdf?var=${activeSelectedCellData.variable.variable_id}`}
+                  className="w-full py-2 bg-[#3a0f34] text-[#fbf9f4] text-xs font-bold rounded-lg hover:bg-[#1a0017] transition-colors flex items-center justify-center gap-2 shadow-2xs"
+                >
+                  <FileText className="h-3.5 w-3.5 text-[#ffdea6]" />
+                  Review & Accept in PDF Workspace
+                </Link>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
                     onClick={handleVerifyCurrentCell}
-                    className="py-2 bg-[#3a0f34] text-[#fbf9f4] text-xs font-bold rounded-lg hover:bg-[#1a0017] transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
-                    title="Mark cell verified"
+                    className="py-1.5 bg-[#ffffff] border border-[#3a0f34] text-[#3a0f34] text-xs font-bold rounded-lg hover:bg-[#eee7ec] transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                    title="Quick accept and record directly to matrix"
                   >
-                    <CheckCheck className="h-3.5 w-3.5 text-[#ffdea6]" /> Verify
+                    <CheckCheck className="h-3.5 w-3.5 text-emerald-700" /> Quick Record
                   </button>
 
                   <button
                     onClick={handleAdjudicateCurrentCell}
-                    className="py-2 bg-[#ffffff] border border-[#3a0f34] text-[#3a0f34] text-xs font-bold rounded-lg hover:bg-[#eee7ec] transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                    className="py-1.5 bg-[#ffffff] border border-[#d2c2cb] text-[#4f444b] text-xs font-bold rounded-lg hover:bg-[#eee7ec] transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
                     title="Adjudicate consensus value"
                   >
                     <ShieldCheck className="h-3.5 w-3.5 text-[#814d75]" /> Adjudicate

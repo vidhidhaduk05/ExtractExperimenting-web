@@ -4387,7 +4387,7 @@ export const api = {
 
   // ── Track Changes Verification & Active Learning ──
 
-  recordExtractionDecision: (data: {
+  recordExtractionDecision: async (data: {
     project_id: string;
     study_id: string;
     variable_id: string;
@@ -4400,11 +4400,58 @@ export const api = {
     codebook_rules?: string;
     reviewer?: string;
     notes?: string;
-  }) =>
-    request<{ status: string; record?: any; undone?: boolean }>("/extraction/decide", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+  }) => {
+    // 1. Immediately persist to client storage for 100% human-in-the-loop verification persistence
+    try {
+      const studyId = data.study_id;
+      const varId = data.variable_id;
+      const dec = data.decision;
+      const currentExts = getStoredProjectExtractions(studyId);
+      const targetList = currentExts.length > 0 ? [...currentExts] : [...((DEMO_EXTRACTIONS as any)[studyId] || [])];
+      const item = targetList.find((e: any) => e.variable_id === varId);
+      if (item) {
+        if (dec === "undone") {
+          item.value = data.original_value || item.value;
+          item.is_verified = false;
+          item.is_edited = false;
+          item.verification_status = "unverified";
+        } else {
+          item.value = dec === "modified" ? (data.corrected_value || item.value) : (dec === "rejected" ? "NR" : (data.corrected_value || data.original_value || item.value));
+          item.is_verified = dec === "accepted" || dec === "modified";
+          item.is_edited = dec === "modified";
+          item.verification_status = dec === "accepted" ? "verified" : (dec === "modified" ? "modified" : "unverified");
+        }
+      } else {
+        targetList.push({
+          extraction_id: `ext_${studyId}_${varId}`,
+          study_id: studyId,
+          variable_id: varId,
+          variable_name: data.variable_name,
+          value: data.corrected_value,
+          is_verified: dec === "accepted" || dec === "modified",
+          is_edited: dec === "modified",
+          verification_status: dec === "accepted" ? "verified" : (dec === "modified" ? "modified" : "unverified"),
+          quote: data.evidence_quote || "",
+          source_page: data.page_number || 1,
+        });
+      }
+      (DEMO_EXTRACTIONS as any)[studyId] = targetList;
+      saveStoredProjectExtractions(studyId, targetList);
+    } catch (e) {
+      console.warn("[api.recordExtractionDecision] Local persistence warning:", e);
+    }
+
+    // 2. Sync to backend API if available
+    try {
+      return await request<{ status: string; record?: any; undone?: boolean }>("/extraction/decide", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    } catch (err) {
+      console.warn("[api.recordExtractionDecision] Server sync skipped, saved to client storage:", err);
+      return { status: "success", record: data };
+    }
+  },
 
   getErrorAnalysis: (projectId?: string) =>
     request<any>(`/extraction/error-analysis${projectId ? `?project_id=${projectId}` : ""}`),

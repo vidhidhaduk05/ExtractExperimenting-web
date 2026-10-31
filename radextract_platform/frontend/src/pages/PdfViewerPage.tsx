@@ -1564,8 +1564,9 @@ export function PdfViewerPage() {
                         <button
                           onClick={() => handleDecision("accepted")}
                           className="px-4 py-1.5 text-xs font-bold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded-lg flex items-center gap-1.5 shadow-2xs"
+                          title="Accept extraction and commit/record it to the Extracted Data Matrix"
                         >
-                          <Check className="h-3.5 w-3.5 text-[#ffdea6]" /> Accept & Next
+                          <Check className="h-3.5 w-3.5 text-[#ffdea6]" /> Accept & Record
                         </button>
                       </div>
                     </div>
@@ -1801,13 +1802,13 @@ export function PdfViewerPage() {
                                 ? "bg-[#7C4B73] ring-2 ring-[#7C4B73]/50"
                                 : "bg-[#381A61] hover:bg-[#4E2487]"
                             }`}
-                            title="Accept Co-Scientist Extraction (Hotkey: A or Enter)"
+                            title="Accept Co-Scientist Extraction & Record into Extraction Matrix (Hotkey: A or Enter)"
                           >
                             <Check className={`h-4 w-4 text-[#F9D14A] ${isTransitioning ? "animate-bounce" : ""}`} />
                             {isTransitioning ? (
-                              <span>Accepted!</span>
+                              <span>Accepted & Recorded!</span>
                             ) : (
-                              <>Accept <span className="text-[10px] opacity-75 font-mono text-[#F9D14A]">(A)</span></>
+                              <>Accept & Record <span className="text-[10px] opacity-75 font-mono text-[#F9D14A]">(A)</span></>
                             )}
                           </button>
 
