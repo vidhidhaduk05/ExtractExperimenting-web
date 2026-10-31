@@ -75,6 +75,11 @@ def test_export_bibliography_access(workspace):
     resp = client.post("/api/scientific-export/bibliography", json={"project_id": "p1", "format": "bibtex"})
     assert resp.status_code == 403
 
+    # Unauthenticated user
+    acting(app, None)
+    resp = client.post("/api/scientific-export/bibliography", json={"project_id": "p1", "format": "bibtex"})
+    assert resp.status_code == 401
+
 
 def test_draft_manuscript_access(workspace):
     app, client, _ = workspace
@@ -90,3 +95,8 @@ def test_draft_manuscript_access(workspace):
     acting(app, "outsider")
     resp = client.post("/api/scientific-export/draft-manuscript", json={"project_id": "p1", "section": "all"})
     assert resp.status_code == 403
+
+    # Unauthenticated user
+    acting(app, None)
+    resp = client.post("/api/scientific-export/draft-manuscript", json={"project_id": "p1", "section": "all"})
+    assert resp.status_code == 401
