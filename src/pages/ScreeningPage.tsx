@@ -67,8 +67,13 @@ import {
   CheckCircle2,
   ChevronDown,
   Sliders,
+  Table,
+  LayoutList,
+  FileSpreadsheet,
+  Download,
+  Highlighter,
 } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn, judgmentColor, judgmentLabel } from "../lib/utils";
 import { UniversalBulkUploadModal } from "../components/common/UniversalBulkUploadModal";
 import { ExploratoryScreeningView } from "../components/screening/ExploratoryScreeningView";
 
@@ -89,9 +94,9 @@ export function ScreeningPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [confidenceFilter, setConfidenceFilter] = useState<"all" | "high" | "medium" | "low">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [layoutMode, setLayoutMode] = useState<"excel" | "split">("excel");
 
-  // Protocol Screening Rules & PICO Criteria Right-Side Slider State
-  const [isProtocolSliderOpen, setIsProtocolSliderOpen] = useState(false);
+
   const [activeBumpKey, setActiveBumpKey] = useState<string | null>(null);
 
   const handleBundleClick = (bundleKey: string) => {
@@ -990,12 +995,12 @@ export function ScreeningPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* Action Buttons - Decluttered: Stage execution lives in the Checklist Drawer */}
+          <div className="flex items-center gap-1.5 flex-wrap">
             {/* Deduplication & Duplicate Review Modal Button */}
             <button
               onClick={() => setIsDuplicateModalOpen(true)}
-              className="px-3 py-2 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1.5 transition-all"
+              className="px-2.5 py-1.5 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1.5 transition-all cursor-pointer"
               title="Review side-by-side duplicates and merge records before screening"
             >
               <Layers className="w-3.5 h-3.5 text-[#814d75]" />
@@ -1010,135 +1015,45 @@ export function ScreeningPage() {
             {/* Bulk Upload from Laptop Button */}
             <button
               onClick={() => setShowBulkUploadModal(true)}
-              className="px-3.5 py-2 text-xs font-semibold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded flex items-center gap-1.5 transition-all"
+              className="px-2.5 py-1.5 text-xs font-semibold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded flex items-center gap-1.5 transition-all cursor-pointer"
               title="Bulk upload study PDFs, spreadsheets, or citations directly from your laptop"
             >
               <FolderPlus className="w-3.5 h-3.5 text-[#ffdea6]" />
-              <span>Bulk Upload from Laptop</span>
+              <span>Bulk Upload</span>
+            </button>
+
+            {/* Keywords & Highlighting */}
+            <button
+              onClick={() => setShowKeywordsDrawer(true)}
+              className="px-2.5 py-1.5 text-xs font-semibold text-[#4f444b] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Configure Rayyan-style inclusion/exclusion keywords and PICO highlight colours"
+            >
+              <Tag className="w-3.5 h-3.5 text-[#814d75]" />
+              <span>Keywords ({keywords.length})</span>
+            </button>
+
+            {/* Exploratory Process Stream Live */}
+            <button
+              onClick={() => setViewMode("exploratory")}
+              className="px-2.5 py-1.5 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] rounded flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Switch to Exploratory View with Senior Doctor Mode, Toggles, and Step-by-Step Process Trace"
+            >
+              <Sliders className="w-3.5 h-3.5 text-[#814d75]" />
+              <span>Exploratory View</span>
+              <span className="text-[9px] font-mono uppercase bg-[#3a0f34] text-[#fbf9f4] px-1 py-0.2 rounded font-bold">
+                Live
+              </span>
             </button>
 
             {/* Hotkeys Cheatsheet Button */}
             <button
               onClick={() => setShowHotkeysModal(true)}
-              className="px-3 py-2 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1.5 transition-all"
+              className="px-2 py-1.5 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1 transition-all cursor-pointer"
               title="Keyboard Shortcuts: [I/1] Include, [E/2] Exclude, [M/3] Maybe, [←/J] Prev, [→/K] Next"
             >
               <Keyboard className="w-3.5 h-3.5 text-[#814d75]" />
-              <span>Hotkeys</span>
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-[#eee7ec] text-[#3a0f34] rounded font-bold">?</kbd>
+              <kbd className="px-1 py-0.5 text-[9px] font-mono bg-[#eee7ec] text-[#3a0f34] rounded font-bold">?</kbd>
             </button>
-
-            {/* View Switcher: Exploratory View */}
-            <button
-              onClick={() => setViewMode("exploratory")}
-              className="px-3.5 py-2 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] hover:bg-[#eee7ec] rounded flex items-center gap-2 transition-all cursor-pointer"
-              title="Switch to Exploratory View with Senior Doctor Mode, Toggles, and Step-by-Step Process Trace"
-            >
-              <Sliders className="w-3.5 h-3.5 text-[#814d75]" />
-              <span>Exploratory Process Stream</span>
-              <span className="text-[10px] font-mono uppercase bg-[#3a0f34] text-[#fbf9f4] px-1.5 py-0.2 rounded font-bold">
-                Live
-              </span>
-            </button>
-
-            <button
-              onClick={() => setShowKeywordsDrawer(true)}
-              className="px-3 py-2 text-xs font-semibold text-[#4f444b] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1.5 transition-all"
-            >
-              <Tag className="w-3.5 h-3.5 text-[#814d75]" />
-              Keywords & Highlighting ({keywords.length})
-            </button>
-
-            {progress?.active ? (
-              progress.paused ? (
-                <>
-                  <button
-                    onClick={() => resumeMutation.mutate()}
-                    disabled={resumeMutation.isPending || cancelMutation.isPending}
-                    className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Resume Co-Scientist screening from current study"
-                  >
-                    {resumeMutation.isPending ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Play className="w-3.5 h-3.5 text-emerald-700 fill-emerald-700" />
-                    )}
-                    <span>Resume Screening</span>
-                  </button>
-                  <button
-                    onClick={() => cancelMutation.mutate()}
-                    disabled={cancelMutation.isPending || resumeMutation.isPending}
-                    className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Stop Co-Scientist screening run completely"
-                  >
-                    {cancelMutation.isPending ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Square className="w-3.5 h-3.5 text-rose-600 fill-rose-600" />
-                    )}
-                    <span>Stop</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => pauseMutation.mutate()}
-                    disabled={pauseMutation.isPending || cancelMutation.isPending}
-                    className="px-3.5 py-2 text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Pause screening cleanly after current study finishes"
-                  >
-                    {pauseMutation.isPending ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Pause className="w-3.5 h-3.5 text-amber-800 fill-amber-800" />
-                    )}
-                    <span>{pauseMutation.isPending ? "Pausing..." : "Pause Screening"}</span>
-                  </button>
-                  <button
-                    onClick={() => cancelMutation.mutate()}
-                    disabled={cancelMutation.isPending || pauseMutation.isPending}
-                    className="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                    title="Stop Co-Scientist screening run completely"
-                  >
-                    {cancelMutation.isPending ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Square className="w-3.5 h-3.5 text-rose-600 fill-rose-600" />
-                    )}
-                    <span>Stop</span>
-                  </button>
-                </>
-              )
-            ) : (
-              <>
-                <button
-                  onClick={() => startAnalysisMutation.mutate()}
-                  disabled={startAnalysisMutation.isPending || startFullPipelineMutation.isPending}
-                  className="px-3.5 py-2 text-xs font-semibold text-[#3a0f34] bg-[#ffffff] border border-[#d2c2cb] rounded hover:bg-[#eee7ec] flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
-                  title="Run Stage 1: Automated Title & Abstract screening triage"
-                >
-                  {startAnalysisMutation.isPending ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Play className="w-3.5 h-3.5 text-[#3a0f34] fill-[#3a0f34]" />
-                  )}
-                  <span>Start Stage 1 (Title & Abstract)</span>
-                </button>
-
-                <button
-                  onClick={() => startFullPipelineMutation.mutate()}
-                  disabled={startFullPipelineMutation.isPending || startAnalysisMutation.isPending}
-                  className="px-4 py-2 text-xs font-semibold text-[#fbf9f4] bg-[#3a0f34] hover:bg-[#1a0017] rounded flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  {startFullPipelineMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-4 h-4" />
-                  )}
-                  Start Full Co-Scientist Screening
-                </button>
-              </>
-            )}
           </div>
         </div>
 
@@ -1419,245 +1334,51 @@ export function ScreeningPage() {
             <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-[#62535d] absolute left-2.5 top-2.5" />
-            <input
-              type="text"
-              placeholder="Search title, authors, DOI..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#ffffff] border border-[#d2c2cb] rounded focus:bg-[#ffffff] focus:outline-none focus:ring-1 focus:ring-[#814d75] font-['Work_Sans'] text-[#3a0f34]"
-            />
-          </div>
-        </div>
-      </div>
+          {/* Layout Toggle (Excel Table vs Split Cards) & Search */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center bg-[#eee7ec] p-0.5 rounded border border-[#d2c2cb] text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setLayoutMode("excel")}
+                className={`px-2.5 py-1 rounded flex items-center gap-1.5 transition-all cursor-pointer ${
+                  layoutMode === "excel"
+                    ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                    : "text-[#62535d] hover:text-[#3a0f34]"
+                }`}
+                title="Excel-like study table matching the previous stage"
+              >
+                <Table className="w-3.5 h-3.5" />
+                <span>Excel Table</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutMode("split")}
+                className={`px-2.5 py-1 rounded flex items-center gap-1.5 transition-all cursor-pointer ${
+                  layoutMode === "split"
+                    ? "bg-[#3a0f34] text-[#fbf9f4] shadow-xs"
+                    : "text-[#62535d] hover:text-[#3a0f34]"
+                }`}
+                title="Two-column workspace with study cards and preview pane"
+              >
+                <LayoutList className="w-3.5 h-3.5" />
+                <span>Study Split</span>
+              </button>
+            </div>
 
-      {/* ── RIGHT-SIDE PROTOCOL SLIDER RIBBON TAB ── */}
-      <aside
-        aria-label="Protocol and PICO Rules"
-        onClick={() => setIsProtocolSliderOpen(true)}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-[#3a0f34] text-[#fbf9f4] py-4 px-2 rounded-l cursor-pointer shadow-md border-l border-t border-b border-[#d2c2cb] hover:bg-[#1a0017] transition-all flex flex-col items-center gap-2.5 group select-none"
-        title="Click to slide open Protocol Eligibility & PICO Rules"
-      >
-        <BookOpen className="w-4 h-4 text-[#ffdea6] group-hover:rotate-12 transition-transform" />
-        <span className="text-[10px] font-bold uppercase tracking-widest [writing-mode:vertical-rl] rotate-180 text-[#fbf9f4]">
-          Protocol &amp; PICO Criteria
-        </span>
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        <ChevronRight className="w-3.5 h-3.5 text-[#d2c2cb] group-hover:text-white rotate-180" />
-      </aside>
-
-      {/* ── SLIDE-OVER PROTOCOL DRAWER ── */}
-      {isProtocolSliderOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-[#1a0017]/40 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsProtocolSliderOpen(false)}
-          />
-
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-[#ffffff] shadow-xl border-l border-[#d2c2cb] flex flex-col animate-tag-pop">
-              {/* Drawer Header */}
-              <div className="bg-[#3a0f34] text-[#fbf9f4] p-4 flex items-center justify-between border-b border-[#d2c2cb]">
-                <div className="flex items-center gap-2.5">
-                  <BookOpen className="w-5 h-5 text-[#ffdea6]" />
-                  <div>
-                    <h3 className="text-sm font-['Serifon_Editorial'] font-bold tracking-tight">Protocol &amp; PICO Rules</h3>
-                    <p className="text-[11px] text-[#d2c2cb] font-['Work_Sans']">Systematic Review Eligibility Criteria</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsProtocolSliderOpen(false)}
-                  className="p-1 rounded hover:bg-white/10 text-[#d2c2cb] hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Drawer Content */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-['Work_Sans']">
-                {/* Protocol Header & Navigation */}
-                <div className="flex items-center justify-between bg-[#fbf9f4] border border-[#d2c2cb] p-2.5 rounded">
-                  <div>
-                    <span className="font-bold text-[#3a0f34] text-[11px] block">PRISMA Protocol Active</span>
-                    <span className="text-[10px] text-[#62535d]">Dual-Pass Mathematical Screening</span>
-                  </div>
-                  <Link
-                    to={`/projects/${projectId}/pico`}
-                    className="text-[11px] bg-[#3a0f34] hover:bg-[#1a0017] text-[#fbf9f4] font-semibold px-2.5 py-1 rounded transition-colors inline-flex items-center gap-1"
-                  >
-                    <span>Edit Criteria</span>
-                    <ChevronRight className="w-3 h-3" />
-                  </Link>
-                </div>
-
-                {/* Mathematical Screening Model & Stanford SLIDERS Calibration */}
-                <div className="p-3 bg-[#fbf9f4] border border-[#814d75] rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-[#3a0f34] text-[11px] flex items-center gap-1.5">
-                      <Sliders className="w-3.5 h-3.5 text-[#814d75]" />
-                      Mathematical Scoring Engine
-                    </span>
-                    <span className="text-[10px] font-mono font-bold bg-[#eee7ec] text-[#3a0f34] px-1.5 py-0.5 rounded border border-[#d2c2cb]">
-                      SLIDERS Microbatch
-                    </span>
-                  </div>
-                  
-                  <div className="p-2 bg-white rounded border border-[#d2c2cb] font-mono text-[10.5px] text-[#4f444b] space-y-1">
-                    <div className="text-[11px] font-semibold text-[#3a0f34]">Logistic Match Equation:</div>
-                    <div className="bg-[#fbf9f4] p-1.5 rounded border border-[#eee7ec] text-[#814d75] font-bold">
-                      P(Include) = σ(β₀ + Σ wᵢ · sᵢ)
-                    </div>
-                    <div className="text-[10px] text-[#62535d] pt-1">
-                      Intercept β₀ = {calibrationData?.calibration?.intercept ?? -2.0} | w = [
-                      {(calibrationData?.calibration?.weights ?? [1.5, 4.0, -2.5, -2.0, -1.0]).join(", ")}]
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-[10px] text-[#4f444b]">
-                    <div className="p-1.5 bg-white rounded border border-[#d2c2cb]">
-                      <span className="text-[#62535d] block">Auto-Include Threshold:</span>
-                      <strong className="text-emerald-700 font-mono text-[11px]">
-                        P &ge; {Math.round((calibrationData?.calibration?.t_include ?? 0.90) * 100)}%
-                      </strong>
-                    </div>
-                    <div className="p-1.5 bg-white rounded border border-[#d2c2cb]">
-                      <span className="text-[#62535d] block">Auto-Exclude Threshold:</span>
-                      <strong className="text-rose-700 font-mono text-[11px]">
-                        P &le; {Math.round((calibrationData?.calibration?.t_excl ?? 0.20) * 100)}%
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-
-                {/* PICO Cards */}
-                <div className="space-y-2.5">
-                  <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-lg">
-                    <div className="font-bold text-indigo-900 flex items-center justify-between mb-1 text-[11px]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">P</span>
-                        <span>Population</span>
-                      </div>
-                      <span className="text-[9.5px] font-mono text-indigo-700 bg-indigo-100 px-1.5 py-0.2 rounded font-semibold">Weight: 1.5</span>
-                    </div>
-                    <p className="text-slate-700 text-[11px] leading-relaxed">
-                      {projectPico?.population || "Patients meeting systematic review population criteria."}
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-sky-50/70 border border-sky-100 rounded-lg">
-                    <div className="font-bold text-sky-900 flex items-center justify-between mb-1 text-[11px]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-black">I</span>
-                        <span>Intervention / Index Test</span>
-                      </div>
-                      <span className="text-[9.5px] font-mono text-sky-700 bg-sky-100 px-1.5 py-0.2 rounded font-semibold">Weight: 4.0</span>
-                    </div>
-                    <p className="text-slate-700 text-[11px] leading-relaxed">
-                      {projectPico?.index_test || (projectPico as any)?.intervention || "Evaluated intervention or diagnostic modality."}
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-lg">
-                    <div className="font-bold text-purple-900 flex items-center justify-between mb-1 text-[11px]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">C</span>
-                        <span>Comparator</span>
-                      </div>
-                      <span className="text-[9.5px] font-mono text-purple-700 bg-purple-100 px-1.5 py-0.2 rounded font-semibold">Weight: 1.0</span>
-                    </div>
-                    <p className="text-slate-700 text-[11px] leading-relaxed">
-                      {projectPico?.comparator || "Reference standard or comparative control group."}
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-lg">
-                    <div className="font-bold text-emerald-900 flex items-center justify-between mb-1 text-[11px]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">O</span>
-                        <span>Outcomes</span>
-                      </div>
-                      <span className="text-[9.5px] font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded font-semibold">Weight: 1.5</span>
-                    </div>
-                    <p className="text-slate-700 text-[11px] leading-relaxed">
-                      {projectPico?.outcome || "Primary and secondary clinical endpoints."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Mandatory Inclusion & Explicit Exclusion */}
-                <div className="space-y-2.5 pt-1">
-                  <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg">
-                    <span className="font-bold text-emerald-900 flex items-center justify-between mb-1.5 text-[11px]">
-                      <span className="flex items-center gap-1.5">
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                        Inclusion Criteria &amp; Mathematical Filters
-                      </span>
-                      <span className="text-[10px] font-mono text-emerald-800">
-                        {projectCriteria?.inclusion?.length || 0} active
-                      </span>
-                    </span>
-                    <ul className="text-[11px] text-emerald-800 space-y-1.5 list-disc list-inside">
-                      {projectCriteria?.inclusion && projectCriteria.inclusion.length > 0 ? (
-                        projectCriteria.inclusion.map((crit, idx) => (
-                          <li key={crit.id || idx} className="leading-snug">
-                            {crit.text}
-                          </li>
-                        ))
-                      ) : (
-                        <>
-                          <li>Human subjects with confirmed clinical diagnosis.</li>
-                          <li>Peer-reviewed original research reporting relevant endpoints.</li>
-                        </>
-                      )}
-                    </ul>
-                  </div>
-
-                  <div className="p-3 bg-rose-50/60 border border-rose-200 rounded-lg">
-                    <span className="font-bold text-rose-900 flex items-center justify-between mb-1.5 text-[11px]">
-                      <span className="flex items-center gap-1.5">
-                        <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                        Exclusion Criteria &amp; Absolute Penalties
-                      </span>
-                      <span className="text-[10px] font-mono text-rose-800">
-                        {(projectCriteria?.exclusion?.length || 0) + (exclusionReasons?.length || 0)} active
-                      </span>
-                    </span>
-                    <ul className="text-[11px] text-rose-800 space-y-1.5 list-disc list-inside">
-                      {projectCriteria?.exclusion && projectCriteria.exclusion.length > 0 ? (
-                        projectCriteria.exclusion.map((crit, idx) => (
-                          <li key={crit.id || idx} className="leading-snug">
-                            {crit.text}
-                          </li>
-                        ))
-                      ) : (
-                        <li>Non-clinical, animal, or in vitro studies.</li>
-                      )}
-                      {exclusionReasons && exclusionReasons.slice(0, 3).map((r, idx) => (
-                        <li key={idx} className="leading-snug">
-                          {typeof r === "string" ? r : r.label}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {/* Drawer Footer */}
-              <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
-                <button
-                  onClick={() => setIsProtocolSliderOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  Close Ribbon
-                </button>
-              </div>
+            {/* Search Box */}
+            <div className="relative w-full sm:w-60">
+              <Search className="w-3.5 h-3.5 text-[#62535d] absolute left-2.5 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search title, authors, DOI..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#ffffff] border border-[#d2c2cb] rounded focus:bg-[#ffffff] focus:outline-none focus:ring-1 focus:ring-[#814d75] font-['Work_Sans'] text-[#3a0f34]"
+              />
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* ── CO-SCIENTIST SCREENING CLARIFICATIONS & REVIEWER CHECKLIST ── */}
       {projectClarifications.length > 0 && (
@@ -1975,7 +1696,206 @@ export function ScreeningPage() {
         </section>
       )}
 
-      {/* Main Two-Pane Screening Workspace */}
+      {/* Excel Table Mode matching the Previous Stage */}
+      {layoutMode === "excel" ? (
+        <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 space-y-4">
+          <div className="flex items-center justify-between text-xs text-[#62535d] px-1">
+            <span className="font-semibold text-[#3a0f34]">
+              {filteredStudies.length} matching studies in screening
+            </span>
+            <div className="flex items-center gap-2">
+              <a
+                href={api.exportProjectXlsxUrl(projectId || "demo")}
+                download
+                className="bg-[#ffffff] text-[#3a0f34] border border-[#d2c2cb] hover:bg-[#eee7ec] px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Download all studies and screening verdicts formatted in Excel (.xlsx)"
+              >
+                <Download className="h-3.5 w-3.5 text-[#814d75]" />
+                <span>Export Excel (.xlsx)</span>
+              </a>
+              {robRunProgress?.status === "running" ? (
+                <span className="text-[11px] font-medium px-2 py-1 rounded bg-[#ffdea6]/50 text-[#7c5800] border border-[#d2c2cb] flex items-center gap-1 animate-pulse">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Auto RoB Running ({robRunProgress.completed_studies}/{robRunProgress.total_studies})
+                </span>
+              ) : (
+                <button
+                  onClick={handleRobAllIncluded}
+                  disabled={startBatchRobMutation.isPending}
+                  className="text-[11px] text-[#3a0f34] hover:text-[#1a0017] font-semibold px-2.5 py-1.5 rounded bg-[#eee7ec] hover:bg-[#d2c2cb]/50 border border-[#d2c2cb] flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Run automated batch Risk of Bias assessment on all included studies"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#814d75]" />
+                  <span>Batch RoB Included</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-[#ffffff] border border-[#d2c2cb] rounded overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-[#fbf9f4] border-b border-[#d2c2cb] text-[10px] font-mono text-[#62535d] uppercase tracking-wider">
+                  <tr>
+                    <th className="px-5 py-3 font-semibold">Study &amp; Citation</th>
+                    <th className="px-4 py-3 font-semibold">Year</th>
+                    <th className="px-4 py-3 font-semibold">Design</th>
+                    <th className="px-4 py-3 font-semibold">Screening Verdict</th>
+                    <th className="px-4 py-3 font-semibold">RoB Status</th>
+                    <th className="px-5 py-3 font-semibold text-right">Extraction Workflows</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#d2c2cb]/40">
+                  {isLoadingStudies ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-[#81737b] text-xs">
+                        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-[#814d75]" />
+                        <span>Loading clinical study records...</span>
+                      </td>
+                    </tr>
+                  ) : filteredStudies.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-[#81737b] text-xs">
+                        No studies match the selected filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredStudies.map((s) => {
+                      const robAssessment = robByStudy.get(s.study_id);
+                      return (
+                        <tr
+                          key={s.study_id}
+                          className="hover:bg-[#eee7ec]/30 transition-colors"
+                        >
+                          <td className="px-5 py-3.5 max-w-md">
+                            <div className="flex items-start gap-2">
+                              <BookmarkButton
+                                saved={bookmarkSet.has(s.study_id)}
+                                disabled={bookmarks.disabled}
+                                onClick={() => bookmarks.toggle(s.study_id)}
+                              />
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedStudyId(s.study_id);
+                                    setLayoutMode("split");
+                                  }}
+                                  className="text-left font-['Serifon_Editorial'] font-bold text-sm text-[#3a0f34] hover:text-[#814d75] hover:underline line-clamp-2 cursor-pointer"
+                                  title="Click to inspect abstract, highlights, and Co-Scientist decisions in split view"
+                                >
+                                  {s.title}
+                                </button>
+                                <TagBadges index={tagIndex.data} studyId={s.study_id} />
+                                <div className="text-xs font-['Work_Sans'] text-[#62535d] mt-0.5 line-clamp-1">
+                                  {s.authors || "Unknown Authors"} {s.journal ? `— ${s.journal}` : ""}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5 font-mono text-xs text-[#62535d]">
+                            {s.publication_year || "—"}
+                          </td>
+                          <td className="px-4 py-3.5 text-xs text-[#62535d]">
+                            {s.study_design || "—"}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-mono font-medium ${
+                                  s.screening_status === "included" || s.screening_status === "ta_included"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : s.screening_status === "excluded"
+                                    ? "bg-rose-100 text-rose-800"
+                                    : s.screening_status === "awaiting_clarification"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : s.screening_status === "awaiting_pdf"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-amber-100 text-amber-800"
+                                }`}
+                              >
+                                {s.screening_status?.replace("_", " ") || "pending"}
+                              </span>
+                              {s.ai_confidence && (
+                                <span className="font-mono text-[10px] text-[#81737b]">
+                                  {Math.round(s.ai_confidence * 100)}%
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            {robAssessment ? (
+                              <Link
+                                to={`/projects/${projectId}/rob/${robAssessment.assessment_id}`}
+                                className="inline-flex items-center gap-1.5 text-xs text-[#3a0f34] hover:underline"
+                              >
+                                <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
+                                <span
+                                  className={`inline-flex px-2 py-0.5 rounded text-[10px] font-mono ${judgmentColor(
+                                    robAssessment.overall_judgment
+                                  )}`}
+                                >
+                                  {judgmentLabel(robAssessment.overall_judgment)}
+                                </span>
+                              </Link>
+                            ) : (
+                              <span className="text-[#81737b] text-xs font-['Newsreader'] italic">
+                                unassessed
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStudyId(s.study_id);
+                                  setLayoutMode("split");
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-[#ffffff] hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all cursor-pointer"
+                                title="Inspect Abstract and Screening Details"
+                              >
+                                <Eye className="h-3 w-3 text-[#814d75]" />
+                                <span>Inspect</span>
+                              </button>
+                              <Link
+                                to={`/projects/${projectId}/studies/${s.study_id}/pdf`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all"
+                                title="Review Co-Scientist Extractions in PDF with Track Changes"
+                              >
+                                <Highlighter className="h-3 w-3 text-[#ffdea6]" />
+                                <span>PDF</span>
+                              </Link>
+                              <Link
+                                to={`/projects/${projectId}/extraction-sheet?study=${s.study_id}`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all"
+                                title="View Extraction Data Sheet"
+                              >
+                                <FileSpreadsheet className="h-3 w-3 text-[#814d75]" />
+                                <span>Sheet</span>
+                              </Link>
+                              <a
+                                href={api.exportStudyXlsxUrl(projectId || "demo", s.study_id)}
+                                download
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all cursor-pointer"
+                                title="Download extraction data Excel (.xlsx) for this study"
+                              >
+                                <Download className="h-3 w-3 text-[#7c5800]" />
+                                <span>Excel</span>
+                              </a>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      ) : (
+        /* Main Two-Pane Screening Workspace */
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* Left Column: Study List (5 cols) */}
         <div className="lg:col-span-5 bg-[#ffffff] border border-[#d2c2cb] rounded flex flex-col h-[calc(100vh-185px)] sticky top-[135px]">
@@ -2795,6 +2715,7 @@ export function ScreeningPage() {
           )}
         </div>
       </main>
+      )}
 
       {/* Keywords & Highlighting Drawer / Modal */}
       {showKeywordsDrawer && (

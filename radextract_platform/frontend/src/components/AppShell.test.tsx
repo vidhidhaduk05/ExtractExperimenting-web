@@ -52,6 +52,7 @@ describe("AppShell Component", () => {
 
     // Right Dock tabs
     expect(screen.getByText("Checklist")).toBeDefined();
+    expect(screen.getByText("Protocol")).toBeDefined();
     expect(screen.getByText("Results")).toBeDefined();
   });
 

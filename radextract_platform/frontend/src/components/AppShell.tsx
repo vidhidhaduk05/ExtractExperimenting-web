@@ -42,6 +42,7 @@ import { cn } from "../lib/utils";
 import { ErrorBoundary } from "./common/ErrorBoundary";
 import { ClarificationNotificationCenter } from "./common/ClarificationNotificationCenter";
 import { GoogleTasksPanel } from "./common/GoogleTasksPanel";
+import { ProtocolCriteriaPanel } from "./common/ProtocolCriteriaPanel";
 import { ClarificationSidePanel } from "./screening/ClarificationSidePanel";
 import type { ClarificationQuestion } from "../lib/api";
 import { GripVertical } from "lucide-react";
@@ -110,7 +111,7 @@ export function AppShell() {
     return true;
   });
 
-  const [activeDockTab, setActiveDockTab] = useState<"todos" | "tasks" | "questions" | "results" | "prisma">("todos");
+  const [activeDockTab, setActiveDockTab] = useState<"todos" | "protocol" | "tasks" | "questions" | "results" | "prisma">("todos");
 
   const queryClient = useQueryClient();
 
@@ -285,8 +286,16 @@ export function AppShell() {
       setIsDockOpen(true);
       setActiveDockTab("questions");
     };
+    const handleOpenProtocol = () => {
+      setIsDockOpen(true);
+      setActiveDockTab("protocol");
+    };
     window.addEventListener("open-clarification-dock", handleOpenQuestions);
-    return () => window.removeEventListener("open-clarification-dock", handleOpenQuestions);
+    window.addEventListener("open-protocol-dock", handleOpenProtocol);
+    return () => {
+      window.removeEventListener("open-clarification-dock", handleOpenQuestions);
+      window.removeEventListener("open-protocol-dock", handleOpenProtocol);
+    };
   }, []);
 
   // Mouse move and mouse up for resizing the right dock
@@ -1013,6 +1022,19 @@ export function AppShell() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setActiveDockTab("protocol")}
+                  className={cn(
+                    "px-2 py-2 rounded-t transition-colors",
+                    activeDockTab === "protocol"
+                      ? "text-[#3a0f34] border-b-2 border-[#3a0f34] font-bold"
+                      : "text-[#62535d] hover:text-[#3a0f34]"
+                  )}
+                  title="Protocol & PICO Eligibility Criteria"
+                >
+                  Protocol
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActiveDockTab("tasks")}
                   className={cn(
                     "px-2 py-2 rounded-t transition-colors",
@@ -1088,6 +1110,13 @@ export function AppShell() {
                 </div>
               )}
 
+              {/* TAB: PROTOCOL (Protocol & PICO Eligibility Criteria) */}
+              {activeDockTab === "protocol" && (
+                <div className="h-full">
+                  <ProtocolCriteriaPanel projectId={projectId} />
+                </div>
+              )}
+
               {/* TAB: GOOGLE TASKS (User Tasks & Notes) */}
               {activeDockTab === "tasks" && (
                 <div className="h-full">
@@ -1100,7 +1129,7 @@ export function AppShell() {
                 <div className="divide-y divide-[rgba(210,194,203,0.45)] text-xs">
                   {/* Step 1: PICO */}
                   <div
-                    onClick={() => projectId && navigate(`/projects/${projectId}/pico`)}
+                    onClick={() => setActiveDockTab("protocol")}
                     className="p-3.5 hover:bg-black/[0.02] cursor-pointer flex items-center justify-between gap-3 transition-colors"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -1112,7 +1141,7 @@ export function AppShell() {
                       <div className="truncate">
                         <div className="font-semibold text-[#4f444b] truncate">PICO Protocol</div>
                         <div className="text-[11px] text-[#62535d]">
-                          {hasPico ? "Criteria configured" : "Draft protocol pending"}
+                          {hasPico ? "Criteria configured · View Protocol" : "Draft protocol pending"}
                         </div>
                       </div>
                     </div>
