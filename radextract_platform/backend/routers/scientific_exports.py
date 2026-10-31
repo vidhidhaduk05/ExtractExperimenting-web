@@ -10,6 +10,7 @@ from services.citation_service import study_to_bibtex, study_to_ris, generate_fo
 from services.manuscript_drafter import draft_methods_section, draft_results_section
 from database import get_db
 from services.db_backend import DBBackend
+from dependencies import get_current_user_optional, check_project_access
 import sqlite3
 
 router = APIRouter(prefix="/api/scientific-export", tags=["scientific_exports"])
@@ -58,8 +59,14 @@ def export_prisma_mermaid(req: PrismaMermaidRequest):
     return {"success": True, "mermaid": mermaid_code}
 
 @router.post("/bibliography")
-def export_project_bibliography(req: BibliographyRequest, conn: DBBackend = Depends(get_db)):
+def export_project_bibliography(
+    req: BibliographyRequest,
+    conn: DBBackend = Depends(get_db),
+    user: dict = Depends(get_current_user_optional),
+):
     """Export project studies into BibTeX, RIS, or formatted APA/Vancouver/Nature reference list."""
+    # Security: Enforce project access to prevent BOLA / unauthorized data leakage
+    check_project_access(conn, req.project_id, user)
     rows = conn.execute(
         "SELECT study_id, title, authors, publication_year, journal, doi, pmid FROM studies WHERE project_id = ?",
         (req.project_id,)
@@ -90,8 +97,14 @@ def export_project_bibliography(req: BibliographyRequest, conn: DBBackend = Depe
     }
 
 @router.post("/draft-manuscript")
-def draft_manuscript_sections(req: ManuscriptDraftRequest, conn: DBBackend = Depends(get_db)):
+def draft_manuscript_sections(
+    req: ManuscriptDraftRequest,
+    conn: DBBackend = Depends(get_db),
+    user: dict = Depends(get_current_user_optional),
+):
     """Draft evidence-bound Methods and Results manuscript sections."""
+    # Security: Enforce project access to prevent BOLA / unauthorized manuscript drafting
+    check_project_access(conn, req.project_id, user)
     proj = conn.execute("SELECT name, description FROM projects WHERE project_id = ?", (req.project_id,)).fetchone()
     proj_title = proj["name"] if proj else "Systematic Review & Meta-Analysis"
         
@@ -113,7 +126,7 @@ def draft_manuscript_sections(req: ManuscriptDraftRequest, conn: DBBackend = Dep
     p_v = req.p_val
 
     if pooled is None:
-        ma_row = conn.execute("SELECT pooled_effect, ci_lower, ci_upper, effect_measure, i2, p_value FROM meta_analyses WHERE project_id = ? ORDER BY created_at DESC LIMIT 1", (req.project_id,)).fetchone()
+        ma_row = conn.execute("SELECT pooled_effect, pooled_ci_lower AS ci_lower, pooled_ci_upper AS ci_upper, effect_measure, i_squared AS i2, p_value FROM meta_analyses WHERE project_id = ? ORDER BY created_at DESC LIMIT 1", (req.project_id,)).fetchone()
         if ma_row and ma_row["pooled_effect"] is not None:
             pooled = float(ma_row["pooled_effect"])
             ci_l = float(ma_row["ci_lower"]) if ma_row["ci_lower"] is not None else pooled
