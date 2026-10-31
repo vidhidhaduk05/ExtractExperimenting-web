@@ -15,7 +15,7 @@ import {
   RotateCcw, Search, Eye, Filter, Zap, ShieldAlert,
   ZoomIn, ZoomOut, Maximize2, Minimize2, Sliders,
   PanelRightClose, PanelRightOpen, FileSpreadsheet,
-  CheckCheck, ExternalLink, ListOrdered
+  CheckCheck, ExternalLink, ListOrdered, ChevronDown
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { CodebookDesignerModal } from "../components/common/CodebookDesignerModal";
@@ -583,7 +583,14 @@ export function PdfViewerPage() {
     }
   }, [undoStack, projectId, activeStudyId, reviewerName, refetchExtractions, refetchErrorAnalysis, queryClient]);
 
-  // ── Accept All High-Confidence (>95%) Extractions ──
+  // ── Pending Unverified Variables & High Confidence ──
+  const pendingVariables = useMemo(() => {
+    return variableList.filter((v: any) => {
+      const ext = extractionMap[v.variable_id];
+      return !ext || !ext.is_verified;
+    });
+  }, [variableList, extractionMap]);
+
   const highConfPendingVariables = useMemo(() => {
     return variableList.filter((v: any) => {
       const ext = extractionMap[v.variable_id];
@@ -594,14 +601,29 @@ export function PdfViewerPage() {
   }, [variableList, extractionMap]);
 
   const [isAcceptingAll, setIsAcceptingAll] = useState(false);
+  const [isAcceptMenuOpen, setIsAcceptMenuOpen] = useState(false);
+  const acceptAllMenuRef = useRef<HTMLDivElement>(null);
 
-  const handleAcceptAllHighConfidence = async () => {
-    if (highConfPendingVariables.length === 0 || isAcceptingAll) return;
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (acceptAllMenuRef.current && !acceptAllMenuRef.current.contains(e.target as Node)) {
+        setIsAcceptMenuOpen(false);
+      }
+    };
+    if (isAcceptMenuOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isAcceptMenuOpen]);
+
+  const handleAcceptAll = async (onlyHighConfidence = false) => {
+    const targets = onlyHighConfidence ? highConfPendingVariables : pendingVariables;
+    if (targets.length === 0 || isAcceptingAll) return;
     setIsAcceptingAll(true);
 
     try {
       const batchUndos: any[] = [];
-      for (const v of highConfPendingVariables) {
+      for (const v of targets) {
         const ext = extractionMap[v.variable_id];
         const val = ext?.value || "";
         const rule = customRules[v.variable_id] || DEMO_CODEBOOK_RULES[v.variable_id];
@@ -629,7 +651,9 @@ export function PdfViewerPage() {
           page_number: ext?.source_page || 1,
           codebook_rules: rule?.definition || "",
           reviewer: reviewerName,
-          notes: "Accepted via Batch High Confidence (>95%)",
+          notes: onlyHighConfidence
+            ? "Accepted via Batch High Confidence (>95%)"
+            : "Accepted via Batch Accept All",
         });
       }
 
@@ -637,14 +661,20 @@ export function PdfViewerPage() {
       await refetchExtractions();
       await refetchErrorAnalysis();
       queryClient.invalidateQueries({ queryKey: ["review-matrix", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["extraction-grid", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["extractions", activeStudyId] });
 
-      setUndoToastMessage(`Accepted ${highConfPendingVariables.length} high-confidence (>95%) extractions ✓`);
+      setUndoToastMessage(
+        onlyHighConfidence
+          ? `Accepted ${targets.length} high-confidence (>95%) extractions ✓`
+          : `Accepted all ${targets.length} extractions for this study ✓`
+      );
       setTimeout(() => setUndoToastMessage(null), 3500);
 
-      // Select first remaining unverified variable (e.g. low-confidence ones)
+      // Select first remaining unverified variable (e.g. low-confidence ones if only high-confidence accepted)
       const remainingUnverified = variableList.find((v: any) => {
         const ext = extractionMap[v.variable_id];
-        const isJustAccepted = highConfPendingVariables.some((hv: any) => hv.variable_id === v.variable_id);
+        const isJustAccepted = targets.some((tv: any) => tv.variable_id === v.variable_id);
         return ext && !ext.is_verified && !isJustAccepted;
       });
 
@@ -653,7 +683,7 @@ export function PdfViewerPage() {
         findQuoteInPdf(remainingUnverified.variable_id);
       }
     } catch (err) {
-      console.error("Failed to batch accept high confidence extractions:", err);
+      console.error("Failed to batch accept extractions:", err);
     } finally {
       setIsAcceptingAll(false);
     }
@@ -692,6 +722,13 @@ export function PdfViewerPage() {
       if (e.key === "f" || e.key === "F" || e.key === "q" || e.key === "Q") {
         e.preventDefault();
         findQuoteInPdf(currentVar?.variable_id);
+        return;
+      }
+
+      // Accept All shortcut: Shift + A
+      if (e.shiftKey && (e.key === "a" || e.key === "A")) {
+        e.preventDefault();
+        handleAcceptAll(false);
         return;
       }
 
@@ -1227,34 +1264,103 @@ export function PdfViewerPage() {
 
               {/* Fast Action Ribbon Buttons: Accept All >95%, Accept & Next, Reject & Next, Modify, Prev, Next, Undo */}
               <div className="flex items-center gap-1.5">
-                {/* Accept All High-Confidence (>95%) Button */}
-                <button
-                  onClick={handleAcceptAllHighConfidence}
-                  disabled={highConfPendingVariables.length === 0 || isAcceptingAll}
-                  className={cn(
-                    "px-2.5 py-1.5 text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition-all",
-                    highConfPendingVariables.length > 0
-                      ? "text-[#381A61] bg-[#F9D14A] hover:bg-[#F9D14A]/90 border border-[#E78429]/40 active:scale-95 cursor-pointer ring-1 ring-[#F9D14A]/50"
-                      : "text-slate-400 bg-slate-100 border border-slate-200 opacity-60 cursor-not-allowed"
+                {/* Accept All with Dropdown Split Action */}
+                <div className="relative inline-flex items-center" ref={acceptAllMenuRef}>
+                  <button
+                    onClick={() => handleAcceptAll(false)}
+                    disabled={pendingVariables.length === 0 || isAcceptingAll}
+                    className={cn(
+                      "px-2.5 py-1.5 text-xs font-bold rounded-l-xl shadow-xs flex items-center gap-1.5 transition-all font-['Work_Sans']",
+                      pendingVariables.length > 0
+                        ? "text-[#3a0f34] bg-[#ffdea6] hover:bg-[#ffd180] border border-[#d2c2cb] active:scale-95 cursor-pointer ring-1 ring-[#ffdea6]/50"
+                        : "text-[#62535d]/50 bg-[#fbf9f4] border border-[#d2c2cb]/60 opacity-60 cursor-not-allowed"
+                    )}
+                    title={
+                      pendingVariables.length > 0
+                        ? `Accept all ${pendingVariables.length} pending extractions for this study (Shift + A)`
+                        : "All extractions for this study have been verified"
+                    }
+                  >
+                    {isAcceptingAll ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[#3a0f34]" />
+                    ) : (
+                      <CheckCheck className="h-3.5 w-3.5 text-[#3a0f34]" />
+                    )}
+                    <span>Accept All</span>
+                    {pendingVariables.length > 0 && (
+                      <span className="text-[10px] font-mono font-bold bg-[#3a0f34] text-[#ffdea6] rounded-full px-1.5 py-0.2">
+                        {pendingVariables.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAcceptMenuOpen(!isAcceptMenuOpen)}
+                    disabled={pendingVariables.length === 0 || isAcceptingAll}
+                    className={cn(
+                      "px-1.5 py-1.5 text-xs font-bold rounded-r-xl border-l-0 shadow-xs flex items-center transition-all",
+                      pendingVariables.length > 0
+                        ? "text-[#3a0f34] bg-[#ffdea6] hover:bg-[#ffd180] border border-[#d2c2cb] active:scale-95 cursor-pointer"
+                        : "text-[#62535d]/50 bg-[#fbf9f4] border border-[#d2c2cb]/60 opacity-60 cursor-not-allowed"
+                    )}
+                    title="Accept options"
+                    aria-label="Accept options"
+                    aria-expanded={isAcceptMenuOpen}
+                  >
+                    <ChevronDown className="h-3.5 w-3.5 text-[#3a0f34]" />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isAcceptMenuOpen && (
+                    <div
+                      className="absolute left-0 top-full mt-1 w-64 bg-[#ffffff] border border-[#d2c2cb] rounded-xl shadow-xl py-1.5 px-1 z-50 animate-in fade-in slide-in-from-top-1 duration-100"
+                      role="menu"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAcceptMenuOpen(false);
+                          handleAcceptAll(false);
+                        }}
+                        disabled={pendingVariables.length === 0}
+                        className="w-full text-left px-3 py-2 text-xs font-['Work_Sans'] text-[#3a0f34] hover:bg-[#eee7ec] rounded-lg transition-colors flex items-center justify-between group disabled:opacity-40 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <CheckCheck className="w-3.5 h-3.5 text-[#3a0f34]" />
+                          <div>
+                            <div className="font-semibold text-[#3a0f34]">Accept All Extractions</div>
+                            <div className="text-[10px] text-[#62535d]">All {pendingVariables.length} unverified variables</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono bg-[#eee7ec] group-hover:bg-[#d2c2cb] px-1.5 py-0.5 rounded text-[#3a0f34] font-bold">
+                          {pendingVariables.length}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAcceptMenuOpen(false);
+                          handleAcceptAll(true);
+                        }}
+                        disabled={highConfPendingVariables.length === 0}
+                        className="w-full text-left px-3 py-2 text-xs font-['Work_Sans'] text-[#3a0f34] hover:bg-[#eee7ec] rounded-lg transition-colors flex items-center justify-between group disabled:opacity-40 cursor-pointer mt-0.5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-3.5 h-3.5 text-[#7c5800]" />
+                          <div>
+                            <div className="font-semibold text-[#3a0f34]">Accept High Conf (&gt;95%)</div>
+                            <div className="text-[10px] text-[#62535d]">Only confidence &gt;95%</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono bg-[#ffdea6]/60 px-1.5 py-0.5 rounded text-[#7c5800] font-bold">
+                          {highConfPendingVariables.length}
+                        </span>
+                      </button>
+                    </div>
                   )}
-                  title={
-                    highConfPendingVariables.length > 0
-                      ? `Accept all ${highConfPendingVariables.length} extractions with Co-Scientist confidence >95%`
-                      : "No pending extractions with confidence >95%"
-                  }
-                >
-                  {isAcceptingAll ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[#381A61]" />
-                  ) : (
-                    <CheckCheck className="h-3.5 w-3.5 text-[#381A61]" />
-                  )}
-                  <span>Accept All &gt;95%</span>
-                  {highConfPendingVariables.length > 0 && (
-                    <span className="text-[10px] font-mono font-bold bg-[#381A61] text-[#F9D14A] rounded-full px-1.5 py-0.2">
-                      {highConfPendingVariables.length}
-                    </span>
-                  )}
-                </button>
+                </div>
 
                 {/* Accept & Next Button */}
                 <button
