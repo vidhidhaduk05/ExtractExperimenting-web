@@ -3,10 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, saveStoredProjectStudies, type Study, type ImportBatchResponse } from "../lib/api";
 import { autoIdentifyPdf } from "../lib/pdfAutoIdentifier";
 import {
-  Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2,
+  Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2, Download,
   Highlighter, FileSpreadsheet, ArrowRight, CheckCircle2, X,
   RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy,
-  ExternalLink, HelpCircle, Undo2, Edit3
+  ExternalLink, HelpCircle, Undo2, Edit3, Search, Eye, Filter, Lock, ArrowUpDown
 } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
 import { useRef, useState, useMemo, useEffect } from "react";
@@ -44,6 +44,9 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
   const bookmarks = useBookmarks(projectId);
   const tagIndex = useProjectTags(projectId);
   const [tagFilter, setTagFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [collaborationStudy, setCollaborationStudy] = useState<Study | null>(null);
   const [savedFilter, setSavedOnly] = useState(false);
   const savedOnly = bookmarkedOnly || savedFilter;
@@ -297,10 +300,91 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
     return count;
   }, [studies, bookmarkSet]);
 
+  // Sort rank helper: Included (1) -> Uncertain (2) -> Excluded (3) -> Pending (4)
+  const getStatusRank = (status?: string | null): number => {
+    const s = (status || "").toLowerCase().trim();
+    if (s === "included" || s === "ta_included" || s === "ft_included") return 1;
+    if (s === "uncertain") return 2;
+    if (s === "excluded" || s === "ta_excluded" || s === "ft_excluded") return 3;
+    return 4; // pending or other
+  };
+
+  const [sortBy, setSortBy] = useState<"status" | "year" | "title">("status");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  // Summary counts for quick status filter pills
+  const statusCounts = useMemo(() => {
+    if (!studies) return { included: 0, uncertain: 0, excluded: 0, pending: 0 };
+    let inc = 0, unc = 0, exc = 0, pend = 0;
+    for (const s of studies) {
+      const rank = getStatusRank(s.screening_status);
+      if (rank === 1) inc++;
+      else if (rank === 2) unc++;
+      else if (rank === 3) exc++;
+      else pend++;
+    }
+    return { included: inc, uncertain: unc, excluded: exc, pending: pend };
+  }, [studies]);
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ studyId, newStatus }: { studyId: string; newStatus: string }) => {
+      return api.screeningDecision(studyId, {
+        project_id: projectId!,
+        decision: newStatus,
+        stage: "ta",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-decisions", projectId] });
+    },
+  });
+
   const visibleStudies = useMemo(() => {
     if (!studies) return [];
-    return studies.filter(s => (!savedOnly || bookmarkSet.has(s.study_id)) && matchesTag(tagIndex.data, s.study_id, tagFilter));
-  }, [studies, savedOnly, bookmarkSet, tagIndex.data, tagFilter]);
+    const filtered = studies.filter((s) => {
+      if (savedOnly && !bookmarkSet.has(s.study_id)) return false;
+      if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
+      if (statusFilter !== "all") {
+        if (statusFilter === "included" && s.screening_status !== "included" && s.screening_status !== "ta_included") return false;
+        if (statusFilter === "excluded" && s.screening_status !== "excluded") return false;
+        if (statusFilter === "uncertain" && s.screening_status !== "uncertain") return false;
+        if (statusFilter === "pending" && s.screening_status && s.screening_status !== "pending") return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const titleMatch = (s.title || "").toLowerCase().includes(q);
+        const authorMatch = (s.authors || "").toLowerCase().includes(q);
+        const journalMatch = (s.journal || "").toLowerCase().includes(q);
+        const doiMatch = (s.doi || "").toLowerCase().includes(q);
+        if (!titleMatch && !authorMatch && !journalMatch && !doiMatch) return false;
+      }
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "status") {
+        const rankA = getStatusRank(a.screening_status);
+        const rankB = getStatusRank(b.screening_status);
+        if (rankA !== rankB) {
+          return sortDirection === "asc" ? rankA - rankB : rankB - rankA;
+        }
+        return (b.publication_year || 0) - (a.publication_year || 0);
+      }
+      if (sortBy === "year") {
+        const yearA = a.publication_year || 0;
+        const yearB = b.publication_year || 0;
+        return sortDirection === "asc" ? yearA - yearB : yearB - yearA;
+      }
+      if (sortBy === "title") {
+        return sortDirection === "asc"
+          ? (a.title || "").localeCompare(b.title || "")
+          : (b.title || "").localeCompare(a.title || "");
+      }
+      return 0;
+    });
+  }, [studies, savedOnly, bookmarkSet, tagIndex.data, tagFilter, statusFilter, searchQuery, sortBy, sortDirection]);
 
   return (
     <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
@@ -400,6 +484,17 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
             <FolderPlus className="h-3.5 w-3.5 text-[#ffdea6]" />
             <span>Bulk Upload PDFs</span>
           </button>
+
+          {/* Export All Studies to Excel */}
+          <a
+            href={api.exportProjectXlsxUrl(projectId || "demo")}
+            download
+            className="bg-[#ffffff] text-[#3a0f34] border border-[#d2c2cb] hover:bg-[#eee7ec] px-3.5 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            title="Export all studies with extraction values and evidence to formatted Excel (.xlsx)"
+          >
+            <Download className="h-3.5 w-3.5 text-[#814d75]" />
+            <span>Export Excel (.xlsx)</span>
+          </a>
 
           {/* Import Single Study */}
           <Link
@@ -660,48 +755,263 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
-        {bookmarkedOnly ? <span className="font-medium">{bookmarkedCount} bookmarked studies</span> : <label className="flex items-center gap-2"><input type="checkbox" checked={savedOnly} onChange={e => setSavedOnly(e.target.checked)} />Saved for later ({bookmarkedCount})</label>}
-        <span className="text-xs text-[#81737b]">{bookmarks.local ? "Bookmarks are saved in this browser." : "Your personal bookmarks."}</span>
-        {bookmarks.error && <span role="alert" className="text-red-600">{bookmarks.error} <button type="button" onClick={bookmarks.retry} className="underline">Retry</button></span>}
-      </div>
-      {savedOnly && studies && studies.length > 0 && bookmarkedCount === 0 && <p className="text-sm text-[#62535d]">No saved studies yet. Use the bookmark icon to save a study for later.</p>}
-      {/* Populated Study Table */}
-      {studies && studies.length > 0 && <p className="text-xs text-slate-500">{visibleStudies.length} matching studies</p>}
-      {tagFilter && studies && studies.length > 0 && visibleStudies.length === 0 && <p className="text-sm text-slate-500">No studies match this tag and the current filters.</p>}
-      {studies && studies.length > 0 && (
-        <div className="bg-[#ffffff] border border-[#d2c2cb] rounded overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-[#fbf9f4] border-b border-[#d2c2cb] text-[10px] font-mono text-[#62535d] uppercase tracking-wider">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Study & Citation</th>
-                  <th className="px-4 py-3 font-semibold">Year</th>
-                  <th className="px-4 py-3 font-semibold">Design</th>
-                  <th className="px-4 py-3 font-semibold">Screening</th>
-                  <th className="px-4 py-3 font-semibold">RoB Status</th>
-                  <th className="px-5 py-3 font-semibold text-right">Extraction Workflows</th>
+      {/* ── EXCEL SPREADSHEET FORMULA BAR & CONTROLS RIBBON ── */}
+      <div className="bg-[#ffffff] border border-[#d2c2cb] rounded-xl p-3 shadow-xs space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d2c2cb]/40 pb-2.5">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Active Cell Formula / Name Box */}
+            <div className="flex items-center gap-2 bg-[#fbf9f4] border border-[#d2c2cb] rounded px-3 py-1 shadow-2xs font-mono text-xs">
+              <span className="font-bold text-[#814d75]">
+                {selectedRowId ? `ROW ${visibleStudies.findIndex((s) => s.study_id === selectedRowId) + 1}` : "A1"}
+              </span>
+              <div className="h-3.5 w-px bg-[#d2c2cb]" />
+              <span className="font-serif italic text-[#81737b] font-bold">fx</span>
+              <span className="text-[#4f444b] font-sans truncate max-w-xs sm:max-w-md">
+                {selectedRowId
+                  ? visibleStudies.find((s) => s.study_id === selectedRowId)?.title
+                  : visibleStudies[0]?.title || "Select a study row to view formula details"}
+              </span>
+            </div>
+
+            <span className="text-xs font-mono text-[#81737b] hidden md:inline">
+              {visibleStudies.length} of {studies?.length || 0} studies
+            </span>
+          </div>
+
+          {/* Quick Status Filter Chips: Included, Uncertain, Excluded, Pending */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className={cn(
+                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans']",
+                statusFilter === "all"
+                  ? "bg-[#3a0f34] text-[#fbf9f4] border-[#3a0f34] shadow-xs"
+                  : "bg-[#ffffff] text-[#4f444b] border-[#d2c2cb] hover:bg-[#eee7ec]"
+              )}
+            >
+              All ({studies?.length || 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("included")}
+              className={cn(
+                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
+                statusFilter === "included"
+                  ? "bg-emerald-700 text-white border-emerald-800 shadow-xs"
+                  : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/70"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Included</span>
+              <span className="font-mono text-[10px] font-bold">({statusCounts.included})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("uncertain")}
+              className={cn(
+                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
+                statusFilter === "uncertain"
+                  ? "bg-purple-700 text-white border-purple-800 shadow-xs"
+                  : "bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100/70"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              <span>Uncertain</span>
+              <span className="font-mono text-[10px] font-bold">({statusCounts.uncertain})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("excluded")}
+              className={cn(
+                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
+                statusFilter === "excluded"
+                  ? "bg-rose-700 text-white border-rose-800 shadow-xs"
+                  : "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100/70"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span>Excluded</span>
+              <span className="font-mono text-[10px] font-bold">({statusCounts.excluded})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("pending")}
+              className={cn(
+                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
+                statusFilter === "pending"
+                  ? "bg-[#7c5800] text-white border-[#7c5800] shadow-xs"
+                  : "bg-[#ffdea6]/40 text-[#7c5800] border-[#d2c2cb] hover:bg-[#ffdea6]/70"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-[#7c5800]" />
+              <span>Pending</span>
+              <span className="font-mono text-[10px] font-bold">({statusCounts.pending})</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Search studies */}
+            <div className="relative">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#62535d]" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search title, author, DOI..."
+                className="pl-8 pr-3 py-1 text-xs border border-[#d2c2cb] rounded bg-[#ffffff] text-[#3a0f34] focus:outline-none focus:ring-1 focus:ring-[#814d75] w-48 sm:w-56 shadow-2xs font-['Work_Sans']"
+              />
+            </div>
+
+            {/* Status filter dropdown */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-xs border border-[#d2c2cb] rounded bg-[#ffffff] px-2.5 py-1 text-[#3a0f34] focus:outline-none focus:ring-1 focus:ring-[#814d75] shadow-2xs font-medium"
+            >
+              <option value="all">All Statuses</option>
+              <option value="included">Included</option>
+              <option value="excluded">Excluded</option>
+              <option value="uncertain">Uncertain</option>
+              <option value="pending">Pending</option>
+            </select>
+
+            {/* Tag Filter */}
+            <TagFilter projectId={projectId!} value={tagFilter} onChange={setTagFilter} />
+
+            {/* Bookmarks Toggle */}
+            <label className="flex items-center gap-1.5 text-xs text-[#4f444b] cursor-pointer bg-[#ffffff] border border-[#d2c2cb] px-2.5 py-1 rounded hover:bg-[#eee7ec] transition-colors shadow-2xs">
+              <input
+                type="checkbox"
+                checked={savedOnly}
+                onChange={(e) => setSavedOnly(e.target.checked)}
+                className="rounded text-[#3a0f34] focus:ring-[#814d75]"
+              />
+              <span className="font-medium">Saved ({bookmarkedCount})</span>
+            </label>
+          </div>
+        </div>
+
+        {/* ── EXCEL-STYLE GRID TABLE WITH COLUMN LETTERS & ROW NUMBERS ── */}
+        <div className="border border-[#d2c2cb] rounded overflow-hidden shadow-xs">
+          <div className="overflow-x-auto max-h-[640px] overflow-y-auto">
+            <table className="border-collapse table-fixed w-full text-left text-xs font-['Work_Sans'] min-w-[900px]">
+              {/* Row 1: Column Letters (A, B, C, D, E, F, G) */}
+              <thead className="sticky top-0 z-20 bg-[#fbf9f4] shadow-xs">
+                <tr className="border-b border-[#d2c2cb] bg-[#eee7ec]/60 text-[10px] font-mono text-[#62535d]">
+                  <th className="sticky left-0 z-30 bg-[#eee7ec] w-12 text-center p-1.5 border-r border-[#d2c2cb] select-none font-bold">
+                    #
+                  </th>
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-[320px]">
+                    A
+                  </th>
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-44">
+                    B
+                  </th>
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-24">
+                    C
+                  </th>
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-44">
+                    D
+                  </th>
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-36">
+                    E
+                  </th>
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-28">
+                    F
+                  </th>
+                  <th className="text-center p-1.5 font-bold select-none w-[300px]">
+                    G
+                  </th>
+                </tr>
+
+                {/* Row 2: Header Field Labels Matching Zotero / Excel Layout */}
+                <tr className="border-b border-[#d2c2cb] text-[11px] text-[#3a0f34] bg-[#fbf9f4]">
+                  <th className="sticky left-0 z-30 bg-[#fbf9f4] w-12 text-center p-2.5 border-r border-[#d2c2cb] font-mono font-bold text-[#62535d] select-none">
+                    Row
+                  </th>
+                  <th className="px-4 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-[#814d75]" />
+                        <span>Title</span>
+                      </span>
+                      <Lock className="h-3 w-3 text-[#814d75]" title="Primary Identifier" />
+                    </div>
+                  </th>
+                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
+                    Creator (Authors)
+                  </th>
+                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none text-center">
+                    Date / Year
+                  </th>
+                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
+                    Publisher / Journal
+                  </th>
+                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSortBy("status");
+                        setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+                      }}
+                      className="flex items-center gap-1 hover:text-[#814d75] transition-colors cursor-pointer"
+                      title="Sort: Included -> Uncertain -> Excluded"
+                    >
+                      <span>Screening Status</span>
+                      <ArrowUpDown className="w-3 h-3 text-[#814d75]" />
+                    </button>
+                  </th>
+                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
+                    RoB Judgment
+                  </th>
+                  <th className="px-4 py-2.5 font-bold font-['Serifon_Editorial'] text-right select-none">
+                    Workflows &amp; Published Site
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d2c2cb]/40">
-                {visibleStudies.map((s) => (
-                  <StudyRow
-                    key={s.study_id}
-                    study={s}
-                    assessment={robMap.get(s.study_id)}
-                    tags={tagIndex.data}
-                    onComments={() => setCollaborationStudy(s)}
-                    bookmark={<BookmarkButton saved={bookmarkSet.has(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
-                    projectId={projectId!}
-                    onDelete={() => deleteMutation.mutate(s.study_id)}
-                  />
-                ))}
+
+              {/* Table Data Rows */}
+              <tbody className="divide-y divide-[#d2c2cb]">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-[#81737b] text-xs">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-[#814d75]" />
+                      <span>Loading clinical study records into spreadsheet...</span>
+                    </td>
+                  </tr>
+                ) : visibleStudies.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-[#81737b] text-xs">
+                      No studies match the selected filters.
+                    </td>
+                  </tr>
+                ) : (
+                  visibleStudies.map((s, idx) => {
+                    const isSelected = selectedRowId === s.study_id;
+                    return (
+                      <StudyRow
+                        key={s.study_id}
+                        rowNumber={idx + 1}
+                        isSelected={isSelected}
+                        onSelectRow={() => setSelectedRowId(s.study_id)}
+                        study={s}
+                        assessment={robMap.get(s.study_id)}
+                        tags={tagIndex.data}
+                        onComments={() => setCollaborationStudy(s)}
+                        onStatusChange={(studyId, newStatus) => updateStatusMutation.mutate({ studyId, newStatus })}
+                        bookmark={<BookmarkButton saved={bookmarkSet.has(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
+                        projectId={projectId!}
+                        onDelete={() => deleteMutation.mutate(s.study_id)}
+                      />
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Bulk Upload Modal */}
       {collaborationStudy && <CollaborationDialog title={collaborationStudy.title} onClose={() => setCollaborationStudy(null)}>
@@ -750,7 +1060,11 @@ function StudyRow({
   bookmark,
   tags,
   onComments,
+  onStatusChange,
   assessment,
+  rowNumber,
+  isSelected,
+  onSelectRow,
 }: {
   study: Study;
   projectId: string;
@@ -758,7 +1072,11 @@ function StudyRow({
   bookmark: React.ReactNode;
   tags: TagIndex | undefined;
   onComments: () => void;
+  onStatusChange: (studyId: string, newStatus: string) => void;
   assessment?: { assessment_id: string; overall_judgment: string };
+  rowNumber: number;
+  isSelected: boolean;
+  onSelectRow: () => void;
 }) {
   // Batch optimization: Only query per-study if bulk assessment was not supplied
   const { data: studyAssessments } = useQuery({
@@ -769,79 +1087,202 @@ function StudyRow({
 
   const activeAssessment = assessment || (studyAssessments && studyAssessments[0]);
 
-  const screeningBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pending: "bg-black/[0.06] text-[#6B665E]",
-      included: "bg-[#E9ED4C] text-[#62631E]",
-      excluded: "bg-rose-100 text-rose-800",
-    };
-    return styles[status] || styles.pending;
+  const getPublishedUrl = (s: Study): string => {
+    if (s.doi) {
+      const cleanDoi = s.doi.trim().replace(/^doi:\s*/i, "");
+      if (cleanDoi.startsWith("http")) return cleanDoi;
+      return `https://doi.org/${cleanDoi}`;
+    }
+    if (s.pmid) {
+      const cleanPmid = s.pmid.trim().replace(/^pmid:\s*/i, "");
+      return `https://pubmed.ncbi.nlm.nih.gov/${cleanPmid}/`;
+    }
+    return `https://scholar.google.com/scholar?q=${encodeURIComponent(s.title)}`;
   };
 
   return (
-    <tr className="hover:bg-[#eee7ec]/30 transition-colors">
-      <td className="px-5 py-3.5">
-        <div className="flex items-start gap-2">{bookmark}<div className="font-['Serifon_Editorial'] font-bold text-sm text-[#3a0f34] line-clamp-1">{study.title}</div></div>
-        <TagBadges index={tags} studyId={study.study_id} />
-        <div className="text-xs font-['Work_Sans'] text-[#62535d] mt-0.5 line-clamp-1">
-          {study.authors || "Unknown Authors"} {study.journal ? `— ${study.journal}` : ""}
+    <tr
+      onClick={onSelectRow}
+      className={`transition-colors cursor-pointer ${
+        isSelected
+          ? "bg-[#ffdea6]/20 outline-2 outline-[#814d75] outline-offset-[-2px] z-10"
+          : "hover:bg-[#fbf9f4]/80"
+      }`}
+    >
+      {/* Frozen Row Number */}
+      <td className="sticky left-0 z-10 bg-[#fbf9f4] text-center p-2 border-r border-[#d2c2cb] font-mono text-[11px] text-[#62535d] select-none font-bold">
+        {rowNumber}
+      </td>
+
+      {/* Column A: Title with Document icon & link & external published site icon */}
+      <td className="px-4 py-2.5 border-r border-[#d2c2cb] max-w-[320px]">
+        <div className="flex items-start gap-2">
+          {bookmark}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-[#814d75] shrink-0 mt-0.5" />
+              <Link
+                to={`/projects/${projectId}/screening?studyId=${study.study_id}`}
+                className="font-['Serifon_Editorial'] font-bold text-xs text-[#3a0f34] hover:text-[#814d75] hover:underline line-clamp-1 block"
+                title={study.title}
+              >
+                {study.title}
+              </Link>
+              <a
+                href={getPublishedUrl(study)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[#814d75] hover:text-[#3a0f34] p-0.5 rounded transition-colors shrink-0"
+                title="View on published journal site (external tab)"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+            <TagBadges index={tags} studyId={study.study_id} />
+          </div>
         </div>
       </td>
-      <td className="px-4 py-3.5 font-mono text-xs text-[#62535d]">{study.publication_year || "—"}</td>
-      <td className="px-4 py-3.5 text-xs text-[#62535d]">{study.study_design || "—"}</td>
-      <td className="px-4 py-3.5">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-mono font-medium ${screeningBadge(study.screening_status)}`}>
-            {study.screening_status || "pending"}
-          </span>
+
+      {/* Column B: Creator (Authors) */}
+      <td className="px-3 py-2.5 border-r border-[#d2c2cb] text-xs font-['Work_Sans'] text-[#4f444b] truncate max-w-[180px]" title={study.authors || "Unknown"}>
+        {study.authors || "Unknown Authors"}
+      </td>
+
+      {/* Column C: Date / Year */}
+      <td className="px-3 py-2.5 border-r border-[#d2c2cb] font-mono text-xs text-[#62535d] select-none text-center">
+        {study.publication_year || "—"}
+      </td>
+
+      {/* Column D: Publisher / Journal */}
+      <td className="px-3 py-2.5 border-r border-[#d2c2cb] text-xs font-['Work_Sans'] text-[#62535d] truncate max-w-[180px]" title={study.journal || "—"}>
+        {study.journal || "—"}
+      </td>
+
+      {/* Column E: Screening Status with live interactive dropdown updating */}
+      <td className="px-3 py-2.5 border-r border-[#d2c2cb]">
+        <div className="flex items-center gap-1.5">
+          <select
+            value={
+              study.screening_status === "ta_included" || study.screening_status === "ft_included"
+                ? "included"
+                : study.screening_status === "ta_excluded" || study.screening_status === "ft_excluded"
+                ? "excluded"
+                : study.screening_status || "pending"
+            }
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation();
+              onStatusChange(study.study_id, e.target.value);
+            }}
+            className={cn(
+              "text-[10px] font-mono font-bold px-2 py-0.5 rounded border transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#814d75]",
+              study.screening_status === "included" || study.screening_status === "ta_included" || study.screening_status === "ft_included"
+                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                : study.screening_status === "uncertain"
+                ? "bg-purple-100 text-purple-800 border-purple-300"
+                : study.screening_status === "excluded" || study.screening_status === "ta_excluded" || study.screening_status === "ft_excluded"
+                ? "bg-rose-100 text-rose-800 border-rose-300"
+                : "bg-amber-100 text-amber-800 border-amber-300"
+            )}
+            title="Update screening status live (Included, Uncertain, Excluded, Pending)"
+          >
+            <option value="included">Included</option>
+            <option value="uncertain">Uncertain</option>
+            <option value="excluded">Excluded</option>
+            <option value="pending">Pending</option>
+          </select>
           {Boolean(study.is_duplicate) && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[#ffdea6]/50 text-[#7c5800] border border-[#d2c2cb] font-medium">
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#ffdea6]/60 text-[#7c5800] border border-[#d2c2cb] font-bold">
               <Copy className="h-2.5 w-2.5" />
-              <span>DUPLICATE</span>
+              <span>DUP</span>
             </span>
           )}
         </div>
       </td>
-      <td className="px-4 py-3.5">
+
+      {/* Column F: RoB Status */}
+      <td className="px-3 py-2.5 border-r border-[#d2c2cb]">
         {activeAssessment ? (
           <Link
             to={`/projects/${projectId}/rob/${activeAssessment.assessment_id}`}
-            className="inline-flex items-center gap-1.5 text-xs text-[#3a0f34] hover:underline"
+            className="inline-flex items-center gap-1 text-xs text-[#3a0f34] hover:underline"
           >
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
-            <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-mono ${judgmentColor(activeAssessment.overall_judgment)}`}>
+            <ShieldCheck className="h-3 w-3 text-emerald-700" />
+            <span
+              className={`inline-flex px-1.5 py-0.2 rounded text-[10px] font-mono ${judgmentColor(
+                activeAssessment.overall_judgment
+              )}`}
+            >
               {judgmentLabel(activeAssessment.overall_judgment)}
             </span>
           </Link>
         ) : (
-          <span className="text-[#81737b] text-xs font-['Newsreader'] italic">unassessed</span>
+          <span className="text-[#81737b] text-xs font-['Newsreader'] italic select-none">unassessed</span>
         )}
       </td>
-      <td className="px-5 py-3.5 text-right">
-        <div className="flex items-center justify-end gap-2">
-          <button type="button" onClick={onComments} className="rounded border border-[#d2c2cb] bg-white px-3 py-1 text-xs text-[#4f444b] hover:bg-[#eee7ec] transition-colors" aria-label={`Comments and tags for ${study.title}`}>Comments & tags</button>
+
+      {/* Column G: Workflows & Published Site Link */}
+      <td className="px-4 py-2.5 text-right">
+        <div className="flex items-center justify-end gap-1.5">
+          {/* View on Published Site Button */}
+          <a
+            href={getPublishedUrl(study)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all shadow-2xs"
+            title="View study on original published site (DOI / PubMed / Publisher)"
+          >
+            <ExternalLink className="h-3 w-3 text-[#814d75]" />
+            <span className="hidden sm:inline">Published Site</span>
+          </a>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onComments();
+            }}
+            className="rounded border border-[#d2c2cb] bg-white px-2 py-0.5 text-[11px] text-[#4f444b] hover:bg-[#eee7ec] transition-colors"
+            title="Comments & tags"
+          >
+            Tags
+          </button>
           <Link
             to={`/projects/${projectId}/studies/${study.study_id}/pdf`}
-            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all"
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all shadow-2xs"
             title="Review Co-Scientist Extractions in PDF with Track Changes"
           >
-            <Highlighter className="h-3 w-3 text-[#ffdea6]" />
+            <Highlighter className="h-2.5 w-2.5 text-[#ffdea6]" />
             <span>PDF</span>
           </Link>
           <Link
             to={`/projects/${projectId}/extraction-sheet?study=${study.study_id}`}
-            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all"
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all shadow-2xs"
             title="View Extraction Data Sheet"
           >
-            <FileSpreadsheet className="h-3 w-3 text-[#814d75]" />
+            <FileSpreadsheet className="h-2.5 w-2.5 text-[#814d75]" />
             <span>Sheet</span>
           </Link>
+          <a
+            href={api.exportStudyXlsxUrl(projectId || "demo", study.study_id)}
+            download
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all shadow-2xs"
+            title="Download extraction data Excel (.xlsx) for this study"
+          >
+            <Download className="h-2.5 w-2.5 text-[#7c5800]" />
+            <span>Excel</span>
+          </a>
           <button
-            onClick={onDelete}
-            className="text-[#81737b] hover:text-rose-700 hover:bg-[#eee7ec] transition-colors p-1.5 rounded"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="text-[#81737b] hover:text-rose-700 hover:bg-[#eee7ec] transition-colors p-1 rounded"
             title="Delete study"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-3 w-3" />
           </button>
         </div>
       </td>

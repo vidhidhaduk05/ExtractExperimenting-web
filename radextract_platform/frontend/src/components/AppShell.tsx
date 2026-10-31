@@ -489,12 +489,20 @@ export function AppShell() {
         Boolean(pid && (pathname === `/projects/${pid}` || pathname === `/projects/${pid}/` || pathname.includes('/pico'))),
     },
     {
+      id: 'all_studies',
+      label: 'All Studies',
+      icon: Table,
+      to: (pid) => (pid ? `/projects/${pid}/studies` : '/projects'),
+      isActive: (pathname) =>
+        pathname.includes('/studies') && !pathname.includes('/pdf') && !pathname.includes('/deduplicat'),
+      badge: totalStudies > 0 ? `${totalStudies}` : undefined,
+    },
+    {
       id: 'deduplication',
       label: 'Deduplication',
       icon: Layers,
-      to: (pid) => (pid ? `/projects/${pid}/studies` : '/projects'),
-      isActive: (pathname) =>
-        (pathname.includes('/studies') && !pathname.includes('/pdf')) || pathname.includes('/deduplicat'),
+      to: (pid) => (pid ? `/projects/${pid}/deduplicate` : '/projects'),
+      isActive: (pathname) => pathname.includes('/deduplicat'),
       badge: duplicatesRemovedCount > 0 ? `${duplicatesRemovedCount} dupes` : undefined,
     },
     {

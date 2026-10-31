@@ -6,7 +6,7 @@ import {
   Plus, FileText, Trash2, ShieldCheck, ArrowLeft, Upload, Loader2, Download,
   Highlighter, FileSpreadsheet, ArrowRight, CheckCircle2, X,
   RefreshCw, Sparkles, FolderPlus, Check, AlertCircle, ArrowLeftRight, Copy,
-  ExternalLink, HelpCircle, Undo2, Edit3, Search, Eye, Filter, Lock
+  ExternalLink, HelpCircle, Undo2, Edit3, Search, Eye, Filter, Lock, ArrowUpDown
 } from "lucide-react";
 import { judgmentColor, judgmentLabel } from "../lib/utils";
 import { useRef, useState, useMemo, useEffect } from "react";
@@ -300,9 +300,50 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
     return count;
   }, [studies, bookmarkSet]);
 
+  // Sort rank helper: Included (1) -> Uncertain (2) -> Excluded (3) -> Pending (4)
+  const getStatusRank = (status?: string | null): number => {
+    const s = (status || "").toLowerCase().trim();
+    if (s === "included" || s === "ta_included" || s === "ft_included") return 1;
+    if (s === "uncertain") return 2;
+    if (s === "excluded" || s === "ta_excluded" || s === "ft_excluded") return 3;
+    return 4; // pending or other
+  };
+
+  const [sortBy, setSortBy] = useState<"status" | "year" | "title">("status");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  // Summary counts for quick status filter pills
+  const statusCounts = useMemo(() => {
+    if (!studies) return { included: 0, uncertain: 0, excluded: 0, pending: 0 };
+    let inc = 0, unc = 0, exc = 0, pend = 0;
+    for (const s of studies) {
+      const rank = getStatusRank(s.screening_status);
+      if (rank === 1) inc++;
+      else if (rank === 2) unc++;
+      else if (rank === 3) exc++;
+      else pend++;
+    }
+    return { included: inc, uncertain: unc, excluded: exc, pending: pend };
+  }, [studies]);
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ studyId, newStatus }: { studyId: string; newStatus: string }) => {
+      return api.screeningDecision(studyId, {
+        project_id: projectId!,
+        decision: newStatus,
+        stage: "ta",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studies", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-summary", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["screening-decisions", projectId] });
+    },
+  });
+
   const visibleStudies = useMemo(() => {
     if (!studies) return [];
-    return studies.filter((s) => {
+    const filtered = studies.filter((s) => {
       if (savedOnly && !bookmarkSet.has(s.study_id)) return false;
       if (!matchesTag(tagIndex.data, s.study_id, tagFilter)) return false;
       if (statusFilter !== "all") {
@@ -321,7 +362,29 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
       }
       return true;
     });
-  }, [studies, savedOnly, bookmarkSet, tagIndex.data, tagFilter, statusFilter, searchQuery]);
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "status") {
+        const rankA = getStatusRank(a.screening_status);
+        const rankB = getStatusRank(b.screening_status);
+        if (rankA !== rankB) {
+          return sortDirection === "asc" ? rankA - rankB : rankB - rankA;
+        }
+        return (b.publication_year || 0) - (a.publication_year || 0);
+      }
+      if (sortBy === "year") {
+        const yearA = a.publication_year || 0;
+        const yearB = b.publication_year || 0;
+        return sortDirection === "asc" ? yearA - yearB : yearB - yearA;
+      }
+      if (sortBy === "title") {
+        return sortDirection === "asc"
+          ? (a.title || "").localeCompare(b.title || "")
+          : (b.title || "").localeCompare(a.title || "");
+      }
+      return 0;
+    });
+  }, [studies, savedOnly, bookmarkSet, tagIndex.data, tagFilter, statusFilter, searchQuery, sortBy, sortDirection]);
 
   return (
     <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
@@ -715,6 +778,78 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
             </span>
           </div>
 
+          {/* Quick Status Filter Chips: Included, Uncertain, Excluded, Pending */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className={cn(
+                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans']",
+                statusFilter === "all"
+                  ? "bg-[#3a0f34] text-[#fbf9f4] border-[#3a0f34] shadow-xs"
+                  : "bg-[#ffffff] text-[#4f444b] border-[#d2c2cb] hover:bg-[#eee7ec]"
+              )}
+            >
+              All ({studies?.length || 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("included")}
+              className={cn(
+                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
+                statusFilter === "included"
+                  ? "bg-emerald-700 text-white border-emerald-800 shadow-xs"
+                  : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/70"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Included</span>
+              <span className="font-mono text-[10px] font-bold">({statusCounts.included})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("uncertain")}
+              className={cn(
+                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
+                statusFilter === "uncertain"
+                  ? "bg-purple-700 text-white border-purple-800 shadow-xs"
+                  : "bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100/70"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              <span>Uncertain</span>
+              <span className="font-mono text-[10px] font-bold">({statusCounts.uncertain})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("excluded")}
+              className={cn(
+                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
+                statusFilter === "excluded"
+                  ? "bg-rose-700 text-white border-rose-800 shadow-xs"
+                  : "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100/70"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span>Excluded</span>
+              <span className="font-mono text-[10px] font-bold">({statusCounts.excluded})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("pending")}
+              className={cn(
+                "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer font-['Work_Sans'] flex items-center gap-1.5",
+                statusFilter === "pending"
+                  ? "bg-[#7c5800] text-white border-[#7c5800] shadow-xs"
+                  : "bg-[#ffdea6]/40 text-[#7c5800] border-[#d2c2cb] hover:bg-[#ffdea6]/70"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-[#7c5800]" />
+              <span>Pending</span>
+              <span className="font-mono text-[10px] font-bold">({statusCounts.pending})</span>
+            </button>
+          </div>
+
           <div className="flex items-center gap-2 flex-wrap">
             {/* Search studies */}
             <div className="relative">
@@ -761,57 +896,77 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
         <div className="border border-[#d2c2cb] rounded overflow-hidden shadow-xs">
           <div className="overflow-x-auto max-h-[640px] overflow-y-auto">
             <table className="border-collapse table-fixed w-full text-left text-xs font-['Work_Sans'] min-w-[900px]">
-              {/* Row 1: Column Letters (A, B, C, D, E, F) */}
+              {/* Row 1: Column Letters (A, B, C, D, E, F, G) */}
               <thead className="sticky top-0 z-20 bg-[#fbf9f4] shadow-xs">
                 <tr className="border-b border-[#d2c2cb] bg-[#eee7ec]/60 text-[10px] font-mono text-[#62535d]">
                   <th className="sticky left-0 z-30 bg-[#eee7ec] w-12 text-center p-1.5 border-r border-[#d2c2cb] select-none font-bold">
                     #
                   </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-[340px]">
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-[320px]">
                     A
                   </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-20">
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-44">
                     B
                   </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-32">
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-24">
                     C
                   </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-32">
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-44">
                     D
                   </th>
-                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-32">
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-36">
                     E
                   </th>
-                  <th className="text-center p-1.5 font-bold select-none w-[280px]">
+                  <th className="text-center p-1.5 border-r border-[#d2c2cb] font-bold select-none w-28">
                     F
+                  </th>
+                  <th className="text-center p-1.5 font-bold select-none w-[300px]">
+                    G
                   </th>
                 </tr>
 
-                {/* Row 2: Header Field Labels */}
+                {/* Row 2: Header Field Labels Matching Zotero / Excel Layout */}
                 <tr className="border-b border-[#d2c2cb] text-[11px] text-[#3a0f34] bg-[#fbf9f4]">
                   <th className="sticky left-0 z-30 bg-[#fbf9f4] w-12 text-center p-2.5 border-r border-[#d2c2cb] font-mono font-bold text-[#62535d] select-none">
                     Row
                   </th>
                   <th className="px-4 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
                     <div className="flex items-center justify-between">
-                      <span>Study &amp; Citation</span>
+                      <span className="flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-[#814d75]" />
+                        <span>Title</span>
+                      </span>
                       <Lock className="h-3 w-3 text-[#814d75]" title="Primary Identifier" />
                     </div>
                   </th>
                   <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
-                    Year
+                    Creator (Authors)
+                  </th>
+                  <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none text-center">
+                    Date / Year
                   </th>
                   <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
-                    Study Design
+                    Publisher / Journal
                   </th>
                   <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
-                    Screening Status
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSortBy("status");
+                        setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+                      }}
+                      className="flex items-center gap-1 hover:text-[#814d75] transition-colors cursor-pointer"
+                      title="Sort: Included -> Uncertain -> Excluded"
+                    >
+                      <span>Screening Status</span>
+                      <ArrowUpDown className="w-3 h-3 text-[#814d75]" />
+                    </button>
                   </th>
                   <th className="px-3 py-2.5 border-r border-[#d2c2cb] font-bold font-['Serifon_Editorial'] select-none">
                     RoB Judgment
                   </th>
                   <th className="px-4 py-2.5 font-bold font-['Serifon_Editorial'] text-right select-none">
-                    Extraction Workflows
+                    Workflows &amp; Published Site
                   </th>
                 </tr>
               </thead>
@@ -844,6 +999,7 @@ export function StudyList({ bookmarkedOnly = false }: { bookmarkedOnly?: boolean
                         assessment={robMap.get(s.study_id)}
                         tags={tagIndex.data}
                         onComments={() => setCollaborationStudy(s)}
+                        onStatusChange={(studyId, newStatus) => updateStatusMutation.mutate({ studyId, newStatus })}
                         bookmark={<BookmarkButton saved={bookmarkSet.has(s.study_id)} disabled={bookmarks.disabled} onClick={() => bookmarks.toggle(s.study_id)} />}
                         projectId={projectId!}
                         onDelete={() => deleteMutation.mutate(s.study_id)}
@@ -904,6 +1060,7 @@ function StudyRow({
   bookmark,
   tags,
   onComments,
+  onStatusChange,
   assessment,
   rowNumber,
   isSelected,
@@ -915,6 +1072,7 @@ function StudyRow({
   bookmark: React.ReactNode;
   tags: TagIndex | undefined;
   onComments: () => void;
+  onStatusChange: (studyId: string, newStatus: string) => void;
   assessment?: { assessment_id: string; overall_judgment: string };
   rowNumber: number;
   isSelected: boolean;
@@ -929,14 +1087,17 @@ function StudyRow({
 
   const activeAssessment = assessment || (studyAssessments && studyAssessments[0]);
 
-  const screeningBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pending: "bg-amber-100 text-amber-800 border-amber-300",
-      included: "bg-emerald-100 text-emerald-800 border-emerald-300",
-      excluded: "bg-rose-100 text-rose-800 border-rose-300",
-      uncertain: "bg-purple-100 text-purple-800 border-purple-300",
-    };
-    return styles[status] || "bg-slate-100 text-slate-700 border-slate-300";
+  const getPublishedUrl = (s: Study): string => {
+    if (s.doi) {
+      const cleanDoi = s.doi.trim().replace(/^doi:\s*/i, "");
+      if (cleanDoi.startsWith("http")) return cleanDoi;
+      return `https://doi.org/${cleanDoi}`;
+    }
+    if (s.pmid) {
+      const cleanPmid = s.pmid.trim().replace(/^pmid:\s*/i, "");
+      return `https://pubmed.ncbi.nlm.nih.gov/${cleanPmid}/`;
+    }
+    return `https://scholar.google.com/scholar?q=${encodeURIComponent(s.title)}`;
   };
 
   return (
@@ -953,48 +1114,86 @@ function StudyRow({
         {rowNumber}
       </td>
 
-      {/* Column A: Study & Citation */}
-      <td className="px-4 py-2.5 border-r border-[#d2c2cb] max-w-[340px]">
+      {/* Column A: Title with Document icon & link & external published site icon */}
+      <td className="px-4 py-2.5 border-r border-[#d2c2cb] max-w-[320px]">
         <div className="flex items-start gap-2">
           {bookmark}
           <div className="min-w-0">
-            <Link
-              to={`/projects/${projectId}/screening?studyId=${study.study_id}`}
-              className="font-['Serifon_Editorial'] font-bold text-xs text-[#3a0f34] hover:text-[#814d75] hover:underline line-clamp-1 block"
-              title={study.title}
-            >
-              {study.title}
-            </Link>
-            <TagBadges index={tags} studyId={study.study_id} />
-            <div className="text-[11px] font-['Work_Sans'] text-[#62535d] mt-0.5 line-clamp-1">
-              {study.authors || "Unknown Authors"} {study.journal ? `— ${study.journal}` : ""}
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-[#814d75] shrink-0 mt-0.5" />
+              <Link
+                to={`/projects/${projectId}/screening?studyId=${study.study_id}`}
+                className="font-['Serifon_Editorial'] font-bold text-xs text-[#3a0f34] hover:text-[#814d75] hover:underline line-clamp-1 block"
+                title={study.title}
+              >
+                {study.title}
+              </Link>
+              <a
+                href={getPublishedUrl(study)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[#814d75] hover:text-[#3a0f34] p-0.5 rounded transition-colors shrink-0"
+                title="View on published journal site (external tab)"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
+            <TagBadges index={tags} studyId={study.study_id} />
           </div>
         </div>
       </td>
 
-      {/* Column B: Year */}
-      <td className="px-3 py-2.5 border-r border-[#d2c2cb] font-mono text-xs text-[#62535d] select-none">
+      {/* Column B: Creator (Authors) */}
+      <td className="px-3 py-2.5 border-r border-[#d2c2cb] text-xs font-['Work_Sans'] text-[#4f444b] truncate max-w-[180px]" title={study.authors || "Unknown"}>
+        {study.authors || "Unknown Authors"}
+      </td>
+
+      {/* Column C: Date / Year */}
+      <td className="px-3 py-2.5 border-r border-[#d2c2cb] font-mono text-xs text-[#62535d] select-none text-center">
         {study.publication_year || "—"}
       </td>
 
-      {/* Column C: Study Design */}
-      <td className="px-3 py-2.5 border-r border-[#d2c2cb] text-xs text-[#62535d] truncate select-none">
-        {study.study_design || "—"}
+      {/* Column D: Publisher / Journal */}
+      <td className="px-3 py-2.5 border-r border-[#d2c2cb] text-xs font-['Work_Sans'] text-[#62535d] truncate max-w-[180px]" title={study.journal || "—"}>
+        {study.journal || "—"}
       </td>
 
-      {/* Column D: Screening Status */}
+      {/* Column E: Screening Status with live interactive dropdown updating */}
       <td className="px-3 py-2.5 border-r border-[#d2c2cb]">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${screeningBadge(
-              study.screening_status
-            )}`}
+        <div className="flex items-center gap-1.5">
+          <select
+            value={
+              study.screening_status === "ta_included" || study.screening_status === "ft_included"
+                ? "included"
+                : study.screening_status === "ta_excluded" || study.screening_status === "ft_excluded"
+                ? "excluded"
+                : study.screening_status || "pending"
+            }
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation();
+              onStatusChange(study.study_id, e.target.value);
+            }}
+            className={cn(
+              "text-[10px] font-mono font-bold px-2 py-0.5 rounded border transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#814d75]",
+              study.screening_status === "included" || study.screening_status === "ta_included" || study.screening_status === "ft_included"
+                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                : study.screening_status === "uncertain"
+                ? "bg-purple-100 text-purple-800 border-purple-300"
+                : study.screening_status === "excluded" || study.screening_status === "ta_excluded" || study.screening_status === "ft_excluded"
+                ? "bg-rose-100 text-rose-800 border-rose-300"
+                : "bg-amber-100 text-amber-800 border-amber-300"
+            )}
+            title="Update screening status live (Included, Uncertain, Excluded, Pending)"
           >
-            {study.screening_status || "pending"}
-          </span>
+            <option value="included">Included</option>
+            <option value="uncertain">Uncertain</option>
+            <option value="excluded">Excluded</option>
+            <option value="pending">Pending</option>
+          </select>
           {Boolean(study.is_duplicate) && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#ffdea6]/60 text-[#7c5800] border border-[#d2c2cb] font-bold">
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#ffdea6]/60 text-[#7c5800] border border-[#d2c2cb] font-bold">
               <Copy className="h-2.5 w-2.5" />
               <span>DUP</span>
             </span>
@@ -1002,7 +1201,7 @@ function StudyRow({
         </div>
       </td>
 
-      {/* Column E: RoB Status */}
+      {/* Column F: RoB Status */}
       <td className="px-3 py-2.5 border-r border-[#d2c2cb]">
         {activeAssessment ? (
           <Link
@@ -1023,9 +1222,22 @@ function StudyRow({
         )}
       </td>
 
-      {/* Column F: Extraction Workflows */}
+      {/* Column G: Workflows & Published Site Link */}
       <td className="px-4 py-2.5 text-right">
         <div className="flex items-center justify-end gap-1.5">
+          {/* View on Published Site Button */}
+          <a
+            href={getPublishedUrl(study)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all shadow-2xs"
+            title="View study on original published site (DOI / PubMed / Publisher)"
+          >
+            <ExternalLink className="h-3 w-3 text-[#814d75]" />
+            <span className="hidden sm:inline">Published Site</span>
+          </a>
+
           <button
             type="button"
             onClick={(e) => {
@@ -1039,7 +1251,7 @@ function StudyRow({
           </button>
           <Link
             to={`/projects/${projectId}/studies/${study.study_id}/pdf`}
-            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all"
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-[#3a0f34] text-[#fbf9f4] hover:bg-[#1a0017] transition-all shadow-2xs"
             title="Review Co-Scientist Extractions in PDF with Track Changes"
           >
             <Highlighter className="h-2.5 w-2.5 text-[#ffdea6]" />
@@ -1047,7 +1259,7 @@ function StudyRow({
           </Link>
           <Link
             to={`/projects/${projectId}/extraction-sheet?study=${study.study_id}`}
-            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all"
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all shadow-2xs"
             title="View Extraction Data Sheet"
           >
             <FileSpreadsheet className="h-2.5 w-2.5 text-[#814d75]" />
@@ -1056,7 +1268,7 @@ function StudyRow({
           <a
             href={api.exportStudyXlsxUrl(projectId || "demo", study.study_id)}
             download
-            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all"
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded bg-white hover:bg-[#eee7ec] text-[#3a0f34] border border-[#d2c2cb] transition-all shadow-2xs"
             title="Download extraction data Excel (.xlsx) for this study"
           >
             <Download className="h-2.5 w-2.5 text-[#7c5800]" />

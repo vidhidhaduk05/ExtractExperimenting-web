@@ -83,6 +83,7 @@ describe("AppShell Component", () => {
     // Chrome stage tabs rendered inside Stage Navigation Tabs container
     const stageTabs = screen.getByLabelText("Stage Navigation Tabs");
     expect(within(stageTabs).getByText("Overview")).toBeDefined();
+    expect(within(stageTabs).getByText("All Studies")).toBeDefined();
     expect(within(stageTabs).getByText("Deduplication")).toBeDefined();
     expect(within(stageTabs).getByText("Abstract Screening")).toBeDefined();
     expect(within(stageTabs).getByText("Full-Text Screening")).toBeDefined();
